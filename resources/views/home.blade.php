@@ -13,6 +13,19 @@
                     title: @js(view_title(\App\Services\Enums\ViewName::MainMenu)),
                     isOpen: true,
                 },
+                'athkar-app-gate': {
+                    title: @js(view_title(\App\Services\Enums\ViewName::AthkarAppGate)),
+                    isOpen: false,
+                    isReaderVisible: $persist(false).as('athkar-reader-visible'),
+                },
+                'athkar-app-sabah': {
+                    title: @js(view_title(\App\Services\Enums\ViewName::AthkarAppSabah)),
+                    isOpen: false,
+                },
+                'athkar-app-masaa': {
+                    title: @js(view_title(\App\Services\Enums\ViewName::AthkarAppMasaa)),
+                    isOpen: false,
+                },
             },
             init() {
                 this.applyViewState(this.activeView);
@@ -59,19 +72,35 @@
             '#settings': () => runHashAction(() => {
                 $dispatch('open-settings-modal');
             }),
+            '#athkar-app-gate': () => runHashAction(() => {
+                $dispatch('switch-view', { to: 'athkar-app-gate' });
+            }),
+            '#athkar-app-sabah': () => runHashAction(() => {
+                $dispatch('switch-view', { to: 'athkar-app-sabah' });
+            }),
+            '#athkar-app-masaa': () => runHashAction(() => {
+                $dispatch('switch-view', { to: 'athkar-app-masaa' });
+            }),
         }"
         x-on:switch-view.window="applyViewState($event.detail?.to)"
     >
         <x-buttons-stack x-bind:data-respecting-stack="$store.bp.current === 'base'">
             @if (!is_platform('mobile'))
+                <x-return-button
+                    :jsShowCondition="'views[`athkar-app-gate`].isReaderVisible'"
+                    :jsClickCallback="'if (views[`athkar-app-gate`].isReaderVisible) $dispatch(`close-athkar-mode`)'"
+                />
                 @include('partials.home-button')
             @endif
             <livewire:color-scheme-switcher />
             <livewire:settings />
         </x-buttons-stack>
 
+        @include('partials.colorful-background')
+
         <main class="fixed inset-0 mt-16 grid place-items-center sm:mt-0 dark:text-white">
             @include('partials.main-menu')
+            @include('partials.athkar-app.index')
         </main>
     </div>
 </x-app>

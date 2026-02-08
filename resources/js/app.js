@@ -6,12 +6,13 @@ import './packages/alpine/hash-actions';
 import './packages/alpine/hooks.js';
 import './packages/nativephp/browser.js';
 import './packages/color';
-import './packages/fitty';
 import './packages/tippy';
+import './packages/fitty';
 import './packages/anime';
 
 import './support/alpine/data/layout-manager';
 import './support/alpine/data/main-menu';
+import './support/alpine/data/athkar-app';
 import './support/alpine/storage/font-manager';
 import './support/alpine/storage/color-scheme';
 import './support/alpine/storage/breakpointer';

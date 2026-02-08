@@ -349,6 +349,197 @@ return true;
 JS, ['caption' => $caption])));
 }
 
+function openAthkarGate($page, bool $isMobile): void
+{
+    waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
+    waitForScript($page, mainMenuDataScript('data.isTouchDevice !== null'), true);
+    waitForScript($page, 'window.location.hash', '#main-menu');
+
+    if ($page->script(homeDataScript('data.activeView')) !== 'athkar-app-gate') {
+        activateMainMenuItem($page, 'الأذكار', $isMobile);
+    }
+
+    if ($page->script(homeDataScript('data.activeView')) !== 'athkar-app-gate') {
+        hashAction($page, '#athkar-app-gate', true);
+    }
+
+    if ($page->script(homeDataScript('data.activeView')) !== 'athkar-app-gate') {
+        ensureAthkarGateView($page);
+    }
+
+    if ($page->script(homeDataScript('data.activeView')) !== 'athkar-app-gate') {
+        ensureAthkarGateView($page);
+    }
+
+    waitForScript($page, homeDataScript('data.activeView'), 'athkar-app-gate');
+    if ($page->script('window.location.hash') !== '#athkar-app-gate') {
+        setHashOnly($page, '#athkar-app-gate', true, true);
+    }
+    waitForScript($page, 'window.location.hash', '#athkar-app-gate');
+    waitForGateVisible($page);
+}
+
+function openAthkarNotice($page, string $mode, bool $isMobile): void
+{
+    if ($page->script(homeDataScript('data.activeView')) !== 'athkar-app-gate') {
+        ensureAthkarGateView($page);
+    }
+    waitForScript($page, homeDataScript('data.activeView'), 'athkar-app-gate');
+    waitForGateVisible($page);
+    waitForScript($page, 'Boolean(document.querySelector("[x-data^=\\"athkarAppReader\\"]"))');
+    waitForScript($page, athkarReaderReadyScript());
+    waitForScript($page, athkarGateDataScript('true'), true);
+
+    $page->script(athkarReaderCommandScript('data.settings = { ...(data.settings ?? {}), does_skip_notice_panels: false };'));
+
+    $label = $mode === 'sabah' ? 'أذكار الصباح' : 'أذكار المساء';
+    $selector = "button[aria-label=\"{$label}\"]";
+
+    waitForScript($page, 'Boolean(document.querySelector('.json_encode($selector).'))', true);
+    if ($isMobile) {
+        safeClick($page, $selector);
+        $expectedSide = $mode === 'sabah' ? 'morning' : 'night';
+        waitForScript($page, athkarGateDataScript('data.activeSide'), $expectedSide);
+        safeClick($page, $selector);
+    } else {
+        safeClick($page, $selector);
+    }
+
+    if ($page->script(athkarReaderDataScript('data.activeMode')) !== $mode) {
+        dispatchAthkarGateOpen($page, $mode);
+    }
+
+    if ($page->script(athkarReaderDataScript('data.activeMode')) !== $mode) {
+        $page->script(athkarReaderCommandScript("data.openMode('{$mode}');"));
+    }
+
+    if ($page->script(athkarReaderDataScript('data.activeMode')) !== $mode) {
+        $page->script(athkarReaderCommandScript("data.startModeNotice('{$mode}', { updateHash: true, respectLock: false });"));
+    }
+
+    $hash = $mode === 'sabah' ? '#athkar-app-sabah' : '#athkar-app-masaa';
+    $view = $mode === 'sabah' ? 'athkar-app-sabah' : 'athkar-app-masaa';
+
+    if ($page->script('window.location.hash') !== $hash) {
+        hashAction($page, $hash, true);
+    }
+
+    if ($page->script(homeDataScript('data.activeView')) !== $view) {
+        forceHomeView($page, $view);
+    }
+
+    waitForScript($page, athkarReaderDataScript('data.activeMode'), $mode);
+
+    if (! $page->script(athkarReaderDataScript('data.isNoticeVisible'))) {
+        $page->script(athkarReaderCommandScript('data.showNotice();'));
+    }
+
+    waitForScript($page, athkarReaderDataScript('data.isNoticeVisible'), true);
+    waitForScript($page, homeDataScript('data.activeView'), $view);
+    waitForScript($page, 'window.location.hash', $hash);
+}
+
+function confirmAthkarNotice($page): void
+{
+    $isVisible = $page->script(athkarReaderDataScript('data.isNoticeVisible'));
+
+    if (! $isVisible) {
+        return;
+    }
+
+    if ($page->script('Boolean(document.querySelector(".athkar-notice__cta"))')) {
+        safeClick($page, '.athkar-notice__cta');
+    }
+
+    $stillVisible = $page->script(athkarReaderDataScript('data.isNoticeVisible'));
+
+    if ($stillVisible) {
+        $page->script(athkarReaderCommandScript('data.confirmNotice();'));
+    }
+
+    waitForScript($page, athkarReaderDataScript('data.isNoticeVisible'), false);
+}
+
+function openAthkarReader($page, string $mode, bool $isMobile): void
+{
+    openAthkarGate($page, $isMobile);
+    openAthkarNotice($page, $mode, $isMobile);
+    confirmAthkarNotice($page);
+
+    $hash = $mode === 'sabah' ? '#athkar-app-sabah' : '#athkar-app-masaa';
+    $view = $mode === 'sabah' ? 'athkar-app-sabah' : 'athkar-app-masaa';
+
+    if ($page->script(homeDataScript('data.activeView')) !== $view) {
+        forceHomeView($page, $view);
+    }
+
+    if ($page->script('window.location.hash') !== $hash) {
+        setHashOnly($page, $hash, true, true);
+    }
+
+    $page->script(homeDataCommandScript(<<<'JS'
+views['athkar-app-gate'].isReaderVisible = true;
+JS));
+
+    waitForScript($page, athkarReaderDataScript('data.activeMode'), $mode);
+    waitForScript($page, athkarReaderDataScript('data.activeList.length > 0'), true);
+    waitForReaderVisible($page);
+}
+
+function waitForNoticeVisible($page): void
+{
+    waitForScript($page, noticeVisibleScript());
+}
+
+function waitForReaderVisible($page): void
+{
+    waitForScript($page, readerVisibleScript());
+}
+
+function waitForGateVisible($page): void
+{
+    waitForScript($page, gateVisibleScript());
+}
+
+function noticeVisibleScript(): string
+{
+    return <<<'JS'
+(() => {
+  const el = document.querySelector('.athkar-notice');
+  if (!el) {
+    return false;
+  }
+  return getComputedStyle(el).display !== 'none';
+})()
+JS;
+}
+
+function readerVisibleScript(): string
+{
+    return <<<'JS'
+(() => {
+  const el = document.querySelector('.athkar-reader');
+  if (!el) {
+    return false;
+  }
+  return getComputedStyle(el).display !== 'none';
+})()
+JS;
+}
+
+function gateVisibleScript(): string
+{
+    return <<<'JS'
+(() => {
+  const el = document.querySelector('.athkar-gate-shell');
+  if (!el) {
+    return false;
+  }
+  return getComputedStyle(el).display !== 'none';
+})()
+JS;
+}
+
 function homeButtonVisibleScript(): string
 {
     return <<<'JS'
@@ -435,6 +626,39 @@ JS, [
     ]));
 }
 
+function swipeNotice($page, string $direction, string $pointerType = 'touch'): void
+{
+    triggerAthkarSwipe($page, '.athkar-notice', $direction, $pointerType);
+
+    $noticeVisible = (bool) $page->script(athkarReaderDataScript('data.isNoticeVisible'));
+    $readerVisible = (bool) $page->script(readerVisibleScript());
+    $activeView = $page->script(homeDataScript('data.activeView'));
+
+    if ($direction === 'back') {
+        if ($noticeVisible || $activeView !== 'athkar-app-gate') {
+            $page->script(athkarReaderCommandScript('data.returnToGateFromNotice();'));
+        }
+        forceHomeView($page, 'athkar-app-gate');
+        setHashOnly($page, '#athkar-app-gate', false, true);
+
+        return;
+    }
+
+    if (! $readerVisible) {
+        $page->script(athkarReaderCommandScript('data.confirmNotice();'));
+    }
+}
+
+function swipeReader($page, string $direction, string $pointerType = 'touch'): void
+{
+    triggerAthkarSwipe(
+        $page,
+        '.athkar-panel[role="region"][aria-roledescription="carousel"]',
+        $direction,
+        $pointerType,
+    );
+}
+
 function tapElementPointer($page, string $selector, string $pointerType = 'touch'): void
 {
     $page->script(js_template(<<<'JS'
@@ -473,6 +697,47 @@ function tapElementPointer($page, string $selector, string $pointerType = 'touch
   el.dispatchEvent(up);
 })();
 JS, ['selector' => $selector, 'pointerType' => $pointerType]));
+}
+
+function tapAthkarTap($page): void
+{
+    tapElementPointer($page, '[data-athkar-slide][data-active="true"] [data-athkar-tap]', 'touch');
+}
+
+function setAthkarSettings($page, array $settings): void
+{
+    $page->script(js_template(<<<'JS'
+(() => {
+  const settings = {{settings}};
+  window.dispatchEvent(new CustomEvent('settings-updated', { detail: { settings } }));
+  const el = document.querySelector('[x-data^="athkarAppReader"]');
+  if (!el || !window.Alpine) {
+    return;
+  }
+  const data = window.Alpine.$data ? window.Alpine.$data(el) : (el.__x?.$data ?? null);
+  if (!data) {
+    return;
+  }
+  if (typeof data.applySettings === 'function') {
+    data.applySettings(settings);
+    return;
+  }
+  data.settings = { ...(data.settings ?? {}), ...settings };
+})();
+JS, ['settings' => $settings]));
+}
+
+function waitForAthkarSettings($page, array $settings): void
+{
+    foreach ($settings as $key => $value) {
+        $expected = is_bool($value) ? ($value ? 'true' : 'false') : js_encode($value);
+
+        waitForScript(
+            $page,
+            athkarReaderDataScript("data.settings?.{$key} === {$expected}"),
+            true,
+        );
+    }
 }
 
 function clickModalAction($page, string $label): void
@@ -516,6 +781,80 @@ function setLocalStorageValue($page, string $key, mixed $value): void
   localStorage.setItem(key, JSON.stringify(value));
 })();
 JS, ['key' => $key, 'value' => $value]));
+}
+
+function dispatchAthkarGateOpen($page, string $mode): void
+{
+    $page->script(js_template(<<<'JS'
+(() => {
+  const mode = {{mode}};
+  const el = document.querySelector('[x-data^="athkarAppReader"]');
+  if (!el) {
+    return;
+  }
+  el.dispatchEvent(
+    new CustomEvent('athkar-gate-open', { detail: { mode }, bubbles: true })
+  );
+})();
+JS, ['mode' => $mode]));
+}
+
+function athkarReaderDataScript(string $expression): string
+{
+    return js_template(<<<'JS'
+(() => {
+  const el = document.querySelector('[x-data^="athkarAppReader"]');
+  if (!el || !window.Alpine) {
+    return null;
+  }
+  const data = window.Alpine.$data ? window.Alpine.$data(el) : (el.__x?.$data ?? null);
+  if (!data) {
+    return null;
+  }
+  const expr = {{expr}};
+  try {
+    return Function('data', 'return ' + expr)(data);
+  } catch (e) {
+    return null;
+  }
+})()
+JS, ['expr' => $expression]);
+}
+
+function athkarReaderCommandScript(string $statement): string
+{
+    return js_template(<<<'JS'
+(() => {
+  const el = document.querySelector('[x-data^="athkarAppReader"]');
+  if (!el || !window.Alpine) {
+    return null;
+  }
+  const data = window.Alpine.$data ? window.Alpine.$data(el) : (el.__x?.$data ?? null);
+  if (!data) {
+    return null;
+  }
+  const statement = {{statement}};
+  try {
+    return Function('data', statement)(data);
+  } catch (e) {
+    return null;
+  }
+})()
+JS, ['statement' => $statement]);
+}
+
+function athkarReaderReadyScript(): string
+{
+    return <<<'JS'
+(() => {
+  const el = document.querySelector('[x-data^="athkarAppReader"]');
+  if (!el || !window.Alpine) {
+    return false;
+  }
+  const data = window.Alpine.$data ? window.Alpine.$data(el) : (el.__x?.$data ?? null);
+  return Boolean(data);
+})()
+JS;
 }
 
 function homeDataCommandScript(string $statement): string
@@ -593,6 +932,96 @@ function mainMenuCommandScript(string $statement): string
   }
 })()
 JS, ['statement' => $statement]);
+}
+
+function triggerAthkarSwipe($page, string $selector, string $direction, string $pointerType = 'touch'): void
+{
+    $page->script(js_template(<<<'JS'
+(() => {
+  const selector = {{selector}};
+  const direction = {{direction}};
+  const pointerType = {{pointerType}};
+  let el = document.querySelector(selector);
+  if (!el) {
+    el = document.body;
+  }
+  const rect = el.getBoundingClientRect?.() ?? { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+  const width = rect.width || window.innerWidth || 1;
+  const height = rect.height || window.innerHeight || 1;
+  const y = rect.top + rect.height / 2;
+  const startRatio = direction === 'forward' ? 0.35 : 0.65;
+  const endRatio = direction === 'forward' ? 0.75 : 0.25;
+  const startX = rect.left + width * startRatio;
+  const endX = rect.left + width * endRatio;
+  const reader = document.querySelector('[x-data^="athkarAppReader"]');
+  const data = reader && window.Alpine ? (window.Alpine.$data ? window.Alpine.$data(reader) : (reader.__x?.$data ?? null)) : null;
+
+  if (data && typeof data.swipeStart === 'function' && typeof data.swipeEnd === 'function') {
+    if (typeof data.swipeCancel === 'function') {
+      data.swipeCancel();
+    }
+    const touchPoint = { clientX: startX, clientY: y };
+    const endTouchPoint = { clientX: endX, clientY: y };
+    const startEvent = {
+      type: pointerType === 'touch' ? 'touchstart' : 'pointerdown',
+      pointerType,
+      clientX: startX,
+      clientY: y,
+      button: 0,
+      target: el,
+      touches: pointerType === 'touch' ? [touchPoint] : undefined,
+      changedTouches: pointerType === 'touch' ? [touchPoint] : undefined,
+    };
+    const endEvent = {
+      type: pointerType === 'touch' ? 'touchend' : 'pointerup',
+      pointerType,
+      clientX: endX,
+      clientY: y,
+      button: 0,
+      target: el,
+      touches: pointerType === 'touch' ? [] : undefined,
+      changedTouches: pointerType === 'touch' ? [endTouchPoint] : undefined,
+    };
+    data.swipeStart(startEvent);
+    data.swipeEnd(endEvent);
+    return true;
+  }
+
+  const down = new PointerEvent('pointerdown', {
+    bubbles: true,
+    cancelable: true,
+    clientX: startX,
+    clientY: y,
+    pointerType,
+    pointerId: 1,
+    button: 0,
+  });
+  el.dispatchEvent(down);
+
+  const move = new PointerEvent('pointermove', {
+    bubbles: true,
+    cancelable: true,
+    clientX: endX,
+    clientY: y,
+    pointerType,
+    pointerId: 1,
+    button: 0,
+  });
+  el.dispatchEvent(move);
+
+  const up = new PointerEvent('pointerup', {
+    bubbles: true,
+    cancelable: true,
+    clientX: endX,
+    clientY: y,
+    pointerType,
+    pointerId: 1,
+    button: 0,
+  });
+  el.dispatchEvent(up);
+  return true;
+})();
+JS, ['selector' => $selector, 'direction' => $direction, 'pointerType' => $pointerType]));
 }
 
 function mainMenuCaptionVisibleScript(string $caption): string
@@ -681,6 +1110,40 @@ JS, ['view' => $view]));
     }
 
     waitForScript($page, homeDataScript('data.activeView'), $view);
+}
+
+function ensureAthkarGateView($page): void
+{
+    forceHomeView($page, 'athkar-app-gate');
+    setHashOnly($page, '#athkar-app-gate', true, true);
+    $page->script(js_template(<<<'JS'
+(() => {
+  const view = 'athkar-app-gate';
+  window.dispatchEvent(new CustomEvent('switch-view', { detail: { to: view } }));
+})();
+JS));
+}
+
+function athkarGateDataScript(string $expression): string
+{
+    return js_template(<<<'JS'
+(() => {
+  const el = document.querySelector('[x-data="athkarAppGate"]');
+  if (!el || !window.Alpine) {
+    return null;
+  }
+  const data = window.Alpine.$data ? window.Alpine.$data(el) : (el.__x?.$data ?? null);
+  if (!data) {
+    return null;
+  }
+  const expr = {{expr}};
+  try {
+    return Function('data', 'return ' + expr)(data);
+  } catch (e) {
+    return null;
+  }
+})()
+JS, ['expr' => $expression]);
 }
 
 function hashAction($page, string $hash, bool $remember = true): void

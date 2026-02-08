@@ -2,6 +2,6 @@
 
 return [
 
-    'app_name' => 'Template Native',
+    'app_name' => 'متسق',
 
 ];

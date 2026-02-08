@@ -2,7 +2,7 @@
 
 return [
 
-    'under_development' => 'Under Development',
-    'language' => 'Language',
+    // 'under_development' => 'Under Development',
+    // 'language' => 'Language',
 
 ];

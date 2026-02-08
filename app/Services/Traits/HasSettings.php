@@ -13,24 +13,22 @@ use Filament\Support\Enums\TextSize;
 
 trait HasSettings
 {
+    /**
+     * @return array<string, bool>
+     */
+    public static function settingsDefaults(): array
+    {
+        return [
+            'does_automatically_switch_completed_athkar' => true,
+            'does_clicking_switch_athkar_too' => true,
+            'does_prevent_switching_athkar_until_completion' => true,
+            'does_skip_notice_panels' => false,
+        ];
+    }
+
     public function settingsAction(): Action
     {
-        $settingDefinitions = Setting::definitions();
-        $athkarSchema = [];
-
-        foreach ($settingDefinitions as $key => $definition) {
-            $checkbox = Components\Checkbox::make($key)
-                ->default($definition['default'])
-                ->label($definition['label']);
-
-            if (array_key_exists('help', $definition)) {
-                $checkbox->belowContent([
-                    Text::make($definition['help'])->size(TextSize::ExtraSmall),
-                ]);
-            }
-
-            $athkarSchema[] = $checkbox;
-        }
+        $settingsKeysCollection = collect(self::settingsDefaults())->keys();
 
         return Action::make('settings')
             ->label('الإعدادات')
@@ -38,18 +36,44 @@ trait HasSettings
             ->modalSubmitActionLabel('حفظ')
             ->fillForm(fn (): array => $this->loadSettings())
             ->schema([
-                Fieldset::make('المجموعة الأولى')
+                Fieldset::make('الأذكار')
                     ->columns([
                         'default' => 1,
                         'md' => 2,
                         'xl' => 3,
                     ])
-                    ->schema($athkarSchema),
+                    ->schema([
+                        // * Auto-navigate
+                        Components\Checkbox::make($settingsKeysCollection->get(0))
+                            ->default(true)
+                            ->label('1. الانتقال التلقائي عند اكتمال عدد الذكر.'),
+
+                        // * Click to navigate also, not just swipe
+                        Components\Checkbox::make($settingsKeysCollection->get(1))
+                            ->default(true)
+                            ->label('2. الضغط والنقر يقوم بالانتقال أيضا للذكر التالي، وليس مجرد السحب فحسب.')
+                            ->belowContent([
+                                Text::make('ولكن إن قمت بالعودة للأذكار التامة، أو كان الخيار الأذكار (1) معطلا، فالضغط يقوم بزيادة العدّ.')->size(TextSize::ExtraSmall),
+                            ]),
+
+                        // * Prevent navigating forward to unreached athar or revisting completed modes
+                        Components\Checkbox::make($settingsKeysCollection->get(2))
+                            ->default(true)
+                            ->label('3. المنع من الانتقال بين الأذكار حتى إنهائها أولًا.')
+                            ->belowContent([
+                                Text::make('وكذلك يقوم بالسماح بإعادة استعراض أذكار الصباح والمساء حتى عند إتمامها.')->size(TextSize::ExtraSmall),
+                            ]),
+
+                        // * Skip notice panels
+                        Components\Checkbox::make($settingsKeysCollection->get(3))
+                            ->default(false)
+                            ->label('4. تجاوز رسائل التعريف أو التهنئة وما شابه.'),
+                    ]),
             ])
             ->action(function (array $data): void {
                 $savedSettings = [];
 
-                foreach (Setting::defaults() as $name => $default) {
+                foreach (self::settingsDefaults() as $name => $default) {
                     $value = array_key_exists($name, $data) ? (bool) $data[$name] : $default;
                     $savedSettings[$name] = $value;
 
@@ -72,6 +96,6 @@ trait HasSettings
     {
         $storedSettings = Setting::query()->pluck('value', 'name')->all();
 
-        return array_replace(Setting::defaults(), $storedSettings);
+        return array_replace(self::settingsDefaults(), $storedSettings);
     }
 }

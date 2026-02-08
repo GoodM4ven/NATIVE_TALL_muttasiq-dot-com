@@ -16,14 +16,13 @@ export default defineConfig({
         },
     },
     server: {
-        cors: { origin: `*` },
-        watch: {
-            ignored: [
-                '**/storage/framework/views/**',
-                '**/nativephp/**',
-                '**/vendor/**',
-                '**/node_modules/**',
-            ],
+        host: true,
+        strictPort: true,
+        port: 5173,
+        hmr: {
+            host: 'vite-muttasiq.dev.localhost',
+            protocol: 'wss',
+            clientPort: 443,
         },
     },
     plugins: [
