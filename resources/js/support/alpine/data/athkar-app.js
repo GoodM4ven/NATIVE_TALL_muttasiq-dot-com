@@ -789,7 +789,11 @@ document.addEventListener('alpine:init', () => {
             this.stopTextShimmer();
 
             setTimeout(() => {
-                if (!this.views[`athkar-app-gate`].isReaderVisible) {
+                if (
+                    !this.views[`athkar-app-gate`].isReaderVisible &&
+                    !this.isNoticeVisible &&
+                    !this.isCompletionVisible
+                ) {
                     this.activeMode = null;
                 }
             }, this.readerLeaveMs);

@@ -224,6 +224,35 @@ it('persists athkar counts, overcounts, and restores the reader on reload', func
     waitForScript($page, athkarReaderDataScript('data.countAt('.$singleIndex.')'), 2);
 });
 
+it('restores the notice on reload and allows continuing to the reader when notice panels are enabled', function () {
+    $page = visit('/');
+
+    resetBrowserState($page);
+    openAthkarReader($page, 'sabah', false);
+
+    $settings = [
+        'does_skip_notice_panels' => false,
+        'does_prevent_switching_athkar_until_completion' => false,
+    ];
+    setAthkarSettings($page, $settings);
+    waitForAthkarSettings($page, $settings);
+
+    waitForReaderVisible($page);
+    waitForScript($page, homeDataScript('data.activeView'), 'athkar-app-sabah');
+    waitForScript($page, athkarReaderDataScript('data.activeMode'), 'sabah');
+
+    $page->refresh();
+
+    waitForAlpineReady($page);
+    waitForScript($page, athkarReaderDataScript('data.settings.does_skip_notice_panels'), false);
+    waitForNoticeVisible($page);
+
+    confirmAthkarNotice($page);
+
+    waitForReaderVisible($page);
+    waitForScript($page, athkarReaderDataScript('data.activeMode'), 'sabah');
+});
+
 it('locks completed modes on the gate unless setting 3 is disabled', function () {
     $page = visit('/');
 

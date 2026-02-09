@@ -65,7 +65,6 @@
                 Object.keys(this.views).forEach((key) => {
                     this.views[key].isOpen = key === view;
                 });
-
                 if (persist) {
                     this.activeView = view;
                 }

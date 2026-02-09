@@ -160,7 +160,7 @@ The assets used for the app so far can be found in this [Penpot](https://penpot.
 
 ### Contributors
 
-- [GoodM4ven](https://github.com/GoodM4ven) (أبو عبد الله، محمد بن أحمد الحاسوبي)
+- [GoodM4ven](https://github.com/GoodM4ven) (أبو عبد الله الحاسوبي)
 
 ### Assets
 
