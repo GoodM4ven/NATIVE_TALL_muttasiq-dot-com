@@ -55,6 +55,21 @@
 - [ ] إمكانية جرد الآثار باتساق
 
 
+## الدعم
+
+تستطيع دعم تطوير وصيانة المشروع هذا عن طريق الاشتراك ([بمبلغ شهري](https://github.com/sponsors/GoodM4ven))، أو عن طريق التبرع [لمرة واحدة](https://github.com/sponsors/GoodM4ven?frequency=one-time&sponsor=GoodM4ven)، وذلك في المنصات التالية:
+- [Github](https://github.com/sponsors/GoodM4ven)
+- [Patreon](https://patreon.com/GoodM4ven)
+- [BuyMeCoffe](https://buymeacoffee.com/goodm4ven)
+
+وإن كنت مطورًا أو مصمّما، وتودّ دعم هذا المشروع، فقم بتفقد القسم المخصص في الأسفل.
+
+والله المستعان.
+
+### الداعمون
+
+- [قناة الرقية الشرعية](t.me/Ruqyah011) (لأبي عمر، يوسف)
+
 </div>
 <div align="left">
 <br>
@@ -68,19 +83,27 @@ The web app is built using one of the most standard and well-documented web tech
 
 Any changes to the `main` branch is going to **directly update the web app**.
 
-Therefore, PRs are not going to be directed to `main` branch, but rather to `dev` branch, please!
+**Therefore, PRs are NOT going to be directed to `main` branch, but rather to `dev` branch, please!**
 
 
 ## Coding
 
+### General
+
 - [lara-stacker](https://github.com/GoodM4ven/CLI_LARAVEL_lara-stacker) can be used for readying up your Ubuntu as a solid development environment.
 - [favycon](https://github.com/ruisaraiva19/favycon) is what had been used to generate all the possible favicon sizes, and their meta links, that were put in [favicon.blade.php](./resources/views/partials/favicon.blade.php) partial view.
-- 
+- [TALL-STANDARDS](https://github.com/GoodM4ven/WIKI_WEB_tall-standards) wikipedia contains a decent bit of tips for dealing with the tall-stack and some other related tools and technologies. (The project isn't complete)
+
+### Native
+
+If you have experience with [Kotlin](https://kotlinlang.org/) or [Swift](https://www.swift.org/), [electronJS](https://www.electronjs.org/) is communicating with them under the hood in [NativePHP](https://nativephp.com). You can implement those changes as PHP [plugins](https://nativephp.com/plugins) of course, and even make them paid to support yourself!
+
+So if you're really up to it, take a look at our [missions](#المهام) above and see if you can implement the native features needed.
 
 
 ## Design
 
-If you're a designer, but you don't know much about coding, feel free to post in [discussions](https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com/discussions) any contributions to how you think visuals can be improved; supported by photos and videos, of course.
+If you're a designer, or perhaps you don't know much about coding, feel free to post in [discussions](https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com/discussions) any contributions to how you think visuals can be improved; supported by photos and videos, of course.
 
 The icon is set to be 1024x1024 pixels:
 
@@ -99,8 +122,8 @@ As for the splash screen, it has to be a portrait 1080x1920 pixels:
 
 <div align="left">
 
-The assets used for the app so far can be found in this online draft:<br>
-(penpot link)
+The assets used for the app so far can be found in this [Penpot](https://penpot.app) file:<br>
+[Design.penpot](./.assets/design.penpot)
 
 
 ## Resources
@@ -110,6 +133,28 @@ The assets used for the app so far can be found in this online draft:<br>
 - [https://laravel-package-ocean.com](https://laravel-package-ocean.com)
 - [https://filamentphp.com/plugins](https://filamentphp.com/plugins)
 - [https://nativephp.com/plugins](https://nativephp.com/plugins)
+
+
+## Credits
+
+### Contributors
+
+### Assets
+
+احذر<br>
+ذوات<br>
+الأرواح
+
+- [Morning athkar background](https://www.freepik.com/free-ai-image/beautiful-anime-landscape-cartoon-scene_94944933.htm#fromView=search&page=3&position=17&uuid=7fbc119d-abf3-4f15-b3b3-7073afb85ff8&query=Anime+nature+wallpaper+day)
+- [Night athkar background](https://www.freepik.com/free-ai-image/digital-art-isolated-house_93658018.htm#fromView=search&page=1&position=36&uuid=7fbc119d-abf3-4f15-b3b3-7073afb85ff8&query=Anime+nature+wallpaper+day) (modified via ChatGPT)
+
+### Technologies
+- [ChatGPT](https://chatgpt.com) and [Codex CLI](https://developers.openai.com/codex/cli/)
+- [Laravel](https://laravel.com) entire ecosystem
+- [TALL-Stack](https://tallstack.dev)
+- [FilamentPHP](https://filamentphp.com)
+- [NativePHP](https://nativephp.com)
+- [VSCodium](https://vscodium.com) (the project was removed and then recovered, file by file, using tons of versions for each file from **the no-telemetry cache**)
 
 
 </div>

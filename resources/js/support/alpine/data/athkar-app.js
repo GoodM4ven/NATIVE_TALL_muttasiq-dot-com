@@ -34,7 +34,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             this.isEnhanced = nextEnhanced;
-            this.spillTargetOpacity = this.isEnhanced ? 0.55 : 0.3;
+            this.spillTargetOpacity = this.isEnhanced ? 0.55 : 0.45;
         },
         animateSplit(value) {
             if (this.splitAnimation?.pause) {
@@ -208,6 +208,7 @@ document.addEventListener('alpine:init', () => {
         completionHack: {
             isVisible: false,
             isPinned: false,
+            isArmed: false,
             canHover: window.matchMedia
                 ? window.matchMedia('(hover: hover) and (pointer: fine)').matches
                 : false,
@@ -806,9 +807,12 @@ document.addEventListener('alpine:init', () => {
 
             return this.transitionStyles();
         },
-        showCompletionHack({ pinned = false } = {}) {
+        showCompletionHack({ pinned = false, armed = null } = {}) {
             this.completionHack.isVisible = true;
             this.completionHack.isPinned = pinned;
+            if (!this.completionHack.canHover) {
+                this.completionHack.isArmed = armed ?? true;
+            }
         },
         hideCompletionHack({ force = false } = {}) {
             if (!force && this.completionHack.isPinned) {
@@ -817,6 +821,7 @@ document.addEventListener('alpine:init', () => {
 
             this.completionHack.isVisible = false;
             this.completionHack.isPinned = false;
+            this.completionHack.isArmed = false;
         },
         toggleCompletionHack() {
             if (this.completionHack.canHover) {

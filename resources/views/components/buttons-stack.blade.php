@@ -20,6 +20,7 @@
         items: [],
         observer: null,
         attributeObserver: null,
+        stackTransitionMs: 200,
         shouldManageDisplay(item) {
             if (!item) {
                 return false;
@@ -130,9 +131,23 @@
                 this.isQuickStackOpen = false;
                 this.activeIndex = 0;
                 this.updateLayout();
+                setTimeout(() => this.resetStackItemState(item), 0);
             };
     
             this.$refs.stack.addEventListener('click', this.handleClick, true);
+        },
+        resetStackItemState(item) {
+            const button = item?.querySelector?.('button');
+    
+            if (button) {
+                button.blur();
+                const data = window.Alpine?.$data
+                    ? window.Alpine.$data(button)
+                    : (button.__x?.$data ?? null);
+                if (data && typeof data === 'object' && 'hovered' in data) {
+                    data.hovered = false;
+                }
+            }
         },
         anchorClasses() {
             if (!this.respectingStack) {
@@ -199,6 +214,8 @@
                 item.style.left = '0';
                 item.style.right = 'auto';
                 item.style.transform = `translateX(${translateX}rem)`;
+                item.style.transition = `transform ${this.stackTransitionMs}ms ease`;
+                item.style.willChange = 'transform';
                 item.style.zIndex = String(this.itemZIndex(index));
                 if (this.shouldManageDisplay(item)) {
                     item.style.display = 'block';
@@ -212,6 +229,8 @@
             item.style.left = '';
             item.style.right = '';
             item.style.transform = '';
+            item.style.transition = '';
+            item.style.willChange = '';
             item.style.zIndex = '';
             if (this.shouldManageDisplay(item)) {
                 item.style.display = '';

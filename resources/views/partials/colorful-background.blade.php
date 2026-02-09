@@ -8,7 +8,7 @@
     x-transition:leave="transition ease-in duration-300"
     x-transition:leave-start="opacity-100"
     x-transition:leave-end="opacity-0"
-    x-show="$store.bp.is('sm+') && (views[`main-menu`].isOpen || views[`athkar-app-gate`].isReaderVisible)"
+    x-show="(views[`main-menu`].isOpen || views[`athkar-app-gate`].isReaderVisible)"
 >
     <div
         class="absolute inset-0 opacity-10 transition-opacity duration-1000 will-change-[opacity]"

@@ -559,6 +559,7 @@
                 </span>
                 <div
                     class="relative flex-1"
+                    data-athkar-completion-toggle
                     x-on:mouseenter="showCompletionHack()"
                     x-on:mouseleave="hideCompletionHack()"
                     x-on:click="toggleCompletionHack()"
@@ -625,9 +626,10 @@
                         <!-- Floating Mobile Counter (togglable) -->
                         <div
                             class="delay-250 pointer-events-none absolute right-2 top-2 z-30 overflow-visible opacity-0 transition-opacity sm:hidden"
+                            data-athkar-mobile-counter
                             x-bind:class="{
                                 /* overall visibility condition */
-                                'opacity-100! pointer-events-auto': (requiredCount(index) > 1 || countAt(index) >
+                                'opacity-100! pointer-events-auto!': (requiredCount(index) > 1 || countAt(index) >
                                         requiredCount(index)) &&
                                     (countAt(index) !== requiredCount(index)),
                             }"
@@ -635,7 +637,7 @@
                             <div class="group relative">
                                 <!-- Top Right Counter -->
                                 <button
-                                    class="relative z-30 size-7 transition-all"
+                                    class="relative z-30 size-9 touch-manipulation transition-all"
                                     data-hint-allow
                                     type="button"
                                     aria-label="العدد"
@@ -700,8 +702,9 @@
                                     type="button"
                                     aria-label="إتمام الذكر"
                                     x-bind:class="{
-                                        'opacity-100 scale-100 pointer-events-auto': isHintOpen(index),
+                                        'opacity-100! scale-100 pointer-events-auto!': isHintOpen(index),
                                     }"
+                                    x-on:click.stop="completeThikr(index)"
                                 >
                                     <x-icon
                                         class="h-4 w-4"

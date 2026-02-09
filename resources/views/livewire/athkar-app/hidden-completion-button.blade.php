@@ -4,7 +4,12 @@
         type="button"
         aria-label="إتمام جميع الأذكار"
         x-bind:class="completionHack.isVisible && 'opacity-100!'"
-        x-on:click.stop="$wire.mountAction('completion')"
+        x-bind:style="completionHack.isVisible ? 'pointer-events: auto;' : 'pointer-events: none;'"
+        x-on:click.stop="
+            if (!completionHack.isVisible) { showCompletionHack({ pinned: true, armed: true }); return; }
+            if (!completionHack.canHover && !completionHack.isArmed) { completionHack.isArmed = true; return; }
+            $wire.mountAction('completion');
+        "
     >
         <x-icon
             class="h-4 w-4"

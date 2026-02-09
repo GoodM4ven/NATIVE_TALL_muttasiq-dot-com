@@ -28,6 +28,17 @@
             --spill-blur: 0px !important;
         }
 
+        @media (max-width: 639px) {
+            .athkar-gate-wrap {
+                --tilt: 5%;
+                --overlap: 1%;
+                --divider-width: 0.9%;
+                --divider-glow-width: 2.6%;
+                --radius: 18px;
+                --radius-bottom: 20px;
+            }
+        }
+
         .dark .athkar-gate-wrap {
             --ping-color: rgba(148, 163, 184, 0.45);
             --edge-glow: rgba(56, 189, 248, 0.3);
@@ -39,6 +50,25 @@
                 inset 0 1px 0 rgba(255, 255, 255, 0.2);
             backdrop-filter: none;
             -webkit-backdrop-filter: none;
+        }
+
+        .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__glass {
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .dark .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__glass {
+            background: rgba(2, 6, 23, 0.45);
+        }
+
+        .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__spill {
+            filter: none;
+        }
+
+        .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__spill-image {
+            opacity: 0.5;
+            transform: scale(1.03);
         }
 
         .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__divider {
@@ -95,6 +125,36 @@
             box-shadow:
                 0 40px 70px rgba(2, 6, 23, 0.65),
                 inset 0 1px 0 rgba(226, 232, 240, 0.18);
+        }
+
+        @media (max-width: 639px) {
+            .athkar-gate {
+                background:
+                    linear-gradient(150deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.07)) padding-box,
+                    linear-gradient(120deg,
+                        rgba(148, 163, 184, 0.35),
+                        rgba(125, 211, 252, 0.5),
+                        rgba(148, 163, 184, 0.22)) border-box;
+                box-shadow:
+                    0 26px 52px rgba(15, 23, 42, 0.22),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            }
+
+            .dark .athkar-gate {
+                background:
+                    linear-gradient(155deg, rgba(15, 23, 42, 0.92), rgba(2, 6, 23, 0.78)) padding-box,
+                    linear-gradient(120deg,
+                        rgba(148, 163, 184, 0.28),
+                        rgba(56, 189, 248, 0.38),
+                        rgba(30, 41, 59, 0.36)) border-box;
+                box-shadow:
+                    0 30px 56px rgba(2, 6, 23, 0.6),
+                    inset 0 1px 0 rgba(226, 232, 240, 0.16);
+            }
+
+            .athkar-gate__divider {
+                opacity: 0.82;
+            }
         }
 
         .athkar-gate__glass {
@@ -384,12 +444,12 @@
                 '--split': `${splitValue}%`,
                 '--spill-opacity': spillOpacity,
                 '--spill-transition': `${spillTransitionMs}ms`,
-                '--spill-inset': isEnhanced ? '-28vmax' : '-40vmax',
-                '--spill-blur': isEnhanced ? '6px' : '2px',
-                '--spill-scale': isEnhanced ? '1.06' : '1.01',
+                '--spill-inset': isEnhanced ? '-28vmax' : '-26vmax',
+                '--spill-blur': isEnhanced ? '6px' : '0px',
+                '--spill-scale': isEnhanced ? '1.06' : '1.03',
                 '--spill-split': `${splitValue}%`,
-                '--gate-blur': isEnhanced ? '14px' : '2px',
-                '--divider-glow-blur': isEnhanced ? '6px' : '2px',
+                '--gate-blur': isEnhanced ? '14px' : '0px',
+                '--divider-glow-blur': isEnhanced ? '6px' : '0px',
             }"
             x-effect="syncPerfProfile(); syncSpillState(views['athkar-app-gate'].isOpen);"
             x-on:click.outside="handleOutsideActivation()"

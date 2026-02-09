@@ -73,39 +73,3 @@ it('swipes the notice forward and back on desktop', function () {
 
     waitForReaderVisible($page);
 });
-
-// it('swipes the notice forward and back on mobile', function () {
-//     $page = visitMobile('/');
-
-//     resetBrowserState($page, true);
-//     openAthkarGate($page, true);
-
-//     $settings = ['does_skip_notice_panels' => false];
-//     setAthkarSettings($page, $settings);
-//     waitForAthkarSettings($page, $settings);
-//     openAthkarNotice($page, 'sabah', true);
-//     waitForNoticeVisible($page);
-
-//     swipeNotice($page, 'back', 'touch');
-
-//     waitForScript($page, athkarReaderDataScript('data.isNoticeVisible'), false);
-//     waitForScript($page, athkarReaderDataScript('data.activeMode'), null);
-//     waitForGateVisible($page);
-
-//     openAthkarNotice($page, 'sabah', true);
-//     waitForNoticeVisible($page);
-
-//     swipeNotice($page, 'forward', 'touch');
-
-//     waitForReaderVisible($page);
-// });
-
-// it('stacks the home button in the gate on mobile', function () {
-//     $page = visitMobile('/');
-
-//     resetBrowserState($page, true);
-
-//     openAthkarGate($page, true);
-
-//     waitForScript($page, homeButtonPositionScript(), 'absolute');
-// });
