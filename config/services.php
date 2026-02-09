@@ -37,4 +37,9 @@ return [
         ],
     ],
 
+    'athkar' => [
+        'base_url' => env('ATHKAR_API_BASE_URL', 'https://muttasiq.com'),
+        'timeout' => env('ATHKAR_API_TIMEOUT', 8),
+    ],
+
 ];
