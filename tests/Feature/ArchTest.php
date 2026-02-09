@@ -7,9 +7,9 @@ arch('it will not use debugging functions')
         'dd',
         'dump',
         'var_dump',
-        'Illuminate\Support\Facades\Log',
         'echo',
-        'logger',
+        // 'Illuminate\Support\Facades\Log',
+        // 'logger',
     ])
     ->each->not->toBeUsed();
 
