@@ -648,11 +648,7 @@
                                     <!-- Ring -->
                                     <div
                                         class="athkar-counter-ring absolute inset-0 rounded-full"
-                                        x-bind:style="`--progress: ${
-                                                                                                                                                                                                                                                                                                            countAt(index) && requiredCount(index)
-                                                                                                                                                                                                                                                                                                                ? Math.min(100, (countAt(index) / requiredCount(index)) * 100)
-                                                                                                                                                                                                                                                                                                                : 0
-                                                                                                                                                                                                                                                                                                        }%`"
+                                        x-bind:style="`--progress: ${countAt(index)&&requiredCount(index)?Math.min(100, (countAt(index) / requiredCount(index)) * 100):0}%`"
                                     ></div>
 
                                     <!-- Background -->

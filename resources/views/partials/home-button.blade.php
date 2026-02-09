@@ -8,6 +8,6 @@
     <x-action-button
         data-testid="settings-button"
         :iconName="'material-design.grid-view'"
-        x-on:click="$hashAction('main-menu', { remember: true })"
+        x-on:click="$viewNav('main-menu')"
     />
 </div>

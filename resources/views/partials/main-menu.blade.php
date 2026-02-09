@@ -13,7 +13,7 @@
         <x-main-menu.item
             :iconName="'zondicon.chat-bubble-dots'"
             :caption="'الأذكار'"
-            :onClickCallback="'() => ($hashAction(`athkar-app-gate`, { remember: true }))'"
+            :onClickCallback="'() => ($viewNav(`athkar-app-gate`))'"
         />
         <x-main-menu.item
             :iconName="'fontawesome.solid-hand-holding'"

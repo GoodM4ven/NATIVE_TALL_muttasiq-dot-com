@@ -8,6 +8,18 @@
             lock: null,
             isSettingsOpen: false,
             activeView: $persist('main-menu').as('app-active-view'),
+            viewTree: {
+                'main-menu': {
+                    children: {
+                        'athkar-app-gate': {
+                            children: {
+                                'athkar-app-sabah': {},
+                                'athkar-app-masaa': {},
+                            },
+                        },
+                    },
+                },
+            },
             views: {
                 'main-menu': {
                     title: @js(view_title(\App\Services\Enums\ViewName::MainMenu)),
@@ -28,7 +40,7 @@
                 },
             },
             init() {
-                this.applyViewState(this.activeView);
+                this.applyViewState('main-menu', { persist: false });
             },
             runHashAction(callback) {
                 if (window.__hashActionBypassLock) {
@@ -47,21 +59,25 @@
                     callback();
                 }
             },
-            applyViewState(nextView) {
+            applyViewState(nextView, { persist = true } = {}) {
                 const view = this.views?.[nextView] ? nextView : 'main-menu';
         
                 Object.keys(this.views).forEach((key) => {
                     this.views[key].isOpen = key === view;
                 });
-        
-                this.activeView = view;
+
+                if (persist) {
+                    this.activeView = view;
+                }
         
                 if (this.views[view]) {
                     document.title = this.views[view].title;
                 }
             },
         }"
-        x-bind:data-hash-default="activeView"
+        x-bind:data-view-tree="JSON.stringify(viewTree)"
+        x-bind:data-hash-default="'main-menu'"
+        x-bind:data-hash-restore="activeView"
         x-hash-actions="{
             '#main-menu': () => runHashAction(() => {
                 $dispatch('switch-view', { to: 'main-menu' });

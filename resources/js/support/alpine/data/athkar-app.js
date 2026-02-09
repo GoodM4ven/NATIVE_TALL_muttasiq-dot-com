@@ -428,7 +428,7 @@ document.addEventListener('alpine:init', () => {
                     }
 
                     this.activeMode = null;
-                    this.$hashAction('athkar-app-gate');
+                    this.$viewNav('athkar-app-gate');
                 }
             }
         },
@@ -677,7 +677,7 @@ document.addEventListener('alpine:init', () => {
             this.resumeModeIndex();
 
             if (updateHash) {
-                this.$hashAction('athkar-app-' + mode, { remember: true });
+                this.$viewNav('athkar-app-' + mode);
             }
 
             this.nav.suppressUntil = performance.now() + 250;
@@ -777,7 +777,7 @@ document.addEventListener('alpine:init', () => {
             if (previousHash === '#athkar-app-gate') {
                 window.history.back();
             } else {
-                this.$hashAction('athkar-app-gate', { remember: false, force: false });
+                this.$viewNav('athkar-app-gate', { force: false });
             }
 
             this.softCloseMode();
@@ -1486,7 +1486,7 @@ document.addEventListener('alpine:init', () => {
                 setTimeout(() => {
                     if (!this.views[`athkar-app-gate`].isReaderVisible) {
                         this.activeMode = null;
-                        this.$hashAction('athkar-app-gate');
+                        this.$viewNav('athkar-app-gate');
                     }
                 }, this.readerLeaveMs);
 
@@ -1509,7 +1509,7 @@ document.addEventListener('alpine:init', () => {
             setTimeout(() => {
                 if (!this.views[`athkar-app-gate`].isReaderVisible) {
                     this.activeMode = null;
-                    this.$hashAction('athkar-app-gate');
+                    this.$viewNav('athkar-app-gate');
                 }
             }, this.readerLeaveMs);
         },
