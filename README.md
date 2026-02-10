@@ -11,8 +11,6 @@
     <img width="100%" alt="telegram post screenshot" src="https://github.com/user-attachments/assets/470e98bf-deea-46cd-8459-d822734ce90b" />
 </a>
 
-
-
 ### المتصفح
 
 لتجربة التطبيق الآن من أي متصفح:<br>
@@ -22,10 +20,9 @@ https://muttasiq.com
 <br><br>
 <img src=".assets/images/screenshots/desktop/athkar-app-reader-light.png" alt="The athkar app reader - light mode" height="320"/>
 
-
 ### الأندرويد
 
-قريبًا، بإذن الله... (الشرح في فيديو التليجرام [في الأعلى](#متسق))
+قريبًا، بإذن الله... (الشرح في فيديو التليجرام [في الأعلى](#مُتَّسِق))
 
 <img src=".assets/images/screenshots/android/athkar-app-gate-light-notification.jpg" alt="A notification message showing in athkar app gate - light mode" height="400"/>
 <span>&nbsp;&nbsp;</span>
@@ -101,6 +98,7 @@ https://muttasiq.com
 <div align="left">
 <br>
 
+
 # Development
 
 [![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/goodm4ven/NATIVE_TALL_muttasiq-dot-com/pest.yml?branch=main&label=tests&style=for-the-badge&color=forestgreen)](https://github.com/goodm4ven/NATIVE_TALL_muttasiq-dot-com/actions?query=workflow%3Apest+branch%3Amain)
@@ -149,7 +147,7 @@ As for the splash screen, it has to be a portrait 1080x1920 pixels:
 
 <div align="left">
 
-The assets used for the app so far can be found in this [Penpot](https://penpot.app) file:<br>
+The assets used for the app so far can be found in this online [Penpot](https://design.penpot.app/#/workspace?team-id=82e31d90-3829-8139-8002-c1de54898224&file-id=ff5222bd-026b-80fd-8007-8c6597adff77&page-id=71bc4f81-468d-8163-8007-8a43ee7cd755) draft (request needed), which you preview quickly from [here](https://design.penpot.app/#/view?file-id=ff5222bd-026b-80fd-8007-8c6597adff77&page-id=71bc4f81-468d-8163-8007-8a43ee7cd755&section=interactions&frame-id=987eaac6-303b-803f-8007-8ce38438e2c9&index=0&share-id=57e6ab48-ab48-8193-8007-8ce21800cfa5) or edit it freely using this file:<br>
 [Design.penpot](./.assets/design.penpot)
 
 
