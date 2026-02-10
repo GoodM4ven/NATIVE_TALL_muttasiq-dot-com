@@ -104,51 +104,63 @@ https://muttasiq.com
 [![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/goodm4ven/NATIVE_TALL_muttasiq-dot-com/pest.yml?branch=main&label=tests&style=for-the-badge&color=forestgreen)](https://github.com/goodm4ven/NATIVE_TALL_muttasiq-dot-com/actions?query=workflow%3Apest+branch%3Amain)
 [![Coverage Status](https://img.shields.io/codecov/c/github/goodm4ven/NATIVE_TALL_muttasiq-dot-com/main?style=for-the-badge&color=purple)](https://codecov.io/gh/goodm4ven/NATIVE_TALL_muttasiq-dot-com)
 
-The web app is built using one of the most standard and well-documented web technology stacks, known as the [TALL stack](https://tallstack.dev). As for the native app is built using [NativePHP](https://nativephp.com)’s new mobile builder, which relies on a wide ecosystem of technologies—without requiring direct interaction with them.
+**The web app** is built using one of the most standard and well-documented web technology stacks, known as the [TALL stack](https://tallstack.dev). Get a grip over the general concepts in the docs as soon as possible - after considering the tip below:
+- [https://tailwindcss.com/docs](https://tailwindcss.com/docs)
+- [https://alpinejs.dev/docs](https://alpinejs.dev/docs)
+- [https://livewire.laravel.com/docs](https://livewire.laravel.com/docs)
+- [https://laravel.com/docs](https://laravel.com/docs)
+- [https://filamentphp.com/docs](https://filamentphp.com/docs)
+- [https://pestphp.com/docs](https://pestphp.com/docs)
 
-Any changes to the `main` branch is going to **directly update the web app**.
+**The native apps**, are built using [NativePHP](https://nativephp.com). And with their new mobile builder, all platforms are covered. It relies on a wide ecosystem of technologies — without requiring YOU to directly interact with them.
+- Check out their [desktop](https://nativephp.com/docs/desktop) AND [mobile](https://nativephp.com/docs/mobile) documentation please.
+- If you have experience with [Kotlin](https://kotlinlang.org/) or [Swift](https://www.swift.org/), [electronJS](https://www.electronjs.org/) is communicating with them under the hood in NativePHP. You can implement those changes as PHP [plugins](https://nativephp.com/plugins) of course, and even make them paid to support yourself!
 
-**Therefore, PRs are NOT going to be directed to `main` branch, but rather to `dev` branch, please!**
+</div>
 
+> [!TIP]
+> You can also start learning about ALL of these technologies by using [Laravel Boost](https://laravel.com/docs/boost), which does almost everything for you if you give the AI agent well-engineered commands — including writing feature tests. I set it up in this project with the [Codex CLI](https://developers.openai.com/codex/cli/), but it can work with pretty much anything.
+
+<div align="left">
 
 ## Coding
 
-### General
+### Rules
 
-- [lara-stacker](https://github.com/GoodM4ven/CLI_LARAVEL_lara-stacker) can be used for readying up your Ubuntu as a solid development environment.
-- [favycon](https://github.com/ruisaraiva19/favycon) is what had been used to generate all the possible favicon sizes, and their meta links, that were put in [favicon.blade.php](./resources/views/partials/favicon.blade.php) partial view.
+0. Use and maintain the 3 root-directory ([`native-dev`](./native-dev.sh), [`native-run`](./native-run.sh), and [`native-watch`](./native-watch.sh)) bash scripts to run and watch the web app, run the native app, and run and watch the native app respectively.
+1. Since any change to the `main` branch is going to **directly update the web app**, **PRs are NOT going to be directed to `main` branch, please, but rather to `dev` branch instead.**
+2. Use the `composer green` command before you do the PR in the first place. It will do the standard code formatting, linting, and testing altogether.
+3. Ensure the [Python](https://python.org) patching [scripts](https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com/tree/main/.scripts/native/patches) that override the original NativePHP package **do not conflict with one another and correctly patch the files of the NativePHP version specified in [`composer.json`](./composer.json)**.
+
+### Tools and Guides
+
+- Setting up your **development environment** could be easier using this [lara-stacker](https://github.com/GoodM4ven/CLI_LARAVEL_lara-stacker) CLI scripts, which utilizes [Docker](https://docker.com) to setup the main services, and leaving you to only care about few tools that are essential for [PHP](https://php.net) development.
+- For reproducing the [favicon](./resources/views/partials/favicon.blade.php) variences, use this [favycon](https://github.com/ruisaraiva19/favycon) tool.
 - [TALL-STANDARDS](https://github.com/GoodM4ven/WIKI_WEB_tall-standards) wikipedia contains a decent bit of tips for dealing with the tall-stack and some other related tools and technologies. (The project isn't complete)
-
-### Native
-
-If you have experience with [Kotlin](https://kotlinlang.org/) or [Swift](https://www.swift.org/), [electronJS](https://www.electronjs.org/) is communicating with them under the hood in [NativePHP](https://nativephp.com). You can implement those changes as PHP [plugins](https://nativephp.com/plugins) of course, and even make them paid to support yourself!
-
-So if you're really up to it, take a look at our [missions](#المهام) above and see if you can implement the native features needed.
 
 
 ## Design
 
 If you're a designer, or perhaps you don't know much about coding, feel free to post in [discussions](https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com/discussions) any contributions to how you think visuals can be improved; supported by photos and videos, of course.
 
-The icon is set to be 1024x1024 pixels:
+- The icon is set to be 1024x1024 pixels:
 
-<img src="public/icon.png" alt="The application icon" width="200"/>
+  <img src="public/icon.png" alt="The application icon" width="200"/>
 
-<br>
+  <br>
 
-As for the splash screen, it has to be a portrait 1080x1920 pixels:
+- As for the splash screen, it has to be a portrait 1080x1920 pixels:
 
-<img src="public/splash.png" alt="The application splash screen" width="200"/>
+  <img src="public/splash.png" alt="The application splash screen" width="200"/>
 
-</div>
+  </div>
 
-> [!TIP]
-> There is light and dark themed splash screen feature, but I'm not currently utilizing it because of the current poor brand anyway...
+  > [!NOTE]
+  > There is light and dark themed splash screen feature, but I'm not currently utilizing it because of the current poor brand anyway...
 
-<div align="left">
+  <div align="left">
 
-The assets used for the app so far can be found in this online [Penpot](https://design.penpot.app/#/workspace?team-id=82e31d90-3829-8139-8002-c1de54898224&file-id=ff5222bd-026b-80fd-8007-8c6597adff77&page-id=71bc4f81-468d-8163-8007-8a43ee7cd755) draft (request needed), which you preview quickly from [here](https://design.penpot.app/#/view?file-id=ff5222bd-026b-80fd-8007-8c6597adff77&page-id=71bc4f81-468d-8163-8007-8a43ee7cd755&section=interactions&frame-id=987eaac6-303b-803f-8007-8ce38438e2c9&index=0&share-id=57e6ab48-ab48-8193-8007-8ce21800cfa5) or edit it freely using this file:<br>
-[Design.penpot](./.assets/design.penpot)
+The assets used for the app so far can be found in this online [Penpot](https://design.penpot.app/#/workspace?team-id=82e31d90-3829-8139-8002-c1de54898224&file-id=ff5222bd-026b-80fd-8007-8c6597adff77&page-id=71bc4f81-468d-8163-8007-8a43ee7cd755) draft (request needed), **which you preview quickly from [here](https://design.penpot.app/#/view?file-id=ff5222bd-026b-80fd-8007-8c6597adff77&page-id=71bc4f81-468d-8163-8007-8a43ee7cd755&section=interactions&frame-id=987eaac6-303b-803f-8007-8ce38438e2c9&index=0&share-id=57e6ab48-ab48-8193-8007-8ce21800cfa5)** or edit it freely using this [[Design.penpot](./.assets/design.penpot)] file.
 
 
 ## Resources
