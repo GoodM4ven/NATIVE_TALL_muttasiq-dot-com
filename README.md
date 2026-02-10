@@ -36,6 +36,8 @@ https://muttasiq.com
 
 لاقتراح أي فكرة أو مناقشة أي خاصيّة حالية للتطبيق، يُرجى طرحها -**لا في قسم [المشكلات التقنية](https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com/issues)**- بل في قسم [النقاشات](https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com/discussions)، جزاكم الله خيرا، والسلام.
 
+وهناك [قسم متكامل](https://github.com/users/GoodM4ven/projects/5/views/1) لاستعراض المهمات التقنية قيد العمل، للمختصين، والذي يمكن من خلاله قياس حوية المشروع بشكل عام.
+
 ### المحرك
 - ~~ترميز واحد لتصدير تطبيق لجميع المنصات~~
 - ~~حافظة محليّة لإنجازات وإعدادات المستخدم~~
