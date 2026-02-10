@@ -14,6 +14,11 @@ use Filament\Support\Enums\TextSize;
 trait HasSettings
 {
     /**
+     * @var array<string, bool>
+     */
+    public array $clientSettings = [];
+
+    /**
      * @return array<string, bool>
      */
     public static function settingsDefaults(): array
@@ -76,13 +81,9 @@ trait HasSettings
                 foreach (self::settingsDefaults() as $name => $default) {
                     $value = array_key_exists($name, $data) ? (bool) $data[$name] : $default;
                     $savedSettings[$name] = $value;
-
-                    Setting::query()->updateOrCreate(
-                        ['name' => $name],
-                        ['value' => $value],
-                    );
                 }
 
+                $this->clientSettings = $savedSettings;
                 $this->dispatch('settings-updated', settings: $savedSettings);
 
                 notify(iconName: 'mdi.content-save-check', title: 'تم حفظ الإعدادات بنجاح');
@@ -90,12 +91,40 @@ trait HasSettings
     }
 
     /**
+     * @param  array<string, mixed>  $settings
+     */
+    public function syncClientSettings(array $settings): void
+    {
+        $this->clientSettings = $this->filterSettings($settings);
+    }
+
+    /**
      * @return array<string, bool>
      */
     private function loadSettings(): array
     {
-        $storedSettings = Setting::query()->pluck('value', 'name')->all();
+        $storedSettings = Setting::query()
+            ->whereIn('name', array_keys(self::settingsDefaults()))
+            ->pluck('value', 'name')
+            ->all();
 
-        return array_replace(self::settingsDefaults(), $storedSettings);
+        $defaults = array_replace(self::settingsDefaults(), $storedSettings);
+
+        return array_replace($defaults, $this->clientSettings);
+    }
+
+    /**
+     * @param  array<string, mixed>  $settings
+     * @return array<string, bool>
+     */
+    private function filterSettings(array $settings): array
+    {
+        $filtered = array_intersect_key($settings, self::settingsDefaults());
+
+        foreach ($filtered as $key => $value) {
+            $filtered[$key] = (bool) $value;
+        }
+
+        return $filtered;
     }
 }

@@ -34,14 +34,4 @@ jobs:
         run: npm run format:blade
 
       - name: Check for formatting changes
-        if: github.event_name == 'pull_request'
         run: git diff --exit-code
-
-      - name: Commit formatted Blade files
-        if: github.event_name == 'push'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .
-          git commit -m "chore: format Blade templates" || exit 0
-          git push

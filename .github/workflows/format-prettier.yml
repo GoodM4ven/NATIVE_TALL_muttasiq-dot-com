@@ -51,19 +51,4 @@ jobs:
         run: composer test
 
       - name: Check for formatting changes
-        id: changes
-        run: |
-          if git diff --quiet; then
-            echo "changed=false" >> $GITHUB_OUTPUT
-          else
-            echo "changed=true" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Commit and push formatted files
-        if: steps.changes.outputs.changed == 'true' && github.event_name == 'push'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .
-          git commit -m "chore: format CSS/JS files [skip ci]"
-          git push
+        run: git diff --exit-code

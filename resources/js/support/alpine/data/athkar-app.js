@@ -1,3 +1,87 @@
+const athkarSettingsStorageKey = 'athkar-settings-v1';
+
+const normalizeAthkarSettings = (settings, defaults) => {
+    if (!defaults || typeof defaults !== 'object' || Object.keys(defaults).length === 0) {
+        if (!settings || typeof settings !== 'object') {
+            return {};
+        }
+
+        const normalized = {};
+
+        Object.keys(settings).forEach((key) => {
+            normalized[key] = Boolean(settings[key]);
+        });
+
+        return normalized;
+    }
+
+    const normalized = { ...defaults };
+
+    if (!settings || typeof settings !== 'object') {
+        return normalized;
+    }
+
+    Object.keys(defaults).forEach((key) => {
+        if (Object.prototype.hasOwnProperty.call(settings, key)) {
+            normalized[key] = Boolean(settings[key]);
+        }
+    });
+
+    return normalized;
+};
+
+const resolveAthkarSettingsDefaults = () => {
+    if (typeof window === 'undefined') {
+        return {};
+    }
+
+    const defaults = window.athkarSettingsDefaults;
+
+    if (!defaults || typeof defaults !== 'object') {
+        return {};
+    }
+
+    return defaults;
+};
+
+const readAthkarSettingsFromStorage = (defaults = resolveAthkarSettingsDefaults()) => {
+    if (typeof localStorage === 'undefined') {
+        return normalizeAthkarSettings({}, defaults);
+    }
+
+    try {
+        const raw = localStorage.getItem(athkarSettingsStorageKey);
+
+        if (!raw) {
+            return normalizeAthkarSettings({}, defaults);
+        }
+
+        return normalizeAthkarSettings(JSON.parse(raw), defaults);
+    } catch (_) {
+        return normalizeAthkarSettings({}, defaults);
+    }
+};
+
+const writeAthkarSettingsToStorage = (settings, defaults = resolveAthkarSettingsDefaults()) => {
+    const normalized = normalizeAthkarSettings(settings, defaults);
+
+    if (typeof localStorage === 'undefined') {
+        return normalized;
+    }
+
+    try {
+        localStorage.setItem(athkarSettingsStorageKey, JSON.stringify(normalized));
+    } catch (_) {
+        return normalized;
+    }
+
+    return normalized;
+};
+
+if (typeof window !== 'undefined') {
+    window.getAthkarSettingsFromStorage = () => readAthkarSettingsFromStorage();
+}
+
 document.addEventListener('alpine:init', () => {
     window.Alpine.data('athkarAppGate', () => ({
         hoverSide: null,
@@ -200,7 +284,8 @@ document.addEventListener('alpine:init', () => {
 
     window.Alpine.data('athkarAppReader', (config) => ({
         athkar: config.athkar,
-        settings: config.athkarSettings,
+        settingsDefaults: config.athkarSettings,
+        settings: readAthkarSettingsFromStorage(config.athkarSettings),
         activeMode: window.Alpine.$persist(null).as('athkar-active-mode'),
         isCompletionVisible: false,
         isNoticeVisible: window.Alpine.$persist(false).as('athkar-notice-visible'),
@@ -296,6 +381,7 @@ document.addEventListener('alpine:init', () => {
             masaa: null,
         }).as('athkar-completed-v1'),
         init() {
+            window.athkarSettingsDefaults = this.settingsDefaults;
             this.ensureState();
             this.syncDay();
             this.ensureProgress('sabah');
@@ -392,10 +478,12 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            this.settings = {
+            const mergedSettings = {
                 ...this.settings,
                 ...nextSettings,
             };
+
+            this.settings = writeAthkarSettingsToStorage(mergedSettings, this.settingsDefaults);
 
             this.ensureProgress('sabah');
             this.ensureProgress('masaa');
