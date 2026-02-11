@@ -127,10 +127,11 @@ https://muttasiq.com
 
 ### Rules
 
-0. Use and maintain the 3 root-directory ([`native-dev`](./native-dev.sh), [`native-run`](./native-run.sh), and [`native-watch`](./native-watch.sh)) bash scripts to run and watch the web app, run the native app, and run and watch the native app respectively.
-1. Since any change to the `main` branch is going to **directly update the web app**, **PRs are NOT going to be directed to `main` branch, please, but rather to `dev` branch instead.**
-2. Use the `composer green` command before you do the PR in the first place. It will do the standard code formatting, linting, and testing altogether.
-3. Ensure the [Python](https://python.org) patching [scripts](https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com/tree/main/.scripts/native/patches) that override the original NativePHP package **do not conflict with one another and correctly patch the files of the NativePHP version specified in [`composer.json`](./composer.json)**.
+0. Focus on the main [missions](#المهام) detailed in [discussions](https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com/discussions) and assigned in the [project](https://github.com/users/GoodM4ven/projects/5/views/1) view. So unless it's a bug fix, **do not work on any new feature without having an [issue](https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com/issues) and being assigned to**.
+1. Use and maintain the 3 root-directory ([`native-dev`](./native-dev.sh), [`native-run`](./native-run.sh), and [`native-watch`](./native-watch.sh)) bash scripts to run and watch the web app, run the native app, and run and watch the native app respectively.
+2. Since any change to the `main` branch is going to **directly update the web app**, **PRs are NOT going to be directed to `main` branch, please, but rather to `dev` branch instead.**
+3. Use the `composer green` command before you do the PR in the first place. It will do the standard code formatting, linting, and testing altogether.
+4. Ensure the [Python](https://python.org) patching [scripts](https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com/tree/main/.scripts/native/patches) that override the original NativePHP package **do not conflict with one another and correctly patch the files of the NativePHP version specified in [`composer.json`](./composer.json)**.
 
 ### Tools and Guides
 
@@ -143,13 +144,13 @@ https://muttasiq.com
 
 If you're a designer, or perhaps you don't know much about coding, feel free to post in [discussions](https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com/discussions) any contributions to how you think visuals can be improved; supported by photos and videos, of course.
 
-- The icon is set to be 1024x1024 pixels:
+- The icon is set to be a 1024x1024 pixels PNG:
 
   <img src="public/icon.png" alt="The application icon" width="200"/>
 
   <br>
 
-- As for the splash screen, it has to be a portrait 1080x1920 pixels:
+- As for the splash screen, it has to be a portrait 1080x1920 pixels PNG:
 
   <img src="public/splash.png" alt="The application splash screen" width="200"/>
 
@@ -158,9 +159,15 @@ If you're a designer, or perhaps you don't know much about coding, feel free to 
   > [!NOTE]
   > There is light and dark themed splash screen feature, but I'm not currently utilizing it because of the current poor brand anyway...
 
-  <div align="left">
+<div align="left">
 
-The assets used for the app so far can be found in this online [Penpot](https://design.penpot.app/#/workspace?team-id=82e31d90-3829-8139-8002-c1de54898224&file-id=ff5222bd-026b-80fd-8007-8c6597adff77&page-id=71bc4f81-468d-8163-8007-8a43ee7cd755) draft (request needed), **which you preview quickly from [here](https://design.penpot.app/#/view?file-id=ff5222bd-026b-80fd-8007-8c6597adff77&page-id=71bc4f81-468d-8163-8007-8a43ee7cd755&section=interactions&frame-id=987eaac6-303b-803f-8007-8ce38438e2c9&index=0&share-id=57e6ab48-ab48-8193-8007-8ce21800cfa5)** or edit it freely using this [[Design.penpot](./.assets/design.penpot)] file.
+- As for the meta OpenGraph image, it should be a 1200x630 pixels JPG:
+
+  <img src="public/images/open-graph.jpg" alt="The open-graph meta picture" width="400"/>
+
+  <br>
+
+The assets used for the app so far can be found in this online [Penpot](https://design.penpot.app/#/workspace?team-id=82e31d90-3829-8139-8002-c1de54898224&file-id=ff5222bd-026b-80fd-8007-8c6597adff77&page-id=71bc4f81-468d-8163-8007-8a43ee7cd755) draft (request needed), **which you preview quickly from [here](https://design.penpot.app/#/view?file-id=ff5222bd-026b-80fd-8007-8c6597adff77&page-id=71bc4f81-468d-8163-8007-8a43ee7cd755&section=interactions&frame-id=987eaac6-303b-803f-8007-8ce38438e2c9&index=0&share-id=57e6ab48-ab48-8193-8007-8ce21800cfa5)** or edit it freely using this [[design.penpot](./.assets/design.penpot)] file.
 
 
 ## Resources

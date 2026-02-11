@@ -22,20 +22,28 @@
 >
 <meta
     name="keywords"
-    content="keyword, another, and another"
+    content="{{ config('app.custom.app_keywords') }}"
 >
 <meta
     name="description"
-    content="Some description..."
+    content="{{ config('app.custom.app_description') }}"
 >
 <meta
     property="og:description"
-    content="Some description..."
+    content="{{ config('app.custom.app_description') }}"
 >
 <meta
     property="og:image"
     content="{{ asset('images/open-graph.jpg') }}"
 >
+<meta
+    property="og:image:width"
+    content="1200"
+/>
+<meta
+    property="og:image:height"
+    content="630"
+/>
 <meta
     name="theme-color"
     x-bind:content="$store.colorScheme.isDarkModeOn ?
