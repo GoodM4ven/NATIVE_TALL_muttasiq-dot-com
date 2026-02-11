@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   format:
@@ -29,26 +29,11 @@ jobs:
         with:
           node-version: 20
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: 8.3
-          coverage: none
-
-      - name: Install Composer dependencies
-        run: composer install --prefer-dist --no-progress --no-suggest
-
       - name: Install dependencies
-        run: npm install
-
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps
+        run: npm ci
 
       - name: Run Prettier
         run: npm run format:prettier
-
-      - name: Run tests
-        run: composer test
 
       - name: Check for formatting changes
         run: git diff --exit-code

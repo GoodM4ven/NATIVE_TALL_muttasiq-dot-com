@@ -7,7 +7,7 @@ return [
     'custom' => [
 
         'app_description' => 'تطبيق يعين على الإسلام والالتزام باتساق ويسر بإذن الله...',
-        'app_keywords' => 'islam, muslim, thikr, athkar', 
+        'app_keywords' => 'islam, muslim, thikr, athkar',
 
         'user' => [
             'name' => env('ADMIN_NAME'),
