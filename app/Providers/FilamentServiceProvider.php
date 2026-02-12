@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Services\Overrides\Pages\Login;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -33,7 +34,10 @@ class FilamentServiceProvider extends PanelProvider
     {
         return $panel
             ->id('admin')
-            ->path('admin')
+            ->path(config('app.custom.admin_path'))
+            ->login(Login::class)
+            ->brandLogo(asset('images/logo-wide.svg'))
+            ->brandLogoHeight('5rem')
             ->colors(config('app.custom.colors'))
             ->viteTheme('resources/css/core/filament/panels.css')
             ->darkMode(false)
