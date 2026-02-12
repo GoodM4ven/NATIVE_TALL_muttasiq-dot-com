@@ -36,7 +36,7 @@ class HomeController extends Controller
             return Thikr::defaultsPayload();
         }
 
-        $url = route('api.athkar.index');
+        $url = $this->resolveAthkarApiUrl();
         try {
             /** @var \Illuminate\Http\Client\Response $response */
             $response = Http::acceptJson()
@@ -65,5 +65,19 @@ class HomeController extends Controller
         }
 
         return Thikr::defaultsPayload();
+    }
+
+    private function resolveAthkarApiUrl(): string
+    {
+        $configuredAthkarEndpoint = (string) config('app.custom.native_end_points.athkar', 'athkar');
+
+        if (str_starts_with($configuredAthkarEndpoint, 'https://') || str_starts_with($configuredAthkarEndpoint, 'http://')) {
+            return $configuredAthkarEndpoint;
+        }
+
+        $applicationUrl = rtrim((string) config('app.url'), '/');
+        $relativeAthkarPath = route('api.athkar.index', [], false);
+
+        return $applicationUrl.$relativeAthkarPath;
     }
 }

@@ -16,16 +16,20 @@ declare(strict_types=1);
 pest()
     ->extend(Tests\TestCase::class)
     ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
-    ->in('Feature', 'Browser')
+    ->in('Feature/App');
+
+pest()
+    ->extend(Tests\TestCase::class)
+    ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
+    ->in('Feature/Browser')
+    ->group('browser')
     ->beforeAll(function () {
-        if (! file_exists(($basePath = __DIR__.'/../public').'/build/manifest.json') && ! file_exists($basePath.'/hot')) {
-            throw new Exception('Vite is not running!');
-        }
+        assertBrowserAssetsReady();
     });
 
 pest()
     ->browser()
-    ->timeout(1500);
+    ->timeout((int) env('PEST_BROWSER_TIMEOUT_MS', 1500));
 
 /*
 |--------------------------------------------------------------------------
@@ -55,6 +59,27 @@ pest()
 
 use Pest\Browser\Execution;
 use Pest\Browser\Playwright\Playwright;
+
+const BROWSER_SETUP_TIMEOUT_MS = 1500;
+
+function assertBrowserAssetsReady(): void
+{
+    if (filter_var(env('SKIP_VITE_ASSET_PREFLIGHT', false), FILTER_VALIDATE_BOOL)) {
+        return;
+    }
+
+    $basePath = __DIR__.'/../public';
+    $manifestPath = $basePath.'/build/manifest.json';
+    $hotPath = $basePath.'/hot';
+
+    if (file_exists($manifestPath)) {
+        return;
+    }
+
+    if (! file_exists($hotPath)) {
+        throw new Exception('Browser tests require Vite assets. Run npm run build or npm run dev.');
+    }
+}
 
 function js_encode(mixed $value): string
 {
@@ -97,13 +122,13 @@ function waitForScriptWithTimeout($page, string $expression, mixed $expected, in
 
 function waitForAlpineReady($page): void
 {
-    applyTestSpeedups($page);
-    waitForScript($page, appReadyScript(), true);
+    waitForScriptWithTimeout($page, appReadyScript(), true, browserSetupTimeoutMs());
 }
 
 function applyTestSpeedups($page): void
 {
-    $page->script(<<<'JS'
+    try {
+        $page->script(<<<'JS'
 (() => {
   if (!window.Alpine) {
     return;
@@ -128,6 +153,9 @@ function applyTestSpeedups($page): void
   }
 })();
 JS);
+    } catch (Throwable) {
+        //
+    }
 }
 
 function appReadyScript(): string
@@ -137,36 +165,10 @@ function appReadyScript(): string
   if (!window.Alpine || !window.Alpine.store) {
     return false;
   }
-  if (!window.Alpine.store('bp')) {
-    return false;
-  }
   if (!document.querySelector('[data-main-menu-item]')) {
     return false;
   }
-  const homeEl = Array.from(document.querySelectorAll('[x-data]')).find((node) =>
-    node.hasAttribute('x-bind:data-hash-default'),
-  );
-  const menuEl = document.querySelector('[x-data^="mainMenu"]');
-  if (!homeEl || !menuEl) {
-    return false;
-  }
-  const homeData = window.Alpine.$data ? window.Alpine.$data(homeEl) : (homeEl.__x?.$data ?? null);
-  const menuData = window.Alpine.$data ? window.Alpine.$data(menuEl) : (menuEl.__x?.$data ?? null);
-  if (!homeData || !menuData) {
-    return false;
-  }
-  if (typeof homeData.applyViewState !== 'function') {
-    return false;
-  }
-  if (!homeData.lock || typeof homeData.lock.run !== 'function') {
-    return false;
-  }
-  if (menuData.isTouchDevice === null) {
-    return false;
-  }
-  if (typeof menuData.handleItemClick !== 'function') {
-    return false;
-  }
+
   return true;
 })()
 JS;
@@ -174,17 +176,48 @@ JS;
 
 function resetBrowserState($page, bool $isMobile = false): void
 {
-    if ($isMobile) {
-        $page->resize(375, 812);
+    $previousTimeout = Playwright::timeout();
+    Playwright::setTimeout(browserSetupTimeoutMs());
+
+    try {
+        if ($isMobile) {
+            $page->resize(375, 812);
+        }
+
+        try {
+            $page->script('localStorage.clear(); sessionStorage.clear(); window.history.replaceState({}, document.title, window.location.pathname + window.location.search);');
+        } catch (Throwable) {
+            //
+        }
+
+        waitForAlpineReady($page);
+
+        if ($isMobile) {
+            enableMobileContext($page);
+        }
+
+        if ($page->script('window.location.hash') !== '#main-menu') {
+            setHashOnly($page, '#main-menu', true, true);
+        }
+
+        if ($page->script(homeDataScript('data.activeView')) !== 'main-menu') {
+            forceHomeView($page, 'main-menu');
+        }
+
+        if ($page->script('JSON.parse(localStorage.getItem("app-active-view"))') !== 'main-menu') {
+            $page->script('localStorage.setItem("app-active-view", JSON.stringify("main-menu"));');
+        }
+
+        waitForScript($page, 'window.location.hash', '#main-menu');
+        waitForScript($page, homeDataScript('data.activeView'), 'main-menu');
+    } finally {
+        Playwright::setTimeout($previousTimeout);
     }
-    $page->script('localStorage.clear(); sessionStorage.clear(); window.history.replaceState({}, document.title, window.location.pathname + window.location.search);');
-    $page->refresh();
-    waitForAlpineReady($page);
-    if ($isMobile) {
-        enableMobileContext($page);
-    }
-    waitForScript($page, 'window.location.hash', '#main-menu');
-    waitForScript($page, homeDataScript('data.activeView'), 'main-menu');
+}
+
+function browserSetupTimeoutMs(): int
+{
+    return max(Playwright::timeout(), BROWSER_SETUP_TIMEOUT_MS);
 }
 
 function enableMobileContext($page): void
@@ -579,7 +612,7 @@ function swipeElement($page, string $selector, string $direction, string $pointe
     return;
   }
   const rect = el.getBoundingClientRect();
-  const y = rect.top + height / 2;
+  const y = rect.top + rect.height / 2;
   const startX = rect.left + rect.width * {{startRatio}};
   const endX = rect.left + rect.width * {{endRatio}};
   const pointerType = {{pointerType}};

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\Thikr;
 use App\Services\Enums\ThikrTime;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
@@ -14,8 +15,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        $beginningCharacter = '﴿';
-        $endingCharacter = '﴾';
+        $beginningCharacter = Thikr::AAYAH_OPENING_MARK;
+        $endingCharacter = Thikr::AAYAH_CLOSING_MARK;
         $now = now();
         $thikrs = $this->thikrData();
         $hasOrderColumn = Schema::hasColumn('thikrs', 'order');
@@ -47,8 +48,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        $beginningCharacter = '﴿';
-        $endingCharacter = '﴾';
+        $beginningCharacter = Thikr::AAYAH_OPENING_MARK;
+        $endingCharacter = Thikr::AAYAH_CLOSING_MARK;
 
         foreach ($this->thikrData() as $thikr) {
             $text = ($thikr['is_quran'] ?? false)

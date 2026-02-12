@@ -28,6 +28,7 @@ class ThikrFactory extends Factory
         return [
             'time' => $this->faker->randomElement(ThikrTime::cases()),
             'text' => $this->faker->sentence(8),
+            'is_aayah' => $this->faker->boolean(20),
             'count' => $this->faker->numberBetween(1, 7),
         ];
     }

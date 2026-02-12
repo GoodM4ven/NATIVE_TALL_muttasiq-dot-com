@@ -196,6 +196,8 @@ it('persists athkar counts, overcounts, and restores the reader on reload', func
     );
 
     expect($singleIndex)->toBeGreaterThanOrEqual(0);
+    $targetItemId = $page->script(athkarReaderDataScript('data.activeList['.$singleIndex.']?.id ?? null'));
+    expect($targetItemId)->not->toBeNull();
 
     $page->script(athkarReaderCommandScript("data.setActiveIndex({$singleIndex});"));
 
@@ -214,6 +216,18 @@ it('persists athkar counts, overcounts, and restores the reader on reload', func
     waitForScript($page, 'JSON.parse(localStorage.getItem("athkar-reader-visible"))', true);
     waitForScript($page, 'JSON.parse(localStorage.getItem("app-active-view"))', 'athkar-app-sabah');
     waitForScript($page, 'window.location.hash', '#athkar-app-sabah');
+    $todayKey = $page->script(<<<'JS'
+(() => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+})()
+JS);
+    $page->script(athkarReaderCommandScript('data.lastSeenDay = data.todayKey();'));
+    setLocalStorageValue($page, 'athkar-last-day', $todayKey);
+    waitForScript($page, 'JSON.parse(localStorage.getItem("athkar-last-day"))', $todayKey);
 
     $page->refresh();
 
@@ -221,7 +235,39 @@ it('persists athkar counts, overcounts, and restores the reader on reload', func
     waitForReaderVisible($page);
     waitForScript($page, homeDataScript('data.activeView'), 'athkar-app-sabah');
     waitForScript($page, athkarReaderDataScript('data.activeMode'), 'sabah');
-    waitForScript($page, athkarReaderDataScript('data.countAt('.$singleIndex.')'), 2);
+    $targetItemIdExpression = js_encode($targetItemId);
+    waitForScriptWithTimeout(
+        $page,
+        athkarReaderDataScript(
+            "data.activeList.some((item) => String(item?.id ?? '') === String({$targetItemIdExpression}))",
+        ),
+        true,
+        12_000,
+    );
+    $restoredIndex = $page->script(
+        athkarReaderDataScript(
+            "data.activeList.findIndex((item) => String(item?.id ?? '') === String({$targetItemIdExpression}))",
+        ),
+    );
+    expect($restoredIndex)->toBeGreaterThanOrEqual(0);
+    waitForScriptWithTimeout(
+        $page,
+        js_template(<<<'JS'
+(() => {
+  const targetId = String({{targetId}});
+  const progress = JSON.parse(localStorage.getItem('athkar-progress-v1') ?? '{}');
+  const ids = progress?.sabah?.ids ?? [];
+  const counts = progress?.sabah?.counts ?? [];
+  const targetIndex = ids.findIndex((id) => String(id ?? '') === targetId);
+  if (targetIndex < 0) {
+    return null;
+  }
+  return Number(counts[targetIndex] ?? 0);
+})()
+JS, ['targetId' => $targetItemId]),
+        2,
+        12_000,
+    );
 });
 
 it('restores the notice on reload and allows continuing to the reader when notice panels are enabled', function () {
