@@ -17,6 +17,11 @@ return [
             'password' => env('ADMIN_PASSWORD'),
         ],
 
+        'native_end_points' => [
+            'retries' => 8,
+            'athkar' => 'athkar',
+        ],
+
         'colors' => [
             'gray' => \Filament\Support\Colors\Color::Slate,
             'primary' => [
