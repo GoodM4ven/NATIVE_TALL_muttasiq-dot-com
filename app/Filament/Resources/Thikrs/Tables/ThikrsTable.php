@@ -23,12 +23,15 @@ class ThikrsTable
         return $table
             ->defaultSort('order')
             ->reorderable('order')
+            ->extraAttributes(['class' => 'admin-thikr-table'])
             ->afterReordering(function (array $order): void {
                 Thikr::clearDefaultCache();
             })
             ->columns([
                 TextInputColumn::make('order')
-                    ->width(50)
+                    ->extraCellAttributes([
+                        'class' => 'admin-thikr-table-order-input',
+                    ])
                     ->label('الترتيب')
                     ->type('number')
                     ->inputMode('numeric')
