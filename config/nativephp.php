@@ -133,7 +133,7 @@ return [
         '.github',
         '.scripts',
         '.vscode',
-        'build',
+        'build/phpstan',
         'tests/Browser',
         'storage/framework/sessions',
         'storage/framework/cache',

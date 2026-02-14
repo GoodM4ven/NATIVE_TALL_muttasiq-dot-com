@@ -15,5 +15,3 @@ fi
 
 (cd "$root_dir" && php artisan optimize:clear)
 (cd "$root_dir" && php artisan migrate)
-
-(cd "$root_dir" && npm run build)

@@ -34,7 +34,7 @@ class FilamentServiceProvider extends PanelProvider
             ->path(config('app.custom.admin_path'))
             ->login(Login::class)
             ->homeUrl(config('app.url'))
-            ->brandLogo(asset('images/logo-wide.svg'))
+            ->brandLogo(sprintf('%s/images/logo-wide.svg', rtrim((string) config('app.url'), '/')))
             ->brandLogoHeight('5rem')
             ->colors(config('app.custom.colors'))
             ->font('Readex Pro')
