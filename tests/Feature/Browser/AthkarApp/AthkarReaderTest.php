@@ -509,7 +509,7 @@ JS,
     );
 });
 
-it('opens athkar manager as a modal on mobile and restricts sorting to drag handles', function () {
+it('opens athkar manager as a modal on mobile while keeping cards sortable and drag controls visible', function () {
     $page = visit('/');
 
     resetBrowserState($page);
@@ -540,14 +540,107 @@ JS,
     waitForScript(
         $page,
         <<<'JS'
-(() => Boolean(document.querySelector('[data-athkar-manager-card] [wire\\:sort\\:handle]')) )()
+(() => Boolean(document.querySelector('[data-athkar-manager-card] .athkar-manager-card__drag-handle[title="اسحب لإعادة الترتيب"]')))()
 JS,
         true,
     );
     waitForScript(
         $page,
         <<<'JS'
-(() => !document.querySelector('[data-athkar-manager-card][wire\\:sort\\:handle]'))()
+(() => Boolean(document.querySelector('[data-athkar-manager-card][wire\\:sort\\:item]')))()
+JS,
+        true,
+    );
+});
+
+it('preserves athkar manager scroll after opening and closing a card modal', function () {
+    $page = visit('/');
+
+    resetBrowserState($page);
+    openAthkarReader($page, 'sabah', false);
+
+    safeClick($page, '[data-athkar-open-manager]');
+
+    waitForScriptWithTimeout($page, 'Boolean(document.querySelector(".fi-modal-window"))', true, 10_000);
+    waitForScript($page, 'Boolean(document.querySelector("[data-athkar-manager-card]"))', true);
+
+    $page->script(<<<'JS'
+(() => {
+  const managerContent = document.querySelector('.fi-modal.fi-modal-open .fi-modal-content');
+  const firstCard = document.querySelector('[data-athkar-manager-card]');
+  if (!managerContent || !firstCard) {
+    return false;
+  }
+
+  const target = Math.max(220, Math.round(managerContent.scrollHeight * 0.4));
+  managerContent.scrollTop = target;
+  window.__athkarManagerScrollBefore = managerContent.scrollTop;
+
+  firstCard.click();
+  return true;
+})()
+JS);
+
+    waitForScriptWithTimeout(
+        $page,
+        'document.querySelectorAll(".fi-modal.fi-modal-open").length >= 2',
+        true,
+        10_000,
+    );
+
+    $page->script(<<<'JS'
+(() => {
+  const openModals = Array.from(document.querySelectorAll('.fi-modal.fi-modal-open'));
+  const childModal = openModals.at(-1);
+
+  if (!childModal) {
+    return false;
+  }
+
+  const closeButton = childModal.querySelector('.fi-modal-close-btn, button[aria-label="Close"], button[aria-label="إغلاق"]');
+
+  if (closeButton instanceof HTMLElement) {
+    closeButton.click();
+    return true;
+  }
+
+  const cancelButton = Array.from(childModal.querySelectorAll('button')).find((button) => {
+    const label = String(button.textContent ?? '').trim();
+
+    return ['إلغاء', 'Cancel', 'Close', 'إغلاق'].includes(label);
+  });
+
+  if (cancelButton instanceof HTMLElement) {
+    cancelButton.click();
+    return true;
+  }
+
+  window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  return true;
+})()
+JS);
+
+    waitForScriptWithTimeout(
+        $page,
+        'document.querySelectorAll(".fi-modal.fi-modal-open").length <= 1',
+        true,
+        10_000,
+    );
+    waitForScriptWithTimeout($page, 'Boolean(document.querySelector("[data-athkar-manager-card]"))', true, 10_000);
+
+    waitForScript(
+        $page,
+        <<<'JS'
+(() => {
+  const managerContent = document.querySelector('.fi-modal.fi-modal-open .fi-modal-content');
+  const before = Number(window.__athkarManagerScrollBefore ?? -1);
+
+  if (!managerContent || !Number.isFinite(before) || before < 0) {
+    return false;
+  }
+
+  return Math.abs(managerContent.scrollTop - before) <= 24;
+})()
 JS,
         true,
     );

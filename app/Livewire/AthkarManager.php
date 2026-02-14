@@ -56,6 +56,7 @@ class AthkarManager extends Component implements HasActions, HasSchemas
         return Action::make('manageAthkar')
             ->modalHeading('إدارة أذكار الصباح والمساء')
             ->modalDescription('يمكنك تخصيص الأذكار كما ترغب، مع إمكانية استعادة الأذكار الافتراضية عبر زر استعادة.')
+            ->modalAutofocus(false)
             ->slideOver(! $this->isManageAthkarMobile)
             ->modalWidth($this->isManageAthkarMobile ? Width::FiveExtraLarge : Width::SevenExtraLarge)
             ->registerModalActions([
@@ -87,6 +88,7 @@ class AthkarManager extends Component implements HasActions, HasSchemas
                     ->label('حذف الذكر')
                     ->color('danger')
                     ->requiresConfirmation()
+                    ->modalAutofocus(false)
                     ->action(function (array $mountedActions): void {
                         $editAthkarAction = collect($mountedActions)
                             ->first(fn (Action $mountedAction): bool => $mountedAction->getName() === 'editAthkar');
@@ -127,6 +129,7 @@ class AthkarManager extends Component implements HasActions, HasSchemas
         return Action::make('createAthkar')
             ->overlayParentActions()
             ->modalHeading('إضافة ذكر جديد')
+            ->modalAutofocus(false)
             ->modalSubmitActionLabel('إضافة')
             ->fillForm(fn (): array => [
                 'order' => max(1, $this->maxResolvedOrder() + 1),
@@ -169,6 +172,7 @@ class AthkarManager extends Component implements HasActions, HasSchemas
             ->color('danger')
             ->requiresConfirmation()
             ->modalHeading('حذف الذكر')
+            ->modalAutofocus(false)
             ->modalDescription('سيتم إخفاء الذكر محليًا ويمكن استعادته عبر زر استعادة الكل.')
             ->action(function (array $arguments): void {
                 $thikrId = (int) ($arguments['thikrId'] ?? 0);
@@ -189,6 +193,7 @@ class AthkarManager extends Component implements HasActions, HasSchemas
             ->color('danger')
             ->requiresConfirmation()
             ->modalHeading('استعادة الإعدادات الافتراضية؟')
+            ->modalAutofocus(false)
             ->modalDescription('سيتم حذف كل التعديلات المحلية، بما فيها الأذكار المضافة.')
             ->modalSubmitActionLabel('نعم، استعادة الكل')
             ->action(function (): void {

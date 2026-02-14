@@ -1066,7 +1066,7 @@
 
                             <!-- Althikr -->
                             <button
-                                class="athkar-tap group relative flex min-h-0 w-full flex-1 touch-manipulation flex-col items-center justify-center gap-4 overflow-hidden rounded-sm border border-transparent px-2 py-3 text-center transition sm:px-4 sm:py-6 mt-[2.1rem] sm:mt-0"
+                                class="athkar-tap group relative mt-[2.1rem] flex min-h-0 w-full flex-1 touch-manipulation flex-col items-center justify-center gap-4 overflow-hidden rounded-sm border border-transparent px-2 py-3 text-center transition sm:mt-0 sm:px-4 sm:py-6"
                                 data-athkar-tap
                                 type="button"
                                 x-on:click="handleTap()"

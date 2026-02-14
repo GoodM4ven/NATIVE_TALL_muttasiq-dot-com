@@ -278,7 +278,6 @@
                             class="athkar-manager-card__drag-handle"
                             title="اسحب لإعادة الترتيب"
                             wire:click.stop
-                            x-on:pointerdown.stop
                             x-on:click.stop
                         >
                             <x-filament::icon
