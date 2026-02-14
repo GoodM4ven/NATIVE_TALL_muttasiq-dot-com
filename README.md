@@ -92,7 +92,8 @@ https://muttasiq.com
 
 ### الداعمون
 
-- [قناة الرقية الشرعية](t.me/Ruqyah011) (لأبي عمر، يوسف)
+- [قناة الرقية الشرعية](https://t.me/Ruqyah011) (لأبي عمر، يوسف)
+- [هيثم عسولي](https://github.com/haithamassoli)
 
 </div>
 <div align="left">
@@ -185,6 +186,7 @@ The assets used for the app so far can be found in this online [Penpot](https://
 
 - [GoodM4ven](https://github.com/GoodM4ven) (أبو عبد الله الحاسوبي)
 - [M4MD24](https://github.com/M4MD24) (أبو عثمان الهواري)
+- Telegram Supporters: [@yahya_0beid](https://t.me/yahya_0beid) (يحيى العبيدي), [@Al_Fawzawi](https://t.me/Al_Fawzawi) (أبو عوف الفوزوي), [@Selamah_Aldimashqq](https://t.me/Selamah_Aldimashqq) (سلمة الدمشقي) 
 
 ### Assets
 
