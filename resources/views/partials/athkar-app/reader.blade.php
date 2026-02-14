@@ -670,7 +670,12 @@
                 class="athkar-chip shadow-inner! focus-visible:outline-primary-500 relative inline-flex cursor-pointer items-center justify-center px-3 py-2 text-xs font-semibold transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 sm:px-4 sm:py-3"
                 data-athkar-open-manager
                 type="button"
+                x-data="{ tip: null }"
                 x-on:click="openGateAndManageAthkar()"
+                x-on:mouseenter="tip = $tippy('إدارة الأذكار', 'bottom')"
+                x-on:mouseleave="tip?._clearHideTimer?.(); tip?.hide()"
+                x-on:focus="tip = $tippy('إدارة الأذكار', 'bottom')"
+                x-on:blur="tip?._clearHideTimer?.(); tip?.hide()"
                 x-text="activeLabel"
             ></button>
 

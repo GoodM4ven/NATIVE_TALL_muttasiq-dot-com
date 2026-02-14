@@ -239,7 +239,7 @@
     }"
     x-init="init();
     return () => destroy();"
-    x-effect="if (typeof isSettingsOpen !== 'undefined' && isSettingsOpen) { isQuickStackOpen = false; activeIndex = 0; updateLayout(); }"
+    x-effect="if ((typeof isSettingsOpen !== 'undefined' && isSettingsOpen) || (typeof isAthkarManagerOpen !== 'undefined' && isAthkarManagerOpen)) { isQuickStackOpen = false; activeIndex = 0; updateLayout(); }"
     x-on:click.window="
         if (!respectingStack) return;
         if ($refs.stack && $refs.stack.contains($event.target)) return;

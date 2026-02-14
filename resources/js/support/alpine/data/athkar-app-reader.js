@@ -87,7 +87,7 @@ document.addEventListener('alpine:init', () => {
         textFit: {
             raf: null,
             resizeObserver: null,
-            minSize: 16,
+            minSize: 14,
             minOriginSize: 8,
             maxScale: 1.2,
             originMaxScale: 1.05,
@@ -1908,14 +1908,17 @@ document.addEventListener('alpine:init', () => {
 
             this.swipe.startedOnTap = false;
 
-            if (absX < 40 || absX < absY) {
+            const isHorizontalSwipe = absX >= 40 && absX >= absY;
+            const isVerticalSwipe = absY >= 40 && absY > absX;
+
+            if (!isHorizontalSwipe && !isVerticalSwipe) {
                 return;
             }
 
             const previousIndex = this.activeIndex;
             let didHandleSwipe = false;
 
-            if (deltaX < 0) {
+            if (isHorizontalSwipe && deltaX < 0) {
                 this.prev();
                 didHandleSwipe = this.activeIndex !== previousIndex;
 

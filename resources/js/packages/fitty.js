@@ -117,7 +117,7 @@ const fitTextToBox = (textElement, availableWidth, availableHeight, minSize, max
 const fitTextInBox = ({
     textElement,
     boxElement,
-    minSize = 16,
+    minSize = 14,
     maxScale = 1.2,
     step = 0.5,
     safePaddingX = 0,

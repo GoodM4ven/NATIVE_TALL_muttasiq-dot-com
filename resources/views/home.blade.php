@@ -7,6 +7,7 @@
         x-data="{
             lock: null,
             isSettingsOpen: false,
+            isAthkarManagerOpen: false,
             activeView: $persist('main-menu').as('app-active-view'),
             viewTree: {
                 'main-menu': {

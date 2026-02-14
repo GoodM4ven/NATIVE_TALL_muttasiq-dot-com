@@ -1,7 +1,15 @@
+@php
+    $isMobile = (bool) ($isMobile ?? false);
+@endphp
+
 @assets
     <style>
         .athkar-manager-card {
             position: relative;
+            transform: translateZ(0);
+            overflow: hidden;
+            backface-visibility: hidden;
+            will-change: transform;
             display: flex;
             min-height: 27rem;
             cursor: pointer;
@@ -22,6 +30,7 @@
 
         .athkar-manager-card:active {
             cursor: pointer;
+            border-radius: 0 !important;
         }
 
         .dark .athkar-manager-card {
@@ -55,6 +64,16 @@
             font-size: 1.08rem;
             line-height: 1.95;
             color: var(--gray-800);
+        }
+
+        @media (max-width: 639px) {
+            .athkar-manager-card__text {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: 100%;
+                line-height: 1.8;
+            }
         }
 
         .dark .athkar-manager-card__text {
@@ -158,6 +177,7 @@
 
         .athkar-manager-card__drag-handle:active {
             cursor: grabbing;
+            border-radius: 0 !important;
         }
 
         .dark .athkar-manager-card__drag-handle {
@@ -178,7 +198,7 @@
 @endassets
 
 <div
-    class="space-y-4"
+    @class(['space-y-4', 'mt-12 sm:mt-0' => $isMobile])
     x-data="athkarAppManager({ componentId: @js($componentId) })"
 >
     <div class="flex flex-wrap items-center justify-between gap-3">
@@ -227,7 +247,6 @@
                 wire:key="athkar-manager-card-{{ $card['id'] }}"
                 wire:sort:item="{{ $card['id'] }}"
                 wire:click.preserve-scroll="openEditAthkar({{ $card['id'] }})"
-                x-on:pointerdown="rememberManagerScroll($event)"
             >
                 <div class="flex items-center justify-between gap-2">
                     <div class="flex flex-wrap items-center gap-2">
@@ -258,7 +277,6 @@
                         <span
                             class="athkar-manager-card__drag-handle"
                             title="اسحب لإعادة الترتيب"
-                            wire:sort:handle
                             wire:click.stop
                             x-on:pointerdown.stop
                             x-on:click.stop

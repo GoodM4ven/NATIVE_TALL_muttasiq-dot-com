@@ -133,6 +133,51 @@ it('swipes only navigate without counting when setting 2 is disabled', function 
     // 'mobile' => [true, 'touch'],
 ]);
 
+it('treats up and down swipes as forward navigation', function () {
+    $page = visit('/');
+
+    resetBrowserState($page);
+    openAthkarReader($page, 'sabah', false);
+
+    $settings = [
+        'does_clicking_switch_athkar_too' => false,
+        'does_prevent_switching_athkar_until_completion' => false,
+    ];
+    setAthkarSettings($page, $settings);
+    waitForAthkarSettings($page, $settings);
+
+    waitForScript($page, athkarReaderDataScript('data.activeList.length > 2'), true);
+
+    $page->script(athkarReaderCommandScript('data.setActiveIndex(0);'));
+    waitForScript($page, athkarReaderDataScript('data.activeIndex'), 0);
+
+    $page->script(
+        athkarReaderCommandScript(<<<'JS'
+const panel = document.querySelector('.athkar-panel[role="region"][aria-roledescription="carousel"]');
+const rect = panel?.getBoundingClientRect() ?? { left: 0, top: 0, width: 200, height: 400 };
+const x = rect.left + (rect.width / 2);
+const startY = rect.top + (rect.height * 0.7);
+const endY = rect.top + (rect.height * 0.2);
+data.swipeStart({ type: 'pointerdown', pointerType: 'touch', clientX: x, clientY: startY, button: 0, target: panel });
+data.swipeEnd({ type: 'pointerup', pointerType: 'touch', clientX: x, clientY: endY, button: 0, target: panel });
+JS),
+    );
+    waitForScript($page, athkarReaderDataScript('data.activeIndex'), 1);
+
+    $page->script(
+        athkarReaderCommandScript(<<<'JS'
+const panel = document.querySelector('.athkar-panel[role="region"][aria-roledescription="carousel"]');
+const rect = panel?.getBoundingClientRect() ?? { left: 0, top: 0, width: 200, height: 400 };
+const x = rect.left + (rect.width / 2);
+const startY = rect.top + (rect.height * 0.3);
+const endY = rect.top + (rect.height * 0.8);
+data.swipeStart({ type: 'pointerdown', pointerType: 'touch', clientX: x, clientY: startY, button: 0, target: panel });
+data.swipeEnd({ type: 'pointerup', pointerType: 'touch', clientX: x, clientY: endY, button: 0, target: panel });
+JS),
+    );
+    waitForScript($page, athkarReaderDataScript('data.activeIndex'), 2);
+});
+
 it('prevents swiping past incomplete athkar and allows quick navigation when disabled', function () {
     $page = visit('/');
 

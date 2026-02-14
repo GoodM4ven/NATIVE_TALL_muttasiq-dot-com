@@ -1021,11 +1021,31 @@ function triggerAthkarSwipe($page, string $selector, string $direction, string $
   const rect = el.getBoundingClientRect?.() ?? { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
   const width = rect.width || window.innerWidth || 1;
   const height = rect.height || window.innerHeight || 1;
-  const y = rect.top + rect.height / 2;
-  const startRatio = direction === 'forward' ? 0.35 : 0.65;
-  const endRatio = direction === 'forward' ? 0.75 : 0.25;
-  const startX = rect.left + width * startRatio;
-  const endX = rect.left + width * endRatio;
+  const centerX = rect.left + width / 2;
+  const centerY = rect.top + height / 2;
+  const horizontalDirection = direction === 'forward' || direction === 'back';
+  const verticalDirection = direction === 'up' || direction === 'down';
+  const horizontalDistance = Math.min(width * 0.8, Math.max(80, width * 0.4));
+  const verticalDistance = Math.min(height * 0.8, Math.max(80, height * 0.4));
+
+  let startX = centerX;
+  let endX = centerX;
+  let startY = centerY;
+  let endY = centerY;
+
+  if (horizontalDirection) {
+    const isForward = direction === 'forward';
+    const halfDistance = horizontalDistance / 2;
+    startX = centerX + (isForward ? -halfDistance : halfDistance);
+    endX = centerX + (isForward ? halfDistance : -halfDistance);
+  }
+
+  if (verticalDirection) {
+    const isDown = direction === 'down';
+    const halfDistance = verticalDistance / 2;
+    startY = centerY + (isDown ? -halfDistance : halfDistance);
+    endY = centerY + (isDown ? halfDistance : -halfDistance);
+  }
   const reader = document.querySelector('[x-data^="athkarAppReader"]');
   const data = reader && window.Alpine ? (window.Alpine.$data ? window.Alpine.$data(reader) : (reader.__x?.$data ?? null)) : null;
 
@@ -1033,13 +1053,13 @@ function triggerAthkarSwipe($page, string $selector, string $direction, string $
     if (typeof data.swipeCancel === 'function') {
       data.swipeCancel();
     }
-    const touchPoint = { clientX: startX, clientY: y };
-    const endTouchPoint = { clientX: endX, clientY: y };
+    const touchPoint = { clientX: startX, clientY: startY };
+    const endTouchPoint = { clientX: endX, clientY: endY };
     const startEvent = {
       type: pointerType === 'touch' ? 'touchstart' : 'pointerdown',
       pointerType,
       clientX: startX,
-      clientY: y,
+      clientY: startY,
       button: 0,
       target: el,
       touches: pointerType === 'touch' ? [touchPoint] : undefined,
@@ -1049,7 +1069,7 @@ function triggerAthkarSwipe($page, string $selector, string $direction, string $
       type: pointerType === 'touch' ? 'touchend' : 'pointerup',
       pointerType,
       clientX: endX,
-      clientY: y,
+      clientY: endY,
       button: 0,
       target: el,
       touches: pointerType === 'touch' ? [] : undefined,
@@ -1064,7 +1084,7 @@ function triggerAthkarSwipe($page, string $selector, string $direction, string $
     bubbles: true,
     cancelable: true,
     clientX: startX,
-    clientY: y,
+    clientY: startY,
     pointerType,
     pointerId: 1,
     button: 0,
@@ -1075,7 +1095,7 @@ function triggerAthkarSwipe($page, string $selector, string $direction, string $
     bubbles: true,
     cancelable: true,
     clientX: endX,
-    clientY: y,
+    clientY: endY,
     pointerType,
     pointerId: 1,
     button: 0,
@@ -1086,7 +1106,7 @@ function triggerAthkarSwipe($page, string $selector, string $direction, string $
     bubbles: true,
     cancelable: true,
     clientX: endX,
-    clientY: y,
+    clientY: endY,
     pointerType,
     pointerId: 1,
     button: 0,

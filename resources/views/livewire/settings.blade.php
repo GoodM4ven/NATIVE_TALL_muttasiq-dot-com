@@ -4,7 +4,7 @@
         data-stack-item
         wire:ignore
         x-transition
-        x-show="!isSettingsOpen"
+        x-show="!isSettingsOpen && !isAthkarManagerOpen"
         x-data="{
             settingsModalId: @js('fi-' . $this->getId() . '-action-0'),
         }"

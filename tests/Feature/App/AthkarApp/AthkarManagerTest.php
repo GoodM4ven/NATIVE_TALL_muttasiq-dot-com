@@ -63,7 +63,7 @@ it('mounts the edit action when opening a card from the manager', function () {
     expect($mountedActionNames)->toContain('editAthkar');
 });
 
-it('configures manage action as slide-over on desktop and fullscreen modal on mobile', function () {
+it('configures manage action as slide-over on desktop and sized modal on mobile', function () {
     $desktopComponent = livewire(AthkarManager::class)
         ->set('isManageAthkarMobile', false)
         ->instance();
@@ -77,7 +77,7 @@ it('configures manage action as slide-over on desktop and fullscreen modal on mo
     expect($desktopAction->isModalSlideOver())->toBeTrue()
         ->and($desktopAction->getModalWidth()->value)->toBe('7xl')
         ->and($mobileAction->isModalSlideOver())->toBeFalse()
-        ->and($mobileAction->getModalWidth()->value)->toBe('screen');
+        ->and($mobileAction->getModalWidth()->value)->toBe('5xl');
 });
 
 it('resolves defaults with local overrides and marks overridden cards', function () {

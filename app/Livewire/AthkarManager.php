@@ -57,7 +57,7 @@ class AthkarManager extends Component implements HasActions, HasSchemas
             ->modalHeading('إدارة أذكار الصباح والمساء')
             ->modalDescription('يمكنك تخصيص الأذكار كما ترغب، مع إمكانية استعادة الأذكار الافتراضية عبر زر استعادة.')
             ->slideOver(! $this->isManageAthkarMobile)
-            ->modalWidth($this->isManageAthkarMobile ? Width::Screen : Width::SevenExtraLarge)
+            ->modalWidth($this->isManageAthkarMobile ? Width::FiveExtraLarge : Width::SevenExtraLarge)
             ->registerModalActions([
                 $this->editAthkarAction(),
                 $this->createAthkarAction(),
@@ -69,6 +69,7 @@ class AthkarManager extends Component implements HasActions, HasSchemas
             ->modalContent(fn (): View => view('livewire.athkar-manager.slideover-content', [
                 'componentId' => $this->getId(),
                 'cards' => $this->resolvedAthkarCards(),
+                'isMobile' => $this->isManageAthkarMobile,
             ]))
             ->action(static fn (): null => null);
     }
