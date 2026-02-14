@@ -175,16 +175,13 @@ class Thikr extends Model implements Sortable
      */
     public function toAthkarArray(): array
     {
-        $type = $this->type instanceof ThikrType
-            ? $this->type->value
-            : ((string) $this->type ?: ThikrType::Glorification->value);
         $origin = is_string($this->origin) ? trim($this->origin) : null;
         $normalizedOrigin = $origin === '' ? null : $origin;
 
         return [
             'id' => $this->id,
             'time' => $this->time->value,
-            'type' => $type,
+            'type' => $this->type->value,
             'text' => $this->text,
             'origin' => $normalizedOrigin,
             'is_aayah' => (bool) $this->is_aayah,

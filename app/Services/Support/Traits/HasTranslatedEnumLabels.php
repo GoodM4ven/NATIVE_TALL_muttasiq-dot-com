@@ -39,9 +39,7 @@ trait HasTranslatedEnumLabels
             }
         }
 
-        $firstCase = static::cases()[0] ?? null;
-
-        return $firstCase ? static::translateLabel($firstCase) : '';
+        return static::translateLabel(static::cases()[0]);
     }
 
     protected static function translateLabel(self $case): string

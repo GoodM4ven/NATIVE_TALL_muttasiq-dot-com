@@ -1,4 +1,7 @@
-<div x-data="{ tip: null }" x-on:athkar-open-single-completion.window="$wire.mountAction('singleThikrCompletion', { index: Number($event.detail?.index ?? -1) })">
+<div
+    x-data="{ tip: null }"
+    x-on:athkar-open-single-completion.window="$wire.mountAction('singleThikrCompletion', { index: Number($event.detail?.index ?? -1) })"
+>
     <button
         class="bg-success-500/90 absolute -top-3 right-2 z-10 flex h-7 w-7 items-center justify-center rounded-full text-white opacity-0 shadow-lg transition-opacity duration-300"
         type="button"

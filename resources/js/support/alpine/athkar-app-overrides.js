@@ -163,7 +163,7 @@ const normalizeAthkarDefaults = (athkar) => {
             };
         })
         .filter(Boolean)
-        .sort((left, right) => (left.order - right.order) || (left.id - right.id));
+        .sort((left, right) => left.order - right.order || left.id - right.id);
 };
 
 const normalizeAthkarOverride = (override) => {
@@ -198,14 +198,8 @@ const normalizeAthkarOverride = (override) => {
         override?.origin === null || override?.origin === undefined
             ? null
             : normalizeAthkarOrigin(override.origin);
-    const isAayahRaw =
-        override?.is_aayah === undefined
-            ? override?.is_quran
-            : override?.is_aayah;
-    const isAayah =
-        isAayahRaw === null || isAayahRaw === undefined
-            ? null
-            : Boolean(isAayahRaw);
+    const isAayahRaw = override?.is_aayah === undefined ? override?.is_quran : override?.is_aayah;
+    const isAayah = isAayahRaw === null || isAayahRaw === undefined ? null : Boolean(isAayahRaw);
     const isCustom = Boolean(override?.is_custom);
 
     return {
@@ -245,7 +239,9 @@ const normalizeAthkarOverrides = (overrides) => {
 const resolveAthkarWithOverrides = (defaults, overrides) => {
     const normalizedDefaults = normalizeAthkarDefaults(defaults);
     const normalizedOverrides = normalizeAthkarOverrides(overrides);
-    const overridesByThikrId = new Map(normalizedOverrides.map((override) => [override.thikr_id, override]));
+    const overridesByThikrId = new Map(
+        normalizedOverrides.map((override) => [override.thikr_id, override]),
+    );
     const defaultsById = new Map(normalizedDefaults.map((item) => [item.id, item]));
 
     const defaultCards = normalizedDefaults
@@ -291,7 +287,7 @@ const resolveAthkarWithOverrides = (defaults, overrides) => {
 
     return defaultCards
         .concat(customCards)
-        .sort((left, right) => (left.order - right.order) || (left.id - right.id));
+        .sort((left, right) => left.order - right.order || left.id - right.id);
 };
 
 const readAthkarOverridesFromStorage = () => {

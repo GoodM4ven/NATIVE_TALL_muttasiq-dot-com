@@ -407,7 +407,7 @@
             transition: border-color 200ms ease, background-color 200ms ease, box-shadow 200ms ease;
         }
 
-        .athkar-origin-indicator > * {
+        .athkar-origin-indicator>* {
             position: relative;
             z-index: 1;
         }
@@ -630,6 +630,7 @@
         }
 
         @keyframes athkar-origin-indicator-pulse {
+
             0%,
             100% {
                 box-shadow:
@@ -673,9 +674,7 @@
                 <span
                     class="text-primary-700 dark:text-primary-200 inline-flex min-w-[4.3rem] items-center justify-center gap-1 text-center text-[0.85rem] tabular-nums sm:min-w-[4.6rem] sm:text-[0.95rem]"
                 >
-                    <span
-                        class="athkar-count"
-                    >
+                    <span class="athkar-count">
                         <span
                             class="athkar-count__current"
                             x-show="!(totalPulse.isActive && totalPulse.hasChanges)"
@@ -821,9 +820,7 @@
                                     >
                                         <span x-text="`${requiredCount(index)} /`"></span>
 
-                                        <span
-                                            class="athkar-count"
-                                        >
+                                        <span class="athkar-count">
                                             <span
                                                 class="athkar-count__current"
                                                 x-show="!(countPulse.index === index && countPulse.isActive && countPulse.hasChanges)"
@@ -909,8 +906,8 @@
                             "
                         >
                             <button
-                                type="button"
                                 class="athkar-origin-indicator athkar-origin-indicator--mobile"
+                                type="button"
                                 x-data="{ tip: null }"
                                 x-bind:class="isOriginVisible(index) && 'is-active'"
                                 x-bind:aria-pressed="isOriginVisible(index)"
@@ -932,7 +929,7 @@
                             <!-- Top Counter -->
                             <div class="hidden items-center justify-between gap-4 sm:flex">
                                 <div class="w-16"></div>
-                                
+
                                 <div class="flex items-center justify-center gap-3">
                                     <div class="group relative h-20 w-20 sm:h-24 sm:w-24">
                                         <!-- The Circle -->
@@ -952,9 +949,7 @@
                                             dir="ltr"
                                         >
                                             <span x-text="`${requiredCount(index)} /`"></span>
-                                            <span
-                                                class="athkar-count"
-                                            >
+                                            <span class="athkar-count">
                                                 <span
                                                     class="athkar-count__current"
                                                     x-show="!(countPulse.index === index && countPulse.isActive && countPulse.hasChanges)"
@@ -1020,11 +1015,11 @@
                                         >العدد</span>
                                     </div>
                                 </div>
-                                
+
                                 <div class="w-16">
                                     <button
-                                        type="button"
                                         class="athkar-origin-indicator athkar-origin-indicator--desktop opacity-0 transition-opacity duration-300"
+                                        type="button"
                                         x-data="{
                                             isVisible: false,
                                             timer: null,
@@ -1120,9 +1115,7 @@
                                                 }
                                             "
                                 >
-                                    <span
-                                        class="athkar-count"
-                                    >
+                                    <span class="athkar-count">
                                         <span
                                             class="athkar-count__current"
                                             x-show="!(pagePulse.isActive && pagePulse.hasChanges)"

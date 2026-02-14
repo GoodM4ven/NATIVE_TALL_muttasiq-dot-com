@@ -105,7 +105,10 @@ document.addEventListener('alpine:init', () => {
             window.setTimeout(() => {
                 const activeElement = document.activeElement;
 
-                if (activeElement instanceof HTMLElement && activeElement.closest('.athkar-manager-card')) {
+                if (
+                    activeElement instanceof HTMLElement &&
+                    activeElement.closest('.athkar-manager-card')
+                ) {
                     activeElement.blur();
                 }
 

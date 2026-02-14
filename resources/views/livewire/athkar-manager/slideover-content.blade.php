@@ -176,8 +176,11 @@
     </style>
 @endassets
 
-<div class="space-y-4" x-data="athkarAppManager({ componentId: @js($componentId) })">
-    <div class="flex flex-wrap justify-between gap-3 items-center">
+<div
+    class="space-y-4"
+    x-data="athkarAppManager({ componentId: @js($componentId) })"
+>
+    <div class="flex flex-wrap items-center justify-between gap-3">
         <p class="text-xs text-gray-500 dark:text-gray-400">
             اسحب بطاقات الأذكار لإعادة ترتيبها، واضغط على أي بطاقة لتعديل محتوياتها.
         </p>
@@ -208,49 +211,59 @@
     </div>
 
     <div
+        class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"
         wire:key="athkar-manager-cards-grid"
         wire:sort="reorderAthkar"
         x-cloak
         x-show="$wire.hasHydratedOverrides"
         x-transition.opacity.duration.200ms
-        class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"
     >
         @foreach ($cards as $card)
             <article
+                class="athkar-manager-card athkar-manager-card__click"
+                style="view-transition-name: athkar-card-{{ $card['id'] }};"
                 wire:key="athkar-manager-card-{{ $card['id'] }}"
                 wire:sort:item="{{ $card['id'] }}"
                 wire:transition="athkar-card-{{ $card['id'] }}"
-                style="view-transition-name: athkar-card-{{ $card['id'] }};"
-                class="athkar-manager-card athkar-manager-card__click"
                 wire:click.preserve-scroll="openEditAthkar({{ $card['id'] }})"
                 x-on:pointerdown="rememberManagerScroll($event)"
             >
                 <div class="flex items-center justify-between gap-2">
                     <div class="flex flex-wrap items-center gap-2">
-                        <span class="athkar-manager-card__badge athkar-manager-card__badge--order" title="اسحب من أي مكان داخل البطاقة لإعادة الترتيب">#{{ $card['order'] }}</span>
-                        <span class="athkar-manager-card__badge athkar-manager-card__badge--time">{{ \App\Services\Enums\ThikrTime::labelFor($card['time']) }}</span>
+                        <span
+                            class="athkar-manager-card__badge athkar-manager-card__badge--order"
+                            title="اسحب من أي مكان داخل البطاقة لإعادة الترتيب"
+                        >#{{ $card['order'] }}</span>
+                        <span
+                            class="athkar-manager-card__badge athkar-manager-card__badge--time">{{ \App\Services\Enums\ThikrTime::labelFor($card['time']) }}</span>
                     </div>
 
                     <div class="flex items-center gap-2">
                         <button
-                            type="button"
                             class="athkar-manager-card__drag-handle"
+                            type="button"
+                            title="حذف الذكر"
                             wire:sort:ignore
                             wire:click.stop="openDeleteAthkar({{ $card['id'] }})"
                             x-on:pointerdown.stop
                             x-on:click.stop
-                            title="حذف الذكر"
                         >
-                            <x-filament::icon icon="heroicon-o-trash" class="h-4 w-4 text-danger-600 dark:text-danger-400" />
+                            <x-filament::icon
+                                class="text-danger-600 dark:text-danger-400 h-4 w-4"
+                                icon="heroicon-o-trash"
+                            />
                         </button>
 
                         <span
                             class="athkar-manager-card__drag-handle"
+                            title="اسحب لإعادة الترتيب"
                             wire:click.stop
                             x-on:click.stop
-                            title="اسحب لإعادة الترتيب"
                         >
-                            <x-filament::icon icon="heroicon-o-bars-3" class="h-4 w-4" />
+                            <x-filament::icon
+                                class="h-4 w-4"
+                                icon="heroicon-o-bars-3"
+                            />
                         </span>
                     </div>
                 </div>
@@ -261,14 +274,16 @@
 
                 <div class="mt-auto flex items-end justify-between gap-2">
                     <div class="flex flex-wrap items-center gap-2">
-                        <span class="athkar-manager-card__badge athkar-manager-card__badge--type">{{ \App\Services\Enums\ThikrType::labelFor($card['type']) }}</span>
+                        <span
+                            class="athkar-manager-card__badge athkar-manager-card__badge--type">{{ \App\Services\Enums\ThikrType::labelFor($card['type']) }}</span>
                         @if ($card['is_original'])
                             <span class="athkar-manager-card__badge athkar-manager-card__badge--origin">مأثور</span>
                         @endif
                     </div>
 
                     <div class="flex flex-wrap items-center justify-end gap-2">
-                        <span class="athkar-manager-card__badge athkar-manager-card__badge--count">العدد: {{ $card['count'] }}</span>
+                        <span class="athkar-manager-card__badge athkar-manager-card__badge--count">العدد:
+                            {{ $card['count'] }}</span>
                         @if ($card['is_overridden'])
                             <span class="athkar-manager-card__badge athkar-manager-card__badge--override">مُعَدّل</span>
                         @endif

@@ -287,68 +287,94 @@ class AthkarManager extends Component implements HasActions, HasSchemas
         $overridesById = collect($normalizedOverrides)
             ->keyBy('thikr_id');
 
-        $defaultCards = collect($defaults)
-            ->map(function (array $defaultCard) use ($defaultOrderMap, $overridesById): ?array {
-                $override = $overridesById->get($defaultCard['id']);
+        $defaultCards = [];
 
-                if ((bool) ($override['is_deleted'] ?? false)) {
-                    return null;
-                }
+        foreach ($defaults as $defaultCard) {
+            /** @var array{
+             *     thikr_id: int,
+             *     order: int|null,
+             *     time: string|null,
+             *     type: string|null,
+             *     text: string|null,
+             *     origin: string|null,
+             *     count: int|null,
+             *     is_aayah: bool|null,
+             *     is_deleted: bool,
+             *     is_custom: bool
+             * }|null $override */
+            $override = $overridesById->get($defaultCard['id']);
 
-                $mergedCard = [
-                    ...$defaultCard,
-                    'order' => $override['order'] ?? ($defaultOrderMap[$defaultCard['id']] ?? $defaultCard['order']),
-                    'time' => $override['time'] ?? $defaultCard['time'],
-                    'type' => $override['type'] ?? $defaultCard['type'],
-                    'text' => $override['text'] ?? $defaultCard['text'],
-                    'origin' => $override['origin'] ?? $defaultCard['origin'],
-                    'count' => $override['count'] ?? $defaultCard['count'],
-                    'is_aayah' => $this->resolveAayahState(
-                        $override['is_aayah'] ?? null,
-                        (string) ($override['text'] ?? $defaultCard['text']),
-                        fallback: (bool) $defaultCard['is_aayah'],
-                    ),
-                ];
+            if ($override && $override['is_deleted']) {
+                continue;
+            }
 
-                $mergedCard['is_original'] = $this->hasOrigin($mergedCard['origin']);
-                $mergedCard['is_custom'] = false;
+            $mergedText = $override['text'] ?? $defaultCard['text'];
+            $mergedOrigin = $override['origin'] ?? $defaultCard['origin'];
 
-                return $mergedCard;
-            })
-            ->filter();
+            $mergedCard = [
+                ...$defaultCard,
+                'order' => $override['order'] ?? ($defaultOrderMap[$defaultCard['id']] ?? $defaultCard['order']),
+                'time' => $override['time'] ?? $defaultCard['time'],
+                'type' => $override['type'] ?? $defaultCard['type'],
+                'text' => $mergedText,
+                'origin' => $mergedOrigin,
+                'count' => $override['count'] ?? $defaultCard['count'],
+                'is_aayah' => $this->resolveAayahState(
+                    $override['is_aayah'] ?? null,
+                    $mergedText,
+                    fallback: (bool) $defaultCard['is_aayah'],
+                ),
+            ];
 
-        $customCards = collect($normalizedOverrides)
-            ->filter(fn (array $override): bool => (bool) ($override['is_custom'] ?? false))
-            ->filter(fn (array $override): bool => ! $defaultsById->has($override['thikr_id']))
-            ->filter(fn (array $override): bool => ! (bool) ($override['is_deleted'] ?? false))
-            ->map(function (array $override): array {
-                $origin = $this->normalizeNullableText($override['origin'] ?? null);
+            $mergedCard['is_original'] = $this->hasOrigin($mergedOrigin);
+            $mergedCard['is_custom'] = false;
 
-                return [
-                    'id' => $override['thikr_id'],
-                    'time' => $override['time'] ?? ThikrTime::Shared->value,
-                    'type' => $override['type'] ?? ThikrType::Glorification->value,
-                    'text' => $override['text'] ?? '',
-                    'origin' => $origin,
-                    'is_aayah' => $this->resolveAayahState(
-                        $override['is_aayah'] ?? null,
-                        (string) ($override['text'] ?? ''),
-                    ),
-                    'is_original' => $this->hasOrigin($origin),
-                    'count' => max(1, (int) ($override['count'] ?? 1)),
-                    'order' => max(1, (int) ($override['order'] ?? 1)),
-                    'is_custom' => true,
-                ];
-            });
+            $defaultCards[] = $mergedCard;
+        }
 
-        $cards = $defaultCards
-            ->concat($customCards)
-            ->sortBy([
-                ['order', 'asc'],
-                ['id', 'asc'],
-            ])
-            ->values()
-            ->all();
+        $customCards = [];
+
+        foreach ($normalizedOverrides as $override) {
+            if (! $override['is_custom']) {
+                continue;
+            }
+            if ($defaultsById->has($override['thikr_id'])) {
+                continue;
+            }
+            if ($override['is_deleted']) {
+                continue;
+            }
+
+            $origin = $this->normalizeNullableText($override['origin']);
+            $text = $override['text'] ?? '';
+
+            $customCards[] = [
+                'id' => $override['thikr_id'],
+                'time' => $override['time'] ?? ThikrTime::Shared->value,
+                'type' => $override['type'] ?? ThikrType::Glorification->value,
+                'text' => $text,
+                'origin' => $origin,
+                'is_aayah' => $this->resolveAayahState(
+                    $override['is_aayah'],
+                    $text,
+                ),
+                'is_original' => $this->hasOrigin($origin),
+                'count' => max(1, (int) ($override['count'] ?? 1)),
+                'order' => max(1, (int) ($override['order'] ?? 1)),
+                'is_custom' => true,
+            ];
+        }
+
+        $cards = [...$defaultCards, ...$customCards];
+        usort($cards, static function (array $left, array $right): int {
+            $orderComparison = $left['order'] <=> $right['order'];
+
+            if ($orderComparison !== 0) {
+                return $orderComparison;
+            }
+
+            return $left['id'] <=> $right['id'];
+        });
 
         return $this->attachOverrideFlags($cards, $normalizedOverrides);
     }
@@ -386,17 +412,17 @@ class AthkarManager extends Component implements HasActions, HasSchemas
             ];
         }
 
-        $text = (string) ($card['text'] ?? '');
+        $text = $card['text'];
         $origin = $this->normalizeNullableText($card['origin'] ?? null);
 
         return [
-            'time' => ThikrTime::tryFrom((string) ($card['time'] ?? ''))?->value ?? ThikrTime::Shared->value,
-            'type' => ThikrType::tryFrom((string) ($card['type'] ?? ''))?->value ?? ThikrType::Glorification->value,
+            'time' => $card['time'],
+            'type' => $card['type'],
             'text' => Thikr::stripAayahWrapper($text),
             'origin' => $origin,
-            'count' => max(1, (int) ($card['count'] ?? 1)),
+            'count' => max(1, $card['count']),
             'is_aayah' => $this->resolveAayahState(
-                $card['is_aayah'] ?? null,
+                $card['is_aayah'],
                 $text,
             ),
         ];
@@ -478,7 +504,7 @@ class AthkarManager extends Component implements HasActions, HasSchemas
     {
         $previousOverrides = $this->normalizeOverrides($this->athkarOverrides);
         $currentCustomOverride = collect($previousOverrides)
-            ->first(fn (array $override): bool => $override['thikr_id'] === $thikrId && (bool) ($override['is_custom'] ?? false));
+            ->first(fn (array $override): bool => $override['thikr_id'] === $thikrId && $override['is_custom']);
 
         if (! $currentCustomOverride) {
             return false;
@@ -498,7 +524,7 @@ class AthkarManager extends Component implements HasActions, HasSchemas
             'origin' => $data['origin'] ?? null,
             'count' => $data['count'] ?? $currentCustomOverride['count'] ?? 1,
             'is_aayah' => (bool) ($data['is_aayah'] ?? $currentCustomOverride['is_aayah'] ?? false),
-            'is_deleted' => (bool) ($currentCustomOverride['is_deleted'] ?? false),
+            'is_deleted' => $currentCustomOverride['is_deleted'],
             'is_custom' => true,
         ]);
 
@@ -586,7 +612,7 @@ class AthkarManager extends Component implements HasActions, HasSchemas
             ];
 
             if ($defaultCard) {
-                $defaultOrder = $defaultOrderMap[$recordId] ?? (int) ($defaultCard['order'] ?? $nextOrder);
+                $defaultOrder = $defaultOrderMap[$recordId] ?? $defaultCard['order'];
                 $nextOverride['order'] = $nextOrder !== $defaultOrder ? $nextOrder : null;
             } else {
                 $nextOverride['order'] = $nextOrder;
@@ -826,14 +852,14 @@ class AthkarManager extends Component implements HasActions, HasSchemas
     {
         $overridesById = collect($normalizedOverrides)->keyBy('thikr_id');
         $currentDefaultIds = collect($cards)
-            ->reject(fn (array $card): bool => (bool) ($card['is_custom'] ?? false))
+            ->reject(fn (array $card): bool => $card['is_custom'])
             ->pluck('id')
             ->map(fn (mixed $id): int => max(0, (int) $id))
             ->filter(fn (int $id): bool => $id > 0)
             ->values()
             ->all();
         $deletedDefaultIds = collect($normalizedOverrides)
-            ->filter(fn (array $override): bool => (bool) ($override['is_deleted'] ?? false))
+            ->filter(fn (array $override): bool => $override['is_deleted'])
             ->pluck('thikr_id')
             ->map(fn (mixed $id): int => max(0, (int) $id))
             ->filter(fn (int $id): bool => $id > 0)
@@ -850,7 +876,7 @@ class AthkarManager extends Component implements HasActions, HasSchemas
         return collect($cards)
             ->map(function (array $card) use ($changedOrderIds, $overridesById): array {
                 $override = $overridesById->get($card['id']);
-                $isDefaultCard = ! (bool) ($card['is_custom'] ?? false);
+                $isDefaultCard = ! $card['is_custom'];
                 $isOrderOverrideMeaningful = $isDefaultCard
                     ? (bool) ($changedOrderIds[(int) $card['id']] ?? false)
                     : (bool) ($override['order'] ?? null);
@@ -902,9 +928,13 @@ class AthkarManager extends Component implements HasActions, HasSchemas
             return [];
         }
 
-        return collect($changedIds)
-            ->mapWithKeys(fn (int $id): array => [$id => true])
-            ->all();
+        $changedIdsMap = [];
+
+        foreach ($changedIds as $changedId) {
+            $changedIdsMap[$changedId] = true;
+        }
+
+        return $changedIdsMap;
     }
 
     private function resolveAayahState(?bool $state, string $text, bool $fallback = false): bool
@@ -943,7 +973,7 @@ class AthkarManager extends Component implements HasActions, HasSchemas
             return $value->value;
         }
 
-        if ($value instanceof BackedEnum && is_scalar($value->value)) {
+        if ($value instanceof BackedEnum) {
             $value = $value->value;
         }
 
@@ -960,7 +990,7 @@ class AthkarManager extends Component implements HasActions, HasSchemas
             return $value->value;
         }
 
-        if ($value instanceof BackedEnum && is_scalar($value->value)) {
+        if ($value instanceof BackedEnum) {
             $value = $value->value;
         }
 

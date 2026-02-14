@@ -18,7 +18,7 @@ enum ThikrType: string implements HasColor, HasLabel
     case Supplication = 'supplication';
     case Protection = 'protection';
 
-    public function getColor(): string|array|null
+    public function getColor(): string
     {
         return 'info';
     }

@@ -783,7 +783,9 @@ document.addEventListener('alpine:init', () => {
         typeLabelFor(type) {
             const normalizedType = String(type ?? this.defaultType());
 
-            return this.typeLabels?.[normalizedType] ?? this.typeLabels?.[this.defaultType()] ?? 'عام';
+            return (
+                this.typeLabels?.[normalizedType] ?? this.typeLabels?.[this.defaultType()] ?? 'عام'
+            );
         },
         activeTypeLabel(index) {
             return this.typeLabelFor(this.activeList?.[index]?.type);

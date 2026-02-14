@@ -5,15 +5,12 @@
 
 @font-face {
     font-family: 'Scheherazade New';
-    src:
-        url('../../../fonts/scheherazade-new/ScheherazadeNew-Regular.ttf')
-        format('truetype');
+    src: url('../../../fonts/scheherazade-new/ScheherazadeNew-Regular.ttf') format('truetype');
     font-display: swap;
 }
 
 :root {
-    --font-arabic-serif:
-        'Scheherazade New', 'Readex Pro', ui-sans-serif, system-ui, sans-serif;
+    --font-arabic-serif: 'Scheherazade New', 'Readex Pro', ui-sans-serif, system-ui, sans-serif;
 }
 
 .admin-thikr-table .admin-thikr-table-order-input .fi-input-wrp {
