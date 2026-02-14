@@ -3,7 +3,7 @@
         .athkar-manager-card {
             position: relative;
             display: flex;
-            min-height: 28rem;
+            min-height: 27rem;
             cursor: pointer;
             border-radius: 1rem;
             border: 1px solid color-mix(in srgb, var(--primary-300) 45%, transparent);
@@ -12,6 +12,7 @@
             transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
             user-select: none;
             -webkit-user-select: none;
+            touch-action: pan-y;
         }
 
         .athkar-manager-card:hover {
@@ -30,7 +31,7 @@
 
         .athkar-manager-card__click {
             display: flex;
-            min-height: 28rem;
+            min-height: 27rem;
             width: 100%;
             flex-direction: column;
             gap: 0.75rem;
@@ -74,14 +75,9 @@
         }
 
         .athkar-manager-card__badge--order {
-            cursor: grab;
             border-color: color-mix(in srgb, var(--gray-400) 50%, transparent);
             background: color-mix(in srgb, var(--gray-300) 16%, transparent);
             color: var(--gray-700);
-        }
-
-        .athkar-manager-card__badge--order:active {
-            cursor: grabbing;
         }
 
         .dark .athkar-manager-card__badge--order {
@@ -157,6 +153,7 @@
             background: color-mix(in srgb, var(--gray-300) 16%, transparent);
             padding: 0.3rem 0.45rem;
             color: var(--gray-700);
+            touch-action: none;
         }
 
         .athkar-manager-card__drag-handle:active {
@@ -172,6 +169,10 @@
         .athkar-manager-card * {
             user-select: none;
             -webkit-user-select: none;
+        }
+
+        .athkar-manager-cards-grid {
+            touch-action: pan-y;
         }
     </style>
 @endassets
@@ -211,7 +212,7 @@
     </div>
 
     <div
-        class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"
+        class="athkar-manager-cards-grid grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"
         wire:key="athkar-manager-cards-grid"
         wire:sort="reorderAthkar"
         x-cloak
@@ -221,6 +222,7 @@
         @foreach ($cards as $card)
             <article
                 class="athkar-manager-card athkar-manager-card__click"
+                data-athkar-manager-card
                 style="view-transition-name: athkar-card-{{ $card['id'] }};"
                 wire:key="athkar-manager-card-{{ $card['id'] }}"
                 wire:sort:item="{{ $card['id'] }}"
@@ -231,7 +233,7 @@
                     <div class="flex flex-wrap items-center gap-2">
                         <span
                             class="athkar-manager-card__badge athkar-manager-card__badge--order"
-                            title="اسحب من أي مكان داخل البطاقة لإعادة الترتيب"
+                            title="ترتيب الذكر"
                         >#{{ $card['order'] }}</span>
                         <span
                             class="athkar-manager-card__badge athkar-manager-card__badge--time">{{ \App\Services\Enums\ThikrTime::labelFor($card['time']) }}</span>
@@ -256,7 +258,9 @@
                         <span
                             class="athkar-manager-card__drag-handle"
                             title="اسحب لإعادة الترتيب"
+                            wire:sort:handle
                             wire:click.stop
+                            x-on:pointerdown.stop
                             x-on:click.stop
                         >
                             <x-filament::icon

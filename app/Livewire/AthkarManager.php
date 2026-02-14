@@ -56,8 +56,8 @@ class AthkarManager extends Component implements HasActions, HasSchemas
         return Action::make('manageAthkar')
             ->modalHeading('إدارة أذكار الصباح والمساء')
             ->modalDescription('يمكنك تخصيص الأذكار كما ترغب، مع إمكانية استعادة الأذكار الافتراضية عبر زر استعادة.')
-            ->slideOver(fn (): bool => ! $this->isManageAthkarMobile)
-            ->modalWidth(fn (): Width => $this->isManageAthkarMobile ? Width::Screen : Width::SevenExtraLarge)
+            ->slideOver(! $this->isManageAthkarMobile)
+            ->modalWidth($this->isManageAthkarMobile ? Width::Screen : Width::SevenExtraLarge)
             ->registerModalActions([
                 $this->editAthkarAction(),
                 $this->createAthkarAction(),
@@ -106,7 +106,16 @@ class AthkarManager extends Component implements HasActions, HasSchemas
             })
             ->schema($this->thikrFormSchema())
             ->action(function (array $data, array $arguments): void {
-                if ($this->saveOverrideById((int) ($arguments['thikrId'] ?? 0), $data)) {
+                $thikrId = (int) ($arguments['thikrId'] ?? 0);
+
+                if ($thikrId < 1) {
+                    return;
+                }
+
+                $didSave = $this->saveOverrideById($thikrId, $data);
+                $didReorder = $this->applyRequestedOrderToCard($thikrId, $data);
+
+                if ($didSave || $didReorder) {
                     notify('heroicon-o-check-circle', 'تم حفظ التعديل');
                 }
             });
@@ -119,6 +128,7 @@ class AthkarManager extends Component implements HasActions, HasSchemas
             ->modalHeading('إضافة ذكر جديد')
             ->modalSubmitActionLabel('إضافة')
             ->fillForm(fn (): array => [
+                'order' => max(1, $this->maxResolvedOrder() + 1),
                 'time' => ThikrTime::Shared->value,
                 'type' => ThikrType::Glorification->value,
                 'text' => '',
@@ -128,7 +138,24 @@ class AthkarManager extends Component implements HasActions, HasSchemas
             ])
             ->schema($this->thikrFormSchema())
             ->action(function (array $data): void {
+                $beforeIds = collect($this->resolvedAthkarCards())
+                    ->pluck('id')
+                    ->map(fn (mixed $id): int => max(0, (int) $id))
+                    ->filter(fn (int $id): bool => $id > 0)
+                    ->values();
+
                 if ($this->createCustomAthkar($data)) {
+                    $afterIds = collect($this->resolvedAthkarCards())
+                        ->pluck('id')
+                        ->map(fn (mixed $id): int => max(0, (int) $id))
+                        ->filter(fn (int $id): bool => $id > 0)
+                        ->values();
+                    $newThikrId = (int) ($afterIds->diff($beforeIds)->first() ?? 0);
+
+                    if ($newThikrId > 0) {
+                        $this->applyRequestedOrderToCard($newThikrId, $data);
+                    }
+
                     notify('heroicon-o-plus-circle', 'تمت إضافة الذكر');
                 }
             });
@@ -248,6 +275,64 @@ class AthkarManager extends Component implements HasActions, HasSchemas
         $orderedIds->splice($targetIndex, 0, [$thikrId]);
 
         $this->persistOrderFromResolvedIds($previousOrderedIds, $orderedIds->values()->all());
+    }
+
+    /**
+     * @param  array{order?: mixed, time?: mixed, type?: mixed, text?: mixed, origin?: mixed, count?: mixed, is_aayah?: mixed}  $data
+     */
+    private function applyRequestedOrderToCard(int $thikrId, array $data): bool
+    {
+        $requestedOrder = $this->normalizePositiveInteger($data['order'] ?? null);
+
+        if ($requestedOrder === null) {
+            return false;
+        }
+
+        return $this->moveResolvedCardToOrder($thikrId, $requestedOrder);
+    }
+
+    private function moveResolvedCardToOrder(int $thikrId, int $targetOrder): bool
+    {
+        $thikrId = max(0, $thikrId);
+
+        if ($thikrId < 1) {
+            return false;
+        }
+
+        $orderedIds = collect($this->resolvedAthkarCards())
+            ->pluck('id')
+            ->map(fn (mixed $id): int => max(0, (int) $id))
+            ->filter(fn (int $id): bool => $id > 0)
+            ->values();
+
+        if ($orderedIds->count() < 2) {
+            return false;
+        }
+
+        $fromIndex = $orderedIds->search($thikrId);
+
+        if ($fromIndex === false) {
+            return false;
+        }
+
+        $targetIndex = max(0, min($targetOrder - 1, $orderedIds->count() - 1));
+
+        if ($fromIndex === $targetIndex) {
+            return false;
+        }
+
+        $previousOrderedIds = $orderedIds->all();
+        $orderedIds->forget($fromIndex);
+        $orderedIds = $orderedIds->values();
+        $orderedIds->splice($targetIndex, 0, [$thikrId]);
+
+        $this->persistOrderFromResolvedIds(
+            $previousOrderedIds,
+            $orderedIds->values()->all(),
+            shouldNotify: false,
+        );
+
+        return true;
     }
 
     /**
@@ -393,7 +478,7 @@ class AthkarManager extends Component implements HasActions, HasSchemas
     }
 
     /**
-     * @return array{time: string, type: string, text: string, origin: string|null, count: int, is_aayah: bool}
+     * @return array{order: int, time: string, type: string, text: string, origin: string|null, count: int, is_aayah: bool}
      */
     private function editFormDefaultsById(int $thikrId): array
     {
@@ -403,6 +488,7 @@ class AthkarManager extends Component implements HasActions, HasSchemas
 
         if (! $card) {
             return [
+                'order' => 1,
                 'time' => ThikrTime::Shared->value,
                 'type' => ThikrType::Glorification->value,
                 'text' => '',
@@ -416,6 +502,7 @@ class AthkarManager extends Component implements HasActions, HasSchemas
         $origin = $this->normalizeNullableText($card['origin'] ?? null);
 
         return [
+            'order' => max(1, (int) $card['order']),
             'time' => $card['time'],
             'type' => $card['type'],
             'text' => Thikr::stripAayahWrapper($text),
@@ -429,7 +516,7 @@ class AthkarManager extends Component implements HasActions, HasSchemas
     }
 
     /**
-     * @param  array{time?: mixed, type?: mixed, text?: mixed, origin?: mixed, count?: mixed, is_aayah?: mixed}  $data
+     * @param  array{order?: mixed, time?: mixed, type?: mixed, text?: mixed, origin?: mixed, count?: mixed, is_aayah?: mixed}  $data
      */
     private function saveOverrideById(int $thikrId, array $data): bool
     {
@@ -498,7 +585,7 @@ class AthkarManager extends Component implements HasActions, HasSchemas
     }
 
     /**
-     * @param  array{time?: mixed, type?: mixed, text?: mixed, origin?: mixed, count?: mixed, is_aayah?: mixed}  $data
+     * @param  array{order?: mixed, time?: mixed, type?: mixed, text?: mixed, origin?: mixed, count?: mixed, is_aayah?: mixed}  $data
      */
     private function saveCustomOverrideById(int $thikrId, array $data): bool
     {
@@ -558,8 +645,11 @@ class AthkarManager extends Component implements HasActions, HasSchemas
      * @param  array<int, int>  $previousOrderedIds
      * @param  array<int, int>  $nextOrderedIds
      */
-    private function persistOrderFromResolvedIds(array $previousOrderedIds, array $nextOrderedIds): void
-    {
+    private function persistOrderFromResolvedIds(
+        array $previousOrderedIds,
+        array $nextOrderedIds,
+        bool $shouldNotify = true
+    ): void {
         $previousOrderedIds = collect($previousOrderedIds)
             ->map(fn (int $id): int => max(0, $id))
             ->filter(fn (int $id): bool => $id > 0)
@@ -641,7 +731,10 @@ class AthkarManager extends Component implements HasActions, HasSchemas
 
         $this->athkarOverrides = $nextOverrides;
         $this->dispatchOverridesPersisted(hasOrderChange: true);
-        notify('heroicon-o-bars-3', 'تم تحديث ترتيب الأذكار');
+
+        if ($shouldNotify) {
+            notify('heroicon-o-bars-3', 'تم تحديث ترتيب الأذكار');
+        }
     }
 
     private function dispatchOverridesPersisted(?int $changedThikrId = null, bool $hasOrderChange = false): void
@@ -1014,7 +1107,7 @@ class AthkarManager extends Component implements HasActions, HasSchemas
     }
 
     /**
-     * @param  array{time?: mixed, type?: mixed, text?: mixed, origin?: mixed, count?: mixed, is_aayah?: mixed}  $data
+     * @param  array{order?: mixed, time?: mixed, type?: mixed, text?: mixed, origin?: mixed, count?: mixed, is_aayah?: mixed}  $data
      */
     private function createCustomAthkar(array $data): bool
     {

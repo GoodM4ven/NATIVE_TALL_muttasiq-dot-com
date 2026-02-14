@@ -270,6 +270,372 @@ JS, ['targetId' => $targetItemId]),
     );
 });
 
+it('keeps progress pinned to the same thikr id after add/remove/reorder overrides and reload', function () {
+    $page = visit('/');
+
+    resetBrowserState($page);
+    openAthkarReader($page, 'sabah', false);
+
+    setAthkarSettings($page, [
+        'does_automatically_switch_completed_athkar' => false,
+        'does_prevent_switching_athkar_until_completion' => false,
+    ]);
+
+    $activeCount = $page->script(athkarReaderDataScript('data.activeList.length'));
+    expect($activeCount)->toBeGreaterThan(2);
+
+    $targetIndex = $page->script(athkarReaderDataScript('Math.min(2, data.activeList.length - 1)'));
+    expect($targetIndex)->toBeGreaterThanOrEqual(0);
+
+    $targetId = $page->script(athkarReaderDataScript('data.activeList['.$targetIndex.']?.id ?? null'));
+    expect($targetId)->not->toBeNull();
+
+    $page->script(
+        athkarReaderCommandScript(
+            "data.setActiveIndex({$targetIndex}); data.setCount({$targetIndex}, 2, { allowOvercount: true });",
+        ),
+    );
+
+    waitForScript($page, athkarReaderDataScript('data.countAt(data.activeIndex)'), 2);
+
+    $result = $page->script(js_template(<<<'JS'
+(() => {
+  const el = document.querySelector('[x-data^="athkarAppReader"]');
+  if (!el || !window.Alpine) {
+    return null;
+  }
+  const data = window.Alpine.$data ? window.Alpine.$data(el) : (el.__x?.$data ?? null);
+  if (!data) {
+    return null;
+  }
+
+  const targetId = Number({{targetId}});
+  const list = Array.isArray(data.activeList) ? data.activeList : [];
+  const deleteCandidate = list.find((item) => Number(item?.id ?? 0) !== targetId);
+  const maxExistingId = list.reduce((max, item) => Math.max(max, Number(item?.id ?? 0)), 0);
+  const customId = maxExistingId + 1000;
+
+  const overrides = [
+    {
+      thikr_id: targetId,
+      order: 1,
+    },
+    {
+      thikr_id: customId,
+      order: 2,
+      time: 'shared',
+      type: 'supplication',
+      text: 'ذكر مخصص لاختبار الاستعادة',
+      origin: null,
+      count: 1,
+      is_aayah: false,
+      is_deleted: false,
+      is_custom: true,
+    },
+  ];
+
+  if (deleteCandidate) {
+    overrides.push({
+      thikr_id: Number(deleteCandidate.id),
+      is_deleted: true,
+    });
+  }
+
+  data.applyAthkarOverrides(overrides, { persist: true });
+
+  return {
+    deletedId: deleteCandidate ? Number(deleteCandidate.id) : null,
+    customId,
+  };
+})()
+JS, ['targetId' => $targetId]));
+
+    expect($result)->toBeArray();
+    $deletedId = $result['deletedId'] ?? null;
+    $customId = $result['customId'] ?? null;
+
+    $targetIdExpression = js_encode($targetId);
+    waitForScriptWithTimeout(
+        $page,
+        athkarReaderDataScript(
+            "String(data.activeList[data.activeIndex]?.id ?? '') === String({$targetIdExpression})",
+        ),
+        true,
+        12_000,
+    );
+    waitForScript($page, athkarReaderDataScript('data.countAt(data.activeIndex)'), 2);
+
+    if ($deletedId !== null) {
+        $deletedIdExpression = js_encode($deletedId);
+        waitForScriptWithTimeout(
+            $page,
+            athkarReaderDataScript(
+                "data.activeList.every((item) => String(item?.id ?? '') !== String({$deletedIdExpression}))",
+            ),
+            true,
+            12_000,
+        );
+    }
+
+    if ($customId !== null) {
+        $customIdExpression = js_encode($customId);
+        waitForScriptWithTimeout(
+            $page,
+            athkarReaderDataScript(
+                "data.activeList.some((item) => String(item?.id ?? '') === String({$customIdExpression}))",
+            ),
+            true,
+            12_000,
+        );
+    }
+
+    $todayKey = $page->script(<<<'JS'
+(() => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+})()
+JS);
+    $page->script(athkarReaderCommandScript('data.lastSeenDay = data.todayKey();'));
+    setLocalStorageValue($page, 'athkar-last-day', $todayKey);
+    waitForScript($page, 'JSON.parse(localStorage.getItem("athkar-last-day"))', $todayKey);
+
+    $page->refresh();
+
+    waitForAlpineReady($page);
+    waitForReaderVisible($page);
+    waitForScript($page, homeDataScript('data.activeView'), 'athkar-app-sabah');
+    waitForScript($page, athkarReaderDataScript('data.activeMode'), 'sabah');
+    waitForScriptWithTimeout(
+        $page,
+        athkarReaderDataScript(
+            "String(data.activeList[data.activeIndex]?.id ?? '') === String({$targetIdExpression})",
+        ),
+        true,
+        12_000,
+    );
+    waitForScriptWithTimeout(
+        $page,
+        js_template(<<<'JS'
+(() => {
+  const targetId = String({{targetId}});
+  const progress = JSON.parse(localStorage.getItem('athkar-progress-v1') ?? '{}');
+  const ids = progress?.sabah?.ids ?? [];
+  const counts = progress?.sabah?.counts ?? [];
+  const targetIndex = ids.findIndex((id) => String(id ?? '') === targetId);
+  if (targetIndex < 0) {
+    return null;
+  }
+  return Number(counts[targetIndex] ?? 0);
+})()
+JS, ['targetId' => $targetId]),
+        2,
+        12_000,
+    );
+});
+
+it('returns to gate then opens athkar manager from the reader top mode button', function () {
+    $page = visit('/');
+
+    resetBrowserState($page);
+    openAthkarReader($page, 'sabah', false);
+    waitForReaderVisible($page);
+
+    safeClick($page, '[data-athkar-open-manager]');
+
+    waitForScript($page, homeDataScript('data.activeView'), 'athkar-app-gate');
+    waitForScript($page, 'window.location.hash', '#athkar-app-gate');
+    waitForScriptWithTimeout($page, 'Boolean(document.querySelector(".fi-modal-window"))', true, 10_000);
+    waitForScript(
+        $page,
+        <<<'JS'
+(() => {
+  const managerGrid = document.querySelector('[wire\\:sort="reorderAthkar"]');
+  if (!managerGrid) {
+    return false;
+  }
+
+  return getComputedStyle(managerGrid).display !== 'none';
+})()
+JS,
+        true,
+    );
+});
+
+it('opens athkar manager as a modal on mobile and restricts sorting to drag handles', function () {
+    $page = visit('/');
+
+    resetBrowserState($page);
+    openAthkarReader($page, 'sabah', false);
+    enableMobileContext($page);
+    waitForReaderVisible($page);
+    waitForScript($page, homeDataScript('data.activeView'), 'athkar-app-sabah');
+
+    safeClick($page, '[data-athkar-open-manager]');
+
+    waitForScript($page, homeDataScript('data.activeView'), 'athkar-app-gate');
+    waitForScript($page, 'window.location.hash', '#athkar-app-gate');
+    waitForScriptWithTimeout($page, 'Boolean(document.querySelector(".fi-modal-window"))', true, 10_000);
+    waitForScript(
+        $page,
+        <<<'JS'
+(() => {
+  const modal = document.querySelector('.fi-modal.fi-modal-open');
+  if (!modal) {
+    return false;
+  }
+
+  return !modal.classList.contains('fi-modal-slide-over');
+})()
+JS,
+        true,
+    );
+    waitForScript(
+        $page,
+        <<<'JS'
+(() => Boolean(document.querySelector('[data-athkar-manager-card] [wire\\:sort\\:handle]')) )()
+JS,
+        true,
+    );
+    waitForScript(
+        $page,
+        <<<'JS'
+(() => !document.querySelector('[data-athkar-manager-card][wire\\:sort\\:handle]'))()
+JS,
+        true,
+    );
+});
+
+it('fits origin text independently and keeps the text box clear of mobile top controls', function () {
+    $page = visit('/');
+
+    resetBrowserState($page);
+    openAthkarReader($page, 'sabah', false);
+    enableMobileContext($page);
+    waitForReaderVisible($page);
+
+    $originIndex = $page->script(
+        athkarReaderDataScript(
+            'data.activeList.findIndex((item) => String(item?.origin ?? "").trim().length > 0 || Boolean(item?.is_original))',
+        ),
+    );
+
+    expect($originIndex)->toBeGreaterThanOrEqual(0);
+
+    $page->script(athkarReaderCommandScript(js_template(<<<'JS'
+data.setActiveIndex({{index}});
+const activeIndex = data.activeIndex;
+
+if (!data.activeList?.[activeIndex]) {
+  return;
+}
+
+data.activeList[activeIndex].text = 'لا إله إلا الله';
+data.activeList[activeIndex].origin = 'حدثنا عبد الله بن مسلمة عن مالك عن سمي عن أبي صالح عن أبي هريرة رضي الله عنه أن رسول الله صلى الله عليه وسلم قال من قال لا إله إلا الله وحده لا شريك له له الملك وله الحمد وهو على كل شيء قدير في يوم مائة مرة كانت له عدل عشر رقاب وكتبت له مائة حسنة ومحيت عنه مائة سيئة وكانت له حرزا من الشيطان يومه ذلك حتى يمسي';
+data.activeList[activeIndex].count = 55;
+
+if (Array.isArray(data.progress?.[data.activeMode]?.counts)) {
+  data.progress[data.activeMode].counts[activeIndex] = 0;
+}
+
+data.originToggle = { mode: data.activeMode, index: activeIndex };
+data.queueReaderTextFit();
+JS, ['index' => $originIndex])));
+
+    waitForScript($page, athkarReaderDataScript('data.isOriginVisible(data.activeIndex)'), true);
+    waitForScript(
+        $page,
+        <<<'JS'
+(() => {
+  const origin = document.querySelector('[data-athkar-slide][data-active="true"] [data-athkar-origin-text]');
+  if (!origin) {
+    return false;
+  }
+
+  return String(origin.textContent ?? '').trim().length > 150;
+})()
+JS,
+        true,
+    );
+    $page->script(athkarReaderCommandScript('data.queueReaderTextFit();'));
+    waitForScript(
+        $page,
+        <<<'JS'
+(() => {
+  const slide = document.querySelector('[data-athkar-slide][data-active="true"]');
+  if (!slide) {
+    return false;
+  }
+
+  const text = slide.querySelector('[data-athkar-text]');
+  const origin = slide.querySelector('[data-athkar-origin-text]');
+  if (!text || !origin) {
+    return false;
+  }
+
+  return text.classList.contains('is-fit') && origin.classList.contains('is-fit');
+})()
+JS,
+        true,
+    );
+
+    $fontSizes = $page->script(<<<'JS'
+(() => {
+  const slide = document.querySelector('[data-athkar-slide][data-active="true"]');
+  if (!slide) {
+    return null;
+  }
+
+  const text = slide.querySelector('[data-athkar-text]');
+  const origin = slide.querySelector('[data-athkar-origin-text]');
+  if (!text || !origin) {
+    return null;
+  }
+
+  return {
+    text: Number.parseFloat(getComputedStyle(text).fontSize),
+    origin: Number.parseFloat(getComputedStyle(origin).fontSize),
+  };
+})()
+JS);
+
+    expect($fontSizes)->toBeArray()
+        ->and($fontSizes['origin'])->toBeLessThanOrEqual($fontSizes['text']);
+
+    waitForScript(
+        $page,
+        <<<'JS'
+(() => {
+  const slide = document.querySelector('[data-athkar-slide][data-active="true"]');
+  if (!slide) {
+    return false;
+  }
+
+  const box = slide.querySelector('[data-athkar-text-box]');
+  const counter = slide.querySelector('[data-athkar-mobile-counter] button[aria-label="العدد"]');
+  const originToggle = slide.querySelector('.athkar-origin-indicator--mobile');
+
+  if (!box || !counter || !originToggle) {
+    return false;
+  }
+
+  const controlsBottom = Math.max(
+    counter.getBoundingClientRect().bottom,
+    originToggle.getBoundingClientRect().bottom,
+  );
+  const boxRect = box.getBoundingClientRect();
+  const paddingTop = Number.parseFloat(getComputedStyle(box).paddingTop);
+  const contentTop = boxRect.top + (Number.isFinite(paddingTop) ? paddingTop : 0);
+
+  return contentTop >= (controlsBottom + 4);
+})()
+JS,
+        true,
+    );
+});
+
 it('restores the notice on reload and allows continuing to the reader when notice panels are enabled', function () {
     $page = visit('/');
 

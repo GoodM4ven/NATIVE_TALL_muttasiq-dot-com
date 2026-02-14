@@ -366,7 +366,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding-inline: 0.25rem;
+            padding-block: inherit;
+            padding-inline: inherit;
             opacity: 0;
             pointer-events: none;
             transition: opacity 260ms ease;
@@ -665,15 +666,20 @@
     >
         <div
             class="athkar-panel athkar-panel-actions flex flex-wrap items-center gap-2 px-3 py-2 sm:flex-nowrap sm:gap-4 sm:px-4 sm:py-3">
-            <span
-                class="athkar-chip shadow-inner! relative inline-flex items-center justify-center px-3 py-2 text-xs font-semibold transition sm:px-4 sm:py-3"
+            <button
+                class="athkar-chip shadow-inner! focus-visible:outline-primary-500 relative inline-flex cursor-pointer items-center justify-center px-3 py-2 text-xs font-semibold transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 sm:px-4 sm:py-3"
+                data-athkar-open-manager
+                type="button"
+                x-on:click="openGateAndManageAthkar()"
                 x-text="activeLabel"
-            ></span>
+            ></button>
 
             <div class="flex flex-1 items-center gap-0.5 text-xs text-gray-600 sm:gap-3 dark:text-gray-300">
                 <span
                     class="text-primary-700 dark:text-primary-200 inline-flex min-w-[4.3rem] items-center justify-center gap-1 text-center text-[0.85rem] tabular-nums sm:min-w-[4.6rem] sm:text-[0.95rem]"
+                    dir="ltr"
                 >
+                    <span x-text="`${totalRequiredCount} /`"></span>
                     <span class="athkar-count">
                         <span
                             class="athkar-count__current"
@@ -711,7 +717,6 @@
                             </template>
                         </span>
                     </span>
-                    <span x-text="`/ ${totalRequiredCount}`"></span>
                 </span>
                 <div
                     class="relative flex-1"
@@ -1056,7 +1061,7 @@
 
                             <!-- Althikr -->
                             <button
-                                class="athkar-tap group relative flex min-h-0 w-full flex-1 touch-manipulation flex-col items-center justify-center gap-4 overflow-hidden rounded-sm border border-transparent px-2 py-3 text-center transition sm:px-4 sm:py-6"
+                                class="athkar-tap group relative flex min-h-0 w-full flex-1 touch-manipulation flex-col items-center justify-center gap-4 overflow-hidden rounded-sm border border-transparent px-2 py-3 text-center transition sm:px-4 sm:py-6 mt-[2.1rem] sm:mt-0"
                                 data-athkar-tap
                                 type="button"
                                 x-on:click="handleTap()"
@@ -1067,7 +1072,7 @@
                                 }"
                             >
                                 <div
-                                    class="{{ twMerge('relative flex w-full min-h-0 flex-1 flex-col gap-3 overflow-visible sm:gap-4 sm:px-10 justify-center transition-opacity') }}"
+                                    class="{{ twMerge('relative Xmt-8 flex w-full min-h-0 flex-1 flex-col justify-center gap-3 overflow-hidden px-[0.3rem] Xsm:mt-0 sm:justify-center sm:gap-4 sm:px-10 transition-opacity') }}"
                                     data-athkar-text-box
                                     dir="rtl"
                                 >

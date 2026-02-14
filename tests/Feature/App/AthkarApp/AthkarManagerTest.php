@@ -306,6 +306,7 @@ it('creates a browser-only custom thikr via manager create action', function () 
         ->call('openManageAthkar', false)
         ->call('mountAction', 'createAthkar')
         ->set('mountedActions.1.data', [
+            'order' => 1,
             'time' => ThikrTime::Masaa->value,
             'type' => ThikrType::Supplication->value,
             'text' => 'ذكر محلي جديد',
@@ -322,7 +323,87 @@ it('creates a browser-only custom thikr via manager create action', function () 
     expect($customCard)->not->toBeNull()
         ->and($customCard['text'])->toBe('ذكر محلي جديد')
         ->and($customCard['type'])->toBe(ThikrType::Supplication->value)
-        ->and($customCard['count'])->toBe(3);
+        ->and($customCard['count'])->toBe(3)
+        ->and($customCard['order'])->toBe(1);
+});
+
+it('reorders a card when order is changed from manager edit form', function () {
+    $component = livewire(AthkarManager::class)
+        ->call('openManageAthkar', false);
+
+    $cards = collect($component->instance()->resolvedAthkarCards())->values();
+    expect($cards->count())->toBeGreaterThan(1);
+
+    $movedId = (int) $cards[0]['id'];
+    $expectedSecondId = (int) $cards[1]['id'];
+
+    $component
+        ->call('openEditAthkar', $movedId)
+        ->set('mountedActions.1.data.order', 2)
+        ->call('callMountedAction')
+        ->assertDispatched('athkar-manager-overrides-persisted');
+
+    $afterCards = collect($component->instance()->resolvedAthkarCards())->values();
+
+    expect((int) $afterCards[0]['id'])->toBe($expectedSecondId)
+        ->and((int) $afterCards[1]['id'])->toBe($movedId);
+});
+
+it('validates order and count in manager create action form', function () {
+    $component = livewire(AthkarManager::class)
+        ->call('openManageAthkar', false)
+        ->call('mountAction', 'createAthkar')
+        ->set('mountedActions.1.data', [
+            'order' => 0,
+            'time' => ThikrTime::Masaa->value,
+            'type' => ThikrType::Supplication->value,
+            'text' => 'ذكر غير صالح',
+            'origin' => null,
+            'count' => 0,
+            'is_aayah' => false,
+        ])
+        ->call('callMountedAction')
+        ->assertHasErrors();
+
+    $errorKeys = $component->errors()->keys();
+    $hasOrderError = collect($errorKeys)->contains(
+        fn (string $key): bool => str_contains($key, 'order'),
+    );
+    $hasCountError = collect($errorKeys)->contains(
+        fn (string $key): bool => str_contains($key, 'count'),
+    );
+
+    expect($hasOrderError)->toBeTrue()
+        ->and($hasCountError)->toBeTrue();
+});
+
+it('validates order and count in manager edit action form', function () {
+    $component = livewire(AthkarManager::class)
+        ->call('openManageAthkar', false);
+
+    $cardId = (int) collect($component->instance()->resolvedAthkarCards())
+        ->pluck('id')
+        ->first();
+
+    expect($cardId)->toBeGreaterThan(0);
+
+    $component
+        ->call('openEditAthkar', $cardId)
+        ->set('mountedActions.1.data.order', 0)
+        ->set('mountedActions.1.data.count', 0)
+        ->call('callMountedAction')
+        ->assertHasErrors();
+
+    $errorKeys = $component->errors()->keys();
+    $hasOrderError = collect($errorKeys)->contains(
+        fn (string $key): bool => str_contains($key, 'order'),
+    );
+    $hasCountError = collect($errorKeys)->contains(
+        fn (string $key): bool => str_contains($key, 'count'),
+    );
+
+    expect($hasOrderError)->toBeTrue()
+        ->and($hasCountError)->toBeTrue();
 });
 
 it('deletes a thikr via confirmation action override', function () {

@@ -88,8 +88,12 @@ document.addEventListener('alpine:init', () => {
             raf: null,
             resizeObserver: null,
             minSize: 16,
+            minOriginSize: 8,
             maxScale: 1.2,
+            originMaxScale: 1.05,
             step: 0.5,
+            safePaddingX: 6,
+            safePaddingY: 4,
         },
         textShimmer: {
             target: null,
@@ -355,6 +359,7 @@ document.addEventListener('alpine:init', () => {
             );
             this.progress[this.activeMode].ids = this.activeList.map((item) => item?.id ?? null);
             this.progress[this.activeMode].activeId = this.activeList[this.activeIndex]?.id ?? null;
+            this.persistProgress();
             const nextTotal = this.totalCompletedCount;
             this.triggerTotalPulse(previousTotal, nextTotal);
 
@@ -404,6 +409,17 @@ document.addEventListener('alpine:init', () => {
                 this.completedOn.masaa = null;
             }
         },
+        persistProgress() {
+            if (typeof localStorage === 'undefined') {
+                return;
+            }
+
+            try {
+                localStorage.setItem('athkar-progress-v1', JSON.stringify(this.progress));
+            } catch (_) {
+                //
+            }
+        },
         todayKey() {
             const now = new Date();
             const year = now.getFullYear();
@@ -448,10 +464,18 @@ document.addEventListener('alpine:init', () => {
                 ids: listIds,
                 activeId: listIds[0] ?? null,
             };
+            this.persistProgress();
         },
         ensureProgress(mode) {
             const list = this.athkarFor(mode);
             const listIds = list.map((item) => item?.id ?? null);
+            const normalizeId = (value) => {
+                if (value === null || value === undefined) {
+                    return null;
+                }
+
+                return String(value);
+            };
 
             if (!this.progress[mode]) {
                 this.resetProgress(mode);
@@ -468,11 +492,13 @@ document.addEventListener('alpine:init', () => {
 
             if (hasStoredIds) {
                 storedIds.forEach((id, index) => {
-                    if (id === null || id === undefined) {
+                    const normalizedId = normalizeId(id);
+
+                    if (normalizedId === null) {
                         return;
                     }
 
-                    countForId.set(id, counts[index]);
+                    countForId.set(normalizedId, counts[index]);
                 });
             }
 
@@ -487,8 +513,10 @@ document.addEventListener('alpine:init', () => {
             };
 
             this.progress[mode].counts = listIds.map((id, index) => {
-                if (hasStoredIds && id !== null && id !== undefined && countForId.has(id)) {
-                    return normalizeCount(countForId.get(id));
+                const normalizedId = normalizeId(id);
+
+                if (hasStoredIds && normalizedId !== null && countForId.has(normalizedId)) {
+                    return normalizeCount(countForId.get(normalizedId));
                 }
 
                 if (!hasStoredIds) {
@@ -501,10 +529,10 @@ document.addEventListener('alpine:init', () => {
             this.progress[mode].ids = listIds;
 
             const maxIndex = Math.max(list.length - 1, 0);
-            const activeId = this.progress[mode].activeId;
+            const activeId = normalizeId(this.progress[mode].activeId);
             const currentIndex = Number(this.progress[mode].index ?? 0);
             const nextIndexById =
-                activeId !== null && activeId !== undefined ? listIds.indexOf(activeId) : -1;
+                activeId !== null ? listIds.findIndex((id) => normalizeId(id) === activeId) : -1;
 
             if (nextIndexById >= 0) {
                 this.progress[mode].index = nextIndexById;
@@ -513,6 +541,13 @@ document.addEventListener('alpine:init', () => {
             }
 
             this.progress[mode].activeId = listIds[this.progress[mode].index] ?? null;
+            this.progress = {
+                ...this.progress,
+                [mode]: {
+                    ...this.progress[mode],
+                },
+            };
+            this.persistProgress();
         },
         isModeLocked(mode) {
             if (!this.shouldPreventSwitching()) {
@@ -543,6 +578,7 @@ document.addEventListener('alpine:init', () => {
             if (currentIndex < targetIndex) {
                 this.progress[this.activeMode].index = targetIndex;
                 this.progress[this.activeMode].activeId = this.activeList[targetIndex]?.id ?? null;
+                this.persistProgress();
             }
         },
         activateMode(mode, { updateHash = false, respectLock = true } = {}) {
@@ -568,6 +604,7 @@ document.addEventListener('alpine:init', () => {
                 this.progress[this.activeMode].index = this.maxNavigableIndex;
                 this.progress[this.activeMode].activeId =
                     this.activeList[this.maxNavigableIndex]?.id ?? null;
+                this.persistProgress();
             }
 
             this.resetNavState();
@@ -652,6 +689,22 @@ document.addEventListener('alpine:init', () => {
             }
 
             this.closeMode();
+        },
+        openGateAndManageAthkar() {
+            if (!this.activeMode) {
+                return;
+            }
+
+            if (this.views?.['athkar-app-gate']) {
+                this.views['athkar-app-gate'].isReaderVisible = false;
+            }
+
+            this.softCloseMode();
+            this.$viewNav('athkar-app-gate', { force: true });
+
+            window.setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('open-athkar-manager'));
+            }, this.readerLeaveMs + 90);
         },
         closeMode() {
             const previousHash = window.history.state?.__hashActionPrev;
@@ -1178,6 +1231,7 @@ document.addEventListener('alpine:init', () => {
             const previousPage = currentIndex + 1;
             this.progress[this.activeMode].index = nextIndex;
             this.progress[this.activeMode].activeId = this.activeList[nextIndex]?.id ?? null;
+            this.persistProgress();
             const direction = nextIndex > currentIndex ? 'next' : 'prev';
             const nextPage = nextIndex + 1;
 
@@ -1249,6 +1303,7 @@ document.addEventListener('alpine:init', () => {
             const nextValue = allowOvercount ? sanitized : Math.min(sanitized, maxCount);
 
             this.progress[this.activeMode].counts[index] = nextValue;
+            this.persistProgress();
         },
         isItemComplete(index) {
             return this.countAt(index) >= this.requiredCount(index);
@@ -1350,6 +1405,7 @@ document.addEventListener('alpine:init', () => {
 
             const previousTotal = this.totalCompletedCount;
             this.progress[this.activeMode].counts[index] = required;
+            this.persistProgress();
             const nextTotal = this.totalCompletedCount;
             this.triggerCountPulse(index, current, required);
             this.triggerTotalPulse(previousTotal, nextTotal);
@@ -1469,7 +1525,9 @@ document.addEventListener('alpine:init', () => {
             }, this.readerLeaveMs);
         },
         itemKey(item, index) {
-            return `${this.activeMode ?? 'athkar'}-${index}`;
+            const itemId = item?.id ?? `index-${index}`;
+
+            return `${this.activeMode ?? 'athkar'}-${itemId}`;
         },
         queueReaderTextFit() {
             if (!this.activeMode) {
@@ -1592,7 +1650,12 @@ document.addEventListener('alpine:init', () => {
 
             if (originText) {
                 originText.classList.remove('is-fit');
-                this.fitTextInBox(originText, box);
+                this.fitTextInBox(
+                    originText,
+                    box,
+                    this.textFit.minOriginSize,
+                    this.textFit.originMaxScale,
+                );
             }
 
             requestAnimationFrame(() => this.setupTextShimmer(text));
@@ -1610,6 +1673,8 @@ document.addEventListener('alpine:init', () => {
                     ? maxScaleOverride
                     : this.textFit.maxScale,
                 step: this.textFit.step,
+                safePaddingX: this.textFit.safePaddingX,
+                safePaddingY: this.textFit.safePaddingY,
                 shouldApplyFittyClass: true,
             });
         },

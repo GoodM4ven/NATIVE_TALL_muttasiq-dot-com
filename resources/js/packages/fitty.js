@@ -2,27 +2,33 @@ import fitty from 'fitty';
 
 window.fitty = fitty;
 
-const resolveMaxTextSize = (textElement, boxElement, baseSize, maxScale) => {
+const resolveAvailableBoxSpace = (boxElement, safePaddingX, safePaddingY) => {
+    const width = Math.max(0, boxElement.clientWidth - safePaddingX);
+    const height = Math.max(0, boxElement.clientHeight - safePaddingY);
+
+    return { width, height };
+};
+
+const resolveMaxTextSize = (textElement, availableWidth, baseSize, maxScale) => {
     if (!Number.isFinite(maxScale) || maxScale <= 1) {
         return baseSize;
     }
 
     textElement.style.fontSize = `${baseSize}px`;
-    const baseHeight = textElement.scrollHeight;
     const baseWidth = textElement.scrollWidth;
 
-    if (!baseHeight) {
+    if (!baseWidth || !availableWidth) {
         return baseSize;
     }
 
-    const heightScale = boxElement.clientHeight / baseHeight;
-    const widthScale = baseWidth ? boxElement.clientWidth / baseWidth : heightScale;
+    // Prefer width-driven sizing first, then clamp for height in fitTextToBox().
+    const widthScale = availableWidth / baseWidth;
 
-    if (heightScale <= 1 && widthScale <= 1) {
+    if (widthScale <= 1) {
         return baseSize;
     }
 
-    const allowedScale = Math.min(maxScale, Math.max(heightScale, widthScale));
+    const allowedScale = Math.min(maxScale, widthScale);
 
     return Math.max(baseSize, baseSize * allowedScale);
 };
@@ -54,17 +60,16 @@ const ensureFittyInstance = (textElement, minSize, maxSize) => {
     return instance;
 };
 
-const fitTextToBox = (textElement, boxElement, minSize, maxSize, step) => {
+const fitTextToBox = (textElement, availableWidth, availableHeight, minSize, maxSize, step) => {
     let size = Number.parseFloat(getComputedStyle(textElement).fontSize);
 
-    if (!Number.isFinite(size)) {
+    if (!Number.isFinite(size) || !availableWidth || !availableHeight) {
         return;
     }
 
     const fits = () => {
         return (
-            textElement.scrollHeight <= boxElement.clientHeight &&
-            textElement.scrollWidth <= boxElement.clientWidth
+            textElement.scrollHeight <= availableHeight && textElement.scrollWidth <= availableWidth
         );
     };
 
@@ -89,9 +94,24 @@ const fitTextToBox = (textElement, boxElement, minSize, maxSize, step) => {
     }
 
     const rounded = Math.max(minSize, Math.min(maxSize, best));
-    const snapped = step > 0 ? Math.round(rounded / step) * step : rounded;
+    const normalizedStep = step > 0 ? step : 0.25;
+    let snapped = Math.round(rounded / normalizedStep) * normalizedStep;
+    snapped = Math.max(minSize, Math.min(maxSize, snapped));
 
     textElement.style.fontSize = `${snapped}px`;
+
+    // Keep shrinking to avoid bottom/edge overflow after snapping.
+    let guard = 0;
+
+    while (!fits() && snapped > minSize && guard < 24) {
+        snapped = Math.max(minSize, snapped - normalizedStep);
+        textElement.style.fontSize = `${snapped}px`;
+        guard += 1;
+    }
+
+    if (!fits()) {
+        textElement.style.fontSize = `${minSize}px`;
+    }
 };
 
 const fitTextInBox = ({
@@ -100,13 +120,21 @@ const fitTextInBox = ({
     minSize = 16,
     maxScale = 1.2,
     step = 0.5,
+    safePaddingX = 0,
+    safePaddingY = 0,
     shouldApplyFittyClass = true,
 }) => {
     if (!textElement || !boxElement) {
         return;
     }
 
-    if (!window.fitty || !boxElement.clientWidth || !boxElement.clientHeight) {
+    const { width: availableWidth, height: availableHeight } = resolveAvailableBoxSpace(
+        boxElement,
+        Number.isFinite(safePaddingX) ? Math.max(0, safePaddingX) : 0,
+        Number.isFinite(safePaddingY) ? Math.max(0, safePaddingY) : 0,
+    );
+
+    if (!window.fitty || !availableWidth || !availableHeight) {
         if (shouldApplyFittyClass) {
             textElement.classList.add('is-fit');
         }
@@ -121,7 +149,7 @@ const fitTextInBox = ({
         return;
     }
 
-    const maxSize = resolveMaxTextSize(textElement, boxElement, baseSize, maxScale);
+    const maxSize = resolveMaxTextSize(textElement, availableWidth, baseSize, maxScale);
     textElement.style.fontSize = `${baseSize}px`;
 
     const instance = ensureFittyInstance(textElement, minSize, maxSize);
@@ -130,7 +158,7 @@ const fitTextInBox = ({
         instance.fit();
     }
 
-    fitTextToBox(textElement, boxElement, minSize, maxSize, step);
+    fitTextToBox(textElement, availableWidth, availableHeight, minSize, maxSize, step);
 
     if (shouldApplyFittyClass) {
         requestAnimationFrame(() => {

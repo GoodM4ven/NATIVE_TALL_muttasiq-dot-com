@@ -2,9 +2,12 @@
 
 declare(strict_types=1);
 
+use App\Filament\Resources\Thikrs\Pages\CreateThikr;
+use App\Filament\Resources\Thikrs\Pages\EditThikr;
 use App\Filament\Resources\Thikrs\Pages\ListThikrs;
 use App\Models\Thikr;
 use App\Models\User;
+use App\Services\Enums\ThikrTime;
 use App\Services\Enums\ThikrType;
 use Filament\Facades\Filament;
 
@@ -23,6 +26,7 @@ it('allows the configured admin to access athkar resource pages', function () {
     get(route('filament.admin.resources.athkar.index'))->assertSuccessful();
     get(route('filament.admin.resources.athkar.create'))
         ->assertSuccessful()
+        ->assertSee('الترتيب')
         ->assertSee('النوع')
         ->assertSee('الأصل');
     get(route('filament.admin.resources.athkar.edit', ['record' => $thikr]))->assertSuccessful();
@@ -63,6 +67,97 @@ it('reorders athkar inline when updating table order column', function () {
     expect($third->fresh()->order)->toBe(1)
         ->and($first->fresh()->order)->toBe(2)
         ->and($second->fresh()->order)->toBe(3);
+});
+
+it('creates athkar from form and applies order using moveToOrder semantics', function () {
+    config(['app.custom.user.email' => 'admin@example.test']);
+
+    $admin = User::factory()->create(['email' => 'admin@example.test']);
+    actingAs($admin);
+    Filament::setCurrentPanel('admin');
+
+    Thikr::query()->delete();
+
+    $first = Thikr::factory()->create();
+    $second = Thikr::factory()->create();
+    Thikr::setNewOrder([$first->id, $second->id]);
+
+    livewire(CreateThikr::class)
+        ->fillForm([
+            'order' => 1,
+            'time' => ThikrTime::Shared->value,
+            'type' => ThikrType::Supplication->value,
+            'text' => 'ذكر جديد بترتيب مخصص',
+            'origin' => null,
+            'count' => 1,
+            'is_aayah' => false,
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $created = Thikr::query()
+        ->where('text', 'ذكر جديد بترتيب مخصص')
+        ->firstOrFail();
+
+    expect($created->fresh()->order)->toBe(1)
+        ->and(
+            Thikr::query()
+                ->ordered()
+                ->limit(3)
+                ->pluck('id')
+                ->all(),
+        )->toBe([$created->id, $first->id, $second->id]);
+});
+
+it('edits athkar from form and applies order using moveToOrder semantics', function () {
+    config(['app.custom.user.email' => 'admin@example.test']);
+
+    $admin = User::factory()->create(['email' => 'admin@example.test']);
+    actingAs($admin);
+    Filament::setCurrentPanel('admin');
+
+    Thikr::query()->delete();
+
+    $first = Thikr::factory()->create();
+    $second = Thikr::factory()->create();
+    $third = Thikr::factory()->create();
+
+    Thikr::setNewOrder([$first->id, $second->id, $third->id]);
+
+    livewire(EditThikr::class, ['record' => $third->getKey()])
+        ->fillForm([
+            'order' => 1,
+        ])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($third->fresh()->order)->toBe(1)
+        ->and($first->fresh()->order)->toBe(2)
+        ->and($second->fresh()->order)->toBe(3);
+});
+
+it('validates order and count fields in the thikr form', function () {
+    config(['app.custom.user.email' => 'admin@example.test']);
+
+    $admin = User::factory()->create(['email' => 'admin@example.test']);
+    actingAs($admin);
+    Filament::setCurrentPanel('admin');
+
+    livewire(CreateThikr::class)
+        ->fillForm([
+            'order' => 0,
+            'time' => ThikrTime::Shared->value,
+            'type' => ThikrType::Supplication->value,
+            'text' => 'ذكر للتحقق من التحقق',
+            'origin' => null,
+            'count' => 0,
+            'is_aayah' => false,
+        ])
+        ->call('create')
+        ->assertHasFormErrors([
+            'order' => 'min',
+            'count' => 'min',
+        ]);
 });
 
 it('filters athkar admin table by type', function () {
