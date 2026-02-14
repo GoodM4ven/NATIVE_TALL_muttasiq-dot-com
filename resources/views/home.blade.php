@@ -100,6 +100,7 @@
         x-on:switch-view.window="applyViewState($event.detail?.to)"
     >
         <x-buttons-stack x-bind:data-respecting-stack="$store.bp.current === 'base'">
+            <livewire:athkar-manager />
             @if (!is_platform('mobile'))
                 <x-return-button
                     :jsShowCondition="'views[`athkar-app-gate`].isReaderVisible'"

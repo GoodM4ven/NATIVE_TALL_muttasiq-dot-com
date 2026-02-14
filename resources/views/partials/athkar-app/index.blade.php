@@ -19,6 +19,7 @@
     x-data="athkarAppReader({
         athkar: @js($athkar),
         athkarSettings: @js($athkarSettings),
+        typeLabels: @js(\App\Services\Enums\ThikrType::labels()),
     })"
     x-on:close-athkar-mode.window="closeMode()"
     x-on:settings-updated.window="applySettings($event.detail?.settings)"

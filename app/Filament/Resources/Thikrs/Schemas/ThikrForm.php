@@ -4,49 +4,104 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Thikrs\Schemas;
 
-use App\Filament\Resources\Thikrs\ThikrResource;
+use App\Services\Enums\ThikrTime;
+use App\Services\Enums\ThikrType;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Component as SchemaComponent;
 use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 
 class ThikrForm
 {
+    /**
+     * @return array<int, SchemaComponent>
+     */
+    public static function components(bool $withOrder = false, bool $fromManager = false): array
+    {
+        $baseComponents = [
+            Grid::make()
+                ->columns(3)
+                ->columnSpanFull()
+                ->schema([
+                    Select::make('time')
+                        ->label('الوقت')
+                        ->options(ThikrTime::class)
+                        ->required()
+                        ->native(false)
+                        ->columnSpan(1),
+
+                    Select::make('type')
+                        ->label('النوع')
+                        ->options(ThikrType::class)
+                        ->required()
+                        ->native(false)
+                        ->afterLabel('احرص على الترتيب')
+                        ->default(ThikrType::Glorification->value)
+                        ->columnSpan(1),
+
+                    TextInput::make('count')
+                        ->label('العدد')
+                        ->required()
+                        ->integer()
+                        ->minValue(1)
+                        ->columnSpan(1),
+                ]),
+
+            Toggle::make('is_aayah')
+                ->label('آيات')
+                ->live()
+                ->hint(fn (Get $get): ?string => $get('is_aayah') ? '' : null)
+                ->helperText('هذا الخيار يضيف أقواس البداية والنهاية تلقائيًا حول النص. وعليك استخدام هذا الرمز ۝ للفصل بين الآيات.')
+                ->columnSpanFull()
+                ->default(false),
+
+            Textarea::make('text')
+                ->label('النص')
+                ->required()
+                ->rows($fromManager ? 4 : 8)
+                ->extraInputAttributes([
+                    'style' => 'font-family: var(--font-arabic-serif); font-size: 1.25rem; line-height: 2;',
+                ])
+                ->columnSpan([
+                    'default' => 2,
+                    'xl' => 1,
+                ]),
+
+            Textarea::make('origin')
+                ->label('الأصل')
+                ->afterLabel('الأثر الوارد في السنة الذي يتضمن النص')
+                ->rows($fromManager ? 4 : 8)
+                ->extraInputAttributes([
+                    'style' => 'font-family: var(--font-arabic-serif); font-size: 1.25rem; line-height: 2;',
+                ])
+                ->columnSpan([
+                    'default' => 2,
+                    'xl' => 1,
+                ]),
+        ];
+
+        if (! $withOrder) {
+            return $baseComponents;
+        }
+
+        return [
+            TextInput::make('order')
+                ->label('الترتيب')
+                ->required()
+                ->integer()
+                ->minValue(1),
+            ...$baseComponents,
+        ];
+    }
+
     public static function configure(Schema $schema): Schema
     {
         return $schema
             ->columns(2)
-            ->components([
-                Grid::make()
-                    ->columns(3)
-                    ->columnSpanFull()
-                    ->schema([
-                        Select::make('time')
-                            ->label('الوقت')
-                            ->options(ThikrResource::timeOptions())
-                            ->required()
-                            ->native(false)
-                            ->columnSpan(1),
-
-                        TextInput::make('count')
-                            ->label('العدد')
-                            ->required()
-                            ->integer()
-                            ->minValue(1)
-                            ->columnSpan(1),
-                    ]),
-
-                Toggle::make('is_aayah')
-                    ->label('آيات')
-                    ->default(false),
-
-                Textarea::make('text')
-                    ->label('النص')
-                    ->required()
-                    ->rows(8)
-                    ->columnSpanFull(),
-            ]);
+            ->components(self::components());
     }
 }

@@ -28,7 +28,7 @@ class HomeController extends Controller
     }
 
     /**
-     * @return array<int, array{id: int, time: string, text: string, count: int, order: int}>
+     * @return array<int, array{id: int, time: string, type: string, text: string, origin: string|null, is_aayah: bool, is_original: bool, count: int, order: int}>
      */
     private function resolveAthkarPayload(): array
     {

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Thikrs\Tables;
 
-use App\Filament\Resources\Thikrs\ThikrResource;
 use App\Models\Thikr;
 use App\Services\Enums\ThikrTime;
+use App\Services\Enums\ThikrType;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -46,7 +46,12 @@ class ThikrsTable
                 TextColumn::make('time')
                     ->label('الوقت')
                     ->badge()
-                    ->formatStateUsing(fn (ThikrTime|string $state): string => ThikrResource::timeLabel($state))
+                    ->formatStateUsing(fn (ThikrTime|string $state): string => ThikrTime::labelFor($state))
+                    ->sortable(),
+                TextColumn::make('type')
+                    ->label('النوع')
+                    ->badge()
+                    ->formatStateUsing(fn (ThikrType|string|null $state): string => ThikrType::labelFor($state))
                     ->sortable(),
                 IconColumn::make('is_aayah')
                     ->label('آيات')
@@ -55,6 +60,9 @@ class ThikrsTable
                     ->label('النص')
                     ->limit(120)
                     ->searchable(),
+                IconColumn::make('is_original')
+                    ->label('مأثور')
+                    ->boolean(),
                 TextColumn::make('count')
                     ->label('العدد')
                     ->numeric()
@@ -67,7 +75,10 @@ class ThikrsTable
             ->filters([
                 SelectFilter::make('time')
                     ->label('الوقت')
-                    ->options(ThikrResource::timeOptions()),
+                    ->options(ThikrTime::labels()),
+                SelectFilter::make('type')
+                    ->label('النوع')
+                    ->options(ThikrType::labels()),
             ])
             ->recordActions([
                 EditAction::make(),

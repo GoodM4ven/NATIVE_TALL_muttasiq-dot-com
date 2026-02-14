@@ -392,6 +392,9 @@ it('executes hidden completion buttons on desktop for single thikr and all athka
     );
     scriptClick($page, $desktopCompleteSelector);
 
+    waitForScript($page, 'Boolean(document.querySelector(".fi-modal-window"))', true);
+    clickModalAction($page, 'نعم، أكمل الذكر');
+
     waitForScript(
         $page,
         athkarReaderDataScript('data.countAt('.$multiIndex.') === data.requiredCount('.$multiIndex.')'),

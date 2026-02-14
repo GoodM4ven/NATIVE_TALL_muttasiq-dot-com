@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\Thikr;
+use App\Services\Enums\ThikrType;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -20,7 +21,7 @@ it('returns cached athkar in order', function () {
 
     $expected = Thikr::query()
         ->ordered()
-        ->get(['id', 'time', 'text', 'count', 'order'])
+        ->get(['id', 'time', 'type', 'text', 'origin', 'is_aayah', 'count', 'order'])
         ->map(fn (Thikr $thikr): array => $thikr->toAthkarArray())
         ->all();
 
@@ -78,4 +79,19 @@ it('normalizes aayah text when toggling whether it is an aayah', function () {
     ]);
 
     expect($thikr->fresh()->text)->toBe('الحمد لله');
+});
+
+it('marks thikr as original when origin text is available', function () {
+    $original = Thikr::factory()->create([
+        'origin' => 'مصدر تجريبي',
+        'type' => ThikrType::Supplication,
+    ]);
+
+    $nonOriginal = Thikr::factory()->create([
+        'origin' => null,
+        'type' => ThikrType::Glorification,
+    ]);
+
+    expect($original->fresh()->is_original)->toBeTrue()
+        ->and($nonOriginal->fresh()->is_original)->toBeFalse();
 });

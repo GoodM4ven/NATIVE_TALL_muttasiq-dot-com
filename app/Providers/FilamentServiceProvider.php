@@ -33,6 +33,7 @@ class FilamentServiceProvider extends PanelProvider
             ->id('admin')
             ->path(config('app.custom.admin_path'))
             ->login(Login::class)
+            ->homeUrl(config('app.url'))
             ->brandLogo(asset('images/logo-wide.svg'))
             ->brandLogoHeight('5rem')
             ->colors(config('app.custom.colors'))

@@ -87,15 +87,19 @@
         ],
         "test": [
             "@optimize",
-            "vendor/bin/pest"
+            ".scripts/run-tests-clean.sh vendor/bin/pest"
         ],
         "testel": [
             "@optimize",
-            "vendor/bin/pest --parallel"
+            ".scripts/run-tests-clean.sh vendor/bin/pest --parallel"
         ],
         "testcov": [
             "@optimize",
-            "vendor/bin/pest --coverage"
+            ".scripts/run-tests-clean.sh vendor/bin/pest --coverage"
+        ],
+        "testbrowser": [
+            "@optimize",
+            ".scripts/run-tests-clean.sh php artisan test --compact tests/Feature/Browser"
         ],
         "green": [
             "@optimize",

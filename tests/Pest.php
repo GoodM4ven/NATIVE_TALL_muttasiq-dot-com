@@ -59,8 +59,48 @@ pest()
 
 use Pest\Browser\Execution;
 use Pest\Browser\Playwright\Playwright;
+use Pest\Plugins\Parallel;
 
 const BROWSER_SETUP_TIMEOUT_MS = 1500;
+const PLAYWRIGHT_SIGTERM_FALLBACK = 15;
+
+if (! defined('SIGTERM')) {
+    define('SIGTERM', PLAYWRIGHT_SIGTERM_FALLBACK);
+}
+
+if (! Parallel::isWorker()) {
+    runPlaywrightBrowserPreflight();
+
+    register_shutdown_function(static function (): void {
+        runPlaywrightBrowserPreflight();
+    });
+}
+
+function runPlaywrightBrowserPreflight(): void
+{
+    if (DIRECTORY_SEPARATOR === '\\') {
+        return;
+    }
+
+    if (! function_exists('exec')) {
+        return;
+    }
+
+    /** @var array<int, string> $disabledFunctions */
+    $disabledFunctions = array_filter(array_map('trim', explode(',', (string) ini_get('disable_functions'))));
+
+    if (in_array('exec', $disabledFunctions, true)) {
+        return;
+    }
+
+    $scriptPath = dirname(__DIR__).'/.scripts/test-preflight.sh';
+
+    if (! file_exists($scriptPath) || ! is_executable($scriptPath)) {
+        return;
+    }
+
+    exec(escapeshellarg($scriptPath).' >/dev/null 2>&1');
+}
 
 function assertBrowserAssetsReady(): void
 {

@@ -10,7 +10,6 @@ use App\Filament\Resources\Thikrs\Pages\ListThikrs;
 use App\Filament\Resources\Thikrs\Schemas\ThikrForm;
 use App\Filament\Resources\Thikrs\Tables\ThikrsTable;
 use App\Models\Thikr;
-use App\Services\Enums\ThikrTime;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -39,25 +38,6 @@ class ThikrResource extends Resource
     public static function table(Table $table): Table
     {
         return ThikrsTable::configure($table);
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    public static function timeOptions(): array
-    {
-        return [
-            ThikrTime::Shared->value => 'مشترك',
-            ThikrTime::Sabah->value => 'الصباح',
-            ThikrTime::Masaa->value => 'المساء',
-        ];
-    }
-
-    public static function timeLabel(ThikrTime|string $time): string
-    {
-        $timeValue = $time instanceof ThikrTime ? $time->value : $time;
-
-        return self::timeOptions()[$timeValue] ?? $timeValue;
     }
 
     public static function getRelations(): array

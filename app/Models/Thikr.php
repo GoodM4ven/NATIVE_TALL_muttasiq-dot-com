@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Services\Enums\ThikrTime;
+use App\Services\Enums\ThikrType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
@@ -14,10 +15,13 @@ use Spatie\EloquentSortable\SortableTrait;
 /**
  * @property int $id
  * @property ThikrTime $time
+ * @property ThikrType $type
  * @property string $text
+ * @property string|null $origin
  * @property bool $is_aayah
  * @property int $count
  * @property int $order
+ * @property-read bool $is_original
  */
 class Thikr extends Model implements Sortable
 {
@@ -26,7 +30,7 @@ class Thikr extends Model implements Sortable
         setNewOrder as private setSortableNewOrder;
     }
 
-    public const DEFAULT_CACHE_KEY = 'athkar.defaults.v1';
+    public const DEFAULT_CACHE_KEY = 'athkar.defaults.v2';
 
     public const DEFAULT_CACHE_TTL_SECONDS = 604800; // ? 1 week
 
@@ -56,6 +60,7 @@ class Thikr extends Model implements Sortable
     {
         return [
             'time' => ThikrTime::class,
+            'type' => ThikrType::class,
             'is_aayah' => 'boolean',
             'count' => 'integer',
             'order' => 'integer',
@@ -63,7 +68,7 @@ class Thikr extends Model implements Sortable
     }
 
     /**
-     * @return array<int, array{id: int, time: string, text: string, count: int, order: int}>
+     * @return array<int, array{id: int, time: string, type: string, text: string, origin: string|null, is_aayah: bool, is_original: bool, count: int, order: int}>
      */
     public static function cachedDefaults(): array
     {
@@ -154,28 +159,48 @@ class Thikr extends Model implements Sortable
     }
 
     /**
-     * @return array<int, array{id: int, time: string, text: string, count: int, order: int}>
+     * @return array<int, array{id: int, time: string, type: string, text: string, origin: string|null, is_aayah: bool, is_original: bool, count: int, order: int}>
      */
     public static function defaultsPayload(): array
     {
         return self::query()
             ->ordered()
-            ->get(['id', 'time', 'text', 'count', 'order'])
+            ->get(['id', 'time', 'type', 'text', 'origin', 'is_aayah', 'count', 'order'])
             ->map(fn (self $thikr): array => $thikr->toAthkarArray())
             ->all();
     }
 
     /**
-     * @return array{id: int, time: string, text: string, count: int, order: int}
+     * @return array{id: int, time: string, type: string, text: string, origin: string|null, is_aayah: bool, is_original: bool, count: int, order: int}
      */
     public function toAthkarArray(): array
     {
+        $type = $this->type instanceof ThikrType
+            ? $this->type->value
+            : ((string) $this->type ?: ThikrType::Glorification->value);
+        $origin = is_string($this->origin) ? trim($this->origin) : null;
+        $normalizedOrigin = $origin === '' ? null : $origin;
+
         return [
             'id' => $this->id,
             'time' => $this->time->value,
+            'type' => $type,
             'text' => $this->text,
+            'origin' => $normalizedOrigin,
+            'is_aayah' => (bool) $this->is_aayah,
+            'is_original' => $this->isOriginal(),
             'count' => $this->count,
             'order' => $this->order,
         ];
+    }
+
+    public function isOriginal(): bool
+    {
+        return is_string($this->origin) && trim($this->origin) !== '';
+    }
+
+    public function getIsOriginalAttribute(): bool
+    {
+        return $this->isOriginal();
     }
 }
