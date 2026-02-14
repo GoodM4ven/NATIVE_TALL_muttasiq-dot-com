@@ -129,9 +129,12 @@ return [
     'cleanup_exclude_files' => [
         '.assets',
         '.codex',
+        '.git',
         '.github',
         '.scripts',
         '.vscode',
+        'build',
+        'tests/Browser',
         'storage/framework/sessions',
         'storage/framework/cache',
         'storage/framework/testing',
