@@ -224,7 +224,6 @@
                 style="view-transition-name: athkar-card-{{ $card['id'] }};"
                 wire:key="athkar-manager-card-{{ $card['id'] }}"
                 wire:sort:item="{{ $card['id'] }}"
-                wire:transition="athkar-card-{{ $card['id'] }}"
                 wire:click.preserve-scroll="openEditAthkar({{ $card['id'] }})"
                 x-on:pointerdown="rememberManagerScroll($event)"
             >
