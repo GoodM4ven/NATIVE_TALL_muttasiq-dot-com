@@ -5,6 +5,12 @@ document.addEventListener('alpine:init', function () {
             .getPropertyValue('--breakpoint')
             .trim()
             .replace(/['"]+/g, '');
+    const mediaMatches = (query) =>
+        typeof window.matchMedia === 'function' && window.matchMedia(query).matches;
+    const hasTouchInput = () =>
+        Number(window.navigator?.maxTouchPoints ?? 0) > 0 ||
+        mediaMatches('(any-pointer: coarse)') ||
+        mediaMatches('(hover: none)');
 
     const is = (q) => {
         if (!q) return false;
@@ -18,10 +24,15 @@ document.addEventListener('alpine:init', function () {
         if (m?.[0] === '-') return curIdx <= idx;
         return cur === name;
     };
+    const isTablet = () => hasTouchInput() && is('sm+') && is('xl-');
+    const shouldUseSortHandles = () => hasTouchInput() && (is('base') || isTablet());
 
     window.Alpine.store('bp', {
         current: read(),
         is: (q) => is(q),
+        isTouch: () => hasTouchInput(),
+        isTablet: () => isTablet(),
+        shouldUseSortHandles: () => shouldUseSortHandles(),
     });
 
     // ? Reactive updates when the CSS var flips at breakpoints (no debounce)

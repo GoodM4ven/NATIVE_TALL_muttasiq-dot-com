@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Services\Enums\ThikrTime;
+use App\Services\Enums\ThikrType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,7 +16,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int|null $order
  * @property array<int, string>|null $overrides
  * @property ThikrTime|null $time
+ * @property ThikrType|null $type
  * @property string|null $text
+ * @property string|null $origin
  * @property int|null $count
  * @property bool $is_deleted
  */
@@ -31,6 +34,7 @@ class OverriddenThikr extends Model
         return [
             'overrides' => 'array',
             'time' => ThikrTime::class,
+            'type' => ThikrType::class,
             'count' => 'integer',
             'order' => 'integer',
             'is_deleted' => 'boolean',

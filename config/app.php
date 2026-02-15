@@ -9,10 +9,17 @@ return [
         'app_description' => 'تطبيق يعين على الإسلام والالتزام باتساق ويسر بإذن الله...',
         'app_keywords' => 'islam, muslim, thikr, athkar',
 
+        'admin_path' => env('ADMIN_PATH', 'admin'),
+
         'user' => [
             'name' => env('ADMIN_NAME'),
             'email' => env('ADMIN_EMAIL'),
             'password' => env('ADMIN_PASSWORD'),
+        ],
+
+        'native_end_points' => [
+            'retries' => 8,
+            'athkar' => 'athkar',
         ],
 
         'colors' => [

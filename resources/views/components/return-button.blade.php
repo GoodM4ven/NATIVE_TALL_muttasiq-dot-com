@@ -8,7 +8,7 @@
     data-stack-item
     x-transition
     x-cloak
-    x-show="{{ $jsShowCondition }} && !isSettingsOpen"
+    x-show="{{ $jsShowCondition }} && !isSettingsOpen && !isAthkarManagerOpen"
 >
     <x-action-button
         data-testid="return-button"

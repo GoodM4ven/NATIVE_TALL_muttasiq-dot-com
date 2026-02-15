@@ -6,6 +6,7 @@ namespace Database\Factories;
 
 use App\Models\Thikr;
 use App\Services\Enums\ThikrTime;
+use App\Services\Enums\ThikrType;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -27,7 +28,10 @@ class ThikrFactory extends Factory
     {
         return [
             'time' => $this->faker->randomElement(ThikrTime::cases()),
+            'type' => $this->faker->randomElement(ThikrType::cases()),
             'text' => $this->faker->sentence(8),
+            'origin' => $this->faker->boolean(35) ? $this->faker->paragraph() : null,
+            'is_aayah' => $this->faker->boolean(20),
             'count' => $this->faker->numberBetween(1, 7),
         ];
     }

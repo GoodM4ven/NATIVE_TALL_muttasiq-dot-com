@@ -2,3 +2,20 @@
 
 @source '../../../../app/Filament/**/*';
 @source '../../../../resources/views/filament/**/*';
+
+@font-face {
+    font-family: 'Scheherazade New';
+    src: url('../../../fonts/scheherazade-new/ScheherazadeNew-Regular.ttf') format('truetype');
+    font-display: swap;
+}
+
+:root {
+    --font-arabic-serif: 'Scheherazade New', 'Readex Pro', ui-sans-serif, system-ui, sans-serif;
+}
+
+.admin-thikr-table .admin-thikr-table-order-input .fi-input-wrp {
+    max-width: 4rem;
+}
+.admin-thikr-table .admin-thikr-table-order-input {
+    max-width: 4rem;
+}

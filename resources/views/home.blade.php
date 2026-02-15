@@ -7,6 +7,7 @@
         x-data="{
             lock: null,
             isSettingsOpen: false,
+            isAthkarManagerOpen: false,
             activeView: $persist('main-menu').as('app-active-view'),
             viewTree: {
                 'main-menu': {
@@ -100,6 +101,7 @@
         x-on:switch-view.window="applyViewState($event.detail?.to)"
     >
         <x-buttons-stack x-bind:data-respecting-stack="$store.bp.current === 'base'">
+            <livewire:athkar-manager />
             @if (!is_platform('mobile'))
                 <x-return-button
                     :jsShowCondition="'views[`athkar-app-gate`].isReaderVisible'"

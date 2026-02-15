@@ -3,7 +3,7 @@
     data-stack-item
     wire:ignore
     x-transition
-    x-show="!isSettingsOpen"
+    x-show="!isSettingsOpen && !isAthkarManagerOpen"
     x-init="() => (lock = $livewireLock($wire, defaultTransitionDurationInMs, true))"
 >
     <x-action-button

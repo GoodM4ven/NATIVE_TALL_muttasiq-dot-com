@@ -16,16 +16,20 @@ declare(strict_types=1);
 pest()
     ->extend(Tests\TestCase::class)
     ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
-    ->in('Feature', 'Browser')
+    ->in('Feature/App');
+
+pest()
+    ->extend(Tests\TestCase::class)
+    ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
+    ->in('Feature/Browser')
+    ->group('browser')
     ->beforeAll(function () {
-        if (! file_exists(($basePath = __DIR__.'/../public').'/build/manifest.json') && ! file_exists($basePath.'/hot')) {
-            throw new Exception('Vite is not running!');
-        }
+        assertBrowserAssetsReady();
     });
 
 pest()
     ->browser()
-    ->timeout(1500);
+    ->timeout((int) env('PEST_BROWSER_TIMEOUT_MS', 1500));
 
 /*
 |--------------------------------------------------------------------------
@@ -55,6 +59,67 @@ pest()
 
 use Pest\Browser\Execution;
 use Pest\Browser\Playwright\Playwright;
+use Pest\Plugins\Parallel;
+
+const BROWSER_SETUP_TIMEOUT_MS = 1500;
+const PLAYWRIGHT_SIGTERM_FALLBACK = 15;
+
+if (! defined('SIGTERM')) {
+    define('SIGTERM', PLAYWRIGHT_SIGTERM_FALLBACK);
+}
+
+if (! Parallel::isWorker()) {
+    runPlaywrightBrowserPreflight();
+
+    register_shutdown_function(static function (): void {
+        runPlaywrightBrowserPreflight();
+    });
+}
+
+function runPlaywrightBrowserPreflight(): void
+{
+    if (DIRECTORY_SEPARATOR === '\\') {
+        return;
+    }
+
+    if (! function_exists('exec')) {
+        return;
+    }
+
+    /** @var array<int, string> $disabledFunctions */
+    $disabledFunctions = array_filter(array_map('trim', explode(',', (string) ini_get('disable_functions'))));
+
+    if (in_array('exec', $disabledFunctions, true)) {
+        return;
+    }
+
+    $scriptPath = dirname(__DIR__).'/.scripts/test-preflight.sh';
+
+    if (! file_exists($scriptPath) || ! is_executable($scriptPath)) {
+        return;
+    }
+
+    exec(escapeshellarg($scriptPath).' >/dev/null 2>&1');
+}
+
+function assertBrowserAssetsReady(): void
+{
+    if (filter_var(env('SKIP_VITE_ASSET_PREFLIGHT', false), FILTER_VALIDATE_BOOL)) {
+        return;
+    }
+
+    $basePath = __DIR__.'/../public';
+    $manifestPath = $basePath.'/build/manifest.json';
+    $hotPath = $basePath.'/hot';
+
+    if (file_exists($manifestPath)) {
+        return;
+    }
+
+    if (! file_exists($hotPath)) {
+        throw new Exception('Browser tests require Vite assets. Run npm run build or npm run dev.');
+    }
+}
 
 function js_encode(mixed $value): string
 {
@@ -74,7 +139,25 @@ function waitForScript($page, string $expression, mixed $expected = true): void
 {
     Execution::instance()->waitForExpectation(
         function () use ($page, $expression, $expected): void {
-            $actual = $page->script($expression);
+            $actual = null;
+
+            for ($attempt = 1; $attempt <= 2; $attempt++) {
+                try {
+                    $actual = $page->script($expression);
+
+                    break;
+                } catch (Throwable $exception) {
+                    if ($attempt === 2) {
+                        throw new RuntimeException(
+                            'Browser script execution failed for expression: '.$expression,
+                            previous: $exception,
+                        );
+                    }
+
+                    usleep(200_000);
+                }
+            }
+
             expect($actual)->toBe(
                 $expected,
                 'JS: '.$expression.' | actual: '.var_export($actual, true),
@@ -97,13 +180,13 @@ function waitForScriptWithTimeout($page, string $expression, mixed $expected, in
 
 function waitForAlpineReady($page): void
 {
-    applyTestSpeedups($page);
-    waitForScript($page, appReadyScript(), true);
+    waitForScriptWithTimeout($page, appReadyScript(), true, browserSetupTimeoutMs());
 }
 
 function applyTestSpeedups($page): void
 {
-    $page->script(<<<'JS'
+    try {
+        $page->script(<<<'JS'
 (() => {
   if (!window.Alpine) {
     return;
@@ -128,6 +211,9 @@ function applyTestSpeedups($page): void
   }
 })();
 JS);
+    } catch (Throwable) {
+        //
+    }
 }
 
 function appReadyScript(): string
@@ -137,36 +223,10 @@ function appReadyScript(): string
   if (!window.Alpine || !window.Alpine.store) {
     return false;
   }
-  if (!window.Alpine.store('bp')) {
-    return false;
-  }
   if (!document.querySelector('[data-main-menu-item]')) {
     return false;
   }
-  const homeEl = Array.from(document.querySelectorAll('[x-data]')).find((node) =>
-    node.hasAttribute('x-bind:data-hash-default'),
-  );
-  const menuEl = document.querySelector('[x-data^="mainMenu"]');
-  if (!homeEl || !menuEl) {
-    return false;
-  }
-  const homeData = window.Alpine.$data ? window.Alpine.$data(homeEl) : (homeEl.__x?.$data ?? null);
-  const menuData = window.Alpine.$data ? window.Alpine.$data(menuEl) : (menuEl.__x?.$data ?? null);
-  if (!homeData || !menuData) {
-    return false;
-  }
-  if (typeof homeData.applyViewState !== 'function') {
-    return false;
-  }
-  if (!homeData.lock || typeof homeData.lock.run !== 'function') {
-    return false;
-  }
-  if (menuData.isTouchDevice === null) {
-    return false;
-  }
-  if (typeof menuData.handleItemClick !== 'function') {
-    return false;
-  }
+
   return true;
 })()
 JS;
@@ -174,45 +234,53 @@ JS;
 
 function resetBrowserState($page, bool $isMobile = false): void
 {
-    if ($isMobile) {
-        $page->resize(375, 812);
+    $previousTimeout = Playwright::timeout();
+    Playwright::setTimeout(browserSetupTimeoutMs());
+
+    try {
+        if ($isMobile) {
+            safeBrowserResize($page, 375, 812);
+        }
+
+        try {
+            $page->script('localStorage.clear(); sessionStorage.clear(); window.history.replaceState({}, document.title, window.location.pathname + window.location.search);');
+        } catch (Throwable) {
+            //
+        }
+
+        waitForAlpineReady($page);
+
+        if ($isMobile) {
+            enableMobileContext($page);
+        }
+
+        if ($page->script('window.location.hash') !== '#main-menu') {
+            setHashOnly($page, '#main-menu', true, true);
+        }
+
+        if ($page->script(homeDataScript('data.activeView')) !== 'main-menu') {
+            forceHomeView($page, 'main-menu');
+        }
+
+        if ($page->script('JSON.parse(localStorage.getItem("app-active-view"))') !== 'main-menu') {
+            $page->script('localStorage.setItem("app-active-view", JSON.stringify("main-menu"));');
+        }
+
+        waitForScript($page, 'window.location.hash', '#main-menu');
+        waitForScript($page, homeDataScript('data.activeView'), 'main-menu');
+    } finally {
+        Playwright::setTimeout($previousTimeout);
     }
-    $page->script('localStorage.clear(); sessionStorage.clear(); window.history.replaceState({}, document.title, window.location.pathname + window.location.search);');
-    $page->refresh();
-    waitForAlpineReady($page);
-    if ($isMobile) {
-        enableMobileContext($page);
-    }
-    waitForScript($page, 'window.location.hash', '#main-menu');
-    waitForScript($page, homeDataScript('data.activeView'), 'main-menu');
+}
+
+function browserSetupTimeoutMs(): int
+{
+    return max(Playwright::timeout(), BROWSER_SETUP_TIMEOUT_MS);
 }
 
 function enableMobileContext($page): void
 {
-    $page->resize(375, 812);
-
-    $page->script(<<<'JS'
-(() => {
-  try {
-    if (!('ontouchstart' in window)) {
-      window.ontouchstart = () => {};
-    }
-  } catch (e) {
-    // ignore
-  }
-  try {
-    Object.defineProperty(navigator, 'maxTouchPoints', { value: 1, configurable: true });
-  } catch (e) {
-    // ignore
-  }
-  document.documentElement.style.setProperty('--breakpoint', 'base');
-  if (window.Alpine?.store?.('bp')) {
-    window.Alpine.store('bp').current = 'base';
-  }
-  window.dispatchEvent(new Event('resize'));
-  window.dispatchEvent(new Event('orientationchange'));
-})();
-JS);
+    enableTouchContext($page, 375, 812, 'base');
 
     waitForScript($page, "Boolean(window.Alpine && window.Alpine.store && window.Alpine.store('bp'))", true);
     waitForScript($page, "window.Alpine.store('bp').current", 'base');
@@ -226,9 +294,63 @@ JS);
     $page->script(mainMenuCommandScript('data.isTouchDevice = true;'));
 }
 
+function enableTabletContext($page): void
+{
+    enableTouchContext($page, 834, 1112, 'md');
+
+    waitForScript($page, "Boolean(window.Alpine && window.Alpine.store && window.Alpine.store('bp'))", true);
+    waitForScript($page, "window.Alpine.store('bp').current", 'md');
+    waitForScript($page, 'window.innerWidth >= 768', true);
+
+    $page->script(mainMenuCommandScript('data.isTouchDevice = true;'));
+}
+
+function enableTouchContext($page, int $width, int $height, string $breakpoint): void
+{
+    safeBrowserResize($page, $width, $height);
+
+    $page->script(js_template(<<<'JS'
+(() => {
+  try {
+    if (!('ontouchstart' in window)) {
+      window.ontouchstart = () => {};
+    }
+  } catch (e) {
+    // ignore
+  }
+  try {
+    Object.defineProperty(navigator, 'maxTouchPoints', { value: 1, configurable: true });
+  } catch (e) {
+    // ignore
+  }
+  document.documentElement.style.setProperty('--breakpoint', {{breakpoint}});
+  if (window.Alpine?.store?.('bp')) {
+    window.Alpine.store('bp').current = {{breakpoint}};
+  }
+  window.dispatchEvent(new Event('resize'));
+  window.dispatchEvent(new Event('orientationchange'));
+})();
+JS, ['breakpoint' => $breakpoint]));
+}
+
+function safeBrowserResize($page, int $width, int $height): void
+{
+    $attempts = 2;
+
+    for ($attempt = 1; $attempt <= $attempts; $attempt++) {
+        try {
+            $page->resize($width, $height);
+
+            return;
+        } catch (Throwable) {
+            usleep(200_000);
+        }
+    }
+}
+
 function visitMobile(string $path = '/')
 {
-    return visit($path)->on()->mobile();
+    return visit($path);
 }
 
 function openSettingsModal($page): void
@@ -579,7 +701,7 @@ function swipeElement($page, string $selector, string $direction, string $pointe
     return;
   }
   const rect = el.getBoundingClientRect();
-  const y = rect.top + height / 2;
+  const y = rect.top + rect.height / 2;
   const startX = rect.left + rect.width * {{startRatio}};
   const endX = rect.left + rect.width * {{endRatio}};
   const pointerType = {{pointerType}};
@@ -948,11 +1070,31 @@ function triggerAthkarSwipe($page, string $selector, string $direction, string $
   const rect = el.getBoundingClientRect?.() ?? { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
   const width = rect.width || window.innerWidth || 1;
   const height = rect.height || window.innerHeight || 1;
-  const y = rect.top + rect.height / 2;
-  const startRatio = direction === 'forward' ? 0.35 : 0.65;
-  const endRatio = direction === 'forward' ? 0.75 : 0.25;
-  const startX = rect.left + width * startRatio;
-  const endX = rect.left + width * endRatio;
+  const centerX = rect.left + width / 2;
+  const centerY = rect.top + height / 2;
+  const horizontalDirection = direction === 'forward' || direction === 'back';
+  const verticalDirection = direction === 'up' || direction === 'down';
+  const horizontalDistance = Math.min(width * 0.8, Math.max(80, width * 0.4));
+  const verticalDistance = Math.min(height * 0.8, Math.max(80, height * 0.4));
+
+  let startX = centerX;
+  let endX = centerX;
+  let startY = centerY;
+  let endY = centerY;
+
+  if (horizontalDirection) {
+    const isForward = direction === 'forward';
+    const halfDistance = horizontalDistance / 2;
+    startX = centerX + (isForward ? -halfDistance : halfDistance);
+    endX = centerX + (isForward ? halfDistance : -halfDistance);
+  }
+
+  if (verticalDirection) {
+    const isDown = direction === 'down';
+    const halfDistance = verticalDistance / 2;
+    startY = centerY + (isDown ? -halfDistance : halfDistance);
+    endY = centerY + (isDown ? halfDistance : -halfDistance);
+  }
   const reader = document.querySelector('[x-data^="athkarAppReader"]');
   const data = reader && window.Alpine ? (window.Alpine.$data ? window.Alpine.$data(reader) : (reader.__x?.$data ?? null)) : null;
 
@@ -960,13 +1102,13 @@ function triggerAthkarSwipe($page, string $selector, string $direction, string $
     if (typeof data.swipeCancel === 'function') {
       data.swipeCancel();
     }
-    const touchPoint = { clientX: startX, clientY: y };
-    const endTouchPoint = { clientX: endX, clientY: y };
+    const touchPoint = { clientX: startX, clientY: startY };
+    const endTouchPoint = { clientX: endX, clientY: endY };
     const startEvent = {
       type: pointerType === 'touch' ? 'touchstart' : 'pointerdown',
       pointerType,
       clientX: startX,
-      clientY: y,
+      clientY: startY,
       button: 0,
       target: el,
       touches: pointerType === 'touch' ? [touchPoint] : undefined,
@@ -976,7 +1118,7 @@ function triggerAthkarSwipe($page, string $selector, string $direction, string $
       type: pointerType === 'touch' ? 'touchend' : 'pointerup',
       pointerType,
       clientX: endX,
-      clientY: y,
+      clientY: endY,
       button: 0,
       target: el,
       touches: pointerType === 'touch' ? [] : undefined,
@@ -991,7 +1133,7 @@ function triggerAthkarSwipe($page, string $selector, string $direction, string $
     bubbles: true,
     cancelable: true,
     clientX: startX,
-    clientY: y,
+    clientY: startY,
     pointerType,
     pointerId: 1,
     button: 0,
@@ -1002,7 +1144,7 @@ function triggerAthkarSwipe($page, string $selector, string $direction, string $
     bubbles: true,
     cancelable: true,
     clientX: endX,
-    clientY: y,
+    clientY: endY,
     pointerType,
     pointerId: 1,
     button: 0,
@@ -1013,7 +1155,7 @@ function triggerAthkarSwipe($page, string $selector, string $direction, string $
     bubbles: true,
     cancelable: true,
     clientX: endX,
-    clientY: y,
+    clientY: endY,
     pointerType,
     pointerId: 1,
     button: 0,

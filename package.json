@@ -9,7 +9,7 @@
         "dev": "vite"
     },
     "devDependencies": {
-        "@openai/codex": "^0.98.0",
+        "@openai/codex": "^0.101.0",
         "@tailwindcss/vite": "^4.1.18",
         "blade-formatter": "^1.44.2",
         "concurrently": "^9.0.1",

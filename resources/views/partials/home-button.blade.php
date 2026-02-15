@@ -3,7 +3,7 @@
     data-stack-item
     x-transition
     x-cloak
-    x-show="!views['main-menu'].isOpen && !isSettingsOpen"
+    x-show="!views['main-menu'].isOpen && !isSettingsOpen && !isAthkarManagerOpen"
 >
     <x-action-button
         data-testid="settings-button"

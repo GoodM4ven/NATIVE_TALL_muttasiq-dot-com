@@ -285,6 +285,16 @@
             -webkit-tap-highlight-color: transparent;
         }
 
+        .athkar-tap.is-origin-active {
+            border-color: color-mix(in srgb, var(--warning-400) 65%, transparent);
+            background-color: color-mix(in srgb, var(--warning-400) 12%, transparent);
+        }
+
+        .dark .athkar-tap.is-origin-active {
+            border-color: color-mix(in srgb, var(--warning-400) 30%, transparent);
+            background-color: color-mix(in srgb, var(--warning-400) 16%, transparent);
+        }
+
         @media (hover: hover) and (pointer: fine) {
             .athkar-tap:hover {
                 border-color: color-mix(in srgb, var(--warning-400) 65%, transparent);
@@ -344,6 +354,122 @@
 
         .athkar-text.is-fit {
             opacity: 1;
+        }
+
+        .athkar-text--muted {
+            opacity: 0 !important;
+        }
+
+        .athkar-origin-text {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding-block: inherit;
+            padding-inline: inherit;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 260ms ease;
+        }
+
+        .athkar-origin-text__content {
+            margin: 0;
+            inline-size: 100%;
+            text-align: center;
+        }
+
+        .athkar-origin-text.is-origin-visible {
+            opacity: 1 !important;
+        }
+
+        .athkar-origin-indicator {
+            position: relative;
+            display: inline-grid;
+            place-items: center;
+            inline-size: 2.6rem;
+            block-size: 2.6rem;
+            padding: 0;
+            border: none;
+            background: transparent;
+            color: var(--info-600);
+            transition: transform 180ms ease, color 200ms ease;
+        }
+
+        .athkar-origin-indicator::before {
+            content: "";
+            position: absolute;
+            inset: 0.28rem;
+            transform: rotate(45deg);
+            border-radius: 0.42rem;
+            border: 1px solid color-mix(in srgb, var(--info-300) 65%, transparent);
+            background: color-mix(in srgb, var(--info-50) 92%, transparent);
+            box-shadow: 0 6px 14px color-mix(in srgb, var(--gray-900) 12%, transparent);
+            transition: border-color 200ms ease, background-color 200ms ease, box-shadow 200ms ease;
+        }
+
+        .athkar-origin-indicator>* {
+            position: relative;
+            z-index: 1;
+        }
+
+        .athkar-origin-indicator:focus-visible {
+            outline: none;
+        }
+
+        .athkar-origin-indicator:focus-visible::before {
+            box-shadow:
+                0 0 0 1px color-mix(in srgb, var(--primary-400) 55%, transparent),
+                0 0 0 7px color-mix(in srgb, var(--primary-300) 18%, transparent);
+        }
+
+        .athkar-origin-indicator--mobile {
+            inline-size: 2.45rem;
+            block-size: 2.45rem;
+        }
+
+        .athkar-origin-indicator--desktop {
+            inline-size: 3.05rem;
+            block-size: 3.05rem;
+        }
+
+        .athkar-origin-indicator:hover {
+            transform: translateY(-1px);
+        }
+
+        .athkar-origin-indicator.is-active {
+            color: var(--warning-700);
+        }
+
+        .athkar-origin-indicator.is-active::before {
+            border-color: color-mix(in srgb, var(--warning-500) 55%, transparent);
+            background: color-mix(in srgb, var(--warning-100) 88%, transparent);
+            box-shadow:
+                0 0 0 1px color-mix(in srgb, var(--warning-400) 45%, transparent),
+                0 0 0 0 color-mix(in srgb, var(--warning-400) 30%, transparent);
+            animation: athkar-origin-indicator-pulse 1.2s ease-in-out infinite;
+        }
+
+        .dark .athkar-origin-indicator {
+            color: var(--info-300);
+        }
+
+        .dark .athkar-origin-indicator::before {
+            border-color: color-mix(in srgb, var(--info-500) 55%, transparent);
+            background: color-mix(in srgb, var(--info-900) 50%, transparent);
+            box-shadow: 0 8px 18px color-mix(in srgb, var(--gray-950) 40%, transparent);
+        }
+
+        .dark .athkar-origin-indicator.is-active {
+            color: var(--warning-100);
+        }
+
+        .dark .athkar-origin-indicator.is-active::before {
+            border-color: color-mix(in srgb, var(--warning-400) 60%, transparent);
+            background: color-mix(in srgb, var(--warning-500) 20%, transparent);
+            box-shadow:
+                0 0 0 1px color-mix(in srgb, var(--warning-400) 50%, transparent),
+                0 0 0 0 color-mix(in srgb, var(--warning-400) 30%, transparent);
         }
 
         @media (min-width: 640px) {
@@ -503,6 +629,22 @@
                 background-position: 200% 50%;
             }
         }
+
+        @keyframes athkar-origin-indicator-pulse {
+
+            0%,
+            100% {
+                box-shadow:
+                    0 0 0 1px color-mix(in srgb, var(--warning-400) 45%, transparent),
+                    0 0 0 0 color-mix(in srgb, var(--warning-400) 30%, transparent);
+            }
+
+            50% {
+                box-shadow:
+                    0 0 0 1px color-mix(in srgb, var(--warning-400) 55%, transparent),
+                    0 0 0 8px color-mix(in srgb, var(--warning-400) 18%, transparent);
+            }
+        }
     </style>
 @endassets
 
@@ -524,38 +666,62 @@
     >
         <div
             class="athkar-panel athkar-panel-actions flex flex-wrap items-center gap-2 px-3 py-2 sm:flex-nowrap sm:gap-4 sm:px-4 sm:py-3">
-            <span
-                class="athkar-chip shadow-inner! relative inline-flex items-center justify-center px-3 py-2 text-xs font-semibold transition sm:px-4 sm:py-3"
+            <button
+                class="athkar-chip shadow-inner! focus-visible:outline-primary-500 relative inline-flex cursor-pointer items-center justify-center px-3 py-2 text-xs font-semibold transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 sm:px-4 sm:py-3"
+                data-athkar-open-manager
+                type="button"
+                x-data="{ tip: null }"
+                x-on:click="openGateAndManageAthkar()"
+                x-on:mouseenter="tip = $tippy('إدارة الأذكار', 'bottom')"
+                x-on:mouseleave="tip?._clearHideTimer?.(); tip?.hide()"
+                x-on:focus="tip = $tippy('إدارة الأذكار', 'bottom')"
+                x-on:blur="tip?._clearHideTimer?.(); tip?.hide()"
                 x-text="activeLabel"
-            ></span>
+            ></button>
 
             <div class="flex flex-1 items-center gap-0.5 text-xs text-gray-600 sm:gap-3 dark:text-gray-300">
                 <span
                     class="text-primary-700 dark:text-primary-200 inline-flex min-w-[4.3rem] items-center justify-center gap-1 text-center text-[0.85rem] tabular-nums sm:min-w-[4.6rem] sm:text-[0.95rem]"
+                    dir="ltr"
                 >
-                    <span
-                        class="athkar-count"
-                        x-bind:class="totalPulse.isActive && 'athkar-count--rolling'"
-                    >
+                    <span x-text="`${totalRequiredCount} /`"></span>
+                    <span class="athkar-count">
                         <span
                             class="athkar-count__current"
-                            x-show="!totalPulse.isActive"
+                            x-show="!(totalPulse.isActive && totalPulse.hasChanges)"
                             x-text="totalCompletedCount"
                         ></span>
                         <span
-                            class="athkar-count__prev"
+                            class="athkar-count__current inline-flex items-center gap-0"
                             x-cloak
-                            x-show="totalPulse.isActive"
-                            x-text="totalPulse.prev"
-                        ></span>
-                        <span
-                            class="athkar-count__next"
-                            x-cloak
-                            x-show="totalPulse.isActive"
-                            x-text="totalPulse.next"
-                        ></span>
+                            x-show="totalPulse.isActive && totalPulse.hasChanges"
+                        >
+                            <template
+                                x-for="segment in totalPulse.segments"
+                                x-bind:key="segment.key"
+                            >
+                                <span class="inline-flex items-center">
+                                    <span
+                                        x-show="!segment.changed"
+                                        x-text="segment.next"
+                                    ></span>
+                                    <span
+                                        class="athkar-count athkar-count--rolling"
+                                        x-show="segment.changed"
+                                    >
+                                        <span
+                                            class="athkar-count__prev"
+                                            x-text="segment.prev"
+                                        ></span>
+                                        <span
+                                            class="athkar-count__next"
+                                            x-text="segment.next"
+                                        ></span>
+                                    </span>
+                                </span>
+                            </template>
+                        </span>
                     </span>
-                    <span x-text="`/ ${totalRequiredCount}`"></span>
                 </span>
                 <div
                     class="relative flex-1"
@@ -664,29 +830,42 @@
                                     >
                                         <span x-text="`${requiredCount(index)} /`"></span>
 
-                                        <span
-                                            class="athkar-count"
-                                            x-bind:class="countPulse.index === index &&
-                                                countPulse.isActive &&
-                                                'athkar-count--rolling'"
-                                        >
+                                        <span class="athkar-count">
                                             <span
                                                 class="athkar-count__current"
-                                                x-show="!(countPulse.index === index && countPulse.isActive)"
+                                                x-show="!(countPulse.index === index && countPulse.isActive && countPulse.hasChanges)"
                                                 x-text="countAt(index)"
                                             ></span>
                                             <span
-                                                class="athkar-count__prev"
+                                                class="athkar-count__current inline-flex items-center gap-0"
                                                 x-cloak
-                                                x-show="countPulse.index === index && countPulse.isActive"
-                                                x-text="countPulse.prev"
-                                            ></span>
-                                            <span
-                                                class="athkar-count__next"
-                                                x-cloak
-                                                x-show="countPulse.index === index && countPulse.isActive"
-                                                x-text="countPulse.next"
-                                            ></span>
+                                                x-show="countPulse.index === index && countPulse.isActive && countPulse.hasChanges"
+                                            >
+                                                <template
+                                                    x-for="segment in countPulse.segments"
+                                                    x-bind:key="segment.key"
+                                                >
+                                                    <span class="inline-flex items-center">
+                                                        <span
+                                                            x-show="!segment.changed"
+                                                            x-text="segment.next"
+                                                        ></span>
+                                                        <span
+                                                            class="athkar-count athkar-count--rolling"
+                                                            x-show="segment.changed"
+                                                        >
+                                                            <span
+                                                                class="athkar-count__prev"
+                                                                x-text="segment.prev"
+                                                            ></span>
+                                                            <span
+                                                                class="athkar-count__next"
+                                                                x-text="segment.next"
+                                                            ></span>
+                                                        </span>
+                                                    </span>
+                                                </template>
+                                            </span>
                                         </span>
                                     </div>
                                 </button>
@@ -700,7 +879,7 @@
                                     x-bind:class="{
                                         'opacity-100! scale-100 pointer-events-auto!': isHintOpen(index),
                                     }"
-                                    x-on:click.stop="completeThikr(index)"
+                                    x-on:click.stop="requestSingleThikrCompletion(index)"
                                 >
                                     <x-icon
                                         class="h-4 w-4"
@@ -718,11 +897,50 @@
                             </div>
                         </div>
 
+                        <!-- Mobile thikr origin toggler -->
+                        <div
+                            class="absolute left-2 top-2 z-30 sm:hidden"
+                            x-data="{
+                                isVisible: false,
+                                timer: null,
+                            }"
+                            x-show="isOriginalThikr(index)"
+                            x-bind:class="isVisible ? 'opacity-100' : 'opacity-0'"
+                            x-effect="
+                                if (slide.isActive) {
+                                    clearTimeout(timer);
+                                    isVisible = false;
+                                } else {
+                                    timer = setTimeout(() => (isVisible = true), 300);
+                                }
+                            "
+                        >
+                            <button
+                                class="athkar-origin-indicator athkar-origin-indicator--mobile"
+                                type="button"
+                                x-data="{ tip: null }"
+                                x-bind:class="isOriginVisible(index) && 'is-active'"
+                                x-bind:aria-pressed="isOriginVisible(index)"
+                                x-on:click.stop="toggleOrigin(index)"
+                                x-on:mouseenter="tip = $tippy('مأثور', 'right')"
+                                x-on:mouseleave="tip?._clearHideTimer?.(); tip?.hide()"
+                                x-on:focus="tip = $tippy('مأثور', 'right')"
+                                x-on:blur="tip?._clearHideTimer?.(); tip?.hide()"
+                            >
+                                <x-icon
+                                    class="h-4 w-4"
+                                    name="bootstrap.exclamation-diamond"
+                                />
+                            </button>
+                        </div>
+
                         <!-- Content -->
                         <div class="flex min-h-0 flex-1 flex-col gap-3 sm:gap-5">
                             <!-- Top Counter -->
-                            <div class="hidden items-center justify-center gap-4 sm:flex">
-                                <div class="flex items-center gap-3">
+                            <div class="hidden items-center justify-between gap-4 sm:flex">
+                                <div class="w-16"></div>
+
+                                <div class="flex items-center justify-center gap-3">
                                     <div class="group relative h-20 w-20 sm:h-24 sm:w-24">
                                         <!-- The Circle -->
                                         <div
@@ -741,28 +959,42 @@
                                             dir="ltr"
                                         >
                                             <span x-text="`${requiredCount(index)} /`"></span>
-                                            <span
-                                                class="athkar-count"
-                                                x-bind:class="countPulse.index === index && countPulse.isActive &&
-                                                    'athkar-count--rolling'"
-                                            >
+                                            <span class="athkar-count">
                                                 <span
                                                     class="athkar-count__current"
-                                                    x-show="!(countPulse.index === index && countPulse.isActive)"
+                                                    x-show="!(countPulse.index === index && countPulse.isActive && countPulse.hasChanges)"
                                                     x-text="countAt(index)"
                                                 ></span>
                                                 <span
-                                                    class="athkar-count__prev"
+                                                    class="athkar-count__current inline-flex items-center gap-0"
                                                     x-cloak
-                                                    x-show="countPulse.index === index && countPulse.isActive"
-                                                    x-text="countPulse.prev"
-                                                ></span>
-                                                <span
-                                                    class="athkar-count__next"
-                                                    x-cloak
-                                                    x-show="countPulse.index === index && countPulse.isActive"
-                                                    x-text="countPulse.next"
-                                                ></span>
+                                                    x-show="countPulse.index === index && countPulse.isActive && countPulse.hasChanges"
+                                                >
+                                                    <template
+                                                        x-for="segment in countPulse.segments"
+                                                        x-bind:key="segment.key"
+                                                    >
+                                                        <span class="inline-flex items-center">
+                                                            <span
+                                                                x-show="!segment.changed"
+                                                                x-text="segment.next"
+                                                            ></span>
+                                                            <span
+                                                                class="athkar-count athkar-count--rolling"
+                                                                x-show="segment.changed"
+                                                            >
+                                                                <span
+                                                                    class="athkar-count__prev"
+                                                                    x-text="segment.prev"
+                                                                ></span>
+                                                                <span
+                                                                    class="athkar-count__next"
+                                                                    x-text="segment.next"
+                                                                ></span>
+                                                            </span>
+                                                        </span>
+                                                    </template>
+                                                </span>
                                             </span>
                                         </div>
 
@@ -773,8 +1005,10 @@
                                                 type="button"
                                                 aria-label="إتمام الذكر"
                                                 x-show="countAt(index) !== requiredCount(index)"
+                                                x-bind:class="!completionHack.canHover && $store.bp.is('sm+') ?
+                                                    'pointer-events-auto! scale-100! opacity-100!' : ''"
                                                 x-data="{ tip: null }"
-                                                x-on:click.stop="tip?._clearHideTimer?.(); tip?.hide(); completeThikr(index)"
+                                                x-on:click.stop="tip?._clearHideTimer?.(); tip?.hide(); requestSingleThikrCompletion(index)"
                                                 x-on:mouseenter="tip = $tippy('إتمام الذكر', 'right')"
                                                 x-on:mouseleave="tip?._clearHideTimer?.(); tip?.hide()"
                                                 x-on:focus="tip = $tippy('إتمام الذكر', 'right')"
@@ -793,21 +1027,59 @@
                                         >العدد</span>
                                     </div>
                                 </div>
+
+                                <div class="w-16">
+                                    <button
+                                        class="athkar-origin-indicator athkar-origin-indicator--desktop opacity-0 transition-opacity duration-300"
+                                        type="button"
+                                        x-data="{
+                                            isVisible: false,
+                                            timer: null,
+                                            tip: null,
+                                        }"
+                                        x-show="isOriginalThikr(index)"
+                                        x-bind:class="{
+                                            'opacity-100!': isVisible,
+                                            'opacity-0': !isVisible,
+                                            'is-active': isOriginVisible(index),
+                                        }"
+                                        x-bind:aria-pressed="isOriginVisible(index)"
+                                        x-on:click.stop="toggleOrigin(index)"
+                                        x-on:mouseenter="tip = $tippy('مأثور', 'right')"
+                                        x-on:mouseleave="tip?._clearHideTimer?.(); tip?.hide()"
+                                        x-on:focus="tip = $tippy('مأثور', 'right')"
+                                        x-on:blur="tip?._clearHideTimer?.(); tip?.hide()"
+                                        x-effect="
+                                            if (slide.isActive) {
+                                                clearTimeout(timer);
+                                                isVisible = false;
+                                            } else {
+                                                timer = setTimeout(() => (isVisible = true), 300);
+                                            }
+                                        "
+                                    >
+                                        <x-icon
+                                            class="h-10 w-10"
+                                            name="bootstrap.exclamation-diamond"
+                                        />
+                                    </button>
+                                </div>
                             </div>
 
                             <!-- Althikr -->
                             <button
-                                class="athkar-tap group relative flex min-h-0 w-full flex-1 touch-manipulation flex-col items-center justify-center gap-4 overflow-hidden rounded-sm border border-transparent px-2 py-3 text-center transition sm:px-4 sm:py-6"
+                                class="athkar-tap group relative mt-[2.1rem] flex min-h-0 w-full flex-1 touch-manipulation flex-col items-center justify-center gap-4 overflow-hidden rounded-sm border border-transparent px-2 py-3 text-center transition sm:mt-0 sm:px-4 sm:py-6"
                                 data-athkar-tap
                                 type="button"
                                 x-on:click="handleTap()"
                                 x-bind:class="{
                                     'opacity-30!': isHintOpen(index),
                                     'athkar-tap--pulse': tapPulse.index === index && tapPulse.isActive,
+                                    'is-origin-active': isOriginVisible(index),
                                 }"
                             >
                                 <div
-                                    class="{{ twMerge('flex w-full min-h-0 flex-1 flex-col gap-3 overflow-visible sm:gap-4 sm:px-10 justify-center transition-opacity') }}"
+                                    class="{{ twMerge('relative Xmt-8 flex w-full min-h-0 flex-1 flex-col justify-center gap-3 overflow-hidden px-[0.3rem] Xsm:mt-0 sm:justify-center sm:gap-4 sm:px-10 transition-opacity') }}"
                                     data-athkar-text-box
                                     dir="rtl"
                                 >
@@ -819,18 +1091,26 @@
                                         data-shimmer-delay="1000"
                                         data-shimmer-pause="4000"
                                         dir="rtl"
+                                        x-bind:class="isOriginVisible(index) && 'athkar-text--muted'"
                                         x-text="item.text"
                                     ></p>
+                                    <div
+                                        class="athkar-origin-text"
+                                        x-bind:class="isOriginVisible(index) && 'is-origin-visible'"
+                                    >
+                                        <p
+                                            class="athkar-text athkar-origin-text__content font-arabic-serif text-primary-950 dark:text-primary-50 whitespace-break-spaces!"
+                                            data-athkar-origin-text
+                                            dir="rtl"
+                                            x-text="originTextAt(index)"
+                                        ></p>
+                                    </div>
                                 </div>
                             </button>
 
                             <!-- Completion Indicator -->
                             <div
                                 class="flex items-center justify-between gap-3 text-sm text-gray-600 sm:text-base dark:text-gray-300">
-                                <span
-                                    class="athkar-complete-badge px-2.5 py-1 text-[0.65rem] font-semibold opacity-0 transition-opacity duration-150 sm:px-3 sm:text-sm"
-                                    x-bind:class="isItemComplete(index) && 'opacity-100!'"
-                                >تم بحمد الله</span>
                                 <span
                                     class="text-primary-700 dark:text-primary-200 inline-flex min-w-[4.4rem] items-center justify-center gap-1 text-center tabular-nums opacity-0 transition-opacity duration-300"
                                     x-data="{
@@ -847,30 +1127,71 @@
                                                 }
                                             "
                                 >
-                                    <span
-                                        class="athkar-count"
-                                        x-bind:class="pagePulse.isActive && 'athkar-count--rolling'"
-                                    >
+                                    <span class="athkar-count">
                                         <span
                                             class="athkar-count__current"
-                                            x-show="!pagePulse.isActive"
+                                            x-show="!(pagePulse.isActive && pagePulse.hasChanges)"
                                             x-text="activeIndex + 1"
                                         ></span>
                                         <span
-                                            class="athkar-count__prev"
+                                            class="athkar-count__current inline-flex items-center gap-0"
                                             x-cloak
-                                            x-show="pagePulse.isActive"
-                                            x-text="pagePulse.prev"
-                                        ></span>
-                                        <span
-                                            class="athkar-count__next"
-                                            x-cloak
-                                            x-show="pagePulse.isActive"
-                                            x-text="pagePulse.next"
-                                        ></span>
+                                            x-show="pagePulse.isActive && pagePulse.hasChanges"
+                                        >
+                                            <template
+                                                x-for="segment in pagePulse.segments"
+                                                x-bind:key="segment.key"
+                                            >
+                                                <span class="inline-flex items-center">
+                                                    <span
+                                                        x-show="!segment.changed"
+                                                        x-text="segment.next"
+                                                    ></span>
+                                                    <span
+                                                        class="athkar-count athkar-count--rolling"
+                                                        x-show="segment.changed"
+                                                    >
+                                                        <span
+                                                            class="athkar-count__prev"
+                                                            x-text="segment.prev"
+                                                        ></span>
+                                                        <span
+                                                            class="athkar-count__next"
+                                                            x-text="segment.next"
+                                                        ></span>
+                                                    </span>
+                                                </span>
+                                            </template>
+                                        </span>
                                     </span>
                                     <span x-text="`/ ${activeList.length}`"></span>
                                 </span>
+
+                                <div
+                                    class="flex items-center gap-1.5"
+                                    x-data="{
+                                        isVisible: false,
+                                        timer: null,
+                                    }"
+                                    x-effect="
+                                        if (slide.isActive) {
+                                            clearTimeout(timer);
+                                            isVisible = false;
+                                        } else {
+                                            timer = setTimeout(() => (isVisible = true), 300);
+                                        }
+                                    "
+                                >
+                                    <span
+                                        class="athkar-complete-badge px-2.5 py-1 text-[0.65rem] font-semibold opacity-0 transition-opacity duration-300 sm:px-3 sm:text-sm"
+                                        x-bind:class="isVisible && isItemComplete(index) ? 'opacity-100!' : 'opacity-0'"
+                                    >تم بحمد الله</span>
+                                    <span
+                                        class="rounded-sm border border-gray-300 bg-gray-100 px-2 py-1 text-[0.65rem] font-semibold text-gray-700 opacity-0 transition-opacity duration-300 sm:px-3 sm:text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                                        x-bind:class="isVisible ? 'opacity-100!' : 'opacity-0'"
+                                        x-text="activeTypeLabel(index)"
+                                    ></span>
+                                </div>
                             </div>
                         </div>
                     </article>

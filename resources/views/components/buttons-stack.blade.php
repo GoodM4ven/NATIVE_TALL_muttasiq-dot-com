@@ -20,6 +20,7 @@
         items: [],
         observer: null,
         attributeObserver: null,
+        isUpdatingLayout: false,
         stackTransitionMs: 200,
         shouldManageDisplay(item) {
             if (!item) {
@@ -27,6 +28,22 @@
             }
     
             return !item.hasAttribute('x-show') && !item.hasAttribute('x-cloak');
+        },
+        isItemVisible(item) {
+            if (!item || !item.isConnected) {
+                return false;
+            }
+    
+            if (item.hidden || item.hasAttribute('x-cloak')) {
+                return false;
+            }
+    
+            const styles = window.getComputedStyle(item);
+    
+            return styles.display !== 'none' && styles.visibility !== 'hidden';
+        },
+        visibleItems() {
+            return this.items.filter((item) => this.isItemVisible(item));
         },
         init() {
             this.refreshItems();
@@ -84,6 +101,10 @@
         },
         observeItems() {
             this.observer = new MutationObserver(() => {
+                if (this.isUpdatingLayout) {
+                    return;
+                }
+    
                 this.refreshItems();
                 this.updateLayout();
             });
@@ -91,6 +112,8 @@
             this.observer.observe(this.$refs.stack, {
                 childList: true,
                 subtree: true,
+                attributes: true,
+                attributeFilter: ['class', 'style', 'hidden', 'x-cloak'],
             });
         },
         bindClickHandler() {
@@ -105,7 +128,7 @@
                     return;
                 }
     
-                const index = Number(item.dataset.stackIndex ?? -1);
+                const index = this.visibleItems().indexOf(item);
     
                 if (index < 0) {
                     return;
@@ -176,7 +199,7 @@
             return this.activeGap;
         },
         offsetFromAnchor(index) {
-            const lastIndex = this.items.length - 1;
+            const lastIndex = this.visibleItems().length - 1;
             let total = 0;
     
             for (let i = index; i < lastIndex; i += 1) {
@@ -193,19 +216,43 @@
             return 70 - index;
         },
         updateLayout() {
+            this.isUpdatingLayout = true;
+    
+            const finishUpdate = () => {
+                requestAnimationFrame(() => {
+                    this.isUpdatingLayout = false;
+                });
+            };
+    
             if (!this.items.length) {
+                finishUpdate();
                 return;
             }
     
             if (!this.respectingStack) {
                 this.items.forEach((item) => this.resetItem(item));
+                finishUpdate();
                 return;
+            }
+    
+            const visibleItems = this.visibleItems();
+    
+            if (!visibleItems.length) {
+                this.items.forEach((item) => this.resetItem(item));
+                finishUpdate();
+                return;
+            }
+    
+            if (this.activeIndex > visibleItems.length - 1) {
+                this.activeIndex = Math.max(visibleItems.length - 1, 0);
             }
     
             const anchorSide = this.vertical === 'bottom' ? 'bottom' : 'top';
             const anchorOpposite = this.vertical === 'bottom' ? 'top' : 'bottom';
     
-            this.items.forEach((item, index) => {
+            this.items.forEach((item) => this.resetItem(item));
+    
+            visibleItems.forEach((item, index) => {
                 const translateX = this.offsetFromAnchor(index).toFixed(2);
     
                 item.style.position = 'absolute';
@@ -221,6 +268,8 @@
                     item.style.display = 'block';
                 }
             });
+    
+            finishUpdate();
         },
         resetItem(item) {
             item.style.position = '';
@@ -239,7 +288,7 @@
     }"
     x-init="init();
     return () => destroy();"
-    x-effect="if (typeof isSettingsOpen !== 'undefined' && isSettingsOpen) { isQuickStackOpen = false; activeIndex = 0; updateLayout(); }"
+    x-effect="if ((typeof isSettingsOpen !== 'undefined' && isSettingsOpen) || (typeof isAthkarManagerOpen !== 'undefined' && isAthkarManagerOpen)) { isQuickStackOpen = false; activeIndex = 0; updateLayout(); }"
     x-on:click.window="
         if (!respectingStack) return;
         if ($refs.stack && $refs.stack.contains($event.target)) return;

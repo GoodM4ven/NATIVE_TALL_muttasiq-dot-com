@@ -28,7 +28,7 @@ class HomeController extends Controller
     }
 
     /**
-     * @return array<int, array{id: int, time: string, text: string, count: int, order: int}>
+     * @return array<int, array{id: int, time: string, type: string, text: string, origin: string|null, is_aayah: bool, is_original: bool, count: int, order: int}>
      */
     private function resolveAthkarPayload(): array
     {
@@ -36,23 +36,21 @@ class HomeController extends Controller
             return Thikr::defaultsPayload();
         }
 
-        $baseUrl = trim((string) config('services.athkar.base_url', 'https://muttasiq.com'));
-
-        if ($baseUrl === '') {
-            return [];
-        }
-
-        $url = rtrim($baseUrl, '/').'/api/athkar';
-
+        $url = $this->resolveAthkarApiUrl();
         try {
+            /** @var \Illuminate\Http\Client\Response $response */
             $response = Http::acceptJson()
-                ->timeout((int) config('services.athkar.timeout', 8))
+                ->timeout((int) config('app.custom.native_end_points.retries', 8))
                 ->get($url);
 
             if ($response->successful()) {
-                $athkar = $response->json('athkar');
+                if (is_array($athkar = $response->json('athkar'))) {
+                    return $athkar;
+                }
 
-                return is_array($athkar) ? $athkar : [];
+                Log::warning('Athkar API returned an invalid payload.', [
+                    'url' => $url,
+                ]);
             }
 
             Log::warning('Athkar API returned non-success response.', [
@@ -66,6 +64,20 @@ class HomeController extends Controller
             ]);
         }
 
-        return [];
+        return Thikr::defaultsPayload();
+    }
+
+    private function resolveAthkarApiUrl(): string
+    {
+        $configuredAthkarEndpoint = (string) config('app.custom.native_end_points.athkar', 'athkar');
+
+        if (str_starts_with($configuredAthkarEndpoint, 'https://') || str_starts_with($configuredAthkarEndpoint, 'http://')) {
+            return $configuredAthkarEndpoint;
+        }
+
+        $applicationUrl = rtrim((string) config('app.url'), '/');
+        $relativeAthkarPath = route('api.athkar.index', [], false);
+
+        return $applicationUrl.$relativeAthkarPath;
     }
 }
