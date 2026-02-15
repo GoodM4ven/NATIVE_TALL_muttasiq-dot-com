@@ -28,6 +28,15 @@
             box-shadow: 0 12px 24px color-mix(in srgb, var(--gray-900) 12%, transparent);
         }
 
+        .athkar-manager-card[data-athkar-touch-drag='true'] {
+            transition: box-shadow 120ms ease, border-color 120ms ease;
+        }
+
+        .athkar-manager-card[data-athkar-touch-drag='true']:hover {
+            transform: none;
+            box-shadow: 0 8px 20px color-mix(in srgb, var(--gray-900) 8%, transparent);
+        }
+
         .athkar-manager-card:active {
             cursor: pointer;
             border-radius: 0 !important;
@@ -97,6 +106,18 @@
             border-color: color-mix(in srgb, var(--gray-400) 50%, transparent);
             background: color-mix(in srgb, var(--gray-300) 16%, transparent);
             color: var(--gray-700);
+        }
+
+        .athkar-manager-card__badge--order[data-athkar-sort-handle] {
+            cursor: grab;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        .athkar-manager-card__badge--order[data-athkar-sort-handle]:active {
+            cursor: grabbing;
+            border-radius: 0 !important;
         }
 
         .dark .athkar-manager-card__badge--order {
@@ -173,6 +194,7 @@
             padding: 0.3rem 0.45rem;
             color: var(--gray-700);
             touch-action: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .athkar-manager-card__drag-handle:active {
@@ -193,6 +215,30 @@
 
         .athkar-manager-cards-grid {
             touch-action: pan-y;
+        }
+
+        .athkar-manager-cards-grid .sortable-ghost,
+        .athkar-manager-cards-grid .sortable-chosen,
+        .athkar-manager-cards-grid .sortable-drag {
+            transition: none !important;
+        }
+
+        @media (hover: none),
+        (pointer: coarse) {
+            .athkar-manager-card {
+                min-height: 20rem;
+                transition: box-shadow 120ms ease, border-color 120ms ease;
+            }
+
+            .athkar-manager-card:hover {
+                transform: none;
+                box-shadow: 0 8px 20px color-mix(in srgb, var(--gray-900) 8%, transparent);
+            }
+
+            .athkar-manager-card__click {
+                min-height: 20rem;
+                padding: 0.875rem;
+            }
         }
     </style>
 @endassets
@@ -247,12 +293,18 @@
                 wire:key="athkar-manager-card-{{ $card['id'] }}"
                 wire:sort:item="{{ $card['id'] }}"
                 wire:click.preserve-scroll="openEditAthkar({{ $card['id'] }})"
+                x-bind="$store.bp.shouldUseSortHandles() ? {} : { 'wire:sort:handle': '' }"
+                x-bind:data-athkar-touch-drag="$store.bp.shouldUseSortHandles() ? 'true' : 'false'"
             >
                 <div class="flex items-center justify-between gap-2">
                     <div class="flex flex-wrap items-center gap-2">
                         <span
                             class="athkar-manager-card__badge athkar-manager-card__badge--order"
+                            data-athkar-sort-handle
                             title="ترتيب الذكر"
+                            wire:sort:handle
+                            wire:click.stop
+                            x-on:click.stop
                         >#{{ $card['order'] }}</span>
                         <span
                             class="athkar-manager-card__badge athkar-manager-card__badge--time">{{ \App\Services\Enums\ThikrTime::labelFor($card['time']) }}</span>
@@ -276,7 +328,9 @@
 
                         <span
                             class="athkar-manager-card__drag-handle"
+                            data-athkar-sort-handle
                             title="اسحب لإعادة الترتيب"
+                            wire:sort:handle
                             wire:click.stop
                             x-on:click.stop
                         >

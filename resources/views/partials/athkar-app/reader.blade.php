@@ -1005,6 +1005,8 @@
                                                 type="button"
                                                 aria-label="إتمام الذكر"
                                                 x-show="countAt(index) !== requiredCount(index)"
+                                                x-bind:class="!completionHack.canHover && $store.bp.is('sm+') ?
+                                                    'pointer-events-auto! scale-100! opacity-100!' : ''"
                                                 x-data="{ tip: null }"
                                                 x-on:click.stop="tip?._clearHideTimer?.(); tip?.hide(); requestSingleThikrCompletion(index)"
                                                 x-on:mouseenter="tip = $tippy('إتمام الذكر', 'right')"

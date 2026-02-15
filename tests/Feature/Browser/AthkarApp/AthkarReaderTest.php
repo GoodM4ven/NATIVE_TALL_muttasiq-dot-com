@@ -507,14 +507,30 @@ it('returns to gate then opens athkar manager from the reader top mode button', 
 JS,
         true,
     );
+    waitForScriptWithTimeout(
+        $page,
+        <<<'JS'
+(() => {
+  const bp = window.Alpine?.store?.('bp');
+  const firstCard = document.querySelector('[data-athkar-manager-card]');
+  if (!bp || !firstCard) {
+    return false;
+  }
+
+  return bp.shouldUseSortHandles() === false && firstCard.hasAttribute('wire:sort:handle');
+})()
+JS,
+        true,
+        10_000,
+    );
 });
 
-it('opens athkar manager as a modal on mobile while keeping cards sortable and drag controls visible', function () {
+it('opens athkar manager as a modal on touch layouts and limits drag handles to order and drag controls', function () {
     $page = visit('/');
 
     resetBrowserState($page);
     openAthkarReader($page, 'sabah', false);
-    enableMobileContext($page);
+    enableTabletContext($page);
     waitForReaderVisible($page);
     waitForScript($page, homeDataScript('data.activeView'), 'athkar-app-sabah');
 
@@ -523,20 +539,6 @@ it('opens athkar manager as a modal on mobile while keeping cards sortable and d
     waitForScript($page, homeDataScript('data.activeView'), 'athkar-app-gate');
     waitForScript($page, 'window.location.hash', '#athkar-app-gate');
     waitForScriptWithTimeout($page, 'Boolean(document.querySelector(".fi-modal-window"))', true, 10_000);
-    waitForScript(
-        $page,
-        <<<'JS'
-(() => {
-  const modal = document.querySelector('.fi-modal.fi-modal-open');
-  if (!modal) {
-    return false;
-  }
-
-  return !modal.classList.contains('fi-modal-slide-over');
-})()
-JS,
-        true,
-    );
     waitForScript(
         $page,
         <<<'JS'
@@ -550,6 +552,62 @@ JS,
 (() => Boolean(document.querySelector('[data-athkar-manager-card][wire\\:sort\\:item]')))()
 JS,
         true,
+    );
+    waitForScriptWithTimeout(
+        $page,
+        <<<'JS'
+(() => {
+  const bp = window.Alpine?.store?.('bp');
+  if (!bp) {
+    return false;
+  }
+
+  return bp.isTablet() === true && bp.shouldUseSortHandles() === true;
+})()
+JS,
+        true,
+        10_000,
+    );
+    waitForScriptWithTimeout(
+        $page,
+        <<<'JS'
+(() => {
+  const card = document.querySelector('[data-athkar-manager-card]');
+  if (!card) {
+    return false;
+  }
+
+  const orderHandle = card.querySelector('.athkar-manager-card__badge--order[data-athkar-sort-handle][wire\\:sort\\:handle]');
+  const dragHandle = card.querySelector('.athkar-manager-card__drag-handle[data-athkar-sort-handle][wire\\:sort\\:handle][title="اسحب لإعادة الترتيب"]');
+
+  return !card.hasAttribute('wire:sort:handle') && Boolean(orderHandle) && Boolean(dragHandle);
+})()
+JS,
+        true,
+        10_000,
+    );
+    waitForScriptWithTimeout(
+        $page,
+        <<<'JS'
+(() => {
+  const card = document.querySelector('[data-athkar-manager-card]');
+  const dragHandle = card?.querySelector('.athkar-manager-card__drag-handle[title="اسحب لإعادة الترتيب"]');
+  const orderHandle = card?.querySelector('.athkar-manager-card__badge--order[data-athkar-sort-handle]');
+  if (!card || !dragHandle || !orderHandle) {
+    return false;
+  }
+
+  const cardStyles = getComputedStyle(card);
+  const dragStyles = getComputedStyle(dragHandle);
+  const orderStyles = getComputedStyle(orderHandle);
+
+  return !String(cardStyles.transitionProperty).includes('transform')
+    && dragStyles.touchAction === 'none'
+    && orderStyles.touchAction === 'none';
+})()
+JS,
+        true,
+        10_000,
     );
 });
 
@@ -917,6 +975,94 @@ it('executes hidden completion buttons on desktop for single thikr and all athka
 
     waitForScript($page, athkarReaderDataScript('data.isModeComplete("sabah")'), true);
     waitForScript($page, athkarReaderDataScript('data.activeMode'), null);
+});
+
+it('shows single-thikr completion button on touch tablets without hover', function () {
+    $page = visit('/');
+
+    resetBrowserState($page);
+    openAthkarReader($page, 'sabah', false);
+    enableTabletContext($page);
+    waitForReaderVisible($page);
+
+    setAthkarSettings($page, [
+        'does_prevent_switching_athkar_until_completion' => false,
+    ]);
+
+    $multiIndex = $page->script(
+        athkarReaderDataScript(
+            'data.activeList.findIndex((item) => Number(item.count ?? 1) > 1)',
+        ),
+    );
+
+    expect($multiIndex)->toBeGreaterThanOrEqual(0);
+
+    $page->script(athkarReaderCommandScript("data.setActiveIndex({$multiIndex});"));
+
+    waitForScript($page, athkarReaderDataScript('data.activeIndex'), $multiIndex);
+
+    $selector = '[data-athkar-slide][data-active="true"] .sm\\:flex button[aria-label="إتمام الذكر"]';
+    $buttonState = null;
+
+    for ($attempt = 1; $attempt <= 20; $attempt++) {
+        /** @var array<string, mixed> $state */
+        $state = $page->script(js_template(<<<'JS'
+(() => {
+  const button = document.querySelector({{selector}});
+  const bp = window.Alpine?.store?.('bp');
+
+  if (!button) {
+    return {
+      exists: false,
+      width: window.innerWidth,
+      isTouch: bp?.isTouch?.() ?? null,
+      isSmPlus: bp?.is?.('sm+') ?? null,
+    };
+  }
+
+  const styles = getComputedStyle(button);
+
+  return {
+    exists: true,
+    width: window.innerWidth,
+    isTouch: bp?.isTouch?.() ?? null,
+    isSmPlus: bp?.is?.('sm+') ?? null,
+    className: button.className,
+    styleAttr: button.getAttribute('style'),
+    display: styles.display,
+    opacity: styles.opacity,
+    pointerEvents: styles.pointerEvents,
+  };
+})()
+JS, ['selector' => $selector]));
+
+        $buttonState = $state;
+
+        if (
+            ($state['exists'] ?? false) === true
+            && ($state['opacity'] ?? '0') === '1'
+            && ($state['pointerEvents'] ?? 'none') !== 'none'
+        ) {
+            break;
+        }
+
+        usleep(200_000);
+    }
+
+    expect($buttonState['exists'] ?? false)->toBeTrue('Button state: '.var_export($buttonState, true));
+    expect($buttonState['opacity'] ?? null)->toBe('1', 'Button state: '.var_export($buttonState, true));
+    expect($buttonState['pointerEvents'] ?? null)->not->toBe('none', 'Button state: '.var_export($buttonState, true));
+
+    scriptClick($page, $selector);
+
+    waitForScript($page, 'Boolean(document.querySelector(".fi-modal-window"))', true);
+    clickModalAction($page, 'نعم، أكمل الذكر');
+
+    waitForScript(
+        $page,
+        athkarReaderDataScript('data.countAt('.$multiIndex.') === data.requiredCount('.$multiIndex.')'),
+        true,
+    );
 });
 
 it('tracks progress by letters and counters by counts while updating page position', function () {

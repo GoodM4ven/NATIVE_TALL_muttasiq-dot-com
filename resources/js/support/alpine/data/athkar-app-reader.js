@@ -26,9 +26,7 @@ document.addEventListener('alpine:init', () => {
             isVisible: false,
             isPinned: false,
             isArmed: false,
-            canHover: window.matchMedia
-                ? window.matchMedia('(hover: hover) and (pointer: fine)').matches
-                : false,
+            canHover: false,
         },
         completionTimer: null,
         swipe: {
@@ -123,10 +121,13 @@ document.addEventListener('alpine:init', () => {
         init() {
             window.athkarSettingsDefaults = this.settingsDefaults;
             this.ensureState();
+            this.refreshCompletionInputMode();
             this.applyAthkarOverrides(this.athkarOverrides, { persist: true });
             this.syncDay();
             this.ensureProgress('sabah');
             this.ensureProgress('masaa');
+            window.addEventListener('resize', () => this.refreshCompletionInputMode());
+            window.addEventListener('orientationchange', () => this.refreshCompletionInputMode());
             window.addEventListener('focus', () => this.syncDay());
             window.addEventListener('athkar-overrides-updated', (event) => {
                 this.applyAthkarOverrides(event?.detail?.overrides ?? [], { persist: true });
@@ -802,6 +803,25 @@ document.addEventListener('alpine:init', () => {
             this.completionHack.isPinned = pinned;
             if (!this.completionHack.canHover) {
                 this.completionHack.isArmed = armed ?? true;
+            }
+        },
+        refreshCompletionInputMode() {
+            const supportsHover = window.matchMedia
+                ? window.matchMedia('(hover: hover) and (pointer: fine)').matches
+                : false;
+            const isTouchContext =
+                this.$store?.bp?.isTouch?.() ?? Number(navigator.maxTouchPoints) > 0;
+            const canHover = supportsHover && !isTouchContext;
+
+            this.completionHack.canHover = canHover;
+
+            if (canHover) {
+                this.completionHack.isArmed = false;
+                return;
+            }
+
+            if (this.completionHack.isVisible) {
+                this.completionHack.isArmed = true;
             }
         },
         hideCompletionHack({ force = false } = {}) {

@@ -139,7 +139,25 @@ function waitForScript($page, string $expression, mixed $expected = true): void
 {
     Execution::instance()->waitForExpectation(
         function () use ($page, $expression, $expected): void {
-            $actual = $page->script($expression);
+            $actual = null;
+
+            for ($attempt = 1; $attempt <= 2; $attempt++) {
+                try {
+                    $actual = $page->script($expression);
+
+                    break;
+                } catch (Throwable $exception) {
+                    if ($attempt === 2) {
+                        throw new RuntimeException(
+                            'Browser script execution failed for expression: '.$expression,
+                            previous: $exception,
+                        );
+                    }
+
+                    usleep(200_000);
+                }
+            }
+
             expect($actual)->toBe(
                 $expected,
                 'JS: '.$expression.' | actual: '.var_export($actual, true),
@@ -221,7 +239,7 @@ function resetBrowserState($page, bool $isMobile = false): void
 
     try {
         if ($isMobile) {
-            $page->resize(375, 812);
+            safeBrowserResize($page, 375, 812);
         }
 
         try {
@@ -262,30 +280,7 @@ function browserSetupTimeoutMs(): int
 
 function enableMobileContext($page): void
 {
-    $page->resize(375, 812);
-
-    $page->script(<<<'JS'
-(() => {
-  try {
-    if (!('ontouchstart' in window)) {
-      window.ontouchstart = () => {};
-    }
-  } catch (e) {
-    // ignore
-  }
-  try {
-    Object.defineProperty(navigator, 'maxTouchPoints', { value: 1, configurable: true });
-  } catch (e) {
-    // ignore
-  }
-  document.documentElement.style.setProperty('--breakpoint', 'base');
-  if (window.Alpine?.store?.('bp')) {
-    window.Alpine.store('bp').current = 'base';
-  }
-  window.dispatchEvent(new Event('resize'));
-  window.dispatchEvent(new Event('orientationchange'));
-})();
-JS);
+    enableTouchContext($page, 375, 812, 'base');
 
     waitForScript($page, "Boolean(window.Alpine && window.Alpine.store && window.Alpine.store('bp'))", true);
     waitForScript($page, "window.Alpine.store('bp').current", 'base');
@@ -299,9 +294,63 @@ JS);
     $page->script(mainMenuCommandScript('data.isTouchDevice = true;'));
 }
 
+function enableTabletContext($page): void
+{
+    enableTouchContext($page, 834, 1112, 'md');
+
+    waitForScript($page, "Boolean(window.Alpine && window.Alpine.store && window.Alpine.store('bp'))", true);
+    waitForScript($page, "window.Alpine.store('bp').current", 'md');
+    waitForScript($page, 'window.innerWidth >= 768', true);
+
+    $page->script(mainMenuCommandScript('data.isTouchDevice = true;'));
+}
+
+function enableTouchContext($page, int $width, int $height, string $breakpoint): void
+{
+    safeBrowserResize($page, $width, $height);
+
+    $page->script(js_template(<<<'JS'
+(() => {
+  try {
+    if (!('ontouchstart' in window)) {
+      window.ontouchstart = () => {};
+    }
+  } catch (e) {
+    // ignore
+  }
+  try {
+    Object.defineProperty(navigator, 'maxTouchPoints', { value: 1, configurable: true });
+  } catch (e) {
+    // ignore
+  }
+  document.documentElement.style.setProperty('--breakpoint', {{breakpoint}});
+  if (window.Alpine?.store?.('bp')) {
+    window.Alpine.store('bp').current = {{breakpoint}};
+  }
+  window.dispatchEvent(new Event('resize'));
+  window.dispatchEvent(new Event('orientationchange'));
+})();
+JS, ['breakpoint' => $breakpoint]));
+}
+
+function safeBrowserResize($page, int $width, int $height): void
+{
+    $attempts = 2;
+
+    for ($attempt = 1; $attempt <= $attempts; $attempt++) {
+        try {
+            $page->resize($width, $height);
+
+            return;
+        } catch (Throwable) {
+            usleep(200_000);
+        }
+    }
+}
+
 function visitMobile(string $path = '/')
 {
-    return visit($path)->on()->mobile();
+    return visit($path);
 }
 
 function openSettingsModal($page): void
