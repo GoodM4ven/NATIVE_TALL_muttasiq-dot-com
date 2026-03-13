@@ -14,15 +14,6 @@
 <img src="images/v-1-1-0/web/visual-enhancements-setting.png" alt="Visual enhancements checkbox in settings modal" height="320"/>
 
 
-## [v1.0.0](https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com/pull/62)
-
-### المحرك
-
-- **يتم اختبار تصدير التطبيق إلى المتجر الرسميّ لمنصتيّ أندرويد وآي او اس من قبل بعض المتطوعين...**
-- التحكم بالإعدادات الافتراضية من قبل المخدم، مع احترام إعدادات المستخدم **عند التعديل**
-- تحسين أداء التطبيق بعض الشيء وبشكل عام
-
-
 ## [v0.5.0](https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com/pull/73)
 
 ### المحرك
@@ -64,13 +55,6 @@
 - إتاحة إضافة الأثر المسند بالنسبة للذكر، وإظهار علامة لعرض "المأثور" أثناء القراءة
 
 <img src="images/v-0-2-0/web/athkar-app-manager.png" alt="The athkar app manager - light mode" height="320"/>
-
-
-## [v0.1.1](https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com/pull/4)
-
-### المحرك
-
-- إصلاح خطأ تعميم الإعدادات من قاعدة البيانات
 
 
 ## [v0.1.0](https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com?tab=readme-ov-file#%D9%85%D9%8F%D8%AA%D9%91%D9%8E%D8%B3%D9%90%D9%82)
