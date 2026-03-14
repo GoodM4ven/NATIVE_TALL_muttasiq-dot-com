@@ -208,6 +208,7 @@ https://muttasiq.com
 3. We strongly advocate for using [VSCodium](https://vscodium.com), especially for those who are new to the development world.
 4. Check out all of our VSC configurations set in this [TALL-STANDARDS](https://github.com/GoodM4ven/WIKI_NATIVE_tall-standards) wikipedia, which also contains a decent bit of tips for dealing with the tall-stack and some other related tools and technologies. (The project isn't complete)
 5. And whatever we advised to do for quick learning about this stack, please make sure you read the [development section](#development) up top.
+6. For [Laravel Boost](https://laravel.com/docs/boost) installation, first, **if it doesn't exist already**, `cp boost.json.dist boost.json` and modify if necessary, then call `php artisan boost:install` to guide you in terminal.
 
 ### Tools and Guides
 
