@@ -26,19 +26,17 @@ document.addEventListener('alpine:init', () => {
 
             return progress <= span;
         },
-        resolveModeFromAngle(angle) {
-            const boardElement = this.$refs?.board;
-
-            if (!boardElement) {
+        resolveModeFromAngle(angle, centerX, centerY, shellRect) {
+            if (!shellRect) {
                 return null;
             }
 
-            const boardRect = boardElement.getBoundingClientRect();
-            const centerX = boardRect.left + boardRect.width / 2;
-            const centerY = boardRect.top + boardRect.height / 2;
-            const topLeftAngle = Math.atan2(boardRect.top - centerY, boardRect.left - centerX);
-            const topRightAngle = Math.atan2(boardRect.top - centerY, boardRect.right - centerX);
-            const bottomCenterAngle = Math.atan2(boardRect.bottom - centerY, 0);
+            const topLeftAngle = Math.atan2(shellRect.top - centerY, shellRect.left - centerX);
+            const topRightAngle = Math.atan2(shellRect.top - centerY, shellRect.right - centerX);
+            const bottomCenterAngle = Math.atan2(
+                shellRect.bottom - centerY,
+                shellRect.left + shellRect.width / 2 - centerX,
+            );
 
             if (this.isAngleWithinArc(angle, topLeftAngle, topRightAngle)) {
                 return 'tilawa';
@@ -134,7 +132,12 @@ document.addEventListener('alpine:init', () => {
 
             this.puckX = ((projectedX - shellRect.left) / shellRect.width) * 100;
             this.puckY = ((projectedY - shellRect.top) / shellRect.height) * 100;
-            this.projectedMode = this.resolveModeFromAngle(projectedAngle);
+            this.projectedMode = this.resolveModeFromAngle(
+                projectedAngle,
+                anchorCenterX,
+                anchorCenterY,
+                shellRect,
+            );
         },
         openMode(mode) {
             const modeViewMap = {
