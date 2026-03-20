@@ -94,7 +94,7 @@ class Reader extends Component
             }
         }
 
-        return view('livewire.quran-reader', [
+        return view('livewire.quran-app.reader', [
             'ready' => true,
             'pageNumber' => $pageNumber,
             'maxPage' => $maxPage,

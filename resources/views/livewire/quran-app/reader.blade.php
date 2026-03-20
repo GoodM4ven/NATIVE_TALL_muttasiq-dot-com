@@ -149,7 +149,7 @@
                         type="button"
                         style="border-color: var(--quran-chip-border); background: var(--quran-chip-bg);"
                         x-data
-                        x-on:click="$dispatch('switch-view', { to: 'main-menu' })"
+                        x-on:click="$viewNav('quran-app-gate')"
                     >
                         القائمة
                     </button>

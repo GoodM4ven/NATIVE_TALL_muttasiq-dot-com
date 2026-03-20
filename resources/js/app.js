@@ -17,6 +17,7 @@ import './support/alpine/data/main-menu';
 import './support/alpine/data/athkar-app-gate';
 import './support/alpine/data/athkar-app-reader';
 import './support/alpine/data/athkar-app-manager';
+import './support/alpine/data/quran-app-gate';
 import './support/alpine/storage/font-manager';
 import './support/alpine/storage/color-scheme';
 import './support/alpine/storage/breakpointer';

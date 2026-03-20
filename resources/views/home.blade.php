@@ -19,7 +19,7 @@
                                 'quran-app-tilawa': {},
                                 'quran-app-tadabbur': {},
                                 'quran-app-hifth': {},
-                            }, 
+                            },
                         },
                         'athkar-app-gate': {
                             children: {
