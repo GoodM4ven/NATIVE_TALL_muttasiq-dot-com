@@ -235,7 +235,7 @@
             position: absolute;
             left: 50%;
             top: 50%;
-            width: clamp(2rem, 4.2vw, 2.8rem);
+            width: clamp(0.9rem, 0.5vw, 0rem);
             aspect-ratio: 1;
             transform: translate(-50%, -50%);
             border-radius: 999px;
@@ -264,7 +264,7 @@
             position: absolute;
             left: 50%;
             top: 0;
-            width: 1.28rem;
+            width: 2.5rem;
             aspect-ratio: 1;
             border-radius: 999px;
             border: 1px solid rgba(253, 232, 171, 0.9);
