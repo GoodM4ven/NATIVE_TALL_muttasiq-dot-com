@@ -83,7 +83,7 @@
         }
 
         img.quran-app-sector__image-img--tilawa {
-            object-position: 50% 100% !important;
+            object-position: 50% 50% !important;
         }
 
         img.quran-app-sector__image-img--hifth {
@@ -106,11 +106,28 @@
         .quran-app-sector__chip {
             position: absolute;
             z-index: 5;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: clamp(5.6rem, 11vw, 8rem);
+            border-radius: 999px;
+            border: 1px solid rgba(253, 232, 171, 0.52);
+            background: linear-gradient(165deg,
+                    rgba(73, 47, 17, 0.52) 0%,
+                    rgba(26, 15, 6, 0.38) 48%,
+                    rgba(12, 7, 3, 0.56) 100%);
+            padding: clamp(0.42rem, 1vw, 0.66rem) clamp(0.96rem, 2.4vw, 1.6rem);
             color: rgba(255, 249, 225, 0.96);
             font-size: clamp(1.5rem, 3.2vw, 2.4rem);
             font-weight: 700;
             line-height: 1.2;
             letter-spacing: 0.04em;
+            backdrop-filter: blur(8px) saturate(1.04);
+            -webkit-backdrop-filter: blur(8px) saturate(1.04);
+            box-shadow:
+                inset 0 1px 0 rgba(255, 234, 183, 0.24),
+                inset 0 -1px 0 rgba(44, 28, 10, 0.34),
+                0 10px 24px rgba(8, 4, 2, 0.36);
             text-shadow:
                 0 3px 18px rgba(10, 8, 4, 0.72),
                 0 1px 0 rgba(0, 0, 0, 0.9);
@@ -237,7 +254,7 @@
             position: absolute;
             inset: 0;
             border-radius: 999px;
-            transform: rotate(-90deg);
+            transform: rotate(0deg);
             transition: transform 95ms ease-out, opacity 220ms ease;
             pointer-events: none;
             z-index: 230;
@@ -293,6 +310,8 @@
             }
 
             .quran-app-sector__chip {
+                min-width: clamp(4.3rem, 20vw, 6rem);
+                padding: 0.35rem 0.9rem;
                 font-size: clamp(1.12rem, 5vw, 1.52rem);
             }
 
@@ -480,7 +499,7 @@
                 class="quran-app-gate-orbit"
                 x-cloak
                 x-show="isPointerInside || isModePinned"
-                x-bind:style="{ transform: `rotate(${pointerAngleDeg}deg)` }"
+                x-bind:style="{ transform: `rotate(${orbitAngleDeg}deg)` }"
             >
                 <span class="quran-app-gate-puck"></span>
             </span>

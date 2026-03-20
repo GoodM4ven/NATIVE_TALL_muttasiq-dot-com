@@ -4,7 +4,7 @@ document.addEventListener('alpine:init', () => {
         pinnedMode: null,
         isPointerInside: false,
         isModePinned: false,
-        pointerAngleDeg: -90,
+        orbitAngleDeg: 0,
         touchPointerId: null,
         isTouchPointerActive: false,
         init() {
@@ -52,15 +52,32 @@ document.addEventListener('alpine:init', () => {
         isModeActive(mode) {
             return (this.pinnedMode ?? this.projectedMode) === mode;
         },
+        setOrbitAngle(targetAngleDeg) {
+            if (!Number.isFinite(targetAngleDeg)) {
+                return;
+            }
+
+            let nextAngleDeg = targetAngleDeg;
+            const angleDelta = nextAngleDeg - this.orbitAngleDeg;
+
+            if (angleDelta > 180) {
+                nextAngleDeg -= 360;
+            } else if (angleDelta < -180) {
+                nextAngleDeg += 360;
+            }
+
+            this.orbitAngleDeg = nextAngleDeg;
+        },
         pinMode(mode) {
             this.pinnedMode = mode;
             this.isModePinned = true;
-            this.pointerAngleDeg =
+            this.setOrbitAngle(
                 {
-                    tilawa: -90,
-                    hifth: 30,
-                    tadabbur: 150,
-                }[mode] ?? -90;
+                    tilawa: 0,
+                    hifth: 120,
+                    tadabbur: 240,
+                }[mode] ?? 0,
+            );
         },
         unpinMode(mode) {
             if (this.pinnedMode !== mode) {
@@ -110,7 +127,7 @@ document.addEventListener('alpine:init', () => {
             }
         },
         positionPuckAtDefault() {
-            this.pointerAngleDeg = -90;
+            this.setOrbitAngle(0);
         },
         handlePointerMove(event) {
             if (
@@ -153,7 +170,7 @@ document.addEventListener('alpine:init', () => {
                 projectedX - anchorCenterX,
             );
 
-            this.pointerAngleDeg = (projectedAngle * 180) / Math.PI;
+            this.setOrbitAngle((projectedAngle * 180) / Math.PI + 90);
             this.projectedMode = this.resolveModeFromAngle(
                 projectedAngle,
                 anchorCenterX,
