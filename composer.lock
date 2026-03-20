@@ -1793,16 +1793,16 @@
         },
         {
             "name": "goodm4ven/arabicable",
-            "version": "v1.0.0",
+            "version": "v1.0.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/GoodM4ven/PACKAGE_LARAVEL_arabicable.git",
-                "reference": "99c45da057124118140ccd17ace9d80af14725a5"
+                "reference": "8d5bae1b9bdf2511cf051c56f9cf52ea6f1ceece"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/GoodM4ven/PACKAGE_LARAVEL_arabicable/zipball/99c45da057124118140ccd17ace9d80af14725a5",
-                "reference": "99c45da057124118140ccd17ace9d80af14725a5",
+                "url": "https://api.github.com/repos/GoodM4ven/PACKAGE_LARAVEL_arabicable/zipball/8d5bae1b9bdf2511cf051c56f9cf52ea6f1ceece",
+                "reference": "8d5bae1b9bdf2511cf051c56f9cf52ea6f1ceece",
                 "shasum": ""
             },
             "require": {
@@ -1879,7 +1879,7 @@
             ],
             "support": {
                 "issues": "https://github.com/GoodM4ven/PACKAGE_LARAVEL_arabicable/issues",
-                "source": "https://github.com/GoodM4ven/PACKAGE_LARAVEL_arabicable/tree/v1.0.0"
+                "source": "https://github.com/GoodM4ven/PACKAGE_LARAVEL_arabicable/tree/v1.0.3"
             },
             "funding": [
                 {
@@ -1895,7 +1895,7 @@
                     "type": "patreon"
                 }
             ],
-            "time": "2026-03-20T04:00:31+00:00"
+            "time": "2026-03-20T15:08:43+00:00"
         },
         {
             "name": "goodm4ven/blurred-image",

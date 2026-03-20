@@ -13,6 +13,10 @@ if (! function_exists('view_title')) {
             ViewName::AthkarAppGate => 'الأذكار',
             ViewName::AthkarAppSabah => 'أذكار الصباح',
             ViewName::AthkarAppMasaa => 'أذكار المساء',
+            ViewName::QuranAppGate => 'الكتاب',
+            ViewName::QuranAppTilawa => 'تلاوة الكتاب',
+            ViewName::QuranAppHifth => 'حفظ الكتاب',
+            ViewName::QuranAppTadabbur => 'تدبّر الكتاب',
         };
 
         return "$appName | $title";

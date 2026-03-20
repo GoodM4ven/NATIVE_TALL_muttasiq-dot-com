@@ -5,36 +5,42 @@ declare(strict_types=1);
 use App\Http\Controllers\HomeController;
 use App\Http\Middleware\LogRepeatedUnmatchedRouteHits;
 use App\Http\Middleware\TrackWebHomeMetrics;
-// use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
-
-// use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 Route::get('/', HomeController::class)
     ->middleware(TrackWebHomeMetrics::class)
     ->name('home');
 
+Route::get('/qpc-v2-fonts/{page}.ttf', function (int $page) {
+    if ($page < 1 || $page > 604) {
+        abort(404);
+    }
+
+    $candidates = [
+        base_path('resources/raw-data/quran/fonts/qpc-v2/p'.$page.'.ttf'),
+        dirname(base_path()).'/resources/raw-data/quran/fonts/qpc-v2/p'.$page.'.ttf',
+        base_path('vendor/goodm4ven/arabicable/resources/raw-data/quran/fonts/qpc-v2/p'.$page.'.ttf'),
+    ];
+
+    $fontPath = null;
+
+    foreach ($candidates as $candidate) {
+        if (is_file($candidate)) {
+            $fontPath = $candidate;
+
+            break;
+        }
+    }
+
+    if (! is_string($fontPath) || $fontPath === '') {
+        abort(404);
+    }
+
+    return response()->file($fontPath, [
+        'Content-Type' => 'font/ttf',
+        'Cache-Control' => 'public, max-age=31536000, immutable',
+    ]);
+})->whereNumber('page')->name('qpc-v2-font');
+
 Route::fallback(fn () => abort(404))
     ->middleware(LogRepeatedUnmatchedRouteHits::class);
-
-// if (config('nativephp-internal.running') && is_platform('ios')) {
-//     Route::get('/docs/updates/images/{path}', function (string $path): BinaryFileResponse {
-//         $imagesDirectory = realpath(public_path('docs/updates/images'));
-//         if ($imagesDirectory === false) {
-//             abort(404);
-//         }
-
-//         $requestedPath = realpath(public_path('docs/updates/images/'.$path));
-//         if (
-//             $requestedPath === false
-//             || ! str_starts_with($requestedPath, $imagesDirectory.DIRECTORY_SEPARATOR)
-//             || ! is_file($requestedPath)
-//         ) {
-//             abort(404);
-//         }
-
-//         return response()->file($requestedPath, [
-//             'Content-Type' => File::mimeType($requestedPath) ?? 'application/octet-stream',
-//         ]);
-//     })->where('path', '.*')->name('docs.updates.images.show');
-// }

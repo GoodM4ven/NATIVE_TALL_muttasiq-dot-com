@@ -14,6 +14,13 @@
             viewTree: {
                 'main-menu': {
                     children: {
+                        'quran-app-gate': {
+                            children: {
+                                'quran-app-tilawa': {},
+                                'quran-app-tadabbur': {},
+                                'quran-app-hifth': {},
+                            }, 
+                        },
                         'athkar-app-gate': {
                             children: {
                                 'athkar-app-sabah': {},
@@ -39,6 +46,22 @@
                 },
                 'athkar-app-masaa': {
                     title: @js(view_title(\App\Services\Support\Enums\ViewName::AthkarAppMasaa)),
+                    isOpen: false,
+                },
+                'quran-app-gate': {
+                    title: @js(view_title(\App\Services\Support\Enums\ViewName::QuranAppGate)),
+                    isOpen: false,
+                },
+                'quran-app-tilawa': {
+                    title: @js(view_title(\App\Services\Support\Enums\ViewName::QuranAppTilawa)),
+                    isOpen: false,
+                },
+                'quran-app-hifth': {
+                    title: @js(view_title(\App\Services\Support\Enums\ViewName::QuranAppHifth)),
+                    isOpen: false,
+                },
+                'quran-app-tadabbur': {
+                    title: @js(view_title(\App\Services\Support\Enums\ViewName::QuranAppTadabbur)),
                     isOpen: false,
                 },
             },
@@ -129,6 +152,18 @@
             '#athkar-app-masaa': () => runHashAction(() => {
                 $dispatch('switch-view', { to: 'athkar-app-masaa' });
             }),
+            '#quran-app-gate': () => runHashAction(() => {
+                $dispatch('switch-view', { to: 'quran-app-gate' });
+            }),
+            '#quran-app-tilawa': () => runHashAction(() => {
+                $dispatch('switch-view', { to: 'quran-app-tilawa' });
+            }),
+            '#quran-app-hifth': () => runHashAction(() => {
+                $dispatch('switch-view', { to: 'quran-app-hifth' });
+            }),
+            '#quran-app-tadabbur': () => runHashAction(() => {
+                $dispatch('switch-view', { to: 'quran-app-tadabbur' });
+            }),
         }"
         x-on:switch-view.window="applyViewState($event.detail?.to)"
         x-on:athkar-action-state-pulse.window="pulseActionState($event.detail ?? {})"
@@ -162,6 +197,7 @@
                 :athkar-settings="$athkarSettings"
                 :athkar-main-text-size-limits="$athkarMainTextSizeLimits"
             />
+            <x-partials.quran-app.index />
         </main>
 
         <x-partials.copyright-and-version />
