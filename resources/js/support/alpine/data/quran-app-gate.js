@@ -4,8 +4,9 @@ document.addEventListener('alpine:init', () => {
         pinnedMode: null,
         isPointerInside: false,
         isModePinned: false,
-        puckX: 50,
-        puckY: 50,
+        pointerAngleDeg: -90,
+        touchPointerId: null,
+        isTouchPointerActive: false,
         init() {
             this.$nextTick(() => {
                 this.positionPuckAtDefault();
@@ -54,6 +55,12 @@ document.addEventListener('alpine:init', () => {
         pinMode(mode) {
             this.pinnedMode = mode;
             this.isModePinned = true;
+            this.pointerAngleDeg =
+                {
+                    tilawa: -90,
+                    hifth: 30,
+                    tadabbur: 150,
+                }[mode] ?? -90;
         },
         unpinMode(mode) {
             if (this.pinnedMode !== mode) {
@@ -74,27 +81,43 @@ document.addEventListener('alpine:init', () => {
                 this.positionPuckAtDefault();
             }
         },
-        positionPuckAtDefault() {
-            const shellElement = this.$refs?.shell;
-            const anchorCircle = this.$refs?.anchorCircle;
-
-            if (!shellElement || !anchorCircle) {
+        handlePointerDown(event) {
+            if (event.pointerType !== 'touch') {
                 return;
             }
 
-            const shellRect = shellElement.getBoundingClientRect();
-            const anchorRect = anchorCircle.getBoundingClientRect();
-            const anchorCenterX = anchorRect.left + anchorRect.width / 2;
-            const anchorCenterY = anchorRect.top + anchorRect.height / 2;
-            const radius = anchorRect.width / 2;
-            const defaultX = anchorCenterX;
-            const defaultY = anchorCenterY - radius;
+            this.touchPointerId = event.pointerId;
+            this.isTouchPointerActive = true;
+            this.isPointerInside = true;
+            this.handlePointerMove(event);
+        },
+        handlePointerUp(event) {
+            if (event.pointerType !== 'touch') {
+                return;
+            }
 
-            this.puckX = ((defaultX - shellRect.left) / shellRect.width) * 100;
-            this.puckY = ((defaultY - shellRect.top) / shellRect.height) * 100;
+            if (this.touchPointerId !== null && event.pointerId !== this.touchPointerId) {
+                return;
+            }
+
+            this.touchPointerId = null;
+            this.isTouchPointerActive = false;
+            this.isPointerInside = false;
+            this.projectedMode = null;
+
+            if (!this.isModePinned) {
+                this.positionPuckAtDefault();
+            }
+        },
+        positionPuckAtDefault() {
+            this.pointerAngleDeg = -90;
         },
         handlePointerMove(event) {
-            if (event.pointerType === 'touch') {
+            if (
+                event.pointerType === 'touch' &&
+                (!this.isTouchPointerActive ||
+                    (this.touchPointerId !== null && event.pointerId !== this.touchPointerId))
+            ) {
                 return;
             }
 
@@ -130,8 +153,7 @@ document.addEventListener('alpine:init', () => {
                 projectedX - anchorCenterX,
             );
 
-            this.puckX = ((projectedX - shellRect.left) / shellRect.width) * 100;
-            this.puckY = ((projectedY - shellRect.top) / shellRect.height) * 100;
+            this.pointerAngleDeg = (projectedAngle * 180) / Math.PI;
             this.projectedMode = this.resolveModeFromAngle(
                 projectedAngle,
                 anchorCenterX,

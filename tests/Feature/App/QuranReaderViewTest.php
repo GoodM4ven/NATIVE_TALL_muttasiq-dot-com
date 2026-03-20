@@ -38,10 +38,18 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranGateSource)->toContain('images/background/quran/tilawa.webp')
         ->and($quranGateSource)->toContain('images/background/quran/hifth.webp')
         ->and($quranGateSource)->toContain('images/background/quran/tadabbur.webp')
+        ->and($quranGateSource)->toContain('quran-app-sector__media--tilawa')
+        ->and($quranGateSource)->toContain('quran-app-sector__media--hifth')
+        ->and($quranGateSource)->toContain('quran-app-sector__media--tadabbur')
+        ->and($quranGateSource)->toContain('quran-app-gate-orbit')
         ->and($quranGateSource)->toContain('x-on:pointermove.passive="handlePointerMove($event)"')
         ->and($quranGateSource)->toContain('x-on:click="openMode(\'tilawa\')"')
         ->and($quranGateSource)->toContain('x-on:click="openMode(\'hifth\')"')
-        ->and($quranGateSource)->toContain('x-on:click="openMode(\'tadabbur\')"');
+        ->and($quranGateSource)->toContain('x-on:click="openMode(\'tadabbur\')"')
+        ->and($quranGateSource)->toContain('<path d="M50 53 L50 100" />')
+        ->and($quranGateSource)->not->toContain('M0 0 L50 53')
+        ->and($quranGateSource)->not->toContain('M100 0 L50 53')
+        ->and($quranGateSource)->not->toContain('quran-app-gate-needle');
 
     expect($quranReaderPartialSource)->not->toBeFalse()
         ->and($quranReaderPartialSource)->toContain('<livewire:quran-app.reader />')
