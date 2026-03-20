@@ -279,7 +279,6 @@ Copyright (C) 2026 Muttasiq Contributors.
     - [@almuhanad1](https://t.me/almuhanad1) (المهند النهمي)
     - [@TheHidden9](https://t.me/TheHidden9) (عبد الله).
 
-
 ### Assets
 
 احذر<br>
