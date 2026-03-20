@@ -34,119 +34,56 @@
             clip-path: polygon(100% 0, var(--gate-cx) var(--gate-cy), 50% 100%, 100% 100%);
         }
 
-        .quran-app-sector__wash,
-        .quran-app-sector__streaks {
+        .quran-app-sector__media {
             position: absolute;
             inset: 0;
-            pointer-events: none;
-            transition: opacity 260ms ease;
+            z-index: 1;
         }
 
-        .quran-app-sector__wash {
-            opacity: 0.12;
-        }
-
-        .quran-app-sector__streaks {
-            opacity: 0.1;
-        }
-
-        .quran-app-sector--tilawa .quran-app-sector__wash {
-            background: linear-gradient(180deg,
-                    color-mix(in srgb, var(--success-300) 42%, transparent),
-                    color-mix(in srgb, var(--success-600) 10%, transparent));
-        }
-
-        .quran-app-sector--tadabbur .quran-app-sector__wash {
-            background: linear-gradient(145deg,
-                    color-mix(in srgb, var(--sky-300) 42%, transparent),
-                    color-mix(in srgb, var(--sky-600) 10%, transparent));
-        }
-
-        .quran-app-sector--hifth .quran-app-sector__wash {
-            background: linear-gradient(215deg,
-                    color-mix(in srgb, var(--amber-300) 42%, transparent),
-                    color-mix(in srgb, var(--amber-600) 10%, transparent));
-        }
-
-        .quran-app-sector__streaks {
-            background-image: repeating-linear-gradient(155deg,
-                    transparent 0 5.8rem,
-                    color-mix(in srgb, var(--rose-300) 22%, transparent) 5.8rem 6.55rem);
-        }
-
-        .quran-app-sector.is-active .quran-app-sector__wash {
-            opacity: 0.28;
-        }
-
-        .quran-app-sector.is-active .quran-app-sector__streaks {
-            opacity: 0.2;
-        }
-
-        .quran-app-card {
+        .quran-app-sector__veil {
             position: absolute;
-            width: min(36vw, 16.6rem);
-            height: min(23vw, 10.6rem);
-            overflow: hidden;
-            border-radius: 1rem;
-            border: 1px solid color-mix(in srgb, var(--primary-400) 36%, transparent);
-            background: color-mix(in srgb, var(--background-dark) 55%, transparent);
-            box-shadow:
-                0 20px 44px color-mix(in srgb, var(--gray-950) 22%, transparent),
-                inset 0 1px 0 color-mix(in srgb, white 30%, transparent);
-            transition: border-color 260ms ease, box-shadow 260ms ease, transform 260ms ease;
-            z-index: 25;
+            inset: 0;
+            z-index: 2;
+            background: linear-gradient(170deg,
+                    color-mix(in srgb, var(--gray-950) 24%, transparent),
+                    color-mix(in srgb, var(--gray-950) 70%, transparent));
+            opacity: 0.28;
+            transition: opacity 260ms ease;
+            pointer-events: none;
         }
 
-        .quran-app-card--tilawa {
-            left: 50%;
-            top: clamp(2rem, 8.2vh, 5.5rem);
-            transform: translateX(-50%);
+        .dark .quran-app-sector__veil {
+            opacity: 0.4;
         }
 
-        .quran-app-card--tadabbur {
-            left: clamp(0.8rem, 8vw, 6rem);
-            bottom: clamp(5rem, 11vh, 8rem);
-        }
-
-        .quran-app-card--hifth {
-            right: clamp(0.8rem, 8vw, 6rem);
-            bottom: clamp(5rem, 11vh, 8rem);
-        }
-
-        img.quran-app-card__image-img {
+        img.quran-app-sector__image-img {
             height: 100%;
             width: 100%;
             object-fit: cover;
-            transform: scale(1.07);
-            filter: blur(3.2px) brightness(0.68) saturate(0.82);
+            transform: scale(1.065);
+            filter: blur(3.4px) brightness(0.62) saturate(0.84);
             transition: transform 420ms ease, filter 320ms ease;
             pointer-events: none;
         }
 
-        .quran-app-sector.is-active img.quran-app-card__image-img {
-            transform: scale(1.02);
-            filter: blur(0) brightness(0.98) saturate(1.04);
+        .quran-app-sector.is-active img.quran-app-sector__image-img {
+            transform: scale(1.018);
+            filter: blur(0) brightness(0.96) saturate(1.04);
         }
 
-        .quran-app-sector.is-active .quran-app-card {
-            border-color: color-mix(in srgb, var(--primary-300) 70%, transparent);
-            box-shadow:
-                0 22px 48px color-mix(in srgb, var(--gray-950) 28%, transparent),
-                0 0 0 1px color-mix(in srgb, var(--primary-200) 28%, transparent),
-                inset 0 1px 0 color-mix(in srgb, white 38%, transparent);
+        .quran-app-sector.is-active .quran-app-sector__veil {
+            opacity: 0.08;
         }
 
-        .quran-app-card__label {
+        .quran-app-sector__chip {
             position: absolute;
-            z-index: 10;
-            right: 0.6rem;
-            bottom: 0.55rem;
+            z-index: 5;
             border-radius: 999px;
             border: 1px solid color-mix(in srgb, white 36%, transparent);
-            background: color-mix(in srgb, var(--gray-950) 62%, transparent);
-            padding: 0.2rem 0.72rem;
+            background: color-mix(in srgb, var(--gray-950) 60%, transparent);
+            padding: 0.22rem 0.76rem;
             color: color-mix(in srgb, white 90%, var(--primary-100));
-            font-size: 0.84rem;
+            font-size: 0.82rem;
             font-weight: 700;
             line-height: 1.2;
             backdrop-filter: blur(3px);
@@ -154,32 +91,56 @@
             pointer-events: none;
         }
 
-        .quran-app-card__soon {
+        .quran-app-sector__chip--tilawa {
+            right: 50%;
+            top: clamp(7.8rem, 20vh, 12.4rem);
+            transform: translateX(7.6rem);
+        }
+
+        .quran-app-sector__chip--tadabbur {
+            left: clamp(0.9rem, 7vw, 4.8rem);
+            bottom: clamp(4.8rem, 10vh, 7.2rem);
+        }
+
+        .quran-app-sector__chip--hifth {
+            right: clamp(0.9rem, 7vw, 4.8rem);
+            bottom: clamp(4.8rem, 10vh, 7.2rem);
+        }
+
+        .quran-app-sector__soon {
             position: absolute;
-            z-index: 10;
-            top: 0.55rem;
-            left: 0.55rem;
+            z-index: 6;
             border-radius: 999px;
             border: 1px solid color-mix(in srgb, var(--amber-300) 52%, transparent);
             background: color-mix(in srgb, var(--amber-500) 28%, transparent);
-            padding: 0.17rem 0.45rem;
-            color: color-mix(in srgb, var(--amber-100) 86%, white);
-            font-size: 0.67rem;
+            padding: 0.16rem 0.44rem;
+            color: color-mix(in srgb, var(--amber-100) 88%, white);
+            font-size: 0.64rem;
             font-weight: 700;
             line-height: 1;
             pointer-events: none;
         }
 
+        .quran-app-sector__soon--tadabbur {
+            left: clamp(0.9rem, 7vw, 4.8rem);
+            bottom: clamp(7.1rem, 14vh, 10.4rem);
+        }
+
+        .quran-app-sector__soon--hifth {
+            right: clamp(0.9rem, 7vw, 4.8rem);
+            bottom: clamp(7.1rem, 14vh, 10.4rem);
+        }
+
         .quran-app-gate-geometry {
             position: absolute;
             inset: 0;
-            z-index: 40;
+            z-index: 85;
             pointer-events: none;
         }
 
         .quran-app-gate-geometry path {
-            stroke: color-mix(in srgb, var(--rose-300) 64%, transparent);
-            stroke-width: 0.42;
+            stroke: color-mix(in srgb, var(--rose-300) 60%, transparent);
+            stroke-width: 0.44;
             stroke-linecap: round;
             filter: drop-shadow(0 2px 5px color-mix(in srgb, var(--rose-500) 18%, transparent));
         }
@@ -188,57 +149,57 @@
             position: absolute;
             left: var(--gate-cx);
             top: var(--gate-cy);
-            width: clamp(7.6rem, 14vw, 10.5rem);
+            width: clamp(8.4rem, 16vw, 12rem);
             aspect-ratio: 1;
             transform: translate(-50%, -50%);
             border-radius: 999px;
-            border: 2px solid color-mix(in srgb, var(--amber-300) 70%, transparent);
+            border: 2px solid color-mix(in srgb, var(--amber-300) 74%, transparent);
             background: radial-gradient(circle,
-                    color-mix(in srgb, var(--amber-200) 16%, transparent) 0,
-                    transparent 72%);
+                    color-mix(in srgb, var(--amber-200) 26%, transparent) 0,
+                    transparent 74%);
             box-shadow:
-                inset 0 0 0 1px color-mix(in srgb, var(--amber-50) 38%, transparent),
-                0 0 0 1px color-mix(in srgb, var(--amber-500) 26%, transparent),
-                0 0 24px color-mix(in srgb, var(--amber-400) 30%, transparent);
+                inset 0 0 0 1px color-mix(in srgb, var(--amber-50) 42%, transparent),
+                0 0 0 1px color-mix(in srgb, var(--amber-500) 34%, transparent),
+                0 0 26px color-mix(in srgb, var(--amber-400) 34%, transparent);
             pointer-events: none;
-            z-index: 60;
+            z-index: 120;
         }
 
         .quran-app-gate-core {
             position: absolute;
             left: 50%;
             top: 50%;
-            width: clamp(1.5rem, 3.4vw, 2.3rem);
+            width: clamp(2rem, 4.2vw, 2.8rem);
             aspect-ratio: 1;
             transform: translate(-50%, -50%);
             border-radius: 999px;
             background: radial-gradient(circle,
-                    color-mix(in srgb, white 92%, var(--amber-100)) 0,
-                    color-mix(in srgb, var(--amber-200) 92%, var(--amber-400)) 36%,
-                    color-mix(in srgb, var(--amber-500) 90%, transparent) 72%);
+                    color-mix(in srgb, white 95%, var(--amber-100)) 0,
+                    color-mix(in srgb, var(--amber-100) 98%, var(--amber-300)) 38%,
+                    color-mix(in srgb, var(--amber-500) 95%, transparent) 76%);
             box-shadow:
-                0 0 0 1px color-mix(in srgb, var(--amber-100) 35%, transparent),
-                0 0 20px color-mix(in srgb, var(--amber-300) 62%, transparent),
-                0 0 40px color-mix(in srgb, var(--amber-500) 34%, transparent);
-            opacity: 0.92;
+                0 0 0 1px color-mix(in srgb, var(--amber-100) 40%, transparent),
+                0 0 24px color-mix(in srgb, var(--amber-300) 64%, transparent),
+                0 0 46px color-mix(in srgb, var(--amber-500) 38%, transparent);
+            opacity: 0.95;
         }
 
         .quran-app-gate-puck {
             position: absolute;
-            width: 1.05rem;
+            width: 1.18rem;
             aspect-ratio: 1;
             border-radius: 999px;
-            border: 1px solid color-mix(in srgb, var(--amber-100) 72%, transparent);
+            border: 1px solid color-mix(in srgb, var(--amber-100) 74%, transparent);
             background: radial-gradient(circle,
-                    color-mix(in srgb, white 92%, var(--amber-100)),
-                    color-mix(in srgb, var(--amber-300) 82%, transparent));
+                    color-mix(in srgb, white 95%, var(--amber-100)),
+                    color-mix(in srgb, var(--amber-300) 84%, transparent));
             box-shadow:
-                0 0 0 6px color-mix(in srgb, var(--amber-300) 18%, transparent),
-                0 0 22px color-mix(in srgb, var(--amber-400) 34%, transparent);
+                0 0 0 7px color-mix(in srgb, var(--amber-300) 18%, transparent),
+                0 0 24px color-mix(in srgb, var(--amber-400) 38%, transparent);
             transform: translate(-50%, -50%);
             transition: left 120ms linear, top 120ms linear, opacity 220ms ease;
             pointer-events: none;
-            z-index: 70;
+            z-index: 135;
         }
 
         @media (max-width: 639px) {
@@ -246,61 +207,43 @@
                 --gate-cy: 54%;
             }
 
-            .quran-app-sector__wash {
-                opacity: 0.08;
+            .quran-app-sector__veil {
+                opacity: 0.34;
+                transition: opacity 200ms ease;
             }
 
-            .quran-app-sector__streaks {
-                opacity: 0.04;
-            }
-
-            .quran-app-sector.is-active .quran-app-sector__wash {
+            .quran-app-sector.is-active .quran-app-sector__veil {
                 opacity: 0.16;
             }
 
-            .quran-app-sector.is-active .quran-app-sector__streaks {
-                opacity: 0.1;
-            }
-
-            .quran-app-card {
-                width: min(47vw, 12rem);
-                height: min(29vw, 7.2rem);
-                border-radius: 0.72rem;
-                box-shadow: 0 10px 22px color-mix(in srgb, var(--gray-950) 24%, transparent);
-                transition: border-color 200ms ease, transform 200ms ease;
-            }
-
-            .quran-app-card--tilawa {
-                top: clamp(2.5rem, 8.6vh, 4.8rem);
-            }
-
-            .quran-app-card--tadabbur {
-                left: 1rem;
-                bottom: clamp(4.2rem, 9.2vh, 6.1rem);
-            }
-
-            .quran-app-card--hifth {
-                right: 1rem;
-                bottom: clamp(4.2rem, 9.2vh, 6.1rem);
-            }
-
-            img.quran-app-card__image-img {
-                transform: scale(1.04);
-                filter: blur(2.2px) brightness(0.72) saturate(0.86);
+            img.quran-app-sector__image-img {
+                transform: scale(1.045);
+                filter: blur(2.2px) brightness(0.7) saturate(0.86);
                 transition: transform 240ms ease, filter 220ms ease;
             }
 
-            .quran-app-card__label {
-                right: 0.4rem;
-                bottom: 0.35rem;
-                padding: 0.17rem 0.52rem;
+            .quran-app-sector__chip {
+                padding: 0.17rem 0.54rem;
                 font-size: 0.66rem;
             }
 
-            .quran-app-card__soon {
-                top: 0.34rem;
-                left: 0.34rem;
+            .quran-app-sector__chip--tilawa {
+                top: clamp(7rem, 18vh, 10.4rem);
+                transform: translateX(5.5rem);
+            }
+
+            .quran-app-sector__chip--tadabbur,
+            .quran-app-sector__chip--hifth {
+                bottom: clamp(4.1rem, 9vh, 5.8rem);
+            }
+
+            .quran-app-sector__soon {
                 font-size: 0.57rem;
+            }
+
+            .quran-app-sector__soon--tadabbur,
+            .quran-app-sector__soon--hifth {
+                bottom: clamp(5.9rem, 12vh, 8.1rem);
             }
 
             .quran-app-gate-geometry path {
@@ -308,25 +251,25 @@
             }
 
             .quran-app-gate-anchor {
-                width: clamp(6.2rem, 18vw, 8rem);
+                width: clamp(7rem, 18vw, 9rem);
                 border-width: 1px;
                 box-shadow:
-                    inset 0 0 0 1px color-mix(in srgb, var(--amber-50) 18%, transparent),
-                    0 0 12px color-mix(in srgb, var(--amber-400) 24%, transparent);
+                    inset 0 0 0 1px color-mix(in srgb, var(--amber-50) 22%, transparent),
+                    0 0 14px color-mix(in srgb, var(--amber-400) 24%, transparent);
             }
 
             .quran-app-gate-core {
-                width: clamp(1.2rem, 3.8vw, 1.7rem);
+                width: clamp(1.55rem, 4vw, 2rem);
                 box-shadow:
-                    0 0 10px color-mix(in srgb, var(--amber-300) 32%, transparent),
-                    0 0 20px color-mix(in srgb, var(--amber-500) 16%, transparent);
+                    0 0 12px color-mix(in srgb, var(--amber-300) 34%, transparent),
+                    0 0 24px color-mix(in srgb, var(--amber-500) 17%, transparent);
             }
 
             .quran-app-gate-puck {
-                width: 0.78rem;
+                width: 0.84rem;
                 box-shadow:
                     0 0 0 3px color-mix(in srgb, var(--amber-300) 16%, transparent),
-                    0 0 8px color-mix(in srgb, var(--amber-400) 24%, transparent);
+                    0 0 9px color-mix(in srgb, var(--amber-400) 24%, transparent);
             }
         }
     </style>
@@ -362,21 +305,20 @@
             x-on:blur="unpinMode('tilawa')"
             x-on:click="openMode('tilawa')"
         >
-            <span class="quran-app-sector__wash"></span>
-            <span class="quran-app-sector__streaks"></span>
-
-            <span class="quran-app-card quran-app-card--tilawa">
+            <span class="quran-app-sector__media">
                 <x-goodmaven::blurred-image
+                    class="absolute inset-0"
                     alt="وضع التلاوة"
                     :imagePath="asset('images/background/quran/tilawa.webp')"
                     :thumbnailImagePath="asset('images/background/quran/tilawa-blur-thumbnail.webp')"
                     :isDisplayEnforced="true"
-                    containerClasses="overflow-hidden bg-black/20"
-                    imageClasses="quran-app-card__image-img select-none"
+                    containerClasses="absolute inset-0 overflow-hidden bg-black/25"
+                    imageClasses="quran-app-sector__image-img select-none"
                 />
-
-                <span class="quran-app-card__label font-arabic-serif">تلاوة</span>
             </span>
+
+            <span class="quran-app-sector__veil"></span>
+            <span class="quran-app-sector__chip quran-app-sector__chip--tilawa font-arabic-serif">تلاوة</span>
         </button>
 
         <button
@@ -390,22 +332,21 @@
             x-on:blur="unpinMode('tadabbur')"
             x-on:click="openMode('tadabbur')"
         >
-            <span class="quran-app-sector__wash"></span>
-            <span class="quran-app-sector__streaks"></span>
-
-            <span class="quran-app-card quran-app-card--tadabbur">
+            <span class="quran-app-sector__media">
                 <x-goodmaven::blurred-image
+                    class="absolute inset-0"
                     alt="وضع التدبّر"
                     :imagePath="asset('images/background/quran/tadabbur.webp')"
                     :thumbnailImagePath="asset('images/background/quran/tadabbur-blur-thumbnail.webp')"
                     :isDisplayEnforced="true"
-                    containerClasses="overflow-hidden bg-black/20"
-                    imageClasses="quran-app-card__image-img select-none"
+                    containerClasses="absolute inset-0 overflow-hidden bg-black/25"
+                    imageClasses="quran-app-sector__image-img select-none"
                 />
-
-                <span class="quran-app-card__soon">قريبًا</span>
-                <span class="quran-app-card__label font-arabic-serif">تدبّر</span>
             </span>
+
+            <span class="quran-app-sector__veil"></span>
+            <span class="quran-app-sector__soon quran-app-sector__soon--tadabbur">قريبًا</span>
+            <span class="quran-app-sector__chip quran-app-sector__chip--tadabbur font-arabic-serif">تدبّر</span>
         </button>
 
         <button
@@ -419,22 +360,21 @@
             x-on:blur="unpinMode('hifth')"
             x-on:click="openMode('hifth')"
         >
-            <span class="quran-app-sector__wash"></span>
-            <span class="quran-app-sector__streaks"></span>
-
-            <span class="quran-app-card quran-app-card--hifth">
+            <span class="quran-app-sector__media">
                 <x-goodmaven::blurred-image
+                    class="absolute inset-0"
                     alt="وضع الحفظ"
                     :imagePath="asset('images/background/quran/hifth.webp')"
                     :thumbnailImagePath="asset('images/background/quran/hifth-blur-thumbnail.webp')"
                     :isDisplayEnforced="true"
-                    containerClasses="overflow-hidden bg-black/20"
-                    imageClasses="quran-app-card__image-img select-none"
+                    containerClasses="absolute inset-0 overflow-hidden bg-black/25"
+                    imageClasses="quran-app-sector__image-img select-none"
                 />
-
-                <span class="quran-app-card__soon">قريبًا</span>
-                <span class="quran-app-card__label font-arabic-serif">حفظ</span>
             </span>
+
+            <span class="quran-app-sector__veil"></span>
+            <span class="quran-app-sector__soon quran-app-sector__soon--hifth">قريبًا</span>
+            <span class="quran-app-sector__chip quran-app-sector__chip--hifth font-arabic-serif">حفظ</span>
         </button>
 
         <svg
