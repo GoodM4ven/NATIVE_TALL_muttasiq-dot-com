@@ -408,7 +408,7 @@
                                 <div
                                     data-quran-line-text
                                     x-bind:class="probeAyahLineClass(line)"
-                                    x-bind:style="lineFontStyle()"
+                                    x-bind:style="probeLineFontStyle()"
                                 >
                                     <template
                                         x-for="(word, wordIndex) in line.words"
@@ -436,7 +436,7 @@
                                 <div
                                     class="font-quran quran-meta-line"
                                     data-quran-line-text
-                                    x-bind:style="lineFontStyle()"
+                                    x-bind:style="probeLineFontStyle()"
                                     x-text="line.text"
                                 ></div>
                             </template>

@@ -164,6 +164,9 @@ document.addEventListener('alpine:init', () => {
         useCenteredAyahLayout: true,
         panelProbeLines: [],
         panelProbeUseCenteredAyahLayout: true,
+        panelProbeFontFamily: null,
+        panelProbeFontUrl: null,
+        panelProbeFontFormat: null,
         panelWidthPx: null,
         isLoadingPage: false,
         isFittingPage: true,
@@ -398,7 +401,6 @@ document.addEventListener('alpine:init', () => {
                 }
 
                 this.prefetchNeighborPages(normalizedPage);
-                await this.ensureCanonicalPanelWidth();
                 await this.layoutPage({ revealDelayMs: 220 });
             } finally {
                 this.isLoadingPage = false;
@@ -455,14 +457,28 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        syncPageFontFace() {
-            const family = String(this.qpcPageFontFamily ?? '').trim();
-            const url = String(this.qpcPageFontUrl ?? '').trim();
-            const format = String(this.qpcPageFontFormat ?? 'woff2').trim() || 'woff2';
-            const styleId = 'quran-reader-dynamic-page-font';
-            let styleTag = document.getElementById(styleId);
+        async waitForFontReady(family) {
+            const normalizedFamily = String(family ?? '').trim();
 
-            if (!family || !url) {
+            if (!normalizedFamily || !document.fonts?.load) {
+                return;
+            }
+
+            try {
+                await document.fonts.load(`32px '${normalizedFamily}'`, 'الحمد لله');
+                await document.fonts.ready;
+            } catch (_) {
+                // Ignore font loading failures and continue with fallback glyphs.
+            }
+        },
+
+        syncDynamicFontFace({ styleId, family, url, format = 'woff2' }) {
+            let styleTag = document.getElementById(styleId);
+            const normalizedFamily = String(family ?? '').trim();
+            const normalizedUrl = String(url ?? '').trim();
+            const normalizedFormat = String(format ?? 'woff2').trim() || 'woff2';
+
+            if (!normalizedFamily || !normalizedUrl) {
                 if (styleTag) {
                     styleTag.remove();
                 }
@@ -476,7 +492,16 @@ document.addEventListener('alpine:init', () => {
                 document.head.appendChild(styleTag);
             }
 
-            styleTag.textContent = `@font-face { font-family: '${family}'; src: url('${url}') format('${format}'); font-display: block; }`;
+            styleTag.textContent = `@font-face { font-family: '${normalizedFamily}'; src: url('${normalizedUrl}') format('${normalizedFormat}'); font-display: block; }`;
+        },
+
+        syncPageFontFace() {
+            this.syncDynamicFontFace({
+                styleId: 'quran-reader-dynamic-page-font',
+                family: this.qpcPageFontFamily,
+                url: this.qpcPageFontUrl,
+                format: this.qpcPageFontFormat,
+            });
         },
 
         clearLayoutTimers() {
@@ -514,14 +539,17 @@ document.addEventListener('alpine:init', () => {
                 clearTimeout(this._viewportChangeDebounceTimer);
             }
 
-            this._viewportChangeDebounceTimer = window.setTimeout(async () => {
+            this._viewportChangeDebounceTimer = window.setTimeout(() => {
                 this._viewportChangeDebounceTimer = null;
-                await this.ensureCanonicalPanelWidth();
                 this.scheduleLayout({ revealDelayMs: 150 });
             }, 90);
         },
 
         async ensureCanonicalPanelWidth() {
+            if (Number.isFinite(Number(this.panelWidthPx)) && Number(this.panelWidthPx) > 0) {
+                return;
+            }
+
             if (this._canonicalWidthPromise) {
                 await this._canonicalWidthPromise;
 
@@ -555,13 +583,23 @@ document.addEventListener('alpine:init', () => {
                 this.panelProbeUseCenteredAyahLayout = Boolean(
                     payload?.useCenteredAyahLayout ?? this.useCenteredAyahLayout,
                 );
+                this.panelProbeFontFamily = payload?.qpcPageFontFamily ?? null;
+                this.panelProbeFontUrl = payload?.qpcPageFontUrl ?? null;
+                this.panelProbeFontFormat = payload?.qpcPageFontFormat ?? null;
 
                 if (this.panelProbeLines.length < 1) {
                     return;
                 }
 
+                this.syncDynamicFontFace({
+                    styleId: 'quran-reader-dynamic-probe-font',
+                    family: this.panelProbeFontFamily,
+                    url: this.panelProbeFontUrl,
+                    format: this.panelProbeFontFormat,
+                });
+
                 await this.nextTickAsync();
-                await this.waitForPageFontReady();
+                await this.waitForFontReady(this.panelProbeFontFamily);
                 await nextAnimationFrame();
 
                 const rootElement = this.$el;
@@ -1007,6 +1045,16 @@ document.addEventListener('alpine:init', () => {
 
         lineFontStyle() {
             const family = String(this.qpcPageFontFamily ?? '').trim();
+
+            if (!family) {
+                return 'color: var(--quran-ink);';
+            }
+
+            return `font-family: '${family}', 'MadinaQuran', 'Amiri', 'Traditional Arabic', serif; color: var(--quran-ink);`;
+        },
+
+        probeLineFontStyle() {
+            const family = String(this.panelProbeFontFamily ?? '').trim();
 
             if (!family) {
                 return 'color: var(--quran-ink);';
