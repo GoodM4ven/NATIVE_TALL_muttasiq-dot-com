@@ -151,6 +151,7 @@ document.addEventListener('alpine:init', () => {
         isLoadingPage: false,
         pageMotionClass: '',
         pageMotionTimer: null,
+        pageScale: 1,
         swipe: {
             active: false,
             startX: 0,
@@ -172,6 +173,13 @@ document.addEventListener('alpine:init', () => {
         _pendingPageLoads: new Map(),
         _pagePayloadByPage: new Map(),
         _searchIndexPromise: null,
+        _fitRaf: null,
+        _fitTimeout: null,
+        _fitStabilizeTimers: [],
+        _viewportResizeObserver: null,
+        _onWindowViewportChange: null,
+        _onVisualViewportChange: null,
+        _onFittyRefitComplete: null,
 
         init() {
             this.applyPayload(this.initialPayload, { setPageNumber: true });
@@ -191,20 +199,29 @@ document.addEventListener('alpine:init', () => {
                 });
             }
 
-            window.addEventListener(
-                'resize',
-                () => {
-                    this.refitQuranText();
-                },
-                { passive: true },
-            );
-            window.addEventListener(
-                'orientationchange',
-                () => {
-                    this.refitQuranText();
-                },
-                { passive: true },
-            );
+            this._onWindowViewportChange = () => {
+                this.refitQuranText();
+                this.schedulePageFit();
+            };
+            window.addEventListener('resize', this._onWindowViewportChange, { passive: true });
+            window.addEventListener('orientationchange', this._onWindowViewportChange, {
+                passive: true,
+            });
+            this._onVisualViewportChange = () => {
+                this.refitQuranText();
+                this.schedulePageFit();
+            };
+
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', this._onVisualViewportChange, {
+                    passive: true,
+                });
+            }
+
+            this._onFittyRefitComplete = () => {
+                this.schedulePageFit();
+            };
+            window.addEventListener('fitty-refit-complete', this._onFittyRefitComplete);
             window.addEventListener('switch-view', (event) => {
                 const to = String(event?.detail?.to ?? '');
 
@@ -212,16 +229,48 @@ document.addEventListener('alpine:init', () => {
                     return;
                 }
 
-                this.refitQuranText();
+                this.afterPagePaint();
             });
 
             this.bootstrap();
         },
 
+        destroy() {
+            if (this._onWindowViewportChange) {
+                window.removeEventListener('resize', this._onWindowViewportChange);
+                window.removeEventListener('orientationchange', this._onWindowViewportChange);
+            }
+
+            if (this._onVisualViewportChange && window.visualViewport) {
+                window.visualViewport.removeEventListener('resize', this._onVisualViewportChange);
+            }
+
+            if (this._onFittyRefitComplete) {
+                window.removeEventListener('fitty-refit-complete', this._onFittyRefitComplete);
+            }
+
+            if (this._fitRaf !== null) {
+                cancelAnimationFrame(this._fitRaf);
+                this._fitRaf = null;
+            }
+
+            if (this._fitTimeout !== null) {
+                clearTimeout(this._fitTimeout);
+                this._fitTimeout = null;
+            }
+
+            this.clearStabilizeTimers();
+
+            if (this._viewportResizeObserver) {
+                this._viewportResizeObserver.disconnect();
+                this._viewportResizeObserver = null;
+            }
+        },
+
         async bootstrap() {
             await this.ensurePersistentStorage();
             await this.ensureCurrentPageLoaded();
-            this.refitQuranText();
+            await this.afterPagePaint();
             this.queueStartupPreload();
             this.warmSearchIndex();
         },
@@ -324,7 +373,7 @@ document.addEventListener('alpine:init', () => {
                 }
 
                 this.prefetchNeighborPages(normalizedPage);
-                this.refitQuranText();
+                await this.afterPagePaint();
             } finally {
                 this.isLoadingPage = false;
             }
@@ -361,6 +410,45 @@ document.addEventListener('alpine:init', () => {
             this.syncPageFontFace();
         },
 
+        async nextTickAsync() {
+            await new Promise((resolve) => this.$nextTick(resolve));
+        },
+
+        async waitForPageFontReady() {
+            const family = String(this.qpcPageFontFamily ?? '').trim();
+
+            if (!family || !document.fonts?.load) {
+                return;
+            }
+
+            try {
+                await document.fonts.load(`32px '${family}'`, 'الحمد لله');
+                await document.fonts.ready;
+            } catch (_) {
+                // Ignore font loading failures and continue with fallback glyphs.
+            }
+        },
+
+        async afterPagePaint() {
+            await this.nextTickAsync();
+            await this.waitForPageFontReady();
+            this.ensureViewportObserver();
+            this.refitQuranText();
+            this.schedulePageFit();
+
+            if (this._fitTimeout !== null) {
+                clearTimeout(this._fitTimeout);
+            }
+
+            this._fitTimeout = window.setTimeout(() => {
+                this.refitQuranText();
+                this.schedulePageFit();
+                this._fitTimeout = null;
+            }, 36);
+
+            this.scheduleStabilizedFitPasses();
+        },
+
         syncPageFontFace() {
             const family = String(this.qpcPageFontFamily ?? '').trim();
             const url = String(this.qpcPageFontUrl ?? '').trim();
@@ -383,6 +471,93 @@ document.addEventListener('alpine:init', () => {
             }
 
             styleTag.textContent = `@font-face { font-family: '${family}'; src: url('${url}') format('${format}'); font-display: block; }`;
+        },
+
+        schedulePageFit(immediate = false) {
+            if (this._fitRaf !== null) {
+                cancelAnimationFrame(this._fitRaf);
+            }
+
+            const runFit = () => {
+                this._fitRaf = null;
+                this.fitPageToViewport();
+            };
+
+            if (immediate) {
+                runFit();
+
+                return;
+            }
+
+            this._fitRaf = requestAnimationFrame(runFit);
+        },
+
+        ensureViewportObserver() {
+            if (typeof ResizeObserver === 'undefined') {
+                return;
+            }
+
+            const viewportElement = this.$refs.pageViewport;
+
+            if (!viewportElement) {
+                return;
+            }
+
+            if (this._viewportResizeObserver) {
+                this._viewportResizeObserver.disconnect();
+            }
+
+            this._viewportResizeObserver = new ResizeObserver(() => {
+                this.refitQuranText();
+                this.schedulePageFit();
+            });
+            this._viewportResizeObserver.observe(viewportElement);
+        },
+
+        clearStabilizeTimers() {
+            this._fitStabilizeTimers.forEach((timer) => {
+                clearTimeout(timer);
+            });
+            this._fitStabilizeTimers = [];
+        },
+
+        scheduleStabilizedFitPasses() {
+            this.clearStabilizeTimers();
+
+            [32, 90, 180, 300].forEach((delay) => {
+                const timer = window.setTimeout(() => {
+                    this.refitQuranText();
+                    this.schedulePageFit();
+                }, delay);
+
+                this._fitStabilizeTimers.push(timer);
+            });
+        },
+
+        fitPageToViewport() {
+            const rootElement = this.$el;
+            const viewportElement = this.$refs.pageViewport;
+            const contentElement = this.$refs.pageContent;
+
+            if (!rootElement || !viewportElement || !contentElement) {
+                return;
+            }
+
+            rootElement.style.setProperty('--quran-page-scale', '1');
+
+            const availableHeight = Math.max(1, viewportElement.clientHeight - 4);
+            const availableWidth = Math.max(1, viewportElement.clientWidth - 4);
+            const contentHeight = Math.max(1, contentElement.scrollHeight);
+            const contentWidth = Math.max(1, contentElement.scrollWidth);
+            const fittedScale = Math.min(
+                1,
+                availableHeight / contentHeight,
+                availableWidth / contentWidth,
+            );
+            const normalizedScale = Math.max(0.5, Math.min(1, fittedScale));
+
+            this.pageScale = Number(normalizedScale.toFixed(4));
+            rootElement.style.setProperty('--quran-page-scale', String(this.pageScale));
         },
 
         async prefetchFontAsset(payload) {
@@ -506,6 +681,12 @@ document.addEventListener('alpine:init', () => {
 
         refitQuranText() {
             window.dispatchEvent(new CustomEvent('fitty-refit'));
+        },
+
+        pageContentStyle() {
+            const maxWidth = this.useCenteredAyahLayout ? '920px' : 'min(32rem, 100%)';
+
+            return `max-width: ${maxWidth};`;
         },
 
         selectAyah(ayahIndex) {

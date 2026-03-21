@@ -1,9 +1,5 @@
-import fitty from 'fitty';
-
-window.fitty = fitty;
-
 // IMPORTANT:
-// Fitty requires measurable layout dimensions. Do not pair fit targets with display:none
+// Text fitting requires measurable layout dimensions. Do not pair fit targets with display:none
 // containers (e.g. raw x-show=false while hidden) if you need immediate refits.
 // Prefer opacity/visibility transitions for hidden states, then trigger `fitty-refit`.
 
@@ -25,6 +21,7 @@ const fallbackMainTextSizeLimits = Object.freeze({
 const fittyTargetSelector = '[data-fitty-target]';
 const fittyBoxSelector = '[data-fitty-box]';
 const fittyRefitEventName = 'fitty-refit';
+const fittyRefitCompleteEventName = 'fitty-refit-complete';
 const deferredRetryDelayMs = 64;
 const maxDeferredRetries = 2;
 const postFitRetryDelayMs = 72;
@@ -229,31 +226,20 @@ const isMeasurable = (textElement, boxElement) => {
     return boxElement.clientWidth > 0 && boxElement.clientHeight > 0;
 };
 
-const ensureFittyInstance = (textElement, minSize, maxSize) => {
-    const storedMin = Number.parseFloat(textElement.dataset.fittyMinSize ?? '');
-    const storedMax = Number.parseFloat(textElement.dataset.fittyMaxSize ?? '');
-
-    if (textElement._fittyInstance && storedMin === minSize && storedMax === maxSize) {
-        return textElement._fittyInstance;
+const destroyFittyInstance = (textElement) => {
+    if (!textElement?._fittyInstance?.unsubscribe) {
+        return;
     }
 
-    if (textElement._fittyInstance?.unsubscribe) {
+    try {
         textElement._fittyInstance.unsubscribe();
+    } catch (_) {
+        // Ignore teardown errors from detached nodes.
     }
 
-    const instance = window.fitty(textElement, {
-        minSize,
-        maxSize,
-        multiLine: true,
-        observeMutations: false,
-        observeWindow: false,
-    });
-
-    textElement._fittyInstance = instance;
-    textElement.dataset.fittyMinSize = String(minSize);
-    textElement.dataset.fittyMaxSize = String(maxSize);
-
-    return instance;
+    delete textElement._fittyInstance;
+    delete textElement.dataset.fittyMinSize;
+    delete textElement.dataset.fittyMaxSize;
 };
 
 const fitToHeight = ({ textElement, minSize, maxSize, availableWidth, availableHeight, step }) => {
@@ -521,6 +507,7 @@ const clearPostFitRetry = (textElement) => {
 
 const processTextElement = (textElement) => {
     if (!textElement || !document.contains(textElement)) {
+        destroyFittyInstance(textElement);
         fitQueue.delete(textElement);
         return null;
     }
@@ -553,7 +540,7 @@ const processTextElement = (textElement) => {
         }
     }
 
-    if (!isMeasurable(target, boxElement) || !window.fitty) {
+    if (!isMeasurable(target, boxElement)) {
         queueDeferredRetry(textElement);
 
         return null;
@@ -574,15 +561,9 @@ const processTextElement = (textElement) => {
     deferredRetryCounts.delete(textElement);
     target.style.maxWidth = `${availableWidth}px`;
 
-    const instance = ensureFittyInstance(target, minSize, maxSize);
+    destroyFittyInstance(target);
 
-    if (instance?.fit) {
-        // Force synchronous fit so fitty does not apply a delayed nowrap pass
-        // after we compute overflow and touch-scroll behavior.
-        instance.fit({ sync: true });
-    }
-
-    // Keep multiline wrapping deterministic after fitty's internal measuring.
+    // Keep multiline wrapping deterministic before manual binary fitting.
     target.style.whiteSpace = 'break-spaces';
 
     fitToHeight({
@@ -636,7 +617,10 @@ const runFitQueue = () => {
 
     if (fitQueue.size > 0) {
         scheduleFitQueue();
+        return;
     }
+
+    window.dispatchEvent(new CustomEvent(fittyRefitCompleteEventName));
 };
 
 const scheduleFitQueue = () => {

@@ -20,6 +20,7 @@
             --quran-active-text: color-mix(in srgb, var(--success-600) 82%, var(--primary-900));
             --quran-page-surface: color-mix(in srgb, var(--background) 86%, transparent);
             --quran-page-border: color-mix(in srgb, var(--gray-300) 58%, transparent);
+            --quran-page-scale: 1;
         }
 
         .dark .quran-reader {
@@ -92,18 +93,18 @@
         }
 
         .quran-ayah-line-run-rect {
-            font-size: min(2.08rem, 6.45cqw);
-            line-height: 1.54;
+            font-size: calc(min(2.08rem, 6.45cqw) * var(--quran-page-scale));
+            line-height: 1.42;
         }
 
         .quran-ayah-line-run-centered {
-            font-size: min(2.02rem, 6.1cqw);
-            line-height: 2.12;
+            font-size: calc(min(2.02rem, 6.1cqw) * var(--quran-page-scale));
+            line-height: 1.72;
         }
 
         .quran-meta-line {
-            font-size: min(1.9rem, 5.5cqw);
-            line-height: 2.1;
+            font-size: calc(min(1.9rem, 5.5cqw) * var(--quran-page-scale));
+            line-height: 1.8;
         }
 
         .quran-page-motion-next {
@@ -280,9 +281,10 @@
             </header>
 
             <div
-                class="min-h-0 flex-1 overflow-y-auto px-3 pb-4 sm:px-4 sm:pb-5"
+                class="min-h-0 flex-1 overflow-hidden px-3 pb-4 sm:px-4 sm:pb-5"
                 x-on:pointerdown.passive="onSwipeStart($event)"
                 x-on:pointerup.passive="onSwipeEnd($event)"
+                x-ref="pageViewport"
             >
                 <div
                     class="quran-page-surface rounded-2xl border px-3 py-4 transition-opacity duration-200 sm:px-4 sm:py-5"
@@ -299,9 +301,10 @@
                     @endif
 
                     <div
-                        class="quran-page-lines mx-auto w-full max-w-full space-y-7"
+                        class="quran-page-lines mx-auto w-full max-w-full space-y-2"
                         data-fitty-box
-                        x-bind:style="useCenteredAyahLayout ? 'max-width: 920px;' : 'max-width: min(32rem, 100%);'"
+                        x-bind:style="pageContentStyle()"
+                        x-ref="pageContent"
                     >
                         <template
                             x-for="line in mushafLines"
@@ -313,7 +316,7 @@
                                 >
                                     <div
                                         data-fitty-target
-                                        data-fitty-min-size-override="14"
+                                        data-fitty-min-size-override="12"
                                         data-fitty-max-size-override="38"
                                         data-fitty-step="0.25"
                                         data-fitty-safe-padding-x="1"
