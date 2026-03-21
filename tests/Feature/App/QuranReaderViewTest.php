@@ -12,6 +12,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
     );
     $quranReaderViewSource = file_get_contents(resource_path('views/livewire/quran-app/reader.blade.php'));
     $quranReaderClassSource = file_get_contents(app_path('Livewire/QuranApp/Reader.php'));
+    $routesSource = file_get_contents(base_path('routes/web.php'));
     $appJsSource = file_get_contents(resource_path('js/app.js'));
 
     expect($menuSource)->not->toBeFalse()
@@ -63,7 +64,14 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderViewSource)->toContain("x-on:click=\"\$viewNav('quran-app-gate')\"");
 
     expect($quranReaderClassSource)->not->toBeFalse()
-        ->and($quranReaderClassSource)->toContain("view('livewire.quran-app.reader'");
+        ->and($quranReaderClassSource)->toContain("view('livewire.quran-app.reader'")
+        ->and($quranReaderClassSource)->toContain('p\'.$pageNumber.\'.woff2')
+        ->and($quranReaderClassSource)->toContain("'format' => 'woff2'");
+
+    expect($routesSource)->not->toBeFalse()
+        ->and($routesSource)->toContain('p\'.$page.\'.woff2')
+        ->and($routesSource)->toContain("'content_type' => 'font/woff2'")
+        ->and($routesSource)->toContain("'Content-Type' => \$contentType");
 
     expect($appJsSource)->not->toBeFalse()
         ->and($appJsSource)->toContain("import './support/alpine/data/quran-app-gate';");

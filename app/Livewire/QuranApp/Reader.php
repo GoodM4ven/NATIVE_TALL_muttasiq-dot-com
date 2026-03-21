@@ -63,6 +63,7 @@ class Reader extends Component
                 'mushafLines' => [],
                 'qpcPageFontFamily' => null,
                 'qpcPageFontUrl' => null,
+                'qpcPageFontFormat' => null,
                 'useCenteredAyahLayout' => true,
             ]);
         }
@@ -102,6 +103,7 @@ class Reader extends Component
             'mushafLines' => $mushafLines,
             'qpcPageFontFamily' => $qpcPageFont['family'] ?? null,
             'qpcPageFontUrl' => $qpcPageFont['url'] ?? null,
+            'qpcPageFontFormat' => $qpcPageFont['format'] ?? null,
             'useCenteredAyahLayout' => $useCenteredAyahLayout,
         ]);
     }
@@ -512,7 +514,7 @@ class Reader extends Component
     }
 
     /**
-     * @return array{family: string, url: string}|null
+     * @return array{family: string, url: string, format: string}|null
      */
     private function resolveQpcPageFont(int $pageNumber): ?array
     {
@@ -521,29 +523,48 @@ class Reader extends Component
         }
 
         $candidates = [
-            base_path('resources/raw-data/quran/fonts/qpc-v2/p'.$pageNumber.'.ttf'),
-            dirname(base_path()).'/resources/raw-data/quran/fonts/qpc-v2/p'.$pageNumber.'.ttf',
-            base_path('vendor/goodm4ven/arabicable/resources/raw-data/quran/fonts/qpc-v2/p'.$pageNumber.'.ttf'),
+            [
+                'path' => base_path('resources/raw-data/quran/fonts/qpc-v2/p'.$pageNumber.'.woff2'),
+                'format' => 'woff2',
+            ],
+            [
+                'path' => dirname(base_path()).'/resources/raw-data/quran/fonts/qpc-v2/p'.$pageNumber.'.woff2',
+                'format' => 'woff2',
+            ],
+            [
+                'path' => base_path('vendor/goodm4ven/arabicable/resources/raw-data/quran/fonts/qpc-v2/p'.$pageNumber.'.woff2'),
+                'format' => 'woff2',
+            ],
+            [
+                'path' => base_path('resources/raw-data/quran/fonts/qpc-v2/p'.$pageNumber.'.ttf'),
+                'format' => 'truetype',
+            ],
+            [
+                'path' => dirname(base_path()).'/resources/raw-data/quran/fonts/qpc-v2/p'.$pageNumber.'.ttf',
+                'format' => 'truetype',
+            ],
+            [
+                'path' => base_path('vendor/goodm4ven/arabicable/resources/raw-data/quran/fonts/qpc-v2/p'.$pageNumber.'.ttf'),
+                'format' => 'truetype',
+            ],
         ];
-
-        $fontPath = null;
 
         foreach ($candidates as $candidate) {
-            if (is_file($candidate)) {
-                $fontPath = $candidate;
+            $fontPath = $candidate['path'];
+            $fontFormat = $candidate['format'];
 
-                break;
+            if (! is_file($fontPath)) {
+                continue;
             }
+
+            return [
+                'family' => 'QpcPage'.$pageNumber,
+                'url' => route('qpc-v2-font', ['page' => $pageNumber]),
+                'format' => $fontFormat,
+            ];
         }
 
-        if (! is_string($fontPath) || $fontPath === '') {
-            return null;
-        }
-
-        return [
-            'family' => 'QpcPage'.$pageNumber,
-            'url' => route('qpc-v2-font', ['page' => $pageNumber]),
-        ];
+        return null;
     }
 
     /**

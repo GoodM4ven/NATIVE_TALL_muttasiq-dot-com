@@ -158,11 +158,11 @@
 
             <div class="min-h-0 flex-1 overflow-y-auto px-3 pb-4 sm:px-4 sm:pb-5">
                 <div class="quran-page-surface rounded-2xl border px-3 py-4 sm:px-4 sm:py-5">
-                    @if ($qpcPageFontFamily !== null && $qpcPageFontUrl !== null)
+                    @if ($qpcPageFontFamily !== null && $qpcPageFontUrl !== null && $qpcPageFontFormat !== null)
                         <style>
                             @font-face {
                                 font-family: '{{ $qpcPageFontFamily }}';
-                                src: url('{{ $qpcPageFontUrl }}') format('truetype');
+                                src: url('{{ $qpcPageFontUrl }}') format('{{ $qpcPageFontFormat }}');
                                 font-display: block;
                             }
                         </style>
