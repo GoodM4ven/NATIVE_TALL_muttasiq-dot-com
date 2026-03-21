@@ -218,7 +218,7 @@
     @else
         <section
             class="quran-reader-panel relative flex h-[clamp(30rem,88svh,60rem)] w-[min(96vw,60rem)] min-w-[18.75rem] flex-col overflow-hidden rounded-[1.75rem] border"
-            style="touch-action: pan-y;"
+            x-bind:style="readerPanelStyle()"
             x-on:pointerdown.passive="onSwipeStart($event)"
             x-on:pointerup.passive="onSwipeEnd($event)"
             x-on:pointercancel.passive="onSwipeCancel()"
@@ -304,6 +304,7 @@
                 <div
                     class="quran-page-surface h-full rounded-2xl border px-3 py-4 transition-opacity duration-200 sm:px-4 sm:py-5"
                     x-bind:class="pageMotionClass"
+                    x-ref="pageSurface"
                 >
                     @if ($qpcPageFontFamily !== null && $qpcPageFontUrl !== null && $qpcPageFontFormat !== null)
                         <style>
@@ -316,11 +317,11 @@
                     @endif
 
                     <div
-                        class="grid h-full w-full place-items-center overflow-hidden"
+                        class="mx-auto grid h-full w-fit max-w-full place-items-center overflow-hidden"
                         x-ref="pageFrame"
                     >
                         <div
-                            class="quran-page-lines mx-auto max-w-full space-y-2.5"
+                            class="quran-page-lines mx-auto space-y-2.5"
                             x-bind:data-fit-state="isFittingPage ? 'fitting' : 'ready'"
                             x-bind:style="pageContentStyle()"
                             x-ref="pageContent"
@@ -381,6 +382,66 @@
                             </template>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <div
+                class="pointer-events-none fixed left-[-200vw] top-0 opacity-0"
+                aria-hidden="true"
+            >
+                <div
+                    class="space-y-2.5"
+                    style="width: max-content;"
+                    x-ref="pageThreeProbe"
+                >
+                    <template
+                        x-for="line in panelProbeLines"
+                        :key="`quran-probe-line-${line.line_number}-${line.line_type}`"
+                    >
+                        <div
+                            x-bind:class="probeLineAlignmentClass(line)"
+                            x-bind:style="lineEntryStyle(line)"
+                        >
+                            <template
+                                x-if="line.line_type === 'ayah' && Array.isArray(line.words) && line.words.length > 0"
+                            >
+                                <div
+                                    data-quran-line-text
+                                    x-bind:class="probeAyahLineClass(line)"
+                                    x-bind:style="lineFontStyle()"
+                                >
+                                    <template
+                                        x-for="(word, wordIndex) in line.words"
+                                        :key="`quran-probe-word-${line.line_number}-${word.word_index ?? wordIndex}`"
+                                    >
+                                        <span class="inline-flex items-baseline">
+                                            <span
+                                                class="quran-word-button rounded-sm px-0"
+                                                x-text="word.text"
+                                            ></span>
+                                            <template x-if="showAyahMarker(word)">
+                                                <span
+                                                    class="quran-ayah-marker mr-0.5 text-[0.92rem]"
+                                                    style="color: var(--quran-subtle);"
+                                                    x-text="'۝' + word.ayah_number"
+                                                ></span>
+                                            </template>
+                                        </span>
+                                    </template>
+                                </div>
+                            </template>
+                            <template
+                                x-if="!(line.line_type === 'ayah' && Array.isArray(line.words) && line.words.length > 0)"
+                            >
+                                <div
+                                    class="font-quran quran-meta-line"
+                                    data-quran-line-text
+                                    x-bind:style="lineFontStyle()"
+                                    x-text="line.text"
+                                ></div>
+                            </template>
+                        </div>
+                    </template>
                 </div>
             </div>
         </section>

@@ -46,6 +46,12 @@ const nextAnimationFrame = async () => {
     });
 };
 
+const wait = async (durationMs) => {
+    await new Promise((resolve) => {
+        window.setTimeout(resolve, durationMs);
+    });
+};
+
 const openCacheSafely = async (cacheName) => {
     if (!cacheName || typeof window === 'undefined' || typeof window.caches === 'undefined') {
         return null;
@@ -156,6 +162,9 @@ document.addEventListener('alpine:init', () => {
         qpcPageFontUrl: null,
         qpcPageFontFormat: null,
         useCenteredAyahLayout: true,
+        panelProbeLines: [],
+        panelProbeUseCenteredAyahLayout: true,
+        panelWidthPx: null,
         isLoadingPage: false,
         isFittingPage: true,
         pageMotionClass: '',
@@ -189,6 +198,7 @@ document.addEventListener('alpine:init', () => {
         _layoutRaf: null,
         _revealTimer: null,
         _viewportChangeDebounceTimer: null,
+        _canonicalWidthPromise: null,
         _onWindowViewportChange: null,
         _onVisualViewportChange: null,
         _onSwitchView: null,
@@ -276,6 +286,7 @@ document.addEventListener('alpine:init', () => {
         async bootstrap() {
             await this.ensurePersistentStorage();
             await this.ensureCurrentPageLoaded();
+            await this.ensureCanonicalPanelWidth();
             await this.layoutPage({ revealDelayMs: 240 });
             this.queueStartupPreload();
             this.warmSearchIndex();
@@ -371,7 +382,15 @@ document.addEventListener('alpine:init', () => {
             this.isLoadingPage = true;
 
             try {
-                const payload = await this.getPagePayload(normalizedPage);
+                const payloadPromise = this.getPagePayload(normalizedPage);
+
+                if (this.mushafLines.length > 0) {
+                    this.isFittingPage = true;
+                    await this.nextTickAsync();
+                    await wait(180);
+                }
+
+                const payload = await payloadPromise;
                 this.applyPayload(payload, { setPageNumber: true });
 
                 if (animate) {
@@ -379,6 +398,7 @@ document.addEventListener('alpine:init', () => {
                 }
 
                 this.prefetchNeighborPages(normalizedPage);
+                await this.ensureCanonicalPanelWidth();
                 await this.layoutPage({ revealDelayMs: 220 });
             } finally {
                 this.isLoadingPage = false;
@@ -494,10 +514,116 @@ document.addEventListener('alpine:init', () => {
                 clearTimeout(this._viewportChangeDebounceTimer);
             }
 
-            this._viewportChangeDebounceTimer = window.setTimeout(() => {
+            this._viewportChangeDebounceTimer = window.setTimeout(async () => {
                 this._viewportChangeDebounceTimer = null;
+                await this.ensureCanonicalPanelWidth();
                 this.scheduleLayout({ revealDelayMs: 150 });
             }, 90);
+        },
+
+        async ensureCanonicalPanelWidth() {
+            if (this._canonicalWidthPromise) {
+                await this._canonicalWidthPromise;
+
+                return;
+            }
+
+            this._canonicalWidthPromise = (async () => {
+                const probePage = this.maxPage >= 3 ? 3 : this.pageNumber;
+                let payload = null;
+
+                if (probePage === this.pageNumber && this.mushafLines.length > 0) {
+                    payload = {
+                        mushafLines: this.mushafLines,
+                        useCenteredAyahLayout: this.useCenteredAyahLayout,
+                    };
+                } else {
+                    try {
+                        payload = await this.getPagePayload(probePage);
+                    } catch (_) {
+                        payload = null;
+                    }
+                }
+
+                if (!payload) {
+                    return;
+                }
+
+                this.panelProbeLines = Array.isArray(payload?.mushafLines)
+                    ? payload.mushafLines
+                    : [];
+                this.panelProbeUseCenteredAyahLayout = Boolean(
+                    payload?.useCenteredAyahLayout ?? this.useCenteredAyahLayout,
+                );
+
+                if (this.panelProbeLines.length < 1) {
+                    return;
+                }
+
+                await this.nextTickAsync();
+                await this.waitForPageFontReady();
+                await nextAnimationFrame();
+
+                const rootElement = this.$el;
+                const panelElement = this.$refs.readerPanel;
+                const viewportElement = this.$refs.pageViewport;
+                const surfaceElement = this.$refs.pageSurface;
+                const frameElement = this.$refs.pageFrame;
+                const probeElement = this.$refs.pageThreeProbe;
+
+                if (
+                    !rootElement ||
+                    !panelElement ||
+                    !viewportElement ||
+                    !surfaceElement ||
+                    !frameElement ||
+                    !probeElement
+                ) {
+                    return;
+                }
+
+                const previousScale = this.pageScale;
+                rootElement.style.setProperty('--quran-page-scale', '1');
+
+                const probeSize = this.measureRenderedBounds(probeElement);
+                const availableHeight = Math.max(1, frameElement.clientHeight);
+                const pageScaleByHeight = Math.min(
+                    1,
+                    availableHeight / Math.max(1, probeSize.height),
+                );
+                const contentTargetWidth = Math.max(1, probeSize.width * pageScaleByHeight);
+                const viewportStyles = window.getComputedStyle(viewportElement);
+                const surfaceStyles = window.getComputedStyle(surfaceElement);
+                const panelStyles = window.getComputedStyle(panelElement);
+                const panelChromeWidth =
+                    Number.parseFloat(viewportStyles.paddingLeft || '0') +
+                    Number.parseFloat(viewportStyles.paddingRight || '0') +
+                    Number.parseFloat(surfaceStyles.paddingLeft || '0') +
+                    Number.parseFloat(surfaceStyles.paddingRight || '0') +
+                    Number.parseFloat(panelStyles.borderLeftWidth || '0') +
+                    Number.parseFloat(panelStyles.borderRightWidth || '0');
+                const desiredPanelWidth = Math.ceil(contentTargetWidth + panelChromeWidth + 6);
+                const viewportMaxWidth = Math.max(320, Math.floor(window.innerWidth * 0.96));
+                const clampedPanelWidth = Math.max(
+                    300,
+                    Math.min(viewportMaxWidth, desiredPanelWidth),
+                );
+
+                if (
+                    this.panelWidthPx === null ||
+                    Math.abs(Number(this.panelWidthPx) - clampedPanelWidth) >= 1
+                ) {
+                    this.panelWidthPx = clampedPanelWidth;
+                }
+
+                rootElement.style.setProperty('--quran-page-scale', String(previousScale || 1));
+            })();
+
+            try {
+                await this._canonicalWidthPromise;
+            } finally {
+                this._canonicalWidthPromise = null;
+            }
         },
 
         scheduleLayout({ revealDelayMs = 180 } = {}) {
@@ -574,7 +700,10 @@ document.addEventListener('alpine:init', () => {
 
             rootElement.style.setProperty('--quran-page-scale', '1');
 
-            const availableWidth = Math.max(1, frameElement.clientWidth);
+            const availableWidth = Math.max(
+                1,
+                frameElement.parentElement?.clientWidth ?? frameElement.clientWidth,
+            );
             const availableHeight = Math.max(1, frameElement.clientHeight);
             const naturalSize = this.measureRenderedBounds(contentElement);
             const initialScale = Math.min(
@@ -782,11 +911,11 @@ document.addEventListener('alpine:init', () => {
             this.swipe.pointerType = null;
             this.swipe.source = null;
 
-            if (absX < 42 || absX < absY * 1.15) {
+            if (absX < 40 || absX < absY) {
                 return;
             }
 
-            if (deltaX < 0) {
+            if (deltaX > 0) {
                 await this.nextPage();
 
                 return;
@@ -804,6 +933,16 @@ document.addEventListener('alpine:init', () => {
 
         pageContentStyle() {
             return 'width: max-content;';
+        },
+
+        readerPanelStyle() {
+            if (!Number.isFinite(Number(this.panelWidthPx))) {
+                return 'touch-action: pan-y;';
+            }
+
+            const width = Math.max(300, Math.round(Number(this.panelWidthPx)));
+
+            return `touch-action: pan-y; width: min(96vw, ${width}px);`;
         },
 
         selectAyah(ayahIndex) {
@@ -840,6 +979,26 @@ document.addEventListener('alpine:init', () => {
 
         ayahLineClass(line) {
             if (this.isRectangularAyahLine(line)) {
+                return 'quran-ayah-line quran-ayah-line-run quran-ayah-line-run-rect font-quran';
+            }
+
+            return 'quran-ayah-line quran-ayah-line-run quran-ayah-line-run-centered font-quran';
+        },
+
+        probeLineAlignmentClass(line) {
+            if (line?.line_type === 'ayah' && !this.panelProbeUseCenteredAyahLayout) {
+                return 'text-right';
+            }
+
+            if (Boolean(line?.is_centered)) {
+                return 'text-center';
+            }
+
+            return '';
+        },
+
+        probeAyahLineClass(line) {
+            if (line?.line_type === 'ayah' && !this.panelProbeUseCenteredAyahLayout) {
                 return 'quran-ayah-line quran-ayah-line-run quran-ayah-line-run-rect font-quran';
             }
 
