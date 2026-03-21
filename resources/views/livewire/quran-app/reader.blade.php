@@ -155,24 +155,24 @@
         @keyframes quran-page-slide-next {
             from {
                 opacity: 0.46;
-                transform: translateX(-1.05rem);
+                transform: translateY(0.5rem);
             }
 
             to {
                 opacity: 1;
-                transform: translateX(0);
+                transform: translateY(0);
             }
         }
 
         @keyframes quran-page-slide-prev {
             from {
                 opacity: 0.46;
-                transform: translateX(1.05rem);
+                transform: translateY(0.5rem);
             }
 
             to {
                 opacity: 1;
-                transform: translateX(0);
+                transform: translateY(0);
             }
         }
     </style>
@@ -302,7 +302,7 @@
                 x-ref="pageViewport"
             >
                 <div
-                    class="quran-page-surface h-full rounded-2xl border px-3 py-4 transition-opacity duration-200 sm:px-4 sm:py-5"
+                    class="quran-page-surface h-full rounded-2xl px-3 py-4 transition-opacity duration-200 sm:px-4 sm:py-5"
                     x-bind:class="pageMotionClass"
                     x-ref="pageSurface"
                 >
