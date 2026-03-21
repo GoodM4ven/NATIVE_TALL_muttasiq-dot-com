@@ -152,11 +152,14 @@ document.addEventListener('alpine:init', () => {
         pageMotionClass: '',
         pageMotionTimer: null,
         pageScale: 1,
+        isFittingPage: true,
         swipe: {
             active: false,
             startX: 0,
             startY: 0,
             pointerId: null,
+            pointerType: null,
+            source: null,
         },
         storage: {
             isPersisted: false,
@@ -175,11 +178,10 @@ document.addEventListener('alpine:init', () => {
         _searchIndexPromise: null,
         _fitRaf: null,
         _fitTimeout: null,
-        _fitStabilizeTimers: [],
-        _viewportResizeObserver: null,
+        _fitCompletionTimer: null,
+        _fitCycleToken: 0,
         _onWindowViewportChange: null,
         _onVisualViewportChange: null,
-        _onFittyRefitComplete: null,
 
         init() {
             this.applyPayload(this.initialPayload, { setPageNumber: true });
@@ -200,6 +202,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             this._onWindowViewportChange = () => {
+                this.beginFitCycle();
                 this.refitQuranText();
                 this.schedulePageFit();
             };
@@ -208,6 +211,7 @@ document.addEventListener('alpine:init', () => {
                 passive: true,
             });
             this._onVisualViewportChange = () => {
+                this.beginFitCycle();
                 this.refitQuranText();
                 this.schedulePageFit();
             };
@@ -218,10 +222,6 @@ document.addEventListener('alpine:init', () => {
                 });
             }
 
-            this._onFittyRefitComplete = () => {
-                this.schedulePageFit();
-            };
-            window.addEventListener('fitty-refit-complete', this._onFittyRefitComplete);
             window.addEventListener('switch-view', (event) => {
                 const to = String(event?.detail?.to ?? '');
 
@@ -245,10 +245,6 @@ document.addEventListener('alpine:init', () => {
                 window.visualViewport.removeEventListener('resize', this._onVisualViewportChange);
             }
 
-            if (this._onFittyRefitComplete) {
-                window.removeEventListener('fitty-refit-complete', this._onFittyRefitComplete);
-            }
-
             if (this._fitRaf !== null) {
                 cancelAnimationFrame(this._fitRaf);
                 this._fitRaf = null;
@@ -259,11 +255,9 @@ document.addEventListener('alpine:init', () => {
                 this._fitTimeout = null;
             }
 
-            this.clearStabilizeTimers();
-
-            if (this._viewportResizeObserver) {
-                this._viewportResizeObserver.disconnect();
-                this._viewportResizeObserver = null;
+            if (this._fitCompletionTimer !== null) {
+                clearTimeout(this._fitCompletionTimer);
+                this._fitCompletionTimer = null;
             }
         },
 
@@ -430,11 +424,12 @@ document.addEventListener('alpine:init', () => {
         },
 
         async afterPagePaint() {
+            const fitCycleToken = this.beginFitCycle();
+
             await this.nextTickAsync();
             await this.waitForPageFontReady();
-            this.ensureViewportObserver();
             this.refitQuranText();
-            this.schedulePageFit();
+            this.schedulePageFit(true);
 
             if (this._fitTimeout !== null) {
                 clearTimeout(this._fitTimeout);
@@ -442,11 +437,22 @@ document.addEventListener('alpine:init', () => {
 
             this._fitTimeout = window.setTimeout(() => {
                 this.refitQuranText();
-                this.schedulePageFit();
+                this.schedulePageFit(true);
                 this._fitTimeout = null;
-            }, 36);
+            }, 54);
 
-            this.scheduleStabilizedFitPasses();
+            if (this._fitCompletionTimer !== null) {
+                clearTimeout(this._fitCompletionTimer);
+            }
+
+            this._fitCompletionTimer = window.setTimeout(() => {
+                if (fitCycleToken !== this._fitCycleToken) {
+                    return;
+                }
+
+                this.isFittingPage = false;
+                this._fitCompletionTimer = null;
+            }, 140);
         },
 
         syncPageFontFace() {
@@ -492,46 +498,16 @@ document.addEventListener('alpine:init', () => {
             this._fitRaf = requestAnimationFrame(runFit);
         },
 
-        ensureViewportObserver() {
-            if (typeof ResizeObserver === 'undefined') {
-                return;
+        beginFitCycle() {
+            this._fitCycleToken += 1;
+            this.isFittingPage = true;
+
+            if (this._fitCompletionTimer !== null) {
+                clearTimeout(this._fitCompletionTimer);
+                this._fitCompletionTimer = null;
             }
 
-            const viewportElement = this.$refs.pageViewport;
-
-            if (!viewportElement) {
-                return;
-            }
-
-            if (this._viewportResizeObserver) {
-                this._viewportResizeObserver.disconnect();
-            }
-
-            this._viewportResizeObserver = new ResizeObserver(() => {
-                this.refitQuranText();
-                this.schedulePageFit();
-            });
-            this._viewportResizeObserver.observe(viewportElement);
-        },
-
-        clearStabilizeTimers() {
-            this._fitStabilizeTimers.forEach((timer) => {
-                clearTimeout(timer);
-            });
-            this._fitStabilizeTimers = [];
-        },
-
-        scheduleStabilizedFitPasses() {
-            this.clearStabilizeTimers();
-
-            [32, 90, 180, 300].forEach((delay) => {
-                const timer = window.setTimeout(() => {
-                    this.refitQuranText();
-                    this.schedulePageFit();
-                }, delay);
-
-                this._fitStabilizeTimers.push(timer);
-            });
+            return this._fitCycleToken;
         },
 
         fitPageToViewport() {
@@ -554,8 +530,8 @@ document.addEventListener('alpine:init', () => {
                 availableHeight / contentHeight,
                 availableWidth / contentWidth,
             );
-            const normalizedScale = Math.max(0.5, Math.min(1, fittedScale));
 
+            const normalizedScale = Math.max(0.62, Math.min(1, fittedScale));
             this.pageScale = Number(normalizedScale.toFixed(4));
             rootElement.style.setProperty('--quran-page-scale', String(this.pageScale));
         },
@@ -635,42 +611,110 @@ document.addEventListener('alpine:init', () => {
             }, 260);
         },
 
+        swipePoint(event) {
+            if (event?.touches?.length) {
+                const touch = event.touches[0];
+
+                return {
+                    x: touch.clientX,
+                    y: touch.clientY,
+                    pointerType: 'touch',
+                    pointerId: null,
+                };
+            }
+
+            if (event?.changedTouches?.length) {
+                const touch = event.changedTouches[0];
+
+                return {
+                    x: touch.clientX,
+                    y: touch.clientY,
+                    pointerType: 'touch',
+                    pointerId: null,
+                };
+            }
+
+            if (Number.isFinite(event?.clientX) && Number.isFinite(event?.clientY)) {
+                return {
+                    x: event.clientX,
+                    y: event.clientY,
+                    pointerType: event.pointerType ?? 'mouse',
+                    pointerId: event.pointerId ?? null,
+                };
+            }
+
+            return null;
+        },
+
         onSwipeStart(event) {
-            if (event.pointerType !== 'touch') {
+            if (event.target?.closest?.('[data-no-swipe]')) {
+                return;
+            }
+
+            if (event.target?.closest?.('input, textarea, select, [contenteditable="true"]')) {
+                return;
+            }
+
+            const source = event?.type?.startsWith('touch') ? 'touch' : 'pointer';
+
+            if (this.swipe.source && this.swipe.source !== source) {
+                return;
+            }
+
+            if (event.pointerType === 'mouse' && event.button !== 0) {
+                return;
+            }
+
+            const point = this.swipePoint(event);
+
+            if (!point) {
                 return;
             }
 
             this.swipe.active = true;
-            this.swipe.startX = Number(event.clientX ?? 0);
-            this.swipe.startY = Number(event.clientY ?? 0);
-            this.swipe.pointerId = Number(event.pointerId ?? 0);
+            this.swipe.source = source;
+            this.swipe.startX = point.x;
+            this.swipe.startY = point.y;
+            this.swipe.pointerId = point.pointerId;
+            this.swipe.pointerType = point.pointerType;
         },
 
         async onSwipeEnd(event) {
-            if (!this.swipe.active || event.pointerType !== 'touch') {
+            if (!this.swipe.active) {
                 return;
             }
 
-            if (
-                this.swipe.pointerId !== null &&
-                Number(event.pointerId ?? -1) !== this.swipe.pointerId
-            ) {
+            const source = event?.type?.startsWith('touch') ? 'touch' : 'pointer';
+
+            if (this.swipe.source && this.swipe.source !== source) {
                 return;
             }
 
-            const endX = Number(event.clientX ?? 0);
-            const endY = Number(event.clientY ?? 0);
-            const deltaX = endX - this.swipe.startX;
-            const deltaY = endY - this.swipe.startY;
+            const point = this.swipePoint(event);
+
+            if (!point) {
+                return;
+            }
+
+            if (this.swipe.pointerId !== null && point.pointerId !== this.swipe.pointerId) {
+                return;
+            }
+
+            const deltaX = point.x - this.swipe.startX;
+            const deltaY = point.y - this.swipe.startY;
+            const absX = Math.abs(deltaX);
+            const absY = Math.abs(deltaY);
 
             this.swipe.active = false;
             this.swipe.pointerId = null;
+            this.swipe.pointerType = null;
+            this.swipe.source = null;
 
-            if (Math.abs(deltaX) < 52 || Math.abs(deltaX) < Math.abs(deltaY) * 1.2) {
+            if (absX < 44 || absX < absY * 1.15) {
                 return;
             }
 
-            if (deltaX < 0) {
+            if (deltaX > 0) {
                 await this.nextPage();
 
                 return;
@@ -679,14 +723,19 @@ document.addEventListener('alpine:init', () => {
             await this.previousPage();
         },
 
+        onSwipeCancel() {
+            this.swipe.active = false;
+            this.swipe.pointerId = null;
+            this.swipe.pointerType = null;
+            this.swipe.source = null;
+        },
+
         refitQuranText() {
             window.dispatchEvent(new CustomEvent('fitty-refit'));
         },
 
         pageContentStyle() {
-            const maxWidth = this.useCenteredAyahLayout ? '920px' : 'min(32rem, 100%)';
-
-            return `max-width: ${maxWidth};`;
+            return 'max-width: 100%;';
         },
 
         selectAyah(ayahIndex) {
@@ -713,6 +762,12 @@ document.addEventListener('alpine:init', () => {
             }
 
             return '';
+        },
+
+        lineEntryStyle(line) {
+            const lineNumber = Math.max(0, Number(line?.line_number ?? 0));
+
+            return `--quran-line-index: ${lineNumber};`;
         },
 
         ayahLineClass(line) {

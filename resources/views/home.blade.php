@@ -175,8 +175,8 @@
             <livewire:athkar-manager />
             @if (!is_platform('mobile'))
                 <x-return-button
-                    :jsShowCondition="'views[`athkar-app-gate`].isReaderVisible'"
-                    :jsClickCallback="'if (views[`athkar-app-gate`].isReaderVisible) $dispatch(`close-athkar-mode`)'"
+                    :jsShowCondition="'views[`athkar-app-gate`].isReaderVisible || views[`quran-app-tilawa`].isOpen || views[`quran-app-hifth`].isOpen || views[`quran-app-tadabbur`].isOpen'"
+                    :jsClickCallback="'if (views[`athkar-app-gate`].isReaderVisible) { $dispatch(`close-athkar-mode`); return; } if (views[`quran-app-tilawa`].isOpen || views[`quran-app-hifth`].isOpen || views[`quran-app-tadabbur`].isOpen) { $viewNav(`quran-app-gate`); }'"
                 />
                 <x-partials.home-button />
             @endif

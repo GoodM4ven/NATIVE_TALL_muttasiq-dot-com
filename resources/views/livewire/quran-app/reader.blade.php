@@ -77,6 +77,7 @@
             align-items: baseline;
             white-space: nowrap;
             line-height: 1;
+            cursor: default;
         }
 
         .quran-ayah-marker {
@@ -86,6 +87,41 @@
 
         .quran-page-lines {
             container-type: inline-size;
+            transition: opacity 260ms ease;
+            user-select: none;
+            -webkit-user-select: none;
+            cursor: default;
+        }
+
+        .quran-page-lines * {
+            user-select: none;
+            -webkit-user-select: none;
+            cursor: default;
+        }
+
+        .quran-page-lines[data-fit-state='fitting'] {
+            opacity: 0;
+        }
+
+        .quran-page-lines[data-fit-state='ready'] {
+            opacity: 1;
+        }
+
+        .quran-page-lines[data-fit-state='ready'] [data-quran-line] {
+            animation: quran-line-reveal 360ms ease both;
+            animation-delay: calc(var(--quran-line-index, 0) * 14ms);
+        }
+
+        @keyframes quran-line-reveal {
+            from {
+                opacity: 0;
+                transform: translateY(0.42rem);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .quran-ayah-line-fit {
@@ -94,17 +130,17 @@
 
         .quran-ayah-line-run-rect {
             font-size: calc(min(2.08rem, 6.45cqw) * var(--quran-page-scale));
-            line-height: 1.42;
+            line-height: 1.44;
         }
 
         .quran-ayah-line-run-centered {
             font-size: calc(min(2.02rem, 6.1cqw) * var(--quran-page-scale));
-            line-height: 1.72;
+            line-height: 1.66;
         }
 
         .quran-meta-line {
             font-size: calc(min(1.9rem, 5.5cqw) * var(--quran-page-scale));
-            line-height: 1.8;
+            line-height: 1.62;
         }
 
         .quran-page-motion-next {
@@ -181,19 +217,18 @@
     @else
         <section
             class="quran-reader-panel relative flex h-[76svh] min-h-[31rem] w-full max-w-[35rem] flex-col overflow-hidden rounded-[1.75rem] border"
+            style="touch-action: pan-y;"
+            x-on:pointerdown.passive="onSwipeStart($event)"
+            x-on:pointerup.passive="onSwipeEnd($event)"
+            x-on:pointercancel.passive="onSwipeCancel()"
+            x-on:touchstart.passive="onSwipeStart($event)"
+            x-on:touchend.passive="onSwipeEnd($event)"
+            x-on:touchcancel.passive="onSwipeCancel()"
         >
-            <header class="grid grid-cols-[auto_1fr_auto] items-center gap-2 px-3 py-3 sm:px-4 sm:py-4">
-                <div class="flex items-center gap-2">
-                    <button
-                        class="rounded-xl border px-3 py-2 text-xs font-semibold transition sm:px-4"
-                        type="button"
-                        style="border-color: var(--quran-chip-border); background: var(--quran-chip-bg);"
-                        x-on:click="nextPage()"
-                    >
-                        التالي
-                    </button>
-                </div>
-
+            <header
+                class="grid grid-cols-1 items-center gap-2 px-3 py-3 sm:px-4 sm:py-4"
+                data-no-swipe
+            >
                 <div class="relative grid place-items-center gap-2 text-center">
                     <p
                         class="text-xs font-semibold"
@@ -258,32 +293,10 @@
                         </div>
                     </div>
                 </div>
-
-                <div class="flex items-center justify-end gap-2">
-                    <button
-                        class="rounded-xl border px-3 py-2 text-xs font-semibold transition sm:px-4"
-                        type="button"
-                        style="border-color: var(--quran-chip-border); background: var(--quran-chip-bg);"
-                        x-on:click="previousPage()"
-                    >
-                        السابق
-                    </button>
-                    <button
-                        class="rounded-xl border px-3 py-2 text-xs font-semibold transition sm:px-4"
-                        type="button"
-                        style="border-color: var(--quran-chip-border); background: var(--quran-chip-bg);"
-                        x-data
-                        x-on:click="$viewNav('quran-app-gate')"
-                    >
-                        القائمة
-                    </button>
-                </div>
             </header>
 
             <div
                 class="min-h-0 flex-1 overflow-hidden px-3 pb-4 sm:px-4 sm:pb-5"
-                x-on:pointerdown.passive="onSwipeStart($event)"
-                x-on:pointerup.passive="onSwipeEnd($event)"
                 x-ref="pageViewport"
             >
                 <div
@@ -301,8 +314,9 @@
                     @endif
 
                     <div
-                        class="quran-page-lines mx-auto w-full max-w-full space-y-2"
+                        class="quran-page-lines mx-auto w-full max-w-full space-y-2.5"
                         data-fitty-box
+                        x-bind:data-fit-state="isFittingPage ? 'fitting' : 'ready'"
                         x-bind:style="pageContentStyle()"
                         x-ref="pageContent"
                     >
@@ -310,7 +324,11 @@
                             x-for="line in mushafLines"
                             :key="`quran-line-${pageNumber}-${line.line_number}-${line.line_type}`"
                         >
-                            <div x-bind:class="lineAlignmentClass(line)">
+                            <div
+                                data-quran-line
+                                x-bind:class="lineAlignmentClass(line)"
+                                x-bind:style="lineEntryStyle(line)"
+                            >
                                 <template
                                     x-if="line.line_type === 'ayah' && Array.isArray(line.words) && line.words.length > 0"
                                 >

@@ -29,6 +29,10 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($homeSource)->toContain("'#quran-app-tilawa': () => runHashAction(() => {")
         ->and($homeSource)->toContain("'#quran-app-hifth': () => runHashAction(() => {")
         ->and($homeSource)->toContain("'#quran-app-tadabbur': () => runHashAction(() => {")
+        ->and($homeSource)->toContain('views[`quran-app-tilawa`].isOpen')
+        ->and($homeSource)->toContain('views[`quran-app-hifth`].isOpen')
+        ->and($homeSource)->toContain('views[`quran-app-tadabbur`].isOpen')
+        ->and($homeSource)->toContain('$viewNav(`quran-app-gate`)')
         ->and($homeSource)->toContain('<x-partials.quran-app.index />');
 
     expect($quranIndexSource)->not->toBeFalse()
@@ -62,10 +66,13 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderViewSource)->toContain('quran-ayah-line-run-rect')
         ->and($quranReaderViewSource)->toContain('quran-ayah-line-run-centered')
         ->and($quranReaderViewSource)->toContain('x-data="quranAppReader({')
-        ->and($quranReaderViewSource)->toContain('x-on:click="nextPage()"')
-        ->and($quranReaderViewSource)->toContain('x-on:click="previousPage()"')
+        ->and($quranReaderViewSource)->toContain('x-on:pointerdown.passive="onSwipeStart($event)"')
+        ->and($quranReaderViewSource)->toContain('x-on:touchstart.passive="onSwipeStart($event)"')
+        ->and($quranReaderViewSource)->toContain('x-bind:data-fit-state="isFittingPage ? \'fitting\' : \'ready\'"')
         ->and($quranReaderViewSource)->toContain('x-for="line in mushafLines"')
-        ->and($quranReaderViewSource)->toContain("x-on:click=\"\$viewNav('quran-app-gate')\"");
+        ->and($quranReaderViewSource)->not->toContain('x-on:click="nextPage()"')
+        ->and($quranReaderViewSource)->not->toContain('x-on:click="previousPage()"')
+        ->and($quranReaderViewSource)->not->toContain("x-on:click=\"\$viewNav('quran-app-gate')\"");
 
     expect($quranReaderClassSource)->not->toBeFalse()
         ->and($quranReaderClassSource)->toContain("view('livewire.quran-app.reader'")
