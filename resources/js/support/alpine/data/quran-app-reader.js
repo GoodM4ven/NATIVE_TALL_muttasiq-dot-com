@@ -38,6 +38,14 @@ const clampPage = (value, maxPage) => {
     return Math.max(1, rounded);
 };
 
+const nextAnimationFrame = async () => {
+    await new Promise((resolve) => {
+        requestAnimationFrame(() => {
+            resolve();
+        });
+    });
+};
+
 const openCacheSafely = async (cacheName) => {
     if (!cacheName || typeof window === 'undefined' || typeof window.caches === 'undefined') {
         return null;
@@ -149,10 +157,10 @@ document.addEventListener('alpine:init', () => {
         qpcPageFontFormat: null,
         useCenteredAyahLayout: true,
         isLoadingPage: false,
+        isFittingPage: true,
         pageMotionClass: '',
         pageMotionTimer: null,
         pageScale: 1,
-        isFittingPage: true,
         swipe: {
             active: false,
             startX: 0,
@@ -173,15 +181,17 @@ document.addEventListener('alpine:init', () => {
             isReady: false,
             isOpen: false,
         },
+
         _pendingPageLoads: new Map(),
         _pagePayloadByPage: new Map(),
         _searchIndexPromise: null,
-        _fitRaf: null,
-        _fitTimeout: null,
-        _fitCompletionTimer: null,
-        _fitCycleToken: 0,
+        _layoutToken: 0,
+        _layoutRaf: null,
+        _revealTimer: null,
+        _viewportChangeDebounceTimer: null,
         _onWindowViewportChange: null,
         _onVisualViewportChange: null,
+        _onSwitchView: null,
 
         init() {
             this.applyPayload(this.initialPayload, { setPageNumber: true });
@@ -202,18 +212,15 @@ document.addEventListener('alpine:init', () => {
             }
 
             this._onWindowViewportChange = () => {
-                this.beginFitCycle();
-                this.refitQuranText();
-                this.schedulePageFit();
+                this.handleViewportChange();
             };
             window.addEventListener('resize', this._onWindowViewportChange, { passive: true });
             window.addEventListener('orientationchange', this._onWindowViewportChange, {
                 passive: true,
             });
+
             this._onVisualViewportChange = () => {
-                this.beginFitCycle();
-                this.refitQuranText();
-                this.schedulePageFit();
+                this.handleViewportChange();
             };
 
             if (window.visualViewport) {
@@ -222,16 +229,17 @@ document.addEventListener('alpine:init', () => {
                 });
             }
 
-            window.addEventListener('switch-view', (event) => {
+            this._onSwitchView = (event) => {
                 const to = String(event?.detail?.to ?? '');
 
                 if (!['quran-app-tilawa', 'quran-app-hifth', 'quran-app-tadabbur'].includes(to)) {
                     return;
                 }
 
-                this.afterPagePaint();
-            });
+                this.scheduleLayout({ revealDelayMs: 200 });
+            };
 
+            window.addEventListener('switch-view', this._onSwitchView);
             this.bootstrap();
         },
 
@@ -245,26 +253,30 @@ document.addEventListener('alpine:init', () => {
                 window.visualViewport.removeEventListener('resize', this._onVisualViewportChange);
             }
 
-            if (this._fitRaf !== null) {
-                cancelAnimationFrame(this._fitRaf);
-                this._fitRaf = null;
+            if (this._onSwitchView) {
+                window.removeEventListener('switch-view', this._onSwitchView);
             }
 
-            if (this._fitTimeout !== null) {
-                clearTimeout(this._fitTimeout);
-                this._fitTimeout = null;
+            if (this._layoutRaf !== null) {
+                cancelAnimationFrame(this._layoutRaf);
+                this._layoutRaf = null;
             }
 
-            if (this._fitCompletionTimer !== null) {
-                clearTimeout(this._fitCompletionTimer);
-                this._fitCompletionTimer = null;
+            if (this._revealTimer !== null) {
+                clearTimeout(this._revealTimer);
+                this._revealTimer = null;
+            }
+
+            if (this._viewportChangeDebounceTimer !== null) {
+                clearTimeout(this._viewportChangeDebounceTimer);
+                this._viewportChangeDebounceTimer = null;
             }
         },
 
         async bootstrap() {
             await this.ensurePersistentStorage();
             await this.ensureCurrentPageLoaded();
-            await this.afterPagePaint();
+            await this.layoutPage({ revealDelayMs: 240 });
             this.queueStartupPreload();
             this.warmSearchIndex();
         },
@@ -367,7 +379,7 @@ document.addEventListener('alpine:init', () => {
                 }
 
                 this.prefetchNeighborPages(normalizedPage);
-                await this.afterPagePaint();
+                await this.layoutPage({ revealDelayMs: 220 });
             } finally {
                 this.isLoadingPage = false;
             }
@@ -423,38 +435,6 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        async afterPagePaint() {
-            const fitCycleToken = this.beginFitCycle();
-
-            await this.nextTickAsync();
-            await this.waitForPageFontReady();
-            this.refitQuranText();
-            this.schedulePageFit(true);
-
-            if (this._fitTimeout !== null) {
-                clearTimeout(this._fitTimeout);
-            }
-
-            this._fitTimeout = window.setTimeout(() => {
-                this.refitQuranText();
-                this.schedulePageFit(true);
-                this._fitTimeout = null;
-            }, 54);
-
-            if (this._fitCompletionTimer !== null) {
-                clearTimeout(this._fitCompletionTimer);
-            }
-
-            this._fitCompletionTimer = window.setTimeout(() => {
-                if (fitCycleToken !== this._fitCycleToken) {
-                    return;
-                }
-
-                this.isFittingPage = false;
-                this._fitCompletionTimer = null;
-            }, 140);
-        },
-
         syncPageFontFace() {
             const family = String(this.qpcPageFontFamily ?? '').trim();
             const url = String(this.qpcPageFontUrl ?? '').trim();
@@ -479,61 +459,153 @@ document.addEventListener('alpine:init', () => {
             styleTag.textContent = `@font-face { font-family: '${family}'; src: url('${url}') format('${format}'); font-display: block; }`;
         },
 
-        schedulePageFit(immediate = false) {
-            if (this._fitRaf !== null) {
-                cancelAnimationFrame(this._fitRaf);
+        clearLayoutTimers() {
+            if (this._layoutRaf !== null) {
+                cancelAnimationFrame(this._layoutRaf);
+                this._layoutRaf = null;
             }
 
-            const runFit = () => {
-                this._fitRaf = null;
-                this.fitPageToViewport();
-            };
-
-            if (immediate) {
-                runFit();
-
-                return;
+            if (this._revealTimer !== null) {
+                clearTimeout(this._revealTimer);
+                this._revealTimer = null;
             }
-
-            this._fitRaf = requestAnimationFrame(runFit);
         },
 
-        beginFitCycle() {
-            this._fitCycleToken += 1;
+        beginLayoutCycle() {
+            this._layoutToken += 1;
             this.isFittingPage = true;
 
-            if (this._fitCompletionTimer !== null) {
-                clearTimeout(this._fitCompletionTimer);
-                this._fitCompletionTimer = null;
+            return this._layoutToken;
+        },
+
+        queuePageReveal(layoutToken, delayMs = 180) {
+            this._revealTimer = window.setTimeout(() => {
+                if (layoutToken !== this._layoutToken) {
+                    return;
+                }
+
+                this.isFittingPage = false;
+                this._revealTimer = null;
+            }, delayMs);
+        },
+
+        handleViewportChange() {
+            if (this._viewportChangeDebounceTimer !== null) {
+                clearTimeout(this._viewportChangeDebounceTimer);
             }
 
-            return this._fitCycleToken;
+            this._viewportChangeDebounceTimer = window.setTimeout(() => {
+                this._viewportChangeDebounceTimer = null;
+                this.scheduleLayout({ revealDelayMs: 150 });
+            }, 90);
+        },
+
+        scheduleLayout({ revealDelayMs = 180 } = {}) {
+            const layoutToken = this.beginLayoutCycle();
+
+            this.clearLayoutTimers();
+
+            this._layoutRaf = requestAnimationFrame(() => {
+                this._layoutRaf = null;
+                this.fitPageToViewport();
+                this.queuePageReveal(layoutToken, revealDelayMs);
+            });
+        },
+
+        async layoutPage({ revealDelayMs = 180 } = {}) {
+            const layoutToken = this.beginLayoutCycle();
+
+            await this.nextTickAsync();
+            await this.waitForPageFontReady();
+            await nextAnimationFrame();
+            await nextAnimationFrame();
+
+            this.fitPageToViewport();
+            this.queuePageReveal(layoutToken, revealDelayMs);
+        },
+
+        measureRenderedBounds(contentElement) {
+            const lineTargets = Array.from(
+                contentElement.querySelectorAll('[data-quran-line-text]'),
+            );
+            const targets = lineTargets.length > 0 ? lineTargets : [contentElement];
+
+            let minLeft = Number.POSITIVE_INFINITY;
+            let minTop = Number.POSITIVE_INFINITY;
+            let maxRight = Number.NEGATIVE_INFINITY;
+            let maxBottom = Number.NEGATIVE_INFINITY;
+
+            targets.forEach((target) => {
+                const rect = target.getBoundingClientRect();
+
+                if (rect.width <= 0 || rect.height <= 0) {
+                    return;
+                }
+
+                minLeft = Math.min(minLeft, rect.left);
+                minTop = Math.min(minTop, rect.top);
+                maxRight = Math.max(maxRight, rect.right);
+                maxBottom = Math.max(maxBottom, rect.bottom);
+            });
+
+            if (!Number.isFinite(minLeft) || !Number.isFinite(maxRight)) {
+                const fallbackRect = contentElement.getBoundingClientRect();
+
+                return {
+                    width: Math.max(1, Number(fallbackRect.width ?? 1)),
+                    height: Math.max(1, Number(fallbackRect.height ?? 1)),
+                };
+            }
+
+            return {
+                width: Math.max(1, maxRight - minLeft),
+                height: Math.max(1, maxBottom - minTop),
+            };
         },
 
         fitPageToViewport() {
             const rootElement = this.$el;
-            const viewportElement = this.$refs.pageViewport;
+            const frameElement = this.$refs.pageFrame;
             const contentElement = this.$refs.pageContent;
 
-            if (!rootElement || !viewportElement || !contentElement) {
+            if (!rootElement || !frameElement || !contentElement) {
                 return;
             }
 
             rootElement.style.setProperty('--quran-page-scale', '1');
 
-            const availableHeight = Math.max(1, viewportElement.clientHeight - 4);
-            const availableWidth = Math.max(1, viewportElement.clientWidth - 4);
-            const contentHeight = Math.max(1, contentElement.scrollHeight);
-            const contentWidth = Math.max(1, contentElement.scrollWidth);
-            const fittedScale = Math.min(
+            const availableWidth = Math.max(1, frameElement.clientWidth);
+            const availableHeight = Math.max(1, frameElement.clientHeight);
+            const naturalSize = this.measureRenderedBounds(contentElement);
+            const initialScale = Math.min(
+                availableWidth / Math.max(1, naturalSize.width),
+                availableHeight / Math.max(1, naturalSize.height),
                 1,
-                availableHeight / contentHeight,
-                availableWidth / contentWidth,
             );
 
-            const normalizedScale = Math.max(0.62, Math.min(1, fittedScale));
-            this.pageScale = Number(normalizedScale.toFixed(4));
-            rootElement.style.setProperty('--quran-page-scale', String(this.pageScale));
+            let normalizedScale = Number.isFinite(initialScale)
+                ? Math.max(0.2, Math.min(1, initialScale))
+                : 1;
+
+            for (let attempt = 0; attempt < 3; attempt += 1) {
+                rootElement.style.setProperty('--quran-page-scale', String(normalizedScale));
+
+                const measured = this.measureRenderedBounds(contentElement);
+                const adjustScale = Math.min(
+                    availableWidth / Math.max(1, measured.width),
+                    availableHeight / Math.max(1, measured.height),
+                    1,
+                );
+
+                if (adjustScale >= 0.999) {
+                    break;
+                }
+
+                normalizedScale = Math.max(0.2, Number((normalizedScale * adjustScale).toFixed(4)));
+            }
+
+            rootElement.style.setProperty('--quran-page-scale', String(normalizedScale));
+            this.pageScale = normalizedScale;
         },
 
         async prefetchFontAsset(payload) {
@@ -710,11 +782,11 @@ document.addEventListener('alpine:init', () => {
             this.swipe.pointerType = null;
             this.swipe.source = null;
 
-            if (absX < 44 || absX < absY * 1.15) {
+            if (absX < 42 || absX < absY * 1.15) {
                 return;
             }
 
-            if (deltaX > 0) {
+            if (deltaX < 0) {
                 await this.nextPage();
 
                 return;
@@ -730,12 +802,8 @@ document.addEventListener('alpine:init', () => {
             this.swipe.source = null;
         },
 
-        refitQuranText() {
-            window.dispatchEvent(new CustomEvent('fitty-refit'));
-        },
-
         pageContentStyle() {
-            return 'max-width: 100%;';
+            return 'width: max-content;';
         },
 
         selectAyah(ayahIndex) {
@@ -772,10 +840,10 @@ document.addEventListener('alpine:init', () => {
 
         ayahLineClass(line) {
             if (this.isRectangularAyahLine(line)) {
-                return 'quran-ayah-line quran-ayah-line-run quran-ayah-line-run-rect quran-ayah-line-fit font-quran';
+                return 'quran-ayah-line quran-ayah-line-run quran-ayah-line-run-rect font-quran';
             }
 
-            return 'quran-ayah-line quran-ayah-line-run quran-ayah-line-run-centered quran-ayah-line-fit font-quran';
+            return 'quran-ayah-line quran-ayah-line-run quran-ayah-line-run-centered font-quran';
         },
 
         lineFontStyle() {

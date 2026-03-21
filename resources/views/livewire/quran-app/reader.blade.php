@@ -56,28 +56,26 @@
         }
 
         .quran-ayah-line-run {
-            display: flex;
-            width: 100%;
+            display: inline-flex;
             direction: rtl;
             align-items: baseline;
             gap: 0;
             white-space: nowrap;
-        }
-
-        .quran-ayah-line-run-rect {
-            justify-content: flex-start;
-        }
-
-        .quran-ayah-line-run-centered {
-            justify-content: center;
+            max-width: none;
         }
 
         .quran-word-button {
             display: inline-flex;
             align-items: baseline;
             white-space: nowrap;
-            line-height: 1;
+            line-height: 1.02;
             cursor: default;
+            transition: background-color 140ms ease;
+        }
+
+        .quran-word-button:hover,
+        .quran-ayah-line:hover .quran-word-button {
+            background-color: color-mix(in srgb, var(--gray-300) 42%, transparent);
         }
 
         .quran-ayah-marker {
@@ -86,11 +84,14 @@
         }
 
         .quran-page-lines {
-            container-type: inline-size;
-            transition: opacity 260ms ease;
+            transition: opacity 300ms ease;
+            opacity: 0;
             user-select: none;
             -webkit-user-select: none;
             cursor: default;
+            width: max-content;
+            max-width: none;
+            direction: rtl;
         }
 
         .quran-page-lines * {
@@ -108,8 +109,8 @@
         }
 
         .quran-page-lines[data-fit-state='ready'] [data-quran-line] {
-            animation: quran-line-reveal 360ms ease both;
-            animation-delay: calc(var(--quran-line-index, 0) * 14ms);
+            animation: quran-line-reveal 440ms ease both;
+            animation-delay: calc(var(--quran-line-index, 0) * 18ms);
         }
 
         @keyframes quran-line-reveal {
@@ -129,18 +130,18 @@
         }
 
         .quran-ayah-line-run-rect {
-            font-size: calc(min(2.08rem, 6.45cqw) * var(--quran-page-scale));
-            line-height: 1.44;
+            font-size: calc(2.08rem * var(--quran-page-scale));
+            line-height: 1.58;
         }
 
         .quran-ayah-line-run-centered {
-            font-size: calc(min(2.02rem, 6.1cqw) * var(--quran-page-scale));
-            line-height: 1.66;
+            font-size: calc(2.02rem * var(--quran-page-scale));
+            line-height: 1.7;
         }
 
         .quran-meta-line {
-            font-size: calc(min(1.9rem, 5.5cqw) * var(--quran-page-scale));
-            line-height: 1.62;
+            font-size: calc(1.88rem * var(--quran-page-scale));
+            line-height: 1.66;
         }
 
         .quran-page-motion-next {
@@ -207,7 +208,7 @@
 >
     @if (!$ready)
         <section
-            class="quran-reader-panel relative flex h-[68svh] min-h-[26rem] w-full max-w-[34rem] flex-col items-center justify-center gap-4 rounded-[1.75rem] border px-6 py-7 text-center"
+            class="quran-reader-panel relative flex h-[clamp(28rem,82svh,50rem)] w-[min(94vw,50rem)] min-w-[18rem] flex-col items-center justify-center gap-4 rounded-[1.75rem] border px-6 py-7 text-center"
         >
             <h2 class="font-quran text-3xl leading-[1.9]">قارئ القرآن</h2>
             <p class="text-sm leading-7 opacity-85">
@@ -216,7 +217,7 @@
         </section>
     @else
         <section
-            class="quran-reader-panel relative flex h-[76svh] min-h-[31rem] w-full max-w-[35rem] flex-col overflow-hidden rounded-[1.75rem] border"
+            class="quran-reader-panel relative flex h-[clamp(30rem,88svh,60rem)] w-[min(96vw,60rem)] min-w-[18.75rem] flex-col overflow-hidden rounded-[1.75rem] border"
             style="touch-action: pan-y;"
             x-on:pointerdown.passive="onSwipeStart($event)"
             x-on:pointerup.passive="onSwipeEnd($event)"
@@ -224,6 +225,7 @@
             x-on:touchstart.passive="onSwipeStart($event)"
             x-on:touchend.passive="onSwipeEnd($event)"
             x-on:touchcancel.passive="onSwipeCancel()"
+            x-ref="readerPanel"
         >
             <header
                 class="grid grid-cols-1 items-center gap-2 px-3 py-3 sm:px-4 sm:py-4"
@@ -300,7 +302,7 @@
                 x-ref="pageViewport"
             >
                 <div
-                    class="quran-page-surface rounded-2xl border px-3 py-4 transition-opacity duration-200 sm:px-4 sm:py-5"
+                    class="quran-page-surface h-full rounded-2xl border px-3 py-4 transition-opacity duration-200 sm:px-4 sm:py-5"
                     x-bind:class="pageMotionClass"
                 >
                     @if ($qpcPageFontFamily !== null && $qpcPageFontUrl !== null && $qpcPageFontFormat !== null)
@@ -314,74 +316,70 @@
                     @endif
 
                     <div
-                        class="quran-page-lines mx-auto w-full max-w-full space-y-2.5"
-                        data-fitty-box
-                        x-bind:data-fit-state="isFittingPage ? 'fitting' : 'ready'"
-                        x-bind:style="pageContentStyle()"
-                        x-ref="pageContent"
+                        class="grid h-full w-full place-items-center overflow-hidden"
+                        x-ref="pageFrame"
                     >
-                        <template
-                            x-for="line in mushafLines"
-                            :key="`quran-line-${pageNumber}-${line.line_number}-${line.line_type}`"
+                        <div
+                            class="quran-page-lines mx-auto max-w-full space-y-2.5"
+                            x-bind:data-fit-state="isFittingPage ? 'fitting' : 'ready'"
+                            x-bind:style="pageContentStyle()"
+                            x-ref="pageContent"
                         >
-                            <div
-                                data-quran-line
-                                x-bind:class="lineAlignmentClass(line)"
-                                x-bind:style="lineEntryStyle(line)"
+                            <template
+                                x-for="line in mushafLines"
+                                :key="`quran-line-${pageNumber}-${line.line_number}-${line.line_type}`"
                             >
-                                <template
-                                    x-if="line.line_type === 'ayah' && Array.isArray(line.words) && line.words.length > 0"
+                                <div
+                                    data-quran-line
+                                    x-bind:class="lineAlignmentClass(line)"
+                                    x-bind:style="lineEntryStyle(line)"
                                 >
-                                    <div
-                                        data-fitty-target
-                                        data-fitty-min-size-override="12"
-                                        data-fitty-max-size-override="38"
-                                        data-fitty-step="0.25"
-                                        data-fitty-safe-padding-x="1"
-                                        data-fitty-safe-padding-y="0"
-                                        x-bind:class="ayahLineClass(line)"
-                                        x-bind:style="lineFontStyle()"
+                                    <template
+                                        x-if="line.line_type === 'ayah' && Array.isArray(line.words) && line.words.length > 0"
                                     >
-                                        <template
-                                            x-for="(word, wordIndex) in line.words"
-                                            :key="`quran-word-${pageNumber}-${line.line_number}-${word.word_index ?? wordIndex}`"
+                                        <div
+                                            data-quran-line-text
+                                            x-bind:class="ayahLineClass(line)"
+                                            x-bind:style="lineFontStyle()"
                                         >
-                                            <span class="inline-flex items-baseline">
-                                                <button
-                                                    class="quran-word-button rounded-sm px-0 transition"
-                                                    type="button"
-                                                    x-bind:class="{ 'quran-segment-active': isWordActive(word) }"
-                                                    x-bind:style="wordStyle(word)"
-                                                    x-bind:disabled="!(Number(word?.ayah_index ?? 0) > 0)"
-                                                    x-on:click="selectAyah(Number(word?.ayah_index ?? 0))"
-                                                    x-text="word.text"
-                                                ></button>
-                                                <template x-if="showAyahMarker(word)">
-                                                    <span
-                                                        class="quran-ayah-marker mr-0.5 text-[0.92rem]"
-                                                        style="color: var(--quran-subtle);"
-                                                        x-text="'۝' + word.ayah_number"
-                                                    ></span>
-                                                </template>
-                                            </span>
-                                        </template>
-                                    </div>
-                                </template>
-                                <template
-                                    x-if="!(line.line_type === 'ayah' && Array.isArray(line.words) && line.words.length > 0)"
-                                >
-                                    <div
-                                        class="font-quran quran-meta-line"
-                                        data-fitty-target
-                                        data-fitty-min-size-override="18"
-                                        data-fitty-max-size-override="42"
-                                        data-fitty-step="0.25"
-                                        x-bind:style="lineFontStyle()"
-                                        x-text="line.text"
-                                    ></div>
-                                </template>
-                            </div>
-                        </template>
+                                            <template
+                                                x-for="(word, wordIndex) in line.words"
+                                                :key="`quran-word-${pageNumber}-${line.line_number}-${word.word_index ?? wordIndex}`"
+                                            >
+                                                <span class="inline-flex items-baseline">
+                                                    <button
+                                                        class="quran-word-button rounded-sm px-0 transition"
+                                                        type="button"
+                                                        x-bind:class="{ 'quran-segment-active': isWordActive(word) }"
+                                                        x-bind:style="wordStyle(word)"
+                                                        x-bind:disabled="!(Number(word?.ayah_index ?? 0) > 0)"
+                                                        x-on:click="selectAyah(Number(word?.ayah_index ?? 0))"
+                                                        x-text="word.text"
+                                                    ></button>
+                                                    <template x-if="showAyahMarker(word)">
+                                                        <span
+                                                            class="quran-ayah-marker mr-0.5 text-[0.92rem]"
+                                                            style="color: var(--quran-subtle);"
+                                                            x-text="'۝' + word.ayah_number"
+                                                        ></span>
+                                                    </template>
+                                                </span>
+                                            </template>
+                                        </div>
+                                    </template>
+                                    <template
+                                        x-if="!(line.line_type === 'ayah' && Array.isArray(line.words) && line.words.length > 0)"
+                                    >
+                                        <div
+                                            class="font-quran quran-meta-line"
+                                            data-quran-line-text
+                                            x-bind:style="lineFontStyle()"
+                                            x-text="line.text"
+                                        ></div>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
                     </div>
                 </div>
             </div>
