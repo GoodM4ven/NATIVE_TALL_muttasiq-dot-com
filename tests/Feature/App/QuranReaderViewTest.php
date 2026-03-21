@@ -12,6 +12,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
     );
     $quranReaderViewSource = file_get_contents(resource_path('views/livewire/quran-app/reader.blade.php'));
     $quranReaderClassSource = file_get_contents(app_path('Livewire/QuranApp/Reader.php'));
+    $quranReaderDataServiceSource = file_get_contents(app_path('Services/Quran/QuranReaderDataService.php'));
     $routesSource = file_get_contents(base_path('routes/web.php'));
     $appJsSource = file_get_contents(resource_path('js/app.js'));
 
@@ -60,23 +61,36 @@ it('wires quran reader entry points from main menu to hash navigation and view m
     expect($quranReaderViewSource)->not->toBeFalse()
         ->and($quranReaderViewSource)->toContain('quran-ayah-line-run-rect')
         ->and($quranReaderViewSource)->toContain('quran-ayah-line-run-centered')
-        ->and($quranReaderViewSource)->toContain('wire:click="selectAyah(')
+        ->and($quranReaderViewSource)->toContain('x-data="quranAppReader({')
+        ->and($quranReaderViewSource)->toContain('x-on:click="nextPage()"')
+        ->and($quranReaderViewSource)->toContain('x-on:click="previousPage()"')
+        ->and($quranReaderViewSource)->toContain('x-for="line in mushafLines"')
         ->and($quranReaderViewSource)->toContain("x-on:click=\"\$viewNav('quran-app-gate')\"");
 
     expect($quranReaderClassSource)->not->toBeFalse()
         ->and($quranReaderClassSource)->toContain("view('livewire.quran-app.reader'")
-        ->and($quranReaderClassSource)->toContain('p\'.$pageNumber.\'.woff2')
-        ->and($quranReaderClassSource)->toContain("'format' => 'woff2'");
+        ->and($quranReaderClassSource)->toContain('QuranReaderDataService');
+
+    expect($quranReaderDataServiceSource)->not->toBeFalse()
+        ->and($quranReaderDataServiceSource)->toContain('p\'.$pageNumber.\'.woff2')
+        ->and($quranReaderDataServiceSource)->toContain("'format' => 'woff2'")
+        ->and($quranReaderDataServiceSource)->toContain('quran-reader-page-v2')
+        ->and($quranReaderDataServiceSource)->toContain('quran-reader-search-index-v1');
 
     expect($routesSource)->not->toBeFalse()
         ->and($routesSource)->toContain('p\'.$page.\'.woff2')
         ->and($routesSource)->toContain("'content_type' => 'font/woff2'")
-        ->and($routesSource)->toContain("'Content-Type' => \$contentType");
+        ->and($routesSource)->toContain("'Content-Type' => \$contentType")
+        ->and($routesSource)->toContain('/quran-reader/pages/{page}.json')
+        ->and($routesSource)->toContain('/quran-reader/search-index.json');
 
     expect($appJsSource)->not->toBeFalse()
-        ->and($appJsSource)->toContain("import './support/alpine/data/quran-app-gate';");
+        ->and($appJsSource)->toContain("import './support/alpine/data/quran-app-gate';")
+        ->and($appJsSource)->toContain("import './support/alpine/data/quran-app-reader';");
 });
 
 it('registers qpc page font route contract used by quran reader pages', function () {
     expect(route('qpc-v2-font', ['page' => 1], false))->toBe('/qpc-v2-fonts/1.ttf');
+    expect(route('quran-reader-page-data', ['page' => 1], false))->toBe('/quran-reader/pages/1.json');
+    expect(route('quran-reader-search-index', [], false))->toBe('/quran-reader/search-index.json');
 });
