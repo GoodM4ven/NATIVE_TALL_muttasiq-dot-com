@@ -15,6 +15,7 @@ class ReaderSearchIndexController extends Controller
         $payload = [
             'ready' => $readerDataService->isReady(),
             'items' => $readerDataService->searchIndex(),
+            'surah_names' => $readerDataService->surahNames(),
         ];
 
         return response()

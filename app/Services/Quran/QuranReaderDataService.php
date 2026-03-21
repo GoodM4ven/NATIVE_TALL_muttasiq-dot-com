@@ -211,6 +211,28 @@ class QuranReaderDataService
     }
 
     /**
+     * @return array<int, string>
+     */
+    public function surahNames(): array
+    {
+        $names = [];
+
+        for ($surahNumber = 1; $surahNumber <= 114; $surahNumber++) {
+            $arabicName = $this->resolveSurahArabicName($surahNumber);
+
+            if ($arabicName === null || $arabicName === '') {
+                $names[$surahNumber] = (string) $surahNumber;
+
+                continue;
+            }
+
+            $names[$surahNumber] = $arabicName;
+        }
+
+        return $names;
+    }
+
+    /**
      * @return array<int, array{
      *     line_number: int,
      *     line_type: string,

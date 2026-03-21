@@ -192,6 +192,10 @@ document.addEventListener('alpine:init', () => {
             isLoading: false,
             isReady: false,
             isOpen: false,
+            modalOpen: false,
+            readyResult: null,
+            surahNames: {},
+            surahDirectory: [],
         },
 
         _pendingPageLoads: new Map(),
@@ -373,7 +377,10 @@ document.addEventListener('alpine:init', () => {
             await this.goToPage(this.pageNumber - 1, { direction: 'prev' });
         },
 
-        async goToPage(pageNumber, { direction = 'next', animate = true } = {}) {
+        async goToPage(
+            pageNumber,
+            { direction = 'next', animate = true, activeAyahIndex = null } = {},
+        ) {
             const normalizedPage = clampPage(pageNumber, this.maxPage);
 
             if (normalizedPage === this.pageNumber && this.mushafLines.length > 0) {
@@ -395,6 +402,10 @@ document.addEventListener('alpine:init', () => {
 
                 const payload = await payloadPromise;
                 this.applyPayload(payload, { setPageNumber: true });
+                this.activeAyahIndex =
+                    Number.isFinite(Number(activeAyahIndex)) && Number(activeAyahIndex) > 0
+                        ? Math.trunc(Number(activeAyahIndex))
+                        : 0;
 
                 if (animate) {
                     this.playPageMotion(direction);
@@ -425,7 +436,6 @@ document.addEventListener('alpine:init', () => {
             this.qpcPageFontFamily = normalizedPayload.qpcPageFontFamily;
             this.qpcPageFontUrl = normalizedPayload.qpcPageFontUrl;
             this.qpcPageFontFormat = normalizedPayload.qpcPageFontFormat;
-            this.activeAyahIndex = normalizedPayload.activeAyahIndex;
 
             if (setPageNumber) {
                 this.pageNumber = clampPage(
@@ -1088,6 +1098,115 @@ document.addEventListener('alpine:init', () => {
                 .toLowerCase();
         },
 
+        buildSurahDirectory() {
+            const firstPageBySurah = new Map();
+
+            this.search.index.forEach((item) => {
+                const surahNumber = Number(item?.surah_number ?? 0);
+                const pageNumber = Number(item?.page_number ?? 0);
+
+                if (surahNumber < 1 || pageNumber < 1 || firstPageBySurah.has(surahNumber)) {
+                    return;
+                }
+
+                firstPageBySurah.set(surahNumber, pageNumber);
+            });
+
+            const directory = [];
+
+            for (let surahNumber = 1; surahNumber <= 114; surahNumber += 1) {
+                directory.push({
+                    surah_number: surahNumber,
+                    page_number: firstPageBySurah.get(surahNumber) ?? 1,
+                    label: this.surahLabel(surahNumber),
+                });
+            }
+
+            this.search.surahDirectory = directory;
+        },
+
+        surahLabel(surahNumber) {
+            const normalizedSurahNumber = Math.max(1, Math.trunc(Number(surahNumber ?? 1)));
+            const names = this.search.surahNames ?? {};
+            const name = String(names?.[normalizedSurahNumber] ?? '').trim();
+
+            if (name !== '') {
+                return `سورة ${name}`;
+            }
+
+            return `سورة ${normalizedSurahNumber}`;
+        },
+
+        currentSurahNumber() {
+            for (const line of this.mushafLines) {
+                const lineSurahNumber = Number(line?.surah_number ?? 0);
+
+                if (lineSurahNumber > 0) {
+                    return lineSurahNumber;
+                }
+
+                if (!Array.isArray(line?.words)) {
+                    continue;
+                }
+
+                for (const word of line.words) {
+                    const wordSurahNumber = Number(word?.surah_number ?? 0);
+
+                    if (wordSurahNumber > 0) {
+                        return wordSurahNumber;
+                    }
+                }
+            }
+
+            return 1;
+        },
+
+        currentSurahTitle() {
+            return this.surahLabel(this.currentSurahNumber());
+        },
+
+        async openSearchModal() {
+            await this.warmSearchIndex();
+            this.search.modalOpen = true;
+            this.search.query = '';
+            this.search.results = [];
+            this.search.readyResult = null;
+            this.search.isOpen = false;
+            this.activeAyahIndex = 0;
+
+            await this.nextTickAsync();
+            this.$refs.searchModalInput?.focus?.();
+        },
+
+        closeSearchModal() {
+            this.search.modalOpen = false;
+            this.search.query = '';
+            this.search.results = [];
+            this.search.readyResult = null;
+            this.search.isOpen = false;
+        },
+
+        async confirmSearchSelection() {
+            if (this.search.readyResult) {
+                await this.goToSearchResult(this.search.readyResult);
+
+                return;
+            }
+
+            if (this.search.results.length > 0) {
+                await this.goToSearchResult(this.search.results[0]);
+            }
+        },
+
+        async goToSurahFromDirectory(entry) {
+            const pageNumber = clampPage(Number(entry?.page_number ?? 1), this.maxPage);
+            const direction = pageNumber >= this.pageNumber ? 'next' : 'prev';
+
+            this.closeSearchModal();
+            this.activeAyahIndex = 0;
+            await this.goToPage(pageNumber, { direction, animate: true });
+        },
+
         async warmSearchIndex() {
             if (this.search.isReady || this.search.isLoading || !this.api.searchIndexUrl) {
                 return;
@@ -1110,9 +1229,16 @@ document.addEventListener('alpine:init', () => {
                     });
 
                     this.search.index = Array.isArray(payload?.items) ? payload.items : [];
+                    this.search.surahNames =
+                        payload && typeof payload === 'object' && payload.surah_names
+                            ? payload.surah_names
+                            : {};
+                    this.buildSurahDirectory();
                     this.search.isReady = true;
                 } catch (_) {
                     this.search.index = [];
+                    this.search.surahNames = {};
+                    this.search.surahDirectory = [];
                     this.search.isReady = false;
                 } finally {
                     this.search.isLoading = false;
@@ -1129,6 +1255,7 @@ document.addEventListener('alpine:init', () => {
             if (!normalizedQuery) {
                 this.search.results = [];
                 this.search.isOpen = false;
+                this.search.readyResult = null;
 
                 return;
             }
@@ -1140,6 +1267,7 @@ document.addEventListener('alpine:init', () => {
             if (!this.search.isReady) {
                 this.search.results = [];
                 this.search.isOpen = false;
+                this.search.readyResult = null;
 
                 return;
             }
@@ -1163,10 +1291,7 @@ document.addEventListener('alpine:init', () => {
 
             this.search.results = results;
             this.search.isOpen = results.length > 0;
-
-            if (results.length === 1) {
-                await this.goToSearchResult(results[0]);
-            }
+            this.search.readyResult = results.length === 1 ? results[0] : null;
         },
 
         async goToSearchResult(result) {
@@ -1174,16 +1299,12 @@ document.addEventListener('alpine:init', () => {
             const ayahIndex = Math.max(0, Math.trunc(Number(result?.ayah_index ?? 0)));
             const direction = targetPage >= this.pageNumber ? 'next' : 'prev';
 
-            this.activeAyahIndex = ayahIndex;
-            this.search.query = '';
-            this.search.results = [];
-            this.search.isOpen = false;
-
-            await this.goToPage(targetPage, { direction, animate: true });
-
-            if (ayahIndex > 0) {
-                this.activeAyahIndex = ayahIndex;
-            }
+            this.closeSearchModal();
+            await this.goToPage(targetPage, {
+                direction,
+                animate: true,
+                activeAyahIndex: ayahIndex,
+            });
         },
     }));
 });
