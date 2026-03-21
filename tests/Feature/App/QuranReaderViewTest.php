@@ -46,7 +46,6 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranGateSource)->toContain('x-on:click="openMode(\'tilawa\')"')
         ->and($quranGateSource)->toContain('x-on:click="openMode(\'hifth\')"')
         ->and($quranGateSource)->toContain('x-on:click="openMode(\'tadabbur\')"')
-        ->and($quranGateSource)->toContain('<path d="M50 53 L50 100" />')
         ->and($quranGateSource)->not->toContain('M0 0 L50 53')
         ->and($quranGateSource)->not->toContain('M100 0 L50 53')
         ->and($quranGateSource)->not->toContain('quran-app-gate-needle');

@@ -57,27 +57,23 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            let nextAngleDeg = targetAngleDeg;
-            const angleDelta = nextAngleDeg - this.orbitAngleDeg;
+            const wrappedDelta = ((targetAngleDeg - this.orbitAngleDeg + 540) % 360) - 180;
 
-            if (angleDelta > 180) {
-                nextAngleDeg -= 360;
-            } else if (angleDelta < -180) {
-                nextAngleDeg += 360;
-            }
-
-            this.orbitAngleDeg = nextAngleDeg;
+            this.orbitAngleDeg += wrappedDelta;
         },
         pinMode(mode) {
             this.pinnedMode = mode;
             this.isModePinned = true;
-            this.setOrbitAngle(
-                {
-                    tilawa: 0,
-                    hifth: 120,
-                    tadabbur: 240,
-                }[mode] ?? 0,
-            );
+
+            if (!this.isPointerInside) {
+                this.setOrbitAngle(
+                    {
+                        tilawa: 0,
+                        hifth: 120,
+                        tadabbur: 240,
+                    }[mode] ?? 0,
+                );
+            }
         },
         unpinMode(mode) {
             if (this.pinnedMode !== mode) {

@@ -8,6 +8,7 @@
             --quran-gold-3: #d79f2f;
             --quran-gold-4: #8b6216;
             isolation: isolate;
+            background: #0b0805;
             user-select: none;
             -webkit-user-drag: none;
             -webkit-touch-callout: none;
@@ -31,11 +32,11 @@
         }
 
         .quran-app-sector--tadabbur {
-            clip-path: polygon(0 0, var(--gate-cx) var(--gate-cy), 50% 100%, 0 100%);
+            clip-path: polygon(0 0, var(--gate-cx) var(--gate-cy), calc(50% + 0.6px) 100%, 0 100%);
         }
 
         .quran-app-sector--hifth {
-            clip-path: polygon(100% 0, var(--gate-cx) var(--gate-cy), 50% 100%, 100% 100%);
+            clip-path: polygon(100% 0, var(--gate-cx) var(--gate-cy), calc(50% - 0.6px) 100%, 100% 100%);
         }
 
         .quran-app-sector__media {
@@ -83,7 +84,7 @@
         }
 
         img.quran-app-sector__image-img--tilawa {
-            object-position: 50% 50% !important;
+            object-position: 50% 62.5% !important;
         }
 
         img.quran-app-sector__image-img--hifth {
@@ -255,7 +256,7 @@
             inset: 0;
             border-radius: 999px;
             transform: rotate(0deg);
-            transition: transform 95ms ease-out, opacity 220ms ease;
+            transition: transform 300ms ease-out, opacity 220ms ease;
             pointer-events: none;
             z-index: 230;
         }
@@ -264,7 +265,7 @@
             position: absolute;
             left: 50%;
             top: 0;
-            width: 2.5rem;
+            width: 3.25rem;
             aspect-ratio: 1;
             border-radius: 999px;
             border: 1px solid rgba(253, 232, 171, 0.9);
@@ -368,6 +369,10 @@
                     0 0 0 3px color-mix(in srgb, var(--quran-gold-2) 16%, transparent),
                     0 0 9px color-mix(in srgb, var(--quran-gold-3) 26%, transparent);
             }
+
+            .quran-app-gate-orbit {
+                transition-duration: 440ms;
+            }
         }
     </style>
 @endassets
@@ -377,10 +382,10 @@
     x-cloak
     x-show="views['quran-app-gate'].isOpen"
     x-transition:enter="transition-all ease-out duration-750 delay-300"
-    x-transition:enter-start="opacity-0! translate-y-5 blur-[2px]"
-    x-transition:enter-end="opacity-100 translate-y-0 blur-0"
+    x-transition:enter-start="opacity-0! blur-[2px]"
+    x-transition:enter-end="opacity-100 blur-0"
     x-transition:leave="transition-all ease-in duration-350!"
-    x-transition:leave-start="opacity-100 translate-y-0 blur-0"
+    x-transition:leave-start="opacity-100 blur-0"
     x-transition:leave-end="opacity-0! blur-[2px]"
 >
     <section
@@ -397,7 +402,7 @@
         <button
             class="quran-app-sector quran-app-sector--tilawa"
             type="button"
-            aria-label="ترتيل القرآن"
+            aria-label="تلاوة القرآن"
             x-bind:class="{ 'is-active': isModeActive('tilawa') }"
             x-on:mouseenter="pinMode('tilawa')"
             x-on:mouseleave="unpinMode('tilawa')"
@@ -419,7 +424,7 @@
             </span>
 
             <span class="quran-app-sector__veil"></span>
-            <span class="quran-app-sector__chip quran-app-sector__chip--tilawa font-arabic-serif">ترتيل</span>
+            <span class="quran-app-sector__chip quran-app-sector__chip--tilawa font-arabic-serif">تلاوة</span>
         </button>
 
         <button
@@ -480,16 +485,6 @@
             <span class="quran-app-sector__chip quran-app-sector__chip--hifth font-arabic-serif">حفظ</span>
         </button>
 
-        <svg
-            class="quran-app-gate-geometry"
-            aria-hidden="true"
-            viewBox="0 0 100 100"
-            preserveAspectRatio="none"
-            fill="none"
-        >
-            <path d="M50 53 L50 100" />
-        </svg>
-
         <div
             class="quran-app-gate-anchor"
             aria-hidden="true"
@@ -497,8 +492,6 @@
         >
             <span
                 class="quran-app-gate-orbit"
-                x-cloak
-                x-show="isPointerInside || isModePinned"
                 x-bind:style="{ transform: `rotate(${orbitAngleDeg}deg)` }"
             >
                 <span class="quran-app-gate-puck"></span>
