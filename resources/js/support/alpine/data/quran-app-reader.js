@@ -206,6 +206,7 @@ document.addEventListener('alpine:init', () => {
         _revealTimer: null,
         _viewportChangeDebounceTimer: null,
         _canonicalWidthPromise: null,
+        _panelWidthBucket: null,
         _onWindowViewportChange: null,
         _onVisualViewportChange: null,
         _onSwitchView: null,
@@ -549,14 +550,53 @@ document.addEventListener('alpine:init', () => {
                 clearTimeout(this._viewportChangeDebounceTimer);
             }
 
-            this._viewportChangeDebounceTimer = window.setTimeout(() => {
+            this._viewportChangeDebounceTimer = window.setTimeout(async () => {
                 this._viewportChangeDebounceTimer = null;
+                const currentBucket = this.viewportWidthBucket();
+
+                if (this._panelWidthBucket !== currentBucket) {
+                    this.panelWidthPx = null;
+                    await this.ensureCanonicalPanelWidth();
+                }
+
                 this.scheduleLayout({ revealDelayMs: 150 });
             }, 90);
         },
 
+        viewportWidthBucket() {
+            const width = Number(window.innerWidth ?? 0);
+
+            if (width >= 1536) {
+                return '2xl';
+            }
+
+            if (width >= 1280) {
+                return 'xl';
+            }
+
+            if (width >= 1024) {
+                return 'lg';
+            }
+
+            if (width >= 768) {
+                return 'md';
+            }
+
+            if (width >= 640) {
+                return 'sm';
+            }
+
+            return 'base';
+        },
+
         async ensureCanonicalPanelWidth() {
-            if (Number.isFinite(Number(this.panelWidthPx)) && Number(this.panelWidthPx) > 0) {
+            const currentBucket = this.viewportWidthBucket();
+
+            if (
+                Number.isFinite(Number(this.panelWidthPx)) &&
+                Number(this.panelWidthPx) > 0 &&
+                this._panelWidthBucket === currentBucket
+            ) {
                 return;
             }
 
@@ -634,12 +674,7 @@ document.addEventListener('alpine:init', () => {
                 rootElement.style.setProperty('--quran-page-scale', '1');
 
                 const probeSize = this.measureRenderedBounds(probeElement);
-                const availableHeight = Math.max(1, frameElement.clientHeight);
-                const pageScaleByHeight = Math.min(
-                    1,
-                    availableHeight / Math.max(1, probeSize.height),
-                );
-                const contentTargetWidth = Math.max(1, probeSize.width * pageScaleByHeight);
+                const contentTargetWidth = Math.max(1, probeSize.width);
                 const viewportStyles = window.getComputedStyle(viewportElement);
                 const surfaceStyles = window.getComputedStyle(surfaceElement);
                 const panelStyles = window.getComputedStyle(panelElement);
@@ -663,6 +698,7 @@ document.addEventListener('alpine:init', () => {
                 ) {
                     this.panelWidthPx = clampedPanelWidth;
                 }
+                this._panelWidthBucket = currentBucket;
 
                 rootElement.style.setProperty('--quran-page-scale', String(previousScale || 1));
             })();
@@ -752,16 +788,36 @@ document.addEventListener('alpine:init', () => {
                 1,
                 frameElement.parentElement?.clientWidth ?? frameElement.clientWidth,
             );
-            const availableHeight = Math.max(1, frameElement.clientHeight);
+            const computedRootStyles = window.getComputedStyle(rootElement);
+            const fitHeightRatio = Math.min(
+                1,
+                Math.max(
+                    0.5,
+                    Number.parseFloat(
+                        computedRootStyles.getPropertyValue('--quran-fit-height-ratio'),
+                    ) || 1,
+                ),
+            );
+            const availableHeight = Math.max(1, frameElement.clientHeight * fitHeightRatio);
+            const minScale = Math.max(
+                0.05,
+                Number.parseFloat(computedRootStyles.getPropertyValue('--quran-min-page-scale')) ||
+                    0.1,
+            );
+            const maxScale = Math.max(
+                minScale,
+                Number.parseFloat(computedRootStyles.getPropertyValue('--quran-max-page-scale')) ||
+                    1,
+            );
             const naturalSize = this.measureRenderedBounds(contentElement);
             const initialScale = Math.min(
                 availableWidth / Math.max(1, naturalSize.width),
                 availableHeight / Math.max(1, naturalSize.height),
-                1,
+                maxScale,
             );
 
             let normalizedScale = Number.isFinite(initialScale)
-                ? Math.max(0.2, Math.min(1, initialScale))
+                ? Math.max(minScale, Math.min(maxScale, initialScale))
                 : 1;
 
             for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -778,7 +834,10 @@ document.addEventListener('alpine:init', () => {
                     break;
                 }
 
-                normalizedScale = Math.max(0.2, Number((normalizedScale * adjustScale).toFixed(4)));
+                normalizedScale = Math.max(
+                    minScale,
+                    Number((normalizedScale * adjustScale).toFixed(4)),
+                );
             }
 
             rootElement.style.setProperty('--quran-page-scale', String(normalizedScale));

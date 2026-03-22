@@ -21,6 +21,73 @@
             --quran-page-surface: color-mix(in srgb, var(--background) 86%, transparent);
             --quran-page-border: color-mix(in srgb, var(--gray-300) 58%, transparent);
             --quran-page-scale: 1;
+            --quran-min-page-scale: 0.1;
+            --quran-max-page-scale: 1;
+            --quran-type-scale: 1;
+            --quran-leading-scale: 1;
+            --quran-gap-scale: 1;
+            --quran-fit-height-ratio: 0.72;
+            --quran-line-gap: 1.3rem;
+            --quran-font-size-rect: 2.08rem;
+            --quran-font-size-center: 2.02rem;
+            --quran-font-size-meta: 1.88rem;
+            --quran-line-height-rect: 1.58;
+            --quran-line-height-center: 1.7;
+            --quran-line-height-meta: 1.66;
+        }
+
+        @media (max-width: 639px) {
+            .quran-reader {
+                --quran-type-scale: 0.94;
+                --quran-leading-scale: 1.02;
+                --quran-gap-scale: 0.92;
+                --quran-fit-height-ratio: 0.68;
+            }
+        }
+
+        @media (min-width: 640px) and (max-width: 767px) {
+            .quran-reader {
+                --quran-type-scale: 0.965;
+                --quran-leading-scale: 1.01;
+                --quran-gap-scale: 0.96;
+                --quran-fit-height-ratio: 0.7;
+            }
+        }
+
+        @media (min-width: 768px) and (max-width: 1023px) {
+            .quran-reader {
+                --quran-type-scale: 0.985;
+                --quran-leading-scale: 1;
+                --quran-gap-scale: 0.99;
+                --quran-fit-height-ratio: 0.72;
+            }
+        }
+
+        @media (min-width: 1024px) and (max-width: 1279px) {
+            .quran-reader {
+                --quran-type-scale: 1;
+                --quran-leading-scale: 1;
+                --quran-gap-scale: 1;
+                --quran-fit-height-ratio: 0.74;
+            }
+        }
+
+        @media (min-width: 1280px) and (max-width: 1535px) {
+            .quran-reader {
+                --quran-type-scale: 1.03;
+                --quran-leading-scale: 1.02;
+                --quran-gap-scale: 1.08;
+                --quran-fit-height-ratio: 0.76;
+            }
+        }
+
+        @media (min-width: 1536px) {
+            .quran-reader {
+                --quran-type-scale: 1.08;
+                --quran-leading-scale: 1.05;
+                --quran-gap-scale: 1.18;
+                --quran-fit-height-ratio: 0.9;
+            }
         }
 
         .dark .quran-reader {
@@ -92,6 +159,9 @@
             width: max-content;
             max-width: none;
             direction: rtl;
+            display: flex;
+            flex-direction: column;
+            gap: calc(var(--quran-line-gap) * var(--quran-gap-scale));
         }
 
         .quran-page-lines * {
@@ -130,18 +200,18 @@
         }
 
         .quran-ayah-line-run-rect {
-            font-size: calc(2.08rem * var(--quran-page-scale));
-            line-height: 1.58;
+            font-size: calc(var(--quran-font-size-rect) * var(--quran-type-scale) * var(--quran-page-scale));
+            line-height: calc(var(--quran-line-height-rect) * var(--quran-leading-scale));
         }
 
         .quran-ayah-line-run-centered {
-            font-size: calc(2.02rem * var(--quran-page-scale));
-            line-height: 1.7;
+            font-size: calc(var(--quran-font-size-center) * var(--quran-type-scale) * var(--quran-page-scale));
+            line-height: calc(var(--quran-line-height-center) * var(--quran-leading-scale));
         }
 
         .quran-meta-line {
-            font-size: calc(1.88rem * var(--quran-page-scale));
-            line-height: 1.66;
+            font-size: calc(var(--quran-font-size-meta) * var(--quran-type-scale) * var(--quran-page-scale));
+            line-height: calc(var(--quran-line-height-meta) * var(--quran-leading-scale));
         }
 
         .quran-page-motion-next {
@@ -443,7 +513,7 @@
         </section>
     @else
         <section
-            class="quran-reader-panel relative flex h-[clamp(30rem,88svh,60rem)] w-[min(96vw,60rem)] min-w-[18.75rem] flex-col overflow-hidden rounded-[1.75rem] border"
+            class="quran-reader-panel relative flex h-[clamp(31rem,92svh,62rem)] w-[min(96vw,60rem)] min-w-75 flex-col overflow-hidden rounded-[1.75rem] border"
             x-bind:style="readerPanelStyle()"
             x-on:pointerdown.passive="onSwipeStart($event)"
             x-on:pointerup.passive="onSwipeEnd($event)"
@@ -481,7 +551,7 @@
                         x-text="currentSurahTitle()"
                     ></span>
                 </button>
-                <div class="min-w-[3.5rem]"></div>
+                <div class="min-w-14"></div>
             </header>
 
             <div
@@ -489,7 +559,7 @@
                 x-ref="pageViewport"
             >
                 <div
-                    class="quran-page-surface h-full rounded-2xl px-3 py-4 transition-opacity duration-200 sm:px-4 sm:py-5"
+                    class="quran-page-surface h-full rounded-2xl transition-opacity duration-200"
                     x-bind:class="pageMotionClass"
                     x-ref="pageSurface"
                 >
@@ -508,7 +578,7 @@
                         x-ref="pageFrame"
                     >
                         <div
-                            class="quran-page-lines mx-auto space-y-8"
+                            class="quran-page-lines mx-auto"
                             x-bind:data-fit-state="isFittingPage ? 'fitting' : 'ready'"
                             x-bind:style="pageContentStyle()"
                             x-ref="pageContent"
@@ -708,8 +778,12 @@
                 aria-hidden="true"
             >
                 <div
-                    class="space-y-2.5"
-                    style="width: max-content;"
+                    style="
+                        width: max-content;
+                        display: flex;
+                        flex-direction: column;
+                        gap: calc(var(--quran-line-gap) * var(--quran-gap-scale));
+                    "
                     x-ref="pageThreeProbe"
                 >
                     <template
