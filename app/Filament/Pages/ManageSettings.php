@@ -57,6 +57,7 @@ class ManageSettings extends Page
     {
         $generalDefinitions = Setting::definitionsForGroup(Setting::GROUP_GENERAL);
         $athkarDefinitions = Setting::definitionsForGroup(Setting::GROUP_ATHKAR);
+        $quranDefinitions = Setting::definitionsForGroup(Setting::GROUP_QURAN);
 
         return $schema
             ->components([
@@ -77,6 +78,11 @@ class ManageSettings extends Page
                     Section::make('الأذكار')
                         ->schema(
                             $this->buildFieldsFromDefinitions($athkarDefinitions),
+                        ),
+
+                    Section::make('القرآن')
+                        ->schema(
+                            $this->buildFieldsFromDefinitions($quranDefinitions),
                         ),
                 ])
                     ->livewireSubmitHandler('save')

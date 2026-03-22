@@ -30,6 +30,7 @@ trait HasControlPanelSettingsTab
     {
         $athkarDefinitions = Setting::definitionsForGroup(Setting::GROUP_ATHKAR);
         $generalDefinitions = Setting::definitionsForGroup(Setting::GROUP_GENERAL);
+        $quranDefinitions = Setting::definitionsForGroup(Setting::GROUP_QURAN);
 
         return Tab::make('الإعدادات')
             ->icon('heroicon-s-adjustments-horizontal')
@@ -68,6 +69,27 @@ trait HasControlPanelSettingsTab
                             ->default((bool) ($generalDefinitions[Setting::DOES_SKIP_GUIDANCE_PANELS]['default'] ?? false))
                             ->extraFieldWrapperAttributes(['class' => 'relative z-20 mt-3 sm:mt-0'])
                             ->label($generalDefinitions[Setting::DOES_SKIP_GUIDANCE_PANELS]['label']),
+                    ]),
+
+                Text::make(new HtmlString('<hr class="border-0 h-px bg-linear-to-r from-transparent via-gray-400 to-transparent mt-5">'))
+                    ->extraAttributes(['class' => 'w-full']),
+
+                Text::make('القرآن')
+                    ->color('black')
+                    ->weight(FontWeight::Medium),
+
+                Grid::make()
+                    ->columns([
+                        'default' => 1,
+                        'md' => 2,
+                    ])
+                    ->schema([
+                        Components\Checkbox::make(Setting::DOES_QURAN_TARGET_WORDS_BY_DEFAULT)
+                            ->default((bool) ($quranDefinitions[Setting::DOES_QURAN_TARGET_WORDS_BY_DEFAULT]['default'] ?? false))
+                            ->label($quranDefinitions[Setting::DOES_QURAN_TARGET_WORDS_BY_DEFAULT]['label'])
+                            ->belowContent([
+                                Text::make((string) ($quranDefinitions[Setting::DOES_QURAN_TARGET_WORDS_BY_DEFAULT]['help'] ?? ''))->size(TextSize::ExtraSmall),
+                            ]),
                     ]),
 
                 Text::make(new HtmlString('<hr class="border-0 h-px bg-linear-to-r from-transparent via-gray-400 to-transparent mt-5">'))

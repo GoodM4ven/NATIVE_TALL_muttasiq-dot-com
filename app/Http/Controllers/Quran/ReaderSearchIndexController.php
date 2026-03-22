@@ -7,15 +7,28 @@ namespace App\Http\Controllers\Quran;
 use App\Http\Controllers\Controller;
 use App\Services\Quran\QuranReaderDataService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class ReaderSearchIndexController extends Controller
 {
-    public function __invoke(QuranReaderDataService $readerDataService): JsonResponse
+    public function __invoke(Request $request, QuranReaderDataService $readerDataService): JsonResponse
     {
+        $query = trim((string) $request->query('q', ''));
+
+        if ($query !== '') {
+            return response()
+                ->json([
+                    'ready' => $readerDataService->isReady(),
+                    'query' => $query,
+                    'items' => $readerDataService->search($query, 24),
+                ])
+                ->header('Cache-Control', 'no-store, max-age=0');
+        }
+
         $payload = [
             'ready' => $readerDataService->isReady(),
-            'items' => $readerDataService->searchIndex(),
             'surah_names' => $readerDataService->surahNames(),
+            'surah_directory' => $readerDataService->surahDirectory(),
         ];
 
         return response()

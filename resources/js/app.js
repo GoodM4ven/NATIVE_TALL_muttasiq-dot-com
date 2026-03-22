@@ -9,6 +9,7 @@ import './packages/color';
 import './packages/day';
 import './packages/fitty';
 import './packages/anime';
+import './packages/auto-animate';
 import './packages/ldrs';
 import './packages/nativephp/browser';
 

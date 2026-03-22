@@ -14,6 +14,11 @@ const defaultPagePayload = Object.freeze({
     useCenteredAyahLayout: true,
 });
 
+const controlPanelSettingKeys = Object.freeze({
+    enableVisualEnhancements: 'enable_visual_enhancements',
+    targetWordsByDefault: 'does_quran_target_words_by_default',
+});
+
 const normalizePayload = (payload = {}) => ({
     ready: Boolean(payload?.ready),
     pageNumber: Number(payload?.pageNumber ?? defaultPagePayload.pageNumber),
@@ -167,12 +172,16 @@ document.addEventListener('alpine:init', () => {
         prewarmPages: Math.max(1, Number(config?.prewarmPages ?? 6)),
         prefetchRadius: Math.max(1, Number(config?.prefetchRadius ?? 2)),
         searchModalId: String(config?.searchModalId ?? ''),
+        searchModalDomId: String(config?.searchModalDomId ?? ''),
+        initialSettings:
+            config?.settings && typeof config.settings === 'object' ? config.settings : {},
 
         ready: false,
         pageNumber: window.Alpine.$persist(1).as('quran-reader-page-number-v1'),
         pageInput: 1,
         maxPage: 0,
         activeAyahIndex: 0,
+        activeWordIndex: 0,
         mushafLines: [],
         qpcPageFontFamily: null,
         qpcPageFontUrl: null,
@@ -182,6 +191,9 @@ document.addEventListener('alpine:init', () => {
         surahHeaderFontFormat: null,
         useCenteredAyahLayout: true,
         hoveredAyahIndex: 0,
+        hoveredWordIndex: 0,
+        doesEnableVisualEnhancements: true,
+        doesTargetWordsByDefault: false,
         panelProbeLines: [],
         panelProbeUseCenteredAyahLayout: true,
         panelProbeFontFamily: null,
@@ -211,7 +223,6 @@ document.addEventListener('alpine:init', () => {
         search: {
             query: '',
             minQueryLength: 2,
-            index: [],
             results: [],
             isLoading: false,
             isReady: false,
@@ -240,10 +251,26 @@ document.addEventListener('alpine:init', () => {
         _fitRunCounter: 0,
         _lastFittedPageNumber: 0,
         _pageInputCommitTimer: null,
+        _searchAbortController: null,
+        _searchRequestSerial: 0,
         _stopLivewireMorphedHook: null,
+        _searchResultsAutoAnimateStop: null,
+        _searchModalCloseDebounceTimer: null,
+        _wordPressHoldTimer: null,
+        _suppressNextWordClick: false,
+        _lastKnownModalOpenState: false,
+        wordPress: {
+            active: false,
+            pointerId: null,
+            startX: 0,
+            startY: 0,
+            holdTriggered: false,
+            word: null,
+        },
 
         init() {
             this.applyPayload(this.initialPayload, { setPageNumber: true });
+            this.applyControlPanelSettings(this.initialSettings);
             this.refreshSurahTriggerCaption(false);
 
             const restoredPage = clampPage(
@@ -348,6 +375,26 @@ document.addEventListener('alpine:init', () => {
                 this._pageInputCommitTimer = null;
             }
 
+            if (this._searchModalCloseDebounceTimer !== null) {
+                clearTimeout(this._searchModalCloseDebounceTimer);
+                this._searchModalCloseDebounceTimer = null;
+            }
+
+            if (this._wordPressHoldTimer !== null) {
+                clearTimeout(this._wordPressHoldTimer);
+                this._wordPressHoldTimer = null;
+            }
+
+            if (this._searchAbortController) {
+                this._searchAbortController.abort();
+                this._searchAbortController = null;
+            }
+
+            if (typeof this._searchResultsAutoAnimateStop === 'function') {
+                this._searchResultsAutoAnimateStop();
+                this._searchResultsAutoAnimateStop = null;
+            }
+
             if (typeof this._stopLivewireMorphedHook === 'function') {
                 this._stopLivewireMorphedHook();
                 this._stopLivewireMorphedHook = null;
@@ -435,7 +482,13 @@ document.addEventListener('alpine:init', () => {
 
         async navigateToPage(
             targetPage,
-            { direction = 'next', animate = true, activeAyahIndex = null, source = 'generic' } = {},
+            {
+                direction = 'next',
+                animate = true,
+                activeAyahIndex = null,
+                source = 'generic',
+                forceRefit = false,
+            } = {},
         ) {
             const normalizedTargetPage = clampPage(targetPage, this.maxPage);
 
@@ -444,7 +497,7 @@ document.addEventListener('alpine:init', () => {
                     direction,
                     animate,
                     activeAyahIndex,
-                    forceRefit: true,
+                    forceRefit,
                 }),
             );
         },
@@ -495,7 +548,7 @@ document.addEventListener('alpine:init', () => {
             if (kind === 'page') {
                 const requestedPage = clampPage(detail?.page ?? this.pageInput, this.maxPage);
                 this.pageInput = requestedPage;
-                await this.onPageInputCommit();
+                await this.onPageInputCommit({ force: false });
             }
         },
 
@@ -540,7 +593,9 @@ document.addEventListener('alpine:init', () => {
             { direction = 'next', animate = true, activeAyahIndex = null, forceRefit = false } = {},
         ) {
             const normalizedPage = clampPage(pageNumber, this.maxPage);
+            this.clearWordPressState();
             this.hoveredAyahIndex = 0;
+            this.hoveredWordIndex = 0;
 
             if (normalizedPage === this.pageNumber && this.mushafLines.length > 0) {
                 this.pageInput = normalizedPage;
@@ -570,6 +625,7 @@ document.addEventListener('alpine:init', () => {
                     Number.isFinite(Number(activeAyahIndex)) && Number(activeAyahIndex) > 0
                         ? Math.trunc(Number(activeAyahIndex))
                         : 0;
+                this.activeWordIndex = 0;
 
                 if (animate) {
                     this.playPageMotion(direction);
@@ -593,7 +649,23 @@ document.addEventListener('alpine:init', () => {
             }, 220);
         },
 
-        async onPageInputCommit() {
+        async onPageInputBlur() {
+            if (this._pageInputCommitTimer !== null) {
+                clearTimeout(this._pageInputCommitTimer);
+                this._pageInputCommitTimer = null;
+                await this.onPageInputCommit({ force: true });
+
+                return;
+            }
+
+            const targetPage = clampPage(this.pageInput, this.maxPage);
+
+            if (targetPage !== this.pageNumber) {
+                await this.onPageInputCommit({ force: true });
+            }
+        },
+
+        async onPageInputCommit({ force = false } = {}) {
             if (this._pageInputCommitTimer !== null) {
                 clearTimeout(this._pageInputCommitTimer);
                 this._pageInputCommitTimer = null;
@@ -603,10 +675,16 @@ document.addEventListener('alpine:init', () => {
             const direction = targetPage >= this.pageNumber ? 'next' : 'prev';
 
             this.pageInput = targetPage;
+
+            if (!force && targetPage === this.pageNumber) {
+                return;
+            }
+
             await this.navigateToPage(targetPage, {
                 direction,
                 animate: true,
                 source: 'page-input',
+                forceRefit: false,
             });
         },
 
@@ -1231,6 +1309,7 @@ document.addEventListener('alpine:init', () => {
             this.swipe.pointerId = point.pointerId;
             this.swipe.pointerType = point.pointerType;
             this.hoveredAyahIndex = 0;
+            this.hoveredWordIndex = 0;
         },
 
         resetSwipeState() {
@@ -1301,6 +1380,7 @@ document.addEventListener('alpine:init', () => {
 
         onSwipeCancel() {
             this.resetSwipeState();
+            this.clearWordPressState();
         },
 
         pageContentStyle() {
@@ -1317,6 +1397,87 @@ document.addEventListener('alpine:init', () => {
             return `touch-action: pan-y; width: min(96vw, ${width}px);`;
         },
 
+        normalizeBooleanFlag(value, fallback = false) {
+            if (typeof value === 'boolean') {
+                return value;
+            }
+
+            if (value === 1 || value === '1') {
+                return true;
+            }
+
+            if (value === 0 || value === '0') {
+                return false;
+            }
+
+            if (value === null || value === undefined || value === '') {
+                return Boolean(fallback);
+            }
+
+            const normalized = String(value).trim().toLowerCase();
+
+            if (['true', 'yes', 'on'].includes(normalized)) {
+                return true;
+            }
+
+            if (['false', 'no', 'off'].includes(normalized)) {
+                return false;
+            }
+
+            return Boolean(fallback);
+        },
+
+        applyControlPanelSettings(controlPanel = {}) {
+            const input =
+                controlPanel && typeof controlPanel === 'object' && !Array.isArray(controlPanel)
+                    ? controlPanel
+                    : {};
+            const hasVisualEnhancements = Object.prototype.hasOwnProperty.call(
+                input,
+                controlPanelSettingKeys.enableVisualEnhancements,
+            );
+            const hasWordTargeting = Object.prototype.hasOwnProperty.call(
+                input,
+                controlPanelSettingKeys.targetWordsByDefault,
+            );
+            const defaultVisualEnhancements = this.normalizeBooleanFlag(
+                this.initialSettings?.enableVisualEnhancements,
+                true,
+            );
+            const defaultWordTargeting = this.normalizeBooleanFlag(
+                this.initialSettings?.targetWordsByDefault,
+                false,
+            );
+
+            this.doesEnableVisualEnhancements = this.normalizeBooleanFlag(
+                hasVisualEnhancements
+                    ? input[controlPanelSettingKeys.enableVisualEnhancements]
+                    : defaultVisualEnhancements,
+                true,
+            );
+            this.doesTargetWordsByDefault = this.normalizeBooleanFlag(
+                hasWordTargeting
+                    ? input[controlPanelSettingKeys.targetWordsByDefault]
+                    : defaultWordTargeting,
+                false,
+            );
+        },
+
+        interactionTargetsWords() {
+            return Boolean(this.doesTargetWordsByDefault);
+        },
+
+        isSelectableWord(word) {
+            const ayahIndex = Number(word?.ayah_index ?? 0);
+            const wordIndex = Number(word?.word_index ?? 0);
+
+            if (this.interactionTargetsWords()) {
+                return Number.isFinite(wordIndex) && wordIndex > 0;
+            }
+
+            return Number.isFinite(ayahIndex) && ayahIndex > 0;
+        },
+
         selectAyah(ayahIndex) {
             const normalizedAyahIndex = Number(ayahIndex);
 
@@ -1328,12 +1489,195 @@ document.addEventListener('alpine:init', () => {
             if (this.activeAyahIndex === normalized) {
                 this.activeAyahIndex = 0;
                 this.hoveredAyahIndex = 0;
+                this.activeWordIndex = 0;
+                this.hoveredWordIndex = 0;
 
                 return;
             }
 
             this.activeAyahIndex = normalized;
             this.hoveredAyahIndex = 0;
+            this.activeWordIndex = 0;
+            this.hoveredWordIndex = 0;
+        },
+
+        selectWord(wordIndex) {
+            const normalizedWordIndex = Number(wordIndex);
+
+            if (!Number.isFinite(normalizedWordIndex) || normalizedWordIndex < 1) {
+                return;
+            }
+
+            const normalized = Math.trunc(normalizedWordIndex);
+
+            if (this.activeWordIndex === normalized) {
+                this.activeWordIndex = 0;
+                this.hoveredWordIndex = 0;
+                this.activeAyahIndex = 0;
+                this.hoveredAyahIndex = 0;
+
+                return;
+            }
+
+            this.activeWordIndex = normalized;
+            this.hoveredWordIndex = 0;
+            this.activeAyahIndex = 0;
+            this.hoveredAyahIndex = 0;
+        },
+
+        selectDefaultSegment(word) {
+            if (this.interactionTargetsWords()) {
+                this.selectWord(Number(word?.word_index ?? 0));
+
+                return;
+            }
+
+            this.selectAyah(Number(word?.ayah_index ?? 0));
+        },
+
+        selectHoldSegment(word) {
+            if (this.interactionTargetsWords()) {
+                this.selectAyah(Number(word?.ayah_index ?? 0));
+
+                return;
+            }
+
+            this.selectWord(Number(word?.word_index ?? 0));
+        },
+
+        clearWordPressState() {
+            if (this._wordPressHoldTimer !== null) {
+                clearTimeout(this._wordPressHoldTimer);
+                this._wordPressHoldTimer = null;
+            }
+
+            this.wordPress.active = false;
+            this.wordPress.pointerId = null;
+            this.wordPress.startX = 0;
+            this.wordPress.startY = 0;
+            this.wordPress.holdTriggered = false;
+            this.wordPress.word = null;
+        },
+
+        onWordPointerDown(event, word) {
+            if (!this.isSelectableWord(word)) {
+                this.clearWordPressState();
+
+                return;
+            }
+
+            const point = this.swipePoint(event);
+
+            if (!point) {
+                this.clearWordPressState();
+
+                return;
+            }
+
+            this.clearWordPressState();
+            this.wordPress.active = true;
+            this.wordPress.pointerId = point.pointerId;
+            this.wordPress.startX = point.x;
+            this.wordPress.startY = point.y;
+            this.wordPress.holdTriggered = false;
+            this.wordPress.word = word;
+            this._wordPressHoldTimer = window.setTimeout(() => {
+                if (!this.wordPress.active || !this.wordPress.word) {
+                    return;
+                }
+
+                this.wordPress.holdTriggered = true;
+                this._suppressNextWordClick = true;
+                this.selectHoldSegment(this.wordPress.word);
+            }, 1250);
+        },
+
+        onWordPointerMove(event) {
+            if (!this.wordPress.active) {
+                return;
+            }
+
+            const point = this.swipePoint(event);
+
+            if (!point) {
+                return;
+            }
+
+            if (
+                this.wordPress.pointerId !== null &&
+                point.pointerId !== null &&
+                this.wordPress.pointerId !== point.pointerId
+            ) {
+                return;
+            }
+
+            const deltaX = Math.abs(point.x - this.wordPress.startX);
+            const deltaY = Math.abs(point.y - this.wordPress.startY);
+
+            if (deltaX > 14 || deltaY > 14) {
+                this.clearWordPressState();
+            }
+        },
+
+        onWordPointerUp() {
+            this.clearWordPressState();
+        },
+
+        onWordPointerCancel() {
+            this.clearWordPressState();
+        },
+
+        onWordPointerLeave(word) {
+            this.clearWordPressState();
+            this.clearHoveredSegment(word);
+        },
+
+        onWordClick(event, word) {
+            if (this._suppressNextWordClick) {
+                event?.preventDefault?.();
+                this._suppressNextWordClick = false;
+
+                return;
+            }
+
+            this.selectDefaultSegment(word);
+        },
+
+        setHoveredSegment(word) {
+            if (this.interactionTargetsWords()) {
+                const wordIndex = Number(word?.word_index ?? 0);
+
+                if (Number.isFinite(wordIndex) && wordIndex > 0) {
+                    this.hoveredWordIndex = Math.trunc(wordIndex);
+                    this.hoveredAyahIndex = 0;
+                }
+
+                return;
+            }
+
+            this.setHoveredAyah(Number(word?.ayah_index ?? 0));
+            this.hoveredWordIndex = 0;
+        },
+
+        clearHoveredSegment(word = null) {
+            if (word === null) {
+                this.hoveredAyahIndex = 0;
+                this.hoveredWordIndex = 0;
+
+                return;
+            }
+
+            if (this.interactionTargetsWords()) {
+                const wordIndex = Number(word?.word_index ?? 0);
+
+                if (Number.isFinite(wordIndex) && this.hoveredWordIndex === Math.trunc(wordIndex)) {
+                    this.hoveredWordIndex = 0;
+                }
+
+                return;
+            }
+
+            this.clearHoveredAyah(Number(word?.ayah_index ?? 0));
         },
 
         clearAyahSelectionOnBackground(event) {
@@ -1343,6 +1687,8 @@ document.addEventListener('alpine:init', () => {
 
             this.activeAyahIndex = 0;
             this.hoveredAyahIndex = 0;
+            this.activeWordIndex = 0;
+            this.hoveredWordIndex = 0;
         },
 
         isRectangularAyahLine(line) {
@@ -1427,12 +1773,22 @@ document.addEventListener('alpine:init', () => {
 
         isWordActive(word) {
             const ayahIndex = Number(word?.ayah_index ?? 0);
+            const wordIndex = Number(word?.word_index ?? 0);
+
+            if (this.interactionTargetsWords() || this.activeWordIndex > 0) {
+                return wordIndex > 0 && wordIndex === this.activeWordIndex;
+            }
 
             return ayahIndex > 0 && ayahIndex === this.activeAyahIndex;
         },
 
         isWordHovered(word) {
             const ayahIndex = Number(word?.ayah_index ?? 0);
+            const wordIndex = Number(word?.word_index ?? 0);
+
+            if (this.interactionTargetsWords() || this.hoveredWordIndex > 0) {
+                return wordIndex > 0 && wordIndex === this.hoveredWordIndex;
+            }
 
             return ayahIndex > 0 && ayahIndex === this.hoveredAyahIndex;
         },
@@ -1539,31 +1895,36 @@ document.addEventListener('alpine:init', () => {
             return `(${surahNumber})`;
         },
 
-        buildSurahDirectory() {
+        buildSurahDirectory(entries = null) {
+            const sourceEntries = Array.isArray(entries) ? entries : this.search.surahDirectory;
             const firstPageBySurah = new Map();
 
-            this.search.index.forEach((item) => {
-                const surahNumber = Number(item?.surah_number ?? 0);
-                const pageNumber = Number(item?.page_number ?? 0);
+            if (Array.isArray(sourceEntries) && sourceEntries.length > 0) {
+                sourceEntries.forEach((entry) => {
+                    const surahNumber = Number(entry?.surah_number ?? 0);
+                    const pageNumber = Number(entry?.page_number ?? 0);
 
-                if (surahNumber < 1 || pageNumber < 1 || firstPageBySurah.has(surahNumber)) {
-                    return;
-                }
+                    if (surahNumber < 1 || surahNumber > 114 || pageNumber < 1) {
+                        return;
+                    }
 
-                firstPageBySurah.set(surahNumber, pageNumber);
-            });
+                    if (firstPageBySurah.has(surahNumber)) {
+                        return;
+                    }
 
-            const directory = [];
-
-            for (let surahNumber = 1; surahNumber <= 114; surahNumber += 1) {
-                directory.push({
-                    surah_number: surahNumber,
-                    page_number: firstPageBySurah.get(surahNumber) ?? 1,
-                    label: this.surahLabel(surahNumber),
+                    firstPageBySurah.set(surahNumber, pageNumber);
                 });
             }
 
-            this.search.surahDirectory = directory;
+            this.search.surahDirectory = Array.from({ length: 114 }, (_, index) => {
+                const surahNumber = index + 1;
+
+                return {
+                    surah_number: surahNumber,
+                    page_number: firstPageBySurah.get(surahNumber) ?? 1,
+                    label: this.surahLabel(surahNumber),
+                };
+            });
         },
 
         surahLabel(surahNumber) {
@@ -1734,38 +2095,109 @@ document.addEventListener('alpine:init', () => {
             }, 140);
         },
 
+        isSearchModalEvent(event) {
+            const modalId = String(event?.detail?.id ?? '').trim();
+
+            if (modalId === '') {
+                return this.search.modalOpen || this._lastKnownModalOpenState;
+            }
+
+            return [this.searchModalId, this.searchModalDomId]
+                .map((value) => String(value ?? '').trim())
+                .filter((value) => value !== '')
+                .includes(modalId);
+        },
+
+        handleModalLifecycleEvent(kind, event) {
+            if (!this.isSearchModalEvent(event)) {
+                return;
+            }
+
+            if (kind === 'opened') {
+                this.handleSearchModalOpened();
+
+                return;
+            }
+
+            if (kind === 'closing' || kind === 'closed') {
+                this.handleSearchModalClosed({ kind });
+            }
+        },
+
+        ensureSearchResultAnimations() {
+            if (typeof window.autoAnimate !== 'function') {
+                return;
+            }
+
+            if (typeof this._searchResultsAutoAnimateStop === 'function') {
+                return;
+            }
+
+            const resultsContainer = this.$refs.searchResultsList;
+
+            if (!(resultsContainer instanceof Element)) {
+                return;
+            }
+
+            this._searchResultsAutoAnimateStop = window.autoAnimate(resultsContainer, {
+                duration: 230,
+                easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+            });
+        },
+
         async handleSearchModalOpened() {
             await this.warmSearchIndex();
             this.search.modalOpen = true;
+            this._lastKnownModalOpenState = true;
             this.search.query = '';
             this.search.results = [];
             this.search.readyResult = null;
             this.search.isOpen = false;
             this.activeAyahIndex = 0;
             this.hoveredAyahIndex = 0;
+            this.activeWordIndex = 0;
+            this.hoveredWordIndex = 0;
 
             await this.nextTickAsync();
+            this.ensureSearchResultAnimations();
             this.$refs.searchModalInput?.focus?.();
         },
 
-        handleSearchModalClosed() {
+        handleSearchModalClosed({ kind = 'closing' } = {}) {
             this.search.modalOpen = false;
+            this._lastKnownModalOpenState = false;
             this.search.query = '';
             this.search.results = [];
             this.search.readyResult = null;
             this.search.isOpen = false;
 
-            this.$nextTick(() => {
+            if (this._searchAbortController) {
+                this._searchAbortController.abort();
+                this._searchAbortController = null;
+            }
+
+            if (this._searchModalCloseDebounceTimer !== null) {
+                clearTimeout(this._searchModalCloseDebounceTimer);
+                this._searchModalCloseDebounceTimer = null;
+            }
+
+            const delayMs = kind === 'closed' ? 120 : 220;
+
+            this._searchModalCloseDebounceTimer = window.setTimeout(() => {
+                this._searchModalCloseDebounceTimer = null;
+
                 if (!this.ready || this.mushafLines.length === 0) {
                     return;
                 }
 
-                this.scheduleLayout({ revealDelayMs: 140 });
-            });
+                this.scheduleLayout({ revealDelayMs: 150 });
+            }, delayMs);
         },
 
         requestSearchModalClose() {
-            if (!this.searchModalId) {
+            const modalId = this.searchModalId || this.searchModalDomId;
+
+            if (!modalId) {
                 this.handleSearchModalClosed();
 
                 return;
@@ -1774,7 +2206,7 @@ document.addEventListener('alpine:init', () => {
             window.dispatchEvent(
                 new CustomEvent('close-modal', {
                     detail: {
-                        id: this.searchModalId,
+                        id: modalId,
                     },
                 }),
             );
@@ -1782,20 +2214,17 @@ document.addEventListener('alpine:init', () => {
 
         requestReaderGateNavigation(_source = 'generic') {
             this.resetSwipeState();
+            this.clearWordPressState();
             this.requestSearchModalClose();
             window.dispatchEvent(new CustomEvent('quran-go-gate'));
         },
 
         async confirmSearchSelection() {
-            if (this.search.readyResult) {
-                await this.goToSearchResult(this.search.readyResult);
-
+            if (!this.search.readyResult) {
                 return;
             }
 
-            if (this.search.results.length > 0) {
-                await this.goToSearchResult(this.search.results[0]);
-            }
+            await this.goToSearchResult(this.search.readyResult);
         },
 
         async goToSurahFromDirectory(entry) {
@@ -1804,7 +2233,32 @@ document.addEventListener('alpine:init', () => {
 
             this.requestSearchModalClose();
             this.activeAyahIndex = 0;
-            await this.goToPage(pageNumber, { direction, animate: true });
+            this.activeWordIndex = 0;
+            await this.goToPage(pageNumber, {
+                direction,
+                animate: true,
+                activeAyahIndex: 0,
+                forceRefit: true,
+            });
+            this.activeAyahIndex = 0;
+            this.activeWordIndex = 0;
+        },
+
+        searchRequestUrl(query = '') {
+            const baseUrl = String(this.api.searchIndexUrl ?? '').trim();
+
+            if (!baseUrl) {
+                return '';
+            }
+
+            if (!query) {
+                return baseUrl;
+            }
+
+            const url = new URL(baseUrl, window.location.origin);
+            url.searchParams.set('q', query);
+
+            return url.toString();
         },
 
         async warmSearchIndex() {
@@ -1823,12 +2277,11 @@ document.addEventListener('alpine:init', () => {
             this._searchIndexPromise = (async () => {
                 try {
                     const payload = await fetchJsonWithCache({
-                        url: this.api.searchIndexUrl,
+                        url: this.searchRequestUrl(),
                         cacheName: this.cacheNames.search,
                         preferCache: true,
                     });
 
-                    this.search.index = Array.isArray(payload?.items) ? payload.items : [];
                     if (
                         payload &&
                         typeof payload === 'object' &&
@@ -1838,15 +2291,15 @@ document.addEventListener('alpine:init', () => {
                         this.search.surahNames = payload.surah_names;
                     }
 
-                    this.buildSurahDirectory();
+                    const surahDirectory = Array.isArray(payload?.surah_directory)
+                        ? payload.surah_directory
+                        : [];
+
+                    this.buildSurahDirectory(surahDirectory);
                     this.refreshSurahTriggerCaption(false);
                     this.search.isReady = true;
                 } catch (_) {
-                    this.search.index = [];
-
-                    if (Object.keys(this.search.surahNames ?? {}).length > 0) {
-                        this.buildSurahDirectory();
-                    }
+                    this.buildSurahDirectory([]);
 
                     this.search.isReady = false;
                 } finally {
@@ -1865,6 +2318,7 @@ document.addEventListener('alpine:init', () => {
                 this.search.results = [];
                 this.search.isOpen = false;
                 this.search.readyResult = null;
+                this.search.isLoading = false;
 
                 return;
             }
@@ -1873,6 +2327,12 @@ document.addEventListener('alpine:init', () => {
                 this.search.results = [];
                 this.search.isOpen = false;
                 this.search.readyResult = null;
+                this.search.isLoading = false;
+
+                if (this._searchAbortController) {
+                    this._searchAbortController.abort();
+                    this._searchAbortController = null;
+                }
 
                 return;
             }
@@ -1885,30 +2345,75 @@ document.addEventListener('alpine:init', () => {
                 this.search.results = [];
                 this.search.isOpen = false;
                 this.search.readyResult = null;
+                this.search.isLoading = false;
 
                 return;
             }
 
-            const results = [];
-
-            for (const item of this.search.index) {
-                const typed = this.normalizeSearchQuery(item?.text_searchable_typed ?? '');
-                const plain = this.normalizeSearchQuery(item?.text_uthmani ?? '');
-
-                if (!typed.includes(normalizedQuery) && !plain.includes(normalizedQuery)) {
-                    continue;
-                }
-
-                results.push(item);
-
-                if (results.length >= 24) {
-                    break;
-                }
+            if (this._searchAbortController) {
+                this._searchAbortController.abort();
             }
 
-            this.search.results = results;
-            this.search.isOpen = results.length > 0;
-            this.search.readyResult = results.length === 1 ? results[0] : null;
+            const requestSerial = ++this._searchRequestSerial;
+            const abortController = new AbortController();
+            this._searchAbortController = abortController;
+            this.search.isLoading = true;
+
+            try {
+                const searchUrl = this.searchRequestUrl(normalizedQuery);
+
+                if (!searchUrl) {
+                    this.search.results = [];
+                    this.search.isOpen = false;
+                    this.search.readyResult = null;
+
+                    return;
+                }
+
+                const response = await fetch(searchUrl, {
+                    credentials: 'same-origin',
+                    cache: 'no-store',
+                    signal: abortController.signal,
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Unexpected search response ${response.status}`);
+                }
+
+                const payload = await response.json();
+
+                if (requestSerial !== this._searchRequestSerial) {
+                    return;
+                }
+
+                const results = Array.isArray(payload?.items) ? payload.items.slice(0, 24) : [];
+                this.search.results = results;
+                this.search.isOpen = results.length > 0;
+                this.search.readyResult = results.length === 1 ? results[0] : null;
+                this.$nextTick(() => {
+                    this.ensureSearchResultAnimations();
+                });
+            } catch (error) {
+                if (error?.name === 'AbortError') {
+                    return;
+                }
+
+                if (requestSerial !== this._searchRequestSerial) {
+                    return;
+                }
+
+                this.search.results = [];
+                this.search.isOpen = false;
+                this.search.readyResult = null;
+            } finally {
+                if (requestSerial === this._searchRequestSerial) {
+                    this.search.isLoading = false;
+                }
+
+                if (this._searchAbortController === abortController) {
+                    this._searchAbortController = null;
+                }
+            }
         },
 
         async goToSearchResult(result) {
@@ -1921,7 +2426,9 @@ document.addEventListener('alpine:init', () => {
                 direction,
                 animate: true,
                 activeAyahIndex: ayahIndex,
+                forceRefit: true,
             });
+            this.activeWordIndex = 0;
         },
     }));
 });

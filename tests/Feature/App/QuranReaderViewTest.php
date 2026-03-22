@@ -81,7 +81,10 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderViewSource)->toContain('quran-ayah-line-run-centered')
         ->and($quranReaderViewSource)->toContain('x-data="quranAppReader({')
         ->and($quranReaderViewSource)->toContain("searchModalId: @js('fi-' . \$this->getId() . '-action-0')")
-        ->and($quranReaderViewSource)->toContain('x-on:x-modal-opened.window="if ($event.detail?.id === searchModalId) handleSearchModalOpened()"')
+        ->and($quranReaderViewSource)->toContain("x-on:x-modal-opened.window=\"handleModalLifecycleEvent('opened', \$event)\"")
+        ->and($quranReaderViewSource)->toContain("x-on:close-modal.window=\"handleModalLifecycleEvent('closing', \$event)\"")
+        ->and($quranReaderViewSource)->toContain("x-on:x-modal-closed.window=\"handleModalLifecycleEvent('closed', \$event)\"")
+        ->and($quranReaderViewSource)->toContain('x-on:control-panel-updated.window="applyControlPanelSettings($event.detail?.controlPanel ?? {})"')
         ->and($quranReaderViewSource)->toContain("\$wire.mountAction('searchQuran');")
         ->and($quranReaderViewSource)->toContain('{{ $this->pageJumpForm }}')
         ->and($quranReaderViewSource)->toContain('<x-filament-actions::modals />')
@@ -97,6 +100,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranSearchModalViewSource)->toContain('quran-search-shell')
         ->and($quranSearchModalViewSource)->toContain('quran-search-results-shell')
         ->and($quranSearchModalViewSource)->toContain('quran-surah-grid')
+        ->and($quranSearchModalViewSource)->toContain('x-ref="searchResultsList"')
         ->and($quranSearchModalViewSource)->toContain('goToSearchResult(result)')
         ->and($quranSearchModalViewSource)->toContain('goToSurahFromDirectory(entry)');
 
@@ -131,6 +135,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
 
     expect($appJsSource)->not->toBeFalse()
         ->and($appJsSource)->toContain("import './support/alpine/data/quran-app-gate';")
+        ->and($appJsSource)->toContain("import './packages/auto-animate';")
         ->and($appJsSource)->toContain("import './support/alpine/data/quran-app-reader';");
 
     expect($filamentComponentsCssSource)->not->toBeFalse()

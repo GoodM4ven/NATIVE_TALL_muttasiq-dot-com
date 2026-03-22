@@ -251,6 +251,7 @@
         min-height: 2.2rem;
         border-radius: 999px;
         direction: rtl;
+        align-items: center;
         background: linear-gradient(
             176deg,
             color-mix(in srgb, var(--gray-200) 70%, transparent),
@@ -263,6 +264,8 @@
 
     #quran-reader-page-counter-field .fi-input-wrp-content-ctn {
         min-width: 4.5rem;
+        display: flex;
+        align-items: center;
     }
 
     #quran-reader-page-counter-input::-webkit-outer-spin-button,
@@ -271,7 +274,18 @@
         margin: 0;
     }
 
+    #quran-reader-page-counter-field input[type='number']::-webkit-outer-spin-button,
+    #quran-reader-page-counter-field input[type='number']::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
     #quran-reader-page-counter-input[type='number'] {
+        -moz-appearance: textfield;
+        appearance: textfield;
+    }
+
+    #quran-reader-page-counter-field input[type='number'] {
         -moz-appearance: textfield;
         appearance: textfield;
     }
@@ -289,6 +303,8 @@
     }
 
     #quran-reader-page-counter-field .fi-input-wrp-suffix .fi-input-wrp-label {
+        display: inline-flex;
+        align-items: center;
         font-family: 'IBM Plex Sans Arabic', 'Manrope', ui-sans-serif, system-ui, sans-serif;
         font-size: 0.75rem;
         font-weight: 600;

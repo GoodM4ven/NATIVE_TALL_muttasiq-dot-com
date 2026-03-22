@@ -137,7 +137,9 @@
             white-space: nowrap;
             line-height: 1.02;
             cursor: default;
-            transition: background-color 140ms ease;
+            transition:
+                background-color 320ms ease,
+                color 260ms ease;
         }
 
         .quran-word-button.quran-segment-hovered {
@@ -463,15 +465,22 @@
         .quran-swipe-hint {
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 0.2rem;
+            min-height: 2.2rem;
+            align-self: center;
             color: color-mix(in srgb, var(--quran-subtle) 86%, transparent);
             opacity: 0.88;
         }
 
         .quran-swipe-hint-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             border: 0;
             background: transparent;
             padding: 0.1rem 0.25rem;
+            min-height: 2.2rem;
             cursor: pointer;
             transition:
                 opacity 160ms ease,
@@ -495,6 +504,7 @@
             animation: quran-swipe-shimmer 1400ms ease-in-out infinite;
             font-size: 2rem;
             line-height: 1;
+            vertical-align: middle;
         }
 
         .quran-swipe-hint-chev:nth-child(1) {
@@ -523,6 +533,13 @@
 
         .quran-swipe-hint-chev.quran-swipe-hint-chev-opposite:nth-child(3) {
             animation-delay: 930ms;
+        }
+
+        .quran-reader--visual-enhancements-disabled .quran-swipe-hint-chev,
+        .quran-reader--visual-enhancements-disabled .quran-swipe-hint-chev.quran-swipe-hint-chev-opposite {
+            animation: none !important;
+            opacity: 0.7;
+            transform: none;
         }
 
         @keyframes quran-swipe-shimmer {
@@ -610,10 +627,15 @@
         prewarmPages: @js(is_platform('native') ? 12 : 6),
         prefetchRadius: @js(is_platform('native') ? 3 : 2),
         searchModalId: @js('fi-' . $this->getId() . '-action-0'),
+        searchModalDomId: @js('quran-reader-search-modal'),
+        settings: @js($quranReaderSettings ?? ['enableVisualEnhancements' => true, 'targetWordsByDefault' => false]),
     })"
-    x-on:x-modal-opened.window="if ($event.detail?.id === searchModalId) handleSearchModalOpened()"
-    x-on:close-modal.window="if ($event.detail?.id === searchModalId) handleSearchModalClosed()"
-    x-on:close-modal-quietly.window="if ($event.detail?.id === searchModalId) handleSearchModalClosed()"
+    x-bind:class="{ 'quran-reader--visual-enhancements-disabled': !doesEnableVisualEnhancements }"
+    x-on:control-panel-updated.window="applyControlPanelSettings($event.detail?.controlPanel ?? {})"
+    x-on:x-modal-opened.window="handleModalLifecycleEvent('opened', $event)"
+    x-on:close-modal.window="handleModalLifecycleEvent('closing', $event)"
+    x-on:close-modal-quietly.window="handleModalLifecycleEvent('closing', $event)"
+    x-on:x-modal-closed.window="handleModalLifecycleEvent('closed', $event)"
 >
     @if (!$ready)
         <section
@@ -711,7 +733,7 @@
                             x-bind:data-fit-state="isFittingPage ? 'fitting' : 'ready'"
                             x-bind:style="pageContentStyle()"
                             x-on:click="clearAyahSelectionOnBackground($event)"
-                            x-on:mouseleave="clearHoveredAyah()"
+                            x-on:mouseleave="clearHoveredSegment()"
                             x-ref="pageContent"
                         >
                             <template
@@ -743,11 +765,16 @@
                                                             'quran-segment-active': isWordActive(word),
                                                             'quran-segment-hovered': isWordHovered(word),
                                                         }"
-                                                        x-bind:disabled="!(Number(word?.ayah_index ?? 0) > 0)"
-                                                        x-on:click.stop="selectAyah(Number(word?.ayah_index ?? 0))"
-                                                        x-on:mouseenter="setHoveredAyah(Number(word?.ayah_index ?? 0))"
-                                                        x-on:focus="setHoveredAyah(Number(word?.ayah_index ?? 0))"
-                                                        x-on:blur="clearHoveredAyah(Number(word?.ayah_index ?? 0))"
+                                                        x-bind:disabled="!isSelectableWord(word)"
+                                                        x-on:pointerdown="onWordPointerDown($event, word)"
+                                                        x-on:pointermove="onWordPointerMove($event)"
+                                                        x-on:pointerup="onWordPointerUp($event)"
+                                                        x-on:pointercancel="onWordPointerCancel()"
+                                                        x-on:mouseleave="onWordPointerLeave(word)"
+                                                        x-on:click.stop="onWordClick($event, word)"
+                                                        x-on:mouseenter="setHoveredSegment(word)"
+                                                        x-on:focus="setHoveredSegment(word)"
+                                                        x-on:blur="clearHoveredSegment(word)"
                                                         x-text="word.text"
                                                     ></button>
                                                     <template x-if="showAyahMarker(word)">

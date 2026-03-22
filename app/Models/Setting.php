@@ -15,6 +15,8 @@ class Setting extends Model
 
     public const GROUP_ATHKAR = 'athkar';
 
+    public const GROUP_QURAN = 'quran';
+
     public const DOES_AUTOMATICALLY_SWITCH_COMPLETED_ATHKAR = 'does_automatically_switch_completed_athkar';
 
     public const DOES_CLICKING_SWITCH_ATHKAR_TOO = 'does_clicking_switch_athkar_too';
@@ -24,6 +26,8 @@ class Setting extends Model
     public const DOES_ENABLE_VISUAL_ENHANCEMENTS = 'enable_visual_enhancements';
 
     public const DOES_SKIP_GUIDANCE_PANELS = 'does_skip_notice_panels';
+
+    public const DOES_QURAN_TARGET_WORDS_BY_DEFAULT = 'does_quran_target_words_by_default';
 
     public const MINIMUM_MAIN_TEXT_SIZE = 'minimum_main_text_size';
 
@@ -93,6 +97,13 @@ class Setting extends Model
                 'default' => false,
                 'label' => '3. تجاوز رسائل التعريف والتهنئة والتلميحات المساعدة.',
                 'group' => self::GROUP_GENERAL,
+                'type' => 'boolean',
+            ],
+            self::DOES_QURAN_TARGET_WORDS_BY_DEFAULT => [
+                'default' => false,
+                'label' => '1. توجيه التحويم والضغط المباشر في قارئ القرآن إلى الكلمات بدل الآيات.',
+                'help' => 'عند التعطيل: الضغط المطوّل لمدة 1.25 ثانية يستهدف الكلمة بدل الآية. وعند التفعيل ينعكس السلوك.',
+                'group' => self::GROUP_QURAN,
                 'type' => 'boolean',
             ],
         ];

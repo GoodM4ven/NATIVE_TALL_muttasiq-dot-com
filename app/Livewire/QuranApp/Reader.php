@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Livewire\QuranApp;
 
+use App\Models\Setting;
 use App\Services\Quran\QuranReaderDataService;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
@@ -94,8 +95,8 @@ class Reader extends Component implements HasActions, HasSchemas
                         'id' => 'quran-reader-page-counter-input',
                         'x-model.number' => 'pageInput',
                         'x-on:input' => 'onPageInputInput()',
-                        'x-on:change.stop' => '$dispatch(\'quran-go-page\', { page: $event.target.value })',
-                        'x-on:keydown.enter.prevent' => '$dispatch(\'quran-go-page\', { page: $event.target.value })',
+                        'x-on:blur' => 'onPageInputBlur()',
+                        'x-on:keydown.enter.prevent' => 'onPageInputCommit({ force: false })',
                         'x-bind:max' => 'Math.max(1, maxPage)',
                         'class' => 'quran-page-counter-input tabular-nums',
                     ], merge: true),
@@ -140,12 +141,24 @@ class Reader extends Component implements HasActions, HasSchemas
         $readerDataService = app(QuranReaderDataService::class);
         $readerData = $readerDataService->resolvePage($this->pageNumber, $this->activeAyahIndex);
         $surahNames = $readerDataService->surahNames();
+        $storedSettings = Setting::query()
+            ->whereIn('name', array_keys(Setting::defaults()))
+            ->pluck('value', 'name')
+            ->all();
+        $normalizedSettings = Setting::normalizeSettings(
+            array_replace(Setting::defaults(), $storedSettings),
+        );
+        $quranReaderSettings = [
+            'enableVisualEnhancements' => (bool) ($normalizedSettings[Setting::DOES_ENABLE_VISUAL_ENHANCEMENTS] ?? true),
+            'targetWordsByDefault' => (bool) ($normalizedSettings[Setting::DOES_QURAN_TARGET_WORDS_BY_DEFAULT] ?? false),
+        ];
         $this->maxPage = max(1, $readerData['maxPage']);
 
         if (! $readerData['ready']) {
             return view('livewire.quran-app.reader', [
                 ...$readerData,
                 'surahNames' => $surahNames,
+                'quranReaderSettings' => $quranReaderSettings,
             ]);
         }
 
@@ -164,6 +177,7 @@ class Reader extends Component implements HasActions, HasSchemas
         return view('livewire.quran-app.reader', [
             ...$readerData,
             'surahNames' => $surahNames,
+            'quranReaderSettings' => $quranReaderSettings,
         ]);
     }
 }

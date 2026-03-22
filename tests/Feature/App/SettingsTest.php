@@ -17,6 +17,9 @@ it('composes and executes the control panel lifecycle without persisting runtime
         ->toContain(HasControlPanelChangelogsTab::class)
         ->toContain(HasControlPanelAboutTab::class);
 
+    expect(Setting::definitionsForGroup(Setting::GROUP_QURAN))
+        ->toHaveKey(Setting::DOES_QURAN_TARGET_WORDS_BY_DEFAULT);
+
     Setting::query()->firstOrCreate(
         ['name' => Setting::DOES_SKIP_GUIDANCE_PANELS],
         ['value' => false],
@@ -30,6 +33,7 @@ it('composes and executes the control panel lifecycle without persisting runtime
         Setting::DOES_PREVENT_SWITCHING_ATHKAR_UNTIL_COMPLETION => false,
         Setting::DOES_SKIP_GUIDANCE_PANELS => true,
         Setting::DOES_ENABLE_VISUAL_ENHANCEMENTS => false,
+        Setting::DOES_QURAN_TARGET_WORDS_BY_DEFAULT => true,
         Setting::MINIMUM_MAIN_TEXT_SIZE => 18,
         Setting::MAXIMUM_MAIN_TEXT_SIZE => 20,
     ];

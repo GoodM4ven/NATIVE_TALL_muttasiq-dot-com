@@ -34,6 +34,7 @@
         <div
             class="quran-search-results"
             x-cloak
+            x-ref="searchResultsList"
             x-show="search.results.length > 0"
             x-transition:enter="transition duration-260 ease-out"
             x-transition:enter-start="opacity-0 translate-y-1"
@@ -43,12 +44,13 @@
             x-transition:leave-end="opacity-0 -translate-y-1"
         >
             <template
-                x-for="result in search.results"
+                x-for="(result, resultIndex) in search.results"
                 :key="`quran-search-modal-${result.id}`"
             >
                 <button
                     class="quran-search-result-btn"
                     type="button"
+                    x-bind:tabindex="resultIndex === 0 ? 0 : -1"
                     x-on:click="goToSearchResult(result)"
                 >
                     <span
