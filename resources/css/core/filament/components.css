@@ -89,12 +89,26 @@
             0 10px 28px color-mix(in srgb, var(--warning-500) 22%, transparent);
     }
 
+    #quran-reader-search-modal .quran-search-field-wrapper .fi-input-wrp-input {
+        display: flex;
+        align-items: center;
+    }
+
     #quran-reader-search-modal .quran-search-field-wrapper .fi-input {
         direction: rtl;
         text-align: right;
         font-size: 1rem;
         font-weight: 600;
+        min-height: 2.25rem;
+        line-height: 2.25rem;
+        padding-block: 0;
         color: color-mix(in srgb, var(--primary-900) 88%, var(--quran-panel-text));
+    }
+
+    #quran-reader-search-modal #quran-reader-search-input {
+        min-height: 2.25rem;
+        line-height: 2.25rem;
+        padding-block: 0;
     }
 
     #quran-reader-search-modal .quran-search-field-wrapper .fi-input::placeholder {
@@ -174,15 +188,36 @@
 
     .quran-surah-grid-shell {
         margin-top: 0.2rem;
+        padding-bottom: 0.2rem;
     }
 
     .quran-surah-grid-caption {
-        margin-bottom: 0.42rem;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.8rem;
         text-align: center;
         font-size: 0.78rem;
         font-weight: 700;
         letter-spacing: 0.01em;
         color: color-mix(in srgb, var(--warning-700) 62%, var(--quran-panel-text));
+        padding: 0.18rem 0 0.8rem;
+    }
+
+    .quran-surah-grid-caption::before,
+    .quran-surah-grid-caption::after {
+        content: '';
+        display: block;
+        flex: 1;
+        max-width: 14rem;
+        height: 1px;
+        background: linear-gradient(
+            90deg,
+            transparent 0%,
+            color-mix(in srgb, var(--warning-400) 44%, transparent) 52%,
+            transparent 100%
+        );
     }
 
     .quran-surah-grid {

@@ -112,7 +112,9 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderScriptSource)->toContain('const wordPressHoldDelayMs = 750;')
         ->and($quranReaderScriptSource)->toContain("search: 'quran-reader-search-v3'")
         ->and($quranReaderScriptSource)->toContain('_pendingPageInputTarget: null')
+        ->and($quranReaderScriptSource)->toContain('_skipNextSearchModalCloseLayout: false')
         ->and($quranReaderScriptSource)->toContain('deriveSurahDirectoryFromItems(items = [])')
+        ->and($quranReaderScriptSource)->toContain('requestSearchModalClose({ skipLayout = false } = {})')
         ->and($quranReaderScriptSource)->toContain('if (this.activeAyahIndex > 0)');
 
     expect($quranReaderClassSource)->not->toBeFalse()
@@ -135,6 +137,9 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderDataServiceSource)->toContain("'format' => 'woff2'")
         ->and($quranReaderDataServiceSource)->toContain('quran-reader-page-v2')
         ->and($quranReaderDataServiceSource)->toContain('quran-reader-search-index-v1')
+        ->and($quranReaderDataServiceSource)->toContain('prepareSearchTokens(array $tokens): array')
+        ->and($quranReaderDataServiceSource)->toContain('collapseVocativeSpacingInPhrase(string $text): string')
+        ->and($quranReaderDataServiceSource)->toContain('stripVocativeParticlesFromPhrase(string $text): string')
         ->and($quranReaderDataServiceSource)->toContain("selectRaw('verse_id, MIN(ayah_index) AS ayah_index')")
         ->and($quranReaderDataServiceSource)->toContain("->groupBy('verse_id')");
 
@@ -156,6 +161,8 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($filamentComponentsCssSource)->toContain('.quran-search-shell')
         ->and($filamentComponentsCssSource)->toContain('.quran-page-counter-field')
         ->and($filamentComponentsCssSource)->toContain('#quran-reader-page-counter-input')
+        ->and($filamentComponentsCssSource)->toContain('#quran-reader-search-input')
+        ->and($filamentComponentsCssSource)->toContain('.quran-surah-grid-caption::before')
         ->and($filamentComponentsCssSource)->toContain('.fi-input-wrp-suffix .fi-input-wrp-label');
 });
 

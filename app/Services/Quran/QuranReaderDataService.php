@@ -342,10 +342,10 @@ class QuranReaderDataService
      */
     private function buildSearchMatches(string $searchQuery, int $limit, bool $hasTypedWordColumn): array
     {
-        $tokens = array_values(array_unique(array_filter(
+        $tokens = $this->prepareSearchTokens(array_values(array_unique(array_filter(
             preg_split('/\s+/u', trim($searchQuery)) ?: [],
             static fn (string $token): bool => $token !== '',
-        )));
+        ))));
 
         if ($tokens === []) {
             return [];
@@ -799,6 +799,8 @@ class QuranReaderDataService
         }
 
         $withoutConjunctions = $this->stripLeadingConjunctionsFromPhrase($trimmed);
+        $collapsedVocative = $this->collapseVocativeSpacingInPhrase($trimmed);
+        $withoutVocative = $this->stripVocativeParticlesFromPhrase($trimmed);
         $variants = [
             $trimmed,
             strtr($trimmed, ['ي' => 'ی', 'ى' => 'ی', 'ك' => 'ک']),
@@ -806,6 +808,10 @@ class QuranReaderDataService
             strtr($trimmed, ['الرحمن' => 'الرحمان', 'رحمن' => 'رحمان']),
             strtr($trimmed, ['الرحمان' => 'الرحمن', 'رحمان' => 'رحمن']),
             $withoutConjunctions,
+            $collapsedVocative,
+            $this->collapseVocativeSpacingInPhrase($withoutConjunctions),
+            $withoutVocative,
+            $this->stripVocativeParticlesFromPhrase($withoutConjunctions),
             $this->normalizeQuestionVerbSpellingsInPhrase($trimmed),
             $this->normalizeQuestionVerbSpellingsInPhrase($withoutConjunctions),
         ];
@@ -840,6 +846,51 @@ class QuranReaderDataService
         }
 
         return trim(implode(' ', $normalized));
+    }
+
+    /**
+     * @param  array<int, string>  $tokens
+     * @return array<int, string>
+     */
+    private function prepareSearchTokens(array $tokens): array
+    {
+        $normalized = [];
+
+        foreach ($tokens as $token) {
+            $value = trim($token);
+
+            if ($value === '') {
+                continue;
+            }
+
+            if ($value === 'يا') {
+                continue;
+            }
+
+            if (mb_strlen($value) < 2) {
+                continue;
+            }
+
+            $normalized[$value] = true;
+        }
+
+        if ($normalized !== []) {
+            return array_keys($normalized);
+        }
+
+        $fallback = [];
+
+        foreach ($tokens as $token) {
+            $value = trim($token);
+
+            if ($value === '') {
+                continue;
+            }
+
+            $fallback[$value] = true;
+        }
+
+        return array_keys($fallback);
     }
 
     private function normalizeQuestionVerbToken(string $token): string
@@ -895,6 +946,16 @@ class QuranReaderDataService
         }
 
         return trim(implode(' ', $normalized));
+    }
+
+    private function collapseVocativeSpacingInPhrase(string $text): string
+    {
+        return trim((string) (preg_replace('/(^|\s)يا\s+([\p{Arabic}]+)/u', '$1يا$2', trim($text)) ?? $text));
+    }
+
+    private function stripVocativeParticlesFromPhrase(string $text): string
+    {
+        return trim((string) (preg_replace('/(^|\s)يا\s+/u', '$1', trim($text)) ?? $text));
     }
 
     private function stripLeadingConjunction(string $token): string

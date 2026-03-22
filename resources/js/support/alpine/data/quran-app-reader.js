@@ -261,6 +261,7 @@ document.addEventListener('alpine:init', () => {
         _wordPressHoldTimer: null,
         _suppressNextWordClick: false,
         _pendingPageInputTarget: null,
+        _skipNextSearchModalCloseLayout: false,
         _lastKnownModalOpenState: false,
         wordPress: {
             active: false,
@@ -644,23 +645,11 @@ document.addEventListener('alpine:init', () => {
         onPageInputInput() {
             if (this._pageInputCommitTimer !== null) {
                 clearTimeout(this._pageInputCommitTimer);
-            }
-
-            this._pageInputCommitTimer = window.setTimeout(() => {
                 this._pageInputCommitTimer = null;
-                this.onPageInputCommit();
-            }, 220);
+            }
         },
 
         async onPageInputBlur() {
-            if (this._pageInputCommitTimer !== null) {
-                clearTimeout(this._pageInputCommitTimer);
-                this._pageInputCommitTimer = null;
-                await this.onPageInputCommit({ force: true });
-
-                return;
-            }
-
             const targetPage = clampPage(this.pageInput, this.maxPage);
 
             if (
@@ -2207,6 +2196,7 @@ document.addEventListener('alpine:init', () => {
             await this.warmSearchIndex();
             this.search.modalOpen = true;
             this._lastKnownModalOpenState = true;
+            this._skipNextSearchModalCloseLayout = false;
             this.search.query = '';
             this.search.results = [];
             this.search.readyResult = null;
@@ -2239,6 +2229,12 @@ document.addEventListener('alpine:init', () => {
                 this._searchModalCloseDebounceTimer = null;
             }
 
+            if (this._skipNextSearchModalCloseLayout) {
+                this._skipNextSearchModalCloseLayout = false;
+
+                return;
+            }
+
             const delayMs = kind === 'closed' ? 120 : 220;
 
             this._searchModalCloseDebounceTimer = window.setTimeout(() => {
@@ -2252,8 +2248,12 @@ document.addEventListener('alpine:init', () => {
             }, delayMs);
         },
 
-        requestSearchModalClose() {
+        requestSearchModalClose({ skipLayout = false } = {}) {
             const modalId = this.searchModalId || this.searchModalDomId;
+
+            if (skipLayout) {
+                this._skipNextSearchModalCloseLayout = true;
+            }
 
             if (!modalId) {
                 this.handleSearchModalClosed();
@@ -2273,7 +2273,7 @@ document.addEventListener('alpine:init', () => {
         requestReaderGateNavigation(_source = 'generic') {
             this.resetSwipeState();
             this.clearWordPressState();
-            this.requestSearchModalClose();
+            this.requestSearchModalClose({ skipLayout: true });
             window.dispatchEvent(new CustomEvent('quran-go-gate'));
         },
 
@@ -2289,7 +2289,7 @@ document.addEventListener('alpine:init', () => {
             const pageNumber = clampPage(Number(entry?.page_number ?? 1), this.maxPage);
             const direction = pageNumber >= this.pageNumber ? 'next' : 'prev';
 
-            this.requestSearchModalClose();
+            this.requestSearchModalClose({ skipLayout: true });
             this.activeAyahIndex = 0;
             this.activeWordIndex = 0;
             await this.goToPage(pageNumber, {
@@ -2492,7 +2492,7 @@ document.addEventListener('alpine:init', () => {
             const ayahIndex = Math.max(0, Math.trunc(Number(result?.ayah_index ?? 0)));
             const direction = targetPage >= this.pageNumber ? 'next' : 'prev';
 
-            this.requestSearchModalClose();
+            this.requestSearchModalClose({ skipLayout: true });
             await this.goToPage(targetPage, {
                 direction,
                 animate: true,

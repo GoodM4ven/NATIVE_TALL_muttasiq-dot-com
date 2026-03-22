@@ -16,8 +16,8 @@
             --quran-chip-bg: color-mix(in srgb, var(--background-dark) 66%, transparent);
             --quran-chip-border: color-mix(in srgb, var(--primary-500) 35%, transparent);
             --quran-chip-hover: color-mix(in srgb, var(--primary-500) 16%, transparent);
-            --quran-active-bg: color-mix(in srgb, var(--success-500) 24%, transparent);
-            --quran-active-text: color-mix(in srgb, var(--success-600) 82%, var(--primary-900));
+            --quran-active-bg: color-mix(in srgb, var(--success-300) 30%, transparent);
+            --quran-active-text: color-mix(in srgb, var(--success-500) 78%, var(--primary-900));
             --quran-page-surface: color-mix(in srgb, var(--background) 86%, transparent);
             --quran-page-border: color-mix(in srgb, var(--warning-300) 58%, transparent);
             --quran-page-scale: 1;
@@ -100,8 +100,8 @@
             --quran-chip-bg: color-mix(in srgb, var(--gray-950) 44%, transparent);
             --quran-chip-border: color-mix(in srgb, var(--primary-200) 42%, transparent);
             --quran-chip-hover: color-mix(in srgb, var(--primary-300) 25%, transparent);
-            --quran-active-bg: color-mix(in srgb, var(--success-400) 28%, transparent);
-            --quran-active-text: color-mix(in srgb, var(--success-200) 82%, white);
+            --quran-active-bg: color-mix(in srgb, var(--success-300) 24%, transparent);
+            --quran-active-text: color-mix(in srgb, var(--success-100) 90%, white);
             --quran-page-surface: color-mix(in srgb, var(--gray-950) 44%, transparent);
             --quran-page-border: color-mix(in srgb, var(--gray-700) 65%, transparent);
         }
@@ -138,17 +138,21 @@
             line-height: 1.02;
             cursor: default;
             transition:
-                background-color 320ms ease,
-                color 260ms ease;
+                background-color 420ms cubic-bezier(0.22, 1, 0.36, 1),
+                color 340ms cubic-bezier(0.22, 1, 0.36, 1),
+                box-shadow 420ms cubic-bezier(0.22, 1, 0.36, 1);
+            will-change: background-color, color, box-shadow;
         }
 
         .quran-word-button.quran-segment-hovered {
-            background-color: color-mix(in srgb, var(--gray-300) 42%, transparent);
+            background-color: color-mix(in srgb, var(--gray-300) 34%, transparent);
+            box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--success-300) 32%, transparent);
         }
 
         .quran-word-button.quran-segment-active {
             background: var(--quran-active-bg);
             color: var(--quran-active-text);
+            box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--success-400) 36%, transparent);
         }
 
         .quran-ayah-marker {
