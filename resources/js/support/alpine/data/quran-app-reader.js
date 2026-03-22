@@ -11,6 +11,7 @@ const defaultPagePayload = Object.freeze({
     surahHeaderFontUrl: null,
     surahHeaderFontFormat: null,
     surahNames: null,
+    surahDirectory: null,
     useCenteredAyahLayout: true,
 });
 
@@ -33,6 +34,7 @@ const normalizePayload = (payload = {}) => ({
     surahHeaderFontFormat: payload?.surahHeaderFontFormat ?? null,
     surahNames:
         payload?.surahNames && typeof payload.surahNames === 'object' ? payload.surahNames : null,
+    surahDirectory: Array.isArray(payload?.surahDirectory) ? payload.surahDirectory : null,
     useCenteredAyahLayout: Boolean(payload?.useCenteredAyahLayout),
 });
 
@@ -212,6 +214,12 @@ document.addEventListener('alpine:init', () => {
         surahTriggerSurahNumber: 1,
         pageMotionTimer: null,
         pageScale: 1,
+        pageCounterPulse: {
+            isActive: false,
+            hasChanges: false,
+            segments: [],
+            timer: null,
+        },
         swipe: {
             active: false,
             startX: 0,
@@ -265,9 +273,10 @@ document.addEventListener('alpine:init', () => {
         _searchModalCloseDebounceTimer: null,
         _wordPressHoldTimer: null,
         _suppressNextWordClick: false,
-        _pendingPageInputTarget: null,
         _skipNextSearchModalCloseLayout: false,
         _lastKnownModalOpenState: false,
+        _lastPageInputCommitPage: 0,
+        _lastPageInputCommitAt: 0,
         wordPress: {
             active: false,
             pointerId: null,
@@ -280,6 +289,12 @@ document.addEventListener('alpine:init', () => {
         init() {
             this.applyPayload(this.initialPayload, { setPageNumber: true });
             this.applyControlPanelSettings(this.initialSettings);
+            this.buildSurahDirectory(
+                Array.isArray(this.initialPayload.surahDirectory) &&
+                    this.initialPayload.surahDirectory.length > 0
+                    ? this.initialPayload.surahDirectory
+                    : this.search.surahDirectory,
+            );
             this.refreshSurahTriggerCaption(false);
 
             const restoredPage = clampPage(
@@ -404,6 +419,11 @@ document.addEventListener('alpine:init', () => {
                 this._wordPressHoldTimer = null;
             }
 
+            if (this.pageCounterPulse.timer !== null) {
+                clearTimeout(this.pageCounterPulse.timer);
+                this.pageCounterPulse.timer = null;
+            }
+
             if (this._searchAbortController) {
                 this._searchAbortController.abort();
                 this._searchAbortController = null;
@@ -502,6 +522,60 @@ document.addEventListener('alpine:init', () => {
             await this.goToPage(normalizedPage, { animate: false });
         },
 
+        buildDigitMorphSegments(previousValue, nextValue) {
+            const previous = String(previousValue ?? '');
+            const next = String(nextValue ?? '');
+            const length = Math.max(previous.length, next.length);
+            const previousChars = previous.padStart(length, ' ').split('');
+            const nextChars = next.padStart(length, ' ').split('');
+
+            const segments = nextChars
+                .map((nextChar, index) => {
+                    const previousChar = previousChars[index] ?? '';
+                    const prev = previousChar === ' ' ? '' : previousChar;
+                    const nextValueChar = nextChar === ' ' ? '' : nextChar;
+
+                    return {
+                        key: `${index}:${prev}->${nextValueChar}`,
+                        prev,
+                        next: nextValueChar,
+                        changed: prev !== nextValueChar,
+                    };
+                })
+                .filter((segment) => segment.prev !== '' || segment.next !== '');
+
+            return {
+                segments,
+                hasChanges: segments.some((segment) => segment.changed),
+            };
+        },
+
+        triggerPageCounterPulse(previousValue, nextValue) {
+            if (this.pageCounterPulse.timer !== null) {
+                clearTimeout(this.pageCounterPulse.timer);
+                this.pageCounterPulse.timer = null;
+            }
+
+            const morph = this.buildDigitMorphSegments(previousValue, nextValue);
+
+            this.pageCounterPulse.isActive = false;
+            this.pageCounterPulse.segments = morph.segments;
+            this.pageCounterPulse.hasChanges = morph.hasChanges;
+
+            if (!morph.hasChanges) {
+                return;
+            }
+
+            requestAnimationFrame(() => {
+                this.pageCounterPulse.isActive = true;
+            });
+
+            this.pageCounterPulse.timer = window.setTimeout(() => {
+                this.pageCounterPulse.isActive = false;
+                this.pageCounterPulse.timer = null;
+            }, 540);
+        },
+
         navigationBasePage() {
             const pendingTargetPage = Number(this._pendingNavigationRequest?.targetPage ?? 0);
 
@@ -510,6 +584,16 @@ document.addEventListener('alpine:init', () => {
             }
 
             return this.pageNumber;
+        },
+
+        resolveNavigationDirection(targetPage, direction = null) {
+            if (direction === 'prev' || direction === 'next') {
+                return direction;
+            }
+
+            const basePage = this.navigationBasePage();
+
+            return targetPage >= basePage ? 'next' : 'prev';
         },
 
         schedulePendingNavigationCommit(delayMs = navigationSettleDelayMs) {
@@ -580,15 +664,22 @@ document.addEventListener('alpine:init', () => {
                 activeAyahIndex = null,
                 source = 'generic',
                 forceRefit = false,
+                commitNow = false,
+                settleDelayMs = navigationSettleDelayMs,
             } = {},
         ) {
             const normalizedTargetPage = clampPage(targetPage, this.maxPage);
-            const resolvedDirection =
-                direction === 'prev' || direction === 'next'
-                    ? direction
-                    : normalizedTargetPage >= this.pageNumber
-                      ? 'next'
-                      : 'prev';
+            const resolvedDirection = this.resolveNavigationDirection(
+                normalizedTargetPage,
+                direction,
+            );
+            const previousInputPage = clampPage(this.pageInput, this.maxPage);
+
+            if (previousInputPage !== normalizedTargetPage) {
+                this.triggerPageCounterPulse(previousInputPage, normalizedTargetPage);
+            }
+
+            this.pageInput = normalizedTargetPage;
 
             this._pendingNavigationRequest = {
                 targetPage: normalizedTargetPage,
@@ -603,7 +694,13 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            this.schedulePendingNavigationCommit(navigationSettleDelayMs);
+            if (commitNow) {
+                await this.commitPendingNavigation();
+
+                return;
+            }
+
+            this.schedulePendingNavigationCommit(settleDelayMs);
         },
 
         async nextPage(source = 'generic') {
@@ -655,8 +752,12 @@ document.addEventListener('alpine:init', () => {
 
             if (kind === 'page') {
                 const requestedPage = clampPage(detail?.page ?? this.pageInput, this.maxPage);
-                this.pageInput = requestedPage;
-                await this.onPageInputCommit({ force: false });
+                await this.navigateToPage(requestedPage, {
+                    direction: this.resolveNavigationDirection(requestedPage),
+                    animate: true,
+                    source: 'page-event',
+                    forceRefit: true,
+                });
             }
         },
 
@@ -694,6 +795,10 @@ document.addEventListener('alpine:init', () => {
             this.hoveredWordIndex = 0;
 
             if (normalizedPage === this.pageNumber && this.mushafLines.length > 0) {
+                if (this.pageInput !== normalizedPage) {
+                    this.triggerPageCounterPulse(this.pageInput, normalizedPage);
+                }
+
                 this.pageInput = normalizedPage;
 
                 if (forceRefit) {
@@ -742,47 +847,47 @@ document.addEventListener('alpine:init', () => {
         },
 
         async onPageInputBlur() {
+            const now = Date.now();
             const targetPage = clampPage(this.pageInput, this.maxPage);
 
-            if (targetPage !== this.pageNumber && this._pendingPageInputTarget !== targetPage) {
-                await this.onPageInputCommit({ force: true });
+            if (
+                targetPage === this._lastPageInputCommitPage &&
+                now - this._lastPageInputCommitAt < 420
+            ) {
+                return;
             }
+
+            await this.onPageInputCommit({
+                force: true,
+                commitNow: true,
+                source: 'page-input-blur',
+            });
         },
 
-        async onPageInputCommit({ force = false } = {}) {
+        async onPageInputCommit({ force = false, commitNow = false, source = 'page-input' } = {}) {
             if (this._pageInputCommitTimer !== null) {
                 clearTimeout(this._pageInputCommitTimer);
                 this._pageInputCommitTimer = null;
             }
 
             const targetPage = clampPage(this.pageInput, this.maxPage);
-            const direction = targetPage >= this.pageNumber ? 'next' : 'prev';
+            const direction = this.resolveNavigationDirection(targetPage);
+            this._lastPageInputCommitPage = targetPage;
+            this._lastPageInputCommitAt = Date.now();
 
             this.pageInput = targetPage;
 
             if (!force && targetPage === this.pageNumber) {
-                this._pendingPageInputTarget = null;
                 return;
             }
 
-            if (this._pendingPageInputTarget === targetPage) {
-                return;
-            }
-
-            this._pendingPageInputTarget = targetPage;
-
-            try {
-                await this.navigateToPage(targetPage, {
-                    direction,
-                    animate: true,
-                    source: 'page-input',
-                    forceRefit: true,
-                });
-            } finally {
-                if (this._pendingPageInputTarget === targetPage) {
-                    this._pendingPageInputTarget = null;
-                }
-            }
+            await this.navigateToPage(targetPage, {
+                direction,
+                animate: true,
+                source,
+                forceRefit: true,
+                commitNow: Boolean(commitNow),
+            });
         },
 
         applyPayload(payload, { setPageNumber = false } = {}) {
@@ -807,14 +912,27 @@ document.addEventListener('alpine:init', () => {
                 Object.keys(normalizedPayload.surahNames).length > 0
             ) {
                 this.search.surahNames = normalizedPayload.surahNames;
-                this.buildSurahDirectory();
             }
+
+            const hasIncomingSurahDirectory =
+                Array.isArray(normalizedPayload.surahDirectory) &&
+                normalizedPayload.surahDirectory.length > 0;
+
+            this.buildSurahDirectory(
+                hasIncomingSurahDirectory
+                    ? normalizedPayload.surahDirectory
+                    : this.search.surahDirectory,
+            );
 
             if (setPageNumber) {
                 this.pageNumber = clampPage(
                     normalizedPayload.pageNumber,
                     normalizedPayload.maxPage,
                 );
+            }
+
+            if (this.pageInput !== this.pageNumber) {
+                this.triggerPageCounterPulse(this.pageInput, this.pageNumber);
             }
 
             this.pageInput = this.pageNumber;
@@ -2000,6 +2118,47 @@ document.addEventListener('alpine:init', () => {
             return `(${surahNumber})`;
         },
 
+        hasSurahHeaderFont() {
+            return String(this.surahHeaderFontFamily ?? '').trim() !== '';
+        },
+
+        surahTileUsesGlyph(entry) {
+            const surahNumber = Math.max(1, Math.trunc(Number(entry?.surah_number ?? 1)));
+            const glyph = this.surahHeaderGlyph(surahNumber);
+
+            return glyph !== '' && this.hasSurahHeaderFont();
+        },
+
+        surahTileLabel(entry) {
+            const surahNumber = Math.max(1, Math.trunc(Number(entry?.surah_number ?? 1)));
+
+            if (this.surahTileUsesGlyph(entry)) {
+                return this.surahHeaderGlyph(surahNumber);
+            }
+
+            const name = this.surahNameOnly(surahNumber);
+
+            if (name !== '') {
+                return name;
+            }
+
+            return String(surahNumber);
+        },
+
+        surahTileLabelStyle(entry) {
+            if (!this.surahTileUsesGlyph(entry)) {
+                return '';
+            }
+
+            const family = String(this.surahHeaderFontFamily ?? '').trim();
+
+            if (!family) {
+                return '';
+            }
+
+            return `font-family: '${family}', 'MadinaQuran', 'Amiri', 'Traditional Arabic', serif;`;
+        },
+
         buildSurahDirectory(entries = null) {
             const sourceEntries = Array.isArray(entries) ? entries : this.search.surahDirectory;
             const firstPageBySurah = new Map();
@@ -2027,7 +2186,6 @@ document.addEventListener('alpine:init', () => {
                 return {
                     surah_number: surahNumber,
                     page_number: firstPageBySurah.get(surahNumber) ?? 1,
-                    label: this.surahLabel(surahNumber),
                 };
             });
         },
@@ -2277,6 +2435,7 @@ document.addEventListener('alpine:init', () => {
             this._searchResultsAutoAnimateStop = window.autoAnimate(resultsContainer, {
                 duration: 230,
                 easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+                disrespectUserMotionPreference: true,
             });
         },
 
@@ -2375,16 +2534,17 @@ document.addEventListener('alpine:init', () => {
 
         async goToSurahFromDirectory(entry) {
             const pageNumber = clampPage(Number(entry?.page_number ?? 1), this.maxPage);
-            const direction = pageNumber >= this.pageNumber ? 'next' : 'prev';
+            const direction = this.resolveNavigationDirection(pageNumber);
 
             this.requestSearchModalClose({ skipLayout: true });
             this.activeAyahIndex = 0;
             this.activeWordIndex = 0;
-            await this.goToPage(pageNumber, {
+            await this.navigateToPage(pageNumber, {
                 direction,
                 animate: true,
                 activeAyahIndex: 0,
                 forceRefit: true,
+                source: 'surah-directory',
             });
             this.activeAyahIndex = 0;
             this.activeWordIndex = 0;
@@ -2578,14 +2738,15 @@ document.addEventListener('alpine:init', () => {
         async goToSearchResult(result) {
             const targetPage = clampPage(Number(result?.page_number ?? 1), this.maxPage);
             const ayahIndex = Math.max(0, Math.trunc(Number(result?.ayah_index ?? 0)));
-            const direction = targetPage >= this.pageNumber ? 'next' : 'prev';
+            const direction = this.resolveNavigationDirection(targetPage);
 
             this.requestSearchModalClose({ skipLayout: true });
-            await this.goToPage(targetPage, {
+            await this.navigateToPage(targetPage, {
                 direction,
                 animate: true,
                 activeAyahIndex: ayahIndex,
                 forceRefit: true,
+                source: 'search-result',
             });
             this.activeWordIndex = 0;
         },

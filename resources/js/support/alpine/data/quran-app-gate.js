@@ -52,6 +52,9 @@ document.addEventListener('alpine:init', () => {
         isModeActive(mode) {
             return (this.pinnedMode ?? this.projectedMode) === mode;
         },
+        currentMode() {
+            return this.pinnedMode ?? this.projectedMode;
+        },
         setOrbitAngle(targetAngleDeg) {
             if (!Number.isFinite(targetAngleDeg)) {
                 return;

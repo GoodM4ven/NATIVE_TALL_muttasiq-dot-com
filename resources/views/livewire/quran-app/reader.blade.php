@@ -454,6 +454,7 @@
             align-items: center;
             gap: 0.65rem;
             padding: 0.5rem 1rem 0.74rem;
+            min-height: 3rem;
         }
 
         .quran-page-counter {
@@ -461,6 +462,53 @@
             align-items: center;
             justify-content: center;
             min-height: 2.2rem;
+            position: relative;
+        }
+
+        .quran-page-counter-morph {
+            position: absolute;
+            inset-inline-start: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 4.5rem;
+            pointer-events: none;
+            font-family: 'IBM Plex Sans Arabic', 'Manrope', ui-sans-serif, system-ui, sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--quran-panel-text);
+            line-height: 1;
+            z-index: 2;
+            direction: ltr;
+        }
+
+        .quran-page-counter.quran-page-counter--morphing #quran-reader-page-counter-input {
+            color: transparent !important;
+        }
+
+        .quran-counter-roll {
+            display: grid;
+            place-items: center;
+        }
+
+        .quran-counter-roll__prev,
+        .quran-counter-roll__next {
+            grid-area: 1 / 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 0.52ch;
+            will-change: transform, opacity;
+        }
+
+        .quran-counter-roll__prev {
+            animation: quran-counter-prev 520ms ease-out both;
+        }
+
+        .quran-counter-roll__next {
+            animation: quran-counter-next 520ms ease-out both;
         }
 
         .quran-swipe-hint {
@@ -482,6 +530,7 @@
             background: transparent;
             padding: 0.1rem 0.25rem;
             min-height: 2.2rem;
+            min-width: 4.2rem;
             cursor: pointer;
             transition:
                 opacity 160ms ease,
@@ -507,7 +556,7 @@
             line-height: 1;
             vertical-align: middle;
             position: relative;
-            top: -0.08rem;
+            top: 0;
         }
 
         .quran-swipe-hint-chev:nth-child(1) {
@@ -596,6 +645,30 @@
                 transform: translateY(0);
             }
         }
+
+        @keyframes quran-counter-prev {
+            0% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+            100% {
+                opacity: 0;
+                transform: translateY(-8px);
+            }
+        }
+
+        @keyframes quran-counter-next {
+            0% {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
     </style>
 @endassets
 
@@ -613,6 +686,7 @@
         'surahHeaderFontUrl' => $surahHeaderFontUrl,
         'surahHeaderFontFormat' => $surahHeaderFontFormat,
         'surahNames' => $surahNames ?? [],
+        'surahDirectory' => $surahDirectory ?? [],
         'useCenteredAyahLayout' => $useCenteredAyahLayout,
     ];
 @endphp
@@ -672,7 +746,7 @@
                 data-no-swipe
             >
                 <button
-                    class="quran-soorah-trigger min-w-[164px]"
+                    class="quran-soorah-trigger w-[13.4rem] shrink-0"
                     type="button"
                     dir="rtl"
                     x-on:click="
@@ -836,8 +910,42 @@
                     <span class="quran-swipe-hint-chev">‹</span>
                     <span class="quran-swipe-hint-chev">‹</span>
                 </button>
-                <div class="quran-page-counter">
+                <div
+                    class="quran-page-counter"
+                    x-bind:class="{ 'quran-page-counter--morphing': pageCounterPulse.isActive && pageCounterPulse.hasChanges }"
+                >
                     {{ $this->pageJumpForm }}
+                    <div
+                        class="quran-page-counter-morph"
+                        aria-hidden="true"
+                        x-cloak
+                        x-show="pageCounterPulse.isActive && pageCounterPulse.hasChanges"
+                    >
+                        <template
+                            x-for="segment in pageCounterPulse.segments"
+                            :key="segment.key"
+                        >
+                            <span class="inline-flex items-center justify-center">
+                                <span
+                                    x-show="!segment.changed"
+                                    x-text="segment.next"
+                                ></span>
+                                <span
+                                    class="quran-counter-roll"
+                                    x-show="segment.changed"
+                                >
+                                    <span
+                                        class="quran-counter-roll__prev"
+                                        x-text="segment.prev"
+                                    ></span>
+                                    <span
+                                        class="quran-counter-roll__next"
+                                        x-text="segment.next"
+                                    ></span>
+                                </span>
+                            </span>
+                        </template>
+                    </div>
                 </div>
                 <button
                     class="quran-swipe-hint quran-swipe-hint-button select-none justify-self-center"

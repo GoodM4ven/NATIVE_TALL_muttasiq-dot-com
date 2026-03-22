@@ -96,7 +96,7 @@ class Reader extends Component implements HasActions, HasSchemas
                         'x-model.number' => 'pageInput',
                         'x-on:input' => 'onPageInputInput()',
                         'x-on:blur' => 'onPageInputBlur()',
-                        'x-on:keydown.enter.prevent' => 'onPageInputCommit({ force: false })',
+                        'x-on:keydown.enter.prevent' => 'onPageInputCommit({ force: false, commitNow: true, source: "page-input-enter" })',
                         'x-bind:max' => 'Math.max(1, maxPage)',
                         'class' => 'quran-page-counter-input tabular-nums',
                     ], merge: true),
@@ -130,6 +130,7 @@ class Reader extends Component implements HasActions, HasSchemas
                         'x-on:input.debounce.220ms' => 'updateSearchResults()',
                         'x-on:keydown.enter.prevent' => 'confirmSearchSelection()',
                         'autocomplete' => 'off',
+                        'class' => 'relative top-[0.25rem]',
                     ], merge: true),
             ])
             ->modalContentFooter(fn (): View => view('livewire.quran-app.search-modal'));
@@ -141,6 +142,7 @@ class Reader extends Component implements HasActions, HasSchemas
         $readerDataService = app(QuranReaderDataService::class);
         $readerData = $readerDataService->resolvePage($this->pageNumber, $this->activeAyahIndex);
         $surahNames = $readerDataService->surahNames();
+        $surahDirectory = $readerDataService->surahDirectory();
         $storedSettings = Setting::query()
             ->whereIn('name', array_keys(Setting::defaults()))
             ->pluck('value', 'name')
@@ -158,6 +160,7 @@ class Reader extends Component implements HasActions, HasSchemas
             return view('livewire.quran-app.reader', [
                 ...$readerData,
                 'surahNames' => $surahNames,
+                'surahDirectory' => $surahDirectory,
                 'quranReaderSettings' => $quranReaderSettings,
             ]);
         }
@@ -177,6 +180,7 @@ class Reader extends Component implements HasActions, HasSchemas
         return view('livewire.quran-app.reader', [
             ...$readerData,
             'surahNames' => $surahNames,
+            'surahDirectory' => $surahDirectory,
             'quranReaderSettings' => $quranReaderSettings,
         ]);
     }

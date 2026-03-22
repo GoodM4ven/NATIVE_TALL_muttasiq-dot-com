@@ -44,12 +44,12 @@
         background: color-mix(in srgb, var(--quran-page-surface) 42%, transparent);
     }
 
-    #quran-reader-search-modal > .fi-modal-content {
+    #quran-reader-search-modal .fi-modal-content {
         padding: 1rem 1.2rem 1.25rem;
         background: transparent;
         display: flex;
         flex-direction: column;
-        gap: 0.9rem;
+        gap: 0 !important;
     }
 
     #quran-reader-search-modal .fi-modal-heading {
@@ -84,15 +84,19 @@
             color-mix(in srgb, var(--warning-100) 84%, white 16%),
             color-mix(in srgb, var(--warning-50) 58%, white 42%)
         );
+    }
+
+    #quran-reader-search-modal .fi-input-wrp.fi-fo-text-input {
         box-shadow:
-            inset 0 0 0 1px color-mix(in srgb, var(--warning-400) 48%, transparent),
-            0 10px 28px color-mix(in srgb, var(--warning-500) 22%, transparent);
+            inset 0 0 0 1px color-mix(in srgb, var(--warning-400) 15%, transparent),
+            0 10px 20px color-mix(in srgb, var(--warning-500) 10%, transparent);
     }
 
     #quran-reader-search-modal .quran-search-field-wrapper .fi-input-wrp-input {
         display: flex;
-        align-items: center;
+        align-items: center !important;
         min-height: 2.5rem;
+        padding-block: 0 !important;
     }
 
     #quran-reader-search-modal .quran-search-field-wrapper .fi-input {
@@ -101,18 +105,18 @@
         font-size: 1rem;
         font-weight: 600;
         min-height: 2.4rem;
-        line-height: 2.4rem !important;
-        padding-top: 0 !important;
-        padding-bottom: 0 !important;
+        line-height: 1.35 !important;
+        padding-top: 0.2rem !important;
+        padding-bottom: 0.15rem !important;
         color: color-mix(in srgb, var(--primary-900) 88%, var(--quran-panel-text));
     }
 
     #quran-reader-search-modal #quran-reader-search-input {
-        min-height: 2.4rem;
-        line-height: 2.4rem;
-        padding-top: 0 !important;
-        padding-bottom: 0 !important;
-        align-self: center;
+        min-height: 2.4rem !important;
+        line-height: 1.35 !important;
+        padding-top: 0.2rem !important;
+        padding-bottom: 0.15rem !important;
+        align-self: center !important;
     }
 
     #quran-reader-search-modal .quran-search-field-wrapper .fi-input::placeholder {
@@ -191,8 +195,8 @@
     }
 
     .quran-surah-grid-shell {
-        margin-top: 0.2rem;
-        padding-bottom: 0.7rem;
+        margin-top: 0.35rem;
+        padding-bottom: 1rem;
     }
 
     .quran-surah-grid-caption {
@@ -200,13 +204,13 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 0.8rem;
+        gap: 1rem;
         text-align: center;
         font-size: 0.78rem;
         font-weight: 700;
         letter-spacing: 0.01em;
         color: color-mix(in srgb, var(--warning-700) 74%, var(--quran-panel-text));
-        padding: 0.2rem 0 1.1rem;
+        padding: 0.3rem 0 1.25rem;
     }
 
     .quran-surah-grid-caption::before,
@@ -214,12 +218,12 @@
         content: '';
         display: block;
         flex: 1;
-        max-width: 15rem;
-        height: 1.5px;
+        max-width: 18rem;
+        height: 2px;
         background: linear-gradient(
             90deg,
             transparent 0%,
-            color-mix(in srgb, var(--warning-500) 66%, transparent) 52%,
+            color-mix(in srgb, var(--warning-500) 74%, transparent) 52%,
             transparent 100%
         );
     }
@@ -233,7 +237,23 @@
         gap: 0.55rem;
         overflow: auto;
         max-height: min(42svh, 23rem);
-        padding: 0.2rem 0.1rem 0.8rem;
+        padding: 0.2rem 0.45rem 0.8rem 0.5rem;
+        scrollbar-gutter: stable both-edges;
+    }
+
+    .quran-surah-grid::-webkit-scrollbar {
+        width: 0.58rem;
+    }
+
+    .quran-surah-grid::-webkit-scrollbar-track {
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--warning-200) 34%, transparent);
+    }
+
+    .quran-surah-grid::-webkit-scrollbar-thumb {
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--warning-500) 42%, transparent);
+        border: 1px solid color-mix(in srgb, var(--warning-300) 38%, transparent);
     }
 
     .quran-surah-tile {
@@ -272,9 +292,16 @@
 
     .quran-surah-tile-label {
         display: block;
-        margin-top: 0.22rem;
-        font-size: 1.06rem;
-        line-height: 1.8;
+        margin-top: 0.28rem;
+        font-family: var(--font-arabic-serif);
+        font-size: 1.4rem;
+        line-height: 1.55;
+    }
+
+    .quran-surah-tile-label.quran-surah-tile-label--glyph {
+        margin-top: 0.38rem;
+        font-size: 2rem;
+        line-height: 1;
     }
 
     .quran-page-counter-field {

@@ -82,12 +82,10 @@
                     x-on:click="goToSurahFromDirectory(entry)"
                 >
                     <span
-                        class="quran-surah-tile-number"
-                        x-text="'#' + entry.surah_number"
-                    ></span>
-                    <span
-                        class="quran-surah-tile-label font-quran"
-                        x-text="entry.label"
+                        class="quran-surah-tile-label"
+                        x-bind:class="{ 'quran-surah-tile-label--glyph': surahTileUsesGlyph(entry) }"
+                        x-bind:style="surahTileLabelStyle(entry)"
+                        x-text="surahTileLabel(entry)"
                     ></span>
                 </button>
             </template>

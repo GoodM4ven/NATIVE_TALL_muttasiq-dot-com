@@ -78,7 +78,7 @@
             width: 100%;
             object-fit: cover;
             transform: scale(1.065);
-            filter: blur(3.4px) brightness(0.62) saturate(0.84);
+            filter: blur(0.7px) brightness(0.66) saturate(0.9);
             transition: transform 420ms ease, filter 320ms ease;
             pointer-events: none;
         }
@@ -97,7 +97,11 @@
 
         .quran-app-sector.is-active img.quran-app-sector__image-img {
             transform: scale(1.018);
-            filter: blur(0) brightness(0.96) saturate(1.04);
+            filter: blur(0.12px) brightness(0.96) saturate(1.04);
+        }
+
+        .quran-app-sector.is-muted img.quran-app-sector__image-img {
+            filter: blur(1.55px) brightness(0.56) saturate(0.82);
         }
 
         .quran-app-sector.is-active .quran-app-sector__veil {
@@ -306,8 +310,12 @@
 
             img.quran-app-sector__image-img {
                 transform: scale(1.045);
-                filter: blur(2.2px) brightness(0.7) saturate(0.86);
+                filter: blur(0.52px) brightness(0.72) saturate(0.9);
                 transition: transform 240ms ease, filter 220ms ease;
+            }
+
+            .quran-app-sector.is-muted img.quran-app-sector__image-img {
+                filter: blur(1.2px) brightness(0.62) saturate(0.82);
             }
 
             .quran-app-sector__chip {
@@ -403,7 +411,7 @@
             class="quran-app-sector quran-app-sector--tilawa"
             type="button"
             aria-label="تلاوة القرآن"
-            x-bind:class="{ 'is-active': isModeActive('tilawa') }"
+            x-bind:class="{ 'is-active': isModeActive('tilawa'), 'is-muted': currentMode() && !isModeActive('tilawa') }"
             x-on:mouseenter="pinMode('tilawa')"
             x-on:mouseleave="unpinMode('tilawa')"
             x-on:focus="pinMode('tilawa')"
@@ -414,8 +422,8 @@
                 <x-goodmaven::blurred-image
                     class="absolute inset-0"
                     alt="وضع التلاوة"
-                    :imagePath="asset('images/background/quran/tilawa.webp')"
-                    :thumbnailImagePath="asset('images/background/quran/tilawa-blur-thumbnail.webp')"
+                    :imagePath="asset('images/background/quran/tilawa-blurred.webp')"
+                    :thumbnailImagePath="asset('images/background/quran/tilawa-blurred-blur-thumbnail.webp')"
                     :isDisplayEnforced="true"
                     :isObjectCentered="false"
                     containerClasses="absolute inset-0 overflow-hidden bg-black/25"
@@ -431,7 +439,7 @@
             class="quran-app-sector quran-app-sector--tadabbur"
             type="button"
             aria-label="تدبّر القرآن"
-            x-bind:class="{ 'is-active': isModeActive('tadabbur') }"
+            x-bind:class="{ 'is-active': isModeActive('tadabbur'), 'is-muted': currentMode() && !isModeActive('tadabbur') }"
             x-on:mouseenter="pinMode('tadabbur')"
             x-on:mouseleave="unpinMode('tadabbur')"
             x-on:focus="pinMode('tadabbur')"
@@ -442,8 +450,8 @@
                 <x-goodmaven::blurred-image
                     class="absolute inset-0"
                     alt="وضع التدبّر"
-                    :imagePath="asset('images/background/quran/tadabbur.webp')"
-                    :thumbnailImagePath="asset('images/background/quran/tadabbur-blur-thumbnail.webp')"
+                    :imagePath="asset('images/background/quran/tadabbur-blurred.webp')"
+                    :thumbnailImagePath="asset('images/background/quran/tadabbur-blurred-blur-thumbnail.webp')"
                     :isDisplayEnforced="true"
                     :isObjectCentered="false"
                     containerClasses="absolute inset-0 overflow-hidden bg-black/25"
@@ -460,7 +468,7 @@
             class="quran-app-sector quran-app-sector--hifth"
             type="button"
             aria-label="حفظ القرآن"
-            x-bind:class="{ 'is-active': isModeActive('hifth') }"
+            x-bind:class="{ 'is-active': isModeActive('hifth'), 'is-muted': currentMode() && !isModeActive('hifth') }"
             x-on:mouseenter="pinMode('hifth')"
             x-on:mouseleave="unpinMode('hifth')"
             x-on:focus="pinMode('hifth')"
@@ -471,8 +479,8 @@
                 <x-goodmaven::blurred-image
                     class="absolute inset-0"
                     alt="وضع الحفظ"
-                    :imagePath="asset('images/background/quran/hifth.webp')"
-                    :thumbnailImagePath="asset('images/background/quran/hifth-blur-thumbnail.webp')"
+                    :imagePath="asset('images/background/quran/hifth-blurred.webp')"
+                    :thumbnailImagePath="asset('images/background/quran/hifth-blurred-blur-thumbnail.webp')"
                     :isDisplayEnforced="true"
                     :isObjectCentered="false"
                     containerClasses="absolute inset-0 overflow-hidden bg-black/25"
