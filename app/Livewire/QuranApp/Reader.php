@@ -50,9 +50,13 @@ class Reader extends Component
         /** @var QuranReaderDataService $readerDataService */
         $readerDataService = app(QuranReaderDataService::class);
         $readerData = $readerDataService->resolvePage($this->pageNumber, $this->activeAyahIndex);
+        $surahNames = $readerDataService->surahNames();
 
         if (! $readerData['ready']) {
-            return view('livewire.quran-app.reader', $readerData);
+            return view('livewire.quran-app.reader', [
+                ...$readerData,
+                'surahNames' => $surahNames,
+            ]);
         }
 
         $normalizedPage = $readerData['pageNumber'];
@@ -67,6 +71,9 @@ class Reader extends Component
             $this->activeAyahIndex = $effectiveAyahIndex;
         }
 
-        return view('livewire.quran-app.reader', $readerData);
+        return view('livewire.quran-app.reader', [
+            ...$readerData,
+            'surahNames' => $surahNames,
+        ]);
     }
 }

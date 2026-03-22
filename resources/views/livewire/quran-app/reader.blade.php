@@ -155,19 +155,50 @@
         }
 
         .quran-surah-header-line {
-            display: inline-block;
+            position: relative;
+            display: flex;
             align-items: center;
             justify-content: center;
+            width: 100%;
             max-width: 100%;
-            padding: 0;
-            border-radius: 0;
+            padding: 0.42rem 0;
             font-size: calc(var(--quran-font-size-meta) * 1.5 * var(--quran-type-scale) * var(--quran-page-scale));
-            line-height: 1.04;
+            line-height: 1;
             color: color-mix(in srgb, var(--primary-600) 86%, var(--quran-ink));
             background: transparent;
             box-shadow: none;
             letter-spacing: normal;
             text-wrap: nowrap;
+        }
+
+        .quran-surah-header-line::before,
+        .quran-surah-header-line::after {
+            content: '';
+            position: absolute;
+            inset-inline: 0;
+            height: 1px;
+            background: linear-gradient(to right,
+                    transparent 0%,
+                    color-mix(in srgb, var(--quran-subtle) 22%, transparent) 14%,
+                    color-mix(in srgb, var(--quran-subtle) 54%, transparent) 50%,
+                    color-mix(in srgb, var(--quran-subtle) 22%, transparent) 86%,
+                    transparent 100%);
+        }
+
+        .quran-surah-header-line::before {
+            inset-block-start: 0;
+        }
+
+        .quran-surah-header-line::after {
+            inset-block-end: 0;
+        }
+
+        .quran-surah-header-glyph {
+            display: inline-block;
+            position: relative;
+            z-index: 1;
+            padding-inline: 0.8rem;
+            line-height: 1;
         }
 
         .quran-page-lines {
@@ -302,7 +333,7 @@
             width: 1rem;
             height: 1rem;
             border-radius: 999px;
-            opacity: 0.92;
+            opacity: 0.25;
             z-index: 1;
             background: color-mix(in srgb, var(--primary-600) 92%, var(--primary-400));
             transition:
@@ -317,6 +348,11 @@
             transition:
                 transform 0.8s cubic-bezier(0.23, 1, 0.32, 1),
                 color 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .quran-soorah-trigger-text-inner {
+            display: inline-block;
+            white-space: nowrap;
         }
 
         .quran-soorah-trigger:hover {
@@ -383,8 +419,29 @@
             opacity: 0.88;
         }
 
+        .quran-swipe-hint-button {
+            border: 0;
+            background: transparent;
+            padding: 0.1rem 0.25rem;
+            cursor: pointer;
+            transition:
+                opacity 160ms ease,
+                transform 160ms ease,
+                color 160ms ease;
+        }
+
+        .quran-swipe-hint-button:hover {
+            opacity: 1;
+            transform: translateY(-0.04rem);
+            color: color-mix(in srgb, var(--quran-panel-text) 92%, var(--quran-subtle));
+        }
+
+        .quran-swipe-hint-button:active {
+            transform: translateY(0);
+        }
+
         .quran-swipe-hint-chev {
-            color: var(--warning-300)
+            color: color-mix(in srgb, var(--warning-400) 70%, var(--warning-600) 80%);
             display: inline-block;
             animation: quran-swipe-shimmer 1400ms ease-in-out infinite;
             font-size: 2rem;
@@ -408,15 +465,15 @@
         }
 
         .quran-swipe-hint-chev.quran-swipe-hint-chev-opposite:nth-child(1) {
-            animation-delay: 110ms;
+            animation-delay: 710ms;
         }
         
         .quran-swipe-hint-chev.quran-swipe-hint-chev-opposite:nth-child(2) {
-            animation-delay: 220ms;
+            animation-delay: 820ms;
         }
 
         .quran-swipe-hint-chev.quran-swipe-hint-chev-opposite:nth-child(3) {
-            animation-delay: 330ms;
+            animation-delay: 930ms;
         }
 
         @keyframes quran-swipe-shimmer {
@@ -596,6 +653,7 @@
         'surahHeaderFontFamily' => $surahHeaderFontFamily,
         'surahHeaderFontUrl' => $surahHeaderFontUrl,
         'surahHeaderFontFormat' => $surahHeaderFontFormat,
+        'surahNames' => $surahNames ?? [],
         'useCenteredAyahLayout' => $useCenteredAyahLayout,
     ];
 @endphp
@@ -650,10 +708,23 @@
                         class="quran-soorah-trigger-icon"
                         :name="'heroicon-o-magnifying-glass'"
                     />
-                    <span
-                        class="quran-soorah-trigger-text"
-                        x-text="currentSurahTriggerLabel()"
-                    ></span>
+                    <span class="quran-soorah-trigger-text">
+                        <template
+                            x-for="caption in [currentSurahTriggerLabel()]"
+                            :key="caption"
+                        >
+                            <span
+                                class="quran-soorah-trigger-text-inner"
+                                x-text="caption"
+                                x-transition:enter="transform transition duration-220 ease-out"
+                                x-transition:enter-start="opacity-0 translate-y-2"
+                                x-transition:enter-end="opacity-100 translate-y-0"
+                                x-transition:leave="transform transition duration-180 ease-in"
+                                x-transition:leave-start="opacity-100 translate-y-0"
+                                x-transition:leave-end="opacity-0 -translate-y-1"
+                            ></span>
+                        </template>
+                    </span>
                     <span class="quran-soorah-trigger-circle"></span>
                 </button>
                 <div class="min-w-14"></div>
@@ -666,6 +737,7 @@
                 <div
                     class="quran-page-surface h-full rounded-2xl transition-opacity duration-200"
                     x-bind:class="pageMotionClass"
+                    x-on:click="clearAyahSelectionOnBackground($event)"
                     x-ref="pageSurface"
                 >
                     @if ($qpcPageFontFamily !== null && $qpcPageFontUrl !== null && $qpcPageFontFormat !== null)
@@ -696,6 +768,7 @@
                             class="quran-page-lines mx-auto"
                             x-bind:data-fit-state="isFittingPage ? 'fitting' : 'ready'"
                             x-bind:style="pageContentStyle()"
+                            x-on:click="clearAyahSelectionOnBackground($event)"
                             x-on:mouseleave="clearHoveredAyah()"
                             x-ref="pageContent"
                         >
@@ -729,7 +802,7 @@
                                                             'quran-segment-hovered': isWordHovered(word),
                                                         }"
                                                         x-bind:disabled="!(Number(word?.ayah_index ?? 0) > 0)"
-                                                        x-on:click="selectAyah(Number(word?.ayah_index ?? 0))"
+                                                        x-on:click.stop="selectAyah(Number(word?.ayah_index ?? 0))"
                                                         x-on:mouseenter="setHoveredAyah(Number(word?.ayah_index ?? 0))"
                                                         x-on:focus="setHoveredAyah(Number(word?.ayah_index ?? 0))"
                                                         x-on:blur="clearHoveredAyah(Number(word?.ayah_index ?? 0))"
@@ -754,8 +827,12 @@
                                                 class="quran-surah-header-line"
                                                 data-quran-line-text
                                                 x-bind:style="surahHeaderLineStyle(line)"
-                                                x-text="surahHeaderLineText(line)"
-                                            ></div>
+                                            >
+                                                <span
+                                                    class="quran-surah-header-glyph"
+                                                    x-text="surahHeaderLineText(line)"
+                                                ></span>
+                                            </div>
                                         </template>
                                         <template x-if="!isSurahHeaderLine(line)">
                                             <div
@@ -777,14 +854,16 @@
                 class="quran-bottom-strip"
                 data-no-swipe
             >
-                <div
-                    class="quran-swipe-hint cursor-default select-none justify-self-center"
-                    aria-hidden="true"
+                <button
+                    class="quran-swipe-hint quran-swipe-hint-button select-none justify-self-center"
+                    type="button"
+                    aria-label="الصفحة السابقة"
+                    x-on:click="goPreviousFromChevron()"
                 >
                     <span class="quran-swipe-hint-chev">‹</span>
                     <span class="quran-swipe-hint-chev">‹</span>
                     <span class="quran-swipe-hint-chev">‹</span>
-                </div>
+                </button>
                 <div class="quran-page-counter">
                     <input
                         class="quran-page-counter-input tabular-nums"
@@ -801,14 +880,16 @@
                         x-text="' / ' + Math.max(1, maxPage)"
                     ></span>
                 </div>
-                <div
-                    class="quran-swipe-hint cursor-default select-none justify-self-center"
-                    aria-hidden="true"
+                <button
+                    class="quran-swipe-hint quran-swipe-hint-button select-none justify-self-center"
+                    type="button"
+                    aria-label="الصفحة التالية"
+                    x-on:click="goNextFromChevron()"
                 >
                     <span class="quran-swipe-hint-chev quran-swipe-hint-chev-opposite">›</span>
                     <span class="quran-swipe-hint-chev quran-swipe-hint-chev-opposite">›</span>
                     <span class="quran-swipe-hint-chev quran-swipe-hint-chev-opposite">›</span>
-                </div>
+                </button>
             </footer>
 
             <div
@@ -961,8 +1042,12 @@
                                         class="quran-surah-header-line"
                                         data-quran-line-text
                                         x-bind:style="surahHeaderLineStyle(line)"
-                                        x-text="surahHeaderLineText(line)"
-                                    ></div>
+                                    >
+                                        <span
+                                            class="quran-surah-header-glyph"
+                                            x-text="surahHeaderLineText(line)"
+                                        ></span>
+                                    </div>
                                 </template>
                                 <template x-if="!isSurahHeaderLine(line)">
                                     <div

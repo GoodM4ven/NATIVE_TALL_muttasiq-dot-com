@@ -10,6 +10,7 @@ const defaultPagePayload = Object.freeze({
     surahHeaderFontFamily: null,
     surahHeaderFontUrl: null,
     surahHeaderFontFormat: null,
+    surahNames: null,
     useCenteredAyahLayout: true,
 });
 
@@ -25,6 +26,8 @@ const normalizePayload = (payload = {}) => ({
     surahHeaderFontFamily: payload?.surahHeaderFontFamily ?? null,
     surahHeaderFontUrl: payload?.surahHeaderFontUrl ?? null,
     surahHeaderFontFormat: payload?.surahHeaderFontFormat ?? null,
+    surahNames:
+        payload?.surahNames && typeof payload.surahNames === 'object' ? payload.surahNames : null,
     useCenteredAyahLayout: Boolean(payload?.useCenteredAyahLayout),
 });
 
@@ -388,6 +391,14 @@ document.addEventListener('alpine:init', () => {
             await this.goToPage(this.pageNumber - 1, { direction: 'prev' });
         },
 
+        async goNextFromChevron() {
+            await this.nextPage();
+        },
+
+        async goPreviousFromChevron() {
+            await this.previousPage();
+        },
+
         async goToPage(
             pageNumber,
             { direction = 'next', animate = true, activeAyahIndex = null } = {},
@@ -451,6 +462,14 @@ document.addEventListener('alpine:init', () => {
             this.surahHeaderFontFamily = normalizedPayload.surahHeaderFontFamily;
             this.surahHeaderFontUrl = normalizedPayload.surahHeaderFontUrl;
             this.surahHeaderFontFormat = normalizedPayload.surahHeaderFontFormat;
+
+            if (
+                normalizedPayload.surahNames &&
+                Object.keys(normalizedPayload.surahNames).length > 0
+            ) {
+                this.search.surahNames = normalizedPayload.surahNames;
+                this.buildSurahDirectory();
+            }
 
             if (setPageNumber) {
                 this.pageNumber = clampPage(
@@ -1097,8 +1116,25 @@ document.addEventListener('alpine:init', () => {
             if (!Number.isFinite(normalizedAyahIndex) || normalizedAyahIndex < 1) {
                 return;
             }
+            const normalized = Math.trunc(normalizedAyahIndex);
 
-            this.activeAyahIndex = Math.trunc(normalizedAyahIndex);
+            if (this.activeAyahIndex === normalized) {
+                this.activeAyahIndex = 0;
+                this.hoveredAyahIndex = 0;
+
+                return;
+            }
+
+            this.activeAyahIndex = normalized;
+            this.hoveredAyahIndex = 0;
+        },
+
+        clearAyahSelectionOnBackground(event) {
+            if (event?.target?.closest?.('.quran-word-button')) {
+                return;
+            }
+
+            this.activeAyahIndex = 0;
             this.hoveredAyahIndex = 0;
         },
 
@@ -1365,7 +1401,29 @@ document.addEventListener('alpine:init', () => {
         },
 
         currentSurahNumber() {
+            const firstAyahSurahNumber = this.firstAyahSurahNumberInPage();
+
+            if (firstAyahSurahNumber > 0) {
+                return firstAyahSurahNumber;
+            }
+
             for (const line of this.mushafLines) {
+                const lineSurahNumber = Number(line?.surah_number ?? 0);
+
+                if (lineSurahNumber > 0) {
+                    return lineSurahNumber;
+                }
+            }
+
+            return 1;
+        },
+
+        firstAyahSurahNumberInPage() {
+            for (const line of this.mushafLines) {
+                if (String(line?.line_type ?? '') !== 'ayah') {
+                    continue;
+                }
+
                 const lineSurahNumber = Number(line?.surah_number ?? 0);
 
                 if (lineSurahNumber > 0) {
@@ -1377,15 +1435,16 @@ document.addEventListener('alpine:init', () => {
                 }
 
                 for (const word of line.words) {
+                    const wordAyahIndex = Number(word?.ayah_index ?? 0);
                     const wordSurahNumber = Number(word?.surah_number ?? 0);
 
-                    if (wordSurahNumber > 0) {
+                    if (wordAyahIndex > 0 && wordSurahNumber > 0) {
                         return wordSurahNumber;
                     }
                 }
             }
 
-            return 1;
+            return 0;
         },
 
         currentSurahTitle() {
