@@ -73,6 +73,8 @@ const wait = async (durationMs) => {
 };
 
 const wordPressHoldDelayMs = 750;
+const navigationSettleDelayMs = 140;
+const navigationRevealLockDurationMs = 1500;
 
 const openCacheSafely = async (cacheName) => {
     if (!cacheName || typeof window === 'undefined' || typeof window.caches === 'undefined') {
@@ -249,7 +251,10 @@ document.addEventListener('alpine:init', () => {
         _onSwitchView: null,
         _surahTriggerTimer: null,
         _surahTriggerCleanupTimer: null,
-        _navigationQueue: Promise.resolve(),
+        _pendingNavigationRequest: null,
+        _navigationDebounceTimer: null,
+        _navigationRevealUnlockTimer: null,
+        _navigationRevealLocked: false,
         _fitRunCounter: 0,
         _lastFittedPageNumber: 0,
         _pageInputCommitTimer: null,
@@ -374,6 +379,16 @@ document.addEventListener('alpine:init', () => {
                 this._surahTriggerCleanupTimer = null;
             }
 
+            if (this._navigationDebounceTimer !== null) {
+                clearTimeout(this._navigationDebounceTimer);
+                this._navigationDebounceTimer = null;
+            }
+
+            if (this._navigationRevealUnlockTimer !== null) {
+                clearTimeout(this._navigationRevealUnlockTimer);
+                this._navigationRevealUnlockTimer = null;
+            }
+
             if (this._pageInputCommitTimer !== null) {
                 clearTimeout(this._pageInputCommitTimer);
                 this._pageInputCommitTimer = null;
@@ -403,6 +418,9 @@ document.addEventListener('alpine:init', () => {
                 this._stopLivewireMorphedHook();
                 this._stopLivewireMorphedHook = null;
             }
+
+            this._pendingNavigationRequest = null;
+            this._navigationRevealLocked = false;
         },
 
         async bootstrap() {
@@ -484,6 +502,76 @@ document.addEventListener('alpine:init', () => {
             await this.goToPage(normalizedPage, { animate: false });
         },
 
+        navigationBasePage() {
+            const pendingTargetPage = Number(this._pendingNavigationRequest?.targetPage ?? 0);
+
+            if (pendingTargetPage > 0) {
+                return pendingTargetPage;
+            }
+
+            return this.pageNumber;
+        },
+
+        schedulePendingNavigationCommit(delayMs = navigationSettleDelayMs) {
+            if (this._navigationDebounceTimer !== null) {
+                clearTimeout(this._navigationDebounceTimer);
+                this._navigationDebounceTimer = null;
+            }
+
+            this._navigationDebounceTimer = window.setTimeout(
+                () => {
+                    this._navigationDebounceTimer = null;
+                    void this.commitPendingNavigation();
+                },
+                Math.max(0, Math.trunc(Number(delayMs) || navigationSettleDelayMs)),
+            );
+        },
+
+        setNavigationRevealLock(durationMs = navigationRevealLockDurationMs) {
+            this._navigationRevealLocked = true;
+
+            if (this._navigationRevealUnlockTimer !== null) {
+                clearTimeout(this._navigationRevealUnlockTimer);
+                this._navigationRevealUnlockTimer = null;
+            }
+
+            this._navigationRevealUnlockTimer = window.setTimeout(
+                () => {
+                    this._navigationRevealUnlockTimer = null;
+                    this._navigationRevealLocked = false;
+
+                    if (this._pendingNavigationRequest !== null) {
+                        this.schedulePendingNavigationCommit(navigationSettleDelayMs);
+                    }
+                },
+                Math.max(120, Math.trunc(Number(durationMs) || navigationRevealLockDurationMs)),
+            );
+        },
+
+        async commitPendingNavigation() {
+            if (this._pendingNavigationRequest === null) {
+                return;
+            }
+
+            if (this._navigationRevealLocked || this.isLoadingPage) {
+                return;
+            }
+
+            const request = this._pendingNavigationRequest;
+            this._pendingNavigationRequest = null;
+
+            await this.goToPage(request.targetPage, {
+                direction: request.direction,
+                animate: request.animate,
+                activeAyahIndex: request.activeAyahIndex,
+                forceRefit: request.forceRefit,
+            });
+
+            if (request.animate) {
+                this.setNavigationRevealLock();
+            }
+        },
+
         async navigateToPage(
             targetPage,
             {
@@ -495,32 +583,48 @@ document.addEventListener('alpine:init', () => {
             } = {},
         ) {
             const normalizedTargetPage = clampPage(targetPage, this.maxPage);
+            const resolvedDirection =
+                direction === 'prev' || direction === 'next'
+                    ? direction
+                    : normalizedTargetPage >= this.pageNumber
+                      ? 'next'
+                      : 'prev';
 
-            await this.enqueueNavigation(() =>
-                this.goToPage(normalizedTargetPage, {
-                    direction,
-                    animate,
-                    activeAyahIndex,
-                    forceRefit,
-                }),
-            );
+            this._pendingNavigationRequest = {
+                targetPage: normalizedTargetPage,
+                direction: resolvedDirection,
+                animate: Boolean(animate),
+                activeAyahIndex,
+                source,
+                forceRefit: Boolean(forceRefit),
+            };
+
+            if (this._navigationRevealLocked || this.isLoadingPage) {
+                return;
+            }
+
+            this.schedulePendingNavigationCommit(navigationSettleDelayMs);
         },
 
         async nextPage(source = 'generic') {
-            await this.navigateToPage(this.pageNumber + 1, {
+            const basePage = this.navigationBasePage();
+
+            await this.navigateToPage(basePage + 1, {
                 direction: 'next',
                 source,
             });
         },
 
         async previousPage(source = 'generic') {
-            if (this.pageNumber <= 1) {
+            const basePage = this.navigationBasePage();
+
+            if (basePage <= 1) {
                 this.requestReaderGateNavigation(source);
 
                 return;
             }
 
-            await this.navigateToPage(this.pageNumber - 1, {
+            await this.navigateToPage(basePage - 1, {
                 direction: 'prev',
                 source,
             });
@@ -554,18 +658,6 @@ document.addEventListener('alpine:init', () => {
                 this.pageInput = requestedPage;
                 await this.onPageInputCommit({ force: false });
             }
-        },
-
-        enqueueNavigation(task) {
-            this._navigationQueue = this._navigationQueue
-                .then(async () => {
-                    await task();
-                })
-                .catch(() => {
-                    // Keep queue alive after failures.
-                });
-
-            return this._navigationQueue;
         },
 
         async onGlobalArrowNavigate(direction, event = null) {
@@ -652,11 +744,7 @@ document.addEventListener('alpine:init', () => {
         async onPageInputBlur() {
             const targetPage = clampPage(this.pageInput, this.maxPage);
 
-            if (
-                targetPage !== this.pageNumber &&
-                this._pendingPageInputTarget !== targetPage &&
-                !this.isLoadingPage
-            ) {
+            if (targetPage !== this.pageNumber && this._pendingPageInputTarget !== targetPage) {
                 await this.onPageInputCommit({ force: true });
             }
         },
@@ -688,7 +776,7 @@ document.addEventListener('alpine:init', () => {
                     direction,
                     animate: true,
                     source: 'page-input',
-                    forceRefit: false,
+                    forceRefit: true,
                 });
             } finally {
                 if (this._pendingPageInputTarget === targetPage) {

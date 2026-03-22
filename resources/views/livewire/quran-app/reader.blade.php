@@ -139,20 +139,17 @@
             cursor: default;
             transition:
                 background-color 420ms cubic-bezier(0.22, 1, 0.36, 1),
-                color 340ms cubic-bezier(0.22, 1, 0.36, 1),
-                box-shadow 420ms cubic-bezier(0.22, 1, 0.36, 1);
-            will-change: background-color, color, box-shadow;
+                color 340ms cubic-bezier(0.22, 1, 0.36, 1);
+            will-change: background-color, color;
         }
 
         .quran-word-button.quran-segment-hovered {
             background-color: color-mix(in srgb, var(--gray-300) 34%, transparent);
-            box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--success-300) 32%, transparent);
         }
 
         .quran-word-button.quran-segment-active {
             background: var(--quran-active-bg);
             color: var(--quran-active-text);
-            box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--success-400) 36%, transparent);
         }
 
         .quran-ayah-marker {
@@ -765,7 +762,7 @@
                                             >
                                                 <span class="inline-flex items-baseline">
                                                     <button
-                                                        class="quran-word-button rounded-sm px-0 transition"
+                                                        class="quran-word-button px-0 transition"
                                                         type="button"
                                                         x-bind:class="{
                                                             'quran-segment-active': isWordActive(word),
@@ -889,7 +886,7 @@
                                     >
                                         <span class="inline-flex items-baseline">
                                             <span
-                                                class="quran-word-button rounded-sm px-0"
+                                                class="quran-word-button px-0"
                                                 x-text="word.text"
                                             ></span>
                                             <template x-if="showAyahMarker(word)">
