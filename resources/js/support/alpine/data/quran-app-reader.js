@@ -240,6 +240,7 @@ document.addEventListener('alpine:init', () => {
         _fitRunCounter: 0,
         _lastFittedPageNumber: 0,
         _pageInputCommitTimer: null,
+        _stopLivewireMorphedHook: null,
 
         init() {
             this.applyPayload(this.initialPayload, { setPageNumber: true });
@@ -289,6 +290,17 @@ document.addEventListener('alpine:init', () => {
             };
 
             window.addEventListener('switch-view', this._onSwitchView);
+
+            if (this.$wire?.$hook) {
+                this._stopLivewireMorphedHook = this.$wire.$hook('morphed', () => {
+                    if (!this.ready || this.mushafLines.length === 0) {
+                        return;
+                    }
+
+                    this.scheduleLayout({ revealDelayMs: 170 });
+                });
+            }
+
             this.bootstrap();
         },
 
@@ -334,6 +346,11 @@ document.addEventListener('alpine:init', () => {
             if (this._pageInputCommitTimer !== null) {
                 clearTimeout(this._pageInputCommitTimer);
                 this._pageInputCommitTimer = null;
+            }
+
+            if (typeof this._stopLivewireMorphedHook === 'function') {
+                this._stopLivewireMorphedHook();
+                this._stopLivewireMorphedHook = null;
             }
         },
 
@@ -1191,12 +1208,6 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            if (event.target?.closest?.('.quran-word-button')) {
-                this.resetSwipeState();
-
-                return;
-            }
-
             const source = event?.type?.startsWith('touch') ? 'touch' : 'pointer';
 
             if (this.swipe.source && this.swipe.source !== source) {
@@ -1743,6 +1754,14 @@ document.addEventListener('alpine:init', () => {
             this.search.results = [];
             this.search.readyResult = null;
             this.search.isOpen = false;
+
+            this.$nextTick(() => {
+                if (!this.ready || this.mushafLines.length === 0) {
+                    return;
+                }
+
+                this.scheduleLayout({ revealDelayMs: 140 });
+            });
         },
 
         requestSearchModalClose() {

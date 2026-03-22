@@ -6,64 +6,62 @@
         class="quran-search-results-shell"
         x-cloak
     >
-        <template
-            x-if="normalizeSearchQuery(search.query).length > 0 && normalizeSearchQuery(search.query).length < search.minQueryLength"
+        <div
+            class="quran-search-feedback"
+            x-cloak
+            x-show="normalizeSearchQuery(search.query).length > 0 && normalizeSearchQuery(search.query).length < search.minQueryLength"
+            x-transition.opacity.duration.220ms
         >
-            <div
-                class="quran-search-feedback"
-                x-transition.opacity.duration.220ms
-            >
-                اكتب حرفين أو أكثر ليبدأ البحث.
-            </div>
-        </template>
+            اكتب حرفين أو أكثر ليبدأ البحث.
+        </div>
 
-        <template x-if="normalizeSearchQuery(search.query).length >= search.minQueryLength && search.isLoading">
-            <div
-                class="quran-search-feedback"
-                x-transition.opacity.duration.220ms
-            >جاري البحث...</div>
-        </template>
+        <div
+            class="quran-search-feedback"
+            x-cloak
+            x-show="normalizeSearchQuery(search.query).length >= search.minQueryLength && search.isLoading"
+            x-transition.opacity.duration.220ms
+        >جاري البحث...</div>
 
-        <template
-            x-if="normalizeSearchQuery(search.query).length >= search.minQueryLength && !search.isLoading && search.results.length === 0"
+        <div
+            class="quran-search-feedback"
+            x-cloak
+            x-show="normalizeSearchQuery(search.query).length >= search.minQueryLength && !search.isLoading && search.results.length === 0"
+            x-transition.opacity.duration.220ms
         >
-            <div
-                class="quran-search-feedback"
-                x-transition.opacity.duration.220ms
-            >لا توجد نتائج مطابقة.</div>
-        </template>
+            لا توجد نتائج مطابقة.
+        </div>
 
-        <template x-if="search.results.length > 0">
-            <div
-                class="quran-search-results"
-                x-transition:enter="transition duration-260 ease-out"
-                x-transition:enter-start="opacity-0 translate-y-1"
-                x-transition:enter-end="opacity-100 translate-y-0"
-                x-transition:leave="transition duration-200 ease-in"
-                x-transition:leave-start="opacity-100 translate-y-0"
-                x-transition:leave-end="opacity-0 -translate-y-1"
+        <div
+            class="quran-search-results"
+            x-cloak
+            x-show="search.results.length > 0"
+            x-transition:enter="transition duration-260 ease-out"
+            x-transition:enter-start="opacity-0 translate-y-1"
+            x-transition:enter-end="opacity-100 translate-y-0"
+            x-transition:leave="transition duration-200 ease-in"
+            x-transition:leave-start="opacity-100 translate-y-0"
+            x-transition:leave-end="opacity-0 -translate-y-1"
+        >
+            <template
+                x-for="result in search.results"
+                :key="`quran-search-modal-${result.id}`"
             >
-                <template
-                    x-for="result in search.results"
-                    :key="`quran-search-modal-${result.id}`"
+                <button
+                    class="quran-search-result-btn"
+                    type="button"
+                    x-on:click="goToSearchResult(result)"
                 >
-                    <button
-                        class="quran-search-result-btn"
-                        type="button"
-                        x-on:click="goToSearchResult(result)"
-                    >
-                        <span
-                            class="quran-search-result-meta"
-                            x-text="surahLabel(result.surah_number) + ' · آية ' + result.ayah_number + ' · صفحة ' + result.page_number"
-                        ></span>
-                        <span
-                            class="quran-search-result-ayah font-quran"
-                            x-text="result.text_uthmani"
-                        ></span>
-                    </button>
-                </template>
-            </div>
-        </template>
+                    <span
+                        class="quran-search-result-meta"
+                        x-text="surahLabel(result.surah_number) + ' · آية ' + result.ayah_number + ' · صفحة ' + result.page_number"
+                    ></span>
+                    <span
+                        class="quran-search-result-ayah font-quran"
+                        x-text="result.text_uthmani"
+                    ></span>
+                </button>
+            </template>
+        </div>
     </div>
 
     <div class="quran-surah-grid-shell">
