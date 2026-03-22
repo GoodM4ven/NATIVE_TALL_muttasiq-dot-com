@@ -315,7 +315,7 @@
             height: 1rem;
             z-index: 3;
             stroke: currentColor;
-            stroke-width: 2;
+            stroke-width: 3;
             fill: none;
             opacity: 0;
             transform: translateX(0.4rem) scale(0.86);
@@ -355,6 +355,70 @@
             white-space: nowrap;
         }
 
+        .quran-soorah-trigger-text-inner.quran-caption-leave-forward {
+            animation: quran-caption-leave-forward 140ms ease both;
+        }
+
+        .quran-soorah-trigger-text-inner.quran-caption-leave-backward {
+            animation: quran-caption-leave-backward 140ms ease both;
+        }
+
+        .quran-soorah-trigger-text-inner.quran-caption-enter-forward {
+            animation: quran-caption-enter-forward 180ms ease both;
+        }
+
+        .quran-soorah-trigger-text-inner.quran-caption-enter-backward {
+            animation: quran-caption-enter-backward 180ms ease both;
+        }
+
+        @keyframes quran-caption-leave-forward {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+
+            to {
+                opacity: 0;
+                transform: translateX(0.5rem);
+            }
+        }
+
+        @keyframes quran-caption-leave-backward {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+
+            to {
+                opacity: 0;
+                transform: translateX(-0.5rem);
+            }
+        }
+
+        @keyframes quran-caption-enter-forward {
+            from {
+                opacity: 0;
+                transform: translateX(-0.5rem);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes quran-caption-enter-backward {
+            from {
+                opacity: 0;
+                transform: translateX(0.5rem);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
         .quran-soorah-trigger:hover {
             color: color-mix(in srgb, var(--primary-50) 92%, var(--gray-900));
             box-shadow: 0 0 0 0.75rem transparent;
@@ -362,9 +426,9 @@
         }
 
         .quran-soorah-trigger:hover .quran-soorah-trigger-icon {
-            inset-inline-start: 0.74rem;
+            inset-inline-start: 1.25rem;
             opacity: 1;
-            transform: translateX(0) scale(1);
+            transform: translateX(-0.2rem) scale(1);
         }
 
         .quran-soorah-trigger:hover .quran-soorah-trigger-text {
@@ -698,7 +762,7 @@
                 data-no-swipe
             >
                 <button
-                    class="quran-soorah-trigger"
+                    class="quran-soorah-trigger min-w-[164px]"
                     type="button"
                     dir="rtl"
                     x-on:click="openSearchModal()"
@@ -709,18 +773,11 @@
                         :name="'heroicon-o-magnifying-glass'"
                     />
                     <span class="quran-soorah-trigger-text">
-                        <template x-if="surahTriggerCaptionVisible">
-                            <span
-                                class="quran-soorah-trigger-text-inner"
-                                x-text="currentSurahTriggerLabel()"
-                                x-transition:enter="transform transition duration-220 ease-out"
-                                x-transition:enter-start="opacity-0 translate-y-2"
-                                x-transition:enter-end="opacity-100 translate-y-0"
-                                x-transition:leave="transform transition duration-180 ease-in"
-                                x-transition:leave-start="opacity-100 translate-y-0"
-                                x-transition:leave-end="opacity-0 -translate-y-1"
-                            ></span>
-                        </template>
+                        <span
+                            class="quran-soorah-trigger-text-inner"
+                            x-bind:class="surahTriggerCaptionAnimClass"
+                            x-text="currentSurahTriggerLabel()"
+                        ></span>
                     </span>
                     <span class="quran-soorah-trigger-circle"></span>
                 </button>
@@ -728,7 +785,7 @@
             </header>
 
             <div
-                class="min-h-0 flex-1 overflow-hidden px-3 pb-4 sm:px-4 sm:pb-5"
+                class="min-h-0 flex-1 overflow-hidden px-3 my-2 sm:px-4 sm:my-3"
                 x-ref="pageViewport"
             >
                 <div

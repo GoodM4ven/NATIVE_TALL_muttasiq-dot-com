@@ -185,7 +185,8 @@ document.addEventListener('alpine:init', () => {
         isFittingPage: true,
         pageMotionClass: '',
         surahTriggerCaption: '',
-        surahTriggerCaptionVisible: true,
+        surahTriggerCaptionAnimClass: '',
+        surahTriggerSurahNumber: 1,
         pageMotionTimer: null,
         pageScale: 1,
         swipe: {
@@ -226,6 +227,7 @@ document.addEventListener('alpine:init', () => {
         _onVisualViewportChange: null,
         _onSwitchView: null,
         _surahTriggerTimer: null,
+        _surahTriggerCleanupTimer: null,
 
         init() {
             this.applyPayload(this.initialPayload, { setPageNumber: true });
@@ -310,6 +312,11 @@ document.addEventListener('alpine:init', () => {
             if (this._surahTriggerTimer !== null) {
                 clearTimeout(this._surahTriggerTimer);
                 this._surahTriggerTimer = null;
+            }
+
+            if (this._surahTriggerCleanupTimer !== null) {
+                clearTimeout(this._surahTriggerCleanupTimer);
+                this._surahTriggerCleanupTimer = null;
             }
         },
 
@@ -1490,8 +1497,13 @@ document.addEventListener('alpine:init', () => {
 
         refreshSurahTriggerCaption(animate = true) {
             const nextCaption = this.resolveCurrentSurahTriggerLabel();
+            const nextSurahNumber = Math.max(1, Math.trunc(Number(this.currentSurahNumber() ?? 1)));
 
-            if (nextCaption === this.surahTriggerCaption && this.surahTriggerCaption !== '') {
+            if (
+                nextCaption === this.surahTriggerCaption &&
+                this.surahTriggerCaption !== '' &&
+                nextSurahNumber === this.surahTriggerSurahNumber
+            ) {
                 return;
             }
 
@@ -1500,19 +1512,39 @@ document.addEventListener('alpine:init', () => {
                 this._surahTriggerTimer = null;
             }
 
+            if (this._surahTriggerCleanupTimer !== null) {
+                clearTimeout(this._surahTriggerCleanupTimer);
+                this._surahTriggerCleanupTimer = null;
+            }
+
             if (!animate || this.surahTriggerCaption === '') {
-                this.surahTriggerCaptionVisible = true;
                 this.surahTriggerCaption = nextCaption;
+                this.surahTriggerSurahNumber = nextSurahNumber;
+                this.surahTriggerCaptionAnimClass = '';
 
                 return;
             }
 
-            this.surahTriggerCaptionVisible = false;
+            const isForward = nextSurahNumber >= this.surahTriggerSurahNumber;
+            const leaveClass = isForward
+                ? 'quran-caption-leave-forward'
+                : 'quran-caption-leave-backward';
+            const enterClass = isForward
+                ? 'quran-caption-enter-forward'
+                : 'quran-caption-enter-backward';
+
+            this.surahTriggerCaptionAnimClass = leaveClass;
             this._surahTriggerTimer = window.setTimeout(() => {
                 this.surahTriggerCaption = nextCaption;
-                this.surahTriggerCaptionVisible = true;
+                this.surahTriggerSurahNumber = nextSurahNumber;
+                this.surahTriggerCaptionAnimClass = enterClass;
                 this._surahTriggerTimer = null;
-            }, 120);
+
+                this._surahTriggerCleanupTimer = window.setTimeout(() => {
+                    this.surahTriggerCaptionAnimClass = '';
+                    this._surahTriggerCleanupTimer = null;
+                }, 180);
+            }, 140);
         },
 
         async openSearchModal() {
