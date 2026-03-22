@@ -639,6 +639,7 @@
             x-on:quran-go-prev.window="handleRequestedNavigation('prev', $event.detail)"
             x-on:quran-go-next.window="handleRequestedNavigation('next', $event.detail)"
             x-on:quran-go-page.window="handleRequestedNavigation('page', $event.detail)"
+            x-on:quran-go-gate.window="$viewNav('quran-app-gate')"
             x-ref="readerPanel"
         >
             <header

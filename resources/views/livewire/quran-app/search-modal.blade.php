@@ -5,30 +5,43 @@
     <div
         class="quran-search-results-shell"
         x-cloak
-        wire:transition
     >
         <template
             x-if="normalizeSearchQuery(search.query).length > 0 && normalizeSearchQuery(search.query).length < search.minQueryLength"
         >
-            <div class="quran-search-feedback">
+            <div
+                class="quran-search-feedback"
+                x-transition.opacity.duration.220ms
+            >
                 اكتب حرفين أو أكثر ليبدأ البحث.
             </div>
         </template>
 
         <template x-if="normalizeSearchQuery(search.query).length >= search.minQueryLength && search.isLoading">
-            <div class="quran-search-feedback">جاري البحث...</div>
+            <div
+                class="quran-search-feedback"
+                x-transition.opacity.duration.220ms
+            >جاري البحث...</div>
         </template>
 
         <template
             x-if="normalizeSearchQuery(search.query).length >= search.minQueryLength && !search.isLoading && search.results.length === 0"
         >
-            <div class="quran-search-feedback">لا توجد نتائج مطابقة.</div>
+            <div
+                class="quran-search-feedback"
+                x-transition.opacity.duration.220ms
+            >لا توجد نتائج مطابقة.</div>
         </template>
 
         <template x-if="search.results.length > 0">
             <div
                 class="quran-search-results"
-                wire:transition
+                x-transition:enter="transition duration-260 ease-out"
+                x-transition:enter-start="opacity-0 translate-y-1"
+                x-transition:enter-end="opacity-100 translate-y-0"
+                x-transition:leave="transition duration-200 ease-in"
+                x-transition:leave-start="opacity-100 translate-y-0"
+                x-transition:leave-end="opacity-0 -translate-y-1"
             >
                 <template
                     x-for="result in search.results"

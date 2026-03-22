@@ -85,8 +85,7 @@ class Reader extends Component implements HasActions, HasSchemas
                     ->inputMode('numeric')
                     ->minValue(1)
                     ->maxValue(fn (): int => max(1, $this->maxPage))
-                    ->live(onBlur: true)
-                    ->suffix(fn (): string => '/ '.max(1, $this->maxPage))
+                    ->suffix(fn (): string => max(1, $this->maxPage).' / ')
                     ->extraFieldWrapperAttributes([
                         'id' => 'quran-reader-page-counter-field',
                         'class' => 'quran-page-counter-field',

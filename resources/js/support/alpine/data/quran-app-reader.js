@@ -31,8 +31,14 @@ const normalizePayload = (payload = {}) => ({
     useCenteredAyahLayout: Boolean(payload?.useCenteredAyahLayout),
 });
 
+const normalizeNumerals = (rawValue) =>
+    String(rawValue ?? '')
+        .replace(/[٠-٩]/g, (digit) => String(digit.charCodeAt(0) - 0x660))
+        .replace(/[۰-۹]/g, (digit) => String(digit.charCodeAt(0) - 0x6f0))
+        .trim();
+
 const clampPage = (value, maxPage) => {
-    const numeric = Number(value);
+    const numeric = typeof value === 'string' ? Number(normalizeNumerals(value)) : Number(value);
 
     if (!Number.isFinite(numeric)) {
         return 1;
@@ -434,6 +440,12 @@ document.addEventListener('alpine:init', () => {
         },
 
         async previousPage(source = 'generic') {
+            if (this.pageNumber <= 1) {
+                this.requestReaderGateNavigation(source);
+
+                return;
+            }
+
             await this.navigateToPage(this.pageNumber - 1, {
                 direction: 'prev',
                 source,
@@ -1179,6 +1191,12 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            if (event.target?.closest?.('.quran-word-button')) {
+                this.resetSwipeState();
+
+                return;
+            }
+
             const source = event?.type?.startsWith('touch') ? 'touch' : 'pointer';
 
             if (this.swipe.source && this.swipe.source !== source) {
@@ -1202,32 +1220,9 @@ document.addEventListener('alpine:init', () => {
             this.swipe.pointerId = point.pointerId;
             this.swipe.pointerType = point.pointerType;
             this.hoveredAyahIndex = 0;
-
-            if (
-                source === 'pointer' &&
-                Number.isFinite(point.pointerId) &&
-                this.$refs.readerPanel?.setPointerCapture
-            ) {
-                try {
-                    this.$refs.readerPanel.setPointerCapture(point.pointerId);
-                } catch (_) {
-                    // Ignore pointer capture failures on unsupported environments.
-                }
-            }
         },
 
         resetSwipeState() {
-            if (
-                Number.isFinite(this.swipe.pointerId) &&
-                this.$refs.readerPanel?.releasePointerCapture
-            ) {
-                try {
-                    this.$refs.readerPanel.releasePointerCapture(this.swipe.pointerId);
-                } catch (_) {
-                    // Ignore pointer release failures on unsupported environments.
-                }
-            }
-
             this.swipe.active = false;
             this.swipe.pointerId = null;
             this.swipe.pointerType = null;
@@ -1764,6 +1759,12 @@ document.addEventListener('alpine:init', () => {
                     },
                 }),
             );
+        },
+
+        requestReaderGateNavigation(_source = 'generic') {
+            this.resetSwipeState();
+            this.requestSearchModalClose();
+            window.dispatchEvent(new CustomEvent('quran-go-gate'));
         },
 
         async confirmSearchSelection() {
