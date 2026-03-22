@@ -228,6 +228,9 @@ document.addEventListener('alpine:init', () => {
         _onSwitchView: null,
         _surahTriggerTimer: null,
         _surahTriggerCleanupTimer: null,
+        _navigationQueue: Promise.resolve(),
+        _fitRunCounter: 0,
+        _lastFittedPageNumber: 0,
 
         init() {
             this.applyPayload(this.initialPayload, { setPageNumber: true });
@@ -324,7 +327,7 @@ document.addEventListener('alpine:init', () => {
             await this.ensurePersistentStorage();
             await this.ensureCurrentPageLoaded();
             await this.ensureCanonicalPanelWidth();
-            await this.layoutPage({ revealDelayMs: 240 });
+            await this.layoutPageGuaranteed({ revealDelayMs: 240 });
             this.queueStartupPreload();
             this.warmSearchIndex();
         },
@@ -400,11 +403,21 @@ document.addEventListener('alpine:init', () => {
         },
 
         async nextPage() {
-            await this.goToPage(this.pageNumber + 1, { direction: 'next' });
+            await this.enqueueNavigation(() =>
+                this.goToPage(this.pageNumber + 1, {
+                    direction: 'next',
+                    forceRefit: true,
+                }),
+            );
         },
 
         async previousPage() {
-            await this.goToPage(this.pageNumber - 1, { direction: 'prev' });
+            await this.enqueueNavigation(() =>
+                this.goToPage(this.pageNumber - 1, {
+                    direction: 'prev',
+                    forceRefit: true,
+                }),
+            );
         },
 
         async goNextFromChevron() {
@@ -415,15 +428,55 @@ document.addEventListener('alpine:init', () => {
             await this.previousPage();
         },
 
+        enqueueNavigation(task) {
+            this._navigationQueue = this._navigationQueue
+                .then(async () => {
+                    await task();
+                })
+                .catch(() => {
+                    // Keep queue alive after failures.
+                });
+
+            return this._navigationQueue;
+        },
+
+        async onGlobalArrowNavigate(direction, event = null) {
+            if (this.search.modalOpen) {
+                return;
+            }
+
+            if (
+                event?.target?.closest?.(
+                    'input:not(.quran-page-counter-input), textarea, select, [contenteditable="true"]',
+                )
+            ) {
+                return;
+            }
+
+            if (direction === 'left') {
+                await this.goNextFromChevron();
+
+                return;
+            }
+
+            if (direction === 'right') {
+                await this.goPreviousFromChevron();
+            }
+        },
+
         async goToPage(
             pageNumber,
-            { direction = 'next', animate = true, activeAyahIndex = null } = {},
+            { direction = 'next', animate = true, activeAyahIndex = null, forceRefit = false } = {},
         ) {
             const normalizedPage = clampPage(pageNumber, this.maxPage);
             this.hoveredAyahIndex = 0;
 
             if (normalizedPage === this.pageNumber && this.mushafLines.length > 0) {
                 this.pageInput = normalizedPage;
+
+                if (forceRefit) {
+                    await this.layoutPageGuaranteed({ revealDelayMs: 200 });
+                }
 
                 return;
             }
@@ -452,7 +505,7 @@ document.addEventListener('alpine:init', () => {
                 }
 
                 this.prefetchNeighborPages(normalizedPage);
-                await this.layoutPage({ revealDelayMs: 220 });
+                await this.layoutPageGuaranteed({ revealDelayMs: 220 });
             } finally {
                 this.isLoadingPage = false;
             }
@@ -463,7 +516,13 @@ document.addEventListener('alpine:init', () => {
             const direction = targetPage >= this.pageNumber ? 'next' : 'prev';
 
             this.pageInput = targetPage;
-            await this.goToPage(targetPage, { direction, animate: true });
+            await this.enqueueNavigation(() =>
+                this.goToPage(targetPage, {
+                    direction,
+                    animate: true,
+                    forceRefit: true,
+                }),
+            );
         },
 
         applyPayload(payload, { setPageNumber = false } = {}) {
@@ -805,6 +864,24 @@ document.addEventListener('alpine:init', () => {
             this.queuePageReveal(layoutToken, revealDelayMs);
         },
 
+        async layoutPageGuaranteed({ revealDelayMs = 180, maxAttempts = 3 } = {}) {
+            const attempts = Math.max(1, Math.trunc(Number(maxAttempts) || 3));
+
+            for (let attempt = 0; attempt < attempts; attempt += 1) {
+                const fitRunsBeforeAttempt = this._fitRunCounter;
+                await this.layoutPage({
+                    revealDelayMs: attempt === 0 ? revealDelayMs : 140,
+                });
+
+                if (
+                    this._fitRunCounter > fitRunsBeforeAttempt &&
+                    this._lastFittedPageNumber === this.pageNumber
+                ) {
+                    return;
+                }
+            }
+        },
+
         measureRenderedBounds(contentElement) {
             const lineTargets = Array.from(
                 contentElement.querySelectorAll('[data-quran-line-text]'),
@@ -913,6 +990,8 @@ document.addEventListener('alpine:init', () => {
 
             rootElement.style.setProperty('--quran-page-scale', String(normalizedScale));
             this.pageScale = normalizedScale;
+            this._fitRunCounter += 1;
+            this._lastFittedPageNumber = this.pageNumber;
         },
 
         async prefetchFontAsset(payload) {

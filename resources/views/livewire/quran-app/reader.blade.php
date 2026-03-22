@@ -755,6 +755,8 @@
             x-on:touchstart.passive="onSwipeStart($event)"
             x-on:touchend.passive="onSwipeEnd($event)"
             x-on:touchcancel.passive="onSwipeCancel()"
+            x-on:keyup.left.window.prevent="onGlobalArrowNavigate('left', $event)"
+            x-on:keyup.right.window.prevent="onGlobalArrowNavigate('right', $event)"
             x-ref="readerPanel"
         >
             <header
@@ -785,7 +787,7 @@
             </header>
 
             <div
-                class="min-h-0 flex-1 overflow-hidden px-3 my-2 sm:px-4 sm:my-3"
+                class="my-2 min-h-0 flex-1 overflow-hidden px-3 sm:my-3 sm:px-4"
                 x-ref="pageViewport"
             >
                 <div
@@ -913,7 +915,6 @@
                     type="button"
                     aria-label="الصفحة السابقة"
                     x-on:click="goPreviousFromChevron()"
-                    x-on:keyup.right.window="if (views['quran-app-tilawa'].isOpen || views['quran-app-hifth'].isOpen || views['quran-app-tadabbur'].isOpen) goPreviousFromChevron()"
                 >
                     <span class="quran-swipe-hint-chev">‹</span>
                     <span class="quran-swipe-hint-chev">‹</span>
@@ -925,6 +926,7 @@
                         type="number"
                         x-model.number="pageInput"
                         x-on:change="onPageInputCommit()"
+                        x-on:input.debounce.220ms="onPageInputCommit()"
                         x-on:keydown.enter.prevent="onPageInputCommit()"
                         x-bind:max="Math.max(1, maxPage)"
                         min="1"
@@ -940,7 +942,6 @@
                     type="button"
                     aria-label="الصفحة التالية"
                     x-on:click="goNextFromChevron()"
-                    x-on:keyup.left.window="if (views['quran-app-tilawa'].isOpen || views['quran-app-hifth'].isOpen || views['quran-app-tadabbur'].isOpen) goNextFromChevron()"
                 >
                     <span class="quran-swipe-hint-chev quran-swipe-hint-chev-opposite">›</span>
                     <span class="quran-swipe-hint-chev quran-swipe-hint-chev-opposite">›</span>
