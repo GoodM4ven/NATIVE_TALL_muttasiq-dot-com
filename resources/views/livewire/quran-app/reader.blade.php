@@ -240,17 +240,15 @@
             background: transparent;
             border: 0.14rem solid transparent;
             border-radius: 999px;
-            color: var(--quran-panel-text);
+            color: color-mix(in srgb, var(--primary-700) 86%, var(--quran-panel-text));
             cursor: pointer;
             overflow: hidden;
             direction: rtl;
-            /* ← RTL */
             transition:
                 box-shadow 0.6s cubic-bezier(0.23, 1, 0.32, 1),
                 color 0.6s cubic-bezier(0.23, 1, 0.32, 1),
-                border-radius 0.6s cubic-bezier(0.23, 1, 0.32, 1),
                 transform 0.22s ease;
-            box-shadow: 0 0 0 1.6px color-mix(in srgb, var(--quran-chip-border) 76%, transparent);
+            box-shadow: 0 0 0 1.6px color-mix(in srgb, var(--primary-500) 72%, transparent);
             font-family: 'IBM Plex Sans Arabic', 'Manrope', ui-sans-serif, system-ui, sans-serif;
             font-size: 0.95rem;
             font-weight: 700;
@@ -259,91 +257,72 @@
             -webkit-user-select: none;
         }
 
-        .quran-soorah-trigger-arr {
+        .quran-soorah-trigger-icon {
             position: absolute;
+            inset-inline-start: 0.82rem;
             width: 1rem;
             height: 1rem;
             z-index: 3;
-            fill: currentColor;
-            transform: scaleX(-1);
-            /* ← mirror arrow to point left */
+            stroke: currentColor;
+            stroke-width: 2;
+            fill: none;
+            opacity: 0;
+            transform: translateX(0.4rem) scale(0.86);
             transition:
+                inset-inline-start 0.8s cubic-bezier(0.23, 1, 0.32, 1),
                 transform 0.8s cubic-bezier(0.23, 1, 0.32, 1),
                 opacity 0.8s cubic-bezier(0.23, 1, 0.32, 1);
-        }
-
-        .quran-soorah-trigger-arr-1 {
-            inset-inline-end: 0.75rem;
-            opacity: 0.86;
-        }
-
-        .quran-soorah-trigger-arr-2 {
-            inset-inline-start: -30%;
-            opacity: 0;
-            transform: scaleX(-1) scale(0.92);
-            /* ← keep mirror + scale */
         }
 
         .quran-soorah-trigger-circle {
             position: absolute;
             inset-block-start: 50%;
             inset-inline-start: 50%;
-            transform: translate(-50%, -50%);
-            width: 0.8rem;
-            height: 0.8rem;
+            transform: translate(-50%, -50%) scale(0);
+            width: 1rem;
+            height: 1rem;
             border-radius: 999px;
-            opacity: 0;
+            opacity: 0.92;
             z-index: 1;
-            background: color-mix(in srgb, var(--success-500) 88%, var(--success-300));
+            background: color-mix(in srgb, var(--primary-500) 92%, var(--primary-400));
             transition:
-                width 0.8s cubic-bezier(0.23, 1, 0.32, 1),
-                height 0.8s cubic-bezier(0.23, 1, 0.32, 1),
-                opacity 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+                transform 0.7s cubic-bezier(0.23, 1, 0.32, 1),
+                opacity 0.7s cubic-bezier(0.23, 1, 0.32, 1);
         }
 
         .quran-soorah-trigger-text {
             position: relative;
             z-index: 2;
-            transform: translateX(0.25rem);
-            /* ← flipped: was -0.25rem */
+            transform: translateX(0.2rem);
             transition:
                 transform 0.8s cubic-bezier(0.23, 1, 0.32, 1),
                 color 0.8s cubic-bezier(0.23, 1, 0.32, 1);
         }
 
         .quran-soorah-trigger:hover {
-            color: color-mix(in srgb, var(--gray-950) 92%, var(--background));
+            color: color-mix(in srgb, var(--primary-50) 92%, var(--gray-900));
             box-shadow: 0 0 0 0.75rem transparent;
-            border-radius: 0.75rem;
             transform: translateY(-0.04rem);
         }
 
-        .quran-soorah-trigger:hover .quran-soorah-trigger-arr-1 {
-            inset-inline-end: -30%;
-            opacity: 0;
-        }
-
-        .quran-soorah-trigger:hover .quran-soorah-trigger-arr-2 {
-            inset-inline-start: 0.75rem;
+        .quran-soorah-trigger:hover .quran-soorah-trigger-icon {
+            inset-inline-start: 0.74rem;
             opacity: 1;
-            transform: scaleX(-1) scale(1);
-            /* ← keep mirror */
+            transform: translateX(0) scale(1);
         }
 
         .quran-soorah-trigger:hover .quran-soorah-trigger-text {
-            transform: translateX(-0.68rem);
-            /* ← flipped: was -0.68rem */
+            transform: translateX(-0.62rem);
         }
 
         .quran-soorah-trigger:hover .quran-soorah-trigger-circle {
-            width: 15rem;
-            height: 15rem;
+            transform: translate(-50%, -50%) scale(18);
             opacity: 1;
         }
 
         .quran-soorah-trigger:active {
             transform: scale(0.97);
-            box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--quran-chip-border) 60%, transparent);
+            box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--primary-500) 58%, transparent);
         }
 
         .quran-bottom-strip {
@@ -362,7 +341,7 @@
             min-height: 2.2rem;
             padding: 0.2rem 0.6rem;
             border-radius: 999px;
-            background: color-mix(in srgb, var(--quran-chip-bg) 82%, transparent);
+            /* background: color-mix(in srgb, var(--quran-chip-bg) 82%, transparent); */
             box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--quran-chip-border) 60%, transparent);
         }
 
@@ -387,8 +366,12 @@
         .quran-swipe-hint-chev {
             display: inline-block;
             animation: quran-swipe-shimmer 1400ms ease-in-out infinite;
-            font-size: 1rem;
+            font-size: 2rem;
             line-height: 1;
+        }
+        
+        .quran-swipe-hint-chev.quran-swipe-hint-chev-opposite {
+            animation: quran-swipe-shimmer-opposite 1400ms ease-in-out infinite;
         }
 
         .quran-swipe-hint-chev:nth-child(2) {
@@ -400,16 +383,26 @@
         }
 
         @keyframes quran-swipe-shimmer {
-
             0%,
             100% {
                 opacity: 0.22;
-                transform: translateY(0);
+                transform: translateX(0);
             }
-
             50% {
                 opacity: 1;
-                transform: translateY(-0.1rem);
+                transform: translateX(0.1rem);
+            }
+        }
+        
+        @keyframes quran-swipe-shimmer-opposite {
+            0%,
+            100% {
+                opacity: 0.22;
+                transform: translateX(0);
+            }
+            50% {
+                opacity: 1;
+                transform: translateX(-0.1rem);
             }
         }
 
@@ -610,7 +603,7 @@
                     x-bind:aria-label="'ابحث في ' + currentSurahTitle()"
                 >
                     <x-icon
-                        class="quran-soorah-trigger-arr quran-soorah-trigger-arr-2"
+                        class="quran-soorah-trigger-icon"
                         :name="'heroicon-o-magnifying-glass'"
                     />
                     <span
@@ -715,12 +708,12 @@
                 data-no-swipe
             >
                 <div
-                    class="quran-swipe-hint justify-self-start"
+                    class="quran-swipe-hint justify-self-center select-none cursor-default"
                     aria-hidden="true"
                 >
-                    <span class="quran-swipe-hint-chev">›</span>
-                    <span class="quran-swipe-hint-chev">›</span>
-                    <span class="quran-swipe-hint-chev">›</span>
+                    <span class="quran-swipe-hint-chev">‹</span>
+                    <span class="quran-swipe-hint-chev">‹</span>
+                    <span class="quran-swipe-hint-chev">‹</span>
                 </div>
                 <div class="quran-page-counter">
                     <input
@@ -733,18 +726,18 @@
                         min="1"
                     >
                     <span
-                        class="text-xs tabular-nums"
+                        class="text-xs tabular-nums select-none cursor-default"
                         style="color: var(--quran-subtle);"
-                        x-text="'/' + Math.max(1, maxPage)"
+                        x-text="' / ' + Math.max(1, maxPage)"
                     ></span>
                 </div>
                 <div
-                    class="quran-swipe-hint justify-self-end"
+                    class="quran-swipe-hint justify-self-center select-none cursor-default"
                     aria-hidden="true"
                 >
-                    <span class="quran-swipe-hint-chev">‹</span>
-                    <span class="quran-swipe-hint-chev">‹</span>
-                    <span class="quran-swipe-hint-chev">‹</span>
+                    <span class="quran-swipe-hint-chev quran-swipe-hint-chev-opposite">›</span>
+                    <span class="quran-swipe-hint-chev quran-swipe-hint-chev-opposite">›</span>
+                    <span class="quran-swipe-hint-chev quran-swipe-hint-chev-opposite">›</span>
                 </div>
             </footer>
 
