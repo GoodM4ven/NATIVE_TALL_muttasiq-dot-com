@@ -1186,14 +1186,44 @@ document.addEventListener('alpine:init', () => {
 
         surahLabel(surahNumber) {
             const normalizedSurahNumber = Math.max(1, Math.trunc(Number(surahNumber ?? 1)));
-            const names = this.search.surahNames ?? {};
-            const name = String(names?.[normalizedSurahNumber] ?? '').trim();
+            const name = this.surahNameOnly(normalizedSurahNumber);
 
             if (name !== '') {
                 return `سورة ${name}`;
             }
 
             return `سورة ${normalizedSurahNumber}`;
+        },
+
+        surahNameOnly(surahNumber) {
+            const normalizedSurahNumber = Math.max(1, Math.trunc(Number(surahNumber ?? 1)));
+            const names = this.search.surahNames ?? {};
+            const rawName = String(names?.[normalizedSurahNumber] ?? '').trim();
+
+            if (rawName !== '') {
+                return rawName
+                    .replace(/^سورة\s+/u, '')
+                    .replace(/^سور[ةه]\s+/u, '')
+                    .trim();
+            }
+
+            const headerLine = this.mushafLines.find((line) => {
+                const lineSurahNumber = Number(line?.surah_number ?? 0);
+                const lineType = String(line?.line_type ?? '');
+
+                return lineSurahNumber === normalizedSurahNumber && lineType === 'surah_name';
+            });
+            const headerText = String(headerLine?.text ?? '').trim();
+
+            if (headerText === '') {
+                return '';
+            }
+
+            return headerText
+                .replace(/^سورة\s+/u, '')
+                .replace(/^سور[ةه]\s+/u, '')
+                .replace(/\(\s*\d+\s*\)\s*$/u, '')
+                .trim();
         },
 
         currentSurahNumber() {
@@ -1222,6 +1252,18 @@ document.addEventListener('alpine:init', () => {
 
         currentSurahTitle() {
             return this.surahLabel(this.currentSurahNumber());
+        },
+
+        currentSurahTriggerLabel() {
+            const surahNumber = this.currentSurahNumber();
+            const normalizedSurahNumber = Math.max(1, Math.trunc(Number(surahNumber ?? 1)));
+            const surahName = this.surahNameOnly(normalizedSurahNumber);
+
+            if (surahName !== '') {
+                return `(${normalizedSurahNumber}) - ${surahName}`;
+            }
+
+            return `(${normalizedSurahNumber})`;
         },
 
         async openSearchModal() {

@@ -231,44 +231,119 @@
 
         .quran-soorah-trigger {
             position: relative;
-            display: inline-flex;
+            display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 2.1rem;
-            padding: 0.25rem 0.25rem 0.25rem 1.95rem;
+            gap: 0.25rem;
+            min-height: 2.2rem;
+            padding: 0.42rem 2.35rem;
             background: transparent;
-            border: 0;
+            border: 0.14rem solid transparent;
+            border-radius: 999px;
             color: var(--quran-panel-text);
             cursor: pointer;
             overflow: hidden;
-        }
-
-        .quran-soorah-trigger-label {
-            display: inline-flex;
+            direction: rtl;
+            /* ← RTL */
             transition:
-                transform 240ms ease,
-                opacity 240ms ease;
+                box-shadow 0.6s cubic-bezier(0.23, 1, 0.32, 1),
+                color 0.6s cubic-bezier(0.23, 1, 0.32, 1),
+                border-radius 0.6s cubic-bezier(0.23, 1, 0.32, 1),
+                transform 0.22s ease;
+            box-shadow: 0 0 0 1.6px color-mix(in srgb, var(--quran-chip-border) 76%, transparent);
+            font-family: 'IBM Plex Sans Arabic', 'Manrope', ui-sans-serif, system-ui, sans-serif;
+            font-size: 0.95rem;
+            font-weight: 700;
+            line-height: 1;
+            user-select: none;
+            -webkit-user-select: none;
         }
 
-        .quran-soorah-trigger-icon {
+        .quran-soorah-trigger-arr {
             position: absolute;
-            inset-inline-start: 0.25rem;
-            width: 1.05rem;
-            height: 1.05rem;
-            opacity: 0;
-            transform: translateX(0.35rem) scale(0.84);
+            width: 1rem;
+            height: 1rem;
+            z-index: 3;
+            fill: currentColor;
+            transform: scaleX(-1);
+            /* ← mirror arrow to point left */
             transition:
-                opacity 240ms ease,
-                transform 240ms ease;
+                transform 0.8s cubic-bezier(0.23, 1, 0.32, 1),
+                opacity 0.8s cubic-bezier(0.23, 1, 0.32, 1);
         }
 
-        .quran-soorah-trigger:hover .quran-soorah-trigger-label {
-            transform: translateX(-0.45rem);
+        .quran-soorah-trigger-arr-1 {
+            inset-inline-end: 0.75rem;
+            opacity: 0.86;
         }
 
-        .quran-soorah-trigger:hover .quran-soorah-trigger-icon {
+        .quran-soorah-trigger-arr-2 {
+            inset-inline-start: -30%;
+            opacity: 0;
+            transform: scaleX(-1) scale(0.92);
+            /* ← keep mirror + scale */
+        }
+
+        .quran-soorah-trigger-circle {
+            position: absolute;
+            inset-block-start: 50%;
+            inset-inline-start: 50%;
+            transform: translate(-50%, -50%);
+            width: 0.8rem;
+            height: 0.8rem;
+            border-radius: 999px;
+            opacity: 0;
+            z-index: 1;
+            background: color-mix(in srgb, var(--success-500) 88%, var(--success-300));
+            transition:
+                width 0.8s cubic-bezier(0.23, 1, 0.32, 1),
+                height 0.8s cubic-bezier(0.23, 1, 0.32, 1),
+                opacity 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .quran-soorah-trigger-text {
+            position: relative;
+            z-index: 2;
+            transform: translateX(0.25rem);
+            /* ← flipped: was -0.25rem */
+            transition:
+                transform 0.8s cubic-bezier(0.23, 1, 0.32, 1),
+                color 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .quran-soorah-trigger:hover {
+            color: color-mix(in srgb, var(--gray-950) 92%, var(--background));
+            box-shadow: 0 0 0 0.75rem transparent;
+            border-radius: 0.75rem;
+            transform: translateY(-0.04rem);
+        }
+
+        .quran-soorah-trigger:hover .quran-soorah-trigger-arr-1 {
+            inset-inline-end: -30%;
+            opacity: 0;
+        }
+
+        .quran-soorah-trigger:hover .quran-soorah-trigger-arr-2 {
+            inset-inline-start: 0.75rem;
             opacity: 1;
-            transform: translateX(0) scale(1);
+            transform: scaleX(-1) scale(1);
+            /* ← keep mirror */
+        }
+
+        .quran-soorah-trigger:hover .quran-soorah-trigger-text {
+            transform: translateX(-0.68rem);
+            /* ← flipped: was -0.68rem */
+        }
+
+        .quran-soorah-trigger:hover .quran-soorah-trigger-circle {
+            width: 15rem;
+            height: 15rem;
+            opacity: 1;
+        }
+
+        .quran-soorah-trigger:active {
+            transform: scale(0.97);
+            box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--quran-chip-border) 60%, transparent);
         }
 
         .quran-bottom-strip {
@@ -513,7 +588,7 @@
         </section>
     @else
         <section
-            class="quran-reader-panel relative flex h-[clamp(31rem,92svh,62rem)] w-[min(96vw,60rem)] min-w-75 flex-col overflow-hidden rounded-[1.75rem] border"
+            class="quran-reader-panel min-w-75 relative flex h-[clamp(31rem,92svh,62rem)] w-[min(96vw,60rem)] flex-col overflow-hidden rounded-[1.75rem] border"
             x-bind:style="readerPanelStyle()"
             x-on:pointerdown.passive="onSwipeStart($event)"
             x-on:pointerup.passive="onSwipeEnd($event)"
@@ -528,28 +603,21 @@
                 data-no-swipe
             >
                 <button
-                    class="quran-soorah-trigger font-quran text-lg"
+                    class="quran-soorah-trigger"
                     type="button"
+                    dir="rtl"
                     x-on:click="openSearchModal()"
+                    x-bind:aria-label="'ابحث في ' + currentSurahTitle()"
                 >
-                    <svg
-                        class="quran-soorah-trigger-icon"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                    >
-                        <path
-                            d="M10.5 4.5a6 6 0 1 1 0 12a6 6 0 0 1 0-12Zm7.5 13.5l-3.2-3.2"
-                            stroke="currentColor"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="1.8"
-                        />
-                    </svg>
+                    <x-icon
+                        class="quran-soorah-trigger-arr quran-soorah-trigger-arr-2"
+                        :name="'heroicon-o-magnifying-glass'"
+                    />
                     <span
-                        class="quran-soorah-trigger-label"
-                        x-text="currentSurahTitle()"
+                        class="quran-soorah-trigger-text"
+                        x-text="currentSurahTriggerLabel()"
                     ></span>
+                    <span class="quran-soorah-trigger-circle"></span>
                 </button>
                 <div class="min-w-14"></div>
             </header>
