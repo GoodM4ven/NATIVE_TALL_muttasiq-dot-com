@@ -231,6 +231,7 @@ document.addEventListener('alpine:init', () => {
         _navigationQueue: Promise.resolve(),
         _fitRunCounter: 0,
         _lastFittedPageNumber: 0,
+        _pageInputCommitTimer: null,
 
         init() {
             this.applyPayload(this.initialPayload, { setPageNumber: true });
@@ -321,6 +322,11 @@ document.addEventListener('alpine:init', () => {
                 clearTimeout(this._surahTriggerCleanupTimer);
                 this._surahTriggerCleanupTimer = null;
             }
+
+            if (this._pageInputCommitTimer !== null) {
+                clearTimeout(this._pageInputCommitTimer);
+                this._pageInputCommitTimer = null;
+            }
         },
 
         async bootstrap() {
@@ -402,30 +408,64 @@ document.addEventListener('alpine:init', () => {
             await this.goToPage(normalizedPage, { animate: false });
         },
 
-        async nextPage() {
+        async navigateToPage(
+            targetPage,
+            { direction = 'next', animate = true, activeAyahIndex = null, source = 'generic' } = {},
+        ) {
+            const normalizedTargetPage = clampPage(targetPage, this.maxPage);
+
             await this.enqueueNavigation(() =>
-                this.goToPage(this.pageNumber + 1, {
-                    direction: 'next',
+                this.goToPage(normalizedTargetPage, {
+                    direction,
+                    animate,
+                    activeAyahIndex,
                     forceRefit: true,
                 }),
             );
         },
 
-        async previousPage() {
-            await this.enqueueNavigation(() =>
-                this.goToPage(this.pageNumber - 1, {
-                    direction: 'prev',
-                    forceRefit: true,
-                }),
-            );
+        async nextPage(source = 'generic') {
+            await this.navigateToPage(this.pageNumber + 1, {
+                direction: 'next',
+                source,
+            });
+        },
+
+        async previousPage(source = 'generic') {
+            await this.navigateToPage(this.pageNumber - 1, {
+                direction: 'prev',
+                source,
+            });
         },
 
         async goNextFromChevron() {
-            await this.nextPage();
+            await this.nextPage('chevron');
         },
 
         async goPreviousFromChevron() {
-            await this.previousPage();
+            await this.previousPage('chevron');
+        },
+
+        async handleRequestedNavigation(kind, detail = {}) {
+            this.resetSwipeState();
+
+            if (kind === 'next') {
+                await this.goNextFromChevron();
+
+                return;
+            }
+
+            if (kind === 'prev') {
+                await this.goPreviousFromChevron();
+
+                return;
+            }
+
+            if (kind === 'page') {
+                const requestedPage = clampPage(detail?.page ?? this.pageInput, this.maxPage);
+                this.pageInput = requestedPage;
+                await this.onPageInputCommit();
+            }
         },
 
         enqueueNavigation(task) {
@@ -454,13 +494,13 @@ document.addEventListener('alpine:init', () => {
             }
 
             if (direction === 'left') {
-                await this.goNextFromChevron();
+                await this.nextPage('keyboard');
 
                 return;
             }
 
             if (direction === 'right') {
-                await this.goPreviousFromChevron();
+                await this.previousPage('keyboard');
             }
         },
 
@@ -511,18 +551,32 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        onPageInputInput() {
+            if (this._pageInputCommitTimer !== null) {
+                clearTimeout(this._pageInputCommitTimer);
+            }
+
+            this._pageInputCommitTimer = window.setTimeout(() => {
+                this._pageInputCommitTimer = null;
+                this.onPageInputCommit();
+            }, 220);
+        },
+
         async onPageInputCommit() {
+            if (this._pageInputCommitTimer !== null) {
+                clearTimeout(this._pageInputCommitTimer);
+                this._pageInputCommitTimer = null;
+            }
+
             const targetPage = clampPage(this.pageInput, this.maxPage);
             const direction = targetPage >= this.pageNumber ? 'next' : 'prev';
 
             this.pageInput = targetPage;
-            await this.enqueueNavigation(() =>
-                this.goToPage(targetPage, {
-                    direction,
-                    animate: true,
-                    forceRefit: true,
-                }),
-            );
+            await this.navigateToPage(targetPage, {
+                direction,
+                animate: true,
+                source: 'page-input',
+            });
         },
 
         applyPayload(payload, { setPageNumber = false } = {}) {
@@ -1112,10 +1166,14 @@ document.addEventListener('alpine:init', () => {
 
         onSwipeStart(event) {
             if (event.target?.closest?.('[data-no-swipe]')) {
+                this.resetSwipeState();
+
                 return;
             }
 
             if (event.target?.closest?.('input, textarea, select, [contenteditable="true"]')) {
+                this.resetSwipeState();
+
                 return;
             }
 
@@ -1142,6 +1200,36 @@ document.addEventListener('alpine:init', () => {
             this.swipe.pointerId = point.pointerId;
             this.swipe.pointerType = point.pointerType;
             this.hoveredAyahIndex = 0;
+
+            if (
+                source === 'pointer' &&
+                Number.isFinite(point.pointerId) &&
+                this.$refs.readerPanel?.setPointerCapture
+            ) {
+                try {
+                    this.$refs.readerPanel.setPointerCapture(point.pointerId);
+                } catch (_) {
+                    // Ignore pointer capture failures on unsupported environments.
+                }
+            }
+        },
+
+        resetSwipeState() {
+            if (
+                Number.isFinite(this.swipe.pointerId) &&
+                this.$refs.readerPanel?.releasePointerCapture
+            ) {
+                try {
+                    this.$refs.readerPanel.releasePointerCapture(this.swipe.pointerId);
+                } catch (_) {
+                    // Ignore pointer release failures on unsupported environments.
+                }
+            }
+
+            this.swipe.active = false;
+            this.swipe.pointerId = null;
+            this.swipe.pointerType = null;
+            this.swipe.source = null;
         },
 
         async onSwipeEnd(event) {
@@ -1149,19 +1237,37 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            if (event?.target?.closest?.('[data-no-swipe]')) {
+                this.resetSwipeState();
+
+                return;
+            }
+
+            if (event?.target?.closest?.('input, textarea, select, [contenteditable="true"]')) {
+                this.resetSwipeState();
+
+                return;
+            }
+
             const source = event?.type?.startsWith('touch') ? 'touch' : 'pointer';
 
             if (this.swipe.source && this.swipe.source !== source) {
+                this.resetSwipeState();
+
                 return;
             }
 
             const point = this.swipePoint(event);
 
             if (!point) {
+                this.resetSwipeState();
+
                 return;
             }
 
             if (this.swipe.pointerId !== null && point.pointerId !== this.swipe.pointerId) {
+                this.resetSwipeState();
+
                 return;
             }
 
@@ -1170,29 +1276,23 @@ document.addEventListener('alpine:init', () => {
             const absX = Math.abs(deltaX);
             const absY = Math.abs(deltaY);
 
-            this.swipe.active = false;
-            this.swipe.pointerId = null;
-            this.swipe.pointerType = null;
-            this.swipe.source = null;
+            this.resetSwipeState();
 
             if (absX < 40 || absX < absY) {
                 return;
             }
 
             if (deltaX > 0) {
-                await this.nextPage();
+                await this.nextPage('swipe');
 
                 return;
             }
 
-            await this.previousPage();
+            await this.previousPage('swipe');
         },
 
         onSwipeCancel() {
-            this.swipe.active = false;
-            this.swipe.pointerId = null;
-            this.swipe.pointerType = null;
-            this.swipe.source = null;
+            this.resetSwipeState();
         },
 
         pageContentStyle() {

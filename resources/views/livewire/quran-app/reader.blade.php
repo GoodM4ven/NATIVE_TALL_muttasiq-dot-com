@@ -750,13 +750,16 @@
             class="quran-reader-panel min-w-75 relative flex h-[clamp(31rem,92svh,62rem)] w-[min(96vw,60rem)] flex-col overflow-hidden rounded-[1.75rem] border"
             x-bind:style="readerPanelStyle()"
             x-on:pointerdown.passive="onSwipeStart($event)"
-            x-on:pointerup.passive="onSwipeEnd($event)"
-            x-on:pointercancel.passive="onSwipeCancel()"
+            x-on:pointerup.window.passive="onSwipeEnd($event)"
+            x-on:pointercancel.window.passive="onSwipeCancel()"
             x-on:touchstart.passive="onSwipeStart($event)"
-            x-on:touchend.passive="onSwipeEnd($event)"
-            x-on:touchcancel.passive="onSwipeCancel()"
+            x-on:touchend.window.passive="onSwipeEnd($event)"
+            x-on:touchcancel.window.passive="onSwipeCancel()"
             x-on:keyup.left.window.prevent="onGlobalArrowNavigate('left', $event)"
             x-on:keyup.right.window.prevent="onGlobalArrowNavigate('right', $event)"
+            x-on:quran-go-prev.window="handleRequestedNavigation('prev', $event.detail)"
+            x-on:quran-go-next.window="handleRequestedNavigation('next', $event.detail)"
+            x-on:quran-go-page.window="handleRequestedNavigation('page', $event.detail)"
             x-ref="readerPanel"
         >
             <header
@@ -914,7 +917,7 @@
                     class="quran-swipe-hint quran-swipe-hint-button select-none justify-self-center"
                     type="button"
                     aria-label="الصفحة السابقة"
-                    x-on:click="goPreviousFromChevron()"
+                    x-on:click.stop.prevent="$dispatch('quran-go-prev')"
                 >
                     <span class="quran-swipe-hint-chev">‹</span>
                     <span class="quran-swipe-hint-chev">‹</span>
@@ -925,9 +928,9 @@
                         class="quran-page-counter-input tabular-nums"
                         type="number"
                         x-model.number="pageInput"
-                        x-on:change="onPageInputCommit()"
-                        x-on:input.debounce.220ms="onPageInputCommit()"
-                        x-on:keydown.enter.prevent="onPageInputCommit()"
+                        x-on:input="onPageInputInput()"
+                        x-on:change.stop="$dispatch('quran-go-page', { page: $event.target.value })"
+                        x-on:keydown.enter.prevent="$dispatch('quran-go-page', { page: $event.target.value })"
                         x-bind:max="Math.max(1, maxPage)"
                         min="1"
                     >
@@ -941,7 +944,7 @@
                     class="quran-swipe-hint quran-swipe-hint-button select-none justify-self-center"
                     type="button"
                     aria-label="الصفحة التالية"
-                    x-on:click="goNextFromChevron()"
+                    x-on:click.stop.prevent="$dispatch('quran-go-next')"
                 >
                     <span class="quran-swipe-hint-chev quran-swipe-hint-chev-opposite">›</span>
                     <span class="quran-swipe-hint-chev quran-swipe-hint-chev-opposite">›</span>
