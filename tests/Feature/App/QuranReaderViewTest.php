@@ -12,10 +12,12 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         resource_path('views/components/partials/quran-app/reader.blade.php'),
     );
     $quranReaderViewSource = file_get_contents(resource_path('views/livewire/quran-app/reader.blade.php'));
+    $quranSearchModalViewSource = file_get_contents(resource_path('views/livewire/quran-app/search-modal.blade.php'));
     $quranReaderClassSource = file_get_contents(app_path('Livewire/QuranApp/Reader.php'));
     $quranReaderDataServiceSource = file_get_contents(app_path('Services/Quran/QuranReaderDataService.php'));
     $routesSource = file_get_contents(base_path('routes/web.php'));
     $appJsSource = file_get_contents(resource_path('js/app.js'));
+    $filamentComponentsCssSource = file_get_contents(resource_path('css/core/filament/components.css'));
 
     expect($menuSource)->not->toBeFalse()
         ->and($menuSource)->toContain(":caption=\"'الكتاب'\"")
@@ -78,6 +80,11 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderViewSource)->toContain('quran-ayah-line-run-rect')
         ->and($quranReaderViewSource)->toContain('quran-ayah-line-run-centered')
         ->and($quranReaderViewSource)->toContain('x-data="quranAppReader({')
+        ->and($quranReaderViewSource)->toContain("searchModalId: @js('fi-' . \$this->getId() . '-action-0')")
+        ->and($quranReaderViewSource)->toContain('x-on:x-modal-opened.window="if ($event.detail?.id === searchModalId) handleSearchModalOpened()"')
+        ->and($quranReaderViewSource)->toContain("\$wire.mountAction('searchQuran');")
+        ->and($quranReaderViewSource)->toContain('{{ $this->pageJumpForm }}')
+        ->and($quranReaderViewSource)->toContain('<x-filament-actions::modals />')
         ->and($quranReaderViewSource)->toContain('x-on:pointerdown.passive="onSwipeStart($event)"')
         ->and($quranReaderViewSource)->toContain('x-on:touchstart.passive="onSwipeStart($event)"')
         ->and($quranReaderViewSource)->toContain('x-bind:data-fit-state="isFittingPage ? \'fitting\' : \'ready\'"')
@@ -86,7 +93,23 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderViewSource)->not->toContain('x-on:click="previousPage()"')
         ->and($quranReaderViewSource)->not->toContain("x-on:click=\"\$viewNav('quran-app-gate')\"");
 
+    expect($quranSearchModalViewSource)->not->toBeFalse()
+        ->and($quranSearchModalViewSource)->toContain('quran-search-shell')
+        ->and($quranSearchModalViewSource)->toContain('x-ref="searchModalInput"')
+        ->and($quranSearchModalViewSource)->toContain('requestSearchModalClose()')
+        ->and($quranSearchModalViewSource)->toContain('confirmSearchSelection()');
+
     expect($quranReaderClassSource)->not->toBeFalse()
+        ->and($quranReaderClassSource)->toContain('implements HasActions, HasSchemas')
+        ->and($quranReaderClassSource)->toContain('use InteractsWithActions;')
+        ->and($quranReaderClassSource)->toContain('use InteractsWithSchemas;')
+        ->and($quranReaderClassSource)->toContain('public function pageJumpForm(Schema $schema): Schema')
+        ->and($quranReaderClassSource)->toContain("TextInput::make('page')")
+        ->and($quranReaderClassSource)->toContain('->live(onBlur: true)')
+        ->and($quranReaderClassSource)->toContain("->suffix(fn (): string => '/ '.max(1, \$this->maxPage))")
+        ->and($quranReaderClassSource)->toContain('public function searchQuranAction(): Action')
+        ->and($quranReaderClassSource)->toContain('->extraModalWindowAttributes([')
+        ->and($quranReaderClassSource)->toContain("'id' => 'quran-reader-search-modal'")
         ->and($quranReaderClassSource)->toContain("view('livewire.quran-app.reader'")
         ->and($quranReaderClassSource)->toContain('QuranReaderDataService');
 
@@ -107,6 +130,12 @@ it('wires quran reader entry points from main menu to hash navigation and view m
     expect($appJsSource)->not->toBeFalse()
         ->and($appJsSource)->toContain("import './support/alpine/data/quran-app-gate';")
         ->and($appJsSource)->toContain("import './support/alpine/data/quran-app-reader';");
+
+    expect($filamentComponentsCssSource)->not->toBeFalse()
+        ->and($filamentComponentsCssSource)->toContain('#quran-reader-search-modal')
+        ->and($filamentComponentsCssSource)->toContain('.quran-search-shell')
+        ->and($filamentComponentsCssSource)->toContain('.quran-page-counter-field')
+        ->and($filamentComponentsCssSource)->toContain('.fi-input-wrp-suffix .fi-input-wrp-label');
 });
 
 it('registers qpc page font route contract used by quran reader pages', function () {

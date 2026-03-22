@@ -160,6 +160,7 @@ document.addEventListener('alpine:init', () => {
         nativeRuntime: Boolean(config?.nativeRuntime ?? false),
         prewarmPages: Math.max(1, Number(config?.prewarmPages ?? 6)),
         prefetchRadius: Math.max(1, Number(config?.prefetchRadius ?? 2)),
+        searchModalId: String(config?.searchModalId ?? ''),
 
         ready: false,
         pageNumber: window.Alpine.$persist(1).as('quran-reader-page-number-v1'),
@@ -1726,7 +1727,7 @@ document.addEventListener('alpine:init', () => {
             }, 140);
         },
 
-        async openSearchModal() {
+        async handleSearchModalOpened() {
             await this.warmSearchIndex();
             this.search.modalOpen = true;
             this.search.query = '';
@@ -1740,12 +1741,28 @@ document.addEventListener('alpine:init', () => {
             this.$refs.searchModalInput?.focus?.();
         },
 
-        closeSearchModal() {
+        handleSearchModalClosed() {
             this.search.modalOpen = false;
             this.search.query = '';
             this.search.results = [];
             this.search.readyResult = null;
             this.search.isOpen = false;
+        },
+
+        requestSearchModalClose() {
+            if (!this.searchModalId) {
+                this.handleSearchModalClosed();
+
+                return;
+            }
+
+            window.dispatchEvent(
+                new CustomEvent('close-modal', {
+                    detail: {
+                        id: this.searchModalId,
+                    },
+                }),
+            );
         },
 
         async confirmSearchSelection() {
@@ -1764,7 +1781,7 @@ document.addEventListener('alpine:init', () => {
             const pageNumber = clampPage(Number(entry?.page_number ?? 1), this.maxPage);
             const direction = pageNumber >= this.pageNumber ? 'next' : 'prev';
 
-            this.closeSearchModal();
+            this.requestSearchModalClose();
             this.activeAyahIndex = 0;
             await this.goToPage(pageNumber, { direction, animate: true });
         },
@@ -1870,7 +1887,7 @@ document.addEventListener('alpine:init', () => {
             const ayahIndex = Math.max(0, Math.trunc(Number(result?.ayah_index ?? 0)));
             const direction = targetPage >= this.pageNumber ? 'next' : 'prev';
 
-            this.closeSearchModal();
+            this.requestSearchModalClose();
             await this.goToPage(targetPage, {
                 direction,
                 animate: true,

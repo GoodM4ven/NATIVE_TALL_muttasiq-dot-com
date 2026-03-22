@@ -457,22 +457,7 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 0.35rem;
             min-height: 2.2rem;
-            padding: 0.2rem 0.6rem;
-            border-radius: 999px;
-            /* background: color-mix(in srgb, var(--quran-chip-bg) 82%, transparent); */
-            box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--quran-chip-border) 60%, transparent);
-        }
-
-        .quran-page-counter-input {
-            width: 4rem;
-            border: 0;
-            background: transparent;
-            text-align: center;
-            font-weight: 600;
-            color: var(--quran-panel-text);
-            outline: none;
         }
 
         .quran-swipe-hint {
@@ -568,116 +553,6 @@
             }
         }
 
-        .quran-search-overlay {
-            position: absolute;
-            inset: 0;
-            z-index: 60;
-            background: color-mix(in srgb, var(--background) 36%, transparent);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-        }
-
-        .quran-search-shell {
-            height: 100%;
-            width: 100%;
-            padding: 1.2rem;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        .quran-search-top {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-inline: auto;
-            width: min(94vw, 42rem);
-            max-width: 100%;
-        }
-
-        .quran-search-input {
-            flex: 1;
-            min-height: 2.55rem;
-            border: 0;
-            border-radius: 999px;
-            background: color-mix(in srgb, var(--quran-chip-bg) 76%, transparent);
-            box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--quran-chip-border) 54%, transparent);
-            color: var(--quran-panel-text);
-            padding: 0 1rem;
-            outline: none;
-        }
-
-        .quran-search-go {
-            min-height: 2.55rem;
-            border: 0;
-            border-radius: 999px;
-            padding: 0 1rem;
-            background: color-mix(in srgb, var(--success-500) 32%, transparent);
-            color: color-mix(in srgb, var(--success-700) 84%, var(--quran-panel-text));
-            cursor: pointer;
-            transition:
-                transform 180ms ease,
-                opacity 180ms ease;
-        }
-
-        .quran-search-go:hover {
-            transform: translateY(-0.08rem);
-        }
-
-        .quran-search-results {
-            margin-inline: auto;
-            width: min(94vw, 42rem);
-            max-width: 100%;
-            display: grid;
-            gap: 0.35rem;
-        }
-
-        .quran-search-result-btn {
-            border: 0;
-            border-radius: 0.85rem;
-            text-align: right;
-            padding: 0.7rem 0.85rem;
-            background: color-mix(in srgb, var(--quran-chip-bg) 72%, transparent);
-            color: var(--quran-panel-text);
-            cursor: pointer;
-            transition: transform 180ms ease;
-        }
-
-        .quran-search-result-btn:hover {
-            transform: translateY(-0.08rem);
-        }
-
-        .quran-surah-grid {
-            margin-top: 0.6rem;
-            margin-inline: auto;
-            width: min(94vw, 56rem);
-            max-width: 100%;
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(8.1rem, 1fr));
-            gap: 0.5rem;
-            overflow: auto;
-            padding-bottom: 1rem;
-        }
-
-        .quran-surah-tile {
-            border: 0;
-            border-radius: 0.95rem;
-            background: color-mix(in srgb, var(--quran-chip-bg) 70%, transparent);
-            color: var(--quran-panel-text);
-            min-height: 5.2rem;
-            padding: 0.55rem;
-            text-align: center;
-            cursor: pointer;
-            transition:
-                transform 180ms ease,
-                box-shadow 180ms ease;
-        }
-
-        .quran-surah-tile:hover {
-            transform: translateY(-0.1rem);
-            box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--quran-chip-border) 66%, transparent);
-        }
-
         @keyframes quran-page-slide-next {
             from {
                 opacity: 0.46;
@@ -734,7 +609,11 @@
         nativeRuntime: @js(is_platform('native')),
         prewarmPages: @js(is_platform('native') ? 12 : 6),
         prefetchRadius: @js(is_platform('native') ? 3 : 2),
+        searchModalId: @js('fi-' . $this->getId() . '-action-0'),
     })"
+    x-on:x-modal-opened.window="if ($event.detail?.id === searchModalId) handleSearchModalOpened()"
+    x-on:close-modal.window="if ($event.detail?.id === searchModalId) handleSearchModalClosed()"
+    x-on:close-modal-quietly.window="if ($event.detail?.id === searchModalId) handleSearchModalClosed()"
 >
     @if (!$ready)
         <section
@@ -770,7 +649,10 @@
                     class="quran-soorah-trigger min-w-[164px]"
                     type="button"
                     dir="rtl"
-                    x-on:click="openSearchModal()"
+                    x-on:click="
+                        warmSearchIndex();
+                        $wire.mountAction('searchQuran');
+                    "
                     x-bind:aria-label="'ابحث في ' + currentSurahTitle()"
                 >
                     <x-icon
@@ -924,21 +806,7 @@
                     <span class="quran-swipe-hint-chev">‹</span>
                 </button>
                 <div class="quran-page-counter">
-                    <input
-                        class="quran-page-counter-input tabular-nums"
-                        type="number"
-                        x-model.number="pageInput"
-                        x-on:input="onPageInputInput()"
-                        x-on:change.stop="$dispatch('quran-go-page', { page: $event.target.value })"
-                        x-on:keydown.enter.prevent="$dispatch('quran-go-page', { page: $event.target.value })"
-                        x-bind:max="Math.max(1, maxPage)"
-                        min="1"
-                    >
-                    <span
-                        class="cursor-default select-none text-xs tabular-nums"
-                        style="color: var(--quran-subtle);"
-                        x-text="' / ' + Math.max(1, maxPage)"
-                    ></span>
+                    {{ $this->pageJumpForm }}
                 </div>
                 <button
                     class="quran-swipe-hint quran-swipe-hint-button select-none justify-self-center"
@@ -951,99 +819,6 @@
                     <span class="quran-swipe-hint-chev quran-swipe-hint-chev-opposite">›</span>
                 </button>
             </footer>
-
-            <div
-                class="quran-search-overlay"
-                data-no-swipe
-                x-cloak
-                x-show="search.modalOpen"
-                x-on:keydown.escape.window="closeSearchModal()"
-            >
-                <div class="quran-search-shell">
-                    <div class="quran-search-top">
-                        <input
-                            class="quran-search-input"
-                            type="search"
-                            placeholder="ابحث في الآيات..."
-                            x-model.debounce.180ms="search.query"
-                            x-on:input.debounce.180ms="updateSearchResults()"
-                            x-on:keydown.enter.prevent="confirmSearchSelection()"
-                            x-ref="searchModalInput"
-                        >
-                        <button
-                            class="quran-search-go"
-                            type="button"
-                            x-cloak
-                            x-show="search.readyResult !== null"
-                            x-transition.opacity.duration.180ms
-                            x-on:click="confirmSearchSelection()"
-                        >اذهب</button>
-                        <button
-                            class="quran-search-go"
-                            type="button"
-                            x-on:click="closeSearchModal()"
-                        >إغلاق</button>
-                    </div>
-
-                    <div
-                        class="quran-search-results"
-                        x-cloak
-                        x-show="search.query.length > 0 && search.results.length > 1"
-                        x-transition:enter="transition duration-260 ease-out"
-                        x-transition:enter-start="opacity-0 translate-y-2"
-                        x-transition:enter-end="opacity-100 translate-y-0"
-                    >
-                        <template
-                            x-for="result in search.results"
-                            :key="`quran-search-modal-${result.id}`"
-                        >
-                            <button
-                                class="quran-search-result-btn"
-                                type="button"
-                                x-on:click="goToSearchResult(result)"
-                            >
-                                <span
-                                    class="block text-xs opacity-80"
-                                    x-text="surahLabel(result.surah_number) + ' · آية ' + result.ayah_number + ' · صفحة ' + result.page_number"
-                                ></span>
-                                <span
-                                    class="font-quran block pt-1 text-lg leading-8"
-                                    x-text="result.text_uthmani"
-                                ></span>
-                            </button>
-                        </template>
-                    </div>
-
-                    <div
-                        class="quran-surah-grid"
-                        x-cloak
-                        x-show="search.query.length > 0 && search.results.length > 1"
-                        x-transition:enter="transition duration-260 ease-out"
-                        x-transition:enter-start="opacity-0 translate-y-3"
-                        x-transition:enter-end="opacity-100 translate-y-0"
-                    >
-                        <template
-                            x-for="entry in search.surahDirectory"
-                            :key="`quran-surah-tile-${entry.surah_number}`"
-                        >
-                            <button
-                                class="quran-surah-tile"
-                                type="button"
-                                x-on:click="goToSurahFromDirectory(entry)"
-                            >
-                                <span
-                                    class="block text-xs opacity-70"
-                                    x-text="'#' + entry.surah_number"
-                                ></span>
-                                <span
-                                    class="font-quran block pt-2 text-base leading-7"
-                                    x-text="entry.label"
-                                ></span>
-                            </button>
-                        </template>
-                    </div>
-                </div>
-            </div>
 
             <div
                 class="pointer-events-none fixed left-[-200vw] top-0 opacity-0"
@@ -1123,5 +898,7 @@
                 </div>
             </div>
         </section>
+
+        <x-filament-actions::modals />
     @endif
 </div>
