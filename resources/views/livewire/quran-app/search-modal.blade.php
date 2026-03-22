@@ -6,7 +6,7 @@
         <input
             class="quran-search-input"
             type="search"
-            placeholder="ابحث في الآيات..."
+            placeholder="يا بنيّ أقم الصلاة، وأمر بالمعروف، وانه عن المنكر..."
             x-model.debounce.180ms="search.query"
             x-on:input.debounce.180ms="updateSearchResults()"
             x-on:keydown.enter.prevent="confirmSearchSelection()"
@@ -19,12 +19,7 @@
             x-show="search.readyResult !== null"
             x-transition.opacity.duration.180ms
             x-on:click="confirmSearchSelection()"
-        >اذهب</button>
-        <button
-            class="quran-search-go quran-search-go--ghost"
-            type="button"
-            x-on:click="requestSearchModalClose()"
-        >إغلاق</button>
+        >انتقل</button>
     </div>
 
     <div

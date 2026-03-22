@@ -7,8 +7,8 @@
         }
 
         .quran-reader {
-            --quran-panel-bg: color-mix(in srgb, var(--background) 92%, transparent);
-            --quran-panel-border: color-mix(in srgb, var(--primary-500) 42%, transparent);
+            --quran-panel-bg: color-mix(in srgb, hsl(38.18 64.71% 98.87%) 90%, transparent);
+            --quran-panel-border: color-mix(in srgb, var(--warning-50) 38%, transparent);
             --quran-panel-shadow: 0 22px 40px color-mix(in srgb, var(--gray-900) 18%, transparent);
             --quran-panel-text: var(--primary-950);
             --quran-ink: color-mix(in srgb, var(--primary-950) 94%, var(--gray-900));
@@ -19,7 +19,7 @@
             --quran-active-bg: color-mix(in srgb, var(--success-500) 24%, transparent);
             --quran-active-text: color-mix(in srgb, var(--success-600) 82%, var(--primary-900));
             --quran-page-surface: color-mix(in srgb, var(--background) 86%, transparent);
-            --quran-page-border: color-mix(in srgb, var(--gray-300) 58%, transparent);
+            --quran-page-border: color-mix(in srgb, var(--warning-300) 58%, transparent);
             --quran-page-scale: 1;
             --quran-min-page-scale: 0.1;
             --quran-max-page-scale: 1;
@@ -114,7 +114,7 @@
         }
 
         .quran-page-surface {
-            background: var(--quran-page-surface);
+            /* background: var(--quran-page-surface); */
             border-color: var(--quran-page-border);
         }
 

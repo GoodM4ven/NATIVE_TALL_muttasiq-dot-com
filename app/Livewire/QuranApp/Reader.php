@@ -102,8 +102,8 @@ class Reader extends Component implements HasActions, HasSchemas
     public function searchQuranAction(): Action
     {
         return Action::make('searchQuran')
-            ->modalHeading('ابحث في القرآن الكريم')
-            ->modalDescription('ابحث في الآيات أو انتقل مباشرة إلى السورة والموضع المناسب.')
+            ->modalHeading('البحث الشامل للقرآن الكريم')
+            ->modalDescription('ابحث عن الآيات وانتقل مباشرة إلى السورة والموضع المقصود...')
             ->modalAutofocus(false)
             ->modalWidth(Width::FiveExtraLarge)
             ->modalSubmitAction(false)
