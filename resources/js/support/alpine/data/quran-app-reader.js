@@ -204,6 +204,7 @@ document.addEventListener('alpine:init', () => {
         },
         search: {
             query: '',
+            minQueryLength: 2,
             index: [],
             results: [],
             isLoading: false,
@@ -1841,6 +1842,14 @@ document.addEventListener('alpine:init', () => {
             const normalizedQuery = this.normalizeSearchQuery(this.search.query);
 
             if (!normalizedQuery) {
+                this.search.results = [];
+                this.search.isOpen = false;
+                this.search.readyResult = null;
+
+                return;
+            }
+
+            if (normalizedQuery.length < this.search.minQueryLength) {
                 this.search.results = [];
                 this.search.isOpen = false;
                 this.search.readyResult = null;

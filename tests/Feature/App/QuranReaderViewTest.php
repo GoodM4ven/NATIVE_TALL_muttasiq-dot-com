@@ -95,9 +95,10 @@ it('wires quran reader entry points from main menu to hash navigation and view m
 
     expect($quranSearchModalViewSource)->not->toBeFalse()
         ->and($quranSearchModalViewSource)->toContain('quran-search-shell')
-        ->and($quranSearchModalViewSource)->toContain('x-ref="searchModalInput"')
-        ->and($quranSearchModalViewSource)->toContain('requestSearchModalClose()')
-        ->and($quranSearchModalViewSource)->toContain('confirmSearchSelection()');
+        ->and($quranSearchModalViewSource)->toContain('quran-search-results-shell')
+        ->and($quranSearchModalViewSource)->toContain('quran-surah-grid')
+        ->and($quranSearchModalViewSource)->toContain('goToSearchResult(result)')
+        ->and($quranSearchModalViewSource)->toContain('goToSurahFromDirectory(entry)');
 
     expect($quranReaderClassSource)->not->toBeFalse()
         ->and($quranReaderClassSource)->toContain('implements HasActions, HasSchemas')
@@ -108,6 +109,8 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderClassSource)->toContain('->live(onBlur: true)')
         ->and($quranReaderClassSource)->toContain("->suffix(fn (): string => '/ '.max(1, \$this->maxPage))")
         ->and($quranReaderClassSource)->toContain('public function searchQuranAction(): Action')
+        ->and($quranReaderClassSource)->toContain("TextInput::make('search')")
+        ->and($quranReaderClassSource)->toContain("->modalContentFooter(fn (): View => view('livewire.quran-app.search-modal'))")
         ->and($quranReaderClassSource)->toContain('->extraModalWindowAttributes([')
         ->and($quranReaderClassSource)->toContain("'id' => 'quran-reader-search-modal'")
         ->and($quranReaderClassSource)->toContain("view('livewire.quran-app.reader'")
@@ -135,6 +138,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($filamentComponentsCssSource)->toContain('#quran-reader-search-modal')
         ->and($filamentComponentsCssSource)->toContain('.quran-search-shell')
         ->and($filamentComponentsCssSource)->toContain('.quran-page-counter-field')
+        ->and($filamentComponentsCssSource)->toContain('#quran-reader-page-counter-input')
         ->and($filamentComponentsCssSource)->toContain('.fi-input-wrp-suffix .fi-input-wrp-label');
 });
 

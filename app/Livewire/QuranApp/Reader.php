@@ -87,8 +87,12 @@ class Reader extends Component implements HasActions, HasSchemas
                     ->maxValue(fn (): int => max(1, $this->maxPage))
                     ->live(onBlur: true)
                     ->suffix(fn (): string => '/ '.max(1, $this->maxPage))
-                    ->extraFieldWrapperAttributes(['class' => 'quran-page-counter-field'])
+                    ->extraFieldWrapperAttributes([
+                        'id' => 'quran-reader-page-counter-field',
+                        'class' => 'quran-page-counter-field',
+                    ])
                     ->extraInputAttributes([
+                        'id' => 'quran-reader-page-counter-input',
                         'x-model.number' => 'pageInput',
                         'x-on:input' => 'onPageInputInput()',
                         'x-on:change.stop' => '$dispatch(\'quran-go-page\', { page: $event.target.value })',
@@ -111,7 +115,24 @@ class Reader extends Component implements HasActions, HasSchemas
             ->extraModalWindowAttributes([
                 'id' => 'quran-reader-search-modal',
             ])
-            ->modalContent(fn (): View => view('livewire.quran-app.search-modal'));
+            ->schema([
+                TextInput::make('search')
+                    ->hiddenLabel()
+                    ->type('search')
+                    ->placeholder('يا بنيّ أقم الصلاة، وأمر بالمعروف، وانه عن المنكر...')
+                    ->extraFieldWrapperAttributes([
+                        'class' => 'quran-search-field-wrapper',
+                    ])
+                    ->extraInputAttributes([
+                        'id' => 'quran-reader-search-input',
+                        'x-ref' => 'searchModalInput',
+                        'x-model.debounce.220ms' => 'search.query',
+                        'x-on:input.debounce.220ms' => 'updateSearchResults()',
+                        'x-on:keydown.enter.prevent' => 'confirmSearchSelection()',
+                        'autocomplete' => 'off',
+                    ], merge: true),
+            ])
+            ->modalContentFooter(fn (): View => view('livewire.quran-app.search-modal'));
     }
 
     public function render(): View
