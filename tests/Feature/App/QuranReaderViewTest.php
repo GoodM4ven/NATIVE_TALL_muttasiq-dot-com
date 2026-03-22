@@ -5,6 +5,7 @@ declare(strict_types=1);
 it('wires quran reader entry points from main menu to hash navigation and view mount', function () {
     $menuSource = file_get_contents(resource_path('views/components/partials/main-menu.blade.php'));
     $homeSource = file_get_contents(resource_path('views/home.blade.php'));
+    $colorfulBackgroundSource = file_get_contents(resource_path('views/components/partials/colorful-background.blade.php'));
     $quranGateSource = file_get_contents(resource_path('views/components/partials/quran-app/gate.blade.php'));
     $quranIndexSource = file_get_contents(resource_path('views/components/partials/quran-app/index.blade.php'));
     $quranReaderPartialSource = file_get_contents(
@@ -34,6 +35,17 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($homeSource)->toContain('views[`quran-app-tadabbur`].isOpen')
         ->and($homeSource)->toContain('$viewNav(`quran-app-gate`)')
         ->and($homeSource)->toContain('<x-partials.quran-app.index />');
+
+    expect($colorfulBackgroundSource)->not->toBeFalse()
+        ->and($colorfulBackgroundSource)->toContain('views[`quran-app-tilawa`].isOpen')
+        ->and($colorfulBackgroundSource)->toContain('views[`quran-app-hifth`].isOpen')
+        ->and($colorfulBackgroundSource)->toContain('views[`quran-app-tadabbur`].isOpen')
+        ->and($colorfulBackgroundSource)->toContain('images/background/quran/tilawa-blurred.webp')
+        ->and($colorfulBackgroundSource)->toContain('images/background/quran/hifth-blurred.webp')
+        ->and($colorfulBackgroundSource)->toContain('images/background/quran/tadabbur-blurred.webp')
+        ->and($colorfulBackgroundSource)->toContain('quran-bg-tilawa-layer')
+        ->and($colorfulBackgroundSource)->toContain('quran-bg-hifth-layer')
+        ->and($colorfulBackgroundSource)->toContain('quran-bg-tadabbur-layer');
 
     expect($quranIndexSource)->not->toBeFalse()
         ->and($quranIndexSource)->toContain('<x-partials.quran-app.gate />')
