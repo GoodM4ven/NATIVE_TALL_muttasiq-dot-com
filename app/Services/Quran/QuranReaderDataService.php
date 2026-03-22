@@ -63,6 +63,9 @@ class QuranReaderDataService
      *     qpcPageFontFamily: string|null,
      *     qpcPageFontUrl: string|null,
      *     qpcPageFontFormat: string|null,
+     *     surahHeaderFontFamily: string|null,
+     *     surahHeaderFontUrl: string|null,
+     *     surahHeaderFontFormat: string|null,
      *     useCenteredAyahLayout: bool
      * }
      */
@@ -78,6 +81,9 @@ class QuranReaderDataService
                 'qpcPageFontFamily' => null,
                 'qpcPageFontUrl' => null,
                 'qpcPageFontFormat' => null,
+                'surahHeaderFontFamily' => null,
+                'surahHeaderFontUrl' => null,
+                'surahHeaderFontFormat' => null,
                 'useCenteredAyahLayout' => true,
             ];
         }
@@ -140,6 +146,7 @@ class QuranReaderDataService
         });
 
         $effectiveAyahIndex = $activeAyahIndex;
+        $surahHeaderFont = $this->resolveSurahHeaderFont();
 
         if ($effectiveAyahIndex < 1) {
             $effectiveAyahIndex = $this->firstAyahIndexInPage($staticPayload['mushafLines']) ?? 0;
@@ -148,6 +155,9 @@ class QuranReaderDataService
         return [
             ...$staticPayload,
             'activeAyahIndex' => $effectiveAyahIndex,
+            'surahHeaderFontFamily' => $surahHeaderFont['family'] ?? null,
+            'surahHeaderFontUrl' => $surahHeaderFont['url'] ?? null,
+            'surahHeaderFontFormat' => $surahHeaderFont['format'] ?? null,
         ];
     }
 
@@ -685,6 +695,64 @@ class QuranReaderDataService
                 'family' => 'QpcPage'.$pageNumber,
                 'url' => route('qpc-v2-font', ['page' => $pageNumber]),
                 'format' => $fontFormat,
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{family: string, url: string, format: string}|null
+     */
+    private function resolveSurahHeaderFont(): ?array
+    {
+        $fontConfig = config('arabicable.quran_fonts.surah_headers', [
+            'family' => 'SurahNameV4',
+            'filename' => 'surah-name-v4.ttf',
+            'format' => 'ttf',
+        ]);
+
+        if (! is_array($fontConfig)) {
+            return null;
+        }
+
+        $filename = trim((string) ($fontConfig['filename'] ?? ''));
+        $family = trim((string) ($fontConfig['family'] ?? ''));
+        $format = trim((string) ($fontConfig['format'] ?? 'woff2'));
+        $configuredSurahHeadersDir = trim((string) config(
+            'arabicable.data_sources.quran_surah_headers_fonts_dir',
+            base_path('vendor/goodm4ven/arabicable/resources/raw-data/quran/fonts/surah-headers'),
+        ));
+        $configuredFontsDir = trim((string) config(
+            'arabicable.data_sources.quran_fonts_dir',
+            base_path('vendor/goodm4ven/arabicable/resources/raw-data/quran/fonts'),
+        ));
+
+        if ($filename === '' || $family === '') {
+            return null;
+        }
+
+        $paths = [
+            $configuredSurahHeadersDir !== '' ? $configuredSurahHeadersDir.'/'.$filename : null,
+            $configuredFontsDir !== '' ? $configuredFontsDir.'/'.$filename : null,
+            base_path('resources/raw-data/quran/fonts/surah-headers/'.$filename),
+            dirname(base_path()).'/resources/raw-data/quran/fonts/surah-headers/'.$filename,
+            base_path('vendor/goodm4ven/arabicable/resources/raw-data/quran/fonts/surah-headers/'.$filename),
+            base_path('resources/raw-data/quran/fonts/'.$filename),
+            dirname(base_path()).'/resources/raw-data/quran/fonts/'.$filename,
+            base_path('vendor/goodm4ven/arabicable/resources/raw-data/quran/fonts/'.$filename),
+            base_path('vendor/goodm4ven/arabicable/resources/dist/'.$filename),
+        ];
+
+        foreach ($paths as $path) {
+            if (! is_string($path) || $path === '' || ! is_file($path)) {
+                continue;
+            }
+
+            return [
+                'family' => $family,
+                'url' => route('quran-surah-header-font'),
+                'format' => in_array($format, ['ttf', 'truetype'], true) ? 'truetype' : 'woff2',
             ];
         }
 

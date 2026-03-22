@@ -39,6 +39,14 @@ return [
         'quran' => true,
     ],
 
+    'quran_fonts' => [
+        'surah_headers' => [
+            'family' => 'SurahNameV4',
+            'filename' => 'surah-name-v4.ttf',
+            'format' => 'ttf',
+        ],
+    ],
+
     'special_characters' => [
         'harakat' => ['ِ', 'ُ', 'ٓ', 'ٰ', 'ْ', 'ٌ', 'ٍ', 'ً', 'ّ', 'َ', 'ـ', 'ٗ'],
 
@@ -132,5 +140,7 @@ return [
         'quran_exegesis_databases_dir' => $rawDataPath.'/quran/exegesis',
         'quran_layout_databases_dir' => $rawDataPath.'/quran/layouts',
         'quran_lexicon_databases_dir' => $rawDataPath.'/quran/lexicon',
+        'quran_fonts_dir' => $rawDataPath.'/quran/fonts',
+        'quran_surah_headers_fonts_dir' => $rawDataPath.'/quran/fonts/surah-headers',
     ],
 ];

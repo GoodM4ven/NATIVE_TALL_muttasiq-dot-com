@@ -88,6 +88,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($routesSource)->toContain('p\'.$page.\'.woff2')
         ->and($routesSource)->toContain("'content_type' => 'font/woff2'")
         ->and($routesSource)->toContain("'Content-Type' => \$contentType")
+        ->and($routesSource)->toContain('/quran-surah-header-font')
         ->and($routesSource)->toContain('/quran-reader/pages/{page}.json')
         ->and($routesSource)->toContain('/quran-reader/search-index.json');
 
@@ -98,6 +99,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
 
 it('registers qpc page font route contract used by quran reader pages', function () {
     expect(route('qpc-v2-font', ['page' => 1], false))->toBe('/qpc-v2-fonts/1.ttf');
+    expect(route('quran-surah-header-font', [], false))->toBe('/quran-surah-header-font');
     expect(route('quran-reader-page-data', ['page' => 1], false))->toBe('/quran-reader/pages/1.json');
     expect(route('quran-reader-search-index', [], false))->toBe('/quran-reader/search-index.json');
 });

@@ -70,6 +70,70 @@ Route::get('/qpc-v2-fonts/{page}.ttf', function (int $page) {
     ]);
 })->whereNumber('page')->name('qpc-v2-font');
 
+Route::get('/quran-surah-header-font', function () {
+    $fontConfig = config('arabicable.quran_fonts.surah_headers', [
+        'family' => 'SurahNameV4',
+        'filename' => 'surah-name-v4.ttf',
+        'format' => 'ttf',
+    ]);
+
+    if (! is_array($fontConfig)) {
+        abort(404);
+    }
+
+    $filename = trim((string) ($fontConfig['filename'] ?? ''));
+    $format = trim((string) ($fontConfig['format'] ?? 'woff2'));
+    $configuredSurahHeadersDir = trim((string) config(
+        'arabicable.data_sources.quran_surah_headers_fonts_dir',
+        base_path('vendor/goodm4ven/arabicable/resources/raw-data/quran/fonts/surah-headers'),
+    ));
+    $configuredFontsDir = trim((string) config(
+        'arabicable.data_sources.quran_fonts_dir',
+        base_path('vendor/goodm4ven/arabicable/resources/raw-data/quran/fonts'),
+    ));
+
+    if ($filename === '') {
+        abort(404);
+    }
+
+    $paths = [
+        $configuredSurahHeadersDir !== '' ? $configuredSurahHeadersDir.'/'.$filename : null,
+        $configuredFontsDir !== '' ? $configuredFontsDir.'/'.$filename : null,
+        base_path('resources/raw-data/quran/fonts/surah-headers/'.$filename),
+        dirname(base_path()).'/resources/raw-data/quran/fonts/surah-headers/'.$filename,
+        base_path('vendor/goodm4ven/arabicable/resources/raw-data/quran/fonts/surah-headers/'.$filename),
+        base_path('resources/raw-data/quran/fonts/'.$filename),
+        dirname(base_path()).'/resources/raw-data/quran/fonts/'.$filename,
+        base_path('vendor/goodm4ven/arabicable/resources/raw-data/quran/fonts/'.$filename),
+        base_path('vendor/goodm4ven/arabicable/resources/dist/'.$filename),
+    ];
+
+    $fontPath = null;
+
+    foreach ($paths as $path) {
+        if (! is_string($path) || $path === '') {
+            continue;
+        }
+
+        if (is_file($path)) {
+            $fontPath = $path;
+
+            break;
+        }
+    }
+
+    if ($fontPath === null) {
+        abort(404);
+    }
+
+    $isTrueType = in_array($format, ['ttf', 'truetype'], true) || str_ends_with($filename, '.ttf');
+
+    return response()->file($fontPath, [
+        'Content-Type' => $isTrueType ? 'font/ttf' : 'font/woff2',
+        'Cache-Control' => 'public, max-age=31536000, immutable',
+    ]);
+})->name('quran-surah-header-font');
+
 Route::get('/quran-reader/pages/{page}.json', ReaderPageDataController::class)
     ->whereNumber('page')
     ->name('quran-reader-page-data');

@@ -7,6 +7,9 @@ const defaultPagePayload = Object.freeze({
     qpcPageFontFamily: null,
     qpcPageFontUrl: null,
     qpcPageFontFormat: null,
+    surahHeaderFontFamily: null,
+    surahHeaderFontUrl: null,
+    surahHeaderFontFormat: null,
     useCenteredAyahLayout: true,
 });
 
@@ -19,6 +22,9 @@ const normalizePayload = (payload = {}) => ({
     qpcPageFontFamily: payload?.qpcPageFontFamily ?? null,
     qpcPageFontUrl: payload?.qpcPageFontUrl ?? null,
     qpcPageFontFormat: payload?.qpcPageFontFormat ?? null,
+    surahHeaderFontFamily: payload?.surahHeaderFontFamily ?? null,
+    surahHeaderFontUrl: payload?.surahHeaderFontUrl ?? null,
+    surahHeaderFontFormat: payload?.surahHeaderFontFormat ?? null,
     useCenteredAyahLayout: Boolean(payload?.useCenteredAyahLayout),
 });
 
@@ -161,7 +167,11 @@ document.addEventListener('alpine:init', () => {
         qpcPageFontFamily: null,
         qpcPageFontUrl: null,
         qpcPageFontFormat: null,
+        surahHeaderFontFamily: null,
+        surahHeaderFontUrl: null,
+        surahHeaderFontFormat: null,
         useCenteredAyahLayout: true,
+        hoveredAyahIndex: 0,
         panelProbeLines: [],
         panelProbeUseCenteredAyahLayout: true,
         panelProbeFontFamily: null,
@@ -383,6 +393,7 @@ document.addEventListener('alpine:init', () => {
             { direction = 'next', animate = true, activeAyahIndex = null } = {},
         ) {
             const normalizedPage = clampPage(pageNumber, this.maxPage);
+            this.hoveredAyahIndex = 0;
 
             if (normalizedPage === this.pageNumber && this.mushafLines.length > 0) {
                 this.pageInput = normalizedPage;
@@ -437,6 +448,9 @@ document.addEventListener('alpine:init', () => {
             this.qpcPageFontFamily = normalizedPayload.qpcPageFontFamily;
             this.qpcPageFontUrl = normalizedPayload.qpcPageFontUrl;
             this.qpcPageFontFormat = normalizedPayload.qpcPageFontFormat;
+            this.surahHeaderFontFamily = normalizedPayload.surahHeaderFontFamily;
+            this.surahHeaderFontUrl = normalizedPayload.surahHeaderFontUrl;
+            this.surahHeaderFontFormat = normalizedPayload.surahHeaderFontFormat;
 
             if (setPageNumber) {
                 this.pageNumber = clampPage(
@@ -447,6 +461,7 @@ document.addEventListener('alpine:init', () => {
 
             this.pageInput = this.pageNumber;
             this.syncPageFontFace();
+            this.syncSurahHeaderFontFace();
         },
 
         async nextTickAsync() {
@@ -455,13 +470,21 @@ document.addEventListener('alpine:init', () => {
 
         async waitForPageFontReady() {
             const family = String(this.qpcPageFontFamily ?? '').trim();
+            const surahHeaderFamily = String(this.surahHeaderFontFamily ?? '').trim();
 
-            if (!family || !document.fonts?.load) {
+            if ((!family && !surahHeaderFamily) || !document.fonts?.load) {
                 return;
             }
 
             try {
-                await document.fonts.load(`32px '${family}'`, 'الحمد لله');
+                if (family) {
+                    await document.fonts.load(`32px '${family}'`, 'الحمد لله');
+                }
+
+                if (surahHeaderFamily) {
+                    await document.fonts.load(`32px '${surahHeaderFamily}'`, 'الفاتحة');
+                }
+
                 await document.fonts.ready;
             } catch (_) {
                 // Ignore font loading failures and continue with fallback glyphs.
@@ -512,6 +535,15 @@ document.addEventListener('alpine:init', () => {
                 family: this.qpcPageFontFamily,
                 url: this.qpcPageFontUrl,
                 format: this.qpcPageFontFormat,
+            });
+        },
+
+        syncSurahHeaderFontFace() {
+            this.syncDynamicFontFace({
+                styleId: 'quran-reader-dynamic-surah-header-font',
+                family: this.surahHeaderFontFamily,
+                url: this.surahHeaderFontUrl,
+                format: this.surahHeaderFontFormat,
             });
         },
 
@@ -846,15 +878,21 @@ document.addEventListener('alpine:init', () => {
 
         async prefetchFontAsset(payload) {
             const fontUrl = String(payload?.qpcPageFontUrl ?? '').trim();
+            const surahHeaderFontUrl = String(payload?.surahHeaderFontUrl ?? '').trim();
 
-            if (!fontUrl) {
-                return;
+            if (fontUrl) {
+                await cacheAssetResponse({
+                    url: fontUrl,
+                    cacheName: this.cacheNames.fonts,
+                });
             }
 
-            await cacheAssetResponse({
-                url: fontUrl,
-                cacheName: this.cacheNames.fonts,
-            });
+            if (surahHeaderFontUrl) {
+                await cacheAssetResponse({
+                    url: surahHeaderFontUrl,
+                    cacheName: this.cacheNames.fonts,
+                });
+            }
         },
 
         queueStartupPreload() {
@@ -985,6 +1023,7 @@ document.addEventListener('alpine:init', () => {
             this.swipe.startY = point.y;
             this.swipe.pointerId = point.pointerId;
             this.swipe.pointerType = point.pointerType;
+            this.hoveredAyahIndex = 0;
         },
 
         async onSwipeEnd(event) {
@@ -1060,6 +1099,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             this.activeAyahIndex = Math.trunc(normalizedAyahIndex);
+            this.hoveredAyahIndex = 0;
         },
 
         isRectangularAyahLine(line) {
@@ -1122,6 +1162,16 @@ document.addEventListener('alpine:init', () => {
             return `font-family: '${family}', 'MadinaQuran', 'Amiri', 'Traditional Arabic', serif; color: var(--quran-ink);`;
         },
 
+        surahHeaderLineStyle() {
+            const family = String(this.surahHeaderFontFamily ?? '').trim();
+
+            if (!family) {
+                return '';
+            }
+
+            return `font-family: '${family}', 'MadinaQuran', 'Amiri', 'Traditional Arabic', serif;`;
+        },
+
         probeLineFontStyle() {
             const family = String(this.panelProbeFontFamily ?? '').trim();
 
@@ -1138,12 +1188,37 @@ document.addEventListener('alpine:init', () => {
             return ayahIndex > 0 && ayahIndex === this.activeAyahIndex;
         },
 
-        wordStyle(word) {
-            if (!this.isWordActive(word)) {
-                return null;
+        isWordHovered(word) {
+            const ayahIndex = Number(word?.ayah_index ?? 0);
+
+            return ayahIndex > 0 && ayahIndex === this.hoveredAyahIndex;
+        },
+
+        setHoveredAyah(ayahIndex) {
+            const normalizedAyahIndex = Number(ayahIndex);
+
+            if (!Number.isFinite(normalizedAyahIndex) || normalizedAyahIndex < 1) {
+                return;
             }
 
-            return 'background: var(--quran-active-bg); color: var(--quran-active-text);';
+            this.hoveredAyahIndex = Math.trunc(normalizedAyahIndex);
+        },
+
+        clearHoveredAyah(ayahIndex = null) {
+            if (ayahIndex === null) {
+                this.hoveredAyahIndex = 0;
+
+                return;
+            }
+
+            const normalizedAyahIndex = Number(ayahIndex);
+
+            if (
+                Number.isFinite(normalizedAyahIndex) &&
+                this.hoveredAyahIndex === Math.trunc(normalizedAyahIndex)
+            ) {
+                this.hoveredAyahIndex = 0;
+            }
         },
 
         showAyahMarker(word) {
@@ -1155,6 +1230,69 @@ document.addEventListener('alpine:init', () => {
                 .trim()
                 .replace(/\s+/g, ' ')
                 .toLowerCase();
+        },
+
+        isSurahHeaderLine(line) {
+            return String(line?.line_type ?? '') === 'surah_name';
+        },
+
+        cleanSurahHeaderText(value) {
+            const normalized = String(value ?? '').trim();
+
+            if (normalized === '') {
+                return '';
+            }
+
+            return normalized
+                .replace(/^سورة\s+/u, '')
+                .replace(/^سور[ةه]\s+/u, '')
+                .replace(/\(\s*\d+\s*\)\s*$/u, '')
+                .replace(/^\(\s*\d+\s*\)\s*-\s*/u, '')
+                .trim();
+        },
+
+        surahHeaderGlyph(surahNumber) {
+            const normalizedSurahNumber = Math.max(1, Math.trunc(Number(surahNumber ?? 0)));
+
+            if (
+                !Number.isFinite(normalizedSurahNumber) ||
+                normalizedSurahNumber < 1 ||
+                normalizedSurahNumber > 114
+            ) {
+                return '';
+            }
+
+            try {
+                return String.fromCodePoint(0xe001 + normalizedSurahNumber - 1);
+            } catch {
+                return '';
+            }
+        },
+
+        surahHeaderLineText(line) {
+            const surahNumber = Math.max(
+                1,
+                Math.trunc(Number(line?.surah_number ?? this.currentSurahNumber())),
+            );
+            const glyph = this.surahHeaderGlyph(surahNumber);
+
+            if (glyph !== '') {
+                return glyph;
+            }
+
+            const lineText = this.cleanSurahHeaderText(line?.text ?? '');
+
+            if (lineText !== '') {
+                return lineText;
+            }
+
+            const mappedName = this.surahNameOnly(surahNumber);
+
+            if (mappedName !== '') {
+                return mappedName;
+            }
+
+            return `(${surahNumber})`;
         },
 
         buildSurahDirectory() {
@@ -1274,6 +1412,7 @@ document.addEventListener('alpine:init', () => {
             this.search.readyResult = null;
             this.search.isOpen = false;
             this.activeAyahIndex = 0;
+            this.hoveredAyahIndex = 0;
 
             await this.nextTickAsync();
             this.$refs.searchModalInput?.focus?.();
