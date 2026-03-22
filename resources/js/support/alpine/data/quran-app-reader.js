@@ -152,9 +152,9 @@ document.addEventListener('alpine:init', () => {
             searchIndexUrl: String(config?.api?.searchIndexUrl ?? ''),
         },
         cacheNames: {
-            pages: 'quran-reader-pages-v1',
+            pages: 'quran-reader-pages-v2',
             fonts: 'quran-reader-fonts-v1',
-            search: 'quran-reader-search-v1',
+            search: 'quran-reader-search-v2',
         },
         initialPayload: normalizePayload(config?.initialPayload),
         nativeRuntime: Boolean(config?.nativeRuntime ?? false),
@@ -184,6 +184,8 @@ document.addEventListener('alpine:init', () => {
         isLoadingPage: false,
         isFittingPage: true,
         pageMotionClass: '',
+        surahTriggerCaption: '',
+        surahTriggerCaptionVisible: true,
         pageMotionTimer: null,
         pageScale: 1,
         swipe: {
@@ -223,9 +225,11 @@ document.addEventListener('alpine:init', () => {
         _onWindowViewportChange: null,
         _onVisualViewportChange: null,
         _onSwitchView: null,
+        _surahTriggerTimer: null,
 
         init() {
             this.applyPayload(this.initialPayload, { setPageNumber: true });
+            this.refreshSurahTriggerCaption(false);
 
             const restoredPage = clampPage(
                 this.pageNumber,
@@ -301,6 +305,11 @@ document.addEventListener('alpine:init', () => {
             if (this._viewportChangeDebounceTimer !== null) {
                 clearTimeout(this._viewportChangeDebounceTimer);
                 this._viewportChangeDebounceTimer = null;
+            }
+
+            if (this._surahTriggerTimer !== null) {
+                clearTimeout(this._surahTriggerTimer);
+                this._surahTriggerTimer = null;
             }
         },
 
@@ -425,6 +434,7 @@ document.addEventListener('alpine:init', () => {
 
                 const payload = await payloadPromise;
                 this.applyPayload(payload, { setPageNumber: true });
+                this.refreshSurahTriggerCaption(animate);
                 this.activeAyahIndex =
                     Number.isFinite(Number(activeAyahIndex)) && Number(activeAyahIndex) > 0
                         ? Math.trunc(Number(activeAyahIndex))
@@ -459,9 +469,12 @@ document.addEventListener('alpine:init', () => {
             this.qpcPageFontFamily = normalizedPayload.qpcPageFontFamily;
             this.qpcPageFontUrl = normalizedPayload.qpcPageFontUrl;
             this.qpcPageFontFormat = normalizedPayload.qpcPageFontFormat;
-            this.surahHeaderFontFamily = normalizedPayload.surahHeaderFontFamily;
-            this.surahHeaderFontUrl = normalizedPayload.surahHeaderFontUrl;
-            this.surahHeaderFontFormat = normalizedPayload.surahHeaderFontFormat;
+            this.surahHeaderFontFamily =
+                normalizedPayload.surahHeaderFontFamily ?? this.surahHeaderFontFamily;
+            this.surahHeaderFontUrl =
+                normalizedPayload.surahHeaderFontUrl ?? this.surahHeaderFontUrl;
+            this.surahHeaderFontFormat =
+                normalizedPayload.surahHeaderFontFormat ?? this.surahHeaderFontFormat;
 
             if (
                 normalizedPayload.surahNames &&
@@ -1311,8 +1324,9 @@ document.addEventListener('alpine:init', () => {
                 Math.trunc(Number(line?.surah_number ?? this.currentSurahNumber())),
             );
             const glyph = this.surahHeaderGlyph(surahNumber);
+            const hasSurahHeaderFont = String(this.surahHeaderFontFamily ?? '').trim() !== '';
 
-            if (glyph !== '') {
+            if (glyph !== '' && hasSurahHeaderFont) {
                 return glyph;
             }
 
@@ -1371,7 +1385,10 @@ document.addEventListener('alpine:init', () => {
 
         surahNameOnly(surahNumber) {
             const normalizedSurahNumber = Math.max(1, Math.trunc(Number(surahNumber ?? 1)));
-            const names = this.search.surahNames ?? {};
+            const names =
+                Object.keys(this.search.surahNames ?? {}).length > 0
+                    ? this.search.surahNames
+                    : (this.initialPayload.surahNames ?? {});
             const rawName = String(names?.[normalizedSurahNumber] ?? '').trim();
 
             if (rawName !== '') {
@@ -1452,6 +1469,14 @@ document.addEventListener('alpine:init', () => {
         },
 
         currentSurahTriggerLabel() {
+            if (this.surahTriggerCaption !== '') {
+                return this.surahTriggerCaption;
+            }
+
+            return this.resolveCurrentSurahTriggerLabel();
+        },
+
+        resolveCurrentSurahTriggerLabel() {
             const surahNumber = this.currentSurahNumber();
             const normalizedSurahNumber = Math.max(1, Math.trunc(Number(surahNumber ?? 1)));
             const surahName = this.surahNameOnly(normalizedSurahNumber);
@@ -1461,6 +1486,33 @@ document.addEventListener('alpine:init', () => {
             }
 
             return `(${normalizedSurahNumber})`;
+        },
+
+        refreshSurahTriggerCaption(animate = true) {
+            const nextCaption = this.resolveCurrentSurahTriggerLabel();
+
+            if (nextCaption === this.surahTriggerCaption && this.surahTriggerCaption !== '') {
+                return;
+            }
+
+            if (this._surahTriggerTimer !== null) {
+                clearTimeout(this._surahTriggerTimer);
+                this._surahTriggerTimer = null;
+            }
+
+            if (!animate || this.surahTriggerCaption === '') {
+                this.surahTriggerCaptionVisible = true;
+                this.surahTriggerCaption = nextCaption;
+
+                return;
+            }
+
+            this.surahTriggerCaptionVisible = false;
+            this._surahTriggerTimer = window.setTimeout(() => {
+                this.surahTriggerCaption = nextCaption;
+                this.surahTriggerCaptionVisible = true;
+                this._surahTriggerTimer = null;
+            }, 120);
         },
 
         async openSearchModal() {
@@ -1528,16 +1580,25 @@ document.addEventListener('alpine:init', () => {
                     });
 
                     this.search.index = Array.isArray(payload?.items) ? payload.items : [];
-                    this.search.surahNames =
-                        payload && typeof payload === 'object' && payload.surah_names
-                            ? payload.surah_names
-                            : {};
+                    if (
+                        payload &&
+                        typeof payload === 'object' &&
+                        payload.surah_names &&
+                        Object.keys(payload.surah_names).length > 0
+                    ) {
+                        this.search.surahNames = payload.surah_names;
+                    }
+
                     this.buildSurahDirectory();
+                    this.refreshSurahTriggerCaption(false);
                     this.search.isReady = true;
                 } catch (_) {
                     this.search.index = [];
-                    this.search.surahNames = {};
-                    this.search.surahDirectory = [];
+
+                    if (Object.keys(this.search.surahNames ?? {}).length > 0) {
+                        this.buildSurahDirectory();
+                    }
+
                     this.search.isReady = false;
                 } finally {
                     this.search.isLoading = false;

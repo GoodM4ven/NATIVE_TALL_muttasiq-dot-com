@@ -451,7 +451,7 @@
         .quran-swipe-hint-chev:nth-child(1) {
             animation-delay: 330ms;
         }
-        
+
         .quran-swipe-hint-chev:nth-child(2) {
             animation-delay: 220ms;
         }
@@ -467,7 +467,7 @@
         .quran-swipe-hint-chev.quran-swipe-hint-chev-opposite:nth-child(1) {
             animation-delay: 710ms;
         }
-        
+
         .quran-swipe-hint-chev.quran-swipe-hint-chev-opposite:nth-child(2) {
             animation-delay: 820ms;
         }
@@ -709,13 +709,10 @@
                         :name="'heroicon-o-magnifying-glass'"
                     />
                     <span class="quran-soorah-trigger-text">
-                        <template
-                            x-for="caption in [currentSurahTriggerLabel()]"
-                            :key="caption"
-                        >
+                        <template x-if="surahTriggerCaptionVisible">
                             <span
                                 class="quran-soorah-trigger-text-inner"
-                                x-text="caption"
+                                x-text="currentSurahTriggerLabel()"
                                 x-transition:enter="transform transition duration-220 ease-out"
                                 x-transition:enter-start="opacity-0 translate-y-2"
                                 x-transition:enter-end="opacity-100 translate-y-0"
@@ -859,6 +856,7 @@
                     type="button"
                     aria-label="الصفحة السابقة"
                     x-on:click="goPreviousFromChevron()"
+                    x-on:keyup.right.window="if (views['quran-app-tilawa'].isOpen || views['quran-app-hifth'].isOpen || views['quran-app-tadabbur'].isOpen) goPreviousFromChevron()"
                 >
                     <span class="quran-swipe-hint-chev">‹</span>
                     <span class="quran-swipe-hint-chev">‹</span>
@@ -885,6 +883,7 @@
                     type="button"
                     aria-label="الصفحة التالية"
                     x-on:click="goNextFromChevron()"
+                    x-on:keyup.left.window="if (views['quran-app-tilawa'].isOpen || views['quran-app-hifth'].isOpen || views['quran-app-tadabbur'].isOpen) goNextFromChevron()"
                 >
                     <span class="quran-swipe-hint-chev quran-swipe-hint-chev-opposite">›</span>
                     <span class="quran-swipe-hint-chev quran-swipe-hint-chev-opposite">›</span>
