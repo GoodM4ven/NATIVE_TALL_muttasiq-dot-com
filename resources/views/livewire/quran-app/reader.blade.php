@@ -279,7 +279,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0.8rem 1rem 0.35rem;
+            padding: 0.8rem 1rem 0.5rem;
         }
 
         .quran-soorah-trigger {
@@ -452,7 +452,7 @@
             grid-template-columns: 1fr auto 1fr;
             align-items: center;
             gap: 0.65rem;
-            padding: 0.5rem 1rem 0.95rem;
+            padding: 0.5rem 1rem 0.74rem;
         }
 
         .quran-page-counter {
@@ -505,6 +505,8 @@
             font-size: 2rem;
             line-height: 1;
             vertical-align: middle;
+            position: relative;
+            top: -0.08rem;
         }
 
         .quran-swipe-hint-chev:nth-child(1) {

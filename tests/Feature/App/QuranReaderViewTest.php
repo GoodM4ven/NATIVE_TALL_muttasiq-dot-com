@@ -13,6 +13,9 @@ it('wires quran reader entry points from main menu to hash navigation and view m
     );
     $quranReaderViewSource = file_get_contents(resource_path('views/livewire/quran-app/reader.blade.php'));
     $quranSearchModalViewSource = file_get_contents(resource_path('views/livewire/quran-app/search-modal.blade.php'));
+    $quranReaderScriptSource = file_get_contents(
+        resource_path('js/support/alpine/data/quran-app-reader.js'),
+    );
     $quranReaderClassSource = file_get_contents(app_path('Livewire/QuranApp/Reader.php'));
     $quranReaderDataServiceSource = file_get_contents(app_path('Services/Quran/QuranReaderDataService.php'));
     $routesSource = file_get_contents(base_path('routes/web.php'));
@@ -79,6 +82,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
     expect($quranReaderViewSource)->not->toBeFalse()
         ->and($quranReaderViewSource)->toContain('quran-ayah-line-run-rect')
         ->and($quranReaderViewSource)->toContain('quran-ayah-line-run-centered')
+        ->and($quranReaderViewSource)->toContain('top: -0.08rem;')
         ->and($quranReaderViewSource)->toContain('x-data="quranAppReader({')
         ->and($quranReaderViewSource)->toContain("searchModalId: @js('fi-' . \$this->getId() . '-action-0')")
         ->and($quranReaderViewSource)->toContain("x-on:x-modal-opened.window=\"handleModalLifecycleEvent('opened', \$event)\"")
@@ -104,6 +108,13 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranSearchModalViewSource)->toContain('goToSearchResult(result)')
         ->and($quranSearchModalViewSource)->toContain('goToSurahFromDirectory(entry)');
 
+    expect($quranReaderScriptSource)->not->toBeFalse()
+        ->and($quranReaderScriptSource)->toContain('const wordPressHoldDelayMs = 750;')
+        ->and($quranReaderScriptSource)->toContain("search: 'quran-reader-search-v3'")
+        ->and($quranReaderScriptSource)->toContain('_pendingPageInputTarget: null')
+        ->and($quranReaderScriptSource)->toContain('deriveSurahDirectoryFromItems(items = [])')
+        ->and($quranReaderScriptSource)->toContain('if (this.activeAyahIndex > 0)');
+
     expect($quranReaderClassSource)->not->toBeFalse()
         ->and($quranReaderClassSource)->toContain('implements HasActions, HasSchemas')
         ->and($quranReaderClassSource)->toContain('use InteractsWithActions;')
@@ -123,7 +134,9 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderDataServiceSource)->toContain('p\'.$pageNumber.\'.woff2')
         ->and($quranReaderDataServiceSource)->toContain("'format' => 'woff2'")
         ->and($quranReaderDataServiceSource)->toContain('quran-reader-page-v2')
-        ->and($quranReaderDataServiceSource)->toContain('quran-reader-search-index-v1');
+        ->and($quranReaderDataServiceSource)->toContain('quran-reader-search-index-v1')
+        ->and($quranReaderDataServiceSource)->toContain("selectRaw('verse_id, MIN(ayah_index) AS ayah_index')")
+        ->and($quranReaderDataServiceSource)->toContain("->groupBy('verse_id')");
 
     expect($routesSource)->not->toBeFalse()
         ->and($routesSource)->toContain('p\'.$page.\'.woff2')

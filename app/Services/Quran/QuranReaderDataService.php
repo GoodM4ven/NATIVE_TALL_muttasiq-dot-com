@@ -436,6 +436,7 @@ class QuranReaderDataService
         }
 
         return DB::table('quran_words')
+            ->selectRaw('verse_id, MIN(ayah_index) AS ayah_index')
             ->where(function (Builder $whereBuilder) use ($queryVariants, $candidateColumns): void {
                 foreach ($queryVariants as $variant) {
                     foreach ($candidateColumns as $column) {
@@ -443,8 +444,9 @@ class QuranReaderDataService
                     }
                 }
             })
-            ->distinct()
+            ->groupBy('verse_id')
             ->orderBy('ayah_index')
+            ->orderBy('verse_id')
             ->limit($limit * 4)
             ->pluck('verse_id')
             ->map(static fn (mixed $value): int => (int) $value)
@@ -476,13 +478,15 @@ class QuranReaderDataService
                 }
 
                 return DB::table('quran_words')
+                    ->selectRaw('verse_id, MIN(ayah_index) AS ayah_index')
                     ->where(function (Builder $builder) use ($candidateColumns, $tokenVariants): void {
                         foreach ($candidateColumns as $column) {
                             $builder->orWhereIn($column, $tokenVariants);
                         }
                     })
-                    ->distinct()
+                    ->groupBy('verse_id')
                     ->orderBy('ayah_index')
+                    ->orderBy('verse_id')
                     ->limit($limit * 18)
                     ->pluck('verse_id')
                     ->map(static fn (mixed $value): int => (int) $value)
@@ -512,9 +516,11 @@ class QuranReaderDataService
             }
 
             $verseIdSets[] = DB::table('quran_words')
+                ->selectRaw('verse_id, MIN(ayah_index) AS ayah_index')
                 ->whereIn('token_stem', $stemCandidates)
-                ->distinct()
+                ->groupBy('verse_id')
                 ->orderBy('ayah_index')
+                ->orderBy('verse_id')
                 ->limit($limit * 18)
                 ->pluck('verse_id')
                 ->map(static fn (mixed $value): int => (int) $value)
@@ -544,9 +550,11 @@ class QuranReaderDataService
             }
 
             $verseIdSets[] = DB::table('quran_words')
+                ->selectRaw('verse_id, MIN(ayah_index) AS ayah_index')
                 ->whereIn('token_root', $rootCandidates)
-                ->distinct()
+                ->groupBy('verse_id')
                 ->orderBy('ayah_index')
+                ->orderBy('verse_id')
                 ->limit($limit * 16)
                 ->pluck('verse_id')
                 ->map(static fn (mixed $value): int => (int) $value)

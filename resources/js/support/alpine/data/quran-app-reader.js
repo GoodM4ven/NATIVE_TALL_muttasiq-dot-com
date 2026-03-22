@@ -72,6 +72,8 @@ const wait = async (durationMs) => {
     });
 };
 
+const wordPressHoldDelayMs = 750;
+
 const openCacheSafely = async (cacheName) => {
     if (!cacheName || typeof window === 'undefined' || typeof window.caches === 'undefined') {
         return null;
@@ -165,7 +167,7 @@ document.addEventListener('alpine:init', () => {
         cacheNames: {
             pages: 'quran-reader-pages-v2',
             fonts: 'quran-reader-fonts-v1',
-            search: 'quran-reader-search-v2',
+            search: 'quran-reader-search-v3',
         },
         initialPayload: normalizePayload(config?.initialPayload),
         nativeRuntime: Boolean(config?.nativeRuntime ?? false),
@@ -258,6 +260,7 @@ document.addEventListener('alpine:init', () => {
         _searchModalCloseDebounceTimer: null,
         _wordPressHoldTimer: null,
         _suppressNextWordClick: false,
+        _pendingPageInputTarget: null,
         _lastKnownModalOpenState: false,
         wordPress: {
             active: false,
@@ -660,7 +663,11 @@ document.addEventListener('alpine:init', () => {
 
             const targetPage = clampPage(this.pageInput, this.maxPage);
 
-            if (targetPage !== this.pageNumber) {
+            if (
+                targetPage !== this.pageNumber &&
+                this._pendingPageInputTarget !== targetPage &&
+                !this.isLoadingPage
+            ) {
                 await this.onPageInputCommit({ force: true });
             }
         },
@@ -677,15 +684,28 @@ document.addEventListener('alpine:init', () => {
             this.pageInput = targetPage;
 
             if (!force && targetPage === this.pageNumber) {
+                this._pendingPageInputTarget = null;
                 return;
             }
 
-            await this.navigateToPage(targetPage, {
-                direction,
-                animate: true,
-                source: 'page-input',
-                forceRefit: false,
-            });
+            if (this._pendingPageInputTarget === targetPage) {
+                return;
+            }
+
+            this._pendingPageInputTarget = targetPage;
+
+            try {
+                await this.navigateToPage(targetPage, {
+                    direction,
+                    animate: true,
+                    source: 'page-input',
+                    forceRefit: false,
+                });
+            } finally {
+                if (this._pendingPageInputTarget === targetPage) {
+                    this._pendingPageInputTarget = null;
+                }
+            }
         },
 
         applyPayload(payload, { setPageNumber = false } = {}) {
@@ -1589,7 +1609,7 @@ document.addEventListener('alpine:init', () => {
                 this.wordPress.holdTriggered = true;
                 this._suppressNextWordClick = true;
                 this.selectHoldSegment(this.wordPress.word);
-            }, 1250);
+            }, wordPressHoldDelayMs);
         },
 
         onWordPointerMove(event) {
@@ -1775,22 +1795,30 @@ document.addEventListener('alpine:init', () => {
             const ayahIndex = Number(word?.ayah_index ?? 0);
             const wordIndex = Number(word?.word_index ?? 0);
 
-            if (this.interactionTargetsWords() || this.activeWordIndex > 0) {
+            if (this.activeAyahIndex > 0) {
+                return ayahIndex > 0 && ayahIndex === this.activeAyahIndex;
+            }
+
+            if (this.activeWordIndex > 0) {
                 return wordIndex > 0 && wordIndex === this.activeWordIndex;
             }
 
-            return ayahIndex > 0 && ayahIndex === this.activeAyahIndex;
+            return false;
         },
 
         isWordHovered(word) {
             const ayahIndex = Number(word?.ayah_index ?? 0);
             const wordIndex = Number(word?.word_index ?? 0);
 
-            if (this.interactionTargetsWords() || this.hoveredWordIndex > 0) {
+            if (this.hoveredAyahIndex > 0) {
+                return ayahIndex > 0 && ayahIndex === this.hoveredAyahIndex;
+            }
+
+            if (this.hoveredWordIndex > 0) {
                 return wordIndex > 0 && wordIndex === this.hoveredWordIndex;
             }
 
-            return ayahIndex > 0 && ayahIndex === this.hoveredAyahIndex;
+            return false;
         },
 
         setHoveredAyah(ayahIndex) {
@@ -1925,6 +1953,36 @@ document.addEventListener('alpine:init', () => {
                     label: this.surahLabel(surahNumber),
                 };
             });
+        },
+
+        deriveSurahDirectoryFromItems(items = []) {
+            if (!Array.isArray(items) || items.length === 0) {
+                return [];
+            }
+
+            const firstPageBySurah = new Map();
+
+            items.forEach((item) => {
+                const surahNumber = Number(item?.surah_number ?? 0);
+                const pageNumber = Number(item?.page_number ?? item?.mushaf_page ?? 0);
+
+                if (surahNumber < 1 || surahNumber > 114 || pageNumber < 1) {
+                    return;
+                }
+
+                const normalizedSurahNumber = Math.trunc(surahNumber);
+                const normalizedPageNumber = Math.trunc(pageNumber);
+                const knownPage = firstPageBySurah.get(normalizedSurahNumber);
+
+                if (knownPage === undefined || normalizedPageNumber < knownPage) {
+                    firstPageBySurah.set(normalizedSurahNumber, normalizedPageNumber);
+                }
+            });
+
+            return Array.from(firstPageBySurah.entries()).map(([surahNumber, pageNumber]) => ({
+                surah_number: surahNumber,
+                page_number: pageNumber,
+            }));
         },
 
         surahLabel(surahNumber) {
@@ -2291,15 +2349,28 @@ document.addEventListener('alpine:init', () => {
                         this.search.surahNames = payload.surah_names;
                     }
 
-                    const surahDirectory = Array.isArray(payload?.surah_directory)
+                    let surahDirectory = Array.isArray(payload?.surah_directory)
                         ? payload.surah_directory
                         : [];
+
+                    if (
+                        surahDirectory.length === 0 &&
+                        Array.isArray(payload?.items) &&
+                        payload.items.length > 0
+                    ) {
+                        surahDirectory = this.deriveSurahDirectoryFromItems(payload.items);
+                    }
 
                     this.buildSurahDirectory(surahDirectory);
                     this.refreshSurahTriggerCaption(false);
                     this.search.isReady = true;
                 } catch (_) {
-                    this.buildSurahDirectory([]);
+                    if (
+                        !Array.isArray(this.search.surahDirectory) ||
+                        this.search.surahDirectory.length === 0
+                    ) {
+                        this.buildSurahDirectory([]);
+                    }
 
                     this.search.isReady = false;
                 } finally {
