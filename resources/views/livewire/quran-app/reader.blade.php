@@ -1067,7 +1067,24 @@
                                         x-bind:class="lineAlignmentClass(line)"
                                         x-bind:style="lineEntryStyle(line)"
                                     >
-                                        <template x-if="isAyahLineWithWords(line)">
+                                        <template x-if="isBasmallahLineWithWords(line)">
+                                            <div
+                                                class="font-quran quran-basmallah-line"
+                                                data-quran-line-text
+                                                x-bind:style="basmallahLineStyle(line)"
+                                            >
+                                                <template
+                                                    x-for="(word, wordIndex) in line.words"
+                                                    :key="`quran-basmallah-word-${pageNumber}-${line.line_number}-${word.word_index ?? wordIndex}`"
+                                                >
+                                                    <span
+                                                        class="quran-basmallah-word"
+                                                        x-text="word.text"
+                                                    ></span>
+                                                </template>
+                                            </div>
+                                        </template>
+                                        <template x-if="!isBasmallahLineWithWords(line) && isAyahLineWithWords(line)">
                                             <div
                                                 data-quran-line-text
                                                 x-bind:class="ayahLineClass(line)"
@@ -1124,7 +1141,7 @@
                                                 </template>
                                             </div>
                                         </template>
-                                        <template x-if="!isAyahLineWithWords(line)">
+                                        <template x-if="!isBasmallahLineWithWords(line) && !isAyahLineWithWords(line)">
                                             <template x-if="isSurahHeaderLine(line)">
                                                 <div
                                                     class="quran-surah-header-line"
@@ -1317,7 +1334,24 @@
                                 x-bind:class="probeLineAlignmentClass(line)"
                                 x-bind:style="lineEntryStyle(line)"
                             >
-                                <template x-if="isAyahLineWithWords(line)">
+                                <template x-if="isBasmallahLineWithWords(line)">
+                                    <div
+                                        class="font-quran quran-basmallah-line"
+                                        data-quran-line-text
+                                        x-bind:style="probeBasmallahLineStyle(line)"
+                                    >
+                                        <template
+                                            x-for="(word, wordIndex) in line.words"
+                                            :key="`quran-probe-basmallah-word-${line.line_number}-${word.word_index ?? wordIndex}`"
+                                        >
+                                            <span
+                                                class="quran-basmallah-word"
+                                                x-text="word.text"
+                                            ></span>
+                                        </template>
+                                    </div>
+                                </template>
+                                <template x-if="!isBasmallahLineWithWords(line) && isAyahLineWithWords(line)">
                                     <div
                                         data-quran-line-text
                                         x-bind:class="probeAyahLineClass(line)"
@@ -1350,7 +1384,7 @@
                                         </template>
                                     </div>
                                 </template>
-                                <template x-if="!isAyahLineWithWords(line)">
+                                <template x-if="!isBasmallahLineWithWords(line) && !isAyahLineWithWords(line)">
                                     <template x-if="isSurahHeaderLine(line)">
                                         <div
                                             class="quran-surah-header-line"
