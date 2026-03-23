@@ -235,7 +235,7 @@
                 inset 0 1px 0 rgba(255, 240, 197, 0.24),
                 0 12px 28px rgba(8, 4, 2, 0.46);
             opacity: 0;
-            transform: translate(-50%, -86%) scale(0.82);
+            transform: translate(-50%, -86%);
             transform-origin: center;
             filter: blur(6px);
             transition:
@@ -246,15 +246,15 @@
         }
 
         .quran-app-sector__chip-lock-icon {
-            width: clamp(1rem, 2vw, 1.3rem);
-            height: clamp(1rem, 2vw, 1.3rem);
+            width: clamp(1rem, 2vw, 1.7rem);
+            height: clamp(1rem, 2vw, 1.7rem);
             color: color-mix(in srgb, var(--quran-gold-1) 92%, white);
             filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.44));
         }
 
         .quran-app-sector__chip-lock-caption {
             color: color-mix(in srgb, var(--quran-gold-1) 90%, white);
-            font-size: 0.78rem;
+            font-size: 1.38rem;
             font-weight: 700;
             line-height: 1;
             white-space: nowrap;
@@ -263,12 +263,12 @@
 
         .quran-app-sector.is-active.is-locked .quran-app-sector__chip-lock {
             opacity: 1;
-            transform: translate(-50%, -136%) scale(1);
+            transform: translate(-50%, -136%);
             filter: blur(0);
         }
 
         .quran-app-sector.is-active.is-locked .quran-app-sector__chip-text {
-            transform: translateY(0.48rem) scale(0.94);
+            transform: translateY(0.3rem);
             letter-spacing: 0.046em;
             filter: blur(1.8px);
             opacity: 0.48;
@@ -285,16 +285,13 @@
             position: absolute;
             left: var(--gate-cx);
             top: var(--gate-cy);
-            width: clamp(34rem, 74vw, 60rem);
+            width: clamp(34rem, 120vw, 1040rem);
             aspect-ratio: 1;
             transform: translate(-50%, -50%);
             border-radius: 999px;
-            background: radial-gradient(circle,
-                    rgba(0, 0, 0, 0) 0%,
-                    rgba(0, 0, 0, 0) 70%,
-                    rgba(2, 1, 0, 0.58) 100%);
+            background: radial-gradient(circle, rgba(0, 0, 0, 0) 10%, rgba(0, 0, 0, 0.5) 50%, rgba(2, 1, 0, 1) 100%);
             pointer-events: none;
-            z-index: 205;
+            z-index: 50;
             mix-blend-mode: multiply;
         }
 
@@ -398,8 +395,8 @@
         .quran-app-gate-pointer::before {
             content: '';
             position: absolute;
-            right: -0.28rem;
-            top: 50%;
+            top: 0;
+            left: 0.5rem;
             width: 0.72rem;
             height: 0.72rem;
             border-radius: 0.1rem;
@@ -554,7 +551,7 @@
             }
 
             .quran-app-gate-pointer::before {
-                right: -0.2rem;
+                /* right: -0.2rem; */
                 width: 0.38rem;
                 height: 0.38rem;
             }
