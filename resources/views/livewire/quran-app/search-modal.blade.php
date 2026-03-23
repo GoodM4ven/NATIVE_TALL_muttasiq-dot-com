@@ -11,9 +11,8 @@
             x-cloak
             x-show="normalizeSearchQuery(search.query).length > 0 && normalizeSearchQuery(search.query).length < search.minQueryLength"
             x-transition.opacity.duration.220ms
-        >
-            اكتب حرفين أو أكثر ليبدأ البحث.
-        </div>
+            x-text="`اكتب ${search.minQueryLength} أحرف أو أكثر ليبدأ البحث.`"
+        ></div>
 
         <div
             class="quran-search-feedback"

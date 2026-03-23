@@ -131,32 +131,63 @@
             max-width: none;
         }
 
+        .quran-segment-cluster {
+            display: inline-flex;
+            align-items: baseline;
+            border-radius: 0.56em;
+            padding-inline: 0.14em;
+            margin-inline: -0.02em;
+            transition:
+                background-color 460ms cubic-bezier(0.22, 1, 0.36, 1),
+                box-shadow 460ms cubic-bezier(0.22, 1, 0.36, 1),
+                color 360ms cubic-bezier(0.22, 1, 0.36, 1);
+            will-change: background-color, box-shadow;
+        }
+
+        .quran-segment-cluster.quran-segment-cluster-hovered {
+            background-color: color-mix(in srgb, var(--gray-300) 18%, transparent);
+            box-shadow:
+                inset 0 0 0 1px color-mix(in srgb, var(--gray-400) 10%, transparent),
+                0 2px 8px color-mix(in srgb, var(--gray-700) 8%, transparent);
+        }
+
+        .quran-segment-cluster.quran-segment-cluster-active {
+            background: var(--quran-active-bg);
+            box-shadow:
+                inset 0 0 0 1px color-mix(in srgb, var(--success-300) 20%, transparent),
+                0 2px 10px color-mix(in srgb, var(--success-400) 12%, transparent);
+        }
+
         .quran-word-button {
             display: inline-flex;
             align-items: baseline;
             white-space: nowrap;
             line-height: 1.02;
-            border-radius: 0.22em;
-            padding-inline: 0.06em;
+            border-radius: 0;
+            padding-inline: 0;
             cursor: default;
             transition:
-                background-color 420ms cubic-bezier(0.22, 1, 0.36, 1),
-                color 340ms cubic-bezier(0.22, 1, 0.36, 1),
-                box-shadow 420ms cubic-bezier(0.22, 1, 0.36, 1);
+                background-color 440ms cubic-bezier(0.22, 1, 0.36, 1),
+                color 360ms cubic-bezier(0.22, 1, 0.36, 1),
+                box-shadow 440ms cubic-bezier(0.22, 1, 0.36, 1);
             will-change: background-color, color, box-shadow;
         }
 
         .quran-word-button.quran-segment-hovered {
-            background-color: color-mix(in srgb, var(--gray-300) 22%, transparent);
-            box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gray-400) 12%, transparent);
+            background-color: color-mix(in srgb, var(--gray-300) 18%, transparent);
+            box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gray-400) 8%, transparent);
+            border-radius: 0.52em;
+            padding-inline: 0.12em;
         }
 
         .quran-word-button.quran-segment-active {
             background: var(--quran-active-bg);
             color: var(--quran-active-text);
             box-shadow:
-                inset 0 0 0 1px color-mix(in srgb, var(--success-300) 26%, transparent),
-                0 1px 8px color-mix(in srgb, var(--success-400) 14%, transparent);
+                inset 0 0 0 1px color-mix(in srgb, var(--success-300) 20%, transparent),
+                0 2px 10px color-mix(in srgb, var(--success-400) 12%, transparent);
+            border-radius: 0.52em;
+            padding-inline: 0.12em;
         }
 
         .quran-ayah-marker {
@@ -465,11 +496,122 @@
         }
 
         .quran-page-counter {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            min-height: 2.4rem;
+        }
+
+        .quran-page-slider {
+            appearance: none;
+            -webkit-appearance: none;
+            width: min(42vw, 13rem);
+            min-width: 8rem;
+            height: 0.56rem;
+            border-radius: 999px;
+            border: 1px solid color-mix(in srgb, var(--gray-500) 50%, transparent);
+            background: linear-gradient(90deg,
+                    color-mix(in srgb, var(--primary-500) 62%, transparent),
+                    color-mix(in srgb, var(--primary-300) 44%, transparent));
+            box-shadow:
+                inset 0 0 0 1px color-mix(in srgb, var(--gray-500) 18%, transparent),
+                0 5px 12px color-mix(in srgb, var(--gray-900) 16%, transparent);
+            cursor: pointer;
+        }
+
+        .quran-page-slider::-webkit-slider-thumb {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 0.95rem;
+            height: 0.95rem;
+            border-radius: 999px;
+            border: 1px solid color-mix(in srgb, var(--primary-600) 72%, transparent);
+            background: linear-gradient(180deg,
+                    color-mix(in srgb, var(--primary-100) 92%, white),
+                    color-mix(in srgb, var(--primary-200) 80%, var(--primary-50)));
+            box-shadow: 0 4px 10px color-mix(in srgb, var(--primary-800) 20%, transparent);
+        }
+
+        .quran-page-slider::-moz-range-thumb {
+            width: 0.95rem;
+            height: 0.95rem;
+            border-radius: 999px;
+            border: 1px solid color-mix(in srgb, var(--primary-600) 72%, transparent);
+            background: linear-gradient(180deg,
+                    color-mix(in srgb, var(--primary-100) 92%, white),
+                    color-mix(in srgb, var(--primary-200) 80%, var(--primary-50)));
+            box-shadow: 0 4px 10px color-mix(in srgb, var(--primary-800) 20%, transparent);
+        }
+
+        .quran-page-slider-chip {
+            position: relative;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            min-height: 2.2rem;
+            gap: 0.12rem;
+            min-width: 5.8rem;
+            border-radius: 999px;
+            border: 1px solid color-mix(in srgb, var(--gray-500) 52%, transparent);
+            background: linear-gradient(176deg,
+                    color-mix(in srgb, var(--gray-200) 70%, transparent),
+                    color-mix(in srgb, var(--gray-300) 58%, transparent));
+            padding: 0.28rem 0.56rem;
+            cursor: pointer;
+            font-family: 'IBM Plex Sans Arabic', 'Manrope', ui-sans-serif, system-ui, sans-serif;
+            font-size: 0.84rem;
+            font-weight: 600;
+            color: var(--quran-panel-text);
+            line-height: 1;
+            font-variant-numeric: tabular-nums;
+            direction: ltr;
+            box-shadow:
+                inset 0 0 0 1px color-mix(in srgb, var(--gray-500) 12%, transparent),
+                0 6px 14px color-mix(in srgb, var(--gray-800) 16%, transparent);
+            transition:
+                transform 140ms ease,
+                box-shadow 180ms ease,
+                color 180ms ease;
+        }
+
+        .quran-page-slider-chip:hover {
+            transform: translateY(-0.04rem);
+            box-shadow:
+                inset 0 0 0 1px color-mix(in srgb, var(--primary-300) 24%, transparent),
+                0 8px 16px color-mix(in srgb, var(--primary-800) 20%, transparent);
+        }
+
+        .quran-page-slider-chip:active {
+            transform: translateY(0);
+        }
+
+        .quran-page-chip-current-wrap {
             position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 2.68ch;
+            width: 2.68ch;
+        }
+
+        .quran-page-chip-current {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 2.68ch;
+            width: 2.68ch;
+        }
+
+        .quran-page-chip-total {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 2.2rem;
+            opacity: 0.88;
+        }
+
+        .quran-page-chip-separator {
+            opacity: 0.65;
         }
 
         .quran-page-counter-morph {
@@ -480,20 +622,14 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 4.5rem;
+            min-width: 2.68ch;
+            width: 2.68ch;
             pointer-events: none;
-            font-family: 'IBM Plex Sans Arabic', 'Manrope', ui-sans-serif, system-ui, sans-serif;
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: var(--quran-panel-text);
-            line-height: 1;
-            font-variant-numeric: tabular-nums;
             z-index: 2;
-            direction: ltr;
         }
 
-        .quran-page-counter.quran-page-counter--morphing #quran-reader-page-counter-input {
-            color: transparent !important;
+        .quran-page-counter.quran-page-counter--morphing .quran-page-chip-current {
+            color: transparent;
         }
 
         .quran-counter-roll {
@@ -717,7 +853,7 @@
         nativeRuntime: @js(is_platform('native')),
         prewarmPages: @js(is_platform('native') ? 12 : 6),
         prefetchRadius: @js(is_platform('native') ? 3 : 2),
-        searchModalId: @js('fi-' . $this->getId() . '-action-0'),
+        searchModalId: @js('quran-reader-search-modal'),
         searchModalDomId: @js('quran-reader-search-modal'),
         settings: @js($quranReaderSettings ?? ['enableVisualEnhancements' => true, 'targetWordsByDefault' => false]),
     })"
@@ -845,35 +981,48 @@
                                             x-bind:style="lineFontStyle()"
                                         >
                                             <template
-                                                x-for="(word, wordIndex) in line.words"
-                                                :key="`quran-word-${pageNumber}-${line.line_number}-${word.word_index ?? wordIndex}`"
+                                                x-for="(cluster, clusterIndex) in lineWordClusters(line)"
+                                                :key="`quran-cluster-${pageNumber}-${line.line_number}-${cluster.key ?? clusterIndex}`"
                                             >
-                                                <span class="inline-flex items-baseline">
-                                                    <button
-                                                        class="quran-word-button px-0 transition"
-                                                        type="button"
-                                                        x-bind:class="{
-                                                            'quran-segment-active': isWordActive(word),
-                                                            'quran-segment-hovered': isWordHovered(word),
-                                                        }"
-                                                        x-bind:disabled="!isSelectableWord(word)"
-                                                        x-on:pointerdown="onWordPointerDown($event, word)"
-                                                        x-on:pointermove="onWordPointerMove($event)"
-                                                        x-on:pointerup="onWordPointerUp($event)"
-                                                        x-on:pointercancel="onWordPointerCancel()"
-                                                        x-on:mouseleave="onWordPointerLeave(word)"
-                                                        x-on:click.stop="onWordClick($event, word)"
-                                                        x-on:mouseenter="setHoveredSegment(word)"
-                                                        x-on:focus="setHoveredSegment(word)"
-                                                        x-on:blur="clearHoveredSegment(word)"
-                                                        x-text="word.text"
-                                                    ></button>
-                                                    <template x-if="showAyahMarker(word)">
-                                                        <span
-                                                            class="quran-ayah-marker mr-0.5 text-[0.92rem]"
-                                                            style="color: var(--quran-subtle);"
-                                                            x-text="'۝' + word.ayah_number"
-                                                        ></span>
+                                                <span
+                                                    class="quran-segment-cluster"
+                                                    x-bind:class="{
+                                                        'quran-segment-cluster-active': isAyahClusterActive(cluster),
+                                                        'quran-segment-cluster-hovered': isAyahClusterHovered(cluster),
+                                                    }"
+                                                >
+                                                    <template
+                                                        x-for="(word, wordIndex) in cluster.words"
+                                                        :key="`quran-word-${pageNumber}-${line.line_number}-${word.word_index ?? wordIndex}`"
+                                                    >
+                                                        <span class="inline-flex items-baseline">
+                                                            <button
+                                                                class="quran-word-button px-0 transition"
+                                                                type="button"
+                                                                x-bind:class="{
+                                                                    'quran-segment-active': isWordActive(word),
+                                                                    'quran-segment-hovered': isWordHovered(word),
+                                                                }"
+                                                                x-bind:disabled="!isSelectableWord(word)"
+                                                                x-on:pointerdown="onWordPointerDown($event, word)"
+                                                                x-on:pointermove="onWordPointerMove($event)"
+                                                                x-on:pointerup="onWordPointerUp($event)"
+                                                                x-on:pointercancel="onWordPointerCancel()"
+                                                                x-on:mouseleave="onWordPointerLeave(word)"
+                                                                x-on:click.stop="onWordClick($event, word)"
+                                                                x-on:mouseenter="setHoveredSegment(word)"
+                                                                x-on:focus="setHoveredSegment(word)"
+                                                                x-on:blur="clearHoveredSegment(word)"
+                                                                x-text="word.text"
+                                                            ></button>
+                                                            <template x-if="showAyahMarker(word)">
+                                                                <span
+                                                                    class="quran-ayah-marker mr-0.5 text-[0.92rem]"
+                                                                    style="color: var(--quran-subtle);"
+                                                                    x-text="'۝' + word.ayah_number"
+                                                                ></span>
+                                                            </template>
+                                                        </span>
                                                     </template>
                                                 </span>
                                             </template>
@@ -928,38 +1077,65 @@
                     class="quran-page-counter"
                     x-bind:class="{ 'quran-page-counter--morphing': pageCounterPulse.isActive && pageCounterPulse.hasChanges }"
                 >
-                    {{ $this->pageJumpForm }}
-                    <div
-                        class="quran-page-counter-morph"
-                        aria-hidden="true"
-                        x-cloak
-                        x-show="pageCounterPulse.isActive && pageCounterPulse.hasChanges"
+                    <input
+                        class="quran-page-slider"
+                        type="range"
+                        aria-label="التنقل بين صفحات المصحف"
+                        min="1"
+                        x-bind:max="Math.max(1, maxPage)"
+                        x-model.number="pageInput"
+                        x-on:input="onSliderInput()"
+                        x-on:change="onSliderCommit()"
+                    />
+                    <button
+                        class="quran-page-slider-chip"
+                        type="button"
+                        aria-label="إدخال رقم صفحة"
+                        x-on:click="$wire.mountAction('jumpToPage')"
                     >
-                        <template
-                            x-for="segment in pageCounterPulse.segments"
-                            :key="segment.key"
-                        >
-                            <span class="quran-counter-cell">
-                                <span
-                                    x-show="!segment.changed"
-                                    x-text="segment.next"
-                                ></span>
-                                <span
-                                    class="quran-counter-roll"
-                                    x-show="segment.changed"
+                        <span
+                            class="quran-page-chip-total"
+                            x-text="maxPage"
+                        ></span>
+                        <span class="quran-page-chip-separator">/</span>
+                        <span class="quran-page-chip-current-wrap quran-page-chip-total">
+                            <span
+                                class="quran-page-chip-current"
+                                x-text="pageInput"
+                            ></span>
+                            <span
+                                class="quran-page-counter-morph"
+                                aria-hidden="true"
+                                x-cloak
+                                x-show="pageCounterPulse.isActive && pageCounterPulse.hasChanges"
+                            >
+                                <template
+                                    x-for="segment in pageCounterPulse.segments"
+                                    :key="segment.key"
                                 >
-                                    <span
-                                        class="quran-counter-roll__prev"
-                                        x-text="segment.prev"
-                                    ></span>
-                                    <span
-                                        class="quran-counter-roll__next"
-                                        x-text="segment.next"
-                                    ></span>
-                                </span>
+                                    <span class="quran-counter-cell">
+                                        <span
+                                            x-show="!segment.changed"
+                                            x-text="segment.next"
+                                        ></span>
+                                        <span
+                                            class="quran-counter-roll"
+                                            x-show="segment.changed"
+                                        >
+                                            <span
+                                                class="quran-counter-roll__prev"
+                                                x-text="segment.prev"
+                                            ></span>
+                                            <span
+                                                class="quran-counter-roll__next"
+                                                x-text="segment.next"
+                                            ></span>
+                                        </span>
+                                    </span>
+                                </template>
                             </span>
-                        </template>
-                    </div>
+                        </span>
+                    </button>
                 </div>
                 <button
                     class="quran-swipe-hint quran-swipe-hint-button select-none justify-self-center"
@@ -1003,20 +1179,27 @@
                                     x-bind:style="probeLineFontStyle()"
                                 >
                                     <template
-                                        x-for="(word, wordIndex) in line.words"
-                                        :key="`quran-probe-word-${line.line_number}-${word.word_index ?? wordIndex}`"
+                                        x-for="(cluster, clusterIndex) in lineWordClusters(line)"
+                                        :key="`quran-probe-cluster-${line.line_number}-${cluster.key ?? clusterIndex}`"
                                     >
-                                        <span class="inline-flex items-baseline">
-                                            <span
-                                                class="quran-word-button px-0"
-                                                x-text="word.text"
-                                            ></span>
-                                            <template x-if="showAyahMarker(word)">
-                                                <span
-                                                    class="quran-ayah-marker mr-0.5 text-[0.92rem]"
-                                                    style="color: var(--quran-subtle);"
-                                                    x-text="'۝' + word.ayah_number"
-                                                ></span>
+                                        <span class="quran-segment-cluster">
+                                            <template
+                                                x-for="(word, wordIndex) in cluster.words"
+                                                :key="`quran-probe-word-${line.line_number}-${word.word_index ?? wordIndex}`"
+                                            >
+                                                <span class="inline-flex items-baseline">
+                                                    <span
+                                                        class="quran-word-button px-0"
+                                                        x-text="word.text"
+                                                    ></span>
+                                                    <template x-if="showAyahMarker(word)">
+                                                        <span
+                                                            class="quran-ayah-marker mr-0.5 text-[0.92rem]"
+                                                            style="color: var(--quran-subtle);"
+                                                            x-text="'۝' + word.ayah_number"
+                                                        ></span>
+                                                    </template>
+                                                </span>
                                             </template>
                                         </span>
                                     </template>

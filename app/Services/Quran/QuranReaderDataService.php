@@ -755,10 +755,15 @@ class QuranReaderDataService
     private function normalizeQuranSearchQuery(string $text): string
     {
         $prepared = strtr($text, [
+            'أ' => 'ا',
+            'إ' => 'ا',
+            'آ' => 'ا',
             'ٱ' => 'ا',
             'ٲ' => 'ا',
             'ٳ' => 'ا',
             'ٵ' => 'ا',
+            'ؤ' => 'و',
+            'ئ' => 'ي',
             'ی' => 'ي',
             'ى' => 'ي',
             'ے' => 'ي',
@@ -801,6 +806,16 @@ class QuranReaderDataService
         $withoutConjunctions = $this->stripLeadingConjunctionsFromPhrase($trimmed);
         $collapsedVocative = $this->collapseVocativeSpacingInPhrase($trimmed);
         $withoutVocative = $this->stripVocativeParticlesFromPhrase($trimmed);
+        $legacyOrthography = $this->normalizeLegacyOrthographyForSearch($trimmed);
+        $legacyOrthographyWithoutConjunctions = $this->normalizeLegacyOrthographyForSearch(
+            $withoutConjunctions,
+        );
+        $legacyOrthographyCollapsedVocative = $this->normalizeLegacyOrthographyForSearch(
+            $collapsedVocative,
+        );
+        $legacyOrthographyWithoutVocative = $this->normalizeLegacyOrthographyForSearch(
+            $withoutVocative,
+        );
         $variants = [
             $trimmed,
             strtr($trimmed, ['ي' => 'ی', 'ى' => 'ی', 'ك' => 'ک']),
@@ -812,6 +827,10 @@ class QuranReaderDataService
             $this->collapseVocativeSpacingInPhrase($withoutConjunctions),
             $withoutVocative,
             $this->stripVocativeParticlesFromPhrase($withoutConjunctions),
+            $legacyOrthography,
+            $legacyOrthographyWithoutConjunctions,
+            $legacyOrthographyCollapsedVocative,
+            $legacyOrthographyWithoutVocative,
             $this->normalizeQuestionVerbSpellingsInPhrase($trimmed),
             $this->normalizeQuestionVerbSpellingsInPhrase($withoutConjunctions),
         ];
@@ -971,6 +990,18 @@ class QuranReaderDataService
         }
 
         return mb_substr($trimmed, 1);
+    }
+
+    private function normalizeLegacyOrthographyForSearch(string $text): string
+    {
+        return strtr(trim($text), [
+            'الصلاة' => 'الصلواة',
+            'صلاة' => 'صلواة',
+            'الزكاة' => 'الزكواة',
+            'زكاة' => 'زكواة',
+            'الحياة' => 'الحيوة',
+            'حياة' => 'حيوة',
+        ]);
     }
 
     private function buildSearchSnippet(string $normalizedVerseText, string $searchQuery): string

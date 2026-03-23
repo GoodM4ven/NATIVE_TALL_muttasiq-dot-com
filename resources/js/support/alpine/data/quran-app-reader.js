@@ -234,7 +234,7 @@ document.addEventListener('alpine:init', () => {
         },
         search: {
             query: '',
-            minQueryLength: 2,
+            minQueryLength: 4,
             results: [],
             isLoading: false,
             isReady: false,
@@ -251,6 +251,8 @@ document.addEventListener('alpine:init', () => {
         _layoutToken: 0,
         _layoutRaf: null,
         _revealTimer: null,
+        _layoutMutationObserver: null,
+        _layoutResizeObserver: null,
         _viewportChangeDebounceTimer: null,
         _canonicalWidthPromise: null,
         _panelWidthBucket: null,
@@ -350,10 +352,16 @@ document.addEventListener('alpine:init', () => {
                         return;
                     }
 
+                    this.$nextTick(() => {
+                        this.initializeLayoutObservers();
+                    });
                     this.scheduleLayout({ revealDelayMs: 170 });
                 });
             }
 
+            this.$nextTick(() => {
+                this.initializeLayoutObservers();
+            });
             this.bootstrap();
         },
 
@@ -380,6 +388,8 @@ document.addEventListener('alpine:init', () => {
                 clearTimeout(this._revealTimer);
                 this._revealTimer = null;
             }
+
+            this.teardownLayoutObservers();
 
             if (this._viewportChangeDebounceTimer !== null) {
                 clearTimeout(this._viewportChangeDebounceTimer);
@@ -443,6 +453,53 @@ document.addEventListener('alpine:init', () => {
 
             this._pendingNavigationRequest = null;
             this._navigationRevealLocked = false;
+        },
+
+        initializeLayoutObservers() {
+            this.teardownLayoutObservers();
+
+            const contentElement = this.$refs.pageContent;
+            const frameElement = this.$refs.pageFrame;
+
+            if (contentElement instanceof Element && typeof MutationObserver !== 'undefined') {
+                this._layoutMutationObserver = new MutationObserver(() => {
+                    if (!this.ready || this.mushafLines.length === 0 || this.isLoadingPage) {
+                        return;
+                    }
+
+                    this.scheduleLayout({ revealDelayMs: 170 });
+                });
+
+                this._layoutMutationObserver.observe(contentElement, {
+                    childList: true,
+                    subtree: true,
+                    characterData: true,
+                });
+            }
+
+            if (frameElement instanceof Element && typeof ResizeObserver !== 'undefined') {
+                this._layoutResizeObserver = new ResizeObserver(() => {
+                    if (!this.ready || this.mushafLines.length === 0 || this.isLoadingPage) {
+                        return;
+                    }
+
+                    this.scheduleLayout({ revealDelayMs: 160 });
+                });
+
+                this._layoutResizeObserver.observe(frameElement);
+            }
+        },
+
+        teardownLayoutObservers() {
+            if (this._layoutMutationObserver) {
+                this._layoutMutationObserver.disconnect();
+                this._layoutMutationObserver = null;
+            }
+
+            if (this._layoutResizeObserver) {
+                this._layoutResizeObserver.disconnect();
+                this._layoutResizeObserver = null;
+            }
         },
 
         async bootstrap() {
@@ -583,6 +640,15 @@ document.addEventListener('alpine:init', () => {
 
             if (pendingTargetPage > 0) {
                 return pendingTargetPage;
+            }
+
+            const visualPage = clampPage(
+                Number(this.pageInput ?? this._lastPageInputVisualValue ?? this.pageNumber),
+                this.maxPage,
+            );
+
+            if (visualPage > 0) {
+                return visualPage;
             }
 
             return this.pageNumber;
@@ -857,6 +923,28 @@ document.addEventListener('alpine:init', () => {
             }
 
             this._lastPageInputVisualValue = normalizedInputPage;
+        },
+
+        async onSliderInput() {
+            this.onPageInputInput();
+
+            const targetPage = clampPage(this.pageInput, this.maxPage);
+
+            await this.navigateToPage(targetPage, {
+                direction: this.resolveNavigationDirection(targetPage),
+                animate: true,
+                source: 'page-slider-input',
+                forceRefit: true,
+                settleDelayMs: 190,
+            });
+        },
+
+        async onSliderCommit() {
+            await this.onPageInputCommit({
+                force: true,
+                commitNow: true,
+                source: 'page-slider-commit',
+            });
         },
 
         async onPageInputBlur() {
@@ -1234,15 +1322,60 @@ document.addEventListener('alpine:init', () => {
         },
 
         scheduleLayout({ revealDelayMs = 180 } = {}) {
-            const layoutToken = this.beginLayoutCycle();
-
             this.clearLayoutTimers();
 
             this._layoutRaf = requestAnimationFrame(() => {
                 this._layoutRaf = null;
-                this.fitPageToViewport();
-                this.queuePageReveal(layoutToken, revealDelayMs);
+                void this.layoutPageGuaranteed({
+                    revealDelayMs,
+                    maxAttempts: 4,
+                });
             });
+        },
+
+        async waitForStableRenderedText(maxFrames = 8) {
+            const contentElement = this.$refs.pageContent;
+
+            if (!(contentElement instanceof Element)) {
+                await nextAnimationFrame();
+
+                return;
+            }
+
+            let previousWidth = 0;
+            let previousHeight = 0;
+            let stableFrames = 0;
+            const frames = Math.max(2, Math.trunc(Number(maxFrames) || 8));
+
+            for (let frame = 0; frame < frames; frame += 1) {
+                await nextAnimationFrame();
+
+                const { width, height } = this.measureRenderedBounds(contentElement);
+
+                if (width <= 1 || height <= 1) {
+                    stableFrames = 0;
+                    previousWidth = width;
+                    previousHeight = height;
+
+                    continue;
+                }
+
+                const widthDelta = Math.abs(width - previousWidth);
+                const heightDelta = Math.abs(height - previousHeight);
+
+                if (widthDelta < 0.6 && heightDelta < 0.6) {
+                    stableFrames += 1;
+                } else {
+                    stableFrames = 0;
+                }
+
+                previousWidth = width;
+                previousHeight = height;
+
+                if (stableFrames >= 2) {
+                    return;
+                }
+            }
         },
 
         async layoutPage({ revealDelayMs = 180 } = {}) {
@@ -1251,19 +1384,19 @@ document.addEventListener('alpine:init', () => {
             await this.nextTickAsync();
             await this.waitForPageFontReady();
             await nextAnimationFrame();
-            await nextAnimationFrame();
+            await this.waitForStableRenderedText(10);
 
             this.fitPageToViewport();
             this.queuePageReveal(layoutToken, revealDelayMs);
         },
 
-        async layoutPageGuaranteed({ revealDelayMs = 180, maxAttempts = 3 } = {}) {
-            const attempts = Math.max(1, Math.trunc(Number(maxAttempts) || 3));
+        async layoutPageGuaranteed({ revealDelayMs = 180, maxAttempts = 4 } = {}) {
+            const attempts = Math.max(2, Math.trunc(Number(maxAttempts) || 4));
 
             for (let attempt = 0; attempt < attempts; attempt += 1) {
                 const fitRunsBeforeAttempt = this._fitRunCounter;
                 await this.layoutPage({
-                    revealDelayMs: attempt === 0 ? revealDelayMs : 140,
+                    revealDelayMs: attempt === 0 ? revealDelayMs : 160,
                 });
 
                 if (
@@ -1272,6 +1405,8 @@ document.addEventListener('alpine:init', () => {
                 ) {
                     return;
                 }
+
+                await wait(55);
             }
         },
 
@@ -1971,6 +2106,50 @@ document.addEventListener('alpine:init', () => {
             return 'quran-ayah-line quran-ayah-line-run quran-ayah-line-run-centered font-quran';
         },
 
+        lineWordClusters(line) {
+            if (!Array.isArray(line?.words) || line.words.length < 1) {
+                return [];
+            }
+
+            const clusters = [];
+            let currentCluster = null;
+
+            line.words.forEach((word, wordIndex) => {
+                const ayahIndex = Math.max(0, Math.trunc(Number(word?.ayah_index ?? 0)));
+                const wordIndexValue = Math.max(
+                    0,
+                    Math.trunc(Number(word?.word_index ?? wordIndex + 1)),
+                );
+
+                if (!currentCluster || currentCluster.ayahIndex !== ayahIndex) {
+                    currentCluster = {
+                        key: `${line?.line_number ?? 0}-${ayahIndex}-${wordIndexValue}`,
+                        ayahIndex,
+                        words: [],
+                    };
+                    clusters.push(currentCluster);
+                }
+
+                currentCluster.words.push(word);
+            });
+
+            return clusters;
+        },
+
+        isAyahClusterActive(cluster) {
+            const ayahIndex = Math.max(0, Math.trunc(Number(cluster?.ayahIndex ?? 0)));
+
+            return this.activeAyahIndex > 0 && ayahIndex > 0 && this.activeAyahIndex === ayahIndex;
+        },
+
+        isAyahClusterHovered(cluster) {
+            const ayahIndex = Math.max(0, Math.trunc(Number(cluster?.ayahIndex ?? 0)));
+
+            return (
+                this.hoveredAyahIndex > 0 && ayahIndex > 0 && this.hoveredAyahIndex === ayahIndex
+            );
+        },
+
         lineFontStyle() {
             const family = String(this.qpcPageFontFamily ?? '').trim();
 
@@ -2002,12 +2181,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         isWordActive(word) {
-            const ayahIndex = Number(word?.ayah_index ?? 0);
             const wordIndex = Number(word?.word_index ?? 0);
-
-            if (this.activeAyahIndex > 0) {
-                return ayahIndex > 0 && ayahIndex === this.activeAyahIndex;
-            }
 
             if (this.activeWordIndex > 0) {
                 return wordIndex > 0 && wordIndex === this.activeWordIndex;
@@ -2017,12 +2191,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         isWordHovered(word) {
-            const ayahIndex = Number(word?.ayah_index ?? 0);
             const wordIndex = Number(word?.word_index ?? 0);
-
-            if (this.hoveredAyahIndex > 0) {
-                return ayahIndex > 0 && ayahIndex === this.hoveredAyahIndex;
-            }
 
             if (this.hoveredWordIndex > 0) {
                 return wordIndex > 0 && wordIndex === this.hoveredWordIndex;
@@ -2064,6 +2233,12 @@ document.addEventListener('alpine:init', () => {
 
         normalizeSearchQuery(value) {
             return String(value ?? '')
+                .replace(/\u0640/g, '')
+                .replace(/[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED]/g, '')
+                .replace(/[أإآٱ]/g, 'ا')
+                .replace(/ى/g, 'ي')
+                .replace(/ؤ/g, 'و')
+                .replace(/ئ/g, 'ي')
                 .trim()
                 .replace(/\s+/g, ' ')
                 .toLowerCase();

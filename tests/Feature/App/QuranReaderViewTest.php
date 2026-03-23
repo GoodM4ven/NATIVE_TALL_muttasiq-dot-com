@@ -84,13 +84,14 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderViewSource)->toContain('quran-ayah-line-run-centered')
         ->and($quranReaderViewSource)->toContain('top: 0;')
         ->and($quranReaderViewSource)->toContain('x-data="quranAppReader({')
-        ->and($quranReaderViewSource)->toContain("searchModalId: @js('fi-' . \$this->getId() . '-action-0')")
+        ->and($quranReaderViewSource)->toContain("searchModalId: @js('quran-reader-search-modal')")
         ->and($quranReaderViewSource)->toContain("x-on:x-modal-opened.window=\"handleModalLifecycleEvent('opened', \$event)\"")
         ->and($quranReaderViewSource)->toContain("x-on:close-modal.window=\"handleModalLifecycleEvent('closing', \$event)\"")
         ->and($quranReaderViewSource)->toContain("x-on:x-modal-closed.window=\"handleModalLifecycleEvent('closed', \$event)\"")
         ->and($quranReaderViewSource)->toContain('x-on:control-panel-updated.window="applyControlPanelSettings($event.detail?.controlPanel ?? {})"')
         ->and($quranReaderViewSource)->toContain("\$wire.mountAction('searchQuran');")
-        ->and($quranReaderViewSource)->toContain('{{ $this->pageJumpForm }}')
+        ->and($quranReaderViewSource)->toContain('class="quran-page-slider"')
+        ->and($quranReaderViewSource)->toContain("\$wire.mountAction('jumpToPage')")
         ->and($quranReaderViewSource)->toContain('<x-filament-actions::modals />')
         ->and($quranReaderViewSource)->toContain('x-on:pointerdown.passive="onSwipeStart($event)"')
         ->and($quranReaderViewSource)->toContain('x-on:touchstart.passive="onSwipeStart($event)"')
@@ -115,17 +116,15 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderScriptSource)->toContain('_skipNextSearchModalCloseLayout: false')
         ->and($quranReaderScriptSource)->toContain('deriveSurahDirectoryFromItems(items = [])')
         ->and($quranReaderScriptSource)->toContain('requestSearchModalClose({ skipLayout = false } = {})')
-        ->and($quranReaderScriptSource)->toContain('if (this.activeAyahIndex > 0)');
+        ->and($quranReaderScriptSource)->toContain('isAyahClusterActive(cluster)');
 
     expect($quranReaderClassSource)->not->toBeFalse()
         ->and($quranReaderClassSource)->toContain('implements HasActions, HasSchemas')
         ->and($quranReaderClassSource)->toContain('use InteractsWithActions;')
         ->and($quranReaderClassSource)->toContain('use InteractsWithSchemas;')
-        ->and($quranReaderClassSource)->toContain('public function pageJumpForm(Schema $schema): Schema')
-        ->and($quranReaderClassSource)->toContain("TextInput::make('page')")
-        ->and($quranReaderClassSource)->toContain("->suffix(fn (): string => max(1, \$this->maxPage).' / ')")
         ->and($quranReaderClassSource)->toContain('public function searchQuranAction(): Action')
         ->and($quranReaderClassSource)->toContain("TextInput::make('search')")
+        ->and($quranReaderClassSource)->toContain('public function jumpToPageAction(): Action')
         ->and($quranReaderClassSource)->toContain("->modalContentFooter(fn (): View => view('livewire.quran-app.search-modal'))")
         ->and($quranReaderClassSource)->toContain('->extraModalWindowAttributes([')
         ->and($quranReaderClassSource)->toContain("'id' => 'quran-reader-search-modal'")
@@ -171,4 +170,23 @@ it('registers qpc page font route contract used by quran reader pages', function
     expect(route('quran-surah-header-font', [], false))->toBe('/quran-surah-header-font');
     expect(route('quran-reader-page-data', ['page' => 1], false))->toBe('/quran-reader/pages/1.json');
     expect(route('quran-reader-search-index', [], false))->toBe('/quran-reader/search-index.json');
+});
+
+it('returns matches for legacy orthography phrases in quran search endpoint', function () {
+    if (! \Illuminate\Support\Facades\Schema::hasTable('quran_verses')) {
+        $this->markTestSkipped('Quran verses table is unavailable.');
+    }
+
+    $query = 'يا بني أقم الصلاة';
+    $response = $this->getJson(route('quran-reader-search-index', ['q' => $query], false));
+
+    $response->assertSuccessful();
+
+    $items = $response->json('items', []);
+
+    expect($items)->toBeArray()->not->toBeEmpty()
+        ->and(collect($items)->contains(
+            static fn (array $item): bool => (int) ($item['surah_number'] ?? 0) === 31
+                && (int) ($item['ayah_number'] ?? 0) === 17,
+        ))->toBeTrue();
 });
