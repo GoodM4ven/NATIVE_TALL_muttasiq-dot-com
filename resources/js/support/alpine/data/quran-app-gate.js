@@ -1,5 +1,10 @@
 document.addEventListener('alpine:init', () => {
     window.Alpine.data('quranAppGate', () => ({
+        modeAvailability: Object.freeze({
+            tilawa: true,
+            hifth: false,
+            tadabbur: false,
+        }),
         projectedMode: null,
         pinnedMode: null,
         isPointerInside: false,
@@ -51,6 +56,12 @@ document.addEventListener('alpine:init', () => {
         },
         isModeActive(mode) {
             return (this.pinnedMode ?? this.projectedMode) === mode;
+        },
+        isModeAvailable(mode) {
+            return Boolean(this.modeAvailability?.[mode] ?? false);
+        },
+        isModeLocked(mode) {
+            return !this.isModeAvailable(mode);
         },
         currentMode() {
             return this.pinnedMode ?? this.projectedMode;
@@ -178,6 +189,10 @@ document.addEventListener('alpine:init', () => {
             );
         },
         openMode(mode) {
+            if (!this.isModeAvailable(mode)) {
+                return;
+            }
+
             const modeViewMap = {
                 tilawa: 'quran-app-tilawa',
                 hifth: 'quran-app-hifth',

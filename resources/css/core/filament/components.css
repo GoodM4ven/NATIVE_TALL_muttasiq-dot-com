@@ -339,7 +339,8 @@
     }
 
     #quran-reader-jump-page-modal {
-        width: min(86vw, 15rem);
+        width: min(78vw, 10.8rem) !important;
+        max-width: 10.8rem !important;
         border-color: color-mix(in srgb, var(--quran-panel-border) 86%, transparent);
         background: color-mix(in srgb, var(--quran-page-surface) 96%, transparent);
     }

@@ -58,12 +58,15 @@ it('wires quran reader entry points from main menu to hash navigation and view m
 
     expect($quranGateSource)->not->toBeFalse()
         ->and($quranGateSource)->toContain('x-data="quranAppGate"')
-        ->and($quranGateSource)->toContain('images/background/quran/tilawa-blurred.webp')
-        ->and($quranGateSource)->toContain('images/background/quran/hifth-blurred.webp')
-        ->and($quranGateSource)->toContain('images/background/quran/tadabbur-blurred.webp')
+        ->and($quranGateSource)->toContain('images/background/quran/tilawa.webp')
+        ->and($quranGateSource)->toContain('images/background/quran/hifth.webp')
+        ->and($quranGateSource)->toContain('images/background/quran/tadabbur.webp')
         ->and($quranGateSource)->toContain('quran-app-sector__media--tilawa')
         ->and($quranGateSource)->toContain('quran-app-sector__media--hifth')
         ->and($quranGateSource)->toContain('quran-app-sector__media--tadabbur')
+        ->and($quranGateSource)->toContain('quran-app-gate-focal-dim')
+        ->and($quranGateSource)->toContain('quran-app-gate-pointer')
+        ->and($quranGateSource)->toContain('quran-app-sector__lock-shell')
         ->and($quranGateSource)->toContain('quran-app-gate-orbit')
         ->and($quranGateSource)->toContain('x-on:pointermove.passive="handlePointerMove($event)"')
         ->and($quranGateSource)->toContain('x-on:click="openMode(\'tilawa\')"')
@@ -121,7 +124,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderScriptSource)->toContain('_skipNextSearchModalCloseLayout: false')
         ->and($quranReaderScriptSource)->toContain('deriveSurahDirectoryFromItems(items = [])')
         ->and($quranReaderScriptSource)->toContain('resetNavigationQueueForPriorityJump()')
-        ->and($quranReaderScriptSource)->toContain("pages: 'quran-reader-pages-v3'")
+        ->and($quranReaderScriptSource)->toContain("pages: 'quran-reader-pages-v7'")
         ->and($quranReaderScriptSource)->toContain('requestSearchModalClose({ skipLayout = false } = {})')
         ->and($quranReaderScriptSource)->toContain('isAyahClusterActive(cluster)');
 
@@ -135,13 +138,15 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderClassSource)->toContain("->modalContentFooter(fn (): View => view('livewire.quran-app.search-modal'))")
         ->and($quranReaderClassSource)->toContain('->extraModalWindowAttributes([')
         ->and($quranReaderClassSource)->toContain("'id' => 'quran-reader-search-modal'")
+        ->and($quranReaderClassSource)->toContain("'x-on:input' => '\$event.target.value = String(Math.min(Math.max(1, Math.trunc(Number(\$event.target.value || 1) || 1)), Math.max(1, Number(\$event.target.max) || 1)));'")
+        ->and($quranReaderClassSource)->toContain("'x-on:blur' => '\$event.target.value = String(Math.min(Math.max(1, Math.trunc(Number(\$event.target.value || 1) || 1)), Math.max(1, Number(\$event.target.max) || 1)));'")
         ->and($quranReaderClassSource)->toContain("view('livewire.quran-app.reader'")
         ->and($quranReaderClassSource)->toContain('QuranReaderDataService');
 
     expect($quranReaderDataServiceSource)->not->toBeFalse()
         ->and($quranReaderDataServiceSource)->toContain('p\'.$pageNumber.\'.woff2')
         ->and($quranReaderDataServiceSource)->toContain("'format' => 'woff2'")
-        ->and($quranReaderDataServiceSource)->toContain('quran-reader-page-v6')
+        ->and($quranReaderDataServiceSource)->toContain('quran-reader-page-v10')
         ->and($quranReaderDataServiceSource)->toContain('quran-reader-surah-directory-v2')
         ->and($quranReaderDataServiceSource)->toContain('injectSyntheticBasmallahAfterSurahHeaders')
         ->and($quranReaderDataServiceSource)->toContain('applyTargetedSurahHeaderCarryovers')
@@ -199,4 +204,28 @@ it('returns matches for legacy orthography phrases in quran search endpoint', fu
             static fn (array $item): bool => (int) ($item['surah_number'] ?? 0) === 31
                 && (int) ($item['ayah_number'] ?? 0) === 17,
         ))->toBeTrue();
+});
+
+it('injects visible basmallah lines under late-page surah headers', function () {
+    if (! \Illuminate\Support\Facades\Schema::hasTable('quran_mushaf_lines')) {
+        $this->markTestSkipped('Quran mushaf lines table is unavailable.');
+    }
+
+    /** @var \App\Services\Quran\QuranReaderDataService $service */
+    $service = app(\App\Services\Quran\QuranReaderDataService::class);
+    $page = $service->resolvePage(604);
+    $basmallahLines = collect($page['mushafLines'] ?? [])
+        ->filter(static fn (array $line): bool => ($line['line_type'] ?? '') === 'basmallah')
+        ->values();
+
+    expect($basmallahLines)->toHaveCount(3)
+        ->and($basmallahLines->every(static function (array $line): bool {
+            $text = trim((string) ($line['text'] ?? ''));
+            $words = is_array($line['words'] ?? null) ? $line['words'] : [];
+            $allGlyphWords = $words !== [] && collect($words)->every(
+                static fn (array $word): bool => (bool) ($word['is_glyph'] ?? false),
+            );
+
+            return $text !== '' && $allGlyphWords;
+        }))->toBeTrue();
 });

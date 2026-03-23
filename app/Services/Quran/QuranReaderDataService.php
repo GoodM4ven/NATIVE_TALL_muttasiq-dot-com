@@ -99,7 +99,7 @@ class QuranReaderDataService
 
         $maxPage = $this->maxPage();
         $normalizedPage = $maxPage > 0 ? max(1, min($pageNumber, $maxPage)) : 1;
-        $cacheKey = 'quran-reader-page-v9:'.$normalizedPage;
+        $cacheKey = 'quran-reader-page-v10:'.$normalizedPage;
 
         /**
          * @var array{
@@ -2367,31 +2367,6 @@ class QuranReaderDataService
             return $cached;
         }
 
-        if (Schema::hasTable('quran_words')) {
-            $rows = DB::table('quran_words')
-                ->select(['global_word_index', 'token_uthmani'])
-                ->where('surah_number', 1)
-                ->where('ayah_number', 1)
-                ->orderBy('global_word_index')
-                ->get();
-
-            if ($rows->count() > 0) {
-                $cached = $rows
-                    ->map(static fn (object $row): array => [
-                        'word_index' => (int) ($row->global_word_index ?? 0),
-                        'text' => trim((string) ($row->token_uthmani ?? '')),
-                        'is_glyph' => false,
-                    ])
-                    ->filter(static fn (array $word): bool => $word['word_index'] > 0 && $word['text'] !== '')
-                    ->values()
-                    ->all();
-
-                if ($cached !== []) {
-                    return $cached;
-                }
-            }
-        }
-
         $databasePath = $this->resolveQpcDisplayWordsDatabasePath();
 
         if ($databasePath !== null) {
@@ -2440,6 +2415,31 @@ class QuranReaderDataService
                 }
             } else {
                 $database->close();
+            }
+        }
+
+        if (Schema::hasTable('quran_words')) {
+            $rows = DB::table('quran_words')
+                ->select(['global_word_index', 'token_uthmani'])
+                ->where('surah_number', 1)
+                ->where('ayah_number', 1)
+                ->orderBy('global_word_index')
+                ->get();
+
+            if ($rows->count() > 0) {
+                $cached = $rows
+                    ->map(static fn (object $row): array => [
+                        'word_index' => (int) ($row->global_word_index ?? 0),
+                        'text' => trim((string) ($row->token_uthmani ?? '')),
+                        'is_glyph' => false,
+                    ])
+                    ->filter(static fn (array $word): bool => $word['word_index'] > 0 && $word['text'] !== '')
+                    ->values()
+                    ->all();
+
+                if ($cached !== []) {
+                    return $cached;
+                }
             }
         }
 

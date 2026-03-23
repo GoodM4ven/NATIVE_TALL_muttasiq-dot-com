@@ -76,7 +76,7 @@ const wait = async (durationMs) => {
 
 const wordPressHoldDelayMs = 750;
 const navigationSettleDelayMs = 140;
-const navigationRevealLockDurationMs = 1500;
+const navigationRevealLockDurationMs = 420;
 
 const openCacheSafely = async (cacheName) => {
     if (!cacheName || typeof window === 'undefined' || typeof window.caches === 'undefined') {
@@ -169,7 +169,7 @@ document.addEventListener('alpine:init', () => {
             searchIndexUrl: String(config?.api?.searchIndexUrl ?? ''),
         },
         cacheNames: {
-            pages: 'quran-reader-pages-v6',
+            pages: 'quran-reader-pages-v7',
             fonts: 'quran-reader-fonts-v1',
             search: 'quran-reader-search-v3',
         },
@@ -487,7 +487,6 @@ document.addEventListener('alpine:init', () => {
                 this._layoutMutationObserver.observe(contentElement, {
                     childList: true,
                     subtree: true,
-                    characterData: true,
                 });
             }
 
@@ -768,6 +767,10 @@ document.addEventListener('alpine:init', () => {
 
             if (previousInputPage !== normalizedTargetPage) {
                 this.triggerPageCounterPulse(previousInputPage, normalizedTargetPage);
+            }
+
+            if (animate) {
+                this.beginLayoutCycle();
             }
 
             this.pageInput = normalizedTargetPage;
@@ -1317,6 +1320,17 @@ document.addEventListener('alpine:init', () => {
                     return;
                 }
 
+                if (
+                    this._navigationRevealLocked ||
+                    this._pendingNavigationRequest !== null ||
+                    this.isLoadingPage
+                ) {
+                    this.isFittingPage = true;
+                    this.queuePageReveal(layoutToken, 90);
+
+                    return;
+                }
+
                 this.isFittingPage = false;
                 this._revealTimer = null;
             }, delayMs);
@@ -1817,6 +1831,12 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            if (event.target?.closest?.('.quran-word-button')) {
+                this.resetSwipeState();
+
+                return;
+            }
+
             if (event.target?.closest?.('input, textarea, select, [contenteditable="true"]')) {
                 this.resetSwipeState();
 
@@ -1862,6 +1882,12 @@ document.addEventListener('alpine:init', () => {
             }
 
             if (event?.target?.closest?.('[data-no-swipe]')) {
+                this.resetSwipeState();
+
+                return;
+            }
+
+            if (event?.target?.closest?.('.quran-word-button')) {
                 this.resetSwipeState();
 
                 return;
@@ -2455,10 +2481,6 @@ document.addEventListener('alpine:init', () => {
                 return fallbackText;
             }
 
-            if (/[\uE000-\uF8FF]/u.test(text)) {
-                return fallbackText;
-            }
-
             return text;
         },
 
@@ -2705,7 +2727,11 @@ document.addEventListener('alpine:init', () => {
             const gridElement = this.resolveSurahDirectoryGridElement();
 
             if (!(gridElement instanceof Element)) {
-                return;
+                return false;
+            }
+
+            if (gridElement.clientHeight < 16) {
+                return false;
             }
 
             const activeSurahNumber = this.directoryActiveSurahNumber();
@@ -2714,7 +2740,15 @@ document.addEventListener('alpine:init', () => {
             );
 
             if (!(activeTile instanceof Element)) {
-                return;
+                return false;
+            }
+
+            if (typeof activeTile.scrollIntoView === 'function') {
+                activeTile.scrollIntoView({
+                    block: 'center',
+                    inline: 'nearest',
+                    behavior,
+                });
             }
 
             const targetScrollTop =
@@ -2722,27 +2756,45 @@ document.addEventListener('alpine:init', () => {
             const normalizedScrollTop = Math.max(0, Math.trunc(targetScrollTop));
 
             if ('scrollTo' in gridElement) {
-                gridElement.scrollTo({
-                    top: normalizedScrollTop,
-                    behavior,
-                });
-
-                return;
+                gridElement.scrollTo({ top: normalizedScrollTop, behavior });
+            } else {
+                gridElement.scrollTop = normalizedScrollTop;
             }
 
-            gridElement.scrollTop = normalizedScrollTop;
+            return true;
         },
 
         queueSurahDirectoryAutoFocus() {
-            const focusDelays = [0, 42, 120, 260];
+            const attemptAutoFocus = (attempt = 0) => {
+                const normalizedAttempt = Math.max(0, Math.trunc(Number(attempt) || 0));
+                const didFocus = this.scrollSurahDirectoryToActive({
+                    behavior: normalizedAttempt === 0 ? 'auto' : 'smooth',
+                });
 
-            focusDelays.forEach((delayMs, index) => {
+                if (didFocus) {
+                    if (normalizedAttempt < 2) {
+                        window.setTimeout(() => {
+                            this.scrollSurahDirectoryToActive({ behavior: 'smooth' });
+                        }, 120);
+                    }
+
+                    window.setTimeout(() => {
+                        this.scrollSurahDirectoryToActive({ behavior: 'smooth' });
+                    }, 260);
+
+                    return;
+                }
+
+                if (normalizedAttempt >= 28) {
+                    return;
+                }
+
                 window.setTimeout(() => {
-                    this.scrollSurahDirectoryToActive({
-                        behavior: index === 0 ? 'auto' : 'smooth',
-                    });
-                }, delayMs);
-            });
+                    attemptAutoFocus(normalizedAttempt + 1);
+                }, 40);
+            };
+
+            attemptAutoFocus(0);
         },
 
         buildSurahDirectory(entries = null) {
