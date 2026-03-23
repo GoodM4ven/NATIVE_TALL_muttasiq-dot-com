@@ -108,6 +108,8 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranSearchModalViewSource)->toContain('quran-search-shell')
         ->and($quranSearchModalViewSource)->toContain('quran-search-results-shell')
         ->and($quranSearchModalViewSource)->toContain('quran-surah-grid')
+        ->and($quranSearchModalViewSource)->toContain('x-ref="surahDirectoryGrid"')
+        ->and($quranSearchModalViewSource)->toContain("'quran-surah-tile--active': isSurahDirectoryEntryActive(entry)")
         ->and($quranSearchModalViewSource)->toContain('x-ref="searchResultsList"')
         ->and($quranSearchModalViewSource)->toContain('goToSearchResult(result)')
         ->and($quranSearchModalViewSource)->toContain('goToSurahFromDirectory(entry)');
@@ -118,6 +120,8 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderScriptSource)->toContain('_lastPageInputCommitPage: 0')
         ->and($quranReaderScriptSource)->toContain('_skipNextSearchModalCloseLayout: false')
         ->and($quranReaderScriptSource)->toContain('deriveSurahDirectoryFromItems(items = [])')
+        ->and($quranReaderScriptSource)->toContain('resetNavigationQueueForPriorityJump()')
+        ->and($quranReaderScriptSource)->toContain("pages: 'quran-reader-pages-v3'")
         ->and($quranReaderScriptSource)->toContain('requestSearchModalClose({ skipLayout = false } = {})')
         ->and($quranReaderScriptSource)->toContain('isAyahClusterActive(cluster)');
 
@@ -137,8 +141,10 @@ it('wires quran reader entry points from main menu to hash navigation and view m
     expect($quranReaderDataServiceSource)->not->toBeFalse()
         ->and($quranReaderDataServiceSource)->toContain('p\'.$pageNumber.\'.woff2')
         ->and($quranReaderDataServiceSource)->toContain("'format' => 'woff2'")
-        ->and($quranReaderDataServiceSource)->toContain('quran-reader-page-v3')
+        ->and($quranReaderDataServiceSource)->toContain('quran-reader-page-v6')
+        ->and($quranReaderDataServiceSource)->toContain('quran-reader-surah-directory-v2')
         ->and($quranReaderDataServiceSource)->toContain('injectSyntheticBasmallahAfterSurahHeaders')
+        ->and($quranReaderDataServiceSource)->toContain('applyTargetedSurahHeaderCarryovers')
         ->and($quranReaderDataServiceSource)->toContain('quran-reader-search-index-v1')
         ->and($quranReaderDataServiceSource)->toContain('prepareSearchTokens(array $tokens): array')
         ->and($quranReaderDataServiceSource)->toContain('collapseVocativeSpacingInPhrase(string $text): string')

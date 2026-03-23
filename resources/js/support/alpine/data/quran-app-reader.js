@@ -169,7 +169,7 @@ document.addEventListener('alpine:init', () => {
             searchIndexUrl: String(config?.api?.searchIndexUrl ?? ''),
         },
         cacheNames: {
-            pages: 'quran-reader-pages-v2',
+            pages: 'quran-reader-pages-v3',
             fonts: 'quran-reader-fonts-v1',
             search: 'quran-reader-search-v3',
         },
@@ -861,6 +861,21 @@ document.addEventListener('alpine:init', () => {
                     forceRefit: true,
                 });
             }
+        },
+
+        resetNavigationQueueForPriorityJump() {
+            if (this._navigationDebounceTimer !== null) {
+                clearTimeout(this._navigationDebounceTimer);
+                this._navigationDebounceTimer = null;
+            }
+
+            if (this._navigationRevealUnlockTimer !== null) {
+                clearTimeout(this._navigationRevealUnlockTimer);
+                this._navigationRevealUnlockTimer = null;
+            }
+
+            this._pendingNavigationRequest = null;
+            this._navigationRevealLocked = false;
         },
 
         async onGlobalArrowNavigate(direction, event = null) {
@@ -2596,6 +2611,35 @@ document.addEventListener('alpine:init', () => {
             return `font-family: '${family}', 'MadinaQuran', 'Amiri', 'Traditional Arabic', serif;`;
         },
 
+        isSurahDirectoryEntryActive(entry) {
+            const surahNumber = Math.max(1, Math.trunc(Number(entry?.surah_number ?? 1)));
+
+            return surahNumber === this.currentSurahNumber();
+        },
+
+        scrollSurahDirectoryToActive({ behavior = 'smooth' } = {}) {
+            const gridElement = this.$refs.surahDirectoryGrid;
+
+            if (!(gridElement instanceof Element)) {
+                return;
+            }
+
+            const activeSurahNumber = this.currentSurahNumber();
+            const activeTile = gridElement.querySelector(
+                `[data-surah-number="${activeSurahNumber}"]`,
+            );
+
+            if (!(activeTile instanceof Element)) {
+                return;
+            }
+
+            activeTile.scrollIntoView({
+                block: 'center',
+                inline: 'nearest',
+                behavior,
+            });
+        },
+
         buildSurahDirectory(entries = null) {
             const sourceEntries = Array.isArray(entries) ? entries : this.search.surahDirectory;
             const firstPageBySurah = new Map();
@@ -2942,6 +2986,10 @@ document.addEventListener('alpine:init', () => {
 
             await this.nextTickAsync();
             this.ensureSearchResultAnimations();
+            this.scrollSurahDirectoryToActive({ behavior: 'auto' });
+            requestAnimationFrame(() => {
+                this.scrollSurahDirectoryToActive({ behavior: 'smooth' });
+            });
             this.$refs.searchModalInput?.focus?.();
         },
 
@@ -3023,7 +3071,8 @@ document.addEventListener('alpine:init', () => {
             const pageNumber = clampPage(Number(entry?.page_number ?? 1), this.maxPage);
             const direction = this.resolveNavigationDirection(pageNumber);
 
-            await this.requestSearchModalClose({ skipLayout: true });
+            this.resetNavigationQueueForPriorityJump();
+            await this.requestSearchModalClose();
             this.activeAyahIndex = 0;
             this.activeWordIndex = 0;
             await this.navigateToPage(pageNumber, {
@@ -3032,7 +3081,10 @@ document.addEventListener('alpine:init', () => {
                 activeAyahIndex: 0,
                 forceRefit: true,
                 source: 'surah-directory',
+                commitNow: true,
+                settleDelayMs: 0,
             });
+            await this.layoutPageGuaranteed({ revealDelayMs: 220, maxAttempts: 5 });
             this.activeAyahIndex = 0;
             this.activeWordIndex = 0;
         },
@@ -3227,14 +3279,18 @@ document.addEventListener('alpine:init', () => {
             const ayahIndex = Math.max(0, Math.trunc(Number(result?.ayah_index ?? 0)));
             const direction = this.resolveNavigationDirection(targetPage);
 
-            await this.requestSearchModalClose({ skipLayout: true });
+            this.resetNavigationQueueForPriorityJump();
+            await this.requestSearchModalClose();
             await this.navigateToPage(targetPage, {
                 direction,
                 animate: true,
                 activeAyahIndex: ayahIndex,
                 forceRefit: true,
                 source: 'search-result',
+                commitNow: true,
+                settleDelayMs: 0,
             });
+            await this.layoutPageGuaranteed({ revealDelayMs: 220, maxAttempts: 5 });
             this.activeWordIndex = 0;
         },
     }));

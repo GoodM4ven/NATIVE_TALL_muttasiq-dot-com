@@ -12,6 +12,13 @@ use Illuminate\Support\Facades\Schema;
 
 class QuranReaderDataService
 {
+    /**
+     * @var array<int, int>
+     */
+    private const TARGETED_SURAH_HEADER_CARRYOVER_NUMBERS = [
+        4, 10, 22, 23, 24, 26, 27, 32, 33, 37, 38, 45, 47, 53, 60, 64, 65, 80,
+    ];
+
     public function isReady(): bool
     {
         $hasVersesTable = Schema::hasTable('quran_verses');
@@ -92,7 +99,7 @@ class QuranReaderDataService
 
         $maxPage = $this->maxPage();
         $normalizedPage = $maxPage > 0 ? max(1, min($pageNumber, $maxPage)) : 1;
-        $cacheKey = 'quran-reader-page-v3:'.$normalizedPage;
+        $cacheKey = 'quran-reader-page-v6:'.$normalizedPage;
 
         /**
          * @var array{
@@ -269,7 +276,7 @@ class QuranReaderDataService
         }
 
         /** @var array<int, array{surah_number: int, page_number: int}> $resolved */
-        $resolved = Cache::remember('quran-reader-surah-directory-v1', now()->addDays(30), function (): array {
+        $resolved = Cache::remember('quran-reader-surah-directory-v2', now()->addDays(30), function (): array {
             $rows = DB::table('quran_mushaf_lines')
                 ->selectRaw('surah_number, MIN(page_number) AS page_number')
                 ->whereNotNull('surah_number')
@@ -294,9 +301,20 @@ class QuranReaderDataService
             $directory = [];
 
             for ($surahNumber = 1; $surahNumber <= 114; $surahNumber++) {
+                $pageNumber = (int) ($firstPageBySurah[$surahNumber] ?? 1);
+                $shouldShiftToNextPage = in_array(
+                    $surahNumber,
+                    self::TARGETED_SURAH_HEADER_CARRYOVER_NUMBERS,
+                    true,
+                );
+
+                if ($shouldShiftToNextPage && $pageNumber < 604) {
+                    $pageNumber++;
+                }
+
                 $directory[] = [
                     'surah_number' => $surahNumber,
-                    'page_number' => (int) ($firstPageBySurah[$surahNumber] ?? 1),
+                    'page_number' => $pageNumber,
                 ];
             }
 
@@ -1407,6 +1425,7 @@ class QuranReaderDataService
         }
 
         $lines = $this->injectSyntheticBasmallahAfterSurahHeaders($lines);
+        $lines = $this->applyTargetedSurahHeaderCarryovers($lines);
 
         return $this->applyOpeningSpreadCorrections($lines);
     }
@@ -1469,7 +1488,6 @@ class QuranReaderDataService
             return $lines;
         }
 
-        $syntheticWords = $this->resolveSyntheticBasmallahWords();
         $result = [];
         $lineCount = count($lines);
 
@@ -1493,38 +1511,469 @@ class QuranReaderDataService
                 continue;
             }
 
-            $result[] = [
-                'line_number' => (int) $line['line_number'] + 1,
-                'line_type' => 'basmallah',
-                'is_centered' => true,
-                'surah_number' => $surahNumber > 0 ? $surahNumber : null,
-                'segments' => [],
-                'words' => array_map(
-                    static fn (array $word): array => [
-                        'verse_id' => 0,
-                        'word_index' => (int) $word['word_index'],
-                        'ayah_index' => 0,
-                        'surah_number' => $surahNumber,
-                        'ayah_number' => 0,
-                        'text' => (string) $word['text'],
-                        'is_glyph' => (bool) $word['is_glyph'],
-                        'ends_ayah' => false,
-                    ],
-                    $syntheticWords,
-                ),
-                'text' => $syntheticWords !== []
-                    ? trim(implode('', array_map(static fn (array $word): string => (string) $word['text'], $syntheticWords)))
-                    : 'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ',
-            ];
+            $result[] = $this->buildSyntheticBasmallahLine($surahNumber > 0 ? $surahNumber : null);
         }
 
+        return $this->normalizeLineNumbers($result);
+    }
+
+    /**
+     * @param  array<int, array{
+     *     line_number: int,
+     *     line_type: string,
+     *     is_centered: bool,
+     *     surah_number: int|null,
+     *     segments: array<int, array{
+     *         verse_id: int,
+     *         ayah_index: int,
+     *         surah_number: int,
+     *         ayah_number: int,
+     *         text: string,
+     *         ends_ayah: bool
+     *     }>,
+     *     words: array<int, array{
+     *         verse_id: int,
+     *         word_index: int,
+     *         ayah_index: int,
+     *         surah_number: int,
+     *         ayah_number: int,
+     *         text: string,
+     *         is_glyph: bool,
+     *         ends_ayah: bool
+     *     }>,
+     *     text: string
+     * }>  $lines
+     * @return array<int, array{
+     *     line_number: int,
+     *     line_type: string,
+     *     is_centered: bool,
+     *     surah_number: int|null,
+     *     segments: array<int, array{
+     *         verse_id: int,
+     *         ayah_index: int,
+     *         surah_number: int,
+     *         ayah_number: int,
+     *         text: string,
+     *         ends_ayah: bool
+     *     }>,
+     *     words: array<int, array{
+     *         verse_id: int,
+     *         word_index: int,
+     *         ayah_index: int,
+     *         surah_number: int,
+     *         ayah_number: int,
+     *         text: string,
+     *         is_glyph: bool,
+     *         ends_ayah: bool
+     *     }>,
+     *     text: string
+     * }>
+     */
+    private function applyTargetedSurahHeaderCarryovers(array $lines): array
+    {
+        if ($lines === []) {
+            return $lines;
+        }
+
+        $targetedSurahs = array_fill_keys(self::TARGETED_SURAH_HEADER_CARRYOVER_NUMBERS, true);
+        $surahsWithAyahLines = [];
+
+        foreach ($lines as $line) {
+            if ($line['line_type'] !== 'ayah') {
+                continue;
+            }
+
+            $surahNumber = $this->resolveLineSurahNumber($line);
+
+            if ($surahNumber > 0) {
+                $surahsWithAyahLines[$surahNumber] = true;
+            }
+        }
+
+        $filteredLines = array_values(array_filter($lines, static function (array $line) use (
+            $targetedSurahs,
+            $surahsWithAyahLines
+        ): bool {
+            $surahNumber = (int) ($line['surah_number'] ?? 0);
+
+            if (! isset($targetedSurahs[$surahNumber])) {
+                return true;
+            }
+
+            if (! in_array($line['line_type'], ['surah_name', 'basmallah'], true)) {
+                return true;
+            }
+
+            return isset($surahsWithAyahLines[$surahNumber]);
+        }));
+
+        $firstAyahSurahNumber = $this->firstAyahSurahNumberInLines($filteredLines);
+
+        if ($firstAyahSurahNumber === null || ! isset($targetedSurahs[$firstAyahSurahNumber])) {
+            return $this->normalizeLineNumbers($filteredLines);
+        }
+
+        if ($this->pageHasSurahHeader($filteredLines, $firstAyahSurahNumber)) {
+            return $this->normalizeLineNumbers($filteredLines);
+        }
+
+        $trimmedLines = [];
+        $passedLeadingPrelude = false;
+
+        foreach ($filteredLines as $line) {
+            if (
+                ! $passedLeadingPrelude &&
+                $line['line_type'] === 'basmallah' &&
+                (int) ($line['surah_number'] ?? 0) === 0
+            ) {
+                continue;
+            }
+
+            if ($line['line_type'] === 'ayah') {
+                $passedLeadingPrelude = true;
+            }
+
+            $trimmedLines[] = $line;
+        }
+
+        $prefixedLines = [
+            $this->buildSyntheticSurahHeaderLine($firstAyahSurahNumber),
+            $this->buildSyntheticBasmallahLine($firstAyahSurahNumber),
+            ...$trimmedLines,
+        ];
+
+        return $this->normalizeLineNumbers($prefixedLines);
+    }
+
+    /**
+     * @param  array<int, array{
+     *     line_number: int,
+     *     line_type: string,
+     *     is_centered: bool,
+     *     surah_number: int|null,
+     *     segments: array<int, array{
+     *         verse_id: int,
+     *         ayah_index: int,
+     *         surah_number: int,
+     *         ayah_number: int,
+     *         text: string,
+     *         ends_ayah: bool
+     *     }>,
+     *     words: array<int, array{
+     *         verse_id: int,
+     *         word_index: int,
+     *         ayah_index: int,
+     *         surah_number: int,
+     *         ayah_number: int,
+     *         text: string,
+     *         is_glyph: bool,
+     *         ends_ayah: bool
+     *     }>,
+     *     text: string
+     * }>  $lines
+     */
+    private function firstAyahSurahNumberInLines(array $lines): ?int
+    {
+        foreach ($lines as $line) {
+            if ($line['line_type'] !== 'ayah') {
+                continue;
+            }
+
+            $surahNumber = $this->resolveLineSurahNumber($line);
+
+            if ($surahNumber > 0) {
+                return $surahNumber;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<int, array{
+     *     line_number: int,
+     *     line_type: string,
+     *     is_centered: bool,
+     *     surah_number: int|null,
+     *     segments: array<int, array{
+     *         verse_id: int,
+     *         ayah_index: int,
+     *         surah_number: int,
+     *         ayah_number: int,
+     *         text: string,
+     *         ends_ayah: bool
+     *     }>,
+     *     words: array<int, array{
+     *         verse_id: int,
+     *         word_index: int,
+     *         ayah_index: int,
+     *         surah_number: int,
+     *         ayah_number: int,
+     *         text: string,
+     *         is_glyph: bool,
+     *         ends_ayah: bool
+     *     }>,
+     *     text: string
+     * }>  $lines
+     */
+    private function pageHasSurahHeader(array $lines, int $surahNumber): bool
+    {
+        foreach ($lines as $line) {
+            if ($line['line_type'] !== 'surah_name') {
+                continue;
+            }
+
+            if ((int) ($line['surah_number'] ?? 0) === $surahNumber) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  array{
+     *     line_number: int,
+     *     line_type: string,
+     *     is_centered: bool,
+     *     surah_number: int|null,
+     *     segments: array<int, array{
+     *         verse_id: int,
+     *         ayah_index: int,
+     *         surah_number: int,
+     *         ayah_number: int,
+     *         text: string,
+     *         ends_ayah: bool
+     *     }>,
+     *     words: array<int, array{
+     *         verse_id: int,
+     *         word_index: int,
+     *         ayah_index: int,
+     *         surah_number: int,
+     *         ayah_number: int,
+     *         text: string,
+     *         is_glyph: bool,
+     *         ends_ayah: bool
+     *     }>,
+     *     text: string
+     * } $line
+     */
+    private function resolveLineSurahNumber(array $line): int
+    {
+        $lineSurahNumber = (int) ($line['surah_number'] ?? 0);
+
+        if ($lineSurahNumber > 0) {
+            return $lineSurahNumber;
+        }
+
+        $segments = $line['segments'];
+
+        if ($segments !== []) {
+            $segmentSurahNumber = (int) ($segments[0]['surah_number'] ?? 0);
+
+            if ($segmentSurahNumber > 0) {
+                return $segmentSurahNumber;
+            }
+        }
+
+        $words = $line['words'];
+
+        if ($words !== []) {
+            $wordSurahNumber = (int) ($words[0]['surah_number'] ?? 0);
+
+            if ($wordSurahNumber > 0) {
+                return $wordSurahNumber;
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * @return array{
+     *     line_number: int,
+     *     line_type: string,
+     *     is_centered: bool,
+     *     surah_number: int|null,
+     *     segments: array<int, array{
+     *         verse_id: int,
+     *         ayah_index: int,
+     *         surah_number: int,
+     *         ayah_number: int,
+     *         text: string,
+     *         ends_ayah: bool
+     *     }>,
+     *     words: array<int, array{
+     *         verse_id: int,
+     *         word_index: int,
+     *         ayah_index: int,
+     *         surah_number: int,
+     *         ayah_number: int,
+     *         text: string,
+     *         is_glyph: bool,
+     *         ends_ayah: bool
+     *     }>,
+     *     text: string
+     * }
+     */
+    private function buildSyntheticSurahHeaderLine(int $surahNumber): array
+    {
+        return [
+            'line_number' => 0,
+            'line_type' => 'surah_name',
+            'is_centered' => true,
+            'surah_number' => $surahNumber > 0 ? $surahNumber : null,
+            'segments' => [],
+            'words' => [],
+            'text' => $this->formatSurahTitle($surahNumber),
+        ];
+    }
+
+    /**
+     * @return array{
+     *     line_number: int,
+     *     line_type: string,
+     *     is_centered: bool,
+     *     surah_number: int|null,
+     *     segments: array<int, array{
+     *         verse_id: int,
+     *         ayah_index: int,
+     *         surah_number: int,
+     *         ayah_number: int,
+     *         text: string,
+     *         ends_ayah: bool
+     *     }>,
+     *     words: array<int, array{
+     *         verse_id: int,
+     *         word_index: int,
+     *         ayah_index: int,
+     *         surah_number: int,
+     *         ayah_number: int,
+     *         text: string,
+     *         is_glyph: bool,
+     *         ends_ayah: bool
+     *     }>,
+     *     text: string
+     * }
+     */
+    private function buildSyntheticBasmallahLine(?int $surahNumber): array
+    {
+        $syntheticWords = $this->resolveSyntheticBasmallahWords();
+        $normalizedSurahNumber = (int) ($surahNumber ?? 0);
+        $words = array_map(
+            static fn (array $word): array => [
+                'verse_id' => 0,
+                'word_index' => (int) $word['word_index'],
+                'ayah_index' => 0,
+                'surah_number' => $normalizedSurahNumber,
+                'ayah_number' => 0,
+                'text' => (string) $word['text'],
+                'is_glyph' => (bool) $word['is_glyph'],
+                'ends_ayah' => false,
+            ],
+            $syntheticWords,
+        );
+
+        return [
+            'line_number' => 0,
+            'line_type' => 'basmallah',
+            'is_centered' => true,
+            'surah_number' => $normalizedSurahNumber > 0 ? $normalizedSurahNumber : null,
+            'segments' => [],
+            'words' => $words,
+            'text' => $this->syntheticBasmallahText($syntheticWords),
+        ];
+    }
+
+    /**
+     * @param  array<int, array{
+     *     word_index: int,
+     *     text: string,
+     *     is_glyph: bool
+     * }>  $words
+     */
+    private function syntheticBasmallahText(array $words): string
+    {
+        if ($words === []) {
+            return 'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ';
+        }
+
+        $usesWordSpacing = false;
+
+        foreach ($words as $word) {
+            if (! ((bool) $word['is_glyph'])) {
+                $usesWordSpacing = true;
+
+                break;
+            }
+        }
+
+        $joiner = $usesWordSpacing ? ' ' : '';
+
+        return trim(implode($joiner, array_map(static fn (array $word): string => (string) $word['text'], $words)));
+    }
+
+    /**
+     * @param  array<int, array{
+     *     line_number: int,
+     *     line_type: string,
+     *     is_centered: bool,
+     *     surah_number: int|null,
+     *     segments: array<int, array{
+     *         verse_id: int,
+     *         ayah_index: int,
+     *         surah_number: int,
+     *         ayah_number: int,
+     *         text: string,
+     *         ends_ayah: bool
+     *     }>,
+     *     words: array<int, array{
+     *         verse_id: int,
+     *         word_index: int,
+     *         ayah_index: int,
+     *         surah_number: int,
+     *         ayah_number: int,
+     *         text: string,
+     *         is_glyph: bool,
+     *         ends_ayah: bool
+     *     }>,
+     *     text: string
+     * }>  $lines
+     * @return array<int, array{
+     *     line_number: int,
+     *     line_type: string,
+     *     is_centered: bool,
+     *     surah_number: int|null,
+     *     segments: array<int, array{
+     *         verse_id: int,
+     *         ayah_index: int,
+     *         surah_number: int,
+     *         ayah_number: int,
+     *         text: string,
+     *         ends_ayah: bool
+     *     }>,
+     *     words: array<int, array{
+     *         verse_id: int,
+     *         word_index: int,
+     *         ayah_index: int,
+     *         surah_number: int,
+     *         ayah_number: int,
+     *         text: string,
+     *         is_glyph: bool,
+     *         ends_ayah: bool
+     *     }>,
+     *     text: string
+     * }>
+     */
+    private function normalizeLineNumbers(array $lines): array
+    {
         return array_map(
             static fn (array $line, int $index): array => [
                 ...$line,
                 'line_number' => $index + 1,
             ],
-            $result,
-            array_keys($result),
+            $lines,
+            array_keys($lines),
         );
     }
 
@@ -1916,6 +2365,31 @@ class QuranReaderDataService
 
         if (is_array($cached)) {
             return $cached;
+        }
+
+        if (Schema::hasTable('quran_words')) {
+            $rows = DB::table('quran_words')
+                ->select(['global_word_index', 'token_uthmani'])
+                ->where('surah_number', 1)
+                ->where('ayah_number', 1)
+                ->orderBy('global_word_index')
+                ->get();
+
+            if ($rows->count() > 0) {
+                $cached = $rows
+                    ->map(static fn (object $row): array => [
+                        'word_index' => (int) ($row->global_word_index ?? 0),
+                        'text' => trim((string) ($row->token_uthmani ?? '')),
+                        'is_glyph' => false,
+                    ])
+                    ->filter(static fn (array $word): bool => $word['word_index'] > 0 && $word['text'] !== '')
+                    ->values()
+                    ->all();
+
+                if ($cached !== []) {
+                    return $cached;
+                }
+            }
         }
 
         $databasePath = $this->resolveQpcDisplayWordsDatabasePath();

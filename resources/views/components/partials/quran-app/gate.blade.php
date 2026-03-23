@@ -97,7 +97,7 @@
 
         .quran-app-sector.is-active img.quran-app-sector__image-img {
             transform: scale(1.018);
-            filter: blur(2px) brightness(0.96) saturate(1.04);
+            filter: blur(0) brightness(0.96) saturate(1.04);
         }
 
         .quran-app-sector.is-muted img.quran-app-sector__image-img {
@@ -422,8 +422,8 @@
                 <x-goodmaven::blurred-image
                     class="absolute inset-0"
                     alt="وضع التلاوة"
-                    :imagePath="asset('images/background/quran/tilawa-blurred.webp')"
-                    :thumbnailImagePath="asset('images/background/quran/tilawa-blurred-blur-thumbnail.webp')"
+                    :imagePath="asset('images/background/quran/tilawa.webp')"
+                    :thumbnailImagePath="asset('images/background/quran/tilawa-blur-thumbnail.webp')"
                     :isDisplayEnforced="true"
                     :isObjectCentered="false"
                     containerClasses="absolute inset-0 overflow-hidden bg-black/25"
@@ -450,8 +450,8 @@
                 <x-goodmaven::blurred-image
                     class="absolute inset-0"
                     alt="وضع التدبّر"
-                    :imagePath="asset('images/background/quran/tadabbur-blurred.webp')"
-                    :thumbnailImagePath="asset('images/background/quran/tadabbur-blurred-blur-thumbnail.webp')"
+                    :imagePath="asset('images/background/quran/tadabbur.webp')"
+                    :thumbnailImagePath="asset('images/background/quran/tadabbur-blur-thumbnail.webp')"
                     :isDisplayEnforced="true"
                     :isObjectCentered="false"
                     containerClasses="absolute inset-0 overflow-hidden bg-black/25"
@@ -479,8 +479,8 @@
                 <x-goodmaven::blurred-image
                     class="absolute inset-0"
                     alt="وضع الحفظ"
-                    :imagePath="asset('images/background/quran/hifth-blurred.webp')"
-                    :thumbnailImagePath="asset('images/background/quran/hifth-blurred-blur-thumbnail.webp')"
+                    :imagePath="asset('images/background/quran/hifth.webp')"
+                    :thumbnailImagePath="asset('images/background/quran/hifth-blur-thumbnail.webp')"
                     :isDisplayEnforced="true"
                     :isObjectCentered="false"
                     containerClasses="absolute inset-0 overflow-hidden bg-black/25"

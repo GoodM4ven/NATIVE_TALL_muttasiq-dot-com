@@ -70,6 +70,7 @@
         <div
             class="quran-surah-grid"
             x-cloak
+            x-ref="surahDirectoryGrid"
         >
             <template
                 x-for="entry in search.surahDirectory"
@@ -78,6 +79,8 @@
                 <button
                     class="quran-surah-tile"
                     type="button"
+                    x-bind:class="{ 'quran-surah-tile--active': isSurahDirectoryEntryActive(entry) }"
+                    x-bind:data-surah-number="entry.surah_number"
                     x-on:click="goToSurahFromDirectory(entry)"
                 >
                     <span

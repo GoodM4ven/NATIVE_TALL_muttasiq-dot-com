@@ -310,7 +310,7 @@
             display: inline-flex;
             align-items: baseline;
             justify-content: center;
-            gap: 0;
+            gap: 0.22ch;
             white-space: nowrap;
             font-size: calc(var(--quran-font-size-center) * var(--quran-type-scale) * var(--quran-page-scale));
             line-height: calc(var(--quran-line-height-center) * var(--quran-leading-scale));
@@ -355,7 +355,7 @@
                 color 0.6s cubic-bezier(0.23, 1, 0.32, 1),
                 transform 0.22s ease;
             box-shadow: 0 0 0 1.6px color-mix(in srgb, var(--primary-500) 72%, transparent);
-            font-family: 'IBM Plex Sans Arabic', 'Manrope', ui-sans-serif, system-ui, sans-serif;
+            font-family: 'Readex Pro', 'IBM Plex Sans Arabic', 'Noto Naskh Arabic', ui-sans-serif, system-ui, sans-serif;
             font-size: 0.95rem;
             font-weight: 700;
             line-height: 1;
@@ -789,11 +789,17 @@
             vertical-align: middle;
             position: relative;
             top: 0;
+            transition: color 200ms ease;
         }
 
         .quran-swipe-hint-chev.quran-swipe-hint-chev-static {
             animation: none !important;
             transform: none !important;
+        }
+
+        .quran-swipe-hint-button:disabled .quran-swipe-hint-chev,
+        .quran-swipe-hint-button:disabled .quran-swipe-hint-chev.quran-swipe-hint-chev-opposite {
+            color: color-mix(in srgb, var(--gray-500) 82%, var(--gray-400));
         }
 
         .quran-swipe-hint-chev:nth-child(1) {
