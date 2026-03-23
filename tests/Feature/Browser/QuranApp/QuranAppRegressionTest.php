@@ -44,7 +44,7 @@ it('navigates to quran gate, persists it across refresh, and handles native back
     waitForScript($mobilePage, 'window.location.hash', '#main-menu');
 });
 
-it('keeps quran reader panel wide and closes quick-surah modal without refit flicker', function () {
+it('keeps quran reader panel wide and keeps lines clean while modals open/close and refit', function () {
     $page = visit('/');
 
     resetBrowserState($page);
@@ -72,9 +72,9 @@ JS,
         true,
         5_000,
     );
-
     scriptClick($page, '.quran-soorah-trigger');
     waitForScriptWithTimeout($page, 'Boolean(document.querySelector("#quran-reader-search-modal"))', true, 5_000);
+    waitForScript($page, quranReaderDataScript('data.isFittingPage'), true);
 
     $targetSurahSelection = $page->script(
         quranReaderDataScript(
@@ -130,7 +130,14 @@ JS,
 
     scriptClick($page, '.quran-soorah-trigger');
     waitForScriptWithTimeout($page, 'Boolean(document.querySelector("#quran-reader-search-modal"))', true, 5_000);
-    waitForScript($page, quranReaderDataScript('data.isFittingPage'), false);
+    waitForScript($page, quranReaderDataScript('data.isFittingPage'), true);
+    safeClick($page, '.fi-modal-window .fi-modal-close-btn');
+    waitForScriptWithTimeout($page, modalClosedScript(), true, 6_000);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 2_000);
+
+    safeClick($page, '.quran-page-slider-chip');
+    waitForScriptWithTimeout($page, 'Boolean(document.querySelector(".fi-modal-window"))', true, 5_000);
+    waitForScript($page, quranReaderDataScript('data.isFittingPage'), true);
     safeClick($page, '.fi-modal-window .fi-modal-close-btn');
     waitForScriptWithTimeout($page, modalClosedScript(), true, 6_000);
     waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 2_000);

@@ -968,92 +968,92 @@
                                 x-for="line in mushafLines"
                                 :key="`quran-line-${pageNumber}-${line.line_number}-${line.line_type}`"
                             >
-                                <div
-                                    data-quran-line
-                                    x-bind:class="lineAlignmentClass(line)"
-                                    x-bind:style="lineEntryStyle(line)"
-                                >
-                                    <template
-                                        x-if="line.line_type === 'ayah' && Array.isArray(line.words) && line.words.length > 0"
+                                <template x-if="shouldRenderLine(line)">
+                                    <div
+                                        data-quran-line
+                                        x-bind:class="lineAlignmentClass(line)"
+                                        x-bind:style="lineEntryStyle(line)"
                                     >
-                                        <div
-                                            data-quran-line-text
-                                            x-bind:class="ayahLineClass(line)"
-                                            x-bind:style="lineFontStyle()"
-                                        >
-                                            <template
-                                                x-for="(cluster, clusterIndex) in lineWordClusters(line)"
-                                                :key="`quran-cluster-${pageNumber}-${line.line_number}-${cluster.key ?? clusterIndex}`"
-                                            >
-                                                <span
-                                                    class="quran-segment-cluster"
-                                                    x-bind:class="{
-                                                        'quran-segment-cluster-active': isAyahClusterActive(cluster),
-                                                        'quran-segment-cluster-hovered': isAyahClusterHovered(cluster),
-                                                    }"
-                                                >
-                                                    <template
-                                                        x-for="(word, wordIndex) in cluster.words"
-                                                        :key="`quran-word-${pageNumber}-${line.line_number}-${word.word_index ?? wordIndex}`"
-                                                    >
-                                                        <span class="inline-flex items-baseline">
-                                                            <button
-                                                                class="quran-word-button px-0 transition"
-                                                                type="button"
-                                                                x-bind:class="{
-                                                                    'quran-segment-active': isWordActive(word),
-                                                                    'quran-segment-hovered': isWordHovered(word),
-                                                                }"
-                                                                x-bind:disabled="!isSelectableWord(word)"
-                                                                x-on:pointerdown="onWordPointerDown($event, word)"
-                                                                x-on:pointermove="onWordPointerMove($event)"
-                                                                x-on:pointerup="onWordPointerUp($event)"
-                                                                x-on:pointercancel="onWordPointerCancel()"
-                                                                x-on:mouseleave="onWordPointerLeave(word)"
-                                                                x-on:click.stop="onWordClick($event, word)"
-                                                                x-on:mouseenter="setHoveredSegment(word)"
-                                                                x-on:focus="setHoveredSegment(word)"
-                                                                x-on:blur="clearHoveredSegment(word)"
-                                                                x-text="word.text"
-                                                            ></button>
-                                                            <template x-if="showAyahMarker(word)">
-                                                                <span
-                                                                    class="quran-ayah-marker mr-0.5 text-[0.92rem]"
-                                                                    style="color: var(--quran-subtle);"
-                                                                    x-text="'۝' + word.ayah_number"
-                                                                ></span>
-                                                            </template>
-                                                        </span>
-                                                    </template>
-                                                </span>
-                                            </template>
-                                        </div>
-                                    </template>
-                                    <template
-                                        x-if="!(line.line_type === 'ayah' && Array.isArray(line.words) && line.words.length > 0)"
-                                    >
-                                        <template x-if="isSurahHeaderLine(line)">
+                                        <template x-if="isAyahLineWithWords(line)">
                                             <div
-                                                class="quran-surah-header-line"
                                                 data-quran-line-text
-                                                x-bind:style="surahHeaderLineStyle(line)"
+                                                x-bind:class="ayahLineClass(line)"
+                                                x-bind:style="lineFontStyle()"
                                             >
-                                                <span
-                                                    class="quran-surah-header-glyph"
-                                                    x-text="surahHeaderLineText(line)"
-                                                ></span>
+                                                <template
+                                                    x-for="(cluster, clusterIndex) in lineWordClusters(line)"
+                                                    :key="`quran-cluster-${pageNumber}-${line.line_number}-${cluster.key ?? clusterIndex}`"
+                                                >
+                                                    <span
+                                                        class="quran-segment-cluster"
+                                                        x-bind:class="{
+                                                            'quran-segment-cluster-active': isAyahClusterActive(
+                                                                cluster),
+                                                            'quran-segment-cluster-hovered': isAyahClusterHovered(
+                                                                cluster),
+                                                        }"
+                                                    >
+                                                        <template
+                                                            x-for="(word, wordIndex) in cluster.words"
+                                                            :key="`quran-word-${pageNumber}-${line.line_number}-${word.word_index ?? wordIndex}`"
+                                                        >
+                                                            <span class="inline-flex items-baseline">
+                                                                <button
+                                                                    class="quran-word-button px-0 transition"
+                                                                    type="button"
+                                                                    x-bind:class="{
+                                                                        'quran-segment-active': isWordActive(word),
+                                                                        'quran-segment-hovered': isWordHovered(word),
+                                                                    }"
+                                                                    x-bind:disabled="!isSelectableWord(word)"
+                                                                    x-on:pointerdown="onWordPointerDown($event, word)"
+                                                                    x-on:pointermove="onWordPointerMove($event)"
+                                                                    x-on:pointerup="onWordPointerUp($event)"
+                                                                    x-on:pointercancel="onWordPointerCancel()"
+                                                                    x-on:mouseleave="onWordPointerLeave(word)"
+                                                                    x-on:click.stop="onWordClick($event, word)"
+                                                                    x-on:mouseenter="setHoveredSegment(word)"
+                                                                    x-on:focus="setHoveredSegment(word)"
+                                                                    x-on:blur="clearHoveredSegment(word)"
+                                                                    x-text="word.text"
+                                                                ></button>
+                                                                <template x-if="showAyahMarker(word)">
+                                                                    <span
+                                                                        class="quran-ayah-marker mr-0.5 text-[0.92rem]"
+                                                                        style="color: var(--quran-subtle);"
+                                                                        x-text="'۝' + word.ayah_number"
+                                                                    ></span>
+                                                                </template>
+                                                            </span>
+                                                        </template>
+                                                    </span>
+                                                </template>
                                             </div>
                                         </template>
-                                        <template x-if="!isSurahHeaderLine(line)">
-                                            <div
-                                                class="font-quran quran-meta-line"
-                                                data-quran-line-text
-                                                x-bind:style="lineFontStyle()"
-                                                x-text="line.text"
-                                            ></div>
+                                        <template x-if="!isAyahLineWithWords(line)">
+                                            <template x-if="isSurahHeaderLine(line)">
+                                                <div
+                                                    class="quran-surah-header-line"
+                                                    data-quran-line-text
+                                                    x-bind:style="surahHeaderLineStyle(line)"
+                                                >
+                                                    <span
+                                                        class="quran-surah-header-glyph"
+                                                        x-text="surahHeaderLineText(line)"
+                                                    ></span>
+                                                </div>
+                                            </template>
+                                            <template x-if="!isSurahHeaderLine(line)">
+                                                <div
+                                                    class="font-quran quran-meta-line"
+                                                    data-quran-line-text
+                                                    x-bind:style="lineFontStyle()"
+                                                    x-text="lineText(line)"
+                                                ></div>
+                                            </template>
                                         </template>
-                                    </template>
-                                </div>
+                                    </div>
+                                </template>
                             </template>
                         </div>
                     </div>
@@ -1167,70 +1167,68 @@
                         x-for="line in panelProbeLines"
                         :key="`quran-probe-line-${line.line_number}-${line.line_type}`"
                     >
-                        <div
-                            x-bind:class="probeLineAlignmentClass(line)"
-                            x-bind:style="lineEntryStyle(line)"
-                        >
-                            <template
-                                x-if="line.line_type === 'ayah' && Array.isArray(line.words) && line.words.length > 0"
+                        <template x-if="shouldRenderLine(line)">
+                            <div
+                                x-bind:class="probeLineAlignmentClass(line)"
+                                x-bind:style="lineEntryStyle(line)"
                             >
-                                <div
-                                    data-quran-line-text
-                                    x-bind:class="probeAyahLineClass(line)"
-                                    x-bind:style="probeLineFontStyle()"
-                                >
-                                    <template
-                                        x-for="(cluster, clusterIndex) in lineWordClusters(line)"
-                                        :key="`quran-probe-cluster-${line.line_number}-${cluster.key ?? clusterIndex}`"
-                                    >
-                                        <span class="quran-segment-cluster">
-                                            <template
-                                                x-for="(word, wordIndex) in cluster.words"
-                                                :key="`quran-probe-word-${line.line_number}-${word.word_index ?? wordIndex}`"
-                                            >
-                                                <span class="inline-flex items-baseline">
-                                                    <span
-                                                        class="quran-word-button px-0"
-                                                        x-text="word.text"
-                                                    ></span>
-                                                    <template x-if="showAyahMarker(word)">
-                                                        <span
-                                                            class="quran-ayah-marker mr-0.5 text-[0.92rem]"
-                                                            style="color: var(--quran-subtle);"
-                                                            x-text="'۝' + word.ayah_number"
-                                                        ></span>
-                                                    </template>
-                                                </span>
-                                            </template>
-                                        </span>
-                                    </template>
-                                </div>
-                            </template>
-                            <template
-                                x-if="!(line.line_type === 'ayah' && Array.isArray(line.words) && line.words.length > 0)"
-                            >
-                                <template x-if="isSurahHeaderLine(line)">
+                                <template x-if="isAyahLineWithWords(line)">
                                     <div
-                                        class="quran-surah-header-line"
                                         data-quran-line-text
-                                        x-bind:style="surahHeaderLineStyle(line)"
+                                        x-bind:class="probeAyahLineClass(line)"
+                                        x-bind:style="probeLineFontStyle()"
                                     >
-                                        <span
-                                            class="quran-surah-header-glyph"
-                                            x-text="surahHeaderLineText(line)"
-                                        ></span>
+                                        <template
+                                            x-for="(cluster, clusterIndex) in lineWordClusters(line)"
+                                            :key="`quran-probe-cluster-${line.line_number}-${cluster.key ?? clusterIndex}`"
+                                        >
+                                            <span class="quran-segment-cluster">
+                                                <template
+                                                    x-for="(word, wordIndex) in cluster.words"
+                                                    :key="`quran-probe-word-${line.line_number}-${word.word_index ?? wordIndex}`"
+                                                >
+                                                    <span class="inline-flex items-baseline">
+                                                        <span
+                                                            class="quran-word-button px-0"
+                                                            x-text="word.text"
+                                                        ></span>
+                                                        <template x-if="showAyahMarker(word)">
+                                                            <span
+                                                                class="quran-ayah-marker mr-0.5 text-[0.92rem]"
+                                                                style="color: var(--quran-subtle);"
+                                                                x-text="'۝' + word.ayah_number"
+                                                            ></span>
+                                                        </template>
+                                                    </span>
+                                                </template>
+                                            </span>
+                                        </template>
                                     </div>
                                 </template>
-                                <template x-if="!isSurahHeaderLine(line)">
-                                    <div
-                                        class="font-quran quran-meta-line"
-                                        data-quran-line-text
-                                        x-bind:style="probeLineFontStyle()"
-                                        x-text="line.text"
-                                    ></div>
+                                <template x-if="!isAyahLineWithWords(line)">
+                                    <template x-if="isSurahHeaderLine(line)">
+                                        <div
+                                            class="quran-surah-header-line"
+                                            data-quran-line-text
+                                            x-bind:style="surahHeaderLineStyle(line)"
+                                        >
+                                            <span
+                                                class="quran-surah-header-glyph"
+                                                x-text="surahHeaderLineText(line)"
+                                            ></span>
+                                        </div>
+                                    </template>
+                                    <template x-if="!isSurahHeaderLine(line)">
+                                        <div
+                                            class="font-quran quran-meta-line"
+                                            data-quran-line-text
+                                            x-bind:style="probeLineFontStyle()"
+                                            x-text="lineText(line)"
+                                        ></div>
+                                    </template>
                                 </template>
-                            </template>
-                        </div>
+                            </div>
+                        </template>
                     </template>
                 </div>
             </div>

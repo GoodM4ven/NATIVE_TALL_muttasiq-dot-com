@@ -274,6 +274,8 @@ document.addEventListener('alpine:init', () => {
         _stopLivewireMorphedHook: null,
         _searchResultsAutoAnimateStop: null,
         _searchModalCloseDebounceTimer: null,
+        _modalLayoutResumeTimer: null,
+        _activeModalIds: new Set(),
         _wordPressHoldTimer: null,
         _suppressNextWordClick: false,
         _skipNextSearchModalCloseLayout: false,
@@ -426,6 +428,13 @@ document.addEventListener('alpine:init', () => {
                 clearTimeout(this._searchModalCloseDebounceTimer);
                 this._searchModalCloseDebounceTimer = null;
             }
+
+            if (this._modalLayoutResumeTimer !== null) {
+                clearTimeout(this._modalLayoutResumeTimer);
+                this._modalLayoutResumeTimer = null;
+            }
+
+            this._activeModalIds.clear();
 
             if (this._wordPressHoldTimer !== null) {
                 clearTimeout(this._wordPressHoldTimer);
@@ -1144,6 +1153,74 @@ document.addEventListener('alpine:init', () => {
             this.isFittingPage = true;
 
             return this._layoutToken;
+        },
+
+        hasRenderablePage() {
+            return this.ready && this.mushafLines.length > 0;
+        },
+
+        holdPageHiddenForModalLifecycle() {
+            if (!this.hasRenderablePage()) {
+                return;
+            }
+
+            this.clearLayoutTimers();
+            this.beginLayoutCycle();
+        },
+
+        scheduleLayoutAfterModalLifecycle(delayMs = 70) {
+            if (!this.hasRenderablePage()) {
+                return;
+            }
+
+            if (this._modalLayoutResumeTimer !== null) {
+                clearTimeout(this._modalLayoutResumeTimer);
+                this._modalLayoutResumeTimer = null;
+            }
+
+            this._modalLayoutResumeTimer = window.setTimeout(
+                () => {
+                    this._modalLayoutResumeTimer = null;
+                    this.scheduleLayout({ revealDelayMs: 170 });
+                },
+                Math.max(0, Math.trunc(Number(delayMs) || 70)),
+            );
+        },
+
+        trackModalLifecycle(kind, event) {
+            const modalId = String(event?.detail?.id ?? '').trim();
+
+            if (modalId === '') {
+                return;
+            }
+
+            if (kind === 'opened') {
+                this._activeModalIds.add(modalId);
+                this.holdPageHiddenForModalLifecycle();
+
+                return;
+            }
+
+            if (kind === 'closing') {
+                if (this._activeModalIds.has(modalId)) {
+                    this.holdPageHiddenForModalLifecycle();
+                }
+
+                return;
+            }
+
+            if (kind === 'closed') {
+                this._activeModalIds.delete(modalId);
+
+                if (this._activeModalIds.size === 0) {
+                    this.holdPageHiddenForModalLifecycle();
+                    this.scheduleLayoutAfterModalLifecycle(70);
+
+                    return;
+                }
+
+                this.holdPageHiddenForModalLifecycle();
+            }
         },
 
         queuePageReveal(layoutToken, delayMs = 180) {
@@ -2073,6 +2150,30 @@ document.addEventListener('alpine:init', () => {
             return `--quran-line-index: ${lineNumber};`;
         },
 
+        isAyahLineWithWords(line) {
+            return (
+                String(line?.line_type ?? '') === 'ayah' &&
+                Array.isArray(line?.words) &&
+                line.words.length > 0
+            );
+        },
+
+        lineText(line) {
+            return String(line?.text ?? '').trim();
+        },
+
+        shouldRenderLine(line) {
+            if (this.isAyahLineWithWords(line)) {
+                return true;
+            }
+
+            if (this.isSurahHeaderLine(line)) {
+                return this.surahHeaderLineText(line) !== '';
+            }
+
+            return this.lineText(line) !== '';
+        },
+
         ayahLineClass(line) {
             if (this.isRectangularAyahLine(line)) {
                 return 'quran-ayah-line quran-ayah-line-run quran-ayah-line-run-rect font-quran';
@@ -2635,6 +2736,8 @@ document.addEventListener('alpine:init', () => {
         },
 
         handleModalLifecycleEvent(kind, event) {
+            this.trackModalLifecycle(kind, event);
+
             if (!this.isSearchModalEvent(kind, event)) {
                 return;
             }
