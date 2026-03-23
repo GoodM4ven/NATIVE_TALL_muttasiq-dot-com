@@ -3146,15 +3146,35 @@ document.addEventListener('alpine:init', () => {
         },
 
         searchModalWindowElement() {
-            const modalDomIds = [this.searchModalDomId, this.searchModalId]
+            const modalWindowIds = [this.searchModalDomId, this.searchModalId]
                 .map((value) => String(value ?? '').trim())
                 .filter((value) => value !== '');
 
-            for (const modalDomId of modalDomIds) {
-                const element = document.getElementById(modalDomId);
+            for (const modalWindowId of modalWindowIds) {
+                const element = document.getElementById(modalWindowId);
 
                 if (element instanceof Element) {
                     return element;
+                }
+            }
+
+            const actionModalIds = [this.searchActionModalId]
+                .map((value) => String(value ?? '').trim())
+                .filter((value) => value !== '');
+
+            for (const actionModalId of actionModalIds) {
+                const modalElement =
+                    document.getElementById(actionModalId) ??
+                    document.querySelector(`[data-fi-modal-id="${actionModalId}"]`);
+
+                if (!(modalElement instanceof Element)) {
+                    continue;
+                }
+
+                const modalWindowElement = modalElement.querySelector('.fi-modal-window');
+
+                if (modalWindowElement instanceof Element) {
+                    return modalWindowElement;
                 }
             }
 
@@ -3184,8 +3204,15 @@ document.addEventListener('alpine:init', () => {
             const knownIds = [this.searchModalId, this.searchModalDomId, this.searchActionModalId]
                 .map((value) => String(value ?? '').trim())
                 .filter((value) => value !== '');
+            const matchedKnownId = modalId !== '' && knownIds.includes(modalId);
 
             if (kind === 'opened') {
+                if (matchedKnownId) {
+                    this.searchActionModalId = modalId;
+
+                    return true;
+                }
+
                 const isVisible = this.isSearchModalWindowVisible();
 
                 if (isVisible && modalId !== '') {
@@ -3195,7 +3222,7 @@ document.addEventListener('alpine:init', () => {
                 return isVisible;
             }
 
-            if (modalId !== '' && knownIds.includes(modalId)) {
+            if (matchedKnownId) {
                 return true;
             }
 
