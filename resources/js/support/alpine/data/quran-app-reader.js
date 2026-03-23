@@ -2628,6 +2628,22 @@ document.addEventListener('alpine:init', () => {
                 .toLowerCase();
         },
 
+        searchResultAyahText(result) {
+            const uthmaniText = String(result?.text_uthmani ?? '').trim();
+
+            if (uthmaniText !== '') {
+                return uthmaniText
+                    .replace(/\u0640/g, '')
+                    .replace(/[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED]/g, '')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+            }
+
+            return String(result?.text_searchable_typed ?? '')
+                .replace(/\s+/g, ' ')
+                .trim();
+        },
+
         isSurahHeaderLine(line) {
             return String(line?.line_type ?? '') === 'surah_name';
         },

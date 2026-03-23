@@ -47,7 +47,7 @@
                 :key="`quran-search-modal-${result.id}`"
             >
                 <button
-                    class="quran-search-result-btn"
+                    class="quran-search-result-btn nth-[2]:mt-2"
                     type="button"
                     x-bind:tabindex="resultIndex === 0 ? 0 : -1"
                     x-on:click="goToSearchResult(result)"
@@ -58,7 +58,7 @@
                     ></span>
                     <span
                         class="quran-search-result-ayah font-quran"
-                        x-text="result.text_uthmani"
+                        x-text="searchResultAyahText(result)"
                     ></span>
                 </button>
             </template>
