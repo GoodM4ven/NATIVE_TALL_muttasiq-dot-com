@@ -2201,8 +2201,10 @@ document.addEventListener('alpine:init', () => {
 
         lineEntryStyle(line) {
             const lineNumber = Math.max(0, Number(line?.line_number ?? 0));
+            const marginBlockStart = this.lineMarginBlockStart(line);
+            const marginBlockEnd = this.lineMarginBlockEnd(line);
 
-            return `--quran-line-index: ${lineNumber};`;
+            return `--quran-line-index: ${lineNumber}; margin-block-start: ${marginBlockStart}; margin-block-end: ${marginBlockEnd};`;
         },
 
         isAyahLineWithWords(line) {
@@ -2215,6 +2217,61 @@ document.addEventListener('alpine:init', () => {
 
         lineText(line) {
             return String(line?.text ?? '').trim();
+        },
+
+        isBasmallahLine(line) {
+            return String(line?.line_type ?? '') === 'basmallah';
+        },
+
+        lineByNumber(lineNumber) {
+            const normalizedLineNumber = Math.max(0, Math.trunc(Number(lineNumber) || 0));
+
+            if (normalizedLineNumber < 1 || !Array.isArray(this.mushafLines)) {
+                return null;
+            }
+
+            return (
+                this.mushafLines.find(
+                    (entry) =>
+                        Math.max(0, Math.trunc(Number(entry?.line_number ?? 0))) ===
+                        normalizedLineNumber,
+                ) ?? null
+            );
+        },
+
+        nextLineType(line) {
+            const lineNumber = Math.max(0, Math.trunc(Number(line?.line_number ?? 0)));
+            const nextLine = this.lineByNumber(lineNumber + 1);
+
+            return String(nextLine?.line_type ?? '');
+        },
+
+        lineMarginBlockStart(line) {
+            if (this.isSurahHeaderLine(line)) {
+                return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * 0.36)';
+            }
+
+            if (this.isBasmallahLine(line)) {
+                return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * 0.12)';
+            }
+
+            return '0px';
+        },
+
+        lineMarginBlockEnd(line) {
+            if (this.isSurahHeaderLine(line)) {
+                if (this.nextLineType(line) === 'basmallah') {
+                    return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * -0.44)';
+                }
+
+                return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * -0.1)';
+            }
+
+            if (this.isBasmallahLine(line)) {
+                return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * 0.1)';
+            }
+
+            return '0px';
         },
 
         shouldRenderLine(line) {
@@ -2230,6 +2287,10 @@ document.addEventListener('alpine:init', () => {
         },
 
         metaLineStyle(line) {
+            if (this.isBasmallahLine(line)) {
+                return "font-family: 'Amiri', 'Traditional Arabic', serif; color: var(--quran-ink);";
+            }
+
             return this.lineFontStyle();
         },
 

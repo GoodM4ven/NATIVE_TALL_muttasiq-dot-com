@@ -12,6 +12,7 @@ use Filament\Actions\Contracts\HasActions;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
+use Filament\Support\Enums\Alignment;
 use Filament\Support\Enums\Width;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
@@ -97,7 +98,7 @@ class Reader extends Component implements HasActions, HasSchemas
             ->modalHeading('الانتقال إلى صفحة')
             ->modalDescription('أدخل رقم الصفحة المراد الانتقال إليها.')
             ->modalAutofocus(false)
-            ->modalWidth(Width::ExtraSmall)
+            ->modalWidth(Width::Small)
             ->modalSubmitActionLabel('انتقال')
             ->extraModalWindowAttributes([
                 'id' => 'quran-reader-jump-page-modal',
@@ -105,6 +106,7 @@ class Reader extends Component implements HasActions, HasSchemas
             ->fillForm(fn (): array => [
                 'page' => max(1, $this->pageNumber),
             ])
+            ->modalFooterActionsAlignment(Alignment::Center)
             ->schema([
                 TextInput::make('page')
                     ->label('الصفحة')
