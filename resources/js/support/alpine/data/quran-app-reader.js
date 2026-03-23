@@ -177,8 +177,8 @@ document.addEventListener('alpine:init', () => {
             searchIndexUrl: String(config?.api?.searchIndexUrl ?? ''),
         },
         cacheNames: {
-            pages: 'quran-reader-pages-v9',
-            fonts: 'quran-reader-fonts-v2',
+            pages: 'quran-reader-pages-v10',
+            fonts: 'quran-reader-fonts-v3',
             search: 'quran-reader-search-v3',
         },
         initialPayload: normalizePayload(config?.initialPayload),
@@ -2323,9 +2323,29 @@ document.addEventListener('alpine:init', () => {
             return String(this.basmallahText ?? '').trim();
         },
 
+        shouldRenderConfiguredBasmallah() {
+            const configuredText = this.preferredBasmallahText();
+
+            if (configuredText === '') {
+                return false;
+            }
+
+            const hasPrivateUseGlyphs = /[\uE000-\uF8FF]/u.test(configuredText);
+            const configuredFamily = String(this.basmallahFontFamily ?? '').trim();
+
+            if (hasPrivateUseGlyphs && configuredFamily === '') {
+                return false;
+            }
+
+            return true;
+        },
+
         isBasmallahLineWithWords(line) {
             return (
-                this.isBasmallahLine(line) && Array.isArray(line?.words) && line.words.length > 0
+                this.isBasmallahLine(line) &&
+                !this.shouldRenderConfiguredBasmallah() &&
+                Array.isArray(line?.words) &&
+                line.words.length > 0
             );
         },
 
@@ -2511,21 +2531,17 @@ document.addEventListener('alpine:init', () => {
             const text = this.lineText(line);
             const hasPrivateUseGlyphs = /[\uE000-\uF8FF]/u.test(text);
 
+            const fallbackText = 'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ';
+
+            if (this.shouldRenderConfiguredBasmallah()) {
+                return configuredText;
+            }
+
             if (text !== '' && !hasPrivateUseGlyphs) {
                 return text;
             }
 
-            const fallbackText = 'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ';
-
-            if (configuredText !== '') {
-                return configuredText;
-            }
-
-            if (text === '' || hasPrivateUseGlyphs) {
-                return fallbackText;
-            }
-
-            return text;
+            return fallbackText;
         },
 
         surahHeaderLineStyle() {

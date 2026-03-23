@@ -46,7 +46,7 @@ return [
             'format' => 'ttf',
         ],
         'basmalah' => [
-            'preferred' => 'madina-default',
+            'preferred' => 'quran-common-ligature',
             'available' => [
                 'madina-default' => [
                     'family' => 'MadinaQuran',
