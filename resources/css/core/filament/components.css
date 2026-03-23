@@ -233,14 +233,17 @@
         margin-inline: auto;
         width: min(94vw, 56rem);
         max-width: 100%;
+        --quran-surah-edge-fade-size: 1rem;
+        --quran-surah-grid-scroll-inset: calc(var(--quran-surah-edge-fade-size) + 0.35rem);
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(6.6rem, 1fr));
         gap: 0.55rem;
         overflow: auto;
         max-height: min(42svh, 23rem);
-        padding: 0.7rem 0.45rem 0.8rem 0.5rem;
+        padding: var(--quran-surah-grid-scroll-inset) 0.45rem var(--quran-surah-grid-scroll-inset)
+            0.5rem;
+        scroll-padding-block: var(--quran-surah-grid-scroll-inset);
         scrollbar-gutter: stable both-edges;
-        --quran-surah-edge-fade-size: 1rem;
         -webkit-mask-image: linear-gradient(
             180deg,
             transparent 0,

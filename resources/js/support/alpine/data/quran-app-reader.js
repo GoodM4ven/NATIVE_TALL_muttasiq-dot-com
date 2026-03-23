@@ -2803,17 +2803,15 @@ document.addEventListener('alpine:init', () => {
                 return false;
             }
 
-            if (typeof activeTile.scrollIntoView === 'function') {
-                activeTile.scrollIntoView({
-                    block: 'center',
-                    inline: 'nearest',
-                    behavior,
-                });
-            }
+            const tileTop = activeTile.offsetTop;
+            const tileHeight = activeTile.clientHeight;
+            const maxScrollTop = Math.max(0, gridElement.scrollHeight - gridElement.clientHeight);
+            const targetScrollTop = tileTop - (tileHeight * 3);
 
-            const targetScrollTop =
-                activeTile.offsetTop - (gridElement.clientHeight - activeTile.clientHeight) / 2;
-            const normalizedScrollTop = Math.max(0, Math.trunc(targetScrollTop));
+            const normalizedScrollTop = Math.max(
+                0,
+                Math.min(maxScrollTop, Math.trunc(targetScrollTop)),
+            );
 
             if ('scrollTo' in gridElement) {
                 gridElement.scrollTo({ top: normalizedScrollTop, behavior });
