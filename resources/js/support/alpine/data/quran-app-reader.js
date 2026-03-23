@@ -177,8 +177,8 @@ document.addEventListener('alpine:init', () => {
             searchIndexUrl: String(config?.api?.searchIndexUrl ?? ''),
         },
         cacheNames: {
-            pages: 'quran-reader-pages-v10',
-            fonts: 'quran-reader-fonts-v3',
+            pages: 'quran-reader-pages-v11',
+            fonts: 'quran-reader-fonts-v4',
             search: 'quran-reader-search-v3',
         },
         initialPayload: normalizePayload(config?.initialPayload),

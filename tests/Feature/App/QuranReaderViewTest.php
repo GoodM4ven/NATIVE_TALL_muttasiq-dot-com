@@ -124,8 +124,8 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderScriptSource)->toContain('_skipNextSearchModalCloseLayout: false')
         ->and($quranReaderScriptSource)->toContain('deriveSurahDirectoryFromItems(items = [])')
         ->and($quranReaderScriptSource)->toContain('resetNavigationQueueForPriorityJump()')
-        ->and($quranReaderScriptSource)->toContain("pages: 'quran-reader-pages-v10'")
-        ->and($quranReaderScriptSource)->toContain("fonts: 'quran-reader-fonts-v3'")
+        ->and($quranReaderScriptSource)->toContain("pages: 'quran-reader-pages-v11'")
+        ->and($quranReaderScriptSource)->toContain("fonts: 'quran-reader-fonts-v4'")
         ->and($quranReaderScriptSource)->toContain('requestSearchModalClose({ skipLayout = false } = {})')
         ->and($quranReaderScriptSource)->toContain('isAyahClusterActive(cluster)');
 
