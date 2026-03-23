@@ -2223,6 +2223,12 @@ document.addEventListener('alpine:init', () => {
             return String(line?.line_type ?? '') === 'basmallah';
         },
 
+        isBasmallahLineWithWords(line) {
+            return (
+                this.isBasmallahLine(line) && Array.isArray(line?.words) && line.words.length > 0
+            );
+        },
+
         lineByNumber(lineNumber) {
             const normalizedLineNumber = Math.max(0, Math.trunc(Number(lineNumber) || 0));
 
@@ -2276,6 +2282,10 @@ document.addEventListener('alpine:init', () => {
 
         shouldRenderLine(line) {
             if (this.isAyahLineWithWords(line)) {
+                return true;
+            }
+
+            if (this.isBasmallahLineWithWords(line)) {
                 return true;
             }
 

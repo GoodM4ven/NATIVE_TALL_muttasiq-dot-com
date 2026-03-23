@@ -1363,7 +1363,31 @@ class QuranReaderDataService
             }
 
             if ($lineText === '' && $lineType === 'basmallah') {
-                $lineText = 'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ';
+                if ($words === []) {
+                    $syntheticBasmallahWords = $this->resolveSyntheticBasmallahWords();
+                    $lineSurahNumber = $lineRow->surah_number !== null ? (int) $lineRow->surah_number : null;
+                    $words = array_map(
+                        static fn (array $word): array => [
+                            'verse_id' => 0,
+                            'word_index' => (int) $word['word_index'],
+                            'ayah_index' => 0,
+                            'surah_number' => $lineSurahNumber ?? 0,
+                            'ayah_number' => 0,
+                            'text' => (string) $word['text'],
+                            'is_glyph' => (bool) $word['is_glyph'],
+                            'ends_ayah' => false,
+                        ],
+                        $syntheticBasmallahWords,
+                    );
+
+                    if ($words !== []) {
+                        $lineText = trim(implode('', array_map(static fn (array $word): string => (string) $word['text'], $words)));
+                    }
+                }
+
+                if ($lineText === '') {
+                    $lineText = 'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ';
+                }
             }
 
             if ($lineText === '' && $lineType === 'surah_name') {
@@ -1758,5 +1782,80 @@ class QuranReaderDataService
         }
 
         return null;
+    }
+
+    /**
+     * @return array<int, array{
+     *     word_index: int,
+     *     text: string,
+     *     is_glyph: bool
+     * }>
+     */
+    private function resolveSyntheticBasmallahWords(): array
+    {
+        static $cached = null;
+
+        if (is_array($cached)) {
+            return $cached;
+        }
+
+        $databasePath = $this->resolveQpcDisplayWordsDatabasePath();
+
+        if ($databasePath === null) {
+            $cached = [];
+
+            return $cached;
+        }
+
+        $database = new \SQLite3($databasePath, SQLITE3_OPEN_READONLY);
+        $statement = $database->prepare('SELECT id, text FROM words WHERE surah = 1 AND ayah = 1 ORDER BY id');
+
+        if (! $statement instanceof \SQLite3Stmt) {
+            $database->close();
+            $cached = [];
+
+            return $cached;
+        }
+
+        $result = $statement->execute();
+
+        if (! $result instanceof \SQLite3Result) {
+            $statement->close();
+            $database->close();
+            $cached = [];
+
+            return $cached;
+        }
+
+        $words = [];
+
+        while (true) {
+            $row = $result->fetchArray(SQLITE3_ASSOC);
+
+            if (! is_array($row)) {
+                break;
+            }
+
+            $wordIndex = (int) ($row['id'] ?? 0);
+            $wordText = (string) ($row['text'] ?? '');
+
+            if ($wordIndex < 1 || $wordText === '') {
+                continue;
+            }
+
+            $words[] = [
+                'word_index' => $wordIndex,
+                'text' => $wordText,
+                'is_glyph' => true,
+            ];
+        }
+
+        $result->finalize();
+        $statement->close();
+        $database->close();
+
+        $cached = $words;
+
+        return $cached;
     }
 }

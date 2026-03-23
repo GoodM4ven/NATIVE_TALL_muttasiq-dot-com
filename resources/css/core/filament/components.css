@@ -349,10 +349,9 @@
     #quran-reader-jump-page-modal .fi-modal-content {
         padding: 0.52rem 0.65rem 0.58rem;
     }
-    
+
     #quran-reader-jump-page-modal .fi-fo-field-label-col,
-    #quran-reader-jump-page-modal .fi-fo-field-content-col
-    {
+    #quran-reader-jump-page-modal .fi-fo-field-content-col {
         justify-content: center;
         text-align: center;
         margin-inline: auto;
