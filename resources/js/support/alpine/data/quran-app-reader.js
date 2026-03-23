@@ -179,6 +179,7 @@ document.addEventListener('alpine:init', () => {
         prefetchRadius: Math.max(1, Number(config?.prefetchRadius ?? 2)),
         searchModalId: String(config?.searchModalId ?? ''),
         searchModalDomId: String(config?.searchModalDomId ?? ''),
+        searchActionModalId: String(config?.searchActionModalId ?? ''),
         initialSettings:
             config?.settings && typeof config.settings === 'object' ? config.settings : {},
 
@@ -1753,13 +1754,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         readerPanelStyle() {
-            if (!Number.isFinite(Number(this.panelWidthPx))) {
-                return 'touch-action: pan-y;';
-            }
-
-            const width = Math.max(300, Math.round(Number(this.panelWidthPx)));
-
-            return `touch-action: pan-y; width: min(96vw, ${width}px);`;
+            return 'touch-action: pan-y;';
         },
 
         normalizeBooleanFlag(value, fallback = false) {
@@ -2578,21 +2573,69 @@ document.addEventListener('alpine:init', () => {
             }, 140);
         },
 
-        isSearchModalEvent(event) {
+        searchModalWindowElement() {
+            const modalDomIds = [this.searchModalDomId, this.searchModalId]
+                .map((value) => String(value ?? '').trim())
+                .filter((value) => value !== '');
+
+            for (const modalDomId of modalDomIds) {
+                const element = document.getElementById(modalDomId);
+
+                if (element instanceof Element) {
+                    return element;
+                }
+            }
+
+            return null;
+        },
+
+        isSearchModalWindowVisible() {
+            const modalWindowElement = this.searchModalWindowElement();
+
+            if (!(modalWindowElement instanceof Element)) {
+                return false;
+            }
+
+            const modalElement = modalWindowElement.closest('.fi-modal');
+
+            if (modalElement && !modalElement.classList.contains('fi-modal-open')) {
+                return false;
+            }
+
+            const styles = window.getComputedStyle(modalWindowElement);
+
+            return styles.display !== 'none' && styles.visibility !== 'hidden';
+        },
+
+        isSearchModalEvent(kind, event) {
             const modalId = String(event?.detail?.id ?? '').trim();
+            const knownIds = [this.searchModalId, this.searchModalDomId, this.searchActionModalId]
+                .map((value) => String(value ?? '').trim())
+                .filter((value) => value !== '');
+
+            if (kind === 'opened') {
+                const isVisible = this.isSearchModalWindowVisible();
+
+                if (isVisible && modalId !== '') {
+                    this.searchActionModalId = modalId;
+                }
+
+                return isVisible;
+            }
+
+            if (modalId !== '' && knownIds.includes(modalId)) {
+                return true;
+            }
 
             if (modalId === '') {
                 return this.search.modalOpen || this._lastKnownModalOpenState;
             }
 
-            return [this.searchModalId, this.searchModalDomId]
-                .map((value) => String(value ?? '').trim())
-                .filter((value) => value !== '')
-                .includes(modalId);
+            return this.search.modalOpen || this._lastKnownModalOpenState;
         },
 
         handleModalLifecycleEvent(kind, event) {
-            if (!this.isSearchModalEvent(event)) {
+            if (!this.isSearchModalEvent(kind, event)) {
                 return;
             }
 
@@ -2603,7 +2646,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             if (kind === 'closing' || kind === 'closed') {
-                this.handleSearchModalClosed({ kind });
+                this.handleSearchModalClosed();
             }
         },
 
@@ -2648,7 +2691,7 @@ document.addEventListener('alpine:init', () => {
             this.$refs.searchModalInput?.focus?.();
         },
 
-        handleSearchModalClosed({ kind = 'closing' } = {}) {
+        handleSearchModalClosed() {
             this.search.modalOpen = false;
             this._lastKnownModalOpenState = false;
             this.search.query = '';
@@ -2671,25 +2714,25 @@ document.addEventListener('alpine:init', () => {
 
                 return;
             }
-
-            const delayMs = kind === 'closed' ? 120 : 220;
-
-            this._searchModalCloseDebounceTimer = window.setTimeout(() => {
-                this._searchModalCloseDebounceTimer = null;
-
-                if (!this.ready || this.mushafLines.length === 0) {
-                    return;
-                }
-
-                this.scheduleLayout({ revealDelayMs: 150 });
-            }, delayMs);
         },
 
-        requestSearchModalClose({ skipLayout = false } = {}) {
-            const modalId = this.searchModalId || this.searchModalDomId;
+        async requestSearchModalClose({ skipLayout = false } = {}) {
+            const modalId = [this.searchActionModalId, this.searchModalId, this.searchModalDomId]
+                .map((value) => String(value ?? '').trim())
+                .find((value) => value !== '');
 
             if (skipLayout) {
                 this._skipNextSearchModalCloseLayout = true;
+            }
+
+            if (typeof this.$wire?.unmountAction === 'function') {
+                try {
+                    await this.$wire.unmountAction(false);
+
+                    return;
+                } catch (_) {
+                    //
+                }
             }
 
             if (!modalId) {
@@ -2710,7 +2753,7 @@ document.addEventListener('alpine:init', () => {
         requestReaderGateNavigation(_source = 'generic') {
             this.resetSwipeState();
             this.clearWordPressState();
-            this.requestSearchModalClose({ skipLayout: true });
+            void this.requestSearchModalClose({ skipLayout: true });
             window.dispatchEvent(new CustomEvent('quran-go-gate'));
         },
 
@@ -2726,7 +2769,7 @@ document.addEventListener('alpine:init', () => {
             const pageNumber = clampPage(Number(entry?.page_number ?? 1), this.maxPage);
             const direction = this.resolveNavigationDirection(pageNumber);
 
-            this.requestSearchModalClose({ skipLayout: true });
+            await this.requestSearchModalClose({ skipLayout: true });
             this.activeAyahIndex = 0;
             this.activeWordIndex = 0;
             await this.navigateToPage(pageNumber, {
@@ -2930,7 +2973,7 @@ document.addEventListener('alpine:init', () => {
             const ayahIndex = Math.max(0, Math.trunc(Number(result?.ayah_index ?? 0)));
             const direction = this.resolveNavigationDirection(targetPage);
 
-            this.requestSearchModalClose({ skipLayout: true });
+            await this.requestSearchModalClose({ skipLayout: true });
             await this.navigateToPage(targetPage, {
                 direction,
                 animate: true,

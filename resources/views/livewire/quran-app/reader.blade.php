@@ -855,6 +855,7 @@
         prefetchRadius: @js(is_platform('native') ? 3 : 2),
         searchModalId: @js('quran-reader-search-modal'),
         searchModalDomId: @js('quran-reader-search-modal'),
+        searchActionModalId: @js('fi-' . $this->getId() . '-action-0'),
         settings: @js($quranReaderSettings ?? ['enableVisualEnhancements' => true, 'targetWordsByDefault' => false]),
     })"
     x-bind:class="{ 'quran-reader--visual-enhancements-disabled': !doesEnableVisualEnhancements }"

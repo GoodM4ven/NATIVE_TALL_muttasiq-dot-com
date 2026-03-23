@@ -333,6 +333,16 @@ function waitForGateVisible($page): void
     waitForScript($page, gateVisibleScript());
 }
 
+function waitForQuranGateVisible($page): void
+{
+    waitForScript($page, quranGateVisibleScript());
+}
+
+function waitForQuranReaderVisible($page): void
+{
+    waitForScript($page, quranReaderVisibleScript());
+}
+
 function noticeVisibleScript(): string
 {
     return <<<'JS'
@@ -364,6 +374,32 @@ function gateVisibleScript(): string
     return <<<'JS'
 (() => {
   const el = document.querySelector('.athkar-gate-shell');
+  if (!el) {
+    return false;
+  }
+  return getComputedStyle(el).display !== 'none';
+})()
+JS;
+}
+
+function quranGateVisibleScript(): string
+{
+    return <<<'JS'
+(() => {
+  const el = document.querySelector('.quran-app-gate-shell');
+  if (!el) {
+    return false;
+  }
+  return getComputedStyle(el).display !== 'none';
+})()
+JS;
+}
+
+function quranReaderVisibleScript(): string
+{
+    return <<<'JS'
+(() => {
+  const el = document.querySelector('[x-data^="quranAppReader"]');
   if (!el) {
     return false;
   }
@@ -587,11 +623,55 @@ function athkarReaderDataScript(string $expression): string
 JS, ['expr' => $expression]);
 }
 
+function quranReaderDataScript(string $expression): string
+{
+    return js_template(<<<'JS'
+(() => {
+  const el = document.querySelector('[x-data^="quranAppReader"]');
+  if (!el || !window.Alpine) {
+    return null;
+  }
+  const data = window.Alpine.$data ? window.Alpine.$data(el) : (el.__x?.$data ?? null);
+  if (!data) {
+    return null;
+  }
+  const expr = {{expr}};
+  try {
+    return Function('data', 'return ' + expr)(data);
+  } catch (e) {
+    return null;
+  }
+})()
+JS, ['expr' => $expression]);
+}
+
 function athkarReaderCommandScript(string $statement): string
 {
     return js_template(<<<'JS'
 (() => {
   const el = document.querySelector('[x-data^="athkarAppReader"]');
+  if (!el || !window.Alpine) {
+    return null;
+  }
+  const data = window.Alpine.$data ? window.Alpine.$data(el) : (el.__x?.$data ?? null);
+  if (!data) {
+    return null;
+  }
+  const statement = {{statement}};
+  try {
+    return Function('data', statement)(data);
+  } catch (e) {
+    return null;
+  }
+})()
+JS, ['statement' => $statement]);
+}
+
+function quranReaderCommandScript(string $statement): string
+{
+    return js_template(<<<'JS'
+(() => {
+  const el = document.querySelector('[x-data^="quranAppReader"]');
   if (!el || !window.Alpine) {
     return null;
   }
