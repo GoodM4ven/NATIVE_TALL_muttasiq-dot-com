@@ -1137,25 +1137,16 @@
                                                     ></span>
                                                 </div>
                                             </template>
-                                            <template x-if="!isSurahHeaderLine(line) && isBasmallahLineWithWords(line)">
+                                            <template x-if="!isSurahHeaderLine(line) && isBasmallahLine(line)">
                                                 <div
-                                                    class="quran-basmallah-line font-quran"
+                                                    class="quran-basmallah-line"
                                                     data-quran-line-text
-                                                    x-bind:style="lineFontStyle()"
+                                                    x-bind:style="basmallahLineStyle(line)"
+                                                    x-text="basmallahDisplayText(line)"
                                                 >
-                                                    <template
-                                                        x-for="(word, wordIndex) in line.words"
-                                                        :key="`quran-basmallah-word-${pageNumber}-${line.line_number}-${word.word_index ?? wordIndex}`"
-                                                    >
-                                                        <span
-                                                            class="quran-basmallah-word"
-                                                            x-text="word.text"
-                                                        ></span>
-                                                    </template>
                                                 </div>
                                             </template>
-                                            <template
-                                                x-if="!isSurahHeaderLine(line) && !isBasmallahLineWithWords(line)">
+                                            <template x-if="!isSurahHeaderLine(line) && !isBasmallahLine(line)">
                                                 <div
                                                     class="font-quran quran-meta-line"
                                                     data-quran-line-text
@@ -1372,24 +1363,16 @@
                                             ></span>
                                         </div>
                                     </template>
-                                    <template x-if="!isSurahHeaderLine(line) && isBasmallahLineWithWords(line)">
+                                    <template x-if="!isSurahHeaderLine(line) && isBasmallahLine(line)">
                                         <div
-                                            class="quran-basmallah-line font-quran"
+                                            class="quran-basmallah-line"
                                             data-quran-line-text
-                                            x-bind:style="probeLineFontStyle()"
+                                            x-bind:style="probeBasmallahLineStyle(line)"
+                                            x-text="basmallahDisplayText(line)"
                                         >
-                                            <template
-                                                x-for="(word, wordIndex) in line.words"
-                                                :key="`quran-probe-basmallah-word-${line.line_number}-${word.word_index ?? wordIndex}`"
-                                            >
-                                                <span
-                                                    class="quran-basmallah-word"
-                                                    x-text="word.text"
-                                                ></span>
-                                            </template>
                                         </div>
                                     </template>
-                                    <template x-if="!isSurahHeaderLine(line) && !isBasmallahLineWithWords(line)">
+                                    <template x-if="!isSurahHeaderLine(line) && !isBasmallahLine(line)">
                                         <div
                                             class="font-quran quran-meta-line"
                                             data-quran-line-text

@@ -99,7 +99,7 @@ class QuranReaderDataService
 
         $maxPage = $this->maxPage();
         $normalizedPage = $maxPage > 0 ? max(1, min($pageNumber, $maxPage)) : 1;
-        $cacheKey = 'quran-reader-page-v6:'.$normalizedPage;
+        $cacheKey = 'quran-reader-page-v9:'.$normalizedPage;
 
         /**
          * @var array{
@@ -2394,60 +2394,56 @@ class QuranReaderDataService
 
         $databasePath = $this->resolveQpcDisplayWordsDatabasePath();
 
-        if ($databasePath === null) {
-            $cached = [];
+        if ($databasePath !== null) {
+            $database = new \SQLite3($databasePath, SQLITE3_OPEN_READONLY);
+            $statement = $database->prepare('SELECT id, text FROM words WHERE surah = 1 AND ayah = 1 ORDER BY id');
 
-            return $cached;
-        }
+            if ($statement instanceof \SQLite3Stmt) {
+                $result = $statement->execute();
 
-        $database = new \SQLite3($databasePath, SQLITE3_OPEN_READONLY);
-        $statement = $database->prepare('SELECT id, text FROM words WHERE surah = 1 AND ayah = 1 ORDER BY id');
+                if ($result instanceof \SQLite3Result) {
+                    $words = [];
 
-        if (! $statement instanceof \SQLite3Stmt) {
-            $database->close();
-            $cached = [];
+                    while (true) {
+                        $row = $result->fetchArray(SQLITE3_ASSOC);
 
-            return $cached;
-        }
+                        if (! is_array($row)) {
+                            break;
+                        }
 
-        $result = $statement->execute();
+                        $wordIndex = (int) ($row['id'] ?? 0);
+                        $wordText = (string) ($row['text'] ?? '');
 
-        if (! $result instanceof \SQLite3Result) {
-            $statement->close();
-            $database->close();
-            $cached = [];
+                        if ($wordIndex < 1 || $wordText === '') {
+                            continue;
+                        }
 
-            return $cached;
-        }
+                        $words[] = [
+                            'word_index' => $wordIndex,
+                            'text' => $wordText,
+                            'is_glyph' => true,
+                        ];
+                    }
 
-        $words = [];
+                    $result->finalize();
+                    $statement->close();
+                    $database->close();
 
-        while (true) {
-            $row = $result->fetchArray(SQLITE3_ASSOC);
+                    if ($words !== []) {
+                        $cached = $words;
 
-            if (! is_array($row)) {
-                break;
+                        return $cached;
+                    }
+                } else {
+                    $statement->close();
+                    $database->close();
+                }
+            } else {
+                $database->close();
             }
-
-            $wordIndex = (int) ($row['id'] ?? 0);
-            $wordText = (string) ($row['text'] ?? '');
-
-            if ($wordIndex < 1 || $wordText === '') {
-                continue;
-            }
-
-            $words[] = [
-                'word_index' => $wordIndex,
-                'text' => $wordText,
-                'is_glyph' => true,
-            ];
         }
 
-        $result->finalize();
-        $statement->close();
-        $database->close();
-
-        $cached = $words;
+        $cached = [];
 
         return $cached;
     }

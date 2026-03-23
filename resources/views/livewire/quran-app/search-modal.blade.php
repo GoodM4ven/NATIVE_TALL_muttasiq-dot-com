@@ -69,6 +69,7 @@
         <p class="quran-surah-grid-caption">الانتقال المباشر إلى السور</p>
         <div
             class="quran-surah-grid"
+            data-quran-surah-grid
             x-cloak
             x-ref="surahDirectoryGrid"
         >

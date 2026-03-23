@@ -169,7 +169,7 @@ document.addEventListener('alpine:init', () => {
             searchIndexUrl: String(config?.api?.searchIndexUrl ?? ''),
         },
         cacheNames: {
-            pages: 'quran-reader-pages-v3',
+            pages: 'quran-reader-pages-v6',
             fonts: 'quran-reader-fonts-v1',
             search: 'quran-reader-search-v3',
         },
@@ -244,6 +244,7 @@ document.addEventListener('alpine:init', () => {
             readyResult: null,
             surahNames: {},
             surahDirectory: [],
+            activeSurahNumber: 1,
         },
 
         _pendingPageLoads: new Map(),
@@ -303,6 +304,7 @@ document.addEventListener('alpine:init', () => {
                     : this.search.surahDirectory,
             );
             this.refreshSurahTriggerCaption(false);
+            this.syncSearchActiveSurahNumber();
 
             const restoredPage = clampPage(
                 this.pageNumber,
@@ -951,6 +953,7 @@ document.addEventListener('alpine:init', () => {
                 const payload = await payloadPromise;
                 this.applyPayload(payload, { setPageNumber: true });
                 this.refreshSurahTriggerCaption(animate);
+                this.syncSearchActiveSurahNumber();
                 this.activeAyahIndex =
                     Number.isFinite(Number(activeAyahIndex)) && Number(activeAyahIndex) > 0
                         ? Math.trunc(Number(activeAyahIndex))
@@ -2321,7 +2324,7 @@ document.addEventListener('alpine:init', () => {
                 return true;
             }
 
-            if (this.isBasmallahLineWithWords(line)) {
+            if (this.isBasmallahLine(line)) {
                 return true;
             }
 
@@ -2420,6 +2423,43 @@ document.addEventListener('alpine:init', () => {
             }
 
             return `font-family: '${family}', 'MadinaQuran', 'Amiri', 'Traditional Arabic', serif; color: var(--quran-ink);`;
+        },
+
+        basmallahLineStyle(line) {
+            const words = Array.isArray(line?.words) ? line.words : [];
+            const hasNonGlyphWord = words.some((word) => !Boolean(word?.is_glyph));
+
+            if (hasNonGlyphWord) {
+                return "font-family: 'Amiri', 'Noto Naskh Arabic', 'Traditional Arabic', serif; color: var(--quran-ink);";
+            }
+
+            return this.lineFontStyle();
+        },
+
+        probeBasmallahLineStyle(line) {
+            const words = Array.isArray(line?.words) ? line.words : [];
+            const hasNonGlyphWord = words.some((word) => !Boolean(word?.is_glyph));
+
+            if (hasNonGlyphWord) {
+                return "font-family: 'Amiri', 'Noto Naskh Arabic', 'Traditional Arabic', serif; color: var(--quran-ink);";
+            }
+
+            return this.probeLineFontStyle();
+        },
+
+        basmallahDisplayText(line) {
+            const fallbackText = 'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ';
+            const text = this.lineText(line);
+
+            if (text === '') {
+                return fallbackText;
+            }
+
+            if (/[\uE000-\uF8FF]/u.test(text)) {
+                return fallbackText;
+            }
+
+            return text;
         },
 
         surahHeaderLineStyle() {
@@ -2611,20 +2651,64 @@ document.addEventListener('alpine:init', () => {
             return `font-family: '${family}', 'MadinaQuran', 'Amiri', 'Traditional Arabic', serif;`;
         },
 
+        directoryActiveSurahNumber() {
+            const searchSurahNumber = Math.max(
+                0,
+                Math.trunc(Number(this.search?.activeSurahNumber ?? 0)),
+            );
+
+            if (searchSurahNumber > 0) {
+                return searchSurahNumber;
+            }
+
+            const triggerSurahNumber = Math.max(
+                0,
+                Math.trunc(Number(this.surahTriggerSurahNumber ?? 0)),
+            );
+
+            if (triggerSurahNumber > 0) {
+                return triggerSurahNumber;
+            }
+
+            return this.currentSurahNumber();
+        },
+
+        syncSearchActiveSurahNumber() {
+            const activeSurahNumber = Math.max(
+                1,
+                Math.trunc(Number(this.currentSurahNumber() ?? 1)),
+            );
+            this.search.activeSurahNumber = activeSurahNumber;
+        },
+
         isSurahDirectoryEntryActive(entry) {
             const surahNumber = Math.max(1, Math.trunc(Number(entry?.surah_number ?? 1)));
 
-            return surahNumber === this.currentSurahNumber();
+            return surahNumber === this.directoryActiveSurahNumber();
+        },
+
+        resolveSurahDirectoryGridElement() {
+            if (this.$refs.surahDirectoryGrid instanceof Element) {
+                return this.$refs.surahDirectoryGrid;
+            }
+
+            const modalWindow = this.searchModalWindowElement();
+
+            if (!(modalWindow instanceof Element)) {
+                return null;
+            }
+
+            return modalWindow.querySelector('[data-quran-surah-grid]');
         },
 
         scrollSurahDirectoryToActive({ behavior = 'smooth' } = {}) {
-            const gridElement = this.$refs.surahDirectoryGrid;
+            const gridElement = this.resolveSurahDirectoryGridElement();
 
             if (!(gridElement instanceof Element)) {
                 return;
             }
 
-            const activeSurahNumber = this.currentSurahNumber();
+            const activeSurahNumber = this.directoryActiveSurahNumber();
             const activeTile = gridElement.querySelector(
                 `[data-surah-number="${activeSurahNumber}"]`,
             );
@@ -2633,10 +2717,31 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            activeTile.scrollIntoView({
-                block: 'center',
-                inline: 'nearest',
-                behavior,
+            const targetScrollTop =
+                activeTile.offsetTop - (gridElement.clientHeight - activeTile.clientHeight) / 2;
+            const normalizedScrollTop = Math.max(0, Math.trunc(targetScrollTop));
+
+            if ('scrollTo' in gridElement) {
+                gridElement.scrollTo({
+                    top: normalizedScrollTop,
+                    behavior,
+                });
+
+                return;
+            }
+
+            gridElement.scrollTop = normalizedScrollTop;
+        },
+
+        queueSurahDirectoryAutoFocus() {
+            const focusDelays = [0, 42, 120, 260];
+
+            focusDelays.forEach((delayMs, index) => {
+                window.setTimeout(() => {
+                    this.scrollSurahDirectoryToActive({
+                        behavior: index === 0 ? 'auto' : 'smooth',
+                    });
+                }, delayMs);
             });
         },
 
@@ -2975,6 +3080,8 @@ document.addEventListener('alpine:init', () => {
             this.search.modalOpen = true;
             this._lastKnownModalOpenState = true;
             this._skipNextSearchModalCloseLayout = false;
+            this.refreshSurahTriggerCaption(false);
+            this.syncSearchActiveSurahNumber();
             this.search.query = '';
             this.search.results = [];
             this.search.readyResult = null;
@@ -2986,10 +3093,7 @@ document.addEventListener('alpine:init', () => {
 
             await this.nextTickAsync();
             this.ensureSearchResultAnimations();
-            this.scrollSurahDirectoryToActive({ behavior: 'auto' });
-            requestAnimationFrame(() => {
-                this.scrollSurahDirectoryToActive({ behavior: 'smooth' });
-            });
+            this.queueSurahDirectoryAutoFocus();
             this.$refs.searchModalInput?.focus?.();
         },
 
@@ -3070,6 +3174,9 @@ document.addEventListener('alpine:init', () => {
         async goToSurahFromDirectory(entry) {
             const pageNumber = clampPage(Number(entry?.page_number ?? 1), this.maxPage);
             const direction = this.resolveNavigationDirection(pageNumber);
+            const surahNumber = Math.max(1, Math.trunc(Number(entry?.surah_number ?? 1)));
+
+            this.search.activeSurahNumber = surahNumber;
 
             this.resetNavigationQueueForPriorityJump();
             await this.requestSearchModalClose();

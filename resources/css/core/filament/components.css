@@ -305,8 +305,10 @@
 
     .quran-surah-tile.quran-surah-tile--active {
         border-color: color-mix(in srgb, var(--primary-500) 78%, transparent);
+        transform: translateY(-0.08rem);
         box-shadow:
             inset 0 0 0 1px color-mix(in srgb, var(--primary-200) 84%, transparent),
+            0 0 0 2px color-mix(in srgb, var(--primary-400) 55%, transparent),
             0 10px 24px color-mix(in srgb, var(--primary-600) 18%, transparent);
         background: linear-gradient(
             156deg,
@@ -337,7 +339,7 @@
     }
 
     #quran-reader-jump-page-modal {
-        width: min(86vw, 12rem);
+        width: min(86vw, 15rem);
         border-color: color-mix(in srgb, var(--quran-panel-border) 86%, transparent);
         background: color-mix(in srgb, var(--quran-page-surface) 96%, transparent);
     }
