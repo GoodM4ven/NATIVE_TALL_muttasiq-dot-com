@@ -82,6 +82,7 @@
                     type="button"
                     x-bind:class="{ 'quran-surah-tile--active': isSurahDirectoryEntryActive(entry) }"
                     x-bind:data-surah-number="entry.surah_number"
+                    x-effect="if (search.modalOpen && isSurahDirectoryEntryActive(entry)) { queueSurahDirectoryAutoFocus(); }"
                     x-on:click="goToSurahFromDirectory(entry)"
                 >
                     <span

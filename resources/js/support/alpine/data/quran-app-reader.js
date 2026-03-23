@@ -169,7 +169,7 @@ document.addEventListener('alpine:init', () => {
             searchIndexUrl: String(config?.api?.searchIndexUrl ?? ''),
         },
         cacheNames: {
-            pages: 'quran-reader-pages-v7',
+            pages: 'quran-reader-pages-v8',
             fonts: 'quran-reader-fonts-v1',
             search: 'quran-reader-search-v3',
         },
@@ -285,6 +285,7 @@ document.addEventListener('alpine:init', () => {
         _lastPageInputCommitPage: 0,
         _lastPageInputCommitAt: 0,
         _lastPageInputVisualValue: 1,
+        _lastWordHoldAt: 0,
         wordPress: {
             active: false,
             pointerId: null,
@@ -1831,12 +1832,6 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            if (event.target?.closest?.('.quran-word-button')) {
-                this.resetSwipeState();
-
-                return;
-            }
-
             if (event.target?.closest?.('input, textarea, select, [contenteditable="true"]')) {
                 this.resetSwipeState();
 
@@ -1887,12 +1882,6 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            if (event?.target?.closest?.('.quran-word-button')) {
-                this.resetSwipeState();
-
-                return;
-            }
-
             if (event?.target?.closest?.('input, textarea, select, [contenteditable="true"]')) {
                 this.resetSwipeState();
 
@@ -1927,6 +1916,10 @@ document.addEventListener('alpine:init', () => {
             const absY = Math.abs(deltaY);
 
             this.resetSwipeState();
+
+            if (Date.now() - this._lastWordHoldAt < 360) {
+                return;
+            }
 
             if (absX < 40 || absX < absY) {
                 return;
@@ -2145,6 +2138,7 @@ document.addEventListener('alpine:init', () => {
 
                 this.wordPress.holdTriggered = true;
                 this._suppressNextWordClick = true;
+                this._lastWordHoldAt = Date.now();
                 this.selectHoldSegment(this.wordPress.word);
             }, wordPressHoldDelayMs);
         },
@@ -2454,8 +2448,10 @@ document.addEventListener('alpine:init', () => {
         basmallahLineStyle(line) {
             const words = Array.isArray(line?.words) ? line.words : [];
             const hasNonGlyphWord = words.some((word) => !Boolean(word?.is_glyph));
+            const text = this.lineText(line);
+            const hasPrivateUseGlyphs = /[\uE000-\uF8FF]/u.test(text);
 
-            if (hasNonGlyphWord) {
+            if (hasNonGlyphWord || hasPrivateUseGlyphs) {
                 return "font-family: 'Amiri', 'Noto Naskh Arabic', 'Traditional Arabic', serif; color: var(--quran-ink);";
             }
 
@@ -2465,8 +2461,10 @@ document.addEventListener('alpine:init', () => {
         probeBasmallahLineStyle(line) {
             const words = Array.isArray(line?.words) ? line.words : [];
             const hasNonGlyphWord = words.some((word) => !Boolean(word?.is_glyph));
+            const text = this.lineText(line);
+            const hasPrivateUseGlyphs = /[\uE000-\uF8FF]/u.test(text);
 
-            if (hasNonGlyphWord) {
+            if (hasNonGlyphWord || hasPrivateUseGlyphs) {
                 return "font-family: 'Amiri', 'Noto Naskh Arabic', 'Traditional Arabic', serif; color: var(--quran-ink);";
             }
 
@@ -2476,8 +2474,9 @@ document.addEventListener('alpine:init', () => {
         basmallahDisplayText(line) {
             const fallbackText = 'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ';
             const text = this.lineText(line);
+            const hasPrivateUseGlyphs = /[\uE000-\uF8FF]/u.test(text);
 
-            if (text === '') {
+            if (text === '' || hasPrivateUseGlyphs) {
                 return fallbackText;
             }
 
@@ -2767,6 +2766,11 @@ document.addEventListener('alpine:init', () => {
         queueSurahDirectoryAutoFocus() {
             const attemptAutoFocus = (attempt = 0) => {
                 const normalizedAttempt = Math.max(0, Math.trunc(Number(attempt) || 0));
+
+                if (!this.search.modalOpen) {
+                    return;
+                }
+
                 const didFocus = this.scrollSurahDirectoryToActive({
                     behavior: normalizedAttempt === 0 ? 'auto' : 'smooth',
                 });
@@ -2785,7 +2789,7 @@ document.addEventListener('alpine:init', () => {
                     return;
                 }
 
-                if (normalizedAttempt >= 28) {
+                if (normalizedAttempt >= 80) {
                     return;
                 }
 

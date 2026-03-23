@@ -1139,7 +1139,7 @@
                                             </template>
                                             <template x-if="!isSurahHeaderLine(line) && isBasmallahLine(line)">
                                                 <div
-                                                    class="quran-basmallah-line"
+                                                    class="font-quran quran-basmallah-line"
                                                     data-quran-line-text
                                                     x-bind:style="basmallahLineStyle(line)"
                                                     x-text="basmallahDisplayText(line)"
@@ -1365,7 +1365,7 @@
                                     </template>
                                     <template x-if="!isSurahHeaderLine(line) && isBasmallahLine(line)">
                                         <div
-                                            class="quran-basmallah-line"
+                                            class="font-quran quran-basmallah-line"
                                             data-quran-line-text
                                             x-bind:style="probeBasmallahLineStyle(line)"
                                             x-text="basmallahDisplayText(line)"

@@ -66,7 +66,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranGateSource)->toContain('quran-app-sector__media--tadabbur')
         ->and($quranGateSource)->toContain('quran-app-gate-focal-dim')
         ->and($quranGateSource)->toContain('quran-app-gate-pointer')
-        ->and($quranGateSource)->toContain('quran-app-sector__lock-shell')
+        ->and($quranGateSource)->toContain('quran-app-sector__chip-lock')
         ->and($quranGateSource)->toContain('quran-app-gate-orbit')
         ->and($quranGateSource)->toContain('x-on:pointermove.passive="handlePointerMove($event)"')
         ->and($quranGateSource)->toContain('x-on:click="openMode(\'tilawa\')"')
@@ -124,7 +124,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderScriptSource)->toContain('_skipNextSearchModalCloseLayout: false')
         ->and($quranReaderScriptSource)->toContain('deriveSurahDirectoryFromItems(items = [])')
         ->and($quranReaderScriptSource)->toContain('resetNavigationQueueForPriorityJump()')
-        ->and($quranReaderScriptSource)->toContain("pages: 'quran-reader-pages-v7'")
+        ->and($quranReaderScriptSource)->toContain("pages: 'quran-reader-pages-v8'")
         ->and($quranReaderScriptSource)->toContain('requestSearchModalClose({ skipLayout = false } = {})')
         ->and($quranReaderScriptSource)->toContain('isAyahClusterActive(cluster)');
 
@@ -146,7 +146,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
     expect($quranReaderDataServiceSource)->not->toBeFalse()
         ->and($quranReaderDataServiceSource)->toContain('p\'.$pageNumber.\'.woff2')
         ->and($quranReaderDataServiceSource)->toContain("'format' => 'woff2'")
-        ->and($quranReaderDataServiceSource)->toContain('quran-reader-page-v10')
+        ->and($quranReaderDataServiceSource)->toContain('quran-reader-page-v11')
         ->and($quranReaderDataServiceSource)->toContain('quran-reader-surah-directory-v2')
         ->and($quranReaderDataServiceSource)->toContain('injectSyntheticBasmallahAfterSurahHeaders')
         ->and($quranReaderDataServiceSource)->toContain('applyTargetedSurahHeaderCarryovers')
@@ -204,6 +204,20 @@ it('returns matches for legacy orthography phrases in quran search endpoint', fu
             static fn (array $item): bool => (int) ($item['surah_number'] ?? 0) === 31
                 && (int) ($item['ayah_number'] ?? 0) === 17,
         ))->toBeTrue();
+
+    $legacySpellingResponse = $this->getJson(route('quran-reader-search-index', [
+        'q' => 'والله يدعو إلى دار السلام',
+    ], false));
+
+    $legacySpellingResponse->assertSuccessful();
+
+    $legacyItems = $legacySpellingResponse->json('items', []);
+
+    expect($legacyItems)->toBeArray()->not->toBeEmpty()
+        ->and(collect($legacyItems)->contains(
+            static fn (array $item): bool => (int) ($item['surah_number'] ?? 0) === 10
+                && (int) ($item['ayah_number'] ?? 0) === 25,
+        ))->toBeTrue();
 });
 
 it('injects visible basmallah lines under late-page surah headers', function () {
@@ -222,10 +236,11 @@ it('injects visible basmallah lines under late-page surah headers', function () 
         ->and($basmallahLines->every(static function (array $line): bool {
             $text = trim((string) ($line['text'] ?? ''));
             $words = is_array($line['words'] ?? null) ? $line['words'] : [];
-            $allGlyphWords = $words !== [] && collect($words)->every(
-                static fn (array $word): bool => (bool) ($word['is_glyph'] ?? false),
+            $containsArabicLetters = preg_match('/[\x{0621}-\x{064A}]/u', $text) === 1;
+            $hasNonGlyphWord = $words !== [] && collect($words)->contains(
+                static fn (array $word): bool => ! (bool) ($word['is_glyph'] ?? false),
             );
 
-            return $text !== '' && $allGlyphWords;
+            return $text !== '' && $containsArabicLetters && $hasNonGlyphWord;
         }))->toBeTrue();
 });
