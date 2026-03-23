@@ -72,6 +72,10 @@ class QuranReaderDataService
      *     qpcPageFontFamily: string|null,
      *     qpcPageFontUrl: string|null,
      *     qpcPageFontFormat: string|null,
+     *     basmallahFontFamily: string|null,
+     *     basmallahFontUrl: string|null,
+     *     basmallahFontFormat: string|null,
+     *     basmallahText: string|null,
      *     surahHeaderFontFamily: string|null,
      *     surahHeaderFontUrl: string|null,
      *     surahHeaderFontFormat: string|null,
@@ -90,6 +94,10 @@ class QuranReaderDataService
                 'qpcPageFontFamily' => null,
                 'qpcPageFontUrl' => null,
                 'qpcPageFontFormat' => null,
+                'basmallahFontFamily' => null,
+                'basmallahFontUrl' => null,
+                'basmallahFontFormat' => null,
+                'basmallahText' => null,
                 'surahHeaderFontFamily' => null,
                 'surahHeaderFontUrl' => null,
                 'surahHeaderFontFormat' => null,
@@ -99,7 +107,12 @@ class QuranReaderDataService
 
         $maxPage = $this->maxPage();
         $normalizedPage = $maxPage > 0 ? max(1, min($pageNumber, $maxPage)) : 1;
-        $cacheKey = 'quran-reader-page-v11:'.$normalizedPage;
+        $basmallahConfigFingerprint = $this->basmallahConfigFingerprint();
+        $cacheKey = sprintf(
+            'quran-reader-page-v13:%d:%s',
+            $normalizedPage,
+            $basmallahConfigFingerprint,
+        );
 
         /**
          * @var array{
@@ -134,11 +147,16 @@ class QuranReaderDataService
          *     qpcPageFontFamily: string|null,
          *     qpcPageFontUrl: string|null,
          *     qpcPageFontFormat: string|null,
+         *     basmallahFontFamily: string|null,
+         *     basmallahFontUrl: string|null,
+         *     basmallahFontFormat: string|null,
+         *     basmallahText: string|null,
          *     useCenteredAyahLayout: bool
          * } $staticPayload
          */
         $staticPayload = Cache::remember($cacheKey, now()->addDays(30), function () use ($maxPage, $normalizedPage): array {
             $qpcPageFont = $this->resolveQpcPageFont($normalizedPage);
+            $basmallahFont = $this->resolveBasmallahFont();
             $mushafLines = $this->buildPageLines($normalizedPage);
             $useCenteredAyahLayout = $this->shouldUseCenteredAyahLayout($normalizedPage, $mushafLines);
 
@@ -150,6 +168,10 @@ class QuranReaderDataService
                 'qpcPageFontFamily' => $qpcPageFont['family'] ?? null,
                 'qpcPageFontUrl' => $qpcPageFont['url'] ?? null,
                 'qpcPageFontFormat' => $qpcPageFont['format'] ?? null,
+                'basmallahFontFamily' => $basmallahFont['family'] ?? null,
+                'basmallahFontUrl' => $basmallahFont['url'] ?? null,
+                'basmallahFontFormat' => $basmallahFont['format'] ?? null,
+                'basmallahText' => $basmallahFont['text'] ?? null,
                 'useCenteredAyahLayout' => $useCenteredAyahLayout,
             ];
         });
@@ -2467,6 +2489,133 @@ class QuranReaderDataService
         }
 
         return null;
+    }
+
+    /**
+     * @return array{family: string|null, url: string|null, format: string|null, text: string|null}|null
+     */
+    private function resolveBasmallahFont(): ?array
+    {
+        $fontConfig = config('arabicable.quran_fonts.basmalah', []);
+
+        if (! is_array($fontConfig)) {
+            return null;
+        }
+
+        $availableFonts = $fontConfig['available'] ?? [];
+        $preferredKey = trim((string) ($fontConfig['preferred'] ?? ''));
+
+        if (! is_array($availableFonts) || $availableFonts === []) {
+            return null;
+        }
+
+        $fontOptions = [];
+
+        if ($preferredKey !== '' && isset($availableFonts[$preferredKey]) && is_array($availableFonts[$preferredKey])) {
+            $fontOptions[$preferredKey] = $availableFonts[$preferredKey];
+        }
+
+        foreach ($availableFonts as $key => $availableFont) {
+            if ($key === $preferredKey || ! is_array($availableFont)) {
+                continue;
+            }
+
+            $fontOptions[$key] = $availableFont;
+        }
+
+        foreach ($fontOptions as $fontKey => $fontOption) {
+            $resolvedFont = $this->resolveConfiguredQuranFont(
+                $fontOption,
+                'quran-basmallah-font',
+                ['fontKey' => $fontKey],
+            );
+
+            if ($resolvedFont !== null) {
+                return $resolvedFont;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $fontConfig
+     * @param  array<string, string>  $routeParameters
+     * @return array{family: string|null, url: string|null, format: string|null, text: string|null}|null
+     */
+    private function resolveConfiguredQuranFont(
+        array $fontConfig,
+        string $routeName,
+        array $routeParameters = [],
+    ): ?array {
+        $family = trim((string) ($fontConfig['family'] ?? ''));
+        $filename = trim((string) ($fontConfig['filename'] ?? ''));
+        $format = trim((string) ($fontConfig['format'] ?? 'woff2'));
+        $text = trim((string) ($fontConfig['glyph'] ?? $fontConfig['text'] ?? ''));
+
+        if ($family === '') {
+            return null;
+        }
+
+        if ($filename === '') {
+            return [
+                'family' => $family,
+                'url' => null,
+                'format' => null,
+                'text' => $text !== '' ? $text : null,
+            ];
+        }
+
+        $configuredSurahHeadersDir = trim((string) config(
+            'arabicable.data_sources.quran_surah_headers_fonts_dir',
+            base_path('vendor/goodm4ven/arabicable/resources/raw-data/quran/fonts/surah-headers'),
+        ));
+        $configuredFontsDir = trim((string) config(
+            'arabicable.data_sources.quran_fonts_dir',
+            base_path('vendor/goodm4ven/arabicable/resources/raw-data/quran/fonts'),
+        ));
+
+        $paths = [
+            $configuredSurahHeadersDir !== '' ? $configuredSurahHeadersDir.'/'.$filename : null,
+            $configuredFontsDir !== '' ? $configuredFontsDir.'/'.$filename : null,
+            base_path('resources/raw-data/quran/fonts/surah-headers/'.$filename),
+            dirname(base_path()).'/resources/raw-data/quran/fonts/surah-headers/'.$filename,
+            base_path('vendor/goodm4ven/arabicable/resources/raw-data/quran/fonts/surah-headers/'.$filename),
+            base_path('resources/raw-data/quran/fonts/'.$filename),
+            dirname(base_path()).'/resources/raw-data/quran/fonts/'.$filename,
+            base_path('vendor/goodm4ven/arabicable/resources/raw-data/quran/fonts/'.$filename),
+            base_path('vendor/goodm4ven/arabicable/resources/dist/'.$filename),
+        ];
+
+        foreach ($paths as $path) {
+            if (! is_string($path) || $path === '' || ! is_file($path)) {
+                continue;
+            }
+
+            return [
+                'family' => $family,
+                'url' => route($routeName, $routeParameters),
+                'format' => in_array($format, ['ttf', 'truetype'], true) ? 'truetype' : 'woff2',
+                'text' => $text !== '' ? $text : null,
+            ];
+        }
+
+        return null;
+    }
+
+    private function basmallahConfigFingerprint(): string
+    {
+        $fontConfig = config('arabicable.quran_fonts.basmalah', []);
+
+        if (! is_array($fontConfig)) {
+            return 'none';
+        }
+
+        try {
+            return sha1(json_encode($fontConfig, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE));
+        } catch (\JsonException) {
+            return 'invalid';
+        }
     }
 
     /**

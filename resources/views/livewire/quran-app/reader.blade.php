@@ -925,6 +925,10 @@
         'qpcPageFontFamily' => $qpcPageFontFamily,
         'qpcPageFontUrl' => $qpcPageFontUrl,
         'qpcPageFontFormat' => $qpcPageFontFormat,
+        'basmallahFontFamily' => $basmallahFontFamily,
+        'basmallahFontUrl' => $basmallahFontUrl,
+        'basmallahFontFormat' => $basmallahFontFormat,
+        'basmallahText' => $basmallahText,
         'surahHeaderFontFamily' => $surahHeaderFontFamily,
         'surahHeaderFontUrl' => $surahHeaderFontUrl,
         'surahHeaderFontFormat' => $surahHeaderFontFormat,
@@ -969,7 +973,7 @@
         </section>
     @else
         <section
-            class="quran-reader-panel min-w-75 relative flex h-[clamp(31rem,92svh,62rem)] w-[min(96vw,60rem)] flex-col overflow-hidden rounded-[1.75rem] border 2xl:w-[min(84vw,54rem)]"
+            class="quran-reader-panel min-w-75 relative flex h-[clamp(31rem,92svh,62rem)] w-[min(96vw,60rem)] flex-col overflow-hidden rounded-[1.75rem] border 2xl:w-[min(84vw,40rem)]"
             x-bind:style="readerPanelStyle()"
             x-on:pointerdown.passive="onSwipeStart($event)"
             x-on:pointerup.window.passive="onSwipeEnd($event)"
@@ -989,6 +993,7 @@
                 class="quran-top-strip"
                 data-no-swipe
             >
+                <!-- Credits: uiverse.io/gharsh11032000/loud-chicken-53 -->
                 <button
                     class="quran-soorah-trigger w-[13.4rem] shrink-0 outline-none"
                     type="button"
@@ -1040,6 +1045,16 @@
                             @font-face {
                                 font-family: '{{ $surahHeaderFontFamily }}';
                                 src: url('{{ $surahHeaderFontUrl }}') format('{{ $surahHeaderFontFormat }}');
+                                font-display: swap;
+                            }
+                        </style>
+                    @endif
+
+                    @if ($basmallahFontFamily !== null && $basmallahFontUrl !== null && $basmallahFontFormat !== null)
+                        <style>
+                            @font-face {
+                                font-family: '{{ $basmallahFontFamily }}';
+                                src: url('{{ $basmallahFontUrl }}') format('{{ $basmallahFontFormat }}');
                                 font-display: swap;
                             }
                         </style>

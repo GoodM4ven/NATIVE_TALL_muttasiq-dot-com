@@ -45,6 +45,27 @@ return [
             'filename' => 'surah-name-v4.ttf',
             'format' => 'ttf',
         ],
+        'basmalah' => [
+            'preferred' => 'madina-default',
+            'available' => [
+                'madina-default' => [
+                    'family' => 'MadinaQuran',
+                    'text' => 'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ',
+                ],
+                'surah-names-v4' => [
+                    'family' => 'SurahNamesV4',
+                    'filename' => 'surah_names.woff2',
+                    'format' => 'woff2',
+                    'text' => 'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ',
+                ],
+                'quran-common-ligature' => [
+                    'family' => 'QuranCommon',
+                    'filename' => 'quran-common.woff2',
+                    'format' => 'woff2',
+                    'glyph' => "\u{FDFD}",
+                ],
+            ],
+        ],
     ],
 
     'special_characters' => [

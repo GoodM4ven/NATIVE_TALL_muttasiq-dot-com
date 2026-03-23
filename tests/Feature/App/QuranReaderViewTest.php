@@ -124,7 +124,8 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderScriptSource)->toContain('_skipNextSearchModalCloseLayout: false')
         ->and($quranReaderScriptSource)->toContain('deriveSurahDirectoryFromItems(items = [])')
         ->and($quranReaderScriptSource)->toContain('resetNavigationQueueForPriorityJump()')
-        ->and($quranReaderScriptSource)->toContain("pages: 'quran-reader-pages-v8'")
+        ->and($quranReaderScriptSource)->toContain("pages: 'quran-reader-pages-v9'")
+        ->and($quranReaderScriptSource)->toContain("fonts: 'quran-reader-fonts-v2'")
         ->and($quranReaderScriptSource)->toContain('requestSearchModalClose({ skipLayout = false } = {})')
         ->and($quranReaderScriptSource)->toContain('isAyahClusterActive(cluster)');
 
@@ -146,7 +147,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
     expect($quranReaderDataServiceSource)->not->toBeFalse()
         ->and($quranReaderDataServiceSource)->toContain('p\'.$pageNumber.\'.woff2')
         ->and($quranReaderDataServiceSource)->toContain("'format' => 'woff2'")
-        ->and($quranReaderDataServiceSource)->toContain('quran-reader-page-v11')
+        ->and($quranReaderDataServiceSource)->toContain('quran-reader-page-v13')
         ->and($quranReaderDataServiceSource)->toContain('quran-reader-surah-directory-v2')
         ->and($quranReaderDataServiceSource)->toContain('injectSyntheticBasmallahAfterSurahHeaders')
         ->and($quranReaderDataServiceSource)->toContain('applyTargetedSurahHeaderCarryovers')
@@ -227,22 +228,29 @@ it('injects visible basmallah lines under late-page surah headers', function () 
 
     /** @var \App\Services\Quran\QuranReaderDataService $service */
     $service = app(\App\Services\Quran\QuranReaderDataService::class);
+    \Illuminate\Support\Facades\Cache::flush();
+    config()->set('arabicable.quran_fonts.basmalah.preferred', 'quran-common-ligature');
+
     $page = $service->resolvePage(604);
     $basmallahLines = collect($page['mushafLines'] ?? [])
         ->filter(static fn (array $line): bool => ($line['line_type'] ?? '') === 'basmallah')
         ->values();
 
     expect($basmallahLines)->toHaveCount(3)
-        ->and($basmallahLines->every(static function (array $line): bool {
-            $text = trim((string) ($line['text'] ?? ''));
-            $words = is_array($line['words'] ?? null) ? $line['words'] : [];
-            $containsArabicLetters = preg_match('/[\x{0621}-\x{064A}]/u', $text) === 1;
-            $hasNonGlyphWord = $words !== [] && collect($words)->contains(
-                static fn (array $word): bool => ! (bool) ($word['is_glyph'] ?? false),
-            );
+        ->and($page['basmallahFontFamily'] ?? null)->toBe('QuranCommon')
+        ->and($page['basmallahFontFormat'] ?? null)->toBe('woff2')
+        ->and($page['basmallahText'] ?? null)->toBe("\u{FDFD}")
+        ->and(filled($page['basmallahFontUrl'] ?? null))->toBeTrue();
 
-            return $text !== '' && $containsArabicLetters && $hasNonGlyphWord;
-        }))->toBeTrue();
+    $this->get((string) $page['basmallahFontUrl'])->assertSuccessful();
+
+    config()->set('arabicable.quran_fonts.basmalah.preferred', 'madina-default');
+
+    $madinaPage = $service->resolvePage(604);
+
+    expect($madinaPage['basmallahFontFamily'] ?? null)->toBe('MadinaQuran')
+        ->and($madinaPage['basmallahFontUrl'] ?? null)->toBeNull()
+        ->and($madinaPage['basmallahText'] ?? null)->toContain('بِسْمِ');
 });
 
 it('does not repeat surah preludes on continuation pages', function () {

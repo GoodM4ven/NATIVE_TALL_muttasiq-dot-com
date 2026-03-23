@@ -7,6 +7,10 @@ const defaultPagePayload = Object.freeze({
     qpcPageFontFamily: null,
     qpcPageFontUrl: null,
     qpcPageFontFormat: null,
+    basmallahFontFamily: null,
+    basmallahFontUrl: null,
+    basmallahFontFormat: null,
+    basmallahText: null,
     surahHeaderFontFamily: null,
     surahHeaderFontUrl: null,
     surahHeaderFontFormat: null,
@@ -29,6 +33,10 @@ const normalizePayload = (payload = {}) => ({
     qpcPageFontFamily: payload?.qpcPageFontFamily ?? null,
     qpcPageFontUrl: payload?.qpcPageFontUrl ?? null,
     qpcPageFontFormat: payload?.qpcPageFontFormat ?? null,
+    basmallahFontFamily: payload?.basmallahFontFamily ?? null,
+    basmallahFontUrl: payload?.basmallahFontUrl ?? null,
+    basmallahFontFormat: payload?.basmallahFontFormat ?? null,
+    basmallahText: payload?.basmallahText ?? null,
     surahHeaderFontFamily: payload?.surahHeaderFontFamily ?? null,
     surahHeaderFontUrl: payload?.surahHeaderFontUrl ?? null,
     surahHeaderFontFormat: payload?.surahHeaderFontFormat ?? null,
@@ -169,8 +177,8 @@ document.addEventListener('alpine:init', () => {
             searchIndexUrl: String(config?.api?.searchIndexUrl ?? ''),
         },
         cacheNames: {
-            pages: 'quran-reader-pages-v8',
-            fonts: 'quran-reader-fonts-v1',
+            pages: 'quran-reader-pages-v9',
+            fonts: 'quran-reader-fonts-v2',
             search: 'quran-reader-search-v3',
         },
         initialPayload: normalizePayload(config?.initialPayload),
@@ -193,6 +201,10 @@ document.addEventListener('alpine:init', () => {
         qpcPageFontFamily: null,
         qpcPageFontUrl: null,
         qpcPageFontFormat: null,
+        basmallahFontFamily: null,
+        basmallahFontUrl: null,
+        basmallahFontFormat: null,
+        basmallahText: null,
         surahHeaderFontFamily: null,
         surahHeaderFontUrl: null,
         surahHeaderFontFormat: null,
@@ -1060,6 +1072,10 @@ document.addEventListener('alpine:init', () => {
             this.qpcPageFontFamily = normalizedPayload.qpcPageFontFamily;
             this.qpcPageFontUrl = normalizedPayload.qpcPageFontUrl;
             this.qpcPageFontFormat = normalizedPayload.qpcPageFontFormat;
+            this.basmallahFontFamily = normalizedPayload.basmallahFontFamily;
+            this.basmallahFontUrl = normalizedPayload.basmallahFontUrl;
+            this.basmallahFontFormat = normalizedPayload.basmallahFontFormat;
+            this.basmallahText = normalizedPayload.basmallahText;
             this.surahHeaderFontFamily =
                 normalizedPayload.surahHeaderFontFamily ?? this.surahHeaderFontFamily;
             this.surahHeaderFontUrl =
@@ -1098,6 +1114,7 @@ document.addEventListener('alpine:init', () => {
             this.pageInput = this.pageNumber;
             this._lastPageInputVisualValue = this.pageNumber;
             this.syncPageFontFace();
+            this.syncBasmallahFontFace();
             this.syncSurahHeaderFontFace();
         },
 
@@ -1107,15 +1124,23 @@ document.addEventListener('alpine:init', () => {
 
         async waitForPageFontReady() {
             const family = String(this.qpcPageFontFamily ?? '').trim();
+            const basmallahFamily = String(this.basmallahFontFamily ?? '').trim();
             const surahHeaderFamily = String(this.surahHeaderFontFamily ?? '').trim();
 
-            if ((!family && !surahHeaderFamily) || !document.fonts?.load) {
+            if ((!family && !basmallahFamily && !surahHeaderFamily) || !document.fonts?.load) {
                 return;
             }
 
             try {
                 if (family) {
                     await document.fonts.load(`32px '${family}'`, 'الحمد لله');
+                }
+
+                if (basmallahFamily) {
+                    await document.fonts.load(
+                        `32px '${basmallahFamily}'`,
+                        this.preferredBasmallahText(),
+                    );
                 }
 
                 if (surahHeaderFamily) {
@@ -1172,6 +1197,15 @@ document.addEventListener('alpine:init', () => {
                 family: this.qpcPageFontFamily,
                 url: this.qpcPageFontUrl,
                 format: this.qpcPageFontFormat,
+            });
+        },
+
+        syncBasmallahFontFace() {
+            this.syncDynamicFontFace({
+                styleId: 'quran-reader-dynamic-basmallah-font',
+                family: this.basmallahFontFamily,
+                url: this.basmallahFontUrl,
+                format: this.basmallahFontFormat,
             });
         },
 
@@ -2285,6 +2319,10 @@ document.addEventListener('alpine:init', () => {
             return String(line?.line_type ?? '') === 'basmallah';
         },
 
+        preferredBasmallahText() {
+            return String(this.basmallahText ?? '').trim();
+        },
+
         isBasmallahLineWithWords(line) {
             return (
                 this.isBasmallahLine(line) && Array.isArray(line?.words) && line.words.length > 0
@@ -2449,17 +2487,39 @@ document.addEventListener('alpine:init', () => {
         },
 
         basmallahLineStyle(line) {
-            return "font-family: 'Scheherazade New', 'Amiri', 'Noto Naskh Arabic', 'Traditional Arabic', serif; color: var(--quran-ink); font-feature-settings: 'liga' 1, 'calt' 1;";
+            const family = String(this.basmallahFontFamily ?? '').trim();
+
+            if (!family) {
+                return "font-family: 'Scheherazade New', 'Amiri', 'Noto Naskh Arabic', 'Traditional Arabic', serif; color: var(--quran-ink); font-feature-settings: 'liga' 1, 'calt' 1;";
+            }
+
+            return `font-family: '${family}', 'Scheherazade New', 'Amiri', 'Noto Naskh Arabic', 'Traditional Arabic', serif; color: var(--quran-ink); font-feature-settings: 'liga' 1, 'calt' 1;`;
         },
 
         probeBasmallahLineStyle(line) {
-            return "font-family: 'Scheherazade New', 'Amiri', 'Noto Naskh Arabic', 'Traditional Arabic', serif; color: var(--quran-ink); font-feature-settings: 'liga' 1, 'calt' 1;";
+            const family = String(this.basmallahFontFamily ?? '').trim();
+
+            if (!family) {
+                return "font-family: 'Scheherazade New', 'Amiri', 'Noto Naskh Arabic', 'Traditional Arabic', serif; color: var(--quran-ink); font-feature-settings: 'liga' 1, 'calt' 1;";
+            }
+
+            return `font-family: '${family}', 'Scheherazade New', 'Amiri', 'Noto Naskh Arabic', 'Traditional Arabic', serif; color: var(--quran-ink); font-feature-settings: 'liga' 1, 'calt' 1;`;
         },
 
         basmallahDisplayText(line) {
-            const fallbackText = 'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ';
+            const configuredText = this.preferredBasmallahText();
             const text = this.lineText(line);
             const hasPrivateUseGlyphs = /[\uE000-\uF8FF]/u.test(text);
+
+            if (text !== '' && !hasPrivateUseGlyphs) {
+                return text;
+            }
+
+            const fallbackText = 'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ';
+
+            if (configuredText !== '') {
+                return configuredText;
+            }
 
             if (text === '' || hasPrivateUseGlyphs) {
                 return fallbackText;
