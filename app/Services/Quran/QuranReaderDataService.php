@@ -92,7 +92,7 @@ class QuranReaderDataService
 
         $maxPage = $this->maxPage();
         $normalizedPage = $maxPage > 0 ? max(1, min($pageNumber, $maxPage)) : 1;
-        $cacheKey = 'quran-reader-page-v2:'.$normalizedPage;
+        $cacheKey = 'quran-reader-page-v3:'.$normalizedPage;
 
         /**
          * @var array{
@@ -1406,7 +1406,126 @@ class QuranReaderDataService
             ];
         }
 
+        $lines = $this->injectSyntheticBasmallahAfterSurahHeaders($lines);
+
         return $this->applyOpeningSpreadCorrections($lines);
+    }
+
+    /**
+     * @param  array<int, array{
+     *     line_number: int,
+     *     line_type: string,
+     *     is_centered: bool,
+     *     surah_number: int|null,
+     *     segments: array<int, array{
+     *         verse_id: int,
+     *         ayah_index: int,
+     *         surah_number: int,
+     *         ayah_number: int,
+     *         text: string,
+     *         ends_ayah: bool
+     *     }>,
+     *     words: array<int, array{
+     *         verse_id: int,
+     *         word_index: int,
+     *         ayah_index: int,
+     *         surah_number: int,
+     *         ayah_number: int,
+     *         text: string,
+     *         is_glyph: bool,
+     *         ends_ayah: bool
+     *     }>,
+     *     text: string
+     * }>  $lines
+     * @return array<int, array{
+     *     line_number: int,
+     *     line_type: string,
+     *     is_centered: bool,
+     *     surah_number: int|null,
+     *     segments: array<int, array{
+     *         verse_id: int,
+     *         ayah_index: int,
+     *         surah_number: int,
+     *         ayah_number: int,
+     *         text: string,
+     *         ends_ayah: bool
+     *     }>,
+     *     words: array<int, array{
+     *         verse_id: int,
+     *         word_index: int,
+     *         ayah_index: int,
+     *         surah_number: int,
+     *         ayah_number: int,
+     *         text: string,
+     *         is_glyph: bool,
+     *         ends_ayah: bool
+     *     }>,
+     *     text: string
+     * }>
+     */
+    private function injectSyntheticBasmallahAfterSurahHeaders(array $lines): array
+    {
+        if ($lines === []) {
+            return $lines;
+        }
+
+        $syntheticWords = $this->resolveSyntheticBasmallahWords();
+        $result = [];
+        $lineCount = count($lines);
+
+        for ($lineIndex = 0; $lineIndex < $lineCount; $lineIndex++) {
+            $line = $lines[$lineIndex];
+            $result[] = $line;
+
+            if ($line['line_type'] !== 'surah_name') {
+                continue;
+            }
+
+            $surahNumber = (int) ($line['surah_number'] ?? 0);
+
+            if ($surahNumber === 1) {
+                continue;
+            }
+
+            $nextLine = $lines[$lineIndex + 1] ?? null;
+
+            if (is_array($nextLine) && $nextLine['line_type'] === 'basmallah') {
+                continue;
+            }
+
+            $result[] = [
+                'line_number' => (int) $line['line_number'] + 1,
+                'line_type' => 'basmallah',
+                'is_centered' => true,
+                'surah_number' => $surahNumber > 0 ? $surahNumber : null,
+                'segments' => [],
+                'words' => array_map(
+                    static fn (array $word): array => [
+                        'verse_id' => 0,
+                        'word_index' => (int) $word['word_index'],
+                        'ayah_index' => 0,
+                        'surah_number' => $surahNumber,
+                        'ayah_number' => 0,
+                        'text' => (string) $word['text'],
+                        'is_glyph' => (bool) $word['is_glyph'],
+                        'ends_ayah' => false,
+                    ],
+                    $syntheticWords,
+                ),
+                'text' => $syntheticWords !== []
+                    ? trim(implode('', array_map(static fn (array $word): string => (string) $word['text'], $syntheticWords)))
+                    : 'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ',
+            ];
+        }
+
+        return array_map(
+            static fn (array $line, int $index): array => [
+                ...$line,
+                'line_number' => $index + 1,
+            ],
+            $result,
+            array_keys($result),
+        );
     }
 
     /**

@@ -592,6 +592,9 @@
 
         .quran-page-slider-chip {
             position: relative;
+            --quran-counter-digit-width: 1ch;
+            --quran-counter-digit-count: 3;
+            --quran-counter-track-width: calc(var(--quran-counter-digit-width) * var(--quran-counter-digit-count));
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -635,9 +638,6 @@
             position: relative;
             display: inline-grid;
             place-items: center;
-            --quran-counter-digit-width: 0.72ch;
-            --quran-counter-digit-count: 3;
-            --quran-counter-track-width: calc(var(--quran-counter-digit-width) * var(--quran-counter-digit-count));
             min-width: var(--quran-counter-track-width);
         }
 
@@ -652,10 +652,13 @@
         }
 
         .quran-page-chip-total {
-            display: inline-flex;
+            display: inline-grid;
+            grid-auto-flow: column;
+            grid-auto-columns: var(--quran-counter-digit-width);
             align-items: center;
             justify-content: center;
-            min-width: 2.2rem;
+            min-width: var(--quran-counter-track-width);
+            width: var(--quran-counter-track-width);
             opacity: 0.88;
         }
 
@@ -770,6 +773,13 @@
             transform: translateY(0);
         }
 
+        .quran-swipe-hint-button:disabled {
+            cursor: default;
+            opacity: 0.48;
+            transform: none;
+            pointer-events: none;
+        }
+
         .quran-swipe-hint-chev {
             color: color-mix(in srgb, var(--warning-400) 70%, var(--warning-600) 80%);
             display: inline-block;
@@ -779,6 +789,11 @@
             vertical-align: middle;
             position: relative;
             top: 0;
+        }
+
+        .quran-swipe-hint-chev.quran-swipe-hint-chev-static {
+            animation: none !important;
+            transform: none !important;
         }
 
         .quran-swipe-hint-chev:nth-child(1) {
@@ -1161,9 +1176,18 @@
                     aria-label="الصفحة السابقة"
                     x-on:click.stop.prevent="$dispatch('quran-go-prev')"
                 >
-                    <span class="quran-swipe-hint-chev">‹</span>
-                    <span class="quran-swipe-hint-chev">‹</span>
-                    <span class="quran-swipe-hint-chev">‹</span>
+                    <span
+                        class="quran-swipe-hint-chev"
+                        x-bind:class="{ 'quran-swipe-hint-chev-static': isFirstNavigationPage() }"
+                    >‹</span>
+                    <span
+                        class="quran-swipe-hint-chev"
+                        x-bind:class="{ 'quran-swipe-hint-chev-static': isFirstNavigationPage() }"
+                    >‹</span>
+                    <span
+                        class="quran-swipe-hint-chev"
+                        x-bind:class="{ 'quran-swipe-hint-chev-static': isFirstNavigationPage() }"
+                    >‹</span>
                 </button>
                 <div class="quran-bottom-strip-center">
                     <div
@@ -1174,17 +1198,24 @@
                             class="quran-page-slider-chip outline-none"
                             type="button"
                             aria-label="إدخال رقم صفحة"
+                            x-bind:style="`--quran-counter-digit-count: ${pageCounterDigitLength()};`"
                             x-on:click="$wire.mountAction('jumpToPage')"
                         >
-                            <span
-                                class="me-1.5"
-                                x-text="maxPage"
-                            ></span>
+                            <span class="quran-page-chip-total me-1.5">
+                                <template
+                                    x-for="(digit, digitIndex) in pageCounterDisplayDigits(maxPage)"
+                                    :key="`quran-page-max-digit-${digitIndex}`"
+                                >
+                                    <span class="quran-counter-cell">
+                                        <span
+                                            class="quran-counter-static"
+                                            x-text="digit"
+                                        ></span>
+                                    </span>
+                                </template>
+                            </span>
                             <span class="quran-page-chip-separator me-1.5">/</span>
-                            <span
-                                class="quran-page-chip-current-wrap"
-                                x-bind:style="`--quran-counter-digit-count: ${pageCounterDigitLength()};`"
-                            >
+                            <span class="quran-page-chip-current-wrap">
                                 <span class="quran-page-chip-current">
                                     <template
                                         x-for="(digit, digitIndex) in pageCounterDisplayDigits(pageInput)"
@@ -1249,11 +1280,21 @@
                     class="quran-swipe-hint quran-swipe-hint-button quran-bottom-strip-nav-next select-none outline-none"
                     type="button"
                     aria-label="الصفحة التالية"
+                    x-bind:disabled="isLastNavigationPage()"
                     x-on:click.stop.prevent="$dispatch('quran-go-next')"
                 >
-                    <span class="quran-swipe-hint-chev quran-swipe-hint-chev-opposite">›</span>
-                    <span class="quran-swipe-hint-chev quran-swipe-hint-chev-opposite">›</span>
-                    <span class="quran-swipe-hint-chev quran-swipe-hint-chev-opposite">›</span>
+                    <span
+                        class="quran-swipe-hint-chev quran-swipe-hint-chev-opposite"
+                        x-bind:class="{ 'quran-swipe-hint-chev-static': isLastNavigationPage() }"
+                    >›</span>
+                    <span
+                        class="quran-swipe-hint-chev quran-swipe-hint-chev-opposite"
+                        x-bind:class="{ 'quran-swipe-hint-chev-static': isLastNavigationPage() }"
+                    >›</span>
+                    <span
+                        class="quran-swipe-hint-chev quran-swipe-hint-chev-opposite"
+                        x-bind:class="{ 'quran-swipe-hint-chev-static': isLastNavigationPage() }"
+                    >›</span>
                 </button>
             </footer>
 

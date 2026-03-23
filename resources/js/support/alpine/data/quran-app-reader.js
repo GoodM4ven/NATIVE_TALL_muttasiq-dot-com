@@ -817,7 +817,19 @@ document.addEventListener('alpine:init', () => {
             });
         },
 
+        isFirstNavigationPage() {
+            return this.navigationBasePage() <= 1;
+        },
+
+        isLastNavigationPage() {
+            return this.maxPage > 0 && this.navigationBasePage() >= this.maxPage;
+        },
+
         async goNextFromChevron() {
+            if (this.isLastNavigationPage()) {
+                return;
+            }
+
             await this.nextPage('chevron');
         },
 
