@@ -96,7 +96,7 @@ class Reader extends Component implements HasActions, HasSchemas
                         'x-model.number' => 'pageInput',
                         'x-on:input' => 'onPageInputInput()',
                         'x-on:blur' => 'onPageInputBlur()',
-                        'x-on:keydown.enter.prevent' => 'onPageInputCommit({ force: false, commitNow: true, source: "page-input-enter" })',
+                        'x-on:keydown.enter.prevent' => 'onPageInputCommit({ force: false, commitNow: true })',
                         'x-bind:max' => 'Math.max(1, maxPage)',
                         'class' => 'quran-page-counter-input tabular-nums',
                     ], merge: true),

@@ -29,8 +29,8 @@
         border-color: color-mix(in srgb, var(--quran-panel-border) 86%, transparent);
         background: linear-gradient(
             180deg,
-            color-mix(in srgb, var(--quran-panel-bg) 94%, transparent),
-            color-mix(in srgb, var(--quran-page-surface) 92%, transparent)
+            color-mix(in srgb, var(--quran-panel-bg) 100%, transparent),
+            color-mix(in srgb, var(--quran-page-surface) 100%, transparent)
         );
         box-shadow:
             0 32px 70px color-mix(in srgb, var(--gray-950) 32%, transparent),
@@ -237,8 +237,27 @@
         gap: 0.55rem;
         overflow: auto;
         max-height: min(42svh, 23rem);
-        padding: 0.2rem 0.45rem 0.8rem 0.5rem;
+        padding: 0.7rem 0.45rem 0.8rem 0.5rem;
         scrollbar-gutter: stable both-edges;
+        --quran-surah-edge-fade-size: 1rem;
+        -webkit-mask-image: linear-gradient(
+            180deg,
+            transparent 0,
+            black var(--quran-surah-edge-fade-size),
+            black calc(100% - var(--quran-surah-edge-fade-size)),
+            transparent 100%
+        );
+        mask-image: linear-gradient(
+            180deg,
+            transparent 0,
+            black var(--quran-surah-edge-fade-size),
+            black calc(100% - var(--quran-surah-edge-fade-size)),
+            transparent 100%
+        );
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-size: 100% 100%;
+        mask-size: 100% 100%;
     }
 
     .quran-surah-grid::-webkit-scrollbar {

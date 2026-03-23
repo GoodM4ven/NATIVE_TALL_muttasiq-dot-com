@@ -277,6 +277,7 @@ document.addEventListener('alpine:init', () => {
         _lastKnownModalOpenState: false,
         _lastPageInputCommitPage: 0,
         _lastPageInputCommitAt: 0,
+        _lastPageInputVisualValue: 1,
         wordPress: {
             active: false,
             pointerId: null,
@@ -304,6 +305,7 @@ document.addEventListener('alpine:init', () => {
 
             this.pageNumber = restoredPage;
             this.pageInput = restoredPage;
+            this._lastPageInputVisualValue = restoredPage;
 
             if (restoredPage !== this.initialPayload.pageNumber && this.ready) {
                 this.goToPage(restoredPage, {
@@ -680,6 +682,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             this.pageInput = normalizedTargetPage;
+            this._lastPageInputVisualValue = normalizedTargetPage;
 
             this._pendingNavigationRequest = {
                 targetPage: normalizedTargetPage,
@@ -800,6 +803,7 @@ document.addEventListener('alpine:init', () => {
                 }
 
                 this.pageInput = normalizedPage;
+                this._lastPageInputVisualValue = normalizedPage;
 
                 if (forceRefit) {
                     await this.layoutPageGuaranteed({ revealDelayMs: 200 });
@@ -844,6 +848,15 @@ document.addEventListener('alpine:init', () => {
                 clearTimeout(this._pageInputCommitTimer);
                 this._pageInputCommitTimer = null;
             }
+
+            const normalizedInputPage = clampPage(this.pageInput, this.maxPage);
+            const previousVisualPage = clampPage(this._lastPageInputVisualValue, this.maxPage);
+
+            if (normalizedInputPage !== previousVisualPage) {
+                this.triggerPageCounterPulse(previousVisualPage, normalizedInputPage);
+            }
+
+            this._lastPageInputVisualValue = normalizedInputPage;
         },
 
         async onPageInputBlur() {
@@ -876,6 +889,7 @@ document.addEventListener('alpine:init', () => {
             this._lastPageInputCommitAt = Date.now();
 
             this.pageInput = targetPage;
+            this._lastPageInputVisualValue = targetPage;
 
             if (!force && targetPage === this.pageNumber) {
                 return;
@@ -936,6 +950,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             this.pageInput = this.pageNumber;
+            this._lastPageInputVisualValue = this.pageNumber;
             this.syncPageFontFace();
             this.syncSurahHeaderFontFace();
         },

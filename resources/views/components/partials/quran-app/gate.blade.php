@@ -78,7 +78,7 @@
             width: 100%;
             object-fit: cover;
             transform: scale(1.065);
-            filter: blur(0.7px) brightness(0.66) saturate(0.9);
+            filter: blur(2px) brightness(0.66) saturate(0.9);
             transition: transform 420ms ease, filter 320ms ease;
             pointer-events: none;
         }
@@ -97,7 +97,7 @@
 
         .quran-app-sector.is-active img.quran-app-sector__image-img {
             transform: scale(1.018);
-            filter: blur(0.12px) brightness(0.96) saturate(1.04);
+            filter: blur(4px) brightness(0.96) saturate(1.04);
         }
 
         .quran-app-sector.is-muted img.quran-app-sector__image-img {

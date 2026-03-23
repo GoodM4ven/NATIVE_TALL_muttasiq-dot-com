@@ -136,20 +136,27 @@
             align-items: baseline;
             white-space: nowrap;
             line-height: 1.02;
+            border-radius: 0.22em;
+            padding-inline: 0.06em;
             cursor: default;
             transition:
                 background-color 420ms cubic-bezier(0.22, 1, 0.36, 1),
-                color 340ms cubic-bezier(0.22, 1, 0.36, 1);
-            will-change: background-color, color;
+                color 340ms cubic-bezier(0.22, 1, 0.36, 1),
+                box-shadow 420ms cubic-bezier(0.22, 1, 0.36, 1);
+            will-change: background-color, color, box-shadow;
         }
 
         .quran-word-button.quran-segment-hovered {
-            background-color: color-mix(in srgb, var(--gray-300) 34%, transparent);
+            background-color: color-mix(in srgb, var(--gray-300) 22%, transparent);
+            box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gray-400) 12%, transparent);
         }
 
         .quran-word-button.quran-segment-active {
             background: var(--quran-active-bg);
             color: var(--quran-active-text);
+            box-shadow:
+                inset 0 0 0 1px color-mix(in srgb, var(--success-300) 26%, transparent),
+                0 1px 8px color-mix(in srgb, var(--success-400) 14%, transparent);
         }
 
         .quran-ayah-marker {
@@ -467,19 +474,20 @@
 
         .quran-page-counter-morph {
             position: absolute;
-            inset-inline-start: 50%;
+            left: 50%;
             top: 50%;
             transform: translate(-50%, -50%);
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            min-width: 4.5rem;
+            width: 4.5rem;
             pointer-events: none;
             font-family: 'IBM Plex Sans Arabic', 'Manrope', ui-sans-serif, system-ui, sans-serif;
             font-size: 0.9rem;
             font-weight: 600;
             color: var(--quran-panel-text);
             line-height: 1;
+            font-variant-numeric: tabular-nums;
             z-index: 2;
             direction: ltr;
         }
@@ -493,13 +501,19 @@
             place-items: center;
         }
 
+        .quran-counter-cell {
+            display: inline-grid;
+            place-items: center;
+            min-width: 0.62ch;
+        }
+
         .quran-counter-roll__prev,
         .quran-counter-roll__next {
             grid-area: 1 / 1;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            min-width: 0.52ch;
+            min-width: 0.62ch;
             will-change: transform, opacity;
         }
 
@@ -925,7 +939,7 @@
                             x-for="segment in pageCounterPulse.segments"
                             :key="segment.key"
                         >
-                            <span class="inline-flex items-center justify-center">
+                            <span class="quran-counter-cell">
                                 <span
                                     x-show="!segment.changed"
                                     x-text="segment.next"
