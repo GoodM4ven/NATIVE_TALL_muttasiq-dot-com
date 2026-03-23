@@ -212,6 +212,10 @@
             text-wrap: nowrap;
         }
 
+        .quran-surah-header-line--fatiha {
+            margin-block-end: 1rem;
+        }
+
         .quran-surah-header-line::before,
         .quran-surah-header-line::after {
             content: '';
@@ -1166,6 +1170,8 @@
                                                 <div
                                                     class="quran-surah-header-line"
                                                     data-quran-line-text
+                                                    x-bind:class="{ 'quran-surah-header-line--fatiha': Number(line?.surah_number ??
+                                                            0) === 1 }"
                                                     x-bind:style="surahHeaderLineStyle(line)"
                                                 >
                                                     <span
@@ -1405,6 +1411,7 @@
                                         <div
                                             class="quran-surah-header-line"
                                             data-quran-line-text
+                                            x-bind:class="{ 'quran-surah-header-line--fatiha': Number(line?.surah_number ?? 0) === 1 }"
                                             x-bind:style="surahHeaderLineStyle(line)"
                                         >
                                             <span
