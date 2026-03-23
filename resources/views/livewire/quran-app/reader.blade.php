@@ -177,7 +177,6 @@
             background-color: color-mix(in srgb, var(--gray-300) 18%, transparent);
             box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gray-400) 8%, transparent);
             border-radius: 0.52em;
-            padding-inline: 0.12em;
         }
 
         .quran-word-button.quran-segment-active {
@@ -187,7 +186,6 @@
                 inset 0 0 0 1px color-mix(in srgb, var(--success-300) 20%, transparent),
                 0 2px 10px color-mix(in srgb, var(--success-400) 12%, transparent);
             border-radius: 0.52em;
-            padding-inline: 0.12em;
         }
 
         .quran-ayah-marker {
@@ -1170,8 +1168,10 @@
                                                 <div
                                                     class="quran-surah-header-line"
                                                     data-quran-line-text
-                                                    x-bind:class="{ 'quran-surah-header-line--fatiha': Number(line?.surah_number ??
-                                                            0) === 1 }"
+                                                    x-bind:class="{
+                                                        'quran-surah-header-line--fatiha': Number(line?.surah_number ??
+                                                            0) === 1
+                                                    }"
                                                     x-bind:style="surahHeaderLineStyle(line)"
                                                 >
                                                     <span
