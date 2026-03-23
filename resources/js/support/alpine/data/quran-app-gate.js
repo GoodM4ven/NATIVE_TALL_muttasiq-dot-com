@@ -10,8 +10,12 @@ document.addEventListener('alpine:init', () => {
         isPointerInside: false,
         isModePinned: false,
         orbitAngleDeg: 0,
+        orbitRenderAngleDeg: 0,
+        orbitTargetAngleDeg: 0,
         touchPointerId: null,
         isTouchPointerActive: false,
+        orbitAnimationFrameId: null,
+        orbitLastFrameAt: 0,
         init() {
             this.$nextTick(() => {
                 this.positionPuckAtDefault();
@@ -71,9 +75,48 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            const wrappedDelta = ((targetAngleDeg - this.orbitAngleDeg + 540) % 360) - 180;
+            const wrappedDelta = ((targetAngleDeg - this.orbitTargetAngleDeg + 540) % 360) - 180;
 
-            this.orbitAngleDeg += wrappedDelta;
+            this.orbitTargetAngleDeg += wrappedDelta;
+            this.startOrbitAnimation();
+        },
+        startOrbitAnimation() {
+            if (this.orbitAnimationFrameId !== null) {
+                return;
+            }
+
+            this.orbitLastFrameAt = 0;
+            this.orbitAnimationFrameId = requestAnimationFrame((timestamp) => {
+                this.animateOrbitFrame(timestamp);
+            });
+        },
+        animateOrbitFrame(timestamp) {
+            if (this.orbitLastFrameAt === 0) {
+                this.orbitLastFrameAt = timestamp;
+            }
+
+            const elapsedMs = Math.min(34, Math.max(8, timestamp - this.orbitLastFrameAt));
+            this.orbitLastFrameAt = timestamp;
+
+            const delta = ((this.orbitTargetAngleDeg - this.orbitRenderAngleDeg + 540) % 360) - 180;
+            const responseMs = this.isPointerInside ? 54 : 78;
+            const easingFactor = 1 - Math.exp(-(elapsedMs / responseMs));
+
+            this.orbitRenderAngleDeg += delta * easingFactor;
+            this.orbitAngleDeg = this.orbitRenderAngleDeg;
+
+            if (Math.abs(delta) <= 0.08) {
+                this.orbitRenderAngleDeg = this.orbitTargetAngleDeg;
+                this.orbitAngleDeg = this.orbitTargetAngleDeg;
+                this.orbitAnimationFrameId = null;
+                this.orbitLastFrameAt = 0;
+
+                return;
+            }
+
+            this.orbitAnimationFrameId = requestAnimationFrame((nextTimestamp) => {
+                this.animateOrbitFrame(nextTimestamp);
+            });
         },
         pinMode(mode) {
             this.pinnedMode = mode;

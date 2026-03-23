@@ -187,6 +187,26 @@ JS,
     scriptClick($page, '.quran-soorah-trigger');
     waitForScriptWithTimeout($page, 'Boolean(document.querySelector("#quran-reader-search-modal"))', true, 5_000);
     waitForScript($page, quranReaderDataScript('data.isFittingPage'), true);
+    waitForScriptWithTimeout(
+        $page,
+        <<<'JS'
+(() => {
+  const grid = document.querySelector('#quran-reader-search-modal .quran-surah-grid');
+  const activeTile = document.querySelector('#quran-reader-search-modal .quran-surah-tile--active');
+  if (!grid || !activeTile) {
+    return false;
+  }
+
+  const gridRect = grid.getBoundingClientRect();
+  const tileRect = activeTile.getBoundingClientRect();
+
+  return tileRect.top >= gridRect.top - 4
+    && tileRect.bottom <= gridRect.bottom + 4;
+})()
+JS,
+        true,
+        5_000,
+    );
 
     $targetSurahSelection = $page->script(
         quranReaderDataScript(

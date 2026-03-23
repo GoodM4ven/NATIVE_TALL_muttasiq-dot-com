@@ -148,6 +148,7 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            overflow: visible;
             min-width: clamp(5.6rem, 11vw, 8rem);
             border-radius: 999px;
             border: 1px solid rgba(253, 232, 171, 0.52);
@@ -181,7 +182,10 @@
             display: inline-block;
             transition:
                 transform 340ms cubic-bezier(0.22, 1, 0.36, 1),
-                letter-spacing 260ms ease;
+                letter-spacing 260ms ease,
+                filter 320ms cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 260ms ease;
+            will-change: transform, filter, opacity;
         }
 
         .quran-app-sector.is-active .quran-app-sector__chip {
@@ -215,16 +219,29 @@
         }
 
         .quran-app-sector__chip-lock {
+            position: absolute;
+            left: 50%;
+            top: 50%;
             display: inline-flex;
             align-items: center;
-            gap: 0.34rem;
-            margin-inline-start: 0.5rem;
+            gap: 0.46rem;
+            padding: 0.38rem 0.72rem;
+            border-radius: 999px;
+            border: 1px solid color-mix(in srgb, var(--quran-gold-2) 76%, transparent);
+            background: linear-gradient(165deg,
+                    rgba(92, 60, 18, 0.92) 0%,
+                    rgba(38, 22, 8, 0.9) 100%);
+            box-shadow:
+                inset 0 1px 0 rgba(255, 240, 197, 0.24),
+                0 12px 28px rgba(8, 4, 2, 0.46);
             opacity: 0;
-            transform: translateX(0.5rem) scale(0.92);
+            transform: translate(-50%, -86%) scale(0.82);
             transform-origin: center;
+            filter: blur(6px);
             transition:
                 opacity 260ms ease,
-                transform 340ms cubic-bezier(0.22, 1, 0.36, 1);
+                transform 380ms cubic-bezier(0.22, 1, 0.36, 1),
+                filter 300ms cubic-bezier(0.22, 1, 0.36, 1);
             pointer-events: none;
         }
 
@@ -236,25 +253,25 @@
         }
 
         .quran-app-sector__chip-lock-caption {
-            border-radius: 999px;
-            border: 1px solid color-mix(in srgb, var(--quran-gold-2) 72%, transparent);
-            background: color-mix(in srgb, var(--quran-gold-4) 46%, transparent);
-            padding: 0.15rem 0.4rem;
             color: color-mix(in srgb, var(--quran-gold-1) 90%, white);
-            font-size: 0.58rem;
+            font-size: 0.78rem;
             font-weight: 700;
             line-height: 1;
             white-space: nowrap;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.42);
         }
 
         .quran-app-sector.is-active.is-locked .quran-app-sector__chip-lock {
             opacity: 1;
-            transform: translateX(0) scale(1);
+            transform: translate(-50%, -136%) scale(1);
+            filter: blur(0);
         }
 
         .quran-app-sector.is-active.is-locked .quran-app-sector__chip-text {
-            transform: translateY(-0.08rem);
+            transform: translateY(0.48rem) scale(0.94);
             letter-spacing: 0.046em;
+            filter: blur(1.8px);
+            opacity: 0.48;
         }
 
         .quran-app-gate-geometry {
@@ -351,7 +368,8 @@
             inset: 0;
             border-radius: 999px;
             transform: rotate(0deg);
-            transition: transform 300ms ease-out, opacity 220ms ease;
+            transition: opacity 220ms ease;
+            will-change: transform;
             pointer-events: none;
             z-index: 230;
         }
@@ -481,8 +499,8 @@
             }
 
             .quran-app-sector__chip-lock {
-                margin-inline-start: 0.38rem;
-                gap: 0.22rem;
+                gap: 0.3rem;
+                padding: 0.28rem 0.52rem;
             }
 
             .quran-app-sector__chip-lock-icon {
@@ -491,8 +509,7 @@
             }
 
             .quran-app-sector__chip-lock-caption {
-                font-size: 0.5rem;
-                padding: 0.14rem 0.33rem;
+                font-size: 0.6rem;
             }
 
             .quran-app-gate-geometry path {
@@ -547,7 +564,7 @@
             }
 
             .quran-app-gate-orbit {
-                transition-duration: 440ms;
+                transition-duration: 0ms;
             }
         }
     </style>
@@ -710,7 +727,7 @@
         >
             <span
                 class="quran-app-gate-orbit"
-                x-bind:style="{ transform: `rotate(${orbitAngleDeg}deg)` }"
+                x-bind:style="{ transform: `rotate(${orbitRenderAngleDeg}deg)` }"
             >
                 <span class="quran-app-gate-pointer"></span>
             </span>

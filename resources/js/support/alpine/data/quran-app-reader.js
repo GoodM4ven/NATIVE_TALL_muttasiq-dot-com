@@ -275,6 +275,9 @@ document.addEventListener('alpine:init', () => {
         _stopLivewireMorphedHook: null,
         _searchResultsAutoAnimateStop: null,
         _searchModalCloseDebounceTimer: null,
+        _surahDirectoryAutoFocusToken: 0,
+        _surahDirectoryAutoFocusTimer: null,
+        _surahDirectoryAutoFocusRaf: null,
         _modalLayoutResumeTimer: null,
         _activeModalIds: new Set(),
         _isModalLifecycleSettling: false,
@@ -2313,7 +2316,7 @@ document.addEventListener('alpine:init', () => {
 
         lineMarginBlockStart(line) {
             if (this.isSurahHeaderLine(line)) {
-                return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * 0.36)';
+                return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * 0.28)';
             }
 
             if (this.isBasmallahLine(line)) {
@@ -2333,7 +2336,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             if (this.isBasmallahLine(line)) {
-                return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * 0.1)';
+                return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * 0.04)';
             }
 
             return '0px';
@@ -2446,29 +2449,11 @@ document.addEventListener('alpine:init', () => {
         },
 
         basmallahLineStyle(line) {
-            const words = Array.isArray(line?.words) ? line.words : [];
-            const hasNonGlyphWord = words.some((word) => !Boolean(word?.is_glyph));
-            const text = this.lineText(line);
-            const hasPrivateUseGlyphs = /[\uE000-\uF8FF]/u.test(text);
-
-            if (hasNonGlyphWord || hasPrivateUseGlyphs) {
-                return "font-family: 'Amiri', 'Noto Naskh Arabic', 'Traditional Arabic', serif; color: var(--quran-ink);";
-            }
-
-            return this.lineFontStyle();
+            return "font-family: 'Scheherazade New', 'Amiri', 'Noto Naskh Arabic', 'Traditional Arabic', serif; color: var(--quran-ink); font-feature-settings: 'liga' 1, 'calt' 1;";
         },
 
         probeBasmallahLineStyle(line) {
-            const words = Array.isArray(line?.words) ? line.words : [];
-            const hasNonGlyphWord = words.some((word) => !Boolean(word?.is_glyph));
-            const text = this.lineText(line);
-            const hasPrivateUseGlyphs = /[\uE000-\uF8FF]/u.test(text);
-
-            if (hasNonGlyphWord || hasPrivateUseGlyphs) {
-                return "font-family: 'Amiri', 'Noto Naskh Arabic', 'Traditional Arabic', serif; color: var(--quran-ink);";
-            }
-
-            return this.probeLineFontStyle();
+            return "font-family: 'Scheherazade New', 'Amiri', 'Noto Naskh Arabic', 'Traditional Arabic', serif; color: var(--quran-ink); font-feature-settings: 'liga' 1, 'calt' 1;";
         },
 
         basmallahDisplayText(line) {
@@ -2763,39 +2748,89 @@ document.addEventListener('alpine:init', () => {
             return true;
         },
 
+        cancelSurahDirectoryAutoFocus() {
+            this._surahDirectoryAutoFocusToken += 1;
+
+            if (this._surahDirectoryAutoFocusTimer !== null) {
+                clearTimeout(this._surahDirectoryAutoFocusTimer);
+                this._surahDirectoryAutoFocusTimer = null;
+            }
+
+            if (this._surahDirectoryAutoFocusRaf !== null) {
+                cancelAnimationFrame(this._surahDirectoryAutoFocusRaf);
+                this._surahDirectoryAutoFocusRaf = null;
+            }
+        },
+
+        resolveActiveSurahDirectoryTile(gridElement = null) {
+            const resolvedGridElement =
+                gridElement instanceof Element
+                    ? gridElement
+                    : this.resolveSurahDirectoryGridElement();
+
+            if (!(resolvedGridElement instanceof Element)) {
+                return null;
+            }
+
+            const activeSurahNumber = this.directoryActiveSurahNumber();
+            const activeTile = resolvedGridElement.querySelector(
+                `[data-surah-number="${activeSurahNumber}"]`,
+            );
+
+            return activeTile instanceof HTMLElement ? activeTile : null;
+        },
+
         queueSurahDirectoryAutoFocus() {
+            this.cancelSurahDirectoryAutoFocus();
+
+            const token = this._surahDirectoryAutoFocusToken;
             const attemptAutoFocus = (attempt = 0) => {
                 const normalizedAttempt = Math.max(0, Math.trunc(Number(attempt) || 0));
 
-                if (!this.search.modalOpen) {
+                if (token !== this._surahDirectoryAutoFocusToken || !this.search.modalOpen) {
                     return;
                 }
 
-                const didFocus = this.scrollSurahDirectoryToActive({
-                    behavior: normalizedAttempt === 0 ? 'auto' : 'smooth',
-                });
+                const gridElement = this.resolveSurahDirectoryGridElement();
+                const activeTile = this.resolveActiveSurahDirectoryTile(gridElement);
+                const isGridReady =
+                    gridElement instanceof HTMLElement &&
+                    activeTile instanceof HTMLElement &&
+                    this.isSearchModalWindowVisible() &&
+                    gridElement.clientHeight > 16 &&
+                    activeTile.getClientRects().length > 0;
 
-                if (didFocus) {
+                if (isGridReady) {
+                    this.scrollSurahDirectoryToActive({
+                        behavior: normalizedAttempt === 0 ? 'auto' : 'smooth',
+                    });
+                    activeTile.focus({ preventScroll: true });
+
                     if (normalizedAttempt < 2) {
-                        window.setTimeout(() => {
-                            this.scrollSurahDirectoryToActive({ behavior: 'smooth' });
-                        }, 120);
+                        this._surahDirectoryAutoFocusTimer = window.setTimeout(
+                            () => {
+                                attemptAutoFocus(normalizedAttempt + 1);
+                            },
+                            normalizedAttempt === 0 ? 140 : 240,
+                        );
                     }
 
-                    window.setTimeout(() => {
-                        this.scrollSurahDirectoryToActive({ behavior: 'smooth' });
-                    }, 260);
-
                     return;
                 }
 
-                if (normalizedAttempt >= 80) {
+                if (normalizedAttempt >= 28) {
                     return;
                 }
 
-                window.setTimeout(() => {
-                    attemptAutoFocus(normalizedAttempt + 1);
-                }, 40);
+                this._surahDirectoryAutoFocusRaf = requestAnimationFrame(() => {
+                    this._surahDirectoryAutoFocusRaf = null;
+                    this._surahDirectoryAutoFocusTimer = window.setTimeout(
+                        () => {
+                            attemptAutoFocus(normalizedAttempt + 1);
+                        },
+                        normalizedAttempt < 8 ? 36 : 72,
+                    );
+                });
             };
 
             attemptAutoFocus(0);
@@ -2830,6 +2865,10 @@ document.addEventListener('alpine:init', () => {
                     page_number: firstPageBySurah.get(surahNumber) ?? 1,
                 };
             });
+
+            if (this.search.modalOpen) {
+                this.queueSurahDirectoryAutoFocus();
+            }
         },
 
         deriveSurahDirectoryFromItems(items = []) {
@@ -3149,11 +3188,12 @@ document.addEventListener('alpine:init', () => {
 
             await this.nextTickAsync();
             this.ensureSearchResultAnimations();
-            this.queueSurahDirectoryAutoFocus();
             this.$refs.searchModalInput?.focus?.();
+            this.queueSurahDirectoryAutoFocus();
         },
 
         handleSearchModalClosed() {
+            this.cancelSurahDirectoryAutoFocus();
             this.search.modalOpen = false;
             this._lastKnownModalOpenState = false;
             this.search.query = '';

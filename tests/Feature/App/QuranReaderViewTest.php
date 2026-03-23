@@ -244,3 +244,25 @@ it('injects visible basmallah lines under late-page surah headers', function () 
             return $text !== '' && $containsArabicLetters && $hasNonGlyphWord;
         }))->toBeTrue();
 });
+
+it('does not repeat surah preludes on continuation pages', function () {
+    if (! \Illuminate\Support\Facades\Schema::hasTable('quran_verses')) {
+        $this->markTestSkipped('Quran verses table is unavailable.');
+    }
+
+    /** @var \App\Services\Quran\QuranReaderDataService $service */
+    $service = app(\App\Services\Quran\QuranReaderDataService::class);
+
+    foreach ([99, 100] as $pageNumber) {
+        $page = $service->resolvePage($pageNumber);
+        $lines = collect($page['mushafLines'] ?? []);
+        $firstAyahLine = $lines->first(static fn (array $line): bool => ($line['line_type'] ?? '') === 'ayah');
+        $firstWord = collect($firstAyahLine['words'] ?? [])->first();
+
+        expect($firstAyahLine)->toBeArray()
+            ->and((int) ($firstWord['ayah_number'] ?? 0))->toBeGreaterThan(1)
+            ->and(($lines->first()['line_type'] ?? null))->toBe('ayah')
+            ->and($lines->take(2)->pluck('line_type')->all())->not->toContain('surah_name')
+            ->and($lines->take(2)->pluck('line_type')->all())->not->toContain('basmallah');
+    }
+});
