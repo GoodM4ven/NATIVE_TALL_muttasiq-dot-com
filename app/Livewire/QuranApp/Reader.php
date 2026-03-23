@@ -97,7 +97,11 @@ class Reader extends Component implements HasActions, HasSchemas
             ->modalHeading('الانتقال إلى صفحة')
             ->modalDescription('أدخل رقم الصفحة المراد الانتقال إليها.')
             ->modalAutofocus(false)
+            ->modalWidth(Width::ExtraSmall)
             ->modalSubmitActionLabel('انتقال')
+            ->extraModalWindowAttributes([
+                'id' => 'quran-reader-jump-page-modal',
+            ])
             ->fillForm(fn (): array => [
                 'page' => max(1, $this->pageNumber),
             ])
@@ -108,6 +112,13 @@ class Reader extends Component implements HasActions, HasSchemas
                     ->inputMode('numeric')
                     ->minValue(1)
                     ->maxValue(fn (): int => max(1, $this->maxPage))
+                    ->extraFieldWrapperAttributes([
+                        'id' => 'quran-reader-page-counter-field',
+                        'class' => 'quran-page-counter-field',
+                    ])
+                    ->extraInputAttributes([
+                        'id' => 'quran-reader-page-counter-input',
+                    ], merge: true)
                     ->required(),
             ])
             ->action(function (array $data): void {

@@ -489,24 +489,56 @@
         .quran-bottom-strip {
             display: grid;
             grid-template-columns: 1fr auto 1fr;
+            grid-template-rows: auto auto;
             align-items: center;
-            gap: 0.65rem;
-            padding: 0.5rem 1rem 0.74rem;
-            min-height: 3rem;
+            column-gap: 0.65rem;
+            row-gap: 0.42rem;
+            padding: 0.45rem 1rem 0.74rem;
+            min-height: 3.65rem;
+        }
+
+        .quran-bottom-strip-nav-prev {
+            grid-column: 1;
+            grid-row: 1 / span 2;
+            justify-self: center;
+            align-self: center;
+        }
+
+        .quran-bottom-strip-nav-next {
+            grid-column: 3;
+            grid-row: 1 / span 2;
+            justify-self: center;
+            align-self: center;
+        }
+
+        .quran-bottom-strip-center {
+            grid-column: 2;
+            grid-row: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .quran-bottom-strip-slider {
+            grid-column: 2;
+            grid-row: 2;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
         .quran-page-counter {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 0.5rem;
+            gap: 0;
             min-height: 2.4rem;
         }
 
         .quran-page-slider {
             appearance: none;
             -webkit-appearance: none;
-            width: min(42vw, 13rem);
+            width: min(42vw, 13.2rem);
             min-width: 8rem;
             height: 0.56rem;
             border-radius: 999px;
@@ -575,14 +607,14 @@
         }
 
         .quran-page-slider-chip:hover {
-            transform: translateY(-0.04rem);
+            /* transform: translateY(-0.04rem); */
             box-shadow:
                 inset 0 0 0 1px color-mix(in srgb, var(--primary-300) 24%, transparent),
                 0 8px 16px color-mix(in srgb, var(--primary-800) 20%, transparent);
         }
 
         .quran-page-slider-chip:active {
-            transform: translateY(0);
+            /* transform: translateY(0); */
         }
 
         .quran-page-chip-current-wrap {
@@ -590,16 +622,16 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            min-width: 2.68ch;
-            width: 2.68ch;
+            min-width: 2.72ch;
+            width: 2.72ch;
         }
 
         .quran-page-chip-current {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            min-width: 2.68ch;
-            width: 2.68ch;
+            min-width: 2.72ch;
+            width: 2.72ch;
         }
 
         .quran-page-chip-total {
@@ -622,10 +654,24 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            min-width: 2.68ch;
-            width: 2.68ch;
+            min-width: 2.72ch;
+            width: 2.72ch;
             pointer-events: none;
             z-index: 2;
+        }
+
+        .quran-page-slider-chip,
+        .quran-page-chip-current,
+        .quran-page-chip-total,
+        .quran-page-counter-morph,
+        .quran-counter-cell,
+        .quran-counter-roll__prev,
+        .quran-counter-roll__next {
+            font-variant-numeric: tabular-nums lining-nums;
+            font-feature-settings: 'tnum' 1, 'lnum' 1;
+            font-kerning: none;
+            letter-spacing: 0;
+            white-space: nowrap;
         }
 
         .quran-page-counter.quran-page-counter--morphing .quran-page-chip-current {
@@ -876,7 +922,7 @@
         </section>
     @else
         <section
-            class="quran-reader-panel min-w-75 relative flex h-[clamp(31rem,92svh,62rem)] w-[min(96vw,60rem)] flex-col overflow-hidden rounded-[1.75rem] border"
+            class="quran-reader-panel min-w-75 relative flex h-[clamp(31rem,92svh,62rem)] w-[min(96vw,60rem)] flex-col overflow-hidden rounded-[1.75rem] border 2xl:w-[min(84vw,54rem)]"
             x-bind:style="readerPanelStyle()"
             x-on:pointerdown.passive="onSwipeStart($event)"
             x-on:pointerup.window.passive="onSwipeEnd($event)"
@@ -897,7 +943,7 @@
                 data-no-swipe
             >
                 <button
-                    class="quran-soorah-trigger w-[13.4rem] shrink-0"
+                    class="quran-soorah-trigger outline-none w-[13.4rem] shrink-0"
                     type="button"
                     dir="rtl"
                     x-on:click="
@@ -999,7 +1045,7 @@
                                                         >
                                                             <span class="inline-flex items-baseline">
                                                                 <button
-                                                                    class="quran-word-button px-0 transition"
+                                                                    class="quran-word-button px-0 transition outline-none"
                                                                     type="button"
                                                                     x-bind:class="{
                                                                         'quran-segment-active': isWordActive(word),
@@ -1047,7 +1093,7 @@
                                                 <div
                                                     class="font-quran quran-meta-line"
                                                     data-quran-line-text
-                                                    x-bind:style="lineFontStyle()"
+                                                    x-bind:style="metaLineStyle(line)"
                                                     x-text="lineText(line)"
                                                 ></div>
                                             </template>
@@ -1065,7 +1111,7 @@
                 data-no-swipe
             >
                 <button
-                    class="quran-swipe-hint quran-swipe-hint-button select-none justify-self-center"
+                    class="quran-swipe-hint outline-none quran-swipe-hint-button quran-bottom-strip-nav-prev select-none"
                     type="button"
                     aria-label="الصفحة السابقة"
                     x-on:click.stop.prevent="$dispatch('quran-go-prev')"
@@ -1074,12 +1120,65 @@
                     <span class="quran-swipe-hint-chev">‹</span>
                     <span class="quran-swipe-hint-chev">‹</span>
                 </button>
-                <div
-                    class="quran-page-counter"
-                    x-bind:class="{ 'quran-page-counter--morphing': pageCounterPulse.isActive && pageCounterPulse.hasChanges }"
-                >
+                <div class="quran-bottom-strip-center">
+                    <div
+                        class="quran-page-counter"
+                        x-bind:class="{ 'quran-page-counter--morphing': pageCounterPulse.isActive && pageCounterPulse.hasChanges }"
+                    >
+                        <button
+                            class="quran-page-slider-chip outline-none"
+                            type="button"
+                            aria-label="إدخال رقم صفحة"
+                            x-on:click="$wire.mountAction('jumpToPage')"
+                        >
+                            <span
+                                class="me-1.5"
+                                x-text="maxPage"
+                            ></span>
+                            <span class="quran-page-chip-separator me-1.5">/</span>
+                            <span class="quran-page-chip-current-wrap">
+                                <span
+                                    class="quran-page-chip-current"
+                                    x-text="pageInput"
+                                ></span>
+                                <span
+                                    class="quran-page-counter-morph"
+                                    aria-hidden="true"
+                                    x-cloak
+                                    x-show="pageCounterPulse.isActive && pageCounterPulse.hasChanges"
+                                >
+                                    <template
+                                        x-for="segment in pageCounterPulse.segments"
+                                        :key="segment.key"
+                                    >
+                                        <span class="quran-counter-cell">
+                                            <span
+                                                x-show="!segment.changed"
+                                                x-text="segment.next"
+                                            ></span>
+                                            <span
+                                                class="quran-counter-roll"
+                                                x-show="segment.changed"
+                                            >
+                                                <span
+                                                    class="quran-counter-roll__prev"
+                                                    x-text="segment.prev"
+                                                ></span>
+                                                <span
+                                                    class="quran-counter-roll__next"
+                                                    x-text="segment.next"
+                                                ></span>
+                                            </span>
+                                        </span>
+                                    </template>
+                                </span>
+                            </span>
+                        </button>
+                    </div>
+                </div>
+                <div class="quran-bottom-strip-slider">
                     <input
-                        class="quran-page-slider"
+                        class="quran-page-slider outline-none"
                         type="range"
                         aria-label="التنقل بين صفحات المصحف"
                         min="1"
@@ -1088,58 +1187,9 @@
                         x-on:input="onSliderInput()"
                         x-on:change="onSliderCommit()"
                     />
-                    <button
-                        class="quran-page-slider-chip"
-                        type="button"
-                        aria-label="إدخال رقم صفحة"
-                        x-on:click="$wire.mountAction('jumpToPage')"
-                    >
-                        <span
-                            class="quran-page-chip-total"
-                            x-text="maxPage"
-                        ></span>
-                        <span class="quran-page-chip-separator">/</span>
-                        <span class="quran-page-chip-current-wrap quran-page-chip-total">
-                            <span
-                                class="quran-page-chip-current"
-                                x-text="pageInput"
-                            ></span>
-                            <span
-                                class="quran-page-counter-morph"
-                                aria-hidden="true"
-                                x-cloak
-                                x-show="pageCounterPulse.isActive && pageCounterPulse.hasChanges"
-                            >
-                                <template
-                                    x-for="segment in pageCounterPulse.segments"
-                                    :key="segment.key"
-                                >
-                                    <span class="quran-counter-cell">
-                                        <span
-                                            x-show="!segment.changed"
-                                            x-text="segment.next"
-                                        ></span>
-                                        <span
-                                            class="quran-counter-roll"
-                                            x-show="segment.changed"
-                                        >
-                                            <span
-                                                class="quran-counter-roll__prev"
-                                                x-text="segment.prev"
-                                            ></span>
-                                            <span
-                                                class="quran-counter-roll__next"
-                                                x-text="segment.next"
-                                            ></span>
-                                        </span>
-                                    </span>
-                                </template>
-                            </span>
-                        </span>
-                    </button>
                 </div>
                 <button
-                    class="quran-swipe-hint quran-swipe-hint-button select-none justify-self-center"
+                    class="quran-swipe-hint outline-none quran-swipe-hint-button quran-bottom-strip-nav-next select-none"
                     type="button"
                     aria-label="الصفحة التالية"
                     x-on:click.stop.prevent="$dispatch('quran-go-next')"
@@ -1222,7 +1272,7 @@
                                         <div
                                             class="font-quran quran-meta-line"
                                             data-quran-line-text
-                                            x-bind:style="probeLineFontStyle()"
+                                            x-bind:style="metaLineStyle(line)"
                                             x-text="lineText(line)"
                                         ></div>
                                     </template>

@@ -44,7 +44,7 @@ it('navigates to quran gate, persists it across refresh, and handles native back
     waitForScript($mobilePage, 'window.location.hash', '#main-menu');
 });
 
-it('keeps quran reader panel wide and keeps lines clean while modals open/close and refit', function () {
+it('keeps quran reader stable for layout, slider navigation, and modal refit timing', function () {
     $page = visit('/');
 
     resetBrowserState($page);
@@ -55,7 +55,7 @@ it('keeps quran reader panel wide and keeps lines clean while modals open/close 
     waitForScript($page, 'window.location.hash', '#quran-app-tilawa');
     waitForQuranReaderVisible($page);
     waitForScript($page, quranReaderDataScript('data.ready && data.mushafLines.length > 0'), true);
-    waitForScript($page, quranReaderDataScript('data.isFittingPage'), false);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
 
     waitForScriptWithTimeout(
         $page,
@@ -72,6 +72,118 @@ JS,
         true,
         5_000,
     );
+    waitForScriptWithTimeout(
+        $page,
+        <<<'JS'
+(() => {
+  const chip = document.querySelector('.quran-page-slider-chip');
+  const slider = document.querySelector('.quran-page-slider');
+  if (!chip || !slider) {
+    return false;
+  }
+
+  const chipRect = chip.getBoundingClientRect();
+  const sliderRect = slider.getBoundingClientRect();
+
+  return sliderRect.top >= chipRect.bottom - 1;
+})()
+JS,
+        true,
+        5_000,
+    );
+    waitForScriptWithTimeout(
+        $page,
+        <<<'JS'
+(() => {
+  const footer = document.querySelector('.quran-bottom-strip');
+  const prev = document.querySelector('.quran-bottom-strip-nav-prev');
+  const next = document.querySelector('.quran-bottom-strip-nav-next');
+  if (!footer || !prev || !next) {
+    return false;
+  }
+
+  const footerRect = footer.getBoundingClientRect();
+  const footerMid = footerRect.top + (footerRect.height / 2);
+  const prevRect = prev.getBoundingClientRect();
+  const nextRect = next.getBoundingClientRect();
+  const prevMid = prevRect.top + (prevRect.height / 2);
+  const nextMid = nextRect.top + (nextRect.height / 2);
+
+  return Math.abs(prevMid - footerMid) <= 5 && Math.abs(nextMid - footerMid) <= 5;
+})()
+JS,
+        true,
+        5_000,
+    );
+    waitForScriptWithTimeout(
+        $page,
+        <<<'JS'
+(() => {
+  if (window.innerWidth < 1536) {
+    return true;
+  }
+
+  const panel = document.querySelector('.quran-reader-panel');
+  if (!panel) {
+    return false;
+  }
+
+  return panel.getBoundingClientRect().width <= 900;
+})()
+JS,
+        true,
+        5_000,
+    );
+    waitForScriptWithTimeout(
+        $page,
+        <<<'JS'
+(() => {
+  const lines = Array.from(document.querySelectorAll('.quran-page-lines [data-quran-line-text]'));
+  if (!lines.length) {
+    return false;
+  }
+
+  return lines.every((line) => {
+    if (line.querySelector('.quran-word-button')) {
+      return line.querySelectorAll('.quran-word-button').length > 0;
+    }
+
+    const text = String(line.textContent ?? '').replace(/\s+/g, '').trim();
+    return text.length > 0;
+  });
+})()
+JS,
+        true,
+        5_000,
+    );
+
+    $sliderTargetPage = $page->script(
+        quranReaderDataScript(
+            <<<'JS'
+(() => {
+  const slider = document.querySelector('.quran-page-slider');
+  if (!slider) {
+    return 0;
+  }
+
+  const currentPage = Number(data.pageInput ?? data.pageNumber ?? 1);
+  const targetPage = Math.min(Number(data.maxPage ?? 1), currentPage + 1);
+  slider.value = String(targetPage);
+  slider.dispatchEvent(new Event('input', { bubbles: true }));
+  slider.dispatchEvent(new Event('change', { bubbles: true }));
+
+  return targetPage;
+})()
+JS,
+        ),
+    );
+
+    expect((int) $sliderTargetPage)->toBeGreaterThan(0);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), true, 1_200);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.pageInput'), (int) $sliderTargetPage, 6_000);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.pageNumber'), (int) $sliderTargetPage, 6_000);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 2_500);
+
     scriptClick($page, '.quran-soorah-trigger');
     waitForScriptWithTimeout($page, 'Boolean(document.querySelector("#quran-reader-search-modal"))', true, 5_000);
     waitForScript($page, quranReaderDataScript('data.isFittingPage'), true);
@@ -126,19 +238,36 @@ JS,
         (int) ($targetSurahSelection['pageNumber'] ?? 0),
         6_000,
     );
-    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 2_000);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
 
     scriptClick($page, '.quran-soorah-trigger');
     waitForScriptWithTimeout($page, 'Boolean(document.querySelector("#quran-reader-search-modal"))', true, 5_000);
     waitForScript($page, quranReaderDataScript('data.isFittingPage'), true);
     safeClick($page, '.fi-modal-window .fi-modal-close-btn');
     waitForScriptWithTimeout($page, modalClosedScript(), true, 6_000);
-    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 2_000);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), true, 400);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 3_000);
 
     safeClick($page, '.quran-page-slider-chip');
     waitForScriptWithTimeout($page, 'Boolean(document.querySelector(".fi-modal-window"))', true, 5_000);
     waitForScript($page, quranReaderDataScript('data.isFittingPage'), true);
+    waitForScriptWithTimeout(
+        $page,
+        <<<'JS'
+(() => {
+  const modal = document.querySelector('#quran-reader-jump-page-modal');
+  if (!modal) {
+    return false;
+  }
+
+  return modal.getBoundingClientRect().width <= 200;
+})()
+JS,
+        true,
+        5_000,
+    );
     safeClick($page, '.fi-modal-window .fi-modal-close-btn');
     waitForScriptWithTimeout($page, modalClosedScript(), true, 6_000);
-    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 2_000);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), true, 400);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 3_000);
 });

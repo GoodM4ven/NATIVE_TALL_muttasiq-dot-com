@@ -276,6 +276,7 @@ document.addEventListener('alpine:init', () => {
         _searchModalCloseDebounceTimer: null,
         _modalLayoutResumeTimer: null,
         _activeModalIds: new Set(),
+        _isModalLifecycleSettling: false,
         _wordPressHoldTimer: null,
         _suppressNextWordClick: false,
         _skipNextSearchModalCloseLayout: false,
@@ -435,6 +436,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             this._activeModalIds.clear();
+            this._isModalLifecycleSettling = false;
 
             if (this._wordPressHoldTimer !== null) {
                 clearTimeout(this._wordPressHoldTimer);
@@ -864,6 +866,17 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        dispatchPageNavigationRequest(targetPage, source = 'generic') {
+            window.dispatchEvent(
+                new CustomEvent('quran-go-page', {
+                    detail: {
+                        page: clampPage(targetPage, this.maxPage),
+                        source,
+                    },
+                }),
+            );
+        },
+
         async goToPage(
             pageNumber,
             { direction = 'next', animate = true, activeAyahIndex = null, forceRefit = false } = {},
@@ -937,24 +950,13 @@ document.addEventListener('alpine:init', () => {
 
         async onSliderInput() {
             this.onPageInputInput();
-
-            const targetPage = clampPage(this.pageInput, this.maxPage);
-
-            await this.navigateToPage(targetPage, {
-                direction: this.resolveNavigationDirection(targetPage),
-                animate: true,
-                source: 'page-slider-input',
-                forceRefit: true,
-                settleDelayMs: 190,
-            });
         },
 
         async onSliderCommit() {
-            await this.onPageInputCommit({
-                force: true,
-                commitNow: true,
-                source: 'page-slider-commit',
-            });
+            const targetPage = clampPage(this.pageInput, this.maxPage);
+            this.pageInput = targetPage;
+            this._lastPageInputVisualValue = targetPage;
+            this.dispatchPageNavigationRequest(targetPage, 'page-slider-commit');
         },
 
         async onPageInputBlur() {
@@ -1148,6 +1150,12 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        openModalCount() {
+            return Array.from(document.querySelectorAll('.fi-modal')).filter((modalElement) =>
+                modalElement.classList.contains('fi-modal-open'),
+            ).length;
+        },
+
         beginLayoutCycle() {
             this._layoutToken += 1;
             this.isFittingPage = true;
@@ -1164,11 +1172,12 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            this._isModalLifecycleSettling = true;
             this.clearLayoutTimers();
             this.beginLayoutCycle();
         },
 
-        scheduleLayoutAfterModalLifecycle(delayMs = 70) {
+        scheduleLayoutAfterModalLifecycle(delayMs = 220) {
             if (!this.hasRenderablePage()) {
                 return;
             }
@@ -1181,51 +1190,91 @@ document.addEventListener('alpine:init', () => {
             this._modalLayoutResumeTimer = window.setTimeout(
                 () => {
                     this._modalLayoutResumeTimer = null;
-                    this.scheduleLayout({ revealDelayMs: 170 });
+                    this._isModalLifecycleSettling = false;
+                    this.scheduleLayout({ revealDelayMs: 240 });
                 },
-                Math.max(0, Math.trunc(Number(delayMs) || 70)),
+                Math.max(0, Math.trunc(Number(delayMs) || 220)),
             );
+        },
+
+        resumeLayoutWhenNoOpenModals(attempt = 0) {
+            if (!this.hasRenderablePage()) {
+                this._isModalLifecycleSettling = false;
+
+                return;
+            }
+
+            const normalizedAttempt = Math.max(0, Math.trunc(Number(attempt) || 0));
+            const remainingModalCount = this.openModalCount();
+
+            if (remainingModalCount <= 0) {
+                this._activeModalIds.clear();
+                this.scheduleLayoutAfterModalLifecycle(220);
+
+                return;
+            }
+
+            this._isModalLifecycleSettling = true;
+
+            if (normalizedAttempt >= 24) {
+                this._activeModalIds.clear();
+                this._isModalLifecycleSettling = false;
+                this.scheduleLayout({ revealDelayMs: 240 });
+
+                return;
+            }
+
+            window.setTimeout(() => {
+                this.resumeLayoutWhenNoOpenModals(normalizedAttempt + 1);
+            }, 40);
         },
 
         trackModalLifecycle(kind, event) {
             const modalId = String(event?.detail?.id ?? '').trim();
-
-            if (modalId === '') {
-                return;
-            }
+            const openModalCount = this.openModalCount();
 
             if (kind === 'opened') {
-                this._activeModalIds.add(modalId);
+                if (modalId !== '') {
+                    this._activeModalIds.add(modalId);
+                }
+
                 this.holdPageHiddenForModalLifecycle();
 
                 return;
             }
 
             if (kind === 'closing') {
-                if (this._activeModalIds.has(modalId)) {
+                if (modalId === '' || this._activeModalIds.has(modalId) || openModalCount > 0) {
                     this.holdPageHiddenForModalLifecycle();
+                    this.resumeLayoutWhenNoOpenModals();
                 }
 
                 return;
             }
 
             if (kind === 'closed') {
-                this._activeModalIds.delete(modalId);
-
-                if (this._activeModalIds.size === 0) {
-                    this.holdPageHiddenForModalLifecycle();
-                    this.scheduleLayoutAfterModalLifecycle(70);
-
-                    return;
+                if (modalId !== '') {
+                    this._activeModalIds.delete(modalId);
                 }
 
                 this.holdPageHiddenForModalLifecycle();
+
+                window.setTimeout(() => {
+                    this.resumeLayoutWhenNoOpenModals();
+                }, 24);
             }
         },
 
         queuePageReveal(layoutToken, delayMs = 180) {
             this._revealTimer = window.setTimeout(() => {
                 if (layoutToken !== this._layoutToken) {
+                    return;
+                }
+
+                if (this._isModalLifecycleSettling || this._activeModalIds.size > 0) {
+                    this.isFittingPage = true;
+                    this.queuePageReveal(layoutToken, 120);
+
                     return;
                 }
 
@@ -1400,6 +1449,12 @@ document.addEventListener('alpine:init', () => {
         },
 
         scheduleLayout({ revealDelayMs = 180 } = {}) {
+            if (this._isModalLifecycleSettling || this._activeModalIds.size > 0) {
+                this.holdPageHiddenForModalLifecycle();
+
+                return;
+            }
+
             this.clearLayoutTimers();
 
             this._layoutRaf = requestAnimationFrame(() => {
@@ -2158,6 +2213,10 @@ document.addEventListener('alpine:init', () => {
             );
         },
 
+        isBasmallahLine(line) {
+            return String(line?.line_type ?? '') === 'basmallah';
+        },
+
         lineText(line) {
             return String(line?.text ?? '').trim();
         },
@@ -2172,6 +2231,14 @@ document.addEventListener('alpine:init', () => {
             }
 
             return this.lineText(line) !== '';
+        },
+
+        metaLineStyle(line) {
+            if (this.isBasmallahLine(line)) {
+                return "font-family: 'MadinaQuran', 'Amiri', 'Traditional Arabic', serif; color: var(--quran-ink);";
+            }
+
+            return this.lineFontStyle();
         },
 
         ayahLineClass(line) {

@@ -324,6 +324,37 @@
         line-height: 1;
     }
 
+    #quran-reader-jump-page-modal {
+        width: min(90vw, 10.8rem);
+        max-width: 10.8rem;
+        border-color: color-mix(in srgb, var(--quran-panel-border) 86%, transparent);
+        background: color-mix(in srgb, var(--quran-page-surface) 96%, transparent);
+    }
+
+    #quran-reader-jump-page-modal > .fi-modal-header {
+        padding: 0.55rem 0.72rem 0.3rem;
+        border-bottom: 1px solid color-mix(in srgb, var(--quran-chip-border) 26%, transparent);
+    }
+
+    #quran-reader-jump-page-modal .fi-modal-heading {
+        font-size: 0.9rem;
+    }
+
+    #quran-reader-jump-page-modal .fi-modal-description {
+        font-size: 0.74rem;
+        line-height: 1.45;
+        opacity: 0.88;
+    }
+
+    #quran-reader-jump-page-modal .fi-modal-content {
+        padding: 0.52rem 0.65rem 0.58rem;
+    }
+
+    #quran-reader-jump-page-modal .fi-modal-footer {
+        padding: 0.45rem 0.62rem 0.62rem;
+        gap: 0.35rem;
+    }
+
     .quran-page-counter-field {
         margin: 0;
     }
