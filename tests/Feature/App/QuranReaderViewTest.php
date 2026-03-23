@@ -90,7 +90,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderViewSource)->toContain("x-on:x-modal-closed.window=\"handleModalLifecycleEvent('closed', \$event)\"")
         ->and($quranReaderViewSource)->toContain('x-on:control-panel-updated.window="applyControlPanelSettings($event.detail?.controlPanel ?? {})"')
         ->and($quranReaderViewSource)->toContain("\$wire.mountAction('searchQuran');")
-        ->and($quranReaderViewSource)->toContain('class="quran-page-slider"')
+        ->and($quranReaderViewSource)->toContain('class="quran-page-slider outline-none"')
         ->and($quranReaderViewSource)->toContain("\$wire.mountAction('jumpToPage')")
         ->and($quranReaderViewSource)->toContain('<x-filament-actions::modals />')
         ->and($quranReaderViewSource)->toContain('x-on:pointerdown.passive="onSwipeStart($event)"')

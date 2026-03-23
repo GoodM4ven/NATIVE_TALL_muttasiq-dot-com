@@ -594,31 +594,40 @@ document.addEventListener('alpine:init', () => {
         },
 
         buildDigitMorphSegments(previousValue, nextValue) {
-            const previous = String(previousValue ?? '');
-            const next = String(nextValue ?? '');
-            const length = Math.max(previous.length, next.length);
+            const previous = String(clampPage(previousValue, this.maxPage));
+            const next = String(clampPage(nextValue, this.maxPage));
+            const length = this.pageCounterDigitLength();
             const previousChars = previous.padStart(length, ' ').split('');
             const nextChars = next.padStart(length, ' ').split('');
 
-            const segments = nextChars
-                .map((nextChar, index) => {
-                    const previousChar = previousChars[index] ?? '';
-                    const prev = previousChar === ' ' ? '' : previousChar;
-                    const nextValueChar = nextChar === ' ' ? '' : nextChar;
+            const segments = nextChars.map((nextChar, index) => {
+                const previousChar = previousChars[index] ?? '';
+                const prev = previousChar === ' ' ? '' : previousChar;
+                const nextValueChar = nextChar === ' ' ? '' : nextChar;
 
-                    return {
-                        key: `${index}:${prev}->${nextValueChar}`,
-                        prev,
-                        next: nextValueChar,
-                        changed: prev !== nextValueChar,
-                    };
-                })
-                .filter((segment) => segment.prev !== '' || segment.next !== '');
+                return {
+                    key: `${index}:${prev}->${nextValueChar}`,
+                    prev,
+                    next: nextValueChar,
+                    changed: prev !== nextValueChar,
+                };
+            });
 
             return {
                 segments,
                 hasChanges: segments.some((segment) => segment.changed),
             };
+        },
+
+        pageCounterDigitLength() {
+            return Math.max(3, String(clampPage(this.maxPage, this.maxPage)).length);
+        },
+
+        pageCounterDisplayDigits(value) {
+            return String(clampPage(value, this.maxPage))
+                .padStart(this.pageCounterDigitLength(), ' ')
+                .split('')
+                .map((digit) => (digit === ' ' ? '' : digit));
         },
 
         triggerPageCounterPulse(previousValue, nextValue) {

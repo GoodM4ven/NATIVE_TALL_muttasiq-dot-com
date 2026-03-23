@@ -633,19 +633,22 @@
 
         .quran-page-chip-current-wrap {
             position: relative;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 2.72ch;
-            width: 2.72ch;
+            display: inline-grid;
+            place-items: center;
+            --quran-counter-digit-width: 0.72ch;
+            --quran-counter-digit-count: 3;
+            --quran-counter-track-width: calc(var(--quran-counter-digit-width) * var(--quran-counter-digit-count));
+            min-width: var(--quran-counter-track-width);
         }
 
         .quran-page-chip-current {
-            display: inline-flex;
+            display: inline-grid;
+            grid-auto-flow: column;
+            grid-auto-columns: var(--quran-counter-digit-width);
             align-items: center;
             justify-content: center;
-            min-width: 2.72ch;
-            width: 2.72ch;
+            min-width: var(--quran-counter-track-width);
+            width: var(--quran-counter-track-width);
         }
 
         .quran-page-chip-total {
@@ -662,14 +665,14 @@
 
         .quran-page-counter-morph {
             position: absolute;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            display: inline-flex;
+            inset: 0;
+            display: inline-grid;
+            grid-auto-flow: column;
+            grid-auto-columns: var(--quran-counter-digit-width);
             align-items: center;
             justify-content: center;
-            min-width: 2.72ch;
-            width: 2.72ch;
+            min-width: var(--quran-counter-track-width);
+            width: var(--quran-counter-track-width);
             pointer-events: none;
             z-index: 2;
         }
@@ -695,12 +698,21 @@
         .quran-counter-roll {
             display: grid;
             place-items: center;
+            contain: layout style;
+            width: 100%;
         }
 
         .quran-counter-cell {
             display: inline-grid;
             place-items: center;
-            min-width: 0.62ch;
+            width: var(--quran-counter-digit-width);
+        }
+
+        .quran-counter-static {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
         }
 
         .quran-counter-roll__prev,
@@ -709,7 +721,7 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            min-width: 0.62ch;
+            width: 100%;
             will-change: transform, opacity;
         }
 
@@ -1169,11 +1181,23 @@
                                 x-text="maxPage"
                             ></span>
                             <span class="quran-page-chip-separator me-1.5">/</span>
-                            <span class="quran-page-chip-current-wrap">
-                                <span
-                                    class="quran-page-chip-current"
-                                    x-text="pageInput"
-                                ></span>
+                            <span
+                                class="quran-page-chip-current-wrap"
+                                x-bind:style="`--quran-counter-digit-count: ${pageCounterDigitLength()};`"
+                            >
+                                <span class="quran-page-chip-current">
+                                    <template
+                                        x-for="(digit, digitIndex) in pageCounterDisplayDigits(pageInput)"
+                                        :key="`quran-page-current-digit-${digitIndex}`"
+                                    >
+                                        <span class="quran-counter-cell">
+                                            <span
+                                                class="quran-counter-static"
+                                                x-text="digit"
+                                            ></span>
+                                        </span>
+                                    </template>
+                                </span>
                                 <span
                                     class="quran-page-counter-morph"
                                     aria-hidden="true"
@@ -1211,7 +1235,7 @@
                 </div>
                 <div class="quran-bottom-strip-slider">
                     <input
-                        class="quran-page-slider"
+                        class="quran-page-slider outline-none"
                         type="range"
                         aria-label="التنقل بين صفحات المصحف"
                         min="1"
