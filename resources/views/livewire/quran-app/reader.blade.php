@@ -943,7 +943,7 @@
                 data-no-swipe
             >
                 <button
-                    class="quran-soorah-trigger outline-none w-[13.4rem] shrink-0"
+                    class="quran-soorah-trigger w-[13.4rem] shrink-0 outline-none"
                     type="button"
                     dir="rtl"
                     x-on:click="
@@ -1045,7 +1045,8 @@
                                                         >
                                                             <span class="inline-flex items-baseline">
                                                                 <button
-                                                                    class="quran-word-button px-0 transition outline-none"
+                                                                    class="quran-word-button px-0 outline-none transition"
+                                                                    tabindex="-1"
                                                                     type="button"
                                                                     x-bind:class="{
                                                                         'quran-segment-active': isWordActive(word),
@@ -1111,7 +1112,7 @@
                 data-no-swipe
             >
                 <button
-                    class="quran-swipe-hint outline-none quran-swipe-hint-button quran-bottom-strip-nav-prev select-none"
+                    class="quran-swipe-hint quran-swipe-hint-button quran-bottom-strip-nav-prev select-none outline-none"
                     type="button"
                     aria-label="الصفحة السابقة"
                     x-on:click.stop.prevent="$dispatch('quran-go-prev')"
@@ -1178,7 +1179,7 @@
                 </div>
                 <div class="quran-bottom-strip-slider">
                     <input
-                        class="quran-page-slider outline-none"
+                        class="quran-page-slider"
                         type="range"
                         aria-label="التنقل بين صفحات المصحف"
                         min="1"
@@ -1189,7 +1190,7 @@
                     />
                 </div>
                 <button
-                    class="quran-swipe-hint outline-none quran-swipe-hint-button quran-bottom-strip-nav-next select-none"
+                    class="quran-swipe-hint quran-swipe-hint-button quran-bottom-strip-nav-next select-none outline-none"
                     type="button"
                     aria-label="الصفحة التالية"
                     x-on:click.stop.prevent="$dispatch('quran-go-next')"

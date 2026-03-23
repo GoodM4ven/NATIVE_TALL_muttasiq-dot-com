@@ -2213,10 +2213,6 @@ document.addEventListener('alpine:init', () => {
             );
         },
 
-        isBasmallahLine(line) {
-            return String(line?.line_type ?? '') === 'basmallah';
-        },
-
         lineText(line) {
             return String(line?.text ?? '').trim();
         },
@@ -2234,10 +2230,6 @@ document.addEventListener('alpine:init', () => {
         },
 
         metaLineStyle(line) {
-            if (this.isBasmallahLine(line)) {
-                return "font-family: 'MadinaQuran', 'Amiri', 'Traditional Arabic', serif; color: var(--quran-ink);";
-            }
-
             return this.lineFontStyle();
         },
 
