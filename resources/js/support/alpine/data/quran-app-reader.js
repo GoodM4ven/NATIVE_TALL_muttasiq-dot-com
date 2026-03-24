@@ -247,7 +247,7 @@ document.addEventListener('alpine:init', () => {
         },
         search: {
             query: '',
-            minQueryLength: 4,
+            minQueryLength: 5,
             results: [],
             isLoading: false,
             isReady: false,

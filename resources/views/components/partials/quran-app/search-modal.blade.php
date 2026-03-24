@@ -65,13 +65,13 @@
                         x-text="surahLabel(result.surah_number) + ' · آية ' + result.ayah_number + ' · صفحة ' + result.page_number"
                     ></span>
                     <span
+                        class="quran-search-result-ayah font-quran"
+                        x-text="searchResultAyahText(result)"
+                    ></span>
+                    <span
                         class="quran-search-result-match-badge"
                         x-bind:data-match-tone="searchMatchTone(result)"
                         x-text="searchMatchLabel(result)"
-                    ></span>
-                    <span
-                        class="quran-search-result-ayah font-quran"
-                        x-text="searchResultAyahText(result)"
                     ></span>
                 </button>
             </template>

@@ -532,7 +532,7 @@ class QuranReaderDataService
      */
     private function collectVerseIdsByExactPhrase(string $searchQuery, int $limit): array
     {
-        $queryVariants = $this->expandSearchTextVariants($searchQuery);
+        $queryVariants = $this->expandStrictExactPhraseVariants($searchQuery);
 
         if ($queryVariants === []) {
             return [];
@@ -541,8 +541,15 @@ class QuranReaderDataService
         return DB::table('quran_verses')
             ->where(function (Builder $whereBuilder) use ($queryVariants): void {
                 foreach ($queryVariants as $variant) {
-                    $this->addBoundedPhraseConditions($whereBuilder, 'text_searchable_typed', $variant);
-                    $this->addBoundedPhraseConditions($whereBuilder, 'text_searchable', $variant);
+                    $whereBuilder
+                        ->orWhere('text_searchable_typed', $variant)
+                        ->orWhere('text_searchable_typed', 'like', $variant.' %')
+                        ->orWhere('text_searchable_typed', 'like', '% '.$variant)
+                        ->orWhere('text_searchable_typed', 'like', '% '.$variant.' %')
+                        ->orWhere('text_searchable', $variant)
+                        ->orWhere('text_searchable', 'like', $variant.' %')
+                        ->orWhere('text_searchable', 'like', '% '.$variant)
+                        ->orWhere('text_searchable', 'like', '% '.$variant.' %');
                 }
             })
             ->orderBy('ayah_index')
@@ -1116,6 +1123,42 @@ class QuranReaderDataService
     /**
      * @return array<int, string>
      */
+    private function expandStrictExactPhraseVariants(string $text): array
+    {
+        $trimmed = trim($text);
+
+        if ($trimmed === '') {
+            return [];
+        }
+
+        $legacyOrthography = $this->normalizeLegacyOrthographyForSearch($trimmed);
+        $variants = [
+            $trimmed,
+            strtr($trimmed, ['ي' => 'ی', 'ى' => 'ی', 'ك' => 'ک']),
+            strtr($trimmed, ['ی' => 'ي', 'ى' => 'ي', 'ک' => 'ك']),
+            strtr($trimmed, ['الرحمن' => 'الرحمان', 'رحمن' => 'رحمان']),
+            strtr($trimmed, ['الرحمان' => 'الرحمن', 'رحمان' => 'رحمن']),
+            $legacyOrthography,
+        ];
+
+        $normalized = [];
+
+        foreach ($variants as $variant) {
+            $value = trim((string) $variant);
+
+            if ($value === '') {
+                continue;
+            }
+
+            $normalized[$value] = true;
+        }
+
+        return array_keys($normalized);
+    }
+
+    /**
+     * @return array<int, string>
+     */
     private function expandLegacySpellingVariantsForPhrase(string $text): array
     {
         $trimmed = trim($text);
@@ -1231,15 +1274,6 @@ class QuranReaderDataService
         }
 
         return $trimmed;
-    }
-
-    private function addBoundedPhraseConditions(Builder $builder, string $column, string $variant): void
-    {
-        $builder
-            ->orWhere($column, $variant)
-            ->orWhere($column, 'like', $variant.' %')
-            ->orWhere($column, 'like', '% '.$variant)
-            ->orWhere($column, 'like', '% '.$variant.' %');
     }
 
     private function addTokenPrefixConditions(Builder $builder, string $column, string $variant): void

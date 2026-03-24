@@ -138,8 +138,8 @@ class Reader extends Component implements HasActions, HasSchemas
                     ->extraInputAttributes([
                         'id' => 'quran-reader-search-input',
                         'x-ref' => 'searchModalInput',
-                        'x-model.debounce.700ms' => 'search.query',
-                        'x-on:input.debounce.700ms' => 'updateSearchResults()',
+                        'x-model.debounce.1000ms' => 'search.query',
+                        'x-on:input.debounce.1000ms' => 'updateSearchResults()',
                         'x-on:keydown.enter.prevent' => 'confirmSearchSelection()',
                         'autocomplete' => 'off',
                         'class' => 'relative top-[0.25rem]',
