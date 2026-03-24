@@ -15,6 +15,8 @@ use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Support\Enums\Alignment;
 use Filament\Support\Enums\Width;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\HtmlString;
 use Livewire\Component;
 
 class Reader extends Component implements HasActions, HasSchemas
@@ -89,7 +91,9 @@ class Reader extends Component implements HasActions, HasSchemas
                         'class' => 'relative top-[0.25rem]',
                     ], merge: true),
             ])
-            ->modalContentFooter(fn (): View => view('livewire.quran-app.search-modal'));
+            ->modalContentFooter(
+                fn (): HtmlString => new HtmlString(Blade::render('<x-partials.quran-app.search-modal />')),
+            );
     }
 
     public function jumpToPageAction(): Action

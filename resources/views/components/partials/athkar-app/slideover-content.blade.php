@@ -1,3 +1,5 @@
+@props(['componentId', 'cards' => [], 'isMobile' => false])
+
 @php
     $isMobile = (bool) ($isMobile ?? false);
 @endphp

@@ -12,7 +12,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         resource_path('views/components/partials/quran-app/reader.blade.php'),
     );
     $quranReaderViewSource = file_get_contents(resource_path('views/livewire/quran-app/reader.blade.php'));
-    $quranSearchModalViewSource = file_get_contents(resource_path('views/livewire/quran-app/search-modal.blade.php'));
+    $quranSearchModalViewSource = file_get_contents(resource_path('views/components/partials/quran-app/search-modal.blade.php'));
     $quranReaderScriptSource = file_get_contents(
         resource_path('js/support/alpine/data/quran-app-reader.js'),
     );
@@ -140,7 +140,8 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderClassSource)->toContain('public function searchQuranAction(): Action')
         ->and($quranReaderClassSource)->toContain("TextInput::make('search')")
         ->and($quranReaderClassSource)->toContain('public function jumpToPageAction(): Action')
-        ->and($quranReaderClassSource)->toContain("->modalContentFooter(fn (): View => view('livewire.quran-app.search-modal'))")
+        ->and($quranReaderClassSource)->toContain('->modalContentFooter(')
+        ->and($quranReaderClassSource)->toContain("Blade::render('<x-partials.quran-app.search-modal />')")
         ->and($quranReaderClassSource)->toContain('->extraModalWindowAttributes([')
         ->and($quranReaderClassSource)->toContain("'id' => 'quran-reader-search-modal'")
         ->and($quranReaderClassSource)->toContain("'x-on:input' => '\$event.target.value = String(Math.min(Math.max(1, Math.trunc(Number(\$event.target.value || 1) || 1)), Math.max(1, Number(\$event.target.max) || 1)));'")

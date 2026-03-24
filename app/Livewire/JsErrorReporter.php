@@ -13,6 +13,8 @@ use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Support\Enums\Width;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\HtmlString;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -78,7 +80,11 @@ class JsErrorReporter extends Component implements HasActions, HasSchemas
                 $this->openGithubIssueAction(),
             ])
             ->modalContentFooter(
-                fn (Action $action): View => view('livewire.js-error-reporter.modal-footer', ['action' => $action]),
+                fn (Action $action): HtmlString => new HtmlString(
+                    Blade::render('<x-partials.js-error-reporter.modal-footer :action="$action" />', [
+                        'action' => $action,
+                    ]),
+                ),
             )
             ->fillForm(fn (): array => [
                 'user_note' => '',

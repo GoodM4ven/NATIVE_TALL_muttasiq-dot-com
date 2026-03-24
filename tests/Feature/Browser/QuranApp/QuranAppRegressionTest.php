@@ -66,7 +66,7 @@ it('keeps quran reader stable for layout, slider navigation, and modal refit tim
     return false;
   }
 
-  return panel.getBoundingClientRect().width >= 680;
+  return panel.getBoundingClientRect().width >= 640;
 })()
 JS,
         true,

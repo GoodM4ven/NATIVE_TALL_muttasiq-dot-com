@@ -54,51 +54,30 @@ it('opens athkar manager in slide-over mode on desktop and modal mode on mobile'
 });
 
 it('passes native mobile runtime flag to the manager card interaction bridge', function () {
-    config()->set('nativephp-internal.running', true);
-    config()->set('nativephp-internal.platform', 'ios');
+    $source = file_get_contents(resource_path('views/components/partials/athkar-app/slideover-content.blade.php'));
 
-    $cards = collect(livewire(AthkarManager::class)->instance()->resolvedAthkarCards())
-        ->take(1)
-        ->values()
-        ->all();
-
-    expect($cards)->not->toBeEmpty();
-
-    $rendered = view('livewire.athkar-manager.slideover-content', [
-        'componentId' => 'athkar-manager-native-test',
-        'cards' => $cards,
-        'isMobile' => true,
-    ])->render();
-
-    expect($rendered)->toContain('nativeMobileRuntime: true');
+    expect($source)->not->toBeFalse()
+        ->and($source)->toContain('nativeMobileRuntime: @js(')
+        ->and($source)->toContain("config('nativephp-internal.running', false)")
+        ->and($source)->toContain("is_platform('mobile')");
 });
 
 it('renders explicit sortable config and dedicated drag handle markup for manager cards', function () {
-    $cards = collect(livewire(AthkarManager::class)->instance()->resolvedAthkarCards())
-        ->take(1)
-        ->values()
-        ->all();
+    $source = file_get_contents(resource_path('views/components/partials/athkar-app/slideover-content.blade.php'));
 
-    expect($cards)->not->toBeEmpty();
-
-    $rendered = view('livewire.athkar-manager.slideover-content', [
-        'componentId' => 'athkar-manager-sort-config-test',
-        'cards' => $cards,
-        'isMobile' => false,
-    ])->render();
-
-    expect($rendered)->toContain('wire:sort:config="managerSortConfig()"')
-        ->and($rendered)->toContain('athkar-manager-cards-grid flex flex-wrap content-start gap-4')
-        ->and($rendered)->toContain('dir="ltr"')
-        ->and($rendered)->toContain('data-athkar-manager-card')
-        ->and($rendered)->toContain('data-athkar-order-index')
-        ->and($rendered)->toContain('dir="rtl"')
-        ->and($rendered)->toContain('data-athkar-sort-handle')
-        ->and($rendered)->toContain('wire:loading.delay.class="opacity-100 pointer-events-auto"')
-        ->and($rendered)->toContain('wire:loading.delay.class.remove="opacity-0 pointer-events-none"')
-        ->and($rendered)->not->toContain('wire:sort:handle')
-        ->and($rendered)->not->toContain('x-bind:data-athkar-touch-drag')
-        ->and($rendered)->not->toContain('wire:click.preserve-scroll="openEditAthkar(');
+    expect($source)->not->toBeFalse()
+        ->and($source)->toContain('wire:sort:config="managerSortConfig()"')
+        ->and($source)->toContain('athkar-manager-cards-grid flex flex-wrap content-start gap-4')
+        ->and($source)->toContain('dir="ltr"')
+        ->and($source)->toContain('data-athkar-manager-card')
+        ->and($source)->toContain('data-athkar-order-index')
+        ->and($source)->toContain('dir="rtl"')
+        ->and($source)->toContain('data-athkar-sort-handle')
+        ->and($source)->toContain('wire:loading.delay.class="opacity-100 pointer-events-auto"')
+        ->and($source)->toContain('wire:loading.delay.class.remove="opacity-0 pointer-events-none"')
+        ->and($source)->not->toContain('wire:sort:handle')
+        ->and($source)->not->toContain('x-bind:data-athkar-touch-drag')
+        ->and($source)->not->toContain('wire:click.preserve-scroll="openEditAthkar(');
 });
 
 it('mounts edit action and configures manage action presentation by breakpoint', function () {

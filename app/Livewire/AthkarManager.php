@@ -16,6 +16,8 @@ use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Support\Enums\Width;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\HtmlString;
 use Livewire\Component;
 
 class AthkarManager extends Component implements HasActions, HasSchemas
@@ -66,11 +68,18 @@ class AthkarManager extends Component implements HasActions, HasSchemas
             ])
             ->modalSubmitAction(false)
             ->modalCancelActionLabel('إغلاق')
-            ->modalContent(fn (): View => view('livewire.athkar-manager.slideover-content', [
-                'componentId' => $this->getId(),
-                'cards' => $this->resolvedAthkarCards(),
-                'isMobile' => $this->isManageAthkarMobile,
-            ]))
+            ->modalContent(
+                fn (): HtmlString => new HtmlString(
+                    Blade::render(
+                        '<x-partials.athkar-app.slideover-content :component-id="$componentId" :cards="$cards" :is-mobile="$isMobile" />',
+                        [
+                            'componentId' => $this->getId(),
+                            'cards' => $this->resolvedAthkarCards(),
+                            'isMobile' => $this->isManageAthkarMobile,
+                        ],
+                    ),
+                ),
+            )
             ->action(static fn (): null => null);
     }
 
