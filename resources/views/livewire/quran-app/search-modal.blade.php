@@ -7,7 +7,7 @@
         x-cloak
     >
         <div
-            class="quran-search-feedback"
+            class="quran-search-feedback mt-2"
             x-cloak
             x-show="normalizeSearchQuery(search.query).length > 0 && normalizeSearchQuery(search.query).length < search.minQueryLength"
             x-transition.opacity.duration.220ms
@@ -15,14 +15,14 @@
         ></div>
 
         <div
-            class="quran-search-feedback"
+            class="quran-search-feedback mt-2"
             x-cloak
             x-show="normalizeSearchQuery(search.query).length >= search.minQueryLength && search.isLoading"
             x-transition.opacity.duration.220ms
         >جاري البحث...</div>
 
         <div
-            class="quran-search-feedback"
+            class="quran-search-feedback mt-2"
             x-cloak
             x-show="normalizeSearchQuery(search.query).length >= search.minQueryLength && !search.isLoading && search.results.length === 0"
             x-transition.opacity.duration.220ms
