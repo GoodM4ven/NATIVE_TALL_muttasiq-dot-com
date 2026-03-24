@@ -157,9 +157,10 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderDataServiceSource)->toContain('injectSyntheticBasmallahAfterSurahHeaders')
         ->and($quranReaderDataServiceSource)->toContain('applyTargetedSurahHeaderCarryovers')
         ->and($quranReaderDataServiceSource)->toContain('quran-reader-search-index-v1')
+        ->and($quranReaderDataServiceSource)->toContain('use GoodMaven\Arabicable\Support\Quran\QuranSearchText;')
         ->and($quranReaderDataServiceSource)->toContain('prepareSearchTokens(array $tokens): array')
-        ->and($quranReaderDataServiceSource)->toContain('collapseVocativeSpacingInPhrase(string $text): string')
-        ->and($quranReaderDataServiceSource)->toContain('stripVocativeParticlesFromPhrase(string $text): string')
+        ->and($quranReaderDataServiceSource)->toContain('return QuranSearchText::expandVariants($text);')
+        ->and($quranReaderDataServiceSource)->toContain('return QuranSearchText::expandStrictExactPhraseVariants($text);')
         ->and($quranReaderDataServiceSource)->toContain("selectRaw('verse_id, MIN(ayah_index) AS ayah_index')")
         ->and($quranReaderDataServiceSource)->toContain("->groupBy('verse_id')");
 

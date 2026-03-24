@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Quran;
 
 use GoodMaven\Arabicable\Facades\ArabicFilter;
+use GoodMaven\Arabicable\Support\Quran\QuranSearchText;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -1014,44 +1015,7 @@ class QuranReaderDataService
 
     private function normalizeQuranSearchQuery(string $text): string
     {
-        $prepared = strtr($text, [
-            'أ' => 'ا',
-            'إ' => 'ا',
-            'آ' => 'ا',
-            'ٱ' => 'ا',
-            'ٲ' => 'ا',
-            'ٳ' => 'ا',
-            'ٵ' => 'ا',
-            'ؤ' => 'و',
-            'ئ' => 'ي',
-            'ی' => 'ي',
-            'ى' => 'ي',
-            'ے' => 'ي',
-            'ۍ' => 'ي',
-            'ې' => 'ي',
-            'ۑ' => 'ي',
-            'ک' => 'ك',
-        ]);
-
-        $prepared = preg_replace('/[\x{200B}-\x{200F}\x{061C}\x{2066}-\x{2069}\x{FEFF}]/u', '', $prepared)
-            ?? $prepared;
-        $prepared = preg_replace('/([\p{Arabic}])\x{0670}/u', '$1ا', $prepared) ?? $prepared;
-        $prepared = preg_replace('/\x{0670}/u', 'ا', $prepared) ?? $prepared;
-
-        $normalized = ArabicFilter::forSearch($prepared);
-
-        return strtr($normalized, [
-            'الرحمان' => 'الرحمن',
-            'رحمان' => 'رحمن',
-            'الصلوة' => 'الصلاة',
-            'صلوة' => 'صلاة',
-            'الزكوة' => 'الزكاة',
-            'زكوة' => 'زكاة',
-            'الحيوة' => 'الحياة',
-            'حيوة' => 'حياة',
-            'الربوا' => 'الربا',
-            'ربوا' => 'ربا',
-        ]);
+        return QuranSearchText::normalizeQuery($text);
     }
 
     /**
@@ -1059,73 +1023,7 @@ class QuranReaderDataService
      */
     private function expandSearchTextVariants(string $text): array
     {
-        $trimmed = trim($text);
-
-        if ($trimmed === '') {
-            return [];
-        }
-
-        $withoutConjunctions = $this->stripLeadingConjunctionsFromPhrase($trimmed);
-        $collapsedVocative = $this->collapseVocativeSpacingInPhrase($trimmed);
-        $vocativeBaniShortcut = $this->normalizeVocativeBaniShortcutInPhrase($trimmed);
-        $withoutVocative = $this->stripVocativeParticlesFromPhrase($trimmed);
-        $legacyOrthography = $this->normalizeLegacyOrthographyForSearch($trimmed);
-        $legacyOrthographyVocativeBaniShortcut = $this->normalizeLegacyOrthographyForSearch(
-            $vocativeBaniShortcut,
-        );
-        $legacyOrthographyWithoutConjunctions = $this->normalizeLegacyOrthographyForSearch(
-            $withoutConjunctions,
-        );
-        $legacyOrthographyCollapsedVocative = $this->normalizeLegacyOrthographyForSearch(
-            $collapsedVocative,
-        );
-        $legacyOrthographyWithoutVocative = $this->normalizeLegacyOrthographyForSearch(
-            $withoutVocative,
-        );
-        $legacySpellingVariants = $this->expandLegacySpellingVariantsForPhrase($trimmed);
-        $legacySpellingVariantsWithoutConjunctions = $this->expandLegacySpellingVariantsForPhrase(
-            $withoutConjunctions,
-        );
-        $legacySpellingVariantsWithoutVocative = $this->expandLegacySpellingVariantsForPhrase(
-            $withoutVocative,
-        );
-        $variants = [
-            $trimmed,
-            strtr($trimmed, ['ي' => 'ی', 'ى' => 'ی', 'ك' => 'ک']),
-            strtr($trimmed, ['ی' => 'ي', 'ى' => 'ي', 'ک' => 'ك']),
-            strtr($trimmed, ['الرحمن' => 'الرحمان', 'رحمن' => 'رحمان']),
-            strtr($trimmed, ['الرحمان' => 'الرحمن', 'رحمان' => 'رحمن']),
-            $withoutConjunctions,
-            $collapsedVocative,
-            $vocativeBaniShortcut,
-            $this->collapseVocativeSpacingInPhrase($withoutConjunctions),
-            $withoutVocative,
-            $this->stripVocativeParticlesFromPhrase($withoutConjunctions),
-            $legacyOrthography,
-            $legacyOrthographyVocativeBaniShortcut,
-            $legacyOrthographyWithoutConjunctions,
-            $legacyOrthographyCollapsedVocative,
-            $legacyOrthographyWithoutVocative,
-            $this->normalizeQuestionVerbSpellingsInPhrase($trimmed),
-            $this->normalizeQuestionVerbSpellingsInPhrase($withoutConjunctions),
-            ...$legacySpellingVariants,
-            ...$legacySpellingVariantsWithoutConjunctions,
-            ...$legacySpellingVariantsWithoutVocative,
-        ];
-
-        $normalized = [];
-
-        foreach ($variants as $variant) {
-            $value = trim((string) $variant);
-
-            if ($value === '') {
-                continue;
-            }
-
-            $normalized[$value] = true;
-        }
-
-        return array_keys($normalized);
+        return QuranSearchText::expandVariants($text);
     }
 
     /**
@@ -1133,100 +1031,7 @@ class QuranReaderDataService
      */
     private function expandStrictExactPhraseVariants(string $text): array
     {
-        $trimmed = trim($text);
-
-        if ($trimmed === '') {
-            return [];
-        }
-
-        $collapsedVocative = $this->collapseVocativeSpacingInPhrase($trimmed);
-        $vocativeBaniShortcut = $this->normalizeVocativeBaniShortcutInPhrase($trimmed);
-        $legacyOrthography = $this->normalizeLegacyOrthographyForSearch($trimmed);
-        $legacyOrthographyCollapsedVocative = $this->normalizeLegacyOrthographyForSearch(
-            $collapsedVocative,
-        );
-        $legacyOrthographyVocativeBaniShortcut = $this->normalizeLegacyOrthographyForSearch(
-            $vocativeBaniShortcut,
-        );
-        $baseVariants = [
-            $trimmed,
-            $collapsedVocative,
-            $vocativeBaniShortcut,
-            $legacyOrthography,
-            $legacyOrthographyCollapsedVocative,
-            $legacyOrthographyVocativeBaniShortcut,
-        ];
-        $variants = [];
-
-        foreach ($baseVariants as $baseVariant) {
-            $variants[] = $baseVariant;
-            $variants[] = strtr($baseVariant, ['ي' => 'ی', 'ى' => 'ی', 'ك' => 'ک']);
-            $variants[] = strtr($baseVariant, ['ی' => 'ي', 'ى' => 'ي', 'ک' => 'ك']);
-            $variants[] = strtr($baseVariant, ['الرحمن' => 'الرحمان', 'رحمن' => 'رحمان']);
-            $variants[] = strtr($baseVariant, ['الرحمان' => 'الرحمن', 'رحمان' => 'رحمن']);
-        }
-
-        $normalized = [];
-
-        foreach ($variants as $variant) {
-            $value = trim((string) $variant);
-
-            if ($value === '') {
-                continue;
-            }
-
-            $normalized[$value] = true;
-        }
-
-        return array_keys($normalized);
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    private function expandLegacySpellingVariantsForPhrase(string $text): array
-    {
-        $trimmed = trim($text);
-
-        if ($trimmed === '') {
-            return [];
-        }
-
-        $normalizedIla = preg_replace('/(^|\s)الي(?=\s|$)/u', '$1اليا', $trimmed) ?? $trimmed;
-        $normalizedWawVerb = preg_replace('/(^|\s)([\p{Arabic}]{2,}عو)(?=\s|$)/u', '$1$2ا', $trimmed) ?? $trimmed;
-        $normalizedCombined = preg_replace('/(^|\s)([\p{Arabic}]{2,}عو)(?=\s|$)/u', '$1$2ا', $normalizedIla)
-            ?? $normalizedIla;
-
-        $variants = [];
-
-        foreach ([$normalizedIla, $normalizedWawVerb, $normalizedCombined] as $candidate) {
-            $value = trim((string) $candidate);
-
-            if ($value === '' || $value === $trimmed) {
-                continue;
-            }
-
-            $variants[] = $value;
-        }
-
-        return array_values(array_unique($variants));
-    }
-
-    private function normalizeQuestionVerbSpellingsInPhrase(string $text): string
-    {
-        $tokens = preg_split('/\s+/u', trim($text)) ?: [];
-
-        if ($tokens === []) {
-            return '';
-        }
-
-        $normalized = [];
-
-        foreach ($tokens as $token) {
-            $normalized[] = $this->normalizeQuestionVerbToken($token);
-        }
-
-        return trim(implode(' ', $normalized));
+        return QuranSearchText::expandStrictExactPhraseVariants($text);
     }
 
     /**
@@ -1235,70 +1040,7 @@ class QuranReaderDataService
      */
     private function prepareSearchTokens(array $tokens): array
     {
-        $normalized = [];
-
-        foreach ($tokens as $token) {
-            $value = trim($token);
-
-            if ($value === '') {
-                continue;
-            }
-
-            if ($value === 'يا') {
-                continue;
-            }
-
-            if (mb_strlen($value) < 2) {
-                continue;
-            }
-
-            $normalized[$value] = true;
-        }
-
-        if ($normalized !== []) {
-            return array_keys($normalized);
-        }
-
-        $fallback = [];
-
-        foreach ($tokens as $token) {
-            $value = trim($token);
-
-            if ($value === '') {
-                continue;
-            }
-
-            $fallback[$value] = true;
-        }
-
-        return array_keys($fallback);
-    }
-
-    private function normalizeQuestionVerbToken(string $token): string
-    {
-        $trimmed = trim($token);
-
-        if ($trimmed === '') {
-            return '';
-        }
-
-        $patterns = [
-            '/^فاسال/u' => 'فسل',
-            '/^فسال/u' => 'فسل',
-            '/^واسال/u' => 'وسل',
-            '/^وسال/u' => 'وسل',
-            '/^اسال/u' => 'سل',
-        ];
-
-        foreach ($patterns as $pattern => $replacement) {
-            if (preg_match($pattern, $trimmed) !== 1) {
-                continue;
-            }
-
-            return preg_replace($pattern, $replacement, $trimmed) ?? $trimmed;
-        }
-
-        return $trimmed;
+        return QuranSearchText::prepareTokens($tokens);
     }
 
     private function addTokenPrefixConditions(Builder $builder, string $column, string $variant): void
@@ -1306,60 +1048,6 @@ class QuranReaderDataService
         $builder
             ->orWhere($column, $variant)
             ->orWhere($column, 'like', $variant.'%');
-    }
-
-    private function stripLeadingConjunctionsFromPhrase(string $text): string
-    {
-        $tokens = preg_split('/\s+/u', trim($text)) ?: [];
-        $normalized = [];
-
-        foreach ($tokens as $token) {
-            $normalized[] = $this->stripLeadingConjunction($token);
-        }
-
-        return trim(implode(' ', $normalized));
-    }
-
-    private function collapseVocativeSpacingInPhrase(string $text): string
-    {
-        return trim((string) (preg_replace('/(^|\s)يا\s+([\p{Arabic}]+)/u', '$1يا$2', trim($text)) ?? $text));
-    }
-
-    private function normalizeVocativeBaniShortcutInPhrase(string $text): string
-    {
-        return trim((string) (preg_replace('/(^|\s)يبن(?=[\p{Arabic}])/u', '$1يابن', trim($text)) ?? $text));
-    }
-
-    private function stripVocativeParticlesFromPhrase(string $text): string
-    {
-        return trim((string) (preg_replace('/(^|\s)يا\s+/u', '$1', trim($text)) ?? $text));
-    }
-
-    private function stripLeadingConjunction(string $token): string
-    {
-        $trimmed = trim($token);
-
-        if (mb_strlen($trimmed) < 3) {
-            return $trimmed;
-        }
-
-        if (preg_match('/^[وف][\p{Arabic}]/u', $trimmed) !== 1) {
-            return $trimmed;
-        }
-
-        return mb_substr($trimmed, 1);
-    }
-
-    private function normalizeLegacyOrthographyForSearch(string $text): string
-    {
-        return strtr(trim($text), [
-            'الصلاة' => 'الصلواة',
-            'صلاة' => 'صلواة',
-            'الزكاة' => 'الزكواة',
-            'زكاة' => 'زكواة',
-            'الحياة' => 'الحيوة',
-            'حياة' => 'حيوة',
-        ]);
     }
 
     private function buildSearchSnippet(string $normalizedVerseText, string $searchQuery): string
