@@ -2,7 +2,7 @@
     class="{{ \Illuminate\Support\Arr::toCssClasses([
         'bottom-3' => !is_platform('mobile'),
         'bottom-7' => is_platform('mobile'),
-        'fixed inset-x-0 z-30 flex w-full max-w-full justify-center overflow-hidden px-4 opacity-0 transition-opacity sm:w-auto sm:max-w-none sm:px-6 pointer-events-none',
+        'fixed inset-x-0 z-30 flex w-full max-w-full justify-center overflow-hidden px-4 opacity-0 transition-opacity sm:w-auto sm:max-w-none sm:px-6 pointer-events-none xl:[zoom:1.25]',
     ]) }}"
     data-testid="copyright-version-shell"
     x-bind:class="{

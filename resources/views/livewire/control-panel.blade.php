@@ -1,6 +1,6 @@
 <div>
     <div
-        class="inset-e-10 fixed top-7 z-30 sm:top-5 md:top-8"
+        class="inset-e-10 fixed top-7 z-30 sm:top-5 md:top-8 xl:[zoom:1.25]"
         data-stack-item
         wire:ignore
         x-transition

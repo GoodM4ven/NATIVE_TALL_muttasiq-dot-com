@@ -25,6 +25,17 @@
         line-height: var(--tw-leading, 1.6);
     }
 
+    @media (min-width: 80rem) {
+        #control-panel-modal,
+        #athkar-manager-modal,
+        #athkar-edit-modal,
+        #athkar-create-modal,
+        #athkar-delete-modal,
+        #athkar-reset-modal {
+            zoom: 1.25;
+        }
+    }
+
     #quran-reader-search-modal {
         border-color: color-mix(in srgb, var(--quran-panel-border) 86%, transparent);
         background: linear-gradient(

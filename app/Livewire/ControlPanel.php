@@ -43,6 +43,9 @@ class ControlPanel extends Component implements HasActions, HasSchemas
             ->label('لوحة التحكم')
             ->modalDescription('بعض المعلومات والتفضيلات في كيفية عمل التطبيق')
             ->modalSubmitActionLabel('حفظ')
+            ->extraModalWindowAttributes([
+                'id' => 'control-panel-modal',
+            ])
             ->fillForm(fn (): array => $this->loadControlPanel())
             ->schema([
                 Tabs::make('Tabs')

@@ -1,5 +1,5 @@
 <div
-    class="absolute inset-0 flex items-center justify-center"
+    class="absolute inset-0 flex items-center justify-center xl:[zoom:1.25]"
     x-cloak
     x-show="views['main-menu'].isOpen"
     x-transition:enter="transition-[opacity,filter] ease-out duration-1000 delay-400"

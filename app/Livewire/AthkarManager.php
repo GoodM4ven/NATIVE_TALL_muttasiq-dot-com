@@ -60,6 +60,9 @@ class AthkarManager extends Component implements HasActions, HasSchemas
             ->modalAutofocus(false)
             ->slideOver(! $this->isManageAthkarMobile)
             ->modalWidth($this->isManageAthkarMobile ? Width::FiveExtraLarge : Width::SevenExtraLarge)
+            ->extraModalWindowAttributes([
+                'id' => 'athkar-manager-modal',
+            ])
             ->registerModalActions([
                 $this->editAthkarAction(),
                 $this->createAthkarAction(),
@@ -90,6 +93,9 @@ class AthkarManager extends Component implements HasActions, HasSchemas
             ->modalHeading('تعديل الذكر')
             ->modalAutofocus(false)
             ->modalSubmitActionLabel('حفظ التعديل')
+            ->extraModalWindowAttributes([
+                'id' => 'athkar-edit-modal',
+            ])
             ->extraModalFooterActions([
                 Action::make('deleteAthkarFromEdit')
                     ->label('حذف الذكر')
@@ -138,6 +144,9 @@ class AthkarManager extends Component implements HasActions, HasSchemas
             ->modalHeading('إضافة ذكر جديد')
             ->modalAutofocus(false)
             ->modalSubmitActionLabel('إضافة')
+            ->extraModalWindowAttributes([
+                'id' => 'athkar-create-modal',
+            ])
             ->fillForm(fn (): array => [
                 'order' => max(1, $this->maxResolvedOrder() + 1),
                 'time' => ThikrTime::Shared->value,
@@ -181,6 +190,9 @@ class AthkarManager extends Component implements HasActions, HasSchemas
             ->modalHeading('حذف الذكر')
             ->modalAutofocus(false)
             ->modalDescription('سيتم إخفاء الذكر محليًا ويمكن استعادته عبر زر استعادة الكل.')
+            ->extraModalWindowAttributes([
+                'id' => 'athkar-delete-modal',
+            ])
             ->action(function (array $arguments): void {
                 $thikrId = (int) ($arguments['thikrId'] ?? 0);
 
@@ -203,6 +215,9 @@ class AthkarManager extends Component implements HasActions, HasSchemas
             ->modalAutofocus(false)
             ->modalDescription('سيتم حذف كل التعديلات المحلية، بما فيها الأذكار المضافة.')
             ->modalSubmitActionLabel('نعم، استعادة الكل')
+            ->extraModalWindowAttributes([
+                'id' => 'athkar-reset-modal',
+            ])
             ->action(function (): void {
                 if ($this->resetAllAthkarOverrides()) {
                     notify('heroicon-o-arrow-path', 'تمت الاستعادة', 'أُعيدت جميع الأذكار للحالة الافتراضية.');
