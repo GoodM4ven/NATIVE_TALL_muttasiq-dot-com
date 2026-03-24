@@ -277,6 +277,21 @@
             opacity: 0.48;
         }
 
+        @media (min-width: 1024px) and (max-width: 1279px) {
+            .quran-app-sector__chip {
+                font-size: clamp(1.28rem, 2.7vw, 2.05rem);
+            }
+
+            .quran-app-sector__chip-lock-icon {
+                width: clamp(0.92rem, 1.45vw, 1.3rem);
+                height: clamp(0.92rem, 1.45vw, 1.3rem);
+            }
+
+            .quran-app-sector__chip-lock-caption {
+                font-size: 1.16rem;
+            }
+        }
+
         .quran-app-gate-geometry {
             position: absolute;
             inset: 0;
@@ -289,6 +304,7 @@
             left: var(--gate-cx);
             top: var(--gate-cy);
             width: clamp(34rem, 120vw, 1040rem);
+            height: clamp(34rem, 120vw, 1040rem);
             aspect-ratio: 1;
             transform: translate(-50%, -50%);
             border-radius: 999px;
@@ -527,10 +543,6 @@
                     0 0 14px color-mix(in srgb, var(--quran-gold-3) 26%, transparent);
             }
 
-            .quran-app-gate-focal-dim {
-                width: 96vw;
-            }
-
             .quran-app-gate-anchor::before {
                 inset: 0.38rem;
                 opacity: 0.66;
@@ -721,6 +733,7 @@
         <div
             class="quran-app-gate-focal-dim"
             aria-hidden="true"
+            x-bind:style="focalDimStyle()"
         ></div>
 
         <div
