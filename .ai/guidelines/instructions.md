@@ -3,6 +3,7 @@
 This shared source code base is representing the web version primarily, the one that serves the administration panel and the API. There are special changes via NativePHP for multiple platforms; distinguished between using `is_platform` global function helper. And since it's a `WebView`, performance is our primary objective.
 
 ## Terminology
+- Answer in English always.
 - When saying "mobile" broadly, then it's both `base` breakpoint in web small mobile screens and the native Android and IOS apps; unless explicitly told otherwise.
 - When saying a "click" broadly, keep in mind that it would mean a "tap" for mobile and tablet devices; unless explicitly told otherwise. And usually that "touch" is doing the same thing a "hover" does in web big screens.
 
@@ -38,7 +39,7 @@ This shared source code base is representing the web version primarily, the one 
 - You can check out what Laravel setup requires for this application to work in [composer.json]'s `setup` script.
 
 ## Testing
-- Do not write tests unless explicitely told to. And if you see doing a test for the feature is essential, then ask to do it.
+- Do not write tests unless explicitely told to. But when you're implementing a new main feature, do create a new test then.
 - When told to write tests, try to find first a related feature test and try to add to it, if it was suitable and simple enough to do.
 - Feature tests must be put inside either App or Browser folders, where Browser is for PestPHP browser testing.
 - PestPHP browser testing is buggy currently, and our setup is in a docker container, so make sure you're using [.scripts/testing] scripts that account for the setup.

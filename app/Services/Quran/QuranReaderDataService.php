@@ -992,8 +992,8 @@ class QuranReaderDataService
                 'rank' => 3,
             ],
             'root_tokens' => [
-                'tone' => 'info',
-                'shade' => 700,
+                'tone' => 'danger',
+                'shade' => 500,
                 'label' => 'مطابقة جذرية',
                 'rank' => 4,
             ],
@@ -1033,6 +1033,8 @@ class QuranReaderDataService
             'ک' => 'ك',
         ]);
 
+        $prepared = preg_replace('/[\x{200B}-\x{200F}\x{061C}\x{2066}-\x{2069}\x{FEFF}]/u', '', $prepared)
+            ?? $prepared;
         $prepared = preg_replace('/([\p{Arabic}])\x{0670}/u', '$1ا', $prepared) ?? $prepared;
         $prepared = preg_replace('/\x{0670}/u', 'ا', $prepared) ?? $prepared;
 
@@ -1065,8 +1067,12 @@ class QuranReaderDataService
 
         $withoutConjunctions = $this->stripLeadingConjunctionsFromPhrase($trimmed);
         $collapsedVocative = $this->collapseVocativeSpacingInPhrase($trimmed);
+        $vocativeBaniShortcut = $this->normalizeVocativeBaniShortcutInPhrase($trimmed);
         $withoutVocative = $this->stripVocativeParticlesFromPhrase($trimmed);
         $legacyOrthography = $this->normalizeLegacyOrthographyForSearch($trimmed);
+        $legacyOrthographyVocativeBaniShortcut = $this->normalizeLegacyOrthographyForSearch(
+            $vocativeBaniShortcut,
+        );
         $legacyOrthographyWithoutConjunctions = $this->normalizeLegacyOrthographyForSearch(
             $withoutConjunctions,
         );
@@ -1091,10 +1097,12 @@ class QuranReaderDataService
             strtr($trimmed, ['الرحمان' => 'الرحمن', 'رحمان' => 'رحمن']),
             $withoutConjunctions,
             $collapsedVocative,
+            $vocativeBaniShortcut,
             $this->collapseVocativeSpacingInPhrase($withoutConjunctions),
             $withoutVocative,
             $this->stripVocativeParticlesFromPhrase($withoutConjunctions),
             $legacyOrthography,
+            $legacyOrthographyVocativeBaniShortcut,
             $legacyOrthographyWithoutConjunctions,
             $legacyOrthographyCollapsedVocative,
             $legacyOrthographyWithoutVocative,
@@ -1131,15 +1139,32 @@ class QuranReaderDataService
             return [];
         }
 
+        $collapsedVocative = $this->collapseVocativeSpacingInPhrase($trimmed);
+        $vocativeBaniShortcut = $this->normalizeVocativeBaniShortcutInPhrase($trimmed);
         $legacyOrthography = $this->normalizeLegacyOrthographyForSearch($trimmed);
-        $variants = [
+        $legacyOrthographyCollapsedVocative = $this->normalizeLegacyOrthographyForSearch(
+            $collapsedVocative,
+        );
+        $legacyOrthographyVocativeBaniShortcut = $this->normalizeLegacyOrthographyForSearch(
+            $vocativeBaniShortcut,
+        );
+        $baseVariants = [
             $trimmed,
-            strtr($trimmed, ['ي' => 'ی', 'ى' => 'ی', 'ك' => 'ک']),
-            strtr($trimmed, ['ی' => 'ي', 'ى' => 'ي', 'ک' => 'ك']),
-            strtr($trimmed, ['الرحمن' => 'الرحمان', 'رحمن' => 'رحمان']),
-            strtr($trimmed, ['الرحمان' => 'الرحمن', 'رحمان' => 'رحمن']),
+            $collapsedVocative,
+            $vocativeBaniShortcut,
             $legacyOrthography,
+            $legacyOrthographyCollapsedVocative,
+            $legacyOrthographyVocativeBaniShortcut,
         ];
+        $variants = [];
+
+        foreach ($baseVariants as $baseVariant) {
+            $variants[] = $baseVariant;
+            $variants[] = strtr($baseVariant, ['ي' => 'ی', 'ى' => 'ی', 'ك' => 'ک']);
+            $variants[] = strtr($baseVariant, ['ی' => 'ي', 'ى' => 'ي', 'ک' => 'ك']);
+            $variants[] = strtr($baseVariant, ['الرحمن' => 'الرحمان', 'رحمن' => 'رحمان']);
+            $variants[] = strtr($baseVariant, ['الرحمان' => 'الرحمن', 'رحمان' => 'رحمن']);
+        }
 
         $normalized = [];
 
@@ -1298,6 +1323,11 @@ class QuranReaderDataService
     private function collapseVocativeSpacingInPhrase(string $text): string
     {
         return trim((string) (preg_replace('/(^|\s)يا\s+([\p{Arabic}]+)/u', '$1يا$2', trim($text)) ?? $text));
+    }
+
+    private function normalizeVocativeBaniShortcutInPhrase(string $text): string
+    {
+        return trim((string) (preg_replace('/(^|\s)يبن(?=[\p{Arabic}])/u', '$1يابن', trim($text)) ?? $text));
     }
 
     private function stripVocativeParticlesFromPhrase(string $text): string

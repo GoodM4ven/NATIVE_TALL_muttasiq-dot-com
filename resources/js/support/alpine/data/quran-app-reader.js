@@ -2616,6 +2616,7 @@ document.addEventListener('alpine:init', () => {
 
         normalizeSearchQuery(value) {
             return String(value ?? '')
+                .replace(/[\u200b-\u200f\u061c\u2066-\u2069\ufeff]/g, '')
                 .replace(/\u0640/g, '')
                 .replace(/[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED]/g, '')
                 .replace(/[أإآٱ]/g, 'ا')

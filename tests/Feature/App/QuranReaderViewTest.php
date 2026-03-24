@@ -226,6 +226,43 @@ it('returns matches for legacy orthography phrases in quran search endpoint', fu
         ))->toBeTrue();
 });
 
+it('normalizes invisible directional chars in quran search queries while preserving exact phrase ranking', function () {
+    if (! \Illuminate\Support\Facades\Schema::hasTable('quran_verses')) {
+        $this->markTestSkipped('Quran verses table is unavailable.');
+    }
+
+    $vocativeQueryWithZwnj = "ي\u{200C}بني أقم الصلاة";
+    $vocativeResponse = $this->getJson(route('quran-reader-search-index', [
+        'q' => $vocativeQueryWithZwnj,
+    ], false));
+
+    $vocativeResponse->assertSuccessful();
+
+    $vocativeItems = $vocativeResponse->json('items', []);
+
+    expect($vocativeItems)->toBeArray()->not->toBeEmpty()
+        ->and(count($vocativeItems))->toBeGreaterThan(1)
+        ->and(collect($vocativeItems)->contains(
+            static fn (array $item): bool => (int) ($item['surah_number'] ?? 0) === 31
+                && (int) ($item['ayah_number'] ?? 0) === 17
+                && (string) ($item['match_strategy'] ?? '') === 'exact_phrase',
+        ))->toBeTrue();
+
+    $invocationQueryWithRlm = "وقال ربكم\u{200F} ادعوني أستجب لكم";
+    $invocationResponse = $this->getJson(route('quran-reader-search-index', [
+        'q' => $invocationQueryWithRlm,
+    ], false));
+
+    $invocationResponse->assertSuccessful();
+
+    $invocationItems = $invocationResponse->json('items', []);
+
+    expect($invocationItems)->toBeArray()->not->toBeEmpty()
+        ->and((int) ($invocationItems[0]['surah_number'] ?? 0))->toBe(40)
+        ->and((int) ($invocationItems[0]['ayah_number'] ?? 0))->toBe(60)
+        ->and((string) ($invocationItems[0]['match_strategy'] ?? ''))->toBe('exact_phrase');
+});
+
 it('injects visible basmallah lines under late-page surah headers', function () {
     if (! \Illuminate\Support\Facades\Schema::hasTable('quran_mushaf_lines')) {
         $this->markTestSkipped('Quran mushaf lines table is unavailable.');
