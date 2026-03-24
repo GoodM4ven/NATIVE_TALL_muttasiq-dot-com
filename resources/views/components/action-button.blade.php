@@ -12,7 +12,7 @@
 
 @php
     $baseButtonClasses =
-        'relative grid h-10 w-10 rotate-45 place-items-center overflow-hidden Xrounded-lg border-2 shadow transition-all outline-none rounded-md focus:ring-2 will-change-auto in-data-loading:opacity-0!';
+        'relative grid h-10 w-10 rotate-45 place-items-center overflow-hidden Xrounded-lg border-2 shadow transition-all outline-none rounded-md focus:ring-2 will-change-auto in-data-loading:opacity-0! sm:h-9 sm:w-9 md:h-8 md:w-8 lg:h-10 lg:w-10';
     $defaultButtonClasses = $useInvertedStyle
         ? 'border-primary-500 shadow-primary-500/30 dark:border-primary-100/60 dark:active:border-primary-400 dark:shadow-primary-500/30 bg-[var(--background)] dark:bg-[var(--background-dark)] focus:ring-primary-300 focus:dark:ring-primary-50 active:ring-primary-300 active:dark:ring-primary-300'
         : 'border-primary-500 shadow-primary-500/30 dark:border-primary-400 dark:shadow-primary-500/30 bg-primary-600 dark:bg-primary-50 focus:ring-primary-200 focus:dark:ring-primary-50 active:ring-primary-300 active:dark:ring-primary-200';
@@ -28,7 +28,7 @@
         : 'text-white dark:text-primary-600';
     $hoveredIconClasses = $useInvertedStyle ? 'text-white! dark:text-primary-600!' : 'text-primary-600!';
     $anchoredIconClasses =
-        'absolute top-1/2 left-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 -rotate-45 shrink-0 transition-all will-change-auto';
+        'absolute top-1/2 left-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 -rotate-45 shrink-0 transition-all will-change-auto sm:h-7 sm:w-7 md:h-6 md:w-6 lg:h-8 lg:w-8';
 @endphp
 
 <button

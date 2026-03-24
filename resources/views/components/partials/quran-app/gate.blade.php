@@ -9,6 +9,7 @@
             --quran-gold-4: #8b6216;
             isolation: isolate;
             background: #0b0805;
+            overflow: hidden;
             user-select: none;
             -webkit-user-drag: none;
             -webkit-touch-callout: none;
@@ -301,14 +302,11 @@
 
         .quran-app-gate-focal-dim {
             position: absolute;
-            left: var(--gate-cx);
-            top: var(--gate-cy);
-            width: clamp(34rem, 120vw, 1040rem);
-            height: clamp(34rem, 120vw, 1040rem);
-            aspect-ratio: 1;
-            transform: translate(-50%, -50%);
-            border-radius: 999px;
-            background: radial-gradient(circle, rgba(0, 0, 0, 0) 10%, rgba(0, 0, 0, 0.5) 50%, rgba(2, 1, 0, 1) 100%);
+            inset: 0;
+            background: radial-gradient(circle farthest-corner at var(--gate-cx) var(--gate-cy),
+                    rgba(0, 0, 0, 0) 10%,
+                    rgba(0, 0, 0, 0.5) 50%,
+                    rgba(2, 1, 0, 1) 100%);
             pointer-events: none;
             z-index: 50;
             mix-blend-mode: multiply;
@@ -471,13 +469,22 @@
 
         @media (max-width: 639px) {
             .quran-app-gate-shell {
-                --gate-cy: 54%;
+                --gate-cy: 58%;
+                background-image: url('{{ asset('images/background/quran/tilawa.webp') }}');
+                background-size: cover;
+                background-position: center top;
             }
 
             .quran-app-gate-caption {
                 top: 0.66rem;
-                padding: 0.3rem 0.8rem;
-                font-size: 0.66rem;
+                left: auto;
+                right: 0.72rem;
+                transform: none;
+                max-width: min(72vw, 14.5rem);
+                padding: 0.26rem 0.72rem;
+                font-size: 0.62rem;
+                line-height: 1.2;
+                text-align: right;
             }
 
             .quran-app-sector__veil {
@@ -523,12 +530,12 @@
             }
 
             .quran-app-sector__chip-lock-icon {
-                width: 0.86rem;
-                height: 0.86rem;
+                width: 1.2rem;
+                height: 1.2rem;
             }
 
             .quran-app-sector__chip-lock-caption {
-                font-size: 0.6rem;
+                font-size: 0.9rem;
             }
 
             .quran-app-gate-geometry path {
@@ -586,7 +593,11 @@
 @endassets
 
 <div
-    class="absolute inset-0 z-10"
+    @class([
+        'absolute inset-x-0 bottom-0 z-10 sm:inset-0',
+        '-top-22 sm:top-0' => is_platform('ios'),
+        '-top-16 sm:top-0' => !is_platform('ios'),
+    ])
     x-cloak
     x-show="views['quran-app-gate'].isOpen"
     x-transition:enter="transition-all ease-out duration-750 delay-300"
@@ -733,7 +744,6 @@
         <div
             class="quran-app-gate-focal-dim"
             aria-hidden="true"
-            x-bind:style="focalDimStyle()"
         ></div>
 
         <div

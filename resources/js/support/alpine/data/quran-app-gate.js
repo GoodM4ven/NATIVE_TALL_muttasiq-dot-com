@@ -16,99 +16,10 @@ document.addEventListener('alpine:init', () => {
         isTouchPointerActive: false,
         orbitAnimationFrameId: null,
         orbitLastFrameAt: 0,
-        focalDimDiameterPx: null,
-        focalDimResizeObserver: null,
-        focalDimResizeFrameId: null,
-        focalDimWindowResizeHandler: null,
         init() {
             this.$nextTick(() => {
-                this.setUpFocalDimSizing();
                 this.positionPuckAtDefault();
             });
-        },
-        destroy() {
-            if (this.focalDimResizeObserver !== null) {
-                this.focalDimResizeObserver.disconnect();
-                this.focalDimResizeObserver = null;
-            }
-
-            if (this.focalDimResizeFrameId !== null) {
-                cancelAnimationFrame(this.focalDimResizeFrameId);
-                this.focalDimResizeFrameId = null;
-            }
-
-            if (this.focalDimWindowResizeHandler !== null) {
-                window.removeEventListener('resize', this.focalDimWindowResizeHandler);
-                this.focalDimWindowResizeHandler = null;
-            }
-        },
-        focalDimStyle() {
-            if (!Number.isFinite(this.focalDimDiameterPx) || this.focalDimDiameterPx <= 0) {
-                return {};
-            }
-
-            return {
-                width: `${this.focalDimDiameterPx}px`,
-                height: `${this.focalDimDiameterPx}px`,
-            };
-        },
-        setUpFocalDimSizing() {
-            this.scheduleFocalDimResize();
-
-            const shellElement = this.$refs?.shell;
-            const anchorCircle = this.$refs?.anchorCircle;
-
-            if (!shellElement || !anchorCircle) {
-                return;
-            }
-
-            this.focalDimWindowResizeHandler = () => {
-                this.scheduleFocalDimResize();
-            };
-            window.addEventListener('resize', this.focalDimWindowResizeHandler, { passive: true });
-
-            if (typeof ResizeObserver !== 'function') {
-                return;
-            }
-
-            this.focalDimResizeObserver = new ResizeObserver(() => {
-                this.scheduleFocalDimResize();
-            });
-
-            this.focalDimResizeObserver.observe(shellElement);
-            this.focalDimResizeObserver.observe(anchorCircle);
-        },
-        scheduleFocalDimResize() {
-            if (this.focalDimResizeFrameId !== null) {
-                cancelAnimationFrame(this.focalDimResizeFrameId);
-            }
-
-            this.focalDimResizeFrameId = requestAnimationFrame(() => {
-                this.focalDimResizeFrameId = null;
-                this.updateFocalDimDiameter();
-            });
-        },
-        updateFocalDimDiameter() {
-            const shellElement = this.$refs?.shell;
-            const anchorCircle = this.$refs?.anchorCircle;
-
-            if (!shellElement || !anchorCircle) {
-                return;
-            }
-
-            const shellRect = shellElement.getBoundingClientRect();
-            const anchorRect = anchorCircle.getBoundingClientRect();
-            const centerX = anchorRect.left + anchorRect.width / 2;
-            const centerY = anchorRect.top + anchorRect.height / 2;
-            const cornerDistances = [
-                Math.hypot(centerX - shellRect.left, centerY - shellRect.top),
-                Math.hypot(centerX - shellRect.right, centerY - shellRect.top),
-                Math.hypot(centerX - shellRect.left, centerY - shellRect.bottom),
-                Math.hypot(centerX - shellRect.right, centerY - shellRect.bottom),
-            ];
-            const radius = Math.max(...cornerDistances);
-
-            this.focalDimDiameterPx = Math.max(1, Math.ceil(radius * 2));
         },
         normalizeAngle(angle) {
             const fullTurn = Math.PI * 2;

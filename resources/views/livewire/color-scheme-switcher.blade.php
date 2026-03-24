@@ -13,13 +13,13 @@
     >
         <x-slot:icons-slot>
             <x-icon
-                class="text-primary-600 dark:text-primary-100 absolute left-1/2 top-1/2 h-8 w-8 shrink-0 -translate-x-1/2 -translate-y-1/2 -rotate-45 transition will-change-[color]"
+                class="text-primary-600 dark:text-primary-100 absolute left-1/2 top-1/2 h-8 w-8 shrink-0 -translate-x-1/2 -translate-y-1/2 -rotate-45 transition will-change-[color] sm:h-7 sm:w-7 md:h-6 md:w-6 lg:h-8 lg:w-8"
                 name="heroicon-s-moon"
                 x-bind:class="{ 'text-primary-100! dark:text-primary-600!': hovered }"
                 x-show="!$store.colorScheme.isDarkModeOn"
             />
             <x-icon
-                class="text-primary-600 dark:text-primary-100 absolute left-1/2 top-1/2 h-8 w-8 shrink-0 -translate-x-1/2 -translate-y-1/2 -rotate-45 transition will-change-[color]"
+                class="text-primary-600 dark:text-primary-100 absolute left-1/2 top-1/2 h-8 w-8 shrink-0 -translate-x-1/2 -translate-y-1/2 -rotate-45 transition will-change-[color] sm:h-7 sm:w-7 md:h-6 md:w-6 lg:h-8 lg:w-8"
                 name="heroicon-s-sun"
                 x-bind:class="{ 'text-primary-600!': hovered }"
                 x-cloak

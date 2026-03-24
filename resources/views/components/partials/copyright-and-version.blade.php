@@ -2,7 +2,7 @@
     class="{{ \Illuminate\Support\Arr::toCssClasses([
         'bottom-3' => !is_platform('mobile'),
         'bottom-7' => is_platform('mobile'),
-        'fixed inset-x-0 z-30 flex w-full max-w-full justify-center overflow-hidden px-4 opacity-0 transition-opacity sm:w-auto sm:max-w-none sm:px-6 pointer-events-none xl:[zoom:1.25]',
+        'fixed inset-x-0 z-30 flex w-full max-w-full justify-center overflow-hidden px-4 opacity-0 transition-opacity sm:w-auto sm:max-w-none sm:px-5 md:px-5 lg:px-6 pointer-events-none xl:[zoom:1.25]',
     ]) }}"
     data-testid="copyright-version-shell"
     x-bind:class="{
@@ -157,7 +157,7 @@
     x-on:app-version-updated.window="setAppVersion($event.detail?.version)"
 >
     <div
-        class="relative w-fit max-w-[90vw] rounded-2xl border border-white/70 bg-gray-100/30 px-4 py-3 text-[clamp(0.6rem,2.65vw,0.8rem)] text-gray-600 opacity-0 ring-1 ring-gray-200/70 transition-all duration-500 ease-out sm:max-w-none sm:px-6 sm:py-4 sm:text-[1rem] dark:border-white/10 dark:bg-gray-900/20 dark:text-gray-300 dark:ring-white/10"
+        class="relative w-fit max-w-[90vw] rounded-2xl border border-white/70 bg-gray-100/30 px-4 py-3 text-[clamp(0.6rem,2.65vw,0.8rem)] text-gray-600 opacity-0 ring-1 ring-gray-200/70 transition-all duration-500 ease-out sm:max-w-none sm:px-4 sm:py-3 sm:text-[0.82rem] md:px-5 md:py-3 md:text-[0.88rem] lg:px-6 lg:py-4 lg:text-[1rem] dark:border-white/10 dark:bg-gray-900/20 dark:text-gray-300 dark:ring-white/10"
         data-testid="copyright-version-panel"
         x-bind:class="{
             'opacity-100!': isVisible,
@@ -172,7 +172,8 @@
                 class="inline whitespace-nowrap rounded-sm font-semibold text-gray-800 underline decoration-gray-400/80 underline-offset-4 transition-colors hover:text-gray-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400/60 dark:text-gray-100 dark:decoration-gray-400/60 dark:hover:text-white dark:focus-visible:ring-gray-200/40"
                 data-testid="copyright-version-button"
                 type="button"
-                x-bind:class="isVisible && (views['main-menu'].isOpen || views['athkar-app-gate'].isOpen) && 'pointer-events-auto!'"
+                x-bind:class="isVisible && (views['main-menu'].isOpen || views['athkar-app-gate'].isOpen || views['quran-app-gate']
+                    .isOpen) && 'pointer-events-auto!'"
                 x-on:click="$dispatch('open-control-panel-modal', { tab: 'updates' })"
             >
                 <span x-text="`v${appVersion}`">v{{ \App\Models\Setting::appVersion() }}</span>
