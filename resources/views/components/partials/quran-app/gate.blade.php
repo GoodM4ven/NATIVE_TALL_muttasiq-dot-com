@@ -3,6 +3,7 @@
         .quran-app-gate-shell {
             --gate-cx: 50%;
             --gate-cy: 53%;
+            --gate-top-overshoot: 0%;
             --quran-gold-1: #fde8ab;
             --quran-gold-2: #efc86b;
             --quran-gold-3: #d79f2f;
@@ -58,15 +59,15 @@
         }
 
         .quran-app-sector--tilawa {
-            clip-path: polygon(0 0, 100% 0, var(--gate-cx) var(--gate-cy));
+            clip-path: polygon(calc(0% - var(--gate-top-overshoot)) 0, calc(100% + var(--gate-top-overshoot)) 0, var(--gate-cx) var(--gate-cy));
         }
 
         .quran-app-sector--tadabbur {
-            clip-path: polygon(0 0, var(--gate-cx) var(--gate-cy), calc(50% + 0.6px) 100%, 0 100%);
+            clip-path: polygon(calc(0% - var(--gate-top-overshoot)) 0, var(--gate-cx) var(--gate-cy), calc(50% + 0.6px) 100%, 0 100%);
         }
 
         .quran-app-sector--hifth {
-            clip-path: polygon(100% 0, var(--gate-cx) var(--gate-cy), calc(50% - 0.6px) 100%, 100% 100%);
+            clip-path: polygon(calc(100% + var(--gate-top-overshoot)) 0, var(--gate-cx) var(--gate-cy), calc(50% - 0.6px) 100%, 100% 100%);
         }
 
         .quran-app-sector__media {
@@ -206,7 +207,7 @@
 
         .quran-app-sector__chip--tilawa {
             left: 50%;
-            top: 22%;
+            top: 30%;
             transform: translate(-50%, -50%);
         }
 
@@ -470,6 +471,7 @@
         @media (max-width: 639px) {
             .quran-app-gate-shell {
                 --gate-cy: 58%;
+                --gate-top-overshoot: 20%;
                 background-image: url('{{ asset('images/background/quran/tilawa.webp') }}');
                 background-size: cover;
                 background-position: center top;
@@ -516,7 +518,7 @@
             }
 
             .quran-app-sector__chip--tilawa {
-                top: 20%;
+                top: 37.5%;
             }
 
             .quran-app-sector__chip--tadabbur,
@@ -579,6 +581,7 @@
                 /* right: -0.2rem; */
                 width: 0.38rem;
                 height: 0.38rem;
+                left: 0.4rem;
             }
 
             .quran-app-gate-pointer::after {
