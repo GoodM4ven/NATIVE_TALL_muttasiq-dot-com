@@ -24,6 +24,8 @@ class Reader extends Component implements HasActions, HasSchemas
     use InteractsWithActions;
     use InteractsWithSchemas;
 
+    private const SEARCH_STREAM_TARGET = 'quran-search-results-stream';
+
     public int $pageNumber = 1;
 
     public int $activeAyahIndex = 0;
@@ -59,6 +61,58 @@ class Reader extends Component implements HasActions, HasSchemas
         }
 
         $this->activeAyahIndex = $ayahIndex;
+    }
+
+    /**
+     * @return array<int, array{
+     *     id: int,
+     *     ayah_index: int,
+     *     surah_number: int,
+     *     ayah_number: int,
+     *     page_number: int,
+     *     text_uthmani: string,
+     *     text_searchable_typed: string,
+     *     search_snippet: string,
+     *     match_strategy: string,
+     *     match_tone: string,
+     *     match_shade: int,
+     *     match_label: string,
+     *     match_rank: int
+     * }>
+     */
+    public function streamSearch(string $query, int $requestSerial = 0): array
+    {
+        /** @var QuranReaderDataService $readerDataService */
+        $readerDataService = app(QuranReaderDataService::class);
+        $normalizedRequestSerial = max(0, $requestSerial);
+        $didStreamChunks = false;
+        $results = $readerDataService->searchProgressively(
+            $query,
+            24,
+            function (array $matches, string $stage, bool $isComplete) use (
+                $normalizedRequestSerial,
+                &$didStreamChunks
+            ): void {
+                $didStreamChunks = true;
+                $this->streamSearchPayload(
+                    $matches,
+                    $normalizedRequestSerial,
+                    $stage,
+                    $isComplete,
+                );
+            },
+        );
+
+        if (! $didStreamChunks) {
+            $this->streamSearchPayload(
+                $results,
+                $normalizedRequestSerial,
+                'complete',
+                true,
+            );
+        }
+
+        return $results;
     }
 
     public function searchQuranAction(): Action
@@ -184,5 +238,46 @@ class Reader extends Component implements HasActions, HasSchemas
             'surahDirectory' => $surahDirectory,
             'quranReaderSettings' => $quranReaderSettings,
         ]);
+    }
+
+    /**
+     * @param  array<int, array{
+     *     id: int,
+     *     ayah_index: int,
+     *     surah_number: int,
+     *     ayah_number: int,
+     *     page_number: int,
+     *     text_uthmani: string,
+     *     text_searchable_typed: string,
+     *     search_snippet: string,
+     *     match_strategy: string,
+     *     match_tone: string,
+     *     match_shade: int,
+     *     match_label: string,
+     *     match_rank: int
+     * }>  $matches
+     */
+    private function streamSearchPayload(
+        array $matches,
+        int $requestSerial,
+        string $stage,
+        bool $isComplete,
+    ): void {
+        $encodedPayload = json_encode([
+            'request_serial' => $requestSerial,
+            'stage' => $stage,
+            'is_loading' => ! $isComplete,
+            'items' => array_values($matches),
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        if (! is_string($encodedPayload)) {
+            return;
+        }
+
+        $this->stream(
+            content: e($encodedPayload),
+            replace: true,
+            to: self::SEARCH_STREAM_TARGET,
+        );
     }
 }

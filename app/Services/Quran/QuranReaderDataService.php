@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Schema;
 
 class QuranReaderDataService
 {
+    private const SEARCH_INTERSECTION_CANDIDATE_LIMIT = 7000;
+
     /**
      * @var array<int, int>
      */
@@ -260,10 +262,37 @@ class QuranReaderDataService
      *     page_number: int,
      *     text_uthmani: string,
      *     text_searchable_typed: string,
-     *     search_snippet: string
+     *     search_snippet: string,
+     *     match_strategy: string,
+     *     match_tone: string,
+     *     match_shade: int,
+     *     match_label: string,
+     *     match_rank: int
      * }>
      */
     public function search(string $query, int $limit = 24): array
+    {
+        return $this->searchProgressively($query, $limit);
+    }
+
+    /**
+     * @return array<int, array{
+     *     id: int,
+     *     ayah_index: int,
+     *     surah_number: int,
+     *     ayah_number: int,
+     *     page_number: int,
+     *     text_uthmani: string,
+     *     text_searchable_typed: string,
+     *     search_snippet: string,
+     *     match_strategy: string,
+     *     match_tone: string,
+     *     match_shade: int,
+     *     match_label: string,
+     *     match_rank: int
+     * }>
+     */
+    public function searchProgressively(string $query, int $limit = 24, ?callable $onProgress = null): array
     {
         if (! $this->isReady()) {
             return [];
@@ -279,7 +308,12 @@ class QuranReaderDataService
         $hasTypedWordColumn = Schema::hasTable('quran_words')
             && Schema::hasColumn('quran_words', 'token_searchable_typed');
 
-        return $this->buildSearchMatches($normalizedQuery, $resolvedLimit, $hasTypedWordColumn);
+        return $this->buildSearchMatches(
+            $normalizedQuery,
+            $resolvedLimit,
+            $hasTypedWordColumn,
+            $onProgress,
+        );
     }
 
     /**
@@ -377,11 +411,20 @@ class QuranReaderDataService
      *     page_number: int,
      *     text_uthmani: string,
      *     text_searchable_typed: string,
-     *     search_snippet: string
+     *     search_snippet: string,
+     *     match_strategy: string,
+     *     match_tone: string,
+     *     match_shade: int,
+     *     match_label: string,
+     *     match_rank: int
      * }>
      */
-    private function buildSearchMatches(string $searchQuery, int $limit, bool $hasTypedWordColumn): array
-    {
+    private function buildSearchMatches(
+        string $searchQuery,
+        int $limit,
+        bool $hasTypedWordColumn,
+        ?callable $onProgress = null,
+    ): array {
         $tokens = $this->prepareSearchTokens(array_values(array_unique(array_filter(
             preg_split('/\s+/u', trim($searchQuery)) ?: [],
             static fn (string $token): bool => $token !== '',
@@ -395,16 +438,36 @@ class QuranReaderDataService
         $seenAyahIndexes = [];
         $exactPhraseVerseIds = $this->collectVerseIdsByExactPhrase($searchQuery, $limit);
 
-        $this->appendVerseMatches($matches, $seenAyahIndexes, $exactPhraseVerseIds, $limit, $searchQuery);
+        $this->appendVerseMatches(
+            $matches,
+            $seenAyahIndexes,
+            $exactPhraseVerseIds,
+            $limit,
+            $searchQuery,
+            'exact_phrase',
+        );
+        $this->emitSearchProgress($onProgress, $matches, 'exact_phrase');
 
         if (count($matches) >= $limit) {
+            $this->emitSearchProgress($onProgress, $matches, 'complete', true);
+
             return $matches;
         }
 
         $exactTokenVerseIds = $this->collectVerseIdsByExactTokens($tokens, $limit);
-        $this->appendVerseMatches($matches, $seenAyahIndexes, $exactTokenVerseIds, $limit, $searchQuery);
+        $this->appendVerseMatches(
+            $matches,
+            $seenAyahIndexes,
+            $exactTokenVerseIds,
+            $limit,
+            $searchQuery,
+            'exact_tokens',
+        );
+        $this->emitSearchProgress($onProgress, $matches, 'exact_tokens');
 
         if (count($matches) >= $limit) {
+            $this->emitSearchProgress($onProgress, $matches, 'complete', true);
+
             return $matches;
         }
 
@@ -413,24 +476,53 @@ class QuranReaderDataService
 
         if ($shouldUseExpandedRoots) {
             $stemVerseIds = $this->collectVerseIdsByStemTokens($tokens, $limit);
-            $this->appendVerseMatches($matches, $seenAyahIndexes, $stemVerseIds, $limit, $searchQuery);
+            $this->appendVerseMatches(
+                $matches,
+                $seenAyahIndexes,
+                $stemVerseIds,
+                $limit,
+                $searchQuery,
+                'stem_tokens',
+            );
+            $this->emitSearchProgress($onProgress, $matches, 'stem_tokens');
         }
 
         if (count($matches) >= $limit) {
+            $this->emitSearchProgress($onProgress, $matches, 'complete', true);
+
             return $matches;
         }
 
         if ($shouldUseExpandedRoots && $shouldUseRootStage) {
             $rootVerseIds = $this->collectVerseIdsByRootTokens($tokens, $limit);
-            $this->appendVerseMatches($matches, $seenAyahIndexes, $rootVerseIds, $limit, $searchQuery);
+            $this->appendVerseMatches(
+                $matches,
+                $seenAyahIndexes,
+                $rootVerseIds,
+                $limit,
+                $searchQuery,
+                'root_tokens',
+            );
+            $this->emitSearchProgress($onProgress, $matches, 'root_tokens');
         }
 
         if (count($matches) >= $limit || ! $hasTypedWordColumn) {
+            $this->emitSearchProgress($onProgress, $matches, 'complete', true);
+
             return $matches;
         }
 
         $wordLikeVerseIds = $this->collectVerseIdsByWordLikeFallback($searchQuery, $limit);
-        $this->appendVerseMatches($matches, $seenAyahIndexes, $wordLikeVerseIds, $limit, $searchQuery);
+        $this->appendVerseMatches(
+            $matches,
+            $seenAyahIndexes,
+            $wordLikeVerseIds,
+            $limit,
+            $searchQuery,
+            'word_prefix',
+        );
+        $this->emitSearchProgress($onProgress, $matches, 'word_prefix');
+        $this->emitSearchProgress($onProgress, $matches, 'complete', true);
 
         return $matches;
     }
@@ -499,18 +591,14 @@ class QuranReaderDataService
      */
     private function collectVerseIdsByExactTokens(array $tokens, int $limit): array
     {
-        $candidateColumns = array_values(array_filter([
-            $this->hasQuranWordColumn('token_searchable_typed') ? 'token_searchable_typed' : null,
-            $this->hasQuranWordColumn('token_searchable') ? 'token_searchable' : null,
-            $this->hasQuranWordColumn('token_lemma') ? 'token_lemma' : null,
-        ]));
+        $candidateColumns = $this->resolveTokenSearchColumns();
 
         if ($candidateColumns === []) {
             return [];
         }
 
         return $this->intersectVerseIdSets(
-            array_map(function (string $token) use ($candidateColumns, $limit): array {
+            array_map(function (string $token) use ($candidateColumns): array {
                 $tokenVariants = $this->expandSearchTextVariants($token);
 
                 if ($tokenVariants === []) {
@@ -527,7 +615,7 @@ class QuranReaderDataService
                     ->groupBy('verse_id')
                     ->orderBy('ayah_index')
                     ->orderBy('verse_id')
-                    ->limit($limit * 18)
+                    ->limit(self::SEARCH_INTERSECTION_CANDIDATE_LIMIT)
                     ->pluck('verse_id')
                     ->map(static fn (mixed $value): int => (int) $value)
                     ->all();
@@ -542,7 +630,10 @@ class QuranReaderDataService
      */
     private function collectVerseIdsByStemTokens(array $tokens, int $limit): array
     {
-        if (! $this->hasQuranWordColumn('token_stem')) {
+        $hasStemColumn = $this->hasQuranWordColumn('token_stem');
+        $searchColumns = $this->resolveTokenSearchColumns();
+
+        if (! $hasStemColumn && $searchColumns === []) {
             return [];
         }
 
@@ -550,18 +641,34 @@ class QuranReaderDataService
 
         foreach ($tokens as $token) {
             $stemCandidates = $this->resolveStemCandidatesForToken($token);
+            $tokenVariants = $this->expandSearchTextVariants($token);
 
-            if ($stemCandidates === []) {
+            if ($stemCandidates === [] && $tokenVariants === []) {
                 return [];
             }
 
             $verseIdSets[] = DB::table('quran_words')
                 ->selectRaw('verse_id, MIN(ayah_index) AS ayah_index')
-                ->whereIn('token_stem', $stemCandidates)
+                ->where(function (Builder $builder) use (
+                    $hasStemColumn,
+                    $searchColumns,
+                    $stemCandidates,
+                    $tokenVariants
+                ): void {
+                    if ($hasStemColumn && $stemCandidates !== []) {
+                        $builder->orWhereIn('token_stem', $stemCandidates);
+                    }
+
+                    if ($tokenVariants !== []) {
+                        foreach ($searchColumns as $column) {
+                            $builder->orWhereIn($column, $tokenVariants);
+                        }
+                    }
+                })
                 ->groupBy('verse_id')
                 ->orderBy('ayah_index')
                 ->orderBy('verse_id')
-                ->limit($limit * 18)
+                ->limit(self::SEARCH_INTERSECTION_CANDIDATE_LIMIT)
                 ->pluck('verse_id')
                 ->map(static fn (mixed $value): int => (int) $value)
                 ->all();
@@ -576,7 +683,10 @@ class QuranReaderDataService
      */
     private function collectVerseIdsByRootTokens(array $tokens, int $limit): array
     {
-        if (! $this->hasQuranWordColumn('token_root')) {
+        $hasRootColumn = $this->hasQuranWordColumn('token_root');
+        $searchColumns = $this->resolveTokenSearchColumns();
+
+        if (! $hasRootColumn && $searchColumns === []) {
             return [];
         }
 
@@ -584,18 +694,34 @@ class QuranReaderDataService
 
         foreach ($tokens as $token) {
             $rootCandidates = $this->resolveRootCandidatesForToken($token);
+            $tokenVariants = $this->expandSearchTextVariants($token);
 
-            if ($rootCandidates === []) {
+            if ($rootCandidates === [] && $tokenVariants === []) {
                 return [];
             }
 
             $verseIdSets[] = DB::table('quran_words')
                 ->selectRaw('verse_id, MIN(ayah_index) AS ayah_index')
-                ->whereIn('token_root', $rootCandidates)
+                ->where(function (Builder $builder) use (
+                    $hasRootColumn,
+                    $searchColumns,
+                    $rootCandidates,
+                    $tokenVariants
+                ): void {
+                    if ($hasRootColumn && $rootCandidates !== []) {
+                        $builder->orWhereIn('token_root', $rootCandidates);
+                    }
+
+                    if ($tokenVariants !== []) {
+                        foreach ($searchColumns as $column) {
+                            $builder->orWhereIn($column, $tokenVariants);
+                        }
+                    }
+                })
                 ->groupBy('verse_id')
                 ->orderBy('ayah_index')
                 ->orderBy('verse_id')
-                ->limit($limit * 16)
+                ->limit(self::SEARCH_INTERSECTION_CANDIDATE_LIMIT)
                 ->pluck('verse_id')
                 ->map(static fn (mixed $value): int => (int) $value)
                 ->all();
@@ -658,11 +784,7 @@ class QuranReaderDataService
             static fn (string $value): string => ArabicFilter::forSearch($value),
             $tokenVariants,
         );
-        $searchColumns = array_values(array_filter([
-            $this->hasQuranWordColumn('token_searchable_typed') ? 'token_searchable_typed' : null,
-            $this->hasQuranWordColumn('token_lemma') ? 'token_lemma' : null,
-            $this->hasQuranWordColumn('token_searchable') ? 'token_searchable' : null,
-        ]));
+        $searchColumns = $this->resolveTokenSearchColumns();
 
         if ($searchColumns === []) {
             return array_values(array_filter(array_unique($seedCandidates)));
@@ -689,11 +811,7 @@ class QuranReaderDataService
     {
         $stemCandidates = $this->resolveStemCandidatesForToken($token);
         $tokenVariants = $this->expandSearchTextVariants($token);
-        $searchColumns = array_values(array_filter([
-            $this->hasQuranWordColumn('token_searchable_typed') ? 'token_searchable_typed' : null,
-            $this->hasQuranWordColumn('token_lemma') ? 'token_lemma' : null,
-            $this->hasQuranWordColumn('token_searchable') ? 'token_searchable' : null,
-        ]));
+        $searchColumns = $this->resolveTokenSearchColumns();
 
         if ($searchColumns === []) {
             return [];
@@ -726,7 +844,12 @@ class QuranReaderDataService
      *     page_number: int,
      *     text_uthmani: string,
      *     text_searchable_typed: string,
-     *     search_snippet: string
+     *     search_snippet: string,
+     *     match_strategy: string,
+     *     match_tone: string,
+     *     match_shade: int,
+     *     match_label: string,
+     *     match_rank: int
      * }>  $matches
      * @param  array<int, true>  $seenAyahIndexes
      * @param  array<int, int>  $verseIds
@@ -737,11 +860,13 @@ class QuranReaderDataService
         array $verseIds,
         int $limit,
         string $searchQuery,
+        string $matchStrategy,
     ): void {
         if ($verseIds === [] || count($matches) >= $limit) {
             return;
         }
 
+        $matchMeta = $this->resolveSearchMatchMeta($matchStrategy);
         $rows = DB::table('quran_verses')
             ->select([
                 'id',
@@ -784,12 +909,100 @@ class QuranReaderDataService
                     (string) ($row->text_searchable_typed ?? ''),
                     $searchQuery,
                 ),
+                'match_strategy' => $matchStrategy,
+                'match_tone' => $matchMeta['tone'],
+                'match_shade' => $matchMeta['shade'],
+                'match_label' => $matchMeta['label'],
+                'match_rank' => $matchMeta['rank'],
             ];
 
             if (count($matches) >= $limit) {
                 return;
             }
         }
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function resolveTokenSearchColumns(): array
+    {
+        return array_values(array_filter([
+            $this->hasQuranWordColumn('token_searchable_typed') ? 'token_searchable_typed' : null,
+            $this->hasQuranWordColumn('token_lemma') ? 'token_lemma' : null,
+            $this->hasQuranWordColumn('token_searchable') ? 'token_searchable' : null,
+        ]));
+    }
+
+    /**
+     * @param  array<int, array{
+     *     id: int,
+     *     ayah_index: int,
+     *     surah_number: int,
+     *     ayah_number: int,
+     *     page_number: int,
+     *     text_uthmani: string,
+     *     text_searchable_typed: string,
+     *     search_snippet: string,
+     *     match_strategy: string,
+     *     match_tone: string,
+     *     match_shade: int,
+     *     match_label: string,
+     *     match_rank: int
+     * }>  $matches
+     */
+    private function emitSearchProgress(?callable $onProgress, array $matches, string $stage, bool $isComplete = false): void
+    {
+        if ($onProgress === null) {
+            return;
+        }
+
+        $onProgress($matches, $stage, $isComplete);
+    }
+
+    /**
+     * @return array{tone: string, shade: int, label: string, rank: int}
+     */
+    private function resolveSearchMatchMeta(string $matchStrategy): array
+    {
+        return match ($matchStrategy) {
+            'exact_phrase' => [
+                'tone' => 'success',
+                'shade' => 500,
+                'label' => 'مطابقة تامة',
+                'rank' => 1,
+            ],
+            'exact_tokens' => [
+                'tone' => 'warning',
+                'shade' => 500,
+                'label' => 'مطابقة كلمات',
+                'rank' => 2,
+            ],
+            'stem_tokens' => [
+                'tone' => 'info',
+                'shade' => 500,
+                'label' => 'مطابقة صرفية',
+                'rank' => 3,
+            ],
+            'root_tokens' => [
+                'tone' => 'info',
+                'shade' => 700,
+                'label' => 'مطابقة جذرية',
+                'rank' => 4,
+            ],
+            'word_prefix' => [
+                'tone' => 'danger',
+                'shade' => 500,
+                'label' => 'مطابقة تقريبية',
+                'rank' => 5,
+            ],
+            default => [
+                'tone' => 'warning',
+                'shade' => 500,
+                'label' => 'مطابقة',
+                'rank' => 6,
+            ],
+        };
     }
 
     private function normalizeQuranSearchQuery(string $text): string

@@ -282,8 +282,9 @@ document.addEventListener('alpine:init', () => {
         _fitRunCounter: 0,
         _lastFittedPageNumber: 0,
         _pageInputCommitTimer: null,
-        _searchAbortController: null,
         _searchRequestSerial: 0,
+        _searchStreamObserver: null,
+        _lastSearchStreamPayloadRaw: '',
         _stopLivewireMorphedHook: null,
         _searchResultsAutoAnimateStop: null,
         _searchModalCloseDebounceTimer: null,
@@ -466,10 +467,8 @@ document.addEventListener('alpine:init', () => {
                 this.pageCounterPulse.timer = null;
             }
 
-            if (this._searchAbortController) {
-                this._searchAbortController.abort();
-                this._searchAbortController = null;
-            }
+            this.teardownSearchStreamObserver();
+            this._lastSearchStreamPayloadRaw = '';
 
             if (typeof this._searchResultsAutoAnimateStop === 'function') {
                 this._searchResultsAutoAnimateStop();
@@ -2644,6 +2643,50 @@ document.addEventListener('alpine:init', () => {
                 .trim();
         },
 
+        searchMatchTone(result) {
+            const tone = String(result?.match_tone ?? '')
+                .trim()
+                .toLowerCase();
+
+            if (['success', 'warning', 'info', 'danger'].includes(tone)) {
+                return tone;
+            }
+
+            return 'warning';
+        },
+
+        searchMatchLabel(result) {
+            const label = String(result?.match_label ?? '').trim();
+
+            if (label !== '') {
+                return label;
+            }
+
+            const strategy = String(result?.match_strategy ?? '').trim();
+
+            if (strategy === 'exact_phrase') {
+                return 'مطابقة تامة';
+            }
+
+            if (strategy === 'exact_tokens') {
+                return 'مطابقة كلمات';
+            }
+
+            if (strategy === 'stem_tokens') {
+                return 'مطابقة صرفية';
+            }
+
+            if (strategy === 'root_tokens') {
+                return 'مطابقة جذرية';
+            }
+
+            if (strategy === 'word_prefix') {
+                return 'مطابقة تقريبية';
+            }
+
+            return 'مطابقة';
+        },
+
         isSurahHeaderLine(line) {
             return String(line?.line_type ?? '') === 'surah_name';
         },
@@ -3195,6 +3238,108 @@ document.addEventListener('alpine:init', () => {
             return null;
         },
 
+        searchStreamTargetElement() {
+            if (this.$refs.searchResultsStream instanceof Element) {
+                return this.$refs.searchResultsStream;
+            }
+
+            const modalWindow = this.searchModalWindowElement();
+
+            if (!(modalWindow instanceof Element)) {
+                return null;
+            }
+
+            return modalWindow.querySelector('[data-quran-search-stream-target]');
+        },
+
+        clearSearchStreamTarget() {
+            const target = this.searchStreamTargetElement();
+
+            if (!(target instanceof Element)) {
+                this._lastSearchStreamPayloadRaw = '';
+
+                return;
+            }
+
+            target.textContent = '';
+            this._lastSearchStreamPayloadRaw = '';
+        },
+
+        teardownSearchStreamObserver() {
+            if (this._searchStreamObserver) {
+                this._searchStreamObserver.disconnect();
+                this._searchStreamObserver = null;
+            }
+        },
+
+        setupSearchStreamObserver() {
+            this.teardownSearchStreamObserver();
+
+            const target = this.searchStreamTargetElement();
+
+            if (!(target instanceof Element) || typeof MutationObserver === 'undefined') {
+                return;
+            }
+
+            this._searchStreamObserver = new MutationObserver(() => {
+                this.consumeSearchStreamPayload();
+            });
+
+            this._searchStreamObserver.observe(target, {
+                childList: true,
+                subtree: true,
+                characterData: true,
+            });
+        },
+
+        consumeSearchStreamPayload() {
+            const target = this.searchStreamTargetElement();
+
+            if (!(target instanceof Element)) {
+                return;
+            }
+
+            const rawPayload = String(target.textContent ?? '').trim();
+
+            if (rawPayload === '' || rawPayload === this._lastSearchStreamPayloadRaw) {
+                return;
+            }
+
+            this._lastSearchStreamPayloadRaw = rawPayload;
+
+            let payload = null;
+
+            try {
+                payload = JSON.parse(rawPayload);
+            } catch (_) {
+                return;
+            }
+
+            this.applySearchStreamPayload(payload);
+        },
+
+        applySearchStreamPayload(payload) {
+            const requestSerial = Math.max(0, Math.trunc(Number(payload?.request_serial ?? 0)));
+
+            if (requestSerial !== this._searchRequestSerial) {
+                return;
+            }
+
+            const results = Array.isArray(payload?.items) ? payload.items.slice(0, 24) : [];
+
+            this.search.results = results;
+            this.search.isOpen = results.length > 0;
+            this.search.readyResult = results.length === 1 ? results[0] : null;
+
+            if (typeof payload?.is_loading === 'boolean') {
+                this.search.isLoading = payload.is_loading;
+            }
+
+            this.$nextTick(() => {
+                this.ensureSearchResultAnimations();
+            });
+        },
+
         isSearchModalWindowVisible() {
             const modalWindowElement = this.searchModalWindowElement();
 
@@ -3304,6 +3449,8 @@ document.addEventListener('alpine:init', () => {
             this.hoveredWordIndex = 0;
 
             await this.nextTickAsync();
+            this.setupSearchStreamObserver();
+            this.clearSearchStreamTarget();
             this.ensureSearchResultAnimations();
             this.$refs.searchModalInput?.focus?.();
             this.queueSurahDirectoryAutoFocus();
@@ -3311,17 +3458,14 @@ document.addEventListener('alpine:init', () => {
 
         handleSearchModalClosed() {
             this.cancelSurahDirectoryAutoFocus();
+            this.teardownSearchStreamObserver();
+            this.clearSearchStreamTarget();
             this.search.modalOpen = false;
             this._lastKnownModalOpenState = false;
             this.search.query = '';
             this.search.results = [];
             this.search.readyResult = null;
             this.search.isOpen = false;
-
-            if (this._searchAbortController) {
-                this._searchAbortController.abort();
-                this._searchAbortController = null;
-            }
 
             if (this._searchModalCloseDebounceTimer !== null) {
                 clearTimeout(this._searchModalCloseDebounceTimer);
@@ -3497,6 +3641,8 @@ document.addEventListener('alpine:init', () => {
                 this.search.isOpen = false;
                 this.search.readyResult = null;
                 this.search.isLoading = false;
+                this._searchRequestSerial += 1;
+                this.clearSearchStreamTarget();
 
                 return;
             }
@@ -3506,11 +3652,8 @@ document.addEventListener('alpine:init', () => {
                 this.search.isOpen = false;
                 this.search.readyResult = null;
                 this.search.isLoading = false;
-
-                if (this._searchAbortController) {
-                    this._searchAbortController.abort();
-                    this._searchAbortController = null;
-                }
+                this._searchRequestSerial += 1;
+                this.clearSearchStreamTarget();
 
                 return;
             }
@@ -3524,47 +3667,27 @@ document.addEventListener('alpine:init', () => {
                 this.search.isOpen = false;
                 this.search.readyResult = null;
                 this.search.isLoading = false;
+                this._searchRequestSerial += 1;
+                this.clearSearchStreamTarget();
 
                 return;
             }
 
-            if (this._searchAbortController) {
-                this._searchAbortController.abort();
-            }
-
             const requestSerial = ++this._searchRequestSerial;
-            const abortController = new AbortController();
-            this._searchAbortController = abortController;
             this.search.isLoading = true;
+            this.clearSearchStreamTarget();
 
             try {
-                const searchUrl = this.searchRequestUrl(normalizedQuery);
-
-                if (!searchUrl) {
-                    this.search.results = [];
-                    this.search.isOpen = false;
-                    this.search.readyResult = null;
-
-                    return;
-                }
-
-                const response = await fetch(searchUrl, {
-                    credentials: 'same-origin',
-                    cache: 'no-store',
-                    signal: abortController.signal,
-                });
-
-                if (!response.ok) {
-                    throw new Error(`Unexpected search response ${response.status}`);
-                }
-
-                const payload = await response.json();
+                const livewireResults = await this.$wire.streamSearch(
+                    normalizedQuery,
+                    requestSerial,
+                );
+                const results = Array.isArray(livewireResults) ? livewireResults.slice(0, 24) : [];
 
                 if (requestSerial !== this._searchRequestSerial) {
                     return;
                 }
 
-                const results = Array.isArray(payload?.items) ? payload.items.slice(0, 24) : [];
                 this.search.results = results;
                 this.search.isOpen = results.length > 0;
                 this.search.readyResult = results.length === 1 ? results[0] : null;
@@ -3572,10 +3695,6 @@ document.addEventListener('alpine:init', () => {
                     this.ensureSearchResultAnimations();
                 });
             } catch (error) {
-                if (error?.name === 'AbortError') {
-                    return;
-                }
-
                 if (requestSerial !== this._searchRequestSerial) {
                     return;
                 }
@@ -3586,10 +3705,6 @@ document.addEventListener('alpine:init', () => {
             } finally {
                 if (requestSerial === this._searchRequestSerial) {
                     this.search.isLoading = false;
-                }
-
-                if (this._searchAbortController === abortController) {
-                    this._searchAbortController = null;
                 }
             }
         },

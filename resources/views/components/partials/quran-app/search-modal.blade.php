@@ -7,6 +7,13 @@
         x-cloak
     >
         <div
+            class="sr-only hidden"
+            data-quran-search-stream-target
+            wire:stream.replace="quran-search-results-stream"
+            x-ref="searchResultsStream"
+        ></div>
+
+        <div
             class="quran-search-feedback mt-2"
             x-cloak
             x-show="normalizeSearchQuery(search.query).length > 0 && normalizeSearchQuery(search.query).length < search.minQueryLength"
@@ -49,12 +56,18 @@
                 <button
                     class="quran-search-result-btn nth-[2]:mt-2"
                     type="button"
+                    x-bind:data-match-tone="searchMatchTone(result)"
                     x-bind:tabindex="resultIndex === 0 ? 0 : -1"
                     x-on:click="goToSearchResult(result)"
                 >
                     <span
                         class="quran-search-result-meta"
                         x-text="surahLabel(result.surah_number) + ' · آية ' + result.ayah_number + ' · صفحة ' + result.page_number"
+                    ></span>
+                    <span
+                        class="quran-search-result-match-badge"
+                        x-bind:data-match-tone="searchMatchTone(result)"
+                        x-text="searchMatchLabel(result)"
                     ></span>
                     <span
                         class="quran-search-result-ayah font-quran"
