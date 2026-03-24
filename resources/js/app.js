@@ -1,6 +1,7 @@
 import './support/dispatch';
 import './support/css-variables';
 import './support/animate-scroll';
+import './support/keyboard-super-key-guard';
 
 import './packages/alpine/hash-actions';
 import './packages/alpine/hooks.js';
