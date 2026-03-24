@@ -403,8 +403,10 @@
 
         .athkar-gate__spill-image {
             height: 100%;
-            width: 100%;
-            object-fit: cover;
+            width: 112%;
+            max-width: none;
+            margin-inline: -6%;
+            object-fit: fill;
             opacity: 0.55;
             transform: scale(var(--spill-scale, 1.14));
         }
@@ -444,9 +446,9 @@
                 '--split': `${splitValue}%`,
                 '--spill-opacity': spillOpacity,
                 '--spill-transition': `${spillTransitionMs}ms`,
-                '--spill-inset': isEnhanced ? '-28vmax' : '-26vmax',
+                '--spill-inset': isEnhanced ? '-48vmax' : '-42vmax',
                 '--spill-blur': isEnhanced ? '6px' : '0px',
-                '--spill-scale': isEnhanced ? '1.06' : '1.03',
+                '--spill-scale': isEnhanced ? '1.18' : '1.12',
                 '--spill-split': `${splitValue}%`,
                 '--gate-blur': isEnhanced ? '14px' : '0px',
                 '--divider-glow-blur': isEnhanced ? '6px' : '0px',
