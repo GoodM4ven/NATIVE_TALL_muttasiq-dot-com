@@ -2394,7 +2394,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             if (this.isBasmallahLine(line)) {
-                return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * 0.04)';
+                return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-basmallah-bottom-gap-scale, 0.04))';
             }
 
             return '0px';
@@ -2822,7 +2822,7 @@ document.addEventListener('alpine:init', () => {
             const tileTop = activeTile.offsetTop;
             const tileHeight = activeTile.clientHeight;
             const maxScrollTop = Math.max(0, gridElement.scrollHeight - gridElement.clientHeight);
-            const targetScrollTop = tileTop - (tileHeight * 3);
+            const targetScrollTop = tileTop - tileHeight * 3;
 
             const normalizedScrollTop = Math.max(
                 0,

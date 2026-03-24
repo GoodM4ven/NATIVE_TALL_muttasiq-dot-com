@@ -28,6 +28,7 @@
             --quran-gap-scale: 1;
             --quran-fit-height-ratio: 0.72;
             --quran-line-gap: 1.3rem;
+            --quran-basmallah-bottom-gap-scale: -0.18;
             --quran-font-size-rect: 2.08rem;
             --quran-font-size-center: 2.02rem;
             --quran-font-size-meta: 1.88rem;
