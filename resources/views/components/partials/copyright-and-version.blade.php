@@ -1,6 +1,6 @@
 <div
     class="{{ \Illuminate\Support\Arr::toCssClasses([
-        'bottom-3' => !is_platform('mobile'),
+        'bottom-4 sm:bottom-10' => !is_platform('mobile'),
         'bottom-7' => is_platform('mobile'),
         'fixed inset-x-0 z-30 flex w-full max-w-full justify-center overflow-hidden px-4 opacity-0 transition-opacity sm:w-auto sm:max-w-none sm:px-5 md:px-5 lg:px-6 pointer-events-none xl:[zoom:1.25]',
     ]) }}"
@@ -157,11 +157,11 @@
     x-on:app-version-updated.window="setAppVersion($event.detail?.version)"
 >
     <div
-        class="relative w-fit max-w-[90vw] rounded-lg border border-white/70 bg-gray-100/30 px-2 py-1.5 text-[clamp(0.65rem,2.65vw,0.8rem)] text-gray-600 opacity-0 ring-1 ring-gray-200/70 transition-all duration-500 ease-out sm:max-w-none sm:rounded-2xl sm:px-4 sm:py-3 sm:text-[0.82rem] md:px-5 md:py-3 md:text-[0.88rem] lg:px-6 lg:py-4 lg:text-[1rem] dark:border-white/10 dark:bg-gray-900/20 dark:text-gray-300 dark:ring-white/10"
+        class="relative w-fit max-w-[90vw] rounded-lg border border-white/70 bg-gray-100/40 px-2 py-1.5 text-[clamp(0.65rem,2.65vw,0.8rem)] text-gray-600 opacity-0 ring-1 ring-gray-200/70 transition-all duration-500 ease-out sm:max-w-none sm:rounded-2xl sm:px-4 sm:py-3 sm:text-[0.82rem] md:px-5 md:py-3 md:text-[0.88rem] lg:px-6 lg:py-4 lg:text-[1rem] dark:border-white/10 dark:bg-gray-900/20 dark:text-gray-300 dark:ring-white/10"
         data-testid="copyright-version-panel"
         x-bind:class="{
             'opacity-100!': isVisible,
-            'bg-gray-100/80! text-gray-700!': views['quran-app-gate'].isOpen,
+            'bg-gray-100/70! text-gray-800!': views['quran-app-gate'].isOpen,
         }"
     >
         <p class="whitespace-normal text-center leading-tight">
