@@ -19,7 +19,7 @@
         .quran-app-gate-caption {
             position: absolute;
             left: 50%;
-            top: clamp(0.85rem, 2.2vw, 1.5rem);
+            top: clamp(0.85rem, 4.2vw, 2.5rem);
             transform: translateX(-50%);
             z-index: 250;
             pointer-events: none;
@@ -279,21 +279,6 @@
             opacity: 0.48;
         }
 
-        @media (min-width: 1024px) and (max-width: 1279px) {
-            .quran-app-sector__chip {
-                font-size: clamp(1.28rem, 2.7vw, 2.05rem);
-            }
-
-            .quran-app-sector__chip-lock-icon {
-                width: clamp(0.92rem, 1.45vw, 1.3rem);
-                height: clamp(0.92rem, 1.45vw, 1.3rem);
-            }
-
-            .quran-app-sector__chip-lock-caption {
-                font-size: 1.16rem;
-            }
-        }
-
         .quran-app-gate-geometry {
             position: absolute;
             inset: 0;
@@ -468,6 +453,25 @@
             }
         }
 
+        @media (min-width: 1024px) and (max-width: 1279px) {
+            .quran-app-gate-caption {
+                top: clamp(0.85rem, 4.2vw, 1.5rem);
+            }
+            
+            .quran-app-sector__chip {
+                font-size: clamp(1.28rem, 2.7vw, 2.05rem);
+            }
+
+            .quran-app-sector__chip-lock-icon {
+                width: clamp(0.92rem, 1.45vw, 1.3rem);
+                height: clamp(0.92rem, 1.45vw, 1.3rem);
+            }
+
+            .quran-app-sector__chip-lock-caption {
+                font-size: 1.16rem;
+            }
+        }
+
         @media (max-width: 639px) {
             .quran-app-gate-shell {
                 --gate-cy: 58%;
@@ -478,9 +482,9 @@
             }
 
             .quran-app-gate-caption {
-                top: 0.66rem;
+                top: 1.76rem;
                 left: auto;
-                right: 0.72rem;
+                right: 1.5rem;
                 transform: none;
                 max-width: min(72vw, 14.5rem);
                 padding: 0.26rem 0.72rem;
