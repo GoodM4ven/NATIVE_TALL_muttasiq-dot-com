@@ -484,7 +484,7 @@
             .quran-app-gate-caption {
                 top: 1.76rem;
                 left: auto;
-                right: 1.5rem;
+                right: 0.7rem;
                 transform: none;
                 max-width: min(72vw, 14.5rem);
                 padding: 0.26rem 0.72rem;

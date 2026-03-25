@@ -323,7 +323,7 @@
             return [
                 'fixed',
                 'z-40',
-                this.horizontal === 'left' ? 'end-10' : 'start-10',
+                this.horizontal === 'left' ? 'end-6 sm:end-10' : 'start-6 sm:start-10',
                 this.vertical === 'bottom' ? 'bottom-7' : 'top-5',
             ].join(' ');
         },
