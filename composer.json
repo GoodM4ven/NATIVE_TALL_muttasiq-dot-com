@@ -30,7 +30,8 @@
         "nativephp/mobile": "^3.0",
         "nativephp/mobile-browser": "^1.0",
         "predis/predis": "^3.4",
-        "spatie/eloquent-sortable": "^4.5"
+        "spatie/eloquent-sortable": "^4.5",
+        "spatie/laravel-tags": "^4.11"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
