@@ -26,6 +26,8 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->after('public function bookmarksManagerAction(): Action')
         ->before('public function render(): View');
     $quranReaderDataServiceSource = file_get_contents(app_path('Services/Quran/QuranReaderDataService.php'));
+    $settingModelSource = file_get_contents(app_path('Models/Setting.php'));
+    $controlPanelSettingsTabSource = file_get_contents(app_path('Services/Traits/HasControlPanelSettingsTab.php'));
     $routesSource = file_get_contents(base_path('routes/web.php'));
     $appJsSource = file_get_contents(resource_path('js/app.js'));
     $filamentComponentsCssSource = file_get_contents(resource_path('css/core/filament/components.css'));
@@ -173,6 +175,9 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderScriptSource)->toContain('copyWordSelection(word, activationAnchor = null)')
         ->and($quranReaderScriptSource)->toContain('copyAyahSelection(ayahIndex, activationAnchor = null)')
         ->and($quranReaderScriptSource)->toContain('writeClipboardText(text)')
+        ->and($quranReaderScriptSource)->toContain("preserveHarakatOnCopy: 'does_quran_preserve_harakat_on_copy'")
+        ->and($quranReaderScriptSource)->toContain('doesPreserveHarakatOnCopy: true')
+        ->and($quranReaderScriptSource)->toContain('normalizeCopiedText(text)')
         ->and($quranReaderScriptSource)->toContain('copyFeedbackStyle()');
 
     expect($quranReaderClassSource)->not->toBeFalse()
@@ -195,6 +200,8 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderClassSource)->toContain("'x-on:input' => '\$event.target.value = String(Math.min(Math.max(1, Math.trunc(Number(\$event.target.value || 1) || 1)), Math.max(1, Number(\$event.target.max) || 1)));'")
         ->and($quranReaderClassSource)->toContain("'x-on:blur' => '\$event.target.value = String(Math.min(Math.max(1, Math.trunc(Number(\$event.target.value || 1) || 1)), Math.max(1, Number(\$event.target.max) || 1)));'")
         ->and($quranReaderClassSource)->toContain("view('livewire.quran-app.reader'")
+        ->and($quranReaderClassSource)->toContain('Setting::DOES_QURAN_PRESERVE_HARAKAT_ON_COPY')
+        ->and($quranReaderClassSource)->toContain("'preserveHarakatOnCopy' =>")
         ->and($quranReaderClassSource)->toContain('QuranReaderDataService');
 
     expect($navigationHistoryActionSource)
@@ -219,6 +226,14 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderDataServiceSource)->toContain('return QuranSearchText::expandStrictExactPhraseVariants($text);')
         ->and($quranReaderDataServiceSource)->toContain("selectRaw('verse_id, MIN(ayah_index) AS ayah_index')")
         ->and($quranReaderDataServiceSource)->toContain("->groupBy('verse_id')");
+
+    expect($settingModelSource)->not->toBeFalse()
+        ->and($settingModelSource)->toContain("DOES_QURAN_PRESERVE_HARAKAT_ON_COPY = 'does_quran_preserve_harakat_on_copy'")
+        ->and($settingModelSource)->toContain("'default' => true")
+        ->and($settingModelSource)->toContain('الحفاظ على الحركات عند نسخ نص الآيات');
+
+    expect($controlPanelSettingsTabSource)->not->toBeFalse()
+        ->and($controlPanelSettingsTabSource)->toContain('Setting::DOES_QURAN_PRESERVE_HARAKAT_ON_COPY');
 
     expect($routesSource)->not->toBeFalse()
         ->and($routesSource)->toContain('p\'.$page.\'.woff2')
@@ -388,14 +403,14 @@ it('uses canonical verse text for ayah copy payload and excludes neighboring aya
 
     /** @var object|null $firstAyah */
     $firstAyah = \Illuminate\Support\Facades\DB::table('quran_verses')
-        ->select(['ayah_index', 'text_uthmani'])
+        ->select(['ayah_index', 'text_searchable_typed', 'text_uthmani'])
         ->where('surah_number', 1)
         ->where('ayah_number', 1)
         ->first();
 
     /** @var object|null $secondAyah */
     $secondAyah = \Illuminate\Support\Facades\DB::table('quran_verses')
-        ->select(['text_uthmani'])
+        ->select(['text_searchable_typed', 'text_uthmani'])
         ->where('surah_number', 1)
         ->where('ayah_number', 2)
         ->first();
@@ -413,8 +428,17 @@ it('uses canonical verse text for ayah copy payload and excludes neighboring aya
     $page = $service->resolvePage(1, (int) $firstAyah->ayah_index);
     $lines = collect($page['mushafLines'] ?? []);
     $firstAyahIndex = (int) $firstAyah->ayah_index;
-    $expectedFirstAyahText = $normalize((string) $firstAyah->text_uthmani);
-    $secondAyahFirstToken = collect(preg_split('/\s+/u', $normalize((string) $secondAyah->text_uthmani)) ?: [])
+    $expectedFirstAyahText = $normalize(
+        trim((string) ($firstAyah->text_uthmani ?? '')) !== ''
+            ? (string) $firstAyah->text_uthmani
+            : (string) ($firstAyah->text_searchable_typed ?? ''),
+    );
+    $secondAyahText = $normalize(
+        trim((string) ($secondAyah->text_uthmani ?? '')) !== ''
+            ? (string) $secondAyah->text_uthmani
+            : (string) ($secondAyah->text_searchable_typed ?? ''),
+    );
+    $secondAyahFirstToken = collect(preg_split('/\s+/u', $secondAyahText) ?: [])
         ->filter(static fn ($token): bool => is_string($token) && trim($token) !== '')
         ->map(static fn (string $token): string => trim($token))
         ->first();

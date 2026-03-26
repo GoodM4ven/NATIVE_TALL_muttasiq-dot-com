@@ -29,6 +29,8 @@ class Setting extends Model
 
     public const DOES_QURAN_TARGET_WORDS_BY_DEFAULT = 'does_quran_target_words_by_default';
 
+    public const DOES_QURAN_PRESERVE_HARAKAT_ON_COPY = 'does_quran_preserve_harakat_on_copy';
+
     public const MINIMUM_MAIN_TEXT_SIZE = 'minimum_main_text_size';
 
     public const MAXIMUM_MAIN_TEXT_SIZE = 'maximum_main_text_size';
@@ -103,6 +105,13 @@ class Setting extends Model
                 'default' => false,
                 'label' => '1. توجيه التحويم والضغط المباشر في قارئ القرآن إلى الكلمات بدل الآيات.',
                 'help' => 'عند التعطيل: الضغط المطوّل لمدة 1.25 ثانية يستهدف الكلمة بدل الآية. وعند التفعيل ينعكس السلوك.',
+                'group' => self::GROUP_QURAN,
+                'type' => 'boolean',
+            ],
+            self::DOES_QURAN_PRESERVE_HARAKAT_ON_COPY => [
+                'default' => true,
+                'label' => '2. الحفاظ على الحركات عند نسخ نص الآيات.',
+                'help' => 'عند التعطيل: تُزال الحركات والعلامات الزخرفية من النص المنسوخ، مع إبقاء الهمزات.',
                 'group' => self::GROUP_QURAN,
                 'type' => 'boolean',
             ],

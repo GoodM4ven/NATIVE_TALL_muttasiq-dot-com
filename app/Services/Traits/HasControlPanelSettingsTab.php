@@ -90,6 +90,13 @@ trait HasControlPanelSettingsTab
                             ->belowContent([
                                 Text::make((string) ($quranDefinitions[Setting::DOES_QURAN_TARGET_WORDS_BY_DEFAULT]['help'] ?? ''))->size(TextSize::ExtraSmall),
                             ]),
+
+                        Components\Checkbox::make(Setting::DOES_QURAN_PRESERVE_HARAKAT_ON_COPY)
+                            ->default((bool) ($quranDefinitions[Setting::DOES_QURAN_PRESERVE_HARAKAT_ON_COPY]['default'] ?? true))
+                            ->label($quranDefinitions[Setting::DOES_QURAN_PRESERVE_HARAKAT_ON_COPY]['label'])
+                            ->belowContent([
+                                Text::make((string) ($quranDefinitions[Setting::DOES_QURAN_PRESERVE_HARAKAT_ON_COPY]['help'] ?? ''))->size(TextSize::ExtraSmall),
+                            ]),
                     ]),
 
                 Text::make(new HtmlString('<hr class="border-0 h-px bg-linear-to-r from-transparent via-gray-400 to-transparent mt-5">'))

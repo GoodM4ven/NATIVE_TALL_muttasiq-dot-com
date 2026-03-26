@@ -250,6 +250,7 @@ class Reader extends Component implements HasActions, HasSchemas
         $quranReaderSettings = [
             'enableVisualEnhancements' => (bool) ($normalizedSettings[Setting::DOES_ENABLE_VISUAL_ENHANCEMENTS] ?? true),
             'targetWordsByDefault' => (bool) ($normalizedSettings[Setting::DOES_QURAN_TARGET_WORDS_BY_DEFAULT] ?? false),
+            'preserveHarakatOnCopy' => (bool) ($normalizedSettings[Setting::DOES_QURAN_PRESERVE_HARAKAT_ON_COPY] ?? true),
         ];
         $this->maxPage = max(1, $readerData['maxPage']);
 

@@ -22,6 +22,7 @@ const defaultPagePayload = Object.freeze({
 const controlPanelSettingKeys = Object.freeze({
     enableVisualEnhancements: 'enable_visual_enhancements',
     targetWordsByDefault: 'does_quran_target_words_by_default',
+    preserveHarakatOnCopy: 'does_quran_preserve_harakat_on_copy',
 });
 
 const normalizePayload = (payload = {}) => ({
@@ -138,6 +139,14 @@ const normalizeTextValue = (value) => {
 
     return normalized === '' ? null : normalized;
 };
+
+const arabicHarakatPattern = /[\u0610-\u061A\u064B-\u0653\u0656-\u065F\u0670\u06D6-\u06ED]/gu;
+
+const stripArabicHarakat = (value) =>
+    String(value ?? '')
+        .replace(arabicHarakatPattern, '')
+        .replace(/\s+/g, ' ')
+        .trim();
 
 const normalizeTags = (value) => {
     const source = Array.isArray(value) ? value : String(value ?? '').split(',');
@@ -464,6 +473,7 @@ document.addEventListener('alpine:init', () => {
         hoveredWordIndex: 0,
         doesEnableVisualEnhancements: true,
         doesTargetWordsByDefault: false,
+        doesPreserveHarakatOnCopy: true,
         isLoadingPage: false,
         isFittingPage: true,
         pageMotionClass: '',
@@ -2814,6 +2824,10 @@ document.addEventListener('alpine:init', () => {
                 input,
                 controlPanelSettingKeys.targetWordsByDefault,
             );
+            const hasPreserveHarakatOnCopy = Object.prototype.hasOwnProperty.call(
+                input,
+                controlPanelSettingKeys.preserveHarakatOnCopy,
+            );
             const defaultVisualEnhancements = this.normalizeBooleanFlag(
                 this.initialSettings?.enableVisualEnhancements,
                 true,
@@ -2821,6 +2835,10 @@ document.addEventListener('alpine:init', () => {
             const defaultWordTargeting = this.normalizeBooleanFlag(
                 this.initialSettings?.targetWordsByDefault,
                 false,
+            );
+            const defaultPreserveHarakatOnCopy = this.normalizeBooleanFlag(
+                this.initialSettings?.preserveHarakatOnCopy,
+                true,
             );
 
             this.doesEnableVisualEnhancements = this.normalizeBooleanFlag(
@@ -2834,6 +2852,12 @@ document.addEventListener('alpine:init', () => {
                     ? input[controlPanelSettingKeys.targetWordsByDefault]
                     : defaultWordTargeting,
                 false,
+            );
+            this.doesPreserveHarakatOnCopy = this.normalizeBooleanFlag(
+                hasPreserveHarakatOnCopy
+                    ? input[controlPanelSettingKeys.preserveHarakatOnCopy]
+                    : defaultPreserveHarakatOnCopy,
+                true,
             );
         },
 
@@ -3224,8 +3248,24 @@ document.addEventListener('alpine:init', () => {
             return copied;
         },
 
-        async writeClipboardText(text) {
+        normalizeCopiedText(text) {
             const normalizedText = normalizeTextValue(text);
+
+            if (!normalizedText) {
+                return null;
+            }
+
+            if (this.doesPreserveHarakatOnCopy) {
+                return normalizedText;
+            }
+
+            const withoutHarakat = normalizeTextValue(stripArabicHarakat(normalizedText));
+
+            return withoutHarakat ?? normalizedText;
+        },
+
+        async writeClipboardText(text) {
+            const normalizedText = this.normalizeCopiedText(text);
 
             if (!normalizedText) {
                 return false;

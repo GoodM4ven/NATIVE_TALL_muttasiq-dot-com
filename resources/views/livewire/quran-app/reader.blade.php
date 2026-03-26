@@ -1240,7 +1240,7 @@
         searchActionModalId: @js(''),
         historyModalId: @js('quran-reader-history-modal'),
         bookmarksModalId: @js('quran-reader-bookmarks-modal'),
-        settings: @js($quranReaderSettings ?? ['enableVisualEnhancements' => true, 'targetWordsByDefault' => false]),
+        settings: @js($quranReaderSettings ?? ['enableVisualEnhancements' => true, 'targetWordsByDefault' => false, 'preserveHarakatOnCopy' => true]),
     })"
     x-bind:class="{ 'quran-reader--visual-enhancements-disabled': !doesEnableVisualEnhancements }"
     x-on:control-panel-updated.window="applyControlPanelSettings($event.detail?.controlPanel ?? {})"

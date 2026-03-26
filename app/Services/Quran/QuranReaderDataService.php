@@ -1315,6 +1315,7 @@ class QuranReaderDataService
                     'global_word_index',
                     'surah_number',
                     'ayah_number',
+                    'token_searchable_typed',
                     'token_uthmani',
                 ])
                 ->whereBetween('global_word_index', [$wordRangeStart, $wordRangeEnd + 1])
@@ -1322,7 +1323,11 @@ class QuranReaderDataService
                 ->get();
 
             foreach ($fallbackWords as $word) {
-                $fallbackText = trim((string) $word->token_uthmani);
+                $fallbackText = trim((string) ($word->token_uthmani ?? ''));
+
+                if ($fallbackText === '') {
+                    $fallbackText = trim((string) ($word->token_searchable_typed ?? ''));
+                }
                 $displayWordsByIndex[(int) $word->global_word_index] = [
                     'global_word_index' => (int) $word->global_word_index,
                     'surah_number' => (int) $word->surah_number,
