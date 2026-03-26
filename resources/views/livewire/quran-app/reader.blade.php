@@ -163,6 +163,14 @@
                 0 2px 10px color-mix(in srgb, var(--success-400) 12%, transparent);
         }
 
+        .quran-segment-cluster.quran-segment-cluster-copied {
+            background: color-mix(in srgb, var(--warning-200) 60%, transparent);
+            box-shadow:
+                inset 0 0 0 1px color-mix(in srgb, var(--warning-500) 26%, transparent),
+                0 2px 12px color-mix(in srgb, var(--warning-700) 18%, transparent);
+            animation: quran-copy-highlight-enter 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
         .quran-word-button {
             display: inline-flex;
             align-items: baseline;
@@ -191,6 +199,28 @@
                 inset 0 0 0 1px color-mix(in srgb, var(--success-300) 20%, transparent),
                 0 2px 10px color-mix(in srgb, var(--success-400) 12%, transparent);
             border-radius: 0.52em;
+        }
+
+        .quran-word-button.quran-segment-copied {
+            background: color-mix(in srgb, var(--warning-200) 64%, transparent);
+            color: color-mix(in srgb, var(--warning-900) 70%, var(--quran-ink));
+            box-shadow:
+                inset 0 0 0 1px color-mix(in srgb, var(--warning-500) 30%, transparent),
+                0 2px 12px color-mix(in srgb, var(--warning-700) 16%, transparent);
+            border-radius: 0.52em;
+            animation: quran-copy-highlight-enter 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        @keyframes quran-copy-highlight-enter {
+            from {
+                opacity: 0;
+                transform: translateY(0.08rem) scale(0.98);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
         }
 
         .quran-ayah-marker {
@@ -1463,6 +1493,8 @@
                                                                 cluster),
                                                             'quran-segment-cluster-hovered': isAyahClusterHovered(
                                                                 cluster),
+                                                            'quran-segment-cluster-copied': isAyahClusterCopied(
+                                                                cluster),
                                                         }"
                                                     >
                                                         <template
@@ -1481,6 +1513,7 @@
                                                                     x-bind:class="{
                                                                         'quran-segment-active': isWordActive(word),
                                                                         'quran-segment-hovered': isWordHovered(word),
+                                                                        'quran-segment-copied': isWordCopied(word),
                                                                     }"
                                                                     x-bind:disabled="!isSelectableWord(word)"
                                                                     x-on:pointerdown="onWordPointerDown($event, word)"

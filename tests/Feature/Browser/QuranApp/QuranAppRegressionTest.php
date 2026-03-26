@@ -941,12 +941,119 @@ JS);
 
     waitForScriptWithTimeout($page, 'Number(window.__copiedTexts?.length ?? 0) >= 2', true, 6_000);
     waitForScriptWithTimeout($page, quranReaderDataScript('Number(data.copyFeedback.serial ?? 0) >= 2'), true, 6_000);
+    $didDragThenSingleClick = $page->script(<<<'JS'
+(() => {
+  const wordButtons = Array.from(document.querySelectorAll('.quran-page-lines .quran-word-button'))
+    .filter((button) => button instanceof HTMLButtonElement && !button.disabled);
+
+  if (wordButtons.length < 4) {
+    return false;
+  }
+
+  const pointFor = (button) => {
+    const rect = button.getBoundingClientRect();
+
+    return {
+      x: rect.left + (rect.width / 2),
+      y: rect.top + (rect.height / 2),
+    };
+  };
+
+  const startWord = wordButtons[0];
+  const middleWord = wordButtons[1];
+  const endWord = wordButtons[2];
+  const postDragWord = wordButtons[3];
+  const startPoint = pointFor(startWord);
+  const middlePoint = pointFor(middleWord);
+  const endPoint = pointFor(endWord);
+  const postDragPoint = pointFor(postDragWord);
+
+  startWord.dispatchEvent(
+    new PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 914,
+      pointerType: 'mouse',
+      clientX: startPoint.x,
+      clientY: startPoint.y,
+    }),
+  );
+
+  middleWord.dispatchEvent(
+    new PointerEvent('pointermove', {
+      bubbles: true,
+      pointerId: 914,
+      pointerType: 'mouse',
+      clientX: middlePoint.x,
+      clientY: middlePoint.y,
+    }),
+  );
+
+  endWord.dispatchEvent(
+    new PointerEvent('pointermove', {
+      bubbles: true,
+      pointerId: 914,
+      pointerType: 'mouse',
+      clientX: endPoint.x,
+      clientY: endPoint.y,
+    }),
+  );
+
+  endWord.dispatchEvent(
+    new PointerEvent('pointerup', {
+      bubbles: true,
+      pointerId: 914,
+      pointerType: 'mouse',
+      clientX: endPoint.x,
+      clientY: endPoint.y,
+    }),
+  );
+
+  window.setTimeout(() => {
+    postDragWord.dispatchEvent(
+      new PointerEvent('pointerdown', {
+        bubbles: true,
+        pointerId: 915,
+        pointerType: 'mouse',
+        clientX: postDragPoint.x,
+        clientY: postDragPoint.y,
+      }),
+    );
+
+    postDragWord.dispatchEvent(
+      new PointerEvent('pointerup', {
+        bubbles: true,
+        pointerId: 915,
+        pointerType: 'mouse',
+        clientX: postDragPoint.x,
+        clientY: postDragPoint.y,
+      }),
+    );
+
+    postDragWord.dispatchEvent(
+      new MouseEvent('click', {
+        bubbles: true,
+        clientX: postDragPoint.x,
+        clientY: postDragPoint.y,
+      }),
+    );
+  }, 260);
+
+  return true;
+})()
+JS);
+
+    expect($didDragThenSingleClick)->toBeTrue();
+
+    waitForScriptWithTimeout($page, 'Number(window.__copiedTexts?.length ?? 0) >= 3', true, 6_000);
+    waitForScriptWithTimeout($page, 'Number(window.__copiedTexts?.length ?? 0) >= 4', true, 6_000);
 
     $copiedTexts = $page->script('window.__copiedTexts');
 
     expect($copiedTexts)->toBeArray()
         ->and(trim((string) ($copiedTexts[0] ?? '')))->not->toBe('')
-        ->and(trim((string) ($copiedTexts[1] ?? '')))->not->toBe('');
+        ->and(trim((string) ($copiedTexts[1] ?? '')))->not->toBe('')
+        ->and(trim((string) ($copiedTexts[2] ?? '')))->not->toBe('')
+        ->and(trim((string) ($copiedTexts[3] ?? '')))->not->toBe('');
 
     scriptClick($page, '[data-quran-open-history]');
     waitForScriptWithTimeout(

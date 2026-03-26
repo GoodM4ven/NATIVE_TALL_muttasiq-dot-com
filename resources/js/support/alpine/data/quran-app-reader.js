@@ -87,6 +87,8 @@ const wordPressHoldDelayMs = 750;
 const wordPressDragThresholdPx = 14;
 const bookmarkHoldDelayMs = 680;
 const copyPopoverVisibleDurationMs = 920;
+const copiedHighlightVisibleDurationMs = 3000;
+const wordClickSuppressionResetMs = 180;
 const navigationSettleDelayMs = 140;
 const navigationRevealLockDurationMs = 420;
 const defaultBasmallahBottomGapScale = -0.18;
@@ -530,6 +532,10 @@ document.addEventListener('alpine:init', () => {
             timer: null,
             serial: 0,
         },
+        copiedHighlights: {
+            wordKeys: [],
+            ayahIndexes: [],
+        },
         bookmarkButtonPress: {
             pointerId: null,
             holdTriggered: false,
@@ -573,6 +579,8 @@ document.addEventListener('alpine:init', () => {
         _wordPressHoldTimer: null,
         _wordBySelectionKey: new Map(),
         _ayahNumberByIndex: new Map(),
+        _copiedHighlightTimer: null,
+        _suppressWordClickResetTimer: null,
         _suppressNextWordClick: false,
         _skipNextSearchModalCloseLayout: false,
         _lastKnownModalOpenState: false,
@@ -750,7 +758,18 @@ document.addEventListener('alpine:init', () => {
                 this._wordPressHoldTimer = null;
             }
 
+            if (this._suppressWordClickResetTimer !== null) {
+                clearTimeout(this._suppressWordClickResetTimer);
+                this._suppressWordClickResetTimer = null;
+            }
+
+            if (this._copiedHighlightTimer !== null) {
+                clearTimeout(this._copiedHighlightTimer);
+                this._copiedHighlightTimer = null;
+            }
+
             this.hideCopyFeedback();
+            this.clearCopiedHighlights();
             this.clearBookmarkButtonPressState();
 
             if (this.pageCounterPulse.timer !== null) {
@@ -3071,6 +3090,91 @@ document.addEventListener('alpine:init', () => {
             return this.readerPanelCenterPoint();
         },
 
+        copiedWordKey(word) {
+            return this.wordSelectionKeyFromMeta(this.normalizeSelectableWordMeta(word));
+        },
+
+        isWordCopied(word) {
+            const wordKey = this.copiedWordKey(word);
+
+            if (!wordKey || !Array.isArray(this.copiedHighlights.wordKeys)) {
+                return false;
+            }
+
+            return this.copiedHighlights.wordKeys.includes(wordKey);
+        },
+
+        isAyahClusterCopied(cluster) {
+            const ayahIndex = Math.max(0, Math.trunc(Number(cluster?.ayahIndex ?? 0)));
+
+            if (ayahIndex < 1 || !Array.isArray(this.copiedHighlights.ayahIndexes)) {
+                return false;
+            }
+
+            return this.copiedHighlights.ayahIndexes.includes(ayahIndex);
+        },
+
+        clearCopiedHighlights() {
+            if (this._copiedHighlightTimer !== null) {
+                clearTimeout(this._copiedHighlightTimer);
+                this._copiedHighlightTimer = null;
+            }
+
+            this.copiedHighlights.wordKeys = [];
+            this.copiedHighlights.ayahIndexes = [];
+        },
+
+        applyCopiedHighlights({ words = [], ayahIndexes = [] } = {}) {
+            const uniqueWordKeys = [
+                ...new Set(
+                    (Array.isArray(words) ? words : [])
+                        .map((word) => this.copiedWordKey(word))
+                        .filter((wordKey) => typeof wordKey === 'string' && wordKey !== ''),
+                ),
+            ];
+            const uniqueAyahIndexes = [
+                ...new Set(
+                    (Array.isArray(ayahIndexes) ? ayahIndexes : [])
+                        .map((ayahIndex) => Math.max(0, Math.trunc(Number(ayahIndex ?? 0))))
+                        .filter((ayahIndex) => ayahIndex > 0),
+                ),
+            ];
+
+            this.copiedHighlights.wordKeys = uniqueWordKeys;
+            this.copiedHighlights.ayahIndexes = uniqueAyahIndexes;
+
+            if (this._copiedHighlightTimer !== null) {
+                clearTimeout(this._copiedHighlightTimer);
+                this._copiedHighlightTimer = null;
+            }
+
+            if (uniqueWordKeys.length < 1 && uniqueAyahIndexes.length < 1) {
+                return;
+            }
+
+            this._copiedHighlightTimer = window.setTimeout(() => {
+                this.clearCopiedHighlights();
+            }, copiedHighlightVisibleDurationMs);
+        },
+
+        setWordClickSuppression(enabled = false) {
+            this._suppressNextWordClick = Boolean(enabled);
+
+            if (this._suppressWordClickResetTimer !== null) {
+                clearTimeout(this._suppressWordClickResetTimer);
+                this._suppressWordClickResetTimer = null;
+            }
+
+            if (!this._suppressNextWordClick) {
+                return;
+            }
+
+            this._suppressWordClickResetTimer = window.setTimeout(() => {
+                this._suppressNextWordClick = false;
+                this._suppressWordClickResetTimer = null;
+            }, wordClickSuppressionResetMs);
+        },
+
         normalizeSelectableWordMeta(word, fallbackWordIndex = 0) {
             return {
                 ayahIndex: Math.max(0, Math.trunc(Number(word?.ayah_index ?? 0))),
@@ -3666,6 +3770,7 @@ document.addEventListener('alpine:init', () => {
             const copied = await this.writeClipboardText(wordText);
 
             if (copied) {
+                this.applyCopiedHighlights({ words: [word] });
                 this.showCopyFeedback(activationAnchor);
             }
         },
@@ -3675,15 +3780,26 @@ document.addEventListener('alpine:init', () => {
             const copied = await this.writeClipboardText(ayahText);
 
             if (copied) {
+                this.applyCopiedHighlights({ ayahIndexes: [ayahIndex] });
                 this.showCopyFeedback(activationAnchor);
             }
         },
 
         async copyDraggedSelection(activationAnchor = null) {
             const draggedText = this.composeDraggedSelectionText();
+            const copiedWords = this.interactionTargetsWords()
+                ? this.wordPress.trailWords.slice()
+                : [];
+            const copiedAyahIndexes = this.interactionTargetsWords()
+                ? []
+                : this.wordPress.trailAyahIndexes.slice();
             const copied = await this.writeClipboardText(draggedText);
 
             if (copied) {
+                this.applyCopiedHighlights({
+                    words: copiedWords,
+                    ayahIndexes: copiedAyahIndexes,
+                });
                 this.showCopyFeedback(activationAnchor);
             }
         },
@@ -3714,6 +3830,8 @@ document.addEventListener('alpine:init', () => {
 
                 return;
             }
+
+            this.setWordClickSuppression(false);
 
             const point = this.swipePoint(event);
 
@@ -3752,7 +3870,7 @@ document.addEventListener('alpine:init', () => {
                 }
 
                 this.wordPress.holdTriggered = true;
-                this._suppressNextWordClick = true;
+                this.setWordClickSuppression(true);
                 this._lastWordHoldAt = Date.now();
                 this.selectHoldSegment(this.wordPress.word, {
                     x: this.wordPress.startX,
@@ -3871,7 +3989,7 @@ document.addEventListener('alpine:init', () => {
                             target: this.wordPress.target,
                         },
                 );
-                this._suppressNextWordClick = shouldSuppressNextWordClick;
+                this.setWordClickSuppression(shouldSuppressNextWordClick);
             }
 
             this.clearWordPressState();
@@ -3888,7 +4006,7 @@ document.addEventListener('alpine:init', () => {
         onWordClick(event, word) {
             if (this._suppressNextWordClick) {
                 event?.preventDefault?.();
-                this._suppressNextWordClick = false;
+                this.setWordClickSuppression(false);
 
                 return;
             }
