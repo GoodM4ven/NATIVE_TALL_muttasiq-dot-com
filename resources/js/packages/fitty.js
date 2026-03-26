@@ -9,12 +9,12 @@ const maximumMainTextSizeKey = 'maximum_main_text_size';
 const fallbackMainTextSizeLimits = Object.freeze({
     [minimumMainTextSizeKey]: Object.freeze({
         min: 10,
-        max: 24,
+        max: 28,
         default: 16,
     }),
     [maximumMainTextSizeKey]: Object.freeze({
         min: 10,
-        max: 24,
+        max: 28,
         default: 24,
     }),
 });

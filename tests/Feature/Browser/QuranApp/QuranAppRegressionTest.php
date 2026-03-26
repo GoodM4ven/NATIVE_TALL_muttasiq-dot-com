@@ -1116,7 +1116,8 @@ JS);
         ->and(trim((string) ($copiedTexts[3] ?? '')))->not->toBe('')
         ->and($outOfOrderCopiedAyahText)->not->toBe('')
         ->and($outOfOrderCopiedAyahText)->not->toContain('۝')
-        ->and($outOfOrderCopiedAyahText)->toMatch('/\b6\b.*\b7\b/u');
+        ->and($outOfOrderCopiedAyahText)->toMatch('/\b6\b.*\b7\b/u')
+        ->and($outOfOrderCopiedAyahText)->toMatch('/~\s*\[[^\]]+\]\s*$/u');
 
     scriptClick($page, '[data-quran-open-history]');
     waitForScriptWithTimeout(

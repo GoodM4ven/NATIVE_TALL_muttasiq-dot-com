@@ -20,6 +20,7 @@ This shared source code base is representing the web version primarily, the one 
 - Use `$livewireLock` (from [resources/js/support/alpine/magic/livewire-lock.js]) for action locking where repeated taps/clicks could cause duplicate requests.
 - Use Filament as the primary UI engine for notifications, modals, slideovers, forms, tables, admin panels, etc.
 - Keep the "control panel" as a Filament tabbed action, where settings, changelogs, and about tabs are built.
+- For settings behavior, keep server/API defaults authoritative for untouched keys while persisting only explicit user overrides (see [resources/js/support/alpine/athkar-app-overrides.js]); any new setting must join this merge path.
 - Place reusable cross-feature utilities in `Support`/`support` namespaces and folders, put inside their standradized main folders first of course.
 - The layout manager [resources/js/support/alpine/data/layout-manager.js] tracks action/modal events (`open-modal`, `close-modal`, etc.) and should stay in sync with Filament modal behavior.
 
@@ -47,6 +48,8 @@ This shared source code base is representing the web version primarily, the one 
 
 ## Debugging
 - For investigating AlpineJS transition failiures, try using [resources/js/support/debugging/alpine-transition-debugger.js].
+- If the front-end behavior doesn't sync with the back-end. Debug it using Playright browser skill.
+  - When Playright is unavailable to the AI agent, warn the user about it.
 
 ## Finishing
 - When have modified CSS or JS files, use `npm run format:prettier` to format them.

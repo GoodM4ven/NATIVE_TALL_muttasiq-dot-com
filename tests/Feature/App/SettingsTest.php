@@ -18,7 +18,8 @@ it('composes and executes the control panel lifecycle without persisting runtime
         ->toContain(HasControlPanelAboutTab::class);
 
     expect(Setting::definitionsForGroup(Setting::GROUP_QURAN))
-        ->toHaveKey(Setting::DOES_QURAN_TARGET_WORDS_BY_DEFAULT);
+        ->toHaveKey(Setting::DOES_QURAN_TARGET_WORDS_BY_DEFAULT)
+        ->toHaveKey(Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ON_MULTI_COPY);
 
     Setting::query()->firstOrCreate(
         ['name' => Setting::DOES_SKIP_GUIDANCE_PANELS],
@@ -33,7 +34,9 @@ it('composes and executes the control panel lifecycle without persisting runtime
         Setting::DOES_PREVENT_SWITCHING_ATHKAR_UNTIL_COMPLETION => false,
         Setting::DOES_SKIP_GUIDANCE_PANELS => true,
         Setting::DOES_ENABLE_VISUAL_ENHANCEMENTS => false,
+        Setting::DOES_PRESERVE_HARAKAT_IN_DISPLAY => false,
         Setting::DOES_QURAN_TARGET_WORDS_BY_DEFAULT => true,
+        Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ON_MULTI_COPY => false,
         Setting::MINIMUM_MAIN_TEXT_SIZE => 18,
         Setting::MAXIMUM_MAIN_TEXT_SIZE => 20,
     ];

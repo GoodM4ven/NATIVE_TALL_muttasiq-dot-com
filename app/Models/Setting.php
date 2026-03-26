@@ -29,9 +29,13 @@ class Setting extends Model
 
     public const DOES_USE_WESTERN_NUMERALS = 'does_use_western_numerals';
 
+    public const DOES_PRESERVE_HARAKAT_IN_DISPLAY = 'does_preserve_harakat_in_display';
+
     public const DOES_QURAN_TARGET_WORDS_BY_DEFAULT = 'does_quran_target_words_by_default';
 
     public const DOES_QURAN_PRESERVE_HARAKAT_ON_COPY = 'does_quran_preserve_harakat_on_copy';
+
+    public const DOES_QURAN_APPEND_SURAH_AFFIX_ON_MULTI_COPY = 'does_quran_append_surah_affix_on_multi_copy';
 
     public const MINIMUM_MAIN_TEXT_SIZE = 'minimum_main_text_size';
 
@@ -39,13 +43,13 @@ class Setting extends Model
 
     public const MIN_MAIN_TEXT_SIZE_MIN = 14;
 
-    public const MIN_MAIN_TEXT_SIZE_MAX = 24;
+    public const MIN_MAIN_TEXT_SIZE_MAX = 28;
 
     public const MIN_MAIN_TEXT_SIZE_DEFAULT = 21;
 
     public const MAX_MAIN_TEXT_SIZE_MIN = 14;
 
-    public const MAX_MAIN_TEXT_SIZE_MAX = 24;
+    public const MAX_MAIN_TEXT_SIZE_MAX = 28;
 
     public const MAX_MAIN_TEXT_SIZE_DEFAULT = 22;
 
@@ -105,7 +109,14 @@ class Setting extends Model
             ],
             self::DOES_USE_WESTERN_NUMERALS => [
                 'default' => true,
-                'label' => '4. استخدام الأرقام الغربية (123) بدل العربية (١٢٣) في العرض.',
+                'label' => '4. استخدام الأرقام العربية الغربية (123) بدل العربية الشرقية (١٢٣) في العرض.',
+                'group' => self::GROUP_GENERAL,
+                'type' => 'boolean',
+            ],
+            self::DOES_PRESERVE_HARAKAT_IN_DISPLAY => [
+                'default' => true,
+                'label' => '5. إظهار الحركات في النصوص العربية المعروضة.',
+                'help' => 'خيار عام مخصّص لاستخدامات لاحقة، ولا يطبَّق حاليًا داخل الواجهات.',
                 'group' => self::GROUP_GENERAL,
                 'type' => 'boolean',
             ],
@@ -120,6 +131,13 @@ class Setting extends Model
                 'default' => true,
                 'label' => '2. الحفاظ على الحركات عند نسخ نص الآيات.',
                 'help' => 'عند التعطيل: تُزال الحركات والعلامات الزخرفية من النص المنسوخ، مع إبقاء الهمزات.',
+                'group' => self::GROUP_QURAN,
+                'type' => 'boolean',
+            ],
+            self::DOES_QURAN_APPEND_SURAH_AFFIX_ON_MULTI_COPY => [
+                'default' => true,
+                'label' => '3. إضافة لاحقة السورة (~ [سورة ...]) مرة واحدة عند النسخ المتعدد.',
+                'help' => 'يُضاف اسم السورة مرة واحدة فقط في نهاية النص المنسوخ عند النسخ بالسحب.',
                 'group' => self::GROUP_QURAN,
                 'type' => 'boolean',
             ],

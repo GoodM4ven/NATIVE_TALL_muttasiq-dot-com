@@ -77,6 +77,14 @@ trait HasControlPanelSettingsTab
                             ->belowContent([
                                 Text::make((string) ($generalDefinitions[Setting::DOES_USE_WESTERN_NUMERALS]['help'] ?? ''))->size(TextSize::ExtraSmall),
                             ]),
+
+                        Components\Checkbox::make(Setting::DOES_PRESERVE_HARAKAT_IN_DISPLAY)
+                            ->default((bool) ($generalDefinitions[Setting::DOES_PRESERVE_HARAKAT_IN_DISPLAY]['default'] ?? true))
+                            ->extraFieldWrapperAttributes(['class' => 'relative z-20 mt-3 sm:mt-0'])
+                            ->label($generalDefinitions[Setting::DOES_PRESERVE_HARAKAT_IN_DISPLAY]['label'])
+                            ->belowContent([
+                                Text::make((string) ($generalDefinitions[Setting::DOES_PRESERVE_HARAKAT_IN_DISPLAY]['help'] ?? ''))->size(TextSize::ExtraSmall),
+                            ]),
                     ]),
 
                 Text::make(new HtmlString('<hr class="border-0 h-px bg-linear-to-r from-transparent via-gray-400 to-transparent mt-5">'))
@@ -104,6 +112,13 @@ trait HasControlPanelSettingsTab
                             ->label($quranDefinitions[Setting::DOES_QURAN_PRESERVE_HARAKAT_ON_COPY]['label'])
                             ->belowContent([
                                 Text::make((string) ($quranDefinitions[Setting::DOES_QURAN_PRESERVE_HARAKAT_ON_COPY]['help'] ?? ''))->size(TextSize::ExtraSmall),
+                            ]),
+
+                        Components\Checkbox::make(Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ON_MULTI_COPY)
+                            ->default((bool) ($quranDefinitions[Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ON_MULTI_COPY]['default'] ?? true))
+                            ->label($quranDefinitions[Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ON_MULTI_COPY]['label'])
+                            ->belowContent([
+                                Text::make((string) ($quranDefinitions[Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ON_MULTI_COPY]['help'] ?? ''))->size(TextSize::ExtraSmall),
                             ]),
                     ]),
 

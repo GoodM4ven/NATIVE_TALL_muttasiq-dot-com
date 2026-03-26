@@ -23,6 +23,7 @@ const controlPanelSettingKeys = Object.freeze({
     enableVisualEnhancements: 'enable_visual_enhancements',
     targetWordsByDefault: 'does_quran_target_words_by_default',
     preserveHarakatOnCopy: 'does_quran_preserve_harakat_on_copy',
+    appendSurahAffixOnMultiCopy: 'does_quran_append_surah_affix_on_multi_copy',
     useWesternNumerals: 'does_use_western_numerals',
 });
 
@@ -486,6 +487,7 @@ document.addEventListener('alpine:init', () => {
         doesEnableVisualEnhancements: true,
         doesTargetWordsByDefault: false,
         doesPreserveHarakatOnCopy: true,
+        doesAppendSurahAffixOnMultiCopy: true,
         doesUseWesternNumerals: true,
         westernNumeralCharacters: defaultWesternNumerals.slice(),
         arabicNumeralCharacters: defaultArabicNumerals.slice(),
@@ -586,6 +588,7 @@ document.addEventListener('alpine:init', () => {
         _wordPressHoldTimer: null,
         _wordBySelectionKey: new Map(),
         _ayahNumberByIndex: new Map(),
+        _surahNumberByAyahIndex: new Map(),
         _copiedHighlightTimer: null,
         _suppressWordClickResetTimer: null,
         _suppressNextWordClick: false,
@@ -612,7 +615,9 @@ document.addEventListener('alpine:init', () => {
 
         init() {
             this.applyPayload(this.initialPayload, { setPageNumber: true });
-            this.applyControlPanelSettings(this.initialSettings);
+            this.applyControlPanelSettings(
+                this.resolveControlPanelSettingsWithUserOverrides(this.initialSettings),
+            );
             this.buildSurahDirectory(
                 Array.isArray(this.initialPayload.surahDirectory) &&
                     this.initialPayload.surahDirectory.length > 0
@@ -2903,6 +2908,44 @@ document.addEventListener('alpine:init', () => {
             });
         },
 
+        resolveControlPanelSettingsWithUserOverrides(defaultSettings = {}) {
+            const defaults =
+                defaultSettings &&
+                typeof defaultSettings === 'object' &&
+                !Array.isArray(defaultSettings)
+                    ? defaultSettings
+                    : {};
+
+            if (
+                typeof window === 'undefined' ||
+                typeof window.getUserSettingsOverrides !== 'function'
+            ) {
+                return defaults;
+            }
+
+            const userOverrides = window.getUserSettingsOverrides();
+
+            if (
+                !userOverrides ||
+                typeof userOverrides !== 'object' ||
+                Array.isArray(userOverrides)
+            ) {
+                return defaults;
+            }
+
+            const merged = { ...defaults };
+
+            Object.keys(defaults).forEach((key) => {
+                if (!Object.prototype.hasOwnProperty.call(userOverrides, key)) {
+                    return;
+                }
+
+                merged[key] = userOverrides[key];
+            });
+
+            return merged;
+        },
+
         applyControlPanelSettings(controlPanel = {}) {
             const input =
                 controlPanel && typeof controlPanel === 'object' && !Array.isArray(controlPanel)
@@ -2920,6 +2963,10 @@ document.addEventListener('alpine:init', () => {
                 input,
                 controlPanelSettingKeys.preserveHarakatOnCopy,
             );
+            const hasAppendSurahAffixOnMultiCopy = Object.prototype.hasOwnProperty.call(
+                input,
+                controlPanelSettingKeys.appendSurahAffixOnMultiCopy,
+            );
             const hasUseWesternNumerals = Object.prototype.hasOwnProperty.call(
                 input,
                 controlPanelSettingKeys.useWesternNumerals,
@@ -2934,6 +2981,10 @@ document.addEventListener('alpine:init', () => {
             );
             const defaultPreserveHarakatOnCopy = this.normalizeBooleanFlag(
                 this.initialSettings?.preserveHarakatOnCopy,
+                true,
+            );
+            const defaultAppendSurahAffixOnMultiCopy = this.normalizeBooleanFlag(
+                this.initialSettings?.appendSurahAffixOnMultiCopy,
                 true,
             );
             const defaultUseWesternNumerals = this.normalizeBooleanFlag(
@@ -2966,6 +3017,12 @@ document.addEventListener('alpine:init', () => {
                 hasPreserveHarakatOnCopy
                     ? input[controlPanelSettingKeys.preserveHarakatOnCopy]
                     : defaultPreserveHarakatOnCopy,
+                true,
+            );
+            this.doesAppendSurahAffixOnMultiCopy = this.normalizeBooleanFlag(
+                hasAppendSurahAffixOnMultiCopy
+                    ? input[controlPanelSettingKeys.appendSurahAffixOnMultiCopy]
+                    : defaultAppendSurahAffixOnMultiCopy,
                 true,
             );
             this.doesUseWesternNumerals = this.normalizeBooleanFlag(
@@ -3249,6 +3306,7 @@ document.addEventListener('alpine:init', () => {
             return {
                 ayahIndex: Math.max(0, Math.trunc(Number(word?.ayah_index ?? 0))),
                 ayahNumber: Math.max(0, Math.trunc(Number(word?.ayah_number ?? 0))),
+                surahNumber: Math.max(0, Math.trunc(Number(word?.surah_number ?? 0))),
                 wordIndex: Math.max(
                     0,
                     Math.trunc(Number(word?.word_index ?? fallbackWordIndex ?? 0)),
@@ -3270,6 +3328,7 @@ document.addEventListener('alpine:init', () => {
         rebuildWordSelectionIndex() {
             this._wordBySelectionKey = new Map();
             this._ayahNumberByIndex = new Map();
+            this._surahNumberByAyahIndex = new Map();
 
             if (!Array.isArray(this.mushafLines)) {
                 return;
@@ -3295,6 +3354,14 @@ document.addEventListener('alpine:init', () => {
                     ) {
                         this._ayahNumberByIndex.set(wordMeta.ayahIndex, wordMeta.ayahNumber);
                     }
+
+                    if (
+                        wordMeta.ayahIndex > 0 &&
+                        wordMeta.surahNumber > 0 &&
+                        !this._surahNumberByAyahIndex.has(wordMeta.ayahIndex)
+                    ) {
+                        this._surahNumberByAyahIndex.set(wordMeta.ayahIndex, wordMeta.surahNumber);
+                    }
                 });
             });
         },
@@ -3317,6 +3384,10 @@ document.addEventListener('alpine:init', () => {
                     0,
                     Math.trunc(Number(buttonElement.getAttribute('data-quran-ayah-number') ?? 0)),
                 ),
+                surahNumber: Math.max(
+                    0,
+                    Math.trunc(Number(buttonElement.getAttribute('data-quran-surah-number') ?? 0)),
+                ),
             };
             const selectionKey = this.wordSelectionKeyFromMeta(wordMeta);
 
@@ -3337,6 +3408,7 @@ document.addEventListener('alpine:init', () => {
             return {
                 ayah_index: wordMeta.ayahIndex,
                 ayah_number: wordMeta.ayahNumber,
+                surah_number: wordMeta.surahNumber,
                 word_index: wordMeta.wordIndex,
                 text: fallbackText,
                 copy_text: fallbackText,
@@ -3376,6 +3448,14 @@ document.addEventListener('alpine:init', () => {
 
             if (wordMeta.ayahNumber > 0 && !this._ayahNumberByIndex.has(wordMeta.ayahIndex)) {
                 this._ayahNumberByIndex.set(wordMeta.ayahIndex, wordMeta.ayahNumber);
+            }
+
+            if (
+                wordMeta.ayahIndex > 0 &&
+                wordMeta.surahNumber > 0 &&
+                !this._surahNumberByAyahIndex.has(wordMeta.ayahIndex)
+            ) {
+                this._surahNumberByAyahIndex.set(wordMeta.ayahIndex, wordMeta.surahNumber);
             }
 
             if (this.interactionTargetsWords()) {
@@ -3426,6 +3506,93 @@ document.addEventListener('alpine:init', () => {
             }
 
             return `(${this.formatAyahTokenNumber(ayahNumber)})`;
+        },
+
+        selectedDraggedAyahIndexes() {
+            const sourceAyahIndexes = this.interactionTargetsWords()
+                ? this.wordPress.trailWords.map(
+                      (word) => this.normalizeSelectableWordMeta(word).ayahIndex,
+                  )
+                : this.wordPress.trailAyahIndexes;
+
+            return sourceAyahIndexes
+                .map((ayahIndex) => Math.max(0, Math.trunc(Number(ayahIndex ?? 0))))
+                .filter(
+                    (ayahIndex, index, array) =>
+                        ayahIndex > 0 && array.indexOf(ayahIndex) === index,
+                )
+                .sort((firstAyahIndex, secondAyahIndex) => firstAyahIndex - secondAyahIndex);
+        },
+
+        surahNumberForAyahIndex(ayahIndex) {
+            const normalizedAyahIndex = Math.max(0, Math.trunc(Number(ayahIndex ?? 0)));
+
+            if (normalizedAyahIndex < 1) {
+                return 0;
+            }
+
+            const mappedSurahNumber = Math.max(
+                0,
+                Math.trunc(Number(this._surahNumberByAyahIndex.get(normalizedAyahIndex) ?? 0)),
+            );
+
+            if (mappedSurahNumber > 0) {
+                return mappedSurahNumber;
+            }
+
+            if (!Array.isArray(this.mushafLines)) {
+                return 0;
+            }
+
+            for (const line of this.mushafLines) {
+                if (!Array.isArray(line?.words)) {
+                    continue;
+                }
+
+                for (const word of line.words) {
+                    const wordAyahIndex = Math.max(0, Math.trunc(Number(word?.ayah_index ?? 0)));
+
+                    if (wordAyahIndex !== normalizedAyahIndex) {
+                        continue;
+                    }
+
+                    const wordSurahNumber = Math.max(
+                        0,
+                        Math.trunc(Number(word?.surah_number ?? line?.surah_number ?? 0)),
+                    );
+
+                    if (wordSurahNumber < 1) {
+                        continue;
+                    }
+
+                    this._surahNumberByAyahIndex.set(normalizedAyahIndex, wordSurahNumber);
+
+                    return wordSurahNumber;
+                }
+            }
+
+            return 0;
+        },
+
+        draggedSelectionSurahAffix() {
+            if (!this.doesAppendSurahAffixOnMultiCopy) {
+                return null;
+            }
+
+            const selectedAyahIndexes = this.selectedDraggedAyahIndexes();
+            const firstSelectedAyahIndex = selectedAyahIndexes[0] ?? 0;
+
+            if (firstSelectedAyahIndex < 1) {
+                return null;
+            }
+
+            const surahNumber = this.surahNumberForAyahIndex(firstSelectedAyahIndex);
+
+            if (surahNumber < 1) {
+                return null;
+            }
+
+            return `~ [${this.surahLabel(surahNumber)}]`;
         },
 
         composeDraggedWordSelectionText() {
@@ -3537,10 +3704,7 @@ document.addEventListener('alpine:init', () => {
                 return null;
             }
 
-            const normalizedAyahIndexes = this.wordPress.trailAyahIndexes
-                .map((ayahIndex) => Math.max(0, Math.trunc(Number(ayahIndex ?? 0))))
-                .filter((ayahIndex) => ayahIndex > 0)
-                .sort((firstAyahIndex, secondAyahIndex) => firstAyahIndex - secondAyahIndex);
+            const normalizedAyahIndexes = this.selectedDraggedAyahIndexes();
 
             if (normalizedAyahIndexes.length < 1) {
                 return null;
@@ -3573,11 +3737,23 @@ document.addEventListener('alpine:init', () => {
         },
 
         composeDraggedSelectionText() {
-            if (this.interactionTargetsWords()) {
-                return this.composeDraggedWordSelectionText();
+            const selectionText = this.interactionTargetsWords()
+                ? this.composeDraggedWordSelectionText()
+                : this.composeDraggedAyahSelectionText();
+
+            const normalizedSelectionText = normalizeTextValue(selectionText);
+
+            if (!normalizedSelectionText) {
+                return null;
             }
 
-            return this.composeDraggedAyahSelectionText();
+            const surahAffix = this.draggedSelectionSurahAffix();
+
+            if (!surahAffix) {
+                return normalizedSelectionText;
+            }
+
+            return normalizeTextValue(`${normalizedSelectionText} ${surahAffix}`);
         },
 
         extractWordText(word) {

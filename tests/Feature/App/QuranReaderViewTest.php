@@ -120,6 +120,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderViewSource)->toContain('x-on:touchstart.passive="onSwipeStart($event)"')
         ->and($quranReaderViewSource)->toContain('x-on:pointerup.window.passive="onWordPointerUp($event)"')
         ->and($quranReaderViewSource)->toContain('data-quran-word-button')
+        ->and($quranReaderViewSource)->toContain('x-bind:data-quran-surah-number=')
         ->and($quranReaderViewSource)->toContain('quran-segment-cluster-copied')
         ->and($quranReaderViewSource)->toContain('quran-segment-copied')
         ->and($quranReaderViewSource)->toContain('x-bind:data-fit-state="isFittingPage ? \'fitting\' : \'ready\'"')
@@ -196,11 +197,17 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderScriptSource)->toContain('isAyahClusterCopied(cluster)')
         ->and($quranReaderScriptSource)->toContain('writeClipboardText(text)')
         ->and($quranReaderScriptSource)->toContain("preserveHarakatOnCopy: 'does_quran_preserve_harakat_on_copy'")
+        ->and($quranReaderScriptSource)->toContain("appendSurahAffixOnMultiCopy: 'does_quran_append_surah_affix_on_multi_copy'")
         ->and($quranReaderScriptSource)->toContain("useWesternNumerals: 'does_use_western_numerals'")
         ->and($quranReaderScriptSource)->toContain('doesPreserveHarakatOnCopy: true')
+        ->and($quranReaderScriptSource)->toContain('doesAppendSurahAffixOnMultiCopy: true')
         ->and($quranReaderScriptSource)->toContain('doesUseWesternNumerals: true')
+        ->and($quranReaderScriptSource)->toContain('resolveControlPanelSettingsWithUserOverrides(defaultSettings = {})')
+        ->and($quranReaderScriptSource)->toContain('typeof window.getUserSettingsOverrides !== \'function\'')
+        ->and($quranReaderScriptSource)->toContain('draggedSelectionSurahAffix()')
+        ->and($quranReaderScriptSource)->toContain('return `~ [${this.surahLabel(surahNumber)}]`;')
         ->and($quranReaderScriptSource)->toContain('formatAyahTokenNumber(value)')
-        ->and($quranReaderScriptSource)->toContain('return this.formatAyahTokenNumber(ayahNumber);')
+        ->and($quranReaderScriptSource)->toContain('return `(${this.formatAyahTokenNumber(ayahNumber)})`;')
         ->and($quranReaderScriptSource)->toContain('normalizeCopiedText(text)')
         ->and($quranReaderScriptSource)->toContain('copyFeedbackStyle()');
 
@@ -225,8 +232,10 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderClassSource)->toContain("'x-on:blur' => '\$event.target.value = String(Math.min(Math.max(1, Math.trunc(Number(\$event.target.value || 1) || 1)), Math.max(1, Number(\$event.target.max) || 1)));'")
         ->and($quranReaderClassSource)->toContain("view('livewire.quran-app.reader'")
         ->and($quranReaderClassSource)->toContain('Setting::DOES_QURAN_PRESERVE_HARAKAT_ON_COPY')
+        ->and($quranReaderClassSource)->toContain('Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ON_MULTI_COPY')
         ->and($quranReaderClassSource)->toContain('Setting::DOES_USE_WESTERN_NUMERALS')
         ->and($quranReaderClassSource)->toContain("'preserveHarakatOnCopy' =>")
+        ->and($quranReaderClassSource)->toContain("'appendSurahAffixOnMultiCopy' =>")
         ->and($quranReaderClassSource)->toContain("'useWesternNumerals' =>")
         ->and($quranReaderClassSource)->toContain("'numeralCharacters' => [")
         ->and($quranReaderClassSource)->toContain('use GoodMaven\Arabicable\Enums\ArabicSpecialCharacters;')
@@ -257,14 +266,20 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderDataServiceSource)->toContain("->groupBy('verse_id')");
 
     expect($settingModelSource)->not->toBeFalse()
+        ->and($settingModelSource)->toContain("DOES_PRESERVE_HARAKAT_IN_DISPLAY = 'does_preserve_harakat_in_display'")
         ->and($settingModelSource)->toContain("DOES_QURAN_PRESERVE_HARAKAT_ON_COPY = 'does_quran_preserve_harakat_on_copy'")
+        ->and($settingModelSource)->toContain("DOES_QURAN_APPEND_SURAH_AFFIX_ON_MULTI_COPY = 'does_quran_append_surah_affix_on_multi_copy'")
         ->and($settingModelSource)->toContain("DOES_USE_WESTERN_NUMERALS = 'does_use_western_numerals'")
         ->and($settingModelSource)->toContain("'default' => true")
+        ->and($settingModelSource)->toContain('إظهار الحركات في النصوص العربية المعروضة')
         ->and($settingModelSource)->toContain('الحفاظ على الحركات عند نسخ نص الآيات')
-        ->and($settingModelSource)->toContain('استخدام الأرقام الغربية (0123) بدل العربية (٠١٢٣) في العرض');
+        ->and($settingModelSource)->toContain('إضافة لاحقة السورة (~ [سورة ...]) مرة واحدة عند النسخ المتعدد')
+        ->and($settingModelSource)->toContain('استخدام الأرقام الغربية (123) بدل العربية (١٢٣) في العرض');
 
     expect($controlPanelSettingsTabSource)->not->toBeFalse()
+        ->and($controlPanelSettingsTabSource)->toContain('Setting::DOES_PRESERVE_HARAKAT_IN_DISPLAY')
         ->and($controlPanelSettingsTabSource)->toContain('Setting::DOES_QURAN_PRESERVE_HARAKAT_ON_COPY')
+        ->and($controlPanelSettingsTabSource)->toContain('Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ON_MULTI_COPY')
         ->and($controlPanelSettingsTabSource)->toContain('Setting::DOES_USE_WESTERN_NUMERALS');
 
     expect($routesSource)->not->toBeFalse()

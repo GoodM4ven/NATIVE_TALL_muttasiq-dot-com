@@ -1269,7 +1269,7 @@
         searchActionModalId: @js(''),
         historyModalId: @js('quran-reader-history-modal'),
         bookmarksModalId: @js('quran-reader-bookmarks-modal'),
-        settings: @js($quranReaderSettings ?? ['enableVisualEnhancements' => true, 'targetWordsByDefault' => false, 'preserveHarakatOnCopy' => true]),
+        settings: @js($quranReaderSettings ?? ['enableVisualEnhancements' => true, 'targetWordsByDefault' => false, 'preserveHarakatOnCopy' => true, 'appendSurahAffixOnMultiCopy' => true, 'useWesternNumerals' => true]),
     })"
     x-bind:class="{ 'quran-reader--visual-enhancements-disabled': !doesEnableVisualEnhancements }"
     x-on:control-panel-updated.window="applyControlPanelSettings($event.detail?.controlPanel ?? {})"
@@ -1510,6 +1510,8 @@
                                                                     x-bind:data-quran-ayah-index="Number(word?.ayah_index ?? 0)"
                                                                     x-bind:data-quran-word-index="Number(word?.word_index ?? 0)"
                                                                     x-bind:data-quran-ayah-number="Number(word?.ayah_number ?? 0)"
+                                                                    x-bind:data-quran-surah-number="Number(word?.surah_number ?? line?.surah_number ??
+                                                                        0)"
                                                                     x-bind:class="{
                                                                         'quran-segment-active': isWordActive(word),
                                                                         'quran-segment-hovered': isWordHovered(word),
