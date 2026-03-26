@@ -3022,7 +3022,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         extractWordText(word) {
-            return normalizeTextValue(word?.text);
+            return normalizeTextValue(word?.copy_text ?? word?.text);
         },
 
         ayahSegments(ayahIndex) {
@@ -3050,12 +3050,13 @@ document.addEventListener('alpine:init', () => {
                     }
 
                     const segmentText = normalizeTextValue(segment?.text);
+                    const segmentCopyText = normalizeTextValue(segment?.copy_text);
 
-                    if (!segmentText) {
+                    if (!segmentText && !segmentCopyText) {
                         return;
                     }
 
-                    segments.push(segmentText);
+                    segments.push(segmentCopyText ?? segmentText);
                 });
             });
 
@@ -3084,14 +3085,16 @@ document.addEventListener('alpine:init', () => {
                     }
 
                     const text = normalizeTextValue(word?.text);
+                    const copyText = normalizeTextValue(word?.copy_text);
+                    const normalizedWordText = copyText ?? text;
 
-                    if (!text) {
+                    if (!normalizedWordText) {
                         return;
                     }
 
                     words.push({
-                        text,
-                        isGlyph: Boolean(word?.is_glyph),
+                        text: normalizedWordText,
+                        joinWithoutSpace: Boolean(word?.is_glyph) && !copyText,
                     });
                 });
             });
@@ -3109,7 +3112,7 @@ document.addEventListener('alpine:init', () => {
                     return;
                 }
 
-                joined += word.isGlyph ? word.text : ` ${word.text}`;
+                joined += word.joinWithoutSpace ? word.text : ` ${word.text}`;
             });
 
             return normalizeTextValue(joined);

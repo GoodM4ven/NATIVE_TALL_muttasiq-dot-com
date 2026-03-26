@@ -112,7 +112,7 @@ class QuranReaderDataService
         $normalizedPage = $maxPage > 0 ? max(1, min($pageNumber, $maxPage)) : 1;
         $basmallahConfigFingerprint = $this->basmallahConfigFingerprint();
         $cacheKey = sprintf(
-            'quran-reader-page-v13:%d:%s',
+            'quran-reader-page-v14:%d:%s',
             $normalizedPage,
             $basmallahConfigFingerprint,
         );
@@ -1261,9 +1261,52 @@ class QuranReaderDataService
         }
 
         $displayWordsByIndex = [];
+        $copyWordsByIndex = [];
+
+        if ($wordRangeStart !== null && $wordRangeEnd !== null && Schema::hasTable('quran_words')) {
+            $copyWordRows = DB::table('quran_words')
+                ->select([
+                    'global_word_index',
+                    'token_uthmani',
+                    'token_searchable_typed',
+                ])
+                ->whereBetween('global_word_index', [$wordRangeStart, $wordRangeEnd + 1])
+                ->orderBy('global_word_index')
+                ->get();
+
+            foreach ($copyWordRows as $wordRow) {
+                $wordIndex = (int) ($wordRow->global_word_index ?? 0);
+
+                if ($wordIndex < 1) {
+                    continue;
+                }
+
+                $copyText = trim((string) ($wordRow->token_uthmani ?? ''));
+
+                if ($copyText === '') {
+                    $copyText = trim((string) ($wordRow->token_searchable_typed ?? ''));
+                }
+
+                if ($copyText === '') {
+                    continue;
+                }
+
+                $copyWordsByIndex[$wordIndex] = $copyText;
+            }
+        }
 
         if ($wordRangeStart !== null && $wordRangeEnd !== null) {
             $displayWordsByIndex = $this->loadQpcDisplayWordsByIndex($wordRangeStart, $wordRangeEnd + 1);
+        }
+
+        if ($displayWordsByIndex !== [] && $copyWordsByIndex !== []) {
+            foreach ($copyWordsByIndex as $wordIndex => $copyText) {
+                if (! isset($displayWordsByIndex[$wordIndex])) {
+                    continue;
+                }
+
+                $displayWordsByIndex[$wordIndex]['copy_text'] = $copyText;
+            }
         }
 
         if ($displayWordsByIndex === [] && $wordRangeStart !== null && $wordRangeEnd !== null) {
@@ -1279,11 +1322,13 @@ class QuranReaderDataService
                 ->get();
 
             foreach ($fallbackWords as $word) {
+                $fallbackText = trim((string) $word->token_uthmani);
                 $displayWordsByIndex[(int) $word->global_word_index] = [
                     'global_word_index' => (int) $word->global_word_index,
                     'surah_number' => (int) $word->surah_number,
                     'ayah_number' => (int) $word->ayah_number,
-                    'text' => trim((string) $word->token_uthmani),
+                    'text' => $fallbackText,
+                    'copy_text' => $fallbackText,
                     'is_glyph' => false,
                 ];
             }
@@ -1332,6 +1377,7 @@ class QuranReaderDataService
             if ($firstWordIndex !== null && $lastWordIndex !== null) {
                 $currentPairKey = null;
                 $currentSegmentTokens = [];
+                $currentSegmentCopyTokens = [];
                 $currentSegmentMeta = null;
                 $currentSegmentJoiner = '';
                 $currentSegmentEndsAyah = false;
@@ -1346,6 +1392,7 @@ class QuranReaderDataService
                     $wordSurahNumber = (int) $word['surah_number'];
                     $wordAyahNumber = (int) $word['ayah_number'];
                     $wordText = (string) $word['text'];
+                    $wordCopyText = trim((string) ($word['copy_text'] ?? $wordText));
                     $pairKey = $wordSurahNumber.':'.$wordAyahNumber;
                     $verseMeta = $verseMetaByPair[$pairKey] ?? null;
                     $nextWord = $displayWordsByIndex[$wordIndex + 1] ?? null;
@@ -1360,6 +1407,7 @@ class QuranReaderDataService
                         'surah_number' => $wordSurahNumber,
                         'ayah_number' => $wordAyahNumber,
                         'text' => $wordText,
+                        'copy_text' => $wordCopyText,
                         'is_glyph' => (bool) $word['is_glyph'],
                         'ends_ayah' => $wordEndsAyah,
                     ];
@@ -1371,10 +1419,12 @@ class QuranReaderDataService
                             'surah_number' => (int) $currentSegmentMeta['surah_number'],
                             'ayah_number' => (int) $currentSegmentMeta['ayah_number'],
                             'text' => trim(implode($currentSegmentJoiner, $currentSegmentTokens)),
+                            'copy_text' => trim(implode(' ', $currentSegmentCopyTokens)),
                             'ends_ayah' => $currentSegmentEndsAyah,
                         ];
 
                         $currentSegmentTokens = [];
+                        $currentSegmentCopyTokens = [];
                         $currentSegmentMeta = null;
                         $currentSegmentEndsAyah = false;
                     }
@@ -1391,6 +1441,7 @@ class QuranReaderDataService
 
                     $currentPairKey = $pairKey;
                     $currentSegmentTokens[] = $wordText;
+                    $currentSegmentCopyTokens[] = $wordCopyText;
                     $currentSegmentEndsAyah = $wordEndsAyah;
                 }
 
@@ -1401,6 +1452,7 @@ class QuranReaderDataService
                         'surah_number' => (int) $currentSegmentMeta['surah_number'],
                         'ayah_number' => (int) $currentSegmentMeta['ayah_number'],
                         'text' => trim(implode($currentSegmentJoiner, $currentSegmentTokens)),
+                        'copy_text' => trim(implode(' ', $currentSegmentCopyTokens)),
                         'ends_ayah' => $currentSegmentEndsAyah,
                     ];
                 }
@@ -1420,6 +1472,7 @@ class QuranReaderDataService
                             'surah_number' => $lineSurahNumber ?? 0,
                             'ayah_number' => 0,
                             'text' => (string) $word['text'],
+                            'copy_text' => (string) $word['text'],
                             'is_glyph' => (bool) $word['is_glyph'],
                             'ends_ayah' => false,
                         ],
