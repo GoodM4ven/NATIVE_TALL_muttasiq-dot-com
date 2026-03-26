@@ -208,7 +208,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
     expect($quranReaderDataServiceSource)->not->toBeFalse()
         ->and($quranReaderDataServiceSource)->toContain('p\'.$pageNumber.\'.woff2')
         ->and($quranReaderDataServiceSource)->toContain("'format' => 'woff2'")
-        ->and($quranReaderDataServiceSource)->toContain('quran-reader-page-v14')
+        ->and($quranReaderDataServiceSource)->toContain('quran-reader-page-v15')
         ->and($quranReaderDataServiceSource)->toContain('quran-reader-surah-directory-v2')
         ->and($quranReaderDataServiceSource)->toContain('injectSyntheticBasmallahAfterSurahHeaders')
         ->and($quranReaderDataServiceSource)->toContain('applyTargetedSurahHeaderCarryovers')
@@ -375,4 +375,77 @@ it('does not repeat surah preludes on continuation pages', function () {
             ->and($lines->take(2)->pluck('line_type')->all())->not->toContain('surah_name')
             ->and($lines->take(2)->pluck('line_type')->all())->not->toContain('basmallah');
     }
+});
+
+it('uses canonical verse text for ayah copy payload and excludes neighboring ayah tokens', function () {
+    if (! \Illuminate\Support\Facades\Schema::hasTable('quran_verses')) {
+        $this->markTestSkipped('Quran verses table is unavailable.');
+    }
+
+    /** @var \App\Services\Quran\QuranReaderDataService $service */
+    $service = app(\App\Services\Quran\QuranReaderDataService::class);
+    \Illuminate\Support\Facades\Cache::flush();
+
+    /** @var object|null $firstAyah */
+    $firstAyah = \Illuminate\Support\Facades\DB::table('quran_verses')
+        ->select(['ayah_index', 'text_uthmani'])
+        ->where('surah_number', 1)
+        ->where('ayah_number', 1)
+        ->first();
+
+    /** @var object|null $secondAyah */
+    $secondAyah = \Illuminate\Support\Facades\DB::table('quran_verses')
+        ->select(['text_uthmani'])
+        ->where('surah_number', 1)
+        ->where('ayah_number', 2)
+        ->first();
+
+    if (! is_object($firstAyah) || ! is_object($secondAyah)) {
+        $this->markTestSkipped('Required Al-Fatiha verses are unavailable.');
+    }
+
+    $normalize = static fn (?string $text): string => (string) preg_replace(
+        '/\s+/u',
+        ' ',
+        trim((string) $text),
+    );
+
+    $page = $service->resolvePage(1, (int) $firstAyah->ayah_index);
+    $lines = collect($page['mushafLines'] ?? []);
+    $firstAyahIndex = (int) $firstAyah->ayah_index;
+    $expectedFirstAyahText = $normalize((string) $firstAyah->text_uthmani);
+    $secondAyahFirstToken = collect(preg_split('/\s+/u', $normalize((string) $secondAyah->text_uthmani)) ?: [])
+        ->filter(static fn ($token): bool => is_string($token) && trim($token) !== '')
+        ->map(static fn (string $token): string => trim($token))
+        ->first();
+
+    $ayahCopyTexts = $lines
+        ->flatMap(function (array $line): array {
+            $segmentTexts = collect($line['segments'] ?? [])
+                ->map(static fn (array $segment): array => [
+                    'ayah_index' => (int) ($segment['ayah_index'] ?? 0),
+                    'ayah_copy_text' => (string) ($segment['ayah_copy_text'] ?? ''),
+                ])
+                ->all();
+
+            $wordTexts = collect($line['words'] ?? [])
+                ->map(static fn (array $word): array => [
+                    'ayah_index' => (int) ($word['ayah_index'] ?? 0),
+                    'ayah_copy_text' => (string) ($word['ayah_copy_text'] ?? ''),
+                ])
+                ->all();
+
+            return [...$segmentTexts, ...$wordTexts];
+        })
+        ->filter(static fn (array $entry): bool => (int) ($entry['ayah_index'] ?? 0) === $firstAyahIndex)
+        ->map(static fn (array $entry): string => $normalize((string) ($entry['ayah_copy_text'] ?? '')))
+        ->filter(static fn (string $text): bool => $text !== '')
+        ->unique()
+        ->values();
+
+    expect($expectedFirstAyahText)->not->toBe('')
+        ->and($secondAyahFirstToken)->toBeString()->not->toBe('')
+        ->and($ayahCopyTexts)->not->toBeEmpty()
+        ->and($ayahCopyTexts)->toContain($expectedFirstAyahText)
+        ->and($ayahCopyTexts->join(' '))->not->toContain($secondAyahFirstToken);
 });

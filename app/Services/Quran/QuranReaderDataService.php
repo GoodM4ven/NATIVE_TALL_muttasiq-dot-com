@@ -112,7 +112,7 @@ class QuranReaderDataService
         $normalizedPage = $maxPage > 0 ? max(1, min($pageNumber, $maxPage)) : 1;
         $basmallahConfigFingerprint = $this->basmallahConfigFingerprint();
         $cacheKey = sprintf(
-            'quran-reader-page-v14:%d:%s',
+            'quran-reader-page-v15:%d:%s',
             $normalizedPage,
             $basmallahConfigFingerprint,
         );
@@ -1347,7 +1347,14 @@ class QuranReaderDataService
 
         if ($surahNumbers !== [] && $ayahNumbers !== []) {
             $verseRows = DB::table('quran_verses')
-                ->select(['id', 'ayah_index', 'surah_number', 'ayah_number'])
+                ->select([
+                    'id',
+                    'ayah_index',
+                    'surah_number',
+                    'ayah_number',
+                    'text_uthmani',
+                    'text_searchable_typed',
+                ])
                 ->whereIn('surah_number', array_keys($surahNumbers))
                 ->whereIn('ayah_number', array_keys($ayahNumbers))
                 ->get();
@@ -1359,6 +1366,9 @@ class QuranReaderDataService
                     'ayah_index' => (int) $verseRow->ayah_index,
                     'surah_number' => (int) $verseRow->surah_number,
                     'ayah_number' => (int) $verseRow->ayah_number,
+                    'copy_text' => trim((string) ($verseRow->text_uthmani ?? '')) !== ''
+                        ? trim((string) ($verseRow->text_uthmani ?? ''))
+                        : trim((string) ($verseRow->text_searchable_typed ?? '')),
                 ];
             }
         }
@@ -1408,6 +1418,7 @@ class QuranReaderDataService
                         'ayah_number' => $wordAyahNumber,
                         'text' => $wordText,
                         'copy_text' => $wordCopyText,
+                        'ayah_copy_text' => trim((string) ($verseMeta['copy_text'] ?? '')),
                         'is_glyph' => (bool) $word['is_glyph'],
                         'ends_ayah' => $wordEndsAyah,
                     ];
@@ -1420,6 +1431,7 @@ class QuranReaderDataService
                             'ayah_number' => (int) $currentSegmentMeta['ayah_number'],
                             'text' => trim(implode($currentSegmentJoiner, $currentSegmentTokens)),
                             'copy_text' => trim(implode(' ', $currentSegmentCopyTokens)),
+                            'ayah_copy_text' => trim((string) $currentSegmentMeta['copy_text']),
                             'ends_ayah' => $currentSegmentEndsAyah,
                         ];
 
@@ -1435,6 +1447,7 @@ class QuranReaderDataService
                             'ayah_index' => (int) ($verseMeta['ayah_index'] ?? 0),
                             'surah_number' => $wordSurahNumber,
                             'ayah_number' => $wordAyahNumber,
+                            'copy_text' => trim((string) ($verseMeta['copy_text'] ?? '')),
                         ];
                         $currentSegmentJoiner = ((bool) $word['is_glyph']) ? '' : ' ';
                     }
@@ -1453,6 +1466,7 @@ class QuranReaderDataService
                         'ayah_number' => (int) $currentSegmentMeta['ayah_number'],
                         'text' => trim(implode($currentSegmentJoiner, $currentSegmentTokens)),
                         'copy_text' => trim(implode(' ', $currentSegmentCopyTokens)),
+                        'ayah_copy_text' => trim((string) $currentSegmentMeta['copy_text']),
                         'ends_ayah' => $currentSegmentEndsAyah,
                     ];
                 }
@@ -1473,6 +1487,7 @@ class QuranReaderDataService
                             'ayah_number' => 0,
                             'text' => (string) $word['text'],
                             'copy_text' => (string) $word['text'],
+                            'ayah_copy_text' => null,
                             'is_glyph' => (bool) $word['is_glyph'],
                             'ends_ayah' => false,
                         ],

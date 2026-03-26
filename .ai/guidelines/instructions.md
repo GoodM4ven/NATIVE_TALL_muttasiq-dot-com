@@ -8,6 +8,7 @@ This shared source code base is representing the web version primarily, the one 
 - When saying a "click" broadly, keep in mind that it would mean a "tap" for mobile and tablet devices; unless explicitly told otherwise. And usually that "touch" is doing the same thing a "hover" does in web big screens.
 
 ## Architecture
+- Since we develop with PHP strict typing, we don't have to do too much defensive programming in place.
 - Add partials as components under [resources/views/components/partials], instead of adding plain `@include`s, in order to gain Livewire Blaze speed.
 - Know that app design colors are specified in [resources/css/app.css] (`@theme`) and [config/app.php] files. Those are even used by Filament in [app/Providers/FilamentServiceProvider.php].
 - Size primary texts with Fitty [resources/js/packages/fitty.js] using `[data-fitty-target]` / `[data-fitty-box]` and `fitty-refit` refresh flow.

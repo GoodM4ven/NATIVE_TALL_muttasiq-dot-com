@@ -3025,6 +3025,56 @@ document.addEventListener('alpine:init', () => {
             return normalizeTextValue(word?.copy_text ?? word?.text);
         },
 
+        canonicalAyahCopyText(ayahIndex) {
+            const normalizedAyahIndex = Math.max(0, Math.trunc(Number(ayahIndex ?? 0)));
+
+            if (normalizedAyahIndex < 1 || !Array.isArray(this.mushafLines)) {
+                return null;
+            }
+
+            for (const line of this.mushafLines) {
+                if (Array.isArray(line?.segments)) {
+                    for (const segment of line.segments) {
+                        const segmentAyahIndex = Math.max(
+                            0,
+                            Math.trunc(Number(segment?.ayah_index ?? 0)),
+                        );
+
+                        if (segmentAyahIndex !== normalizedAyahIndex) {
+                            continue;
+                        }
+
+                        const segmentAyahCopyText = normalizeTextValue(segment?.ayah_copy_text);
+
+                        if (segmentAyahCopyText) {
+                            return segmentAyahCopyText;
+                        }
+                    }
+                }
+
+                if (Array.isArray(line?.words)) {
+                    for (const word of line.words) {
+                        const wordAyahIndex = Math.max(
+                            0,
+                            Math.trunc(Number(word?.ayah_index ?? 0)),
+                        );
+
+                        if (wordAyahIndex !== normalizedAyahIndex) {
+                            continue;
+                        }
+
+                        const wordAyahCopyText = normalizeTextValue(word?.ayah_copy_text);
+
+                        if (wordAyahCopyText) {
+                            return wordAyahCopyText;
+                        }
+                    }
+                }
+            }
+
+            return null;
+        },
+
         ayahSegments(ayahIndex) {
             const normalizedAyahIndex = Math.max(0, Math.trunc(Number(ayahIndex ?? 0)));
 
@@ -3119,6 +3169,12 @@ document.addEventListener('alpine:init', () => {
         },
 
         extractAyahText(ayahIndex) {
+            const canonicalAyahText = this.canonicalAyahCopyText(ayahIndex);
+
+            if (canonicalAyahText) {
+                return canonicalAyahText;
+            }
+
             const segments = this.ayahSegments(ayahIndex);
 
             if (segments.length > 0) {
