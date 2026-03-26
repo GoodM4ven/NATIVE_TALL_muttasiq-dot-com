@@ -387,7 +387,73 @@
             color: color-mix(in srgb, var(--warning-800) 92%, var(--quran-panel-text));
         }
 
-        #quran-reader-bookmark-toggle.bookmark {
+        #quran-reader-history-toggle.quran-history-toggle-button {
+            width: 3.125rem;
+            height: 3.125rem;
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgb(44 44 44);
+            border-radius: 999px;
+            cursor: pointer;
+            transition-duration: 0.3s;
+            box-shadow: 2px 2px 10px rgb(0 0 0 / 13%);
+            border: none;
+            color: #fff;
+        }
+
+        #quran-reader-history-toggle .quran-history-toggle-icon {
+            width: 2rem;
+            height: 2rem;
+        }
+
+        #quran-reader-history-toggle .quran-history-toggle-icon path {
+            stroke: #fff;
+            fill: transparent;
+        }
+
+        #quran-reader-history-toggle.quran-history-toggle-button:hover {
+            background-color: rgb(56 56 56);
+        }
+
+        #quran-reader-history-toggle.quran-history-toggle-button:hover .quran-history-toggle-icon {
+            animation: quran-history-bell-ring 0.9s both;
+        }
+
+        #quran-reader-history-toggle.quran-history-toggle-button:active {
+            transform: scale(0.8);
+        }
+
+        @keyframes quran-history-bell-ring {
+
+            0%,
+            100% {
+                transform-origin: top;
+            }
+
+            15% {
+                transform: rotateZ(10deg);
+            }
+
+            30% {
+                transform: rotateZ(-10deg);
+            }
+
+            45% {
+                transform: rotateZ(5deg);
+            }
+
+            60% {
+                transform: rotateZ(-5deg);
+            }
+
+            75% {
+                transform: rotateZ(2deg);
+            }
+        }
+
+        #quran-reader-bookmark-toggle.quran-bookmark-toggle-button {
             position: relative;
             overflow: hidden;
             cursor: pointer;
@@ -407,22 +473,22 @@
             box-shadow: 0 10px 20px color-mix(in srgb, var(--gray-900) 18%, transparent);
         }
 
-        #quran-reader-bookmark-toggle.bookmark:hover {
+        #quran-reader-bookmark-toggle.quran-bookmark-toggle-button:hover {
             transform: translateY(-0.04rem);
             background-color: #008080;
         }
 
-        #quran-reader-bookmark-toggle.bookmark:active {
+        #quran-reader-bookmark-toggle.quran-bookmark-toggle-button:active {
             transform: scale(0.97);
         }
 
-        #quran-reader-bookmark-toggle.bookmark:focus-visible {
+        #quran-reader-bookmark-toggle.quran-bookmark-toggle-button:focus-visible {
             box-shadow:
                 0 0 0 2px color-mix(in srgb, var(--quran-page-bg) 76%, transparent),
                 0 0 0 4px rgb(0 128 128 / 45%);
         }
 
-        #quran-reader-bookmark-toggle .fill {
+        #quran-reader-bookmark-toggle .quran-bookmark-toggle-fill {
             position: absolute;
             width: 0.625rem;
             height: 0.625rem;
@@ -433,22 +499,22 @@
             z-index: 1;
         }
 
-        #quran-reader-bookmark-toggle.bookmark:active .fill {
+        #quran-reader-bookmark-toggle.quran-bookmark-toggle-button:active .quran-bookmark-toggle-fill {
             animation: quran-bookmark-fill-spread 2s linear forwards;
         }
 
-        #quran-reader-bookmark-toggle.bookmark:not(:active) .fill {
+        #quran-reader-bookmark-toggle.quran-bookmark-toggle-button:not(:active) .quran-bookmark-toggle-fill {
             animation: quran-bookmark-fill-retract 0.3s ease forwards;
         }
 
-        #quran-reader-bookmark-toggle .svgIcon {
+        #quran-reader-bookmark-toggle .quran-bookmark-toggle-icon {
             position: relative;
             z-index: 2;
             width: 0.9375rem;
             height: auto;
         }
 
-        #quran-reader-bookmark-toggle .svgIcon path {
+        #quran-reader-bookmark-toggle .quran-bookmark-toggle-icon path {
             stroke-dasharray: 200 0;
             stroke-dashoffset: 0;
             stroke: #fff;
@@ -456,7 +522,7 @@
             transition: 0.5s;
         }
 
-        #quran-reader-bookmark-toggle.bookmark.is-bookmarked .svgIcon path {
+        #quran-reader-bookmark-toggle.quran-bookmark-toggle-button.quran-bookmark-toggle-button--bookmarked .quran-bookmark-toggle-icon path {
             fill: #fff;
             animation: quran-bookmark-draw 0.5s linear;
             transition-delay: 0.5s;
@@ -1208,26 +1274,27 @@
                 </button>
                 <div class="quran-top-actions">
                     <button
-                        class="quran-top-action outline-none"
+                        class="quran-history-toggle-button outline-none"
+                        id="quran-reader-history-toggle"
                         data-quran-open-history
                         type="button"
                         aria-label="سجل التنقل"
                         x-on:click="$wire.mountAction('navigationHistory')"
                     >
                         <x-icon
-                            class="h-4 w-4"
+                            class="quran-history-toggle-icon"
                             :name="'heroicon-o-clock'"
                         />
                     </button>
 
                     <!-- Credits: https://uiverse.io/vinodjangid07/breezy-goose-71 -->
                     <button
-                        class="bookmark outline-none"
+                        class="quran-bookmark-toggle-button outline-none"
                         id="quran-reader-bookmark-toggle"
                         data-quran-bookmark-toggle
                         type="button"
                         x-bind:class="{
-                            'is-bookmarked': (typeof isCurrentPageBookmarked === 'function' ?
+                            'quran-bookmark-toggle-button--bookmarked': (typeof isCurrentPageBookmarked === 'function' ?
                                 isCurrentPageBookmarked() : false)
                         }"
                         x-bind:aria-pressed="(typeof isCurrentPageBookmarked === 'function' && isCurrentPageBookmarked()) ? 'true' : 'false'"
@@ -1240,11 +1307,11 @@
                         x-on:click.prevent="onBookmarkButtonClick()"
                     >
                         <span
-                            class="fill"
+                            class="quran-bookmark-toggle-fill"
                             aria-hidden="true"
                         ></span>
                         <svg
-                            class="svgIcon"
+                            class="quran-bookmark-toggle-icon"
                             aria-hidden="true"
                             width="15"
                             viewBox="0 0 50 70"
