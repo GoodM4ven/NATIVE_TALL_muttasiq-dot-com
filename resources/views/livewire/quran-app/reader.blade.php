@@ -387,6 +387,116 @@
             color: color-mix(in srgb, var(--warning-800) 92%, var(--quran-panel-text));
         }
 
+        #quran-reader-bookmark-toggle.bookmark {
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            background-color: teal;
+            width: 2.8125rem;
+            height: 2.8125rem;
+            border-radius: 0.625rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            border: 0;
+            transition:
+                transform 160ms ease,
+                background-color 220ms ease,
+                box-shadow 220ms ease;
+            box-shadow: 0 10px 20px color-mix(in srgb, var(--gray-900) 18%, transparent);
+        }
+
+        #quran-reader-bookmark-toggle.bookmark:hover {
+            transform: translateY(-0.04rem);
+            background-color: #008080;
+        }
+
+        #quran-reader-bookmark-toggle.bookmark:active {
+            transform: scale(0.97);
+        }
+
+        #quran-reader-bookmark-toggle.bookmark:focus-visible {
+            box-shadow:
+                0 0 0 2px color-mix(in srgb, var(--quran-page-bg) 76%, transparent),
+                0 0 0 4px rgb(0 128 128 / 45%);
+        }
+
+        #quran-reader-bookmark-toggle .fill {
+            position: absolute;
+            width: 0.625rem;
+            height: 0.625rem;
+            background: rgb(255 255 255 / 25%);
+            border-radius: 999px;
+            transform: scale(0);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        #quran-reader-bookmark-toggle.bookmark:active .fill {
+            animation: quran-bookmark-fill-spread 2s linear forwards;
+        }
+
+        #quran-reader-bookmark-toggle.bookmark:not(:active) .fill {
+            animation: quran-bookmark-fill-retract 0.3s ease forwards;
+        }
+
+        #quran-reader-bookmark-toggle .svgIcon {
+            position: relative;
+            z-index: 2;
+            width: 0.9375rem;
+            height: auto;
+        }
+
+        #quran-reader-bookmark-toggle .svgIcon path {
+            stroke-dasharray: 200 0;
+            stroke-dashoffset: 0;
+            stroke: #fff;
+            fill: transparent;
+            transition: 0.5s;
+        }
+
+        #quran-reader-bookmark-toggle.bookmark.is-bookmarked .svgIcon path {
+            fill: #fff;
+            animation: quran-bookmark-draw 0.5s linear;
+            transition-delay: 0.5s;
+        }
+
+        @keyframes quran-bookmark-fill-spread {
+            from {
+                transform: scale(0);
+                opacity: 0.6;
+            }
+
+            to {
+                transform: scale(15);
+                opacity: 1;
+            }
+        }
+
+        @keyframes quran-bookmark-fill-retract {
+            from {
+                transform: scale(15);
+                opacity: 1;
+            }
+
+            to {
+                transform: scale(0);
+                opacity: 0;
+            }
+        }
+
+        @keyframes quran-bookmark-draw {
+            0% {
+                stroke-dasharray: 0 200;
+                stroke-dashoffset: 80;
+            }
+
+            100% {
+                stroke-dasharray: 200 0;
+            }
+        }
+
         .quran-copy-popover {
             position: fixed;
             z-index: 90;
@@ -1110,14 +1220,17 @@
                         />
                     </button>
 
+                    <!-- Credits: https://uiverse.io/vinodjangid07/breezy-goose-71 -->
                     <button
-                        class="quran-top-action outline-none"
+                        class="bookmark outline-none"
+                        id="quran-reader-bookmark-toggle"
                         data-quran-bookmark-toggle
                         type="button"
                         x-bind:class="{
-                            'quran-top-action--active': (typeof isCurrentPageBookmarked === 'function' ?
+                            'is-bookmarked': (typeof isCurrentPageBookmarked === 'function' ?
                                 isCurrentPageBookmarked() : false)
                         }"
+                        x-bind:aria-pressed="(typeof isCurrentPageBookmarked === 'function' && isCurrentPageBookmarked()) ? 'true' : 'false'"
                         x-bind:aria-label="(typeof isCurrentPageBookmarked === 'function' && isCurrentPageBookmarked()) ?
                         'إزالة علامة الصفحة الحالية' : 'حفظ الصفحة الحالية كعلامة'"
                         x-on:pointerdown="onBookmarkButtonPointerDown($event)"
@@ -1126,18 +1239,24 @@
                         x-on:pointerleave="onBookmarkButtonPointerCancel()"
                         x-on:click.prevent="onBookmarkButtonClick()"
                     >
-                        <x-icon
-                            class="h-4 w-4"
-                            :name="'heroicon-o-bookmark'"
-                            x-cloak
-                            x-show="!(typeof isCurrentPageBookmarked === 'function' ? isCurrentPageBookmarked() : false)"
-                        />
-                        <x-icon
-                            class="h-4 w-4"
-                            :name="'heroicon-s-bookmark'"
-                            x-cloak
-                            x-show="typeof isCurrentPageBookmarked === 'function' ? isCurrentPageBookmarked() : false"
-                        />
+                        <span
+                            class="fill"
+                            aria-hidden="true"
+                        ></span>
+                        <svg
+                            class="svgIcon"
+                            aria-hidden="true"
+                            width="15"
+                            viewBox="0 0 50 70"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                        >
+                            <path
+                                d="M46 62.0085L46 3.88139L3.99609 3.88139L3.99609 62.0085L24.5 45.5L46 62.0085Z"
+                                stroke="#fff"
+                                stroke-width="7"
+                            ></path>
+                        </svg>
                     </button>
                 </div>
             </header>
