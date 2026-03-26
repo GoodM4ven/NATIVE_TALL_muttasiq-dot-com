@@ -564,7 +564,7 @@
         }
 
         .quran-copy-popover {
-            position: fixed;
+            position: absolute;
             z-index: 90;
             pointer-events: none;
             display: inline-flex;
@@ -1273,6 +1273,7 @@
                     <span class="quran-soorah-trigger-circle"></span>
                 </button>
                 <div class="quran-top-actions">
+                    <!-- Credits: https://uiverse.io/vinodjangid07/tricky-bullfrog-41 -->
                     <button
                         class="quran-history-toggle-button outline-none"
                         id="quran-reader-history-toggle"

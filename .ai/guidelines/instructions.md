@@ -49,6 +49,6 @@ This shared source code base is representing the web version primarily, the one 
 
 ## Finishing
 - When have modified CSS or JS files, use `npm run format:prettier` to format them.
-- When have modified Blade-PHP files, use `format:blade` to format them.
+- When have modified Blade-PHP files, use `npm run format:blade` to format them.
 - When have modified PHP files, ensure `php artisan pint` was ran to format them.
 - When have modified PHP files, run static analysis using `vendor/bin/phpstan analyse`.

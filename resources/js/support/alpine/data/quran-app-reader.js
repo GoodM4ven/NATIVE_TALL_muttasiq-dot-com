@@ -68,6 +68,8 @@ const clampPage = (value, maxPage) => {
     return Math.max(1, rounded);
 };
 
+const clampNumber = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
+
 const nextAnimationFrame = async () => {
     await new Promise((resolve) => {
         requestAnimationFrame(() => {
@@ -2965,7 +2967,11 @@ document.addEventListener('alpine:init', () => {
             const directX = Number(anchor?.x);
             const directY = Number(anchor?.y);
 
-            if (Number.isFinite(directX) && Number.isFinite(directY)) {
+            if (
+                Number.isFinite(directX) &&
+                Number.isFinite(directY) &&
+                (directX > 0 || directY > 0)
+            ) {
                 return {
                     x: directX,
                     y: directY,
@@ -2988,6 +2994,37 @@ document.addEventListener('alpine:init', () => {
             }
 
             return this.readerPanelCenterPoint();
+        },
+
+        copyPointToReaderPanel(point = null) {
+            const x = Number(point?.x);
+            const y = Number(point?.y);
+
+            if (!Number.isFinite(x) || !Number.isFinite(y)) {
+                return null;
+            }
+
+            const panelElement = this.$refs.readerPanel;
+            const panelRect = panelElement?.getBoundingClientRect?.();
+
+            if (
+                !Number.isFinite(panelRect?.left) ||
+                !Number.isFinite(panelRect?.top) ||
+                !Number.isFinite(panelRect?.width) ||
+                !Number.isFinite(panelRect?.height)
+            ) {
+                return null;
+            }
+
+            const panelInsetX = 18;
+            const panelInsetY = 18;
+            const maxX = Math.max(panelInsetX, panelRect.width - panelInsetX);
+            const maxY = Math.max(panelInsetY, panelRect.height - panelInsetY);
+
+            return {
+                x: clampNumber(x - panelRect.left, panelInsetX, maxX),
+                y: clampNumber(y - panelRect.top, panelInsetY, maxY),
+            };
         },
 
         extractWordText(word) {
@@ -3159,7 +3196,8 @@ document.addEventListener('alpine:init', () => {
         },
 
         showCopyFeedback(anchor = null) {
-            const point = this.copyPointFromAnchor(anchor);
+            const viewportPoint = this.copyPointFromAnchor(anchor);
+            const point = this.copyPointToReaderPanel(viewportPoint);
 
             if (!point) {
                 return;
