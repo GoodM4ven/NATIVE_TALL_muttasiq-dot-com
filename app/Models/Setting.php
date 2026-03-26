@@ -37,6 +37,8 @@ class Setting extends Model
 
     public const DOES_QURAN_APPEND_SURAH_AFFIX_ON_MULTI_COPY = 'does_quran_append_surah_affix_on_multi_copy';
 
+    public const DOES_QURAN_APPEND_SURAH_AFFIX_ALWAYS_ON_COPY = 'does_quran_append_surah_affix_always_on_copy';
+
     public const MINIMUM_MAIN_TEXT_SIZE = 'minimum_main_text_size';
 
     public const MAXIMUM_MAIN_TEXT_SIZE = 'maximum_main_text_size';
@@ -136,8 +138,15 @@ class Setting extends Model
             ],
             self::DOES_QURAN_APPEND_SURAH_AFFIX_ON_MULTI_COPY => [
                 'default' => true,
-                'label' => '3. إضافة لاحقة السورة (~ [سورة ...]) مرة واحدة عند النسخ المتعدد.',
-                'help' => 'يُضاف اسم السورة مرة واحدة فقط في نهاية النص المنسوخ عند النسخ بالسحب.',
+                'label' => '3. إضافة لاحقة السورة (~ [سورة ...]) عند النسخ المتعدد بين الآيات.',
+                'help' => 'عند التفعيل: تُضاف لاحقة السورة لكل سورة مشاركة فقط إذا امتد النسخ بالسحب عبر أكثر من آية.',
+                'group' => self::GROUP_QURAN,
+                'type' => 'boolean',
+            ],
+            self::DOES_QURAN_APPEND_SURAH_AFFIX_ALWAYS_ON_COPY => [
+                'default' => false,
+                'label' => '4. إضافة لاحقة السورة (~ [سورة ...]) دائمًا عند النسخ بالسحب.',
+                'help' => 'عند التفعيل: تُضاف لاحقة السورة حتى عند نسخ كلمات من آية واحدة فقط.',
                 'group' => self::GROUP_QURAN,
                 'type' => 'boolean',
             ],

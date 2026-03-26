@@ -15,12 +15,14 @@ test('athkar setting defaults are available for the home payload', function () {
     expect(array_key_exists(Setting::DOES_ENABLE_VISUAL_ENHANCEMENTS, $defaults))->toBeTrue();
     expect(array_key_exists(Setting::DOES_PRESERVE_HARAKAT_IN_DISPLAY, $defaults))->toBeTrue();
     expect(array_key_exists(Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ON_MULTI_COPY, $defaults))->toBeTrue();
+    expect(array_key_exists(Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ALWAYS_ON_COPY, $defaults))->toBeTrue();
     expect($defaults[Setting::DOES_SKIP_GUIDANCE_PANELS])->toBeFalse();
     expect($defaults[Setting::MINIMUM_MAIN_TEXT_SIZE])->toBe(Setting::MIN_MAIN_TEXT_SIZE_DEFAULT);
     expect($defaults[Setting::MAXIMUM_MAIN_TEXT_SIZE])->toBe(Setting::MAX_MAIN_TEXT_SIZE_DEFAULT);
     expect($defaults[Setting::DOES_ENABLE_VISUAL_ENHANCEMENTS])->toBeTrue();
     expect($defaults[Setting::DOES_PRESERVE_HARAKAT_IN_DISPLAY])->toBeTrue();
     expect($defaults[Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ON_MULTI_COPY])->toBeTrue();
+    expect($defaults[Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ALWAYS_ON_COPY])->toBeFalse();
 });
 
 test('it exposes main text size limits for frontend consumers', function () {

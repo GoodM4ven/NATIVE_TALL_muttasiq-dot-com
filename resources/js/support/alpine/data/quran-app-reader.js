@@ -24,6 +24,7 @@ const controlPanelSettingKeys = Object.freeze({
     targetWordsByDefault: 'does_quran_target_words_by_default',
     preserveHarakatOnCopy: 'does_quran_preserve_harakat_on_copy',
     appendSurahAffixOnMultiCopy: 'does_quran_append_surah_affix_on_multi_copy',
+    appendSurahAffixAlwaysOnCopy: 'does_quran_append_surah_affix_always_on_copy',
     useWesternNumerals: 'does_use_western_numerals',
 });
 
@@ -488,6 +489,7 @@ document.addEventListener('alpine:init', () => {
         doesTargetWordsByDefault: false,
         doesPreserveHarakatOnCopy: true,
         doesAppendSurahAffixOnMultiCopy: true,
+        doesAppendSurahAffixAlwaysOnCopy: false,
         doesUseWesternNumerals: true,
         westernNumeralCharacters: defaultWesternNumerals.slice(),
         arabicNumeralCharacters: defaultArabicNumerals.slice(),
@@ -529,6 +531,7 @@ document.addEventListener('alpine:init', () => {
             surahNames: {},
             surahDirectory: [],
             activeSurahNumber: 1,
+            preserveActiveSurahOnNextOpen: false,
         },
         navigationHistory: [],
         bookmarks: [],
@@ -614,7 +617,10 @@ document.addEventListener('alpine:init', () => {
         },
 
         init() {
-            this.applyPayload(this.initialPayload, { setPageNumber: true });
+            this.applyPayload(this.initialPayload, {
+                setPageNumber: true,
+                persistPageNumber: false,
+            });
             this.applyControlPanelSettings(
                 this.resolveControlPanelSettingsWithUserOverrides(this.initialSettings),
             );
@@ -1701,7 +1707,7 @@ document.addEventListener('alpine:init', () => {
             });
         },
 
-        applyPayload(payload, { setPageNumber = false } = {}) {
+        applyPayload(payload, { setPageNumber = false, persistPageNumber = true } = {}) {
             const normalizedPayload = normalizePayload(payload);
 
             this.ready = normalizedPayload.ready;
@@ -1745,7 +1751,10 @@ document.addEventListener('alpine:init', () => {
                     normalizedPayload.pageNumber,
                     normalizedPayload.maxPage,
                 );
-                this.persistLastPageNumber(this.pageNumber);
+
+                if (persistPageNumber) {
+                    this.persistLastPageNumber(this.pageNumber);
+                }
             }
 
             if (this.pageInput !== this.pageNumber) {
@@ -2973,6 +2982,10 @@ document.addEventListener('alpine:init', () => {
                 input,
                 controlPanelSettingKeys.appendSurahAffixOnMultiCopy,
             );
+            const hasAppendSurahAffixAlwaysOnCopy = Object.prototype.hasOwnProperty.call(
+                input,
+                controlPanelSettingKeys.appendSurahAffixAlwaysOnCopy,
+            );
             const hasUseWesternNumerals = Object.prototype.hasOwnProperty.call(
                 input,
                 controlPanelSettingKeys.useWesternNumerals,
@@ -2992,6 +3005,10 @@ document.addEventListener('alpine:init', () => {
             const defaultAppendSurahAffixOnMultiCopy = this.normalizeBooleanFlag(
                 this.initialSettings?.appendSurahAffixOnMultiCopy,
                 true,
+            );
+            const defaultAppendSurahAffixAlwaysOnCopy = this.normalizeBooleanFlag(
+                this.initialSettings?.appendSurahAffixAlwaysOnCopy,
+                false,
             );
             const defaultUseWesternNumerals = this.normalizeBooleanFlag(
                 this.initialSettings?.useWesternNumerals,
@@ -3030,6 +3047,12 @@ document.addEventListener('alpine:init', () => {
                     ? input[controlPanelSettingKeys.appendSurahAffixOnMultiCopy]
                     : defaultAppendSurahAffixOnMultiCopy,
                 true,
+            );
+            this.doesAppendSurahAffixAlwaysOnCopy = this.normalizeBooleanFlag(
+                hasAppendSurahAffixAlwaysOnCopy
+                    ? input[controlPanelSettingKeys.appendSurahAffixAlwaysOnCopy]
+                    : defaultAppendSurahAffixAlwaysOnCopy,
+                false,
             );
             this.doesUseWesternNumerals = this.normalizeBooleanFlag(
                 hasUseWesternNumerals
@@ -3530,6 +3553,23 @@ document.addEventListener('alpine:init', () => {
                 .sort((firstAyahIndex, secondAyahIndex) => firstAyahIndex - secondAyahIndex);
         },
 
+        selectedDraggedSurahNumbers() {
+            const selectedAyahIndexes = this.selectedDraggedAyahIndexes();
+            const surahNumbers = [];
+
+            selectedAyahIndexes.forEach((ayahIndex) => {
+                const surahNumber = this.surahNumberForAyahIndex(ayahIndex);
+
+                if (surahNumber < 1 || surahNumbers.includes(surahNumber)) {
+                    return;
+                }
+
+                surahNumbers.push(surahNumber);
+            });
+
+            return surahNumbers;
+        },
+
         surahNumberForAyahIndex(ayahIndex) {
             const normalizedAyahIndex = Math.max(0, Math.trunc(Number(ayahIndex ?? 0)));
 
@@ -3580,25 +3620,30 @@ document.addEventListener('alpine:init', () => {
             return 0;
         },
 
-        draggedSelectionSurahAffix() {
+        shouldAppendDraggedSurahAffix() {
+            if (this.doesAppendSurahAffixAlwaysOnCopy) {
+                return true;
+            }
+
             if (!this.doesAppendSurahAffixOnMultiCopy) {
-                return null;
+                return false;
             }
 
-            const selectedAyahIndexes = this.selectedDraggedAyahIndexes();
-            const firstSelectedAyahIndex = selectedAyahIndexes[0] ?? 0;
+            return this.selectedDraggedAyahIndexes().length > 1;
+        },
 
-            if (firstSelectedAyahIndex < 1) {
-                return null;
+        draggedSelectionSurahAffixes() {
+            if (!this.shouldAppendDraggedSurahAffix()) {
+                return [];
             }
 
-            const surahNumber = this.surahNumberForAyahIndex(firstSelectedAyahIndex);
+            return this.selectedDraggedSurahNumbers()
+                .map((surahNumber) => `~ [${this.surahLabel(surahNumber)}]`)
+                .filter((affix) => normalizeTextValue(affix) !== null);
+        },
 
-            if (surahNumber < 1) {
-                return null;
-            }
-
-            return `~ [${this.surahLabel(surahNumber)}]`;
+        draggedSelectionSurahAffix() {
+            return this.draggedSelectionSurahAffixes()[0] ?? null;
         },
 
         composeDraggedWordSelectionText() {
@@ -3753,13 +3798,13 @@ document.addEventListener('alpine:init', () => {
                 return null;
             }
 
-            const surahAffix = this.draggedSelectionSurahAffix();
+            const surahAffixes = this.draggedSelectionSurahAffixes();
 
-            if (!surahAffix) {
+            if (!Array.isArray(surahAffixes) || surahAffixes.length < 1) {
                 return normalizedSelectionText;
             }
 
-            return normalizeTextValue(`${normalizedSelectionText} ${surahAffix}`);
+            return normalizeTextValue(`${normalizedSelectionText} ${surahAffixes.join(' ')}`);
         },
 
         extractWordText(word) {
@@ -5548,7 +5593,13 @@ document.addEventListener('alpine:init', () => {
             this._lastKnownModalOpenState = true;
             this._skipNextSearchModalCloseLayout = false;
             this.refreshSurahTriggerCaption(false);
-            this.syncSearchActiveSurahNumber();
+
+            if (this.search.preserveActiveSurahOnNextOpen) {
+                this.search.preserveActiveSurahOnNextOpen = false;
+            } else {
+                this.syncSearchActiveSurahNumber();
+            }
+
             this.search.query = '';
             this.search.results = [];
             this.search.readyResult = null;
@@ -5713,6 +5764,7 @@ document.addEventListener('alpine:init', () => {
             const surahNumber = Math.max(1, Math.trunc(Number(entry?.surah_number ?? 1)));
 
             this.search.activeSurahNumber = surahNumber;
+            this.search.preserveActiveSurahOnNextOpen = true;
 
             this.resetNavigationQueueForPriorityJump();
             await this.requestSearchModalClose();
@@ -5728,6 +5780,7 @@ document.addEventListener('alpine:init', () => {
                 settleDelayMs: 0,
             });
             await this.layoutPageGuaranteed({ revealDelayMs: 220, maxAttempts: 5 });
+            this.search.activeSurahNumber = surahNumber;
             this.activeAyahIndex = 0;
             this.activeWordIndex = 0;
             this.recordNavigationHistory({

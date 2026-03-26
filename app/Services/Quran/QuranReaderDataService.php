@@ -1265,42 +1265,87 @@ class QuranReaderDataService
         $displayWordsByIndex = [];
         $copyWordsByAyahPosition = [];
         $copyWordsByGlobalWordIndex = [];
+        $canonicalWordsByIndex = [];
+        $canonicalWordRows = collect();
 
-        if ($wordRangeStart !== null && $wordRangeEnd !== null) {
-            $displayWordsByIndex = $this->loadQpcDisplayWordsByIndex($wordRangeStart, $wordRangeEnd + 1);
-        }
-
-        if ($displayWordsByIndex === [] && $wordRangeStart !== null && $wordRangeEnd !== null) {
-            $fallbackWords = DB::table('quran_words')
+        if (Schema::hasTable('quran_words') && $wordRangeStart !== null && $wordRangeEnd !== null) {
+            $canonicalWordRows = DB::table('quran_words')
                 ->select([
                     'global_word_index',
                     'surah_number',
                     'ayah_number',
-                    'token_searchable_typed',
+                    'word_position',
                     'token_uthmani',
+                    'token_searchable_typed',
                 ])
                 ->whereBetween('global_word_index', [$wordRangeStart, $wordRangeEnd + 1])
                 ->orderBy('global_word_index')
                 ->get();
 
-            foreach ($fallbackWords as $word) {
-                $fallbackText = QuranWordCopyText::normalizeToken(
-                    $word->token_uthmani,
-                    $word->token_searchable_typed,
-                );
+            $copyWordsByGlobalWordIndex = QuranWordCopyText::buildMapByGlobalWordIndex($canonicalWordRows);
+            $copyWordsByAyahPosition = QuranWordCopyText::buildMapByAyahPosition($canonicalWordRows);
 
-                if ($fallbackText === null) {
+            foreach ($canonicalWordRows as $canonicalWordRow) {
+                $canonicalWordIndex = (int) ($canonicalWordRow->global_word_index ?? 0);
+
+                if ($canonicalWordIndex < 1) {
                     continue;
                 }
 
-                $displayWordsByIndex[(int) $word->global_word_index] = [
-                    'global_word_index' => (int) $word->global_word_index,
-                    'surah_number' => (int) $word->surah_number,
-                    'ayah_number' => (int) $word->ayah_number,
+                $canonicalWordsByIndex[$canonicalWordIndex] = [
+                    'surah_number' => (int) ($canonicalWordRow->surah_number ?? 0),
+                    'ayah_number' => (int) ($canonicalWordRow->ayah_number ?? 0),
+                    'word_position' => (int) ($canonicalWordRow->word_position ?? 0),
+                    'copy_text' => trim((string) ($copyWordsByGlobalWordIndex[$canonicalWordIndex] ?? '')),
+                ];
+            }
+        }
+
+        if ($wordRangeStart !== null && $wordRangeEnd !== null) {
+            $displayWordsByIndex = $this->loadQpcDisplayWordsByIndex($wordRangeStart, $wordRangeEnd + 1);
+        }
+
+        if ($displayWordsByIndex === [] && $canonicalWordsByIndex !== []) {
+            foreach ($canonicalWordsByIndex as $canonicalWordIndex => $canonicalWordMeta) {
+                $fallbackText = trim((string) $canonicalWordMeta['copy_text']);
+
+                if ($fallbackText === '') {
+                    continue;
+                }
+
+                $displayWordsByIndex[$canonicalWordIndex] = [
+                    'global_word_index' => $canonicalWordIndex,
+                    'surah_number' => (int) $canonicalWordMeta['surah_number'],
+                    'ayah_number' => (int) $canonicalWordMeta['ayah_number'],
                     'text' => $fallbackText,
                     'copy_text' => $fallbackText,
                     'is_glyph' => false,
                 ];
+            }
+        }
+
+        if ($displayWordsByIndex !== [] && $canonicalWordsByIndex !== []) {
+            foreach ($displayWordsByIndex as $displayWordIndex => $displayWord) {
+                $canonicalWordMeta = $canonicalWordsByIndex[(int) $displayWordIndex] ?? null;
+
+                if ($canonicalWordMeta === null) {
+                    continue;
+                }
+
+                $canonicalSurahNumber = (int) $canonicalWordMeta['surah_number'];
+                $canonicalAyahNumber = (int) $canonicalWordMeta['ayah_number'];
+
+                if ($canonicalSurahNumber > 0) {
+                    $displayWord['surah_number'] = $canonicalSurahNumber;
+                }
+
+                if ($canonicalAyahNumber > 0) {
+                    $displayWord['ayah_number'] = $canonicalAyahNumber;
+                }
+
+                $displayWord['copy_text'] = trim((string) $canonicalWordMeta['copy_text']);
+
+                $displayWordsByIndex[(int) $displayWordIndex] = $displayWord;
             }
         }
 
@@ -1315,7 +1360,13 @@ class QuranReaderDataService
 
         unset($surahNumbers[0], $ayahNumbers[0]);
 
-        if (Schema::hasTable('quran_words') && $surahNumbers !== [] && $ayahNumbers !== []) {
+        if (
+            $copyWordsByGlobalWordIndex === [] &&
+            $copyWordsByAyahPosition === [] &&
+            Schema::hasTable('quran_words') &&
+            $surahNumbers !== [] &&
+            $ayahNumbers !== []
+        ) {
             $copyWordRows = DB::table('quran_words')
                 ->select([
                     'global_word_index',
@@ -1617,12 +1668,26 @@ class QuranReaderDataService
             }
 
             $surahNumber = (int) ($line['surah_number'] ?? 0);
+            $nextLine = $lines[$lineIndex + 1] ?? null;
 
             if ($surahNumber === 1) {
                 continue;
             }
 
-            $nextLine = $lines[$lineIndex + 1] ?? null;
+            if (
+                $surahNumber === 9 &&
+                is_array($nextLine) &&
+                $nextLine['line_type'] === 'basmallah' &&
+                (int) ($nextLine['surah_number'] ?? $surahNumber) === 9
+            ) {
+                $lineIndex++;
+
+                continue;
+            }
+
+            if ($surahNumber === 9) {
+                continue;
+            }
 
             if (is_array($nextLine) && $nextLine['line_type'] === 'basmallah') {
                 continue;

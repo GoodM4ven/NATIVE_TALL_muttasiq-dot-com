@@ -345,6 +345,196 @@ JS,
     );
 });
 
+it('re-focuses and scrolls the selected surah tile when reopening search modal', function () {
+    $page = visit('/');
+
+    resetBrowserState($page);
+    waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
+    hashAction($page, '#quran-app-tilawa', true);
+
+    waitForScript($page, homeDataScript('data.activeView'), 'quran-app-tilawa');
+    waitForScript($page, 'window.location.hash', '#quran-app-tilawa');
+    waitForQuranReaderVisible($page);
+    waitForScript($page, quranReaderDataScript('data.ready && data.mushafLines.length > 0'), true);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
+
+    scriptClick($page, '.quran-soorah-trigger');
+    waitForScriptWithTimeout($page, 'Boolean(document.querySelector("#quran-reader-search-modal"))', true, 5_000);
+
+    $targetSurahSelection = $page->script(
+        quranReaderDataScript(
+            <<<'JS'
+(() => {
+  const currentPage = Number(data.pageNumber ?? 1);
+  const directory = Array.isArray(data.search?.surahDirectory) ? data.search.surahDirectory : [];
+  const preferredBoundarySurahNumbers = [13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
+
+  const preferredEntry = preferredBoundarySurahNumbers
+    .map((surahNumber) =>
+      directory.find(
+        (item) =>
+          Number(item?.surah_number ?? 0) === surahNumber
+          && Number(item?.page_number ?? 0) > currentPage,
+      ),
+    )
+    .find((entry) => entry);
+
+  const fallbackEntry =
+    preferredEntry
+    ?? directory.find((item) => Number(item?.page_number ?? 0) > currentPage && Number(item?.surah_number ?? 0) > 1)
+    ?? directory.find((item) => Number(item?.surah_number ?? 0) > 1)
+    ?? null;
+
+  return {
+    surahNumber: Number(fallbackEntry?.surah_number ?? 0),
+    pageNumber: Number(fallbackEntry?.page_number ?? 0),
+  };
+})()
+JS,
+        ),
+    );
+
+    expect($targetSurahSelection)->toBeArray();
+    expect((int) ($targetSurahSelection['surahNumber'] ?? 0))->toBeGreaterThan(0);
+    expect((int) ($targetSurahSelection['pageNumber'] ?? 0))->toBeGreaterThan(0);
+
+    $page->script(
+        quranReaderCommandScript(
+            js_template(
+                <<<'JS'
+const targetSurah = Number({{surahNumber}});
+const entry = (Array.isArray(data.search?.surahDirectory) ? data.search.surahDirectory : [])
+  .find((item) => Number(item?.surah_number ?? 0) === targetSurah);
+
+if (!entry) {
+  return false;
+}
+
+data.goToSurahFromDirectory(entry);
+
+return true;
+JS,
+                ['surahNumber' => (int) ($targetSurahSelection['surahNumber'] ?? 0)],
+            ),
+        ),
+    );
+
+    waitForScriptWithTimeout($page, modalClosedScript(), true, 6_000);
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('data.pageNumber'),
+        (int) ($targetSurahSelection['pageNumber'] ?? 0),
+        6_000,
+    );
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('Number(data.search?.activeSurahNumber ?? 0)'),
+        (int) ($targetSurahSelection['surahNumber'] ?? 0),
+        6_000,
+    );
+
+    scriptClick($page, '.quran-soorah-trigger');
+    waitForScriptWithTimeout($page, 'Boolean(document.querySelector("#quran-reader-search-modal"))', true, 5_000);
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('Number(data.search?.activeSurahNumber ?? 0)'),
+        (int) ($targetSurahSelection['surahNumber'] ?? 0),
+        6_000,
+    );
+
+    $surahTileFocusState = $page->script(
+        <<<'JS'
+(() => {
+  const grid = document.querySelector('#quran-reader-search-modal .quran-surah-grid');
+  const activeTile = document.querySelector('#quran-reader-search-modal .quran-surah-tile--active');
+
+  if (!(grid instanceof HTMLElement) || !(activeTile instanceof HTMLElement)) {
+    return {
+      surahNumber: 0,
+      inView: false,
+    };
+  }
+
+  const gridRect = grid.getBoundingClientRect();
+  const tileRect = activeTile.getBoundingClientRect();
+
+  return {
+    surahNumber: Number(activeTile.getAttribute('data-surah-number') ?? 0),
+    inView: tileRect.top >= gridRect.top - 4 && tileRect.bottom <= gridRect.bottom + 4,
+  };
+})()
+JS,
+    );
+
+    expect($surahTileFocusState)->toBeArray();
+    expect((int) ($surahTileFocusState['surahNumber'] ?? 0))
+        ->toBe((int) ($targetSurahSelection['surahNumber'] ?? 0));
+    expect((bool) ($surahTileFocusState['inView'] ?? false))->toBeTrue();
+});
+
+it('restores the saved last page across quran modes and refresh', function () {
+    $page = visit('/');
+
+    resetBrowserState($page);
+    waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
+    hashAction($page, '#quran-app-tilawa', true);
+
+    waitForScript($page, homeDataScript('data.activeView'), 'quran-app-tilawa');
+    waitForScript($page, 'window.location.hash', '#quran-app-tilawa');
+    waitForQuranReaderVisible($page);
+    waitForScript($page, quranReaderDataScript('data.ready && data.mushafLines.length > 0'), true);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
+
+    $targetPage = 14;
+    $page->script(
+        quranReaderCommandScript(
+            js_template(
+                "data.dispatchPageNavigationRequest({{page}}, 'test-last-page-restore');",
+                ['page' => $targetPage],
+            ),
+        ),
+    );
+
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.pageNumber'), $targetPage, 6_000);
+    waitForScriptWithTimeout(
+        $page,
+        "Number(JSON.parse(localStorage.getItem('quran-reader-last-page-v1') ?? 'null') ?? 0)",
+        $targetPage,
+        5_000,
+    );
+
+    hashAction($page, '#quran-app-gate', true);
+    waitForScript($page, homeDataScript('data.activeView'), 'quran-app-gate');
+    waitForQuranGateVisible($page);
+
+    hashAction($page, '#quran-app-hifth', true);
+    waitForScript($page, homeDataScript('data.activeView'), 'quran-app-hifth');
+    waitForQuranReaderVisible($page);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.pageNumber'), $targetPage, 6_000);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
+
+    hashAction($page, '#quran-app-gate', true);
+    waitForScript($page, homeDataScript('data.activeView'), 'quran-app-gate');
+    waitForQuranGateVisible($page);
+
+    hashAction($page, '#quran-app-tadabbur', true);
+    waitForScript($page, homeDataScript('data.activeView'), 'quran-app-tadabbur');
+    waitForQuranReaderVisible($page);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.pageNumber'), $targetPage, 6_000);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
+
+    $page->refresh();
+
+    waitForAlpineReady($page);
+    waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
+    hashAction($page, '#quran-app-tilawa', true);
+    waitForScript($page, homeDataScript('data.activeView'), 'quran-app-tilawa');
+    waitForQuranReaderVisible($page);
+    waitForScript($page, quranReaderDataScript('data.ready && data.mushafLines.length > 0'), true);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.pageNumber'), $targetPage, 6_000);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
+});
+
 it('persists local reader state for last page, navigation history, and bookmarks', function () {
     $page = visit('/');
 
@@ -1221,6 +1411,8 @@ JS);
   );
 
   return {
+    firstSurahNumber: boundaryStart.surahNumber,
+    secondSurahNumber: boundaryEnd.surahNumber,
     firstAyahNumber: boundaryStart.ayahNumber,
     secondAyahNumber: boundaryEnd.ayahNumber,
   };
@@ -1228,6 +1420,8 @@ JS);
 JS);
 
         expect($crossSurahSelection)->toBeArray()
+            ->and((int) ($crossSurahSelection['firstSurahNumber'] ?? 0))->toBeGreaterThan(0)
+            ->and((int) ($crossSurahSelection['secondSurahNumber'] ?? 0))->toBeGreaterThan(0)
             ->and((int) ($crossSurahSelection['firstAyahNumber'] ?? 0))->toBeGreaterThan(0)
             ->and((int) ($crossSurahSelection['secondAyahNumber'] ?? 0))->toBeGreaterThan(0);
 
@@ -1243,6 +1437,20 @@ JS);
                 ['٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4', '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9'],
             ))
             ->all();
+        $surahAffixMatches = [];
+        preg_match_all('/~\s*\[([^\]]+)\]/u', $crossSurahCopiedText, $surahAffixMatches);
+        $surahAffixes = collect($surahAffixMatches[1] ?? [])
+            ->map(static fn (string $token): string => trim($token))
+            ->filter(static fn (string $token): bool => $token !== '')
+            ->values()
+            ->all();
+        $expectedSurahAffixesCount = collect([
+            (int) ($crossSurahSelection['firstSurahNumber'] ?? 0),
+            (int) ($crossSurahSelection['secondSurahNumber'] ?? 0),
+        ])
+            ->filter(static fn (int $surahNumber): bool => $surahNumber > 0)
+            ->unique()
+            ->count();
         $expectedSplitterValues = [
             (int) ($crossSurahSelection['firstAyahNumber'] ?? 0),
             (int) ($crossSurahSelection['secondAyahNumber'] ?? 0),
@@ -1251,7 +1459,8 @@ JS);
         expect($crossSurahCopiedText)->not->toBe('')
             ->and($crossSurahCopiedText)->not->toContain('۝')
             ->and($crossSurahCopiedText)->not->toMatch('/[\x{FB50}-\x{FDFF}\x{FE70}-\x{FEFF}]/u')
-            ->and($splitterValues)->toBe($expectedSplitterValues);
+            ->and($splitterValues)->toBe($expectedSplitterValues)
+            ->and(count($surahAffixes))->toBe($expectedSurahAffixesCount);
     }
 
     scriptClick($page, '[data-quran-open-history]');
@@ -1414,6 +1623,271 @@ JS);
     expect($didSwipeFromLineGap)->toBeTrue();
     waitForScriptWithTimeout($page, quranReaderDataScript('data.pageNumber'), $startingPageNumber + 1, 6_000);
     waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
+    $page->assertNoJavaScriptErrors();
+});
+
+it('applies surah-affix rules correctly in word-target drag mode', function () {
+    $page = visit('/');
+
+    resetBrowserState($page);
+    waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
+    hashAction($page, '#quran-app-tilawa', true);
+
+    waitForScript($page, homeDataScript('data.activeView'), 'quran-app-tilawa');
+    waitForScript($page, 'window.location.hash', '#quran-app-tilawa');
+    waitForQuranReaderVisible($page);
+    waitForScript($page, quranReaderDataScript('data.ready && data.mushafLines.length > 0'), true);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
+
+    $page->script(<<<'JS'
+(() => {
+  window.__wordModeCopiedTexts = [];
+  const clipboard = {
+    writeText(value) {
+      window.__wordModeCopiedTexts.push(String(value ?? ''));
+      return Promise.resolve();
+    },
+  };
+
+  try {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: clipboard,
+    });
+  } catch (_) {
+    navigator.clipboard = clipboard;
+  }
+
+  return true;
+})()
+JS);
+
+    $page->script(quranReaderCommandScript(<<<'JS'
+data.doesTargetWordsByDefault = true;
+data.doesAppendSurahAffixOnMultiCopy = true;
+data.doesAppendSurahAffixAlwaysOnCopy = false;
+JS));
+
+    $didDragWithinSingleAyah = $page->script(<<<'JS'
+(() => {
+  const words = Array.from(document.querySelectorAll('.quran-page-lines .quran-word-button'))
+    .filter((button) => button instanceof HTMLButtonElement && !button.disabled)
+    .map((button) => ({
+      button,
+      ayahIndex: Number(button.getAttribute('data-quran-ayah-index') ?? 0),
+    }));
+
+  const firstPair = words.find((entry, index) =>
+    entry.ayahIndex > 0 && words[index + 1] && words[index + 1].ayahIndex === entry.ayahIndex
+  );
+
+  if (!firstPair) {
+    return false;
+  }
+
+  const secondWord = words[words.indexOf(firstPair) + 1]?.button ?? null;
+
+  if (!(secondWord instanceof HTMLButtonElement)) {
+    return false;
+  }
+
+  const pointFor = (button) => {
+    const rect = button.getBoundingClientRect();
+
+    return {
+      x: rect.left + (rect.width / 2),
+      y: rect.top + (rect.height / 2),
+    };
+  };
+
+  const startPoint = pointFor(firstPair.button);
+  const endPoint = pointFor(secondWord);
+
+  firstPair.button.dispatchEvent(new PointerEvent('pointerdown', {
+    bubbles: true,
+    pointerId: 920,
+    pointerType: 'mouse',
+    clientX: startPoint.x,
+    clientY: startPoint.y,
+  }));
+
+  secondWord.dispatchEvent(new PointerEvent('pointermove', {
+    bubbles: true,
+    pointerId: 920,
+    pointerType: 'mouse',
+    clientX: endPoint.x,
+    clientY: endPoint.y,
+  }));
+
+  secondWord.dispatchEvent(new PointerEvent('pointerup', {
+    bubbles: true,
+    pointerId: 920,
+    pointerType: 'mouse',
+    clientX: endPoint.x,
+    clientY: endPoint.y,
+  }));
+
+  return true;
+})()
+JS);
+
+    expect($didDragWithinSingleAyah)->toBeTrue();
+    waitForScriptWithTimeout($page, 'Number(window.__wordModeCopiedTexts?.length ?? 0) >= 1', true, 6_000);
+
+    $singleAyahWordModeCopy = trim((string) ($page->script('window.__wordModeCopiedTexts[0]') ?? ''));
+
+    expect($singleAyahWordModeCopy)->not->toBe('')
+        ->and($singleAyahWordModeCopy)->not->toContain('~ [');
+
+    $didDragAcrossAyahs = $page->script(<<<'JS'
+(() => {
+  const words = Array.from(document.querySelectorAll('.quran-page-lines .quran-word-button'))
+    .filter((button) => button instanceof HTMLButtonElement && !button.disabled)
+    .map((button) => ({
+      button,
+      ayahIndex: Number(button.getAttribute('data-quran-ayah-index') ?? 0),
+    }))
+    .filter((entry) => entry.ayahIndex > 0);
+
+  let startWord = null;
+  let endWord = null;
+
+  for (let index = 0; index < words.length - 1; index += 1) {
+    if (words[index].ayahIndex === words[index + 1].ayahIndex) {
+      continue;
+    }
+
+    startWord = words[index].button;
+    endWord = words[index + 1].button;
+    break;
+  }
+
+  if (!(startWord instanceof HTMLButtonElement) || !(endWord instanceof HTMLButtonElement)) {
+    return false;
+  }
+
+  const pointFor = (button) => {
+    const rect = button.getBoundingClientRect();
+
+    return {
+      x: rect.left + (rect.width / 2),
+      y: rect.top + (rect.height / 2),
+    };
+  };
+
+  const startPoint = pointFor(startWord);
+  const endPoint = pointFor(endWord);
+
+  startWord.dispatchEvent(new PointerEvent('pointerdown', {
+    bubbles: true,
+    pointerId: 921,
+    pointerType: 'mouse',
+    clientX: startPoint.x,
+    clientY: startPoint.y,
+  }));
+
+  endWord.dispatchEvent(new PointerEvent('pointermove', {
+    bubbles: true,
+    pointerId: 921,
+    pointerType: 'mouse',
+    clientX: endPoint.x,
+    clientY: endPoint.y,
+  }));
+
+  endWord.dispatchEvent(new PointerEvent('pointerup', {
+    bubbles: true,
+    pointerId: 921,
+    pointerType: 'mouse',
+    clientX: endPoint.x,
+    clientY: endPoint.y,
+  }));
+
+  return true;
+})()
+JS);
+
+    expect($didDragAcrossAyahs)->toBeTrue();
+    waitForScriptWithTimeout($page, 'Number(window.__wordModeCopiedTexts?.length ?? 0) >= 2', true, 6_000);
+
+    $multiAyahWordModeCopy = trim((string) ($page->script('window.__wordModeCopiedTexts[1]') ?? ''));
+
+    expect($multiAyahWordModeCopy)->not->toBe('')
+        ->and($multiAyahWordModeCopy)->toContain('~ [');
+
+    $page->script(quranReaderCommandScript('data.doesAppendSurahAffixAlwaysOnCopy = true;'));
+
+    $didDragSingleAyahWithAlwaysSetting = $page->script(<<<'JS'
+(() => {
+  const words = Array.from(document.querySelectorAll('.quran-page-lines .quran-word-button'))
+    .filter((button) => button instanceof HTMLButtonElement && !button.disabled)
+    .map((button) => ({
+      button,
+      ayahIndex: Number(button.getAttribute('data-quran-ayah-index') ?? 0),
+    }))
+    .filter((entry) => entry.ayahIndex > 0);
+
+  const firstPair = words.find((entry, index) =>
+    words[index + 1] && words[index + 1].ayahIndex === entry.ayahIndex
+  );
+
+  if (!firstPair) {
+    return false;
+  }
+
+  const secondWord = words[words.indexOf(firstPair) + 1]?.button ?? null;
+
+  if (!(secondWord instanceof HTMLButtonElement)) {
+    return false;
+  }
+
+  const pointFor = (button) => {
+    const rect = button.getBoundingClientRect();
+
+    return {
+      x: rect.left + (rect.width / 2),
+      y: rect.top + (rect.height / 2),
+    };
+  };
+
+  const startPoint = pointFor(firstPair.button);
+  const endPoint = pointFor(secondWord);
+
+  firstPair.button.dispatchEvent(new PointerEvent('pointerdown', {
+    bubbles: true,
+    pointerId: 922,
+    pointerType: 'mouse',
+    clientX: startPoint.x,
+    clientY: startPoint.y,
+  }));
+
+  secondWord.dispatchEvent(new PointerEvent('pointermove', {
+    bubbles: true,
+    pointerId: 922,
+    pointerType: 'mouse',
+    clientX: endPoint.x,
+    clientY: endPoint.y,
+  }));
+
+  secondWord.dispatchEvent(new PointerEvent('pointerup', {
+    bubbles: true,
+    pointerId: 922,
+    pointerType: 'mouse',
+    clientX: endPoint.x,
+    clientY: endPoint.y,
+  }));
+
+  return true;
+})()
+JS);
+
+    expect($didDragSingleAyahWithAlwaysSetting)->toBeTrue();
+    waitForScriptWithTimeout($page, 'Number(window.__wordModeCopiedTexts?.length ?? 0) >= 3', true, 6_000);
+
+    $alwaysAffixCopy = trim((string) ($page->script('window.__wordModeCopiedTexts[2]') ?? ''));
+
+    expect($alwaysAffixCopy)->not->toBe('')
+        ->and($alwaysAffixCopy)->toContain('~ [');
+
     $page->assertNoJavaScriptErrors();
 });
 

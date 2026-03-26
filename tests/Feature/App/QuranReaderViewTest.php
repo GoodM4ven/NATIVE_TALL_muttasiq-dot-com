@@ -198,14 +198,19 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderScriptSource)->toContain('writeClipboardText(text)')
         ->and($quranReaderScriptSource)->toContain("preserveHarakatOnCopy: 'does_quran_preserve_harakat_on_copy'")
         ->and($quranReaderScriptSource)->toContain("appendSurahAffixOnMultiCopy: 'does_quran_append_surah_affix_on_multi_copy'")
+        ->and($quranReaderScriptSource)->toContain("appendSurahAffixAlwaysOnCopy: 'does_quran_append_surah_affix_always_on_copy'")
         ->and($quranReaderScriptSource)->toContain("useWesternNumerals: 'does_use_western_numerals'")
         ->and($quranReaderScriptSource)->toContain('doesPreserveHarakatOnCopy: true')
         ->and($quranReaderScriptSource)->toContain('doesAppendSurahAffixOnMultiCopy: true')
+        ->and($quranReaderScriptSource)->toContain('doesAppendSurahAffixAlwaysOnCopy: false')
         ->and($quranReaderScriptSource)->toContain('doesUseWesternNumerals: true')
         ->and($quranReaderScriptSource)->toContain('resolveControlPanelSettingsWithUserOverrides(defaultSettings = {})')
         ->and($quranReaderScriptSource)->toContain('typeof window.getUserSettingsOverrides !== \'function\'')
+        ->and($quranReaderScriptSource)->toContain('selectedDraggedSurahNumbers()')
+        ->and($quranReaderScriptSource)->toContain('shouldAppendDraggedSurahAffix()')
+        ->and($quranReaderScriptSource)->toContain('draggedSelectionSurahAffixes()')
         ->and($quranReaderScriptSource)->toContain('draggedSelectionSurahAffix()')
-        ->and($quranReaderScriptSource)->toContain('return `~ [${this.surahLabel(surahNumber)}]`;')
+        ->and($quranReaderScriptSource)->toContain('return this.draggedSelectionSurahAffixes()[0] ?? null;')
         ->and($quranReaderScriptSource)->toContain('formatAyahTokenNumber(value)')
         ->and($quranReaderScriptSource)->toContain('return `(${this.formatAyahTokenNumber(ayahNumber)})`;')
         ->and($quranReaderScriptSource)->toContain('normalizeCopiedText(text)')
@@ -233,9 +238,11 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderClassSource)->toContain("view('livewire.quran-app.reader'")
         ->and($quranReaderClassSource)->toContain('Setting::DOES_QURAN_PRESERVE_HARAKAT_ON_COPY')
         ->and($quranReaderClassSource)->toContain('Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ON_MULTI_COPY')
+        ->and($quranReaderClassSource)->toContain('Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ALWAYS_ON_COPY')
         ->and($quranReaderClassSource)->toContain('Setting::DOES_USE_WESTERN_NUMERALS')
         ->and($quranReaderClassSource)->toContain("'preserveHarakatOnCopy' =>")
         ->and($quranReaderClassSource)->toContain("'appendSurahAffixOnMultiCopy' =>")
+        ->and($quranReaderClassSource)->toContain("'appendSurahAffixAlwaysOnCopy' =>")
         ->and($quranReaderClassSource)->toContain("'useWesternNumerals' =>")
         ->and($quranReaderClassSource)->toContain("'numeralCharacters' => [")
         ->and($quranReaderClassSource)->toContain('use GoodMaven\Arabicable\Enums\ArabicSpecialCharacters;')
@@ -269,17 +276,20 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($settingModelSource)->toContain("DOES_PRESERVE_HARAKAT_IN_DISPLAY = 'does_preserve_harakat_in_display'")
         ->and($settingModelSource)->toContain("DOES_QURAN_PRESERVE_HARAKAT_ON_COPY = 'does_quran_preserve_harakat_on_copy'")
         ->and($settingModelSource)->toContain("DOES_QURAN_APPEND_SURAH_AFFIX_ON_MULTI_COPY = 'does_quran_append_surah_affix_on_multi_copy'")
+        ->and($settingModelSource)->toContain("DOES_QURAN_APPEND_SURAH_AFFIX_ALWAYS_ON_COPY = 'does_quran_append_surah_affix_always_on_copy'")
         ->and($settingModelSource)->toContain("DOES_USE_WESTERN_NUMERALS = 'does_use_western_numerals'")
         ->and($settingModelSource)->toContain("'default' => true")
         ->and($settingModelSource)->toContain('إظهار الحركات في النصوص العربية المعروضة')
         ->and($settingModelSource)->toContain('الحفاظ على الحركات عند نسخ نص الآيات')
-        ->and($settingModelSource)->toContain('إضافة لاحقة السورة (~ [سورة ...]) مرة واحدة عند النسخ المتعدد')
-        ->and($settingModelSource)->toContain('استخدام الأرقام الغربية (123) بدل العربية (١٢٣) في العرض');
+        ->and($settingModelSource)->toContain('إضافة لاحقة السورة (~ [سورة ...]) عند النسخ المتعدد بين الآيات')
+        ->and($settingModelSource)->toContain('إضافة لاحقة السورة (~ [سورة ...]) دائمًا عند النسخ بالسحب')
+        ->and($settingModelSource)->toContain('استخدام الأرقام العربية الغربية (123) بدل العربية الشرقية (١٢٣) في العرض');
 
     expect($controlPanelSettingsTabSource)->not->toBeFalse()
         ->and($controlPanelSettingsTabSource)->toContain('Setting::DOES_PRESERVE_HARAKAT_IN_DISPLAY')
         ->and($controlPanelSettingsTabSource)->toContain('Setting::DOES_QURAN_PRESERVE_HARAKAT_ON_COPY')
         ->and($controlPanelSettingsTabSource)->toContain('Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ON_MULTI_COPY')
+        ->and($controlPanelSettingsTabSource)->toContain('Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ALWAYS_ON_COPY')
         ->and($controlPanelSettingsTabSource)->toContain('Setting::DOES_USE_WESTERN_NUMERALS');
 
     expect($routesSource)->not->toBeFalse()
@@ -624,6 +634,62 @@ it('builds meaningful late-page copy payloads for ayahs and words', function () 
     }
 });
 
+it('does not render basmallah below surah nine header', function () {
+    if (! \Illuminate\Support\Facades\Schema::hasTable('quran_mushaf_lines')) {
+        $this->markTestSkipped('Quran mushaf lines table is unavailable.');
+    }
+
+    /** @var \App\Services\Quran\QuranReaderDataService $service */
+    $service = app(\App\Services\Quran\QuranReaderDataService::class);
+    \Illuminate\Support\Facades\Cache::flush();
+
+    $pageNumbers = \Illuminate\Support\Facades\DB::table('quran_mushaf_lines')
+        ->distinct()
+        ->orderBy('page_number')
+        ->pluck('page_number')
+        ->map(static fn ($value): int => max(0, (int) $value))
+        ->filter(static fn (int $pageNumber): bool => $pageNumber > 0)
+        ->values()
+        ->all();
+
+    $surahNineBasmallahEntries = [];
+
+    foreach ($pageNumbers as $pageNumber) {
+        $page = $service->resolvePage((int) $pageNumber);
+        $lines = array_values(array_filter($page['mushafLines'] ?? [], 'is_array'));
+
+        foreach ($lines as $lineIndex => $line) {
+            if (
+                ($line['line_type'] ?? null) === 'basmallah' &&
+                (int) ($line['surah_number'] ?? 0) === 9
+            ) {
+                $surahNineBasmallahEntries[] = [
+                    'page' => (int) $pageNumber,
+                    'line' => (int) ($line['line_number'] ?? $lineIndex + 1),
+                ];
+            }
+
+            if (
+                ($line['line_type'] ?? null) !== 'surah_name' ||
+                (int) ($line['surah_number'] ?? 0) !== 9
+            ) {
+                continue;
+            }
+
+            $nextLine = $lines[$lineIndex + 1] ?? null;
+
+            if (is_array($nextLine) && ($nextLine['line_type'] ?? null) === 'basmallah') {
+                $surahNineBasmallahEntries[] = [
+                    'page' => (int) $pageNumber,
+                    'line' => (int) ($nextLine['line_number'] ?? $lineIndex + 2),
+                ];
+            }
+        }
+    }
+
+    expect(array_slice($surahNineBasmallahEntries, 0, 10))->toBeEmpty();
+});
+
 it('builds canonical copy payloads for every ayah in the quran dataset', function () {
     if (! \Illuminate\Support\Facades\Schema::hasTable('quran_verses')) {
         $this->markTestSkipped('Quran verses table is unavailable.');
@@ -682,6 +748,7 @@ it('builds canonical copy payloads for every ayah in the quran dataset', functio
     $actualAyahTextsByIndex = [];
     $invalidWordCopyEntries = [];
     $invalidAyahCopyEntries = [];
+    $invalidAyahMetadataEntries = [];
 
     foreach ($pageNumbers as $pageNumber) {
         $page = $service->resolvePage((int) $pageNumber);
@@ -690,6 +757,8 @@ it('builds canonical copy payloads for every ayah in the quran dataset', functio
             $segmentEntries = collect($line['segments'] ?? [])
                 ->map(static fn (array $segment): array => [
                     'ayah_index' => (int) ($segment['ayah_index'] ?? 0),
+                    'surah_number' => (int) ($segment['surah_number'] ?? 0),
+                    'ayah_number' => (int) ($segment['ayah_number'] ?? 0),
                     'copy_text' => (string) ($segment['copy_text'] ?? ''),
                     'ayah_copy_text' => (string) ($segment['ayah_copy_text'] ?? ''),
                 ])
@@ -698,6 +767,8 @@ it('builds canonical copy payloads for every ayah in the quran dataset', functio
             $wordEntries = collect($line['words'] ?? [])
                 ->map(static fn (array $word): array => [
                     'ayah_index' => (int) ($word['ayah_index'] ?? 0),
+                    'surah_number' => (int) ($word['surah_number'] ?? 0),
+                    'ayah_number' => (int) ($word['ayah_number'] ?? 0),
                     'copy_text' => (string) ($word['copy_text'] ?? ''),
                     'ayah_copy_text' => (string) ($word['ayah_copy_text'] ?? ''),
                 ])
@@ -715,6 +786,17 @@ it('builds canonical copy payloads for every ayah in the quran dataset', functio
 
             $copyText = $normalize((string) ($entry['copy_text'] ?? ''));
             $ayahCopyText = $normalize((string) ($entry['ayah_copy_text'] ?? ''));
+            $surahNumber = (int) ($entry['surah_number'] ?? 0);
+            $ayahNumber = (int) ($entry['ayah_number'] ?? 0);
+
+            if ($surahNumber < 1 || $ayahNumber < 1) {
+                $invalidAyahMetadataEntries[] = [
+                    'page' => (int) $pageNumber,
+                    'ayah_index' => $ayahIndex,
+                    'surah_number' => $surahNumber,
+                    'ayah_number' => $ayahNumber,
+                ];
+            }
 
             if ($copyText !== '' && preg_match($presentationFormPattern, $copyText)) {
                 $invalidWordCopyEntries[] = [
@@ -772,6 +854,7 @@ it('builds canonical copy payloads for every ayah in the quran dataset', functio
 
     expect(array_slice($invalidWordCopyEntries, 0, 10))->toBeEmpty()
         ->and(array_slice($invalidAyahCopyEntries, 0, 10))->toBeEmpty()
+        ->and(array_slice($invalidAyahMetadataEntries, 0, 10))->toBeEmpty()
         ->and(array_slice($missingAyahIndexes, 0, 20))->toBeEmpty()
         ->and(array_slice($unexpectedAyahIndexes, 0, 20))->toBeEmpty()
         ->and(array_slice($mismatchedAyahs, 0, 10))->toBeEmpty();
