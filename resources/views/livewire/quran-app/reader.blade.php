@@ -131,7 +131,7 @@
             display: inline-flex;
             direction: rtl;
             align-items: baseline;
-            gap: 0;
+            gap: var(--quran-word-gap-extra, 0em);
             white-space: nowrap;
             max-width: none;
         }
@@ -139,6 +139,7 @@
         .quran-segment-cluster {
             display: inline-flex;
             align-items: baseline;
+            gap: var(--quran-word-gap-extra, 0em);
             border-radius: 0.56em;
             padding-inline: 0.14em;
             margin-inline: -0.02em;
@@ -1453,6 +1454,8 @@
                                     <div
                                         data-quran-line
                                         x-bind:class="lineAlignmentClass(line)"
+                                        x-bind:data-quran-line-number="Number(line?.line_number ?? 0)"
+                                        x-bind:data-quran-line-type="String(line?.line_type ?? '')"
                                         x-bind:style="lineEntryStyle(line)"
                                     >
                                         <template x-if="isBasmallahLine(line)">
@@ -1502,7 +1505,7 @@
                                                             x-for="(word, wordIndex) in cluster.words"
                                                             :key="`quran-word-${pageNumber}-${line.line_number}-${word.word_index ?? wordIndex}`"
                                                         >
-                                                            <span class="inline-flex items-baseline">
+                                                            <span class="quran-word-slot inline-flex items-baseline">
                                                                 <button
                                                                     class="quran-word-button px-0 outline-none transition"
                                                                     data-quran-word-button

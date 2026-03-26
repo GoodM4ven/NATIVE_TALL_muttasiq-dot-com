@@ -503,6 +503,7 @@ document.addEventListener('alpine:init', () => {
         surahTriggerSurahNumber: 1,
         pageMotionTimer: null,
         pageScale: 1,
+        lineWordGapAdjustments: {},
         pageCounterPulse: {
             isActive: false,
             hasChanges: false,
@@ -605,6 +606,7 @@ document.addEventListener('alpine:init', () => {
         _lastPageInputCommitAt: 0,
         _lastPageInputVisualValue: 1,
         _lastWordHoldAt: 0,
+        _lastWordGapRebalancedPageNumber: 0,
         wordPress: {
             active: false,
             pointerId: null,
@@ -625,9 +627,11 @@ document.addEventListener('alpine:init', () => {
                 setPageNumber: true,
                 persistPageNumber: false,
             });
-            this.applyControlPanelSettings(
-                this.resolveControlPanelSettingsWithUserOverrides(this.initialSettings),
-            );
+            const resolveControlPanelSettings =
+                typeof this.resolveControlPanelSettingsWithUserOverrides === 'function'
+                    ? this.resolveControlPanelSettingsWithUserOverrides.bind(this)
+                    : (defaults = {}) => defaults;
+            this.applyControlPanelSettings(resolveControlPanelSettings(this.initialSettings));
             this.buildSurahDirectory(
                 Array.isArray(this.initialPayload.surahDirectory) &&
                     this.initialPayload.surahDirectory.length > 0
@@ -1454,10 +1458,6 @@ document.addEventListener('alpine:init', () => {
                 this.triggerPageCounterPulse(previousInputPage, normalizedTargetPage);
             }
 
-            if (animate) {
-                this.beginLayoutCycle();
-            }
-
             this.pageInput = normalizedTargetPage;
             this._lastPageInputVisualValue = normalizedTargetPage;
 
@@ -1629,6 +1629,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             this.isLoadingPage = true;
+            let didCompletePageTransition = false;
 
             try {
                 const payloadPromise = this.getPagePayload(normalizedPage);
@@ -1656,8 +1657,25 @@ document.addEventListener('alpine:init', () => {
 
                 this.prefetchNeighborPages(normalizedPage);
                 await this.layoutPageGuaranteed({ revealDelayMs: 220 });
+                didCompletePageTransition = true;
+            } catch (_) {
+                if (this.hasRenderablePage()) {
+                    this.isFittingPage = false;
+                }
             } finally {
                 this.isLoadingPage = false;
+
+                if (!didCompletePageTransition && this.hasRenderablePage()) {
+                    this.scheduleLayout({ revealDelayMs: 150 });
+                }
+
+                if (this._pendingNavigationRequest !== null) {
+                    if (this._navigationRevealLocked) {
+                        this.schedulePendingNavigationCommit(navigationSettleDelayMs);
+                    } else {
+                        void this.commitPendingNavigation();
+                    }
+                }
             }
         },
 
@@ -1739,6 +1757,8 @@ document.addEventListener('alpine:init', () => {
             this.ready = normalizedPayload.ready;
             this.maxPage = normalizedPayload.maxPage;
             this.mushafLines = normalizedPayload.mushafLines;
+            this.lineWordGapAdjustments = {};
+            this._lastWordGapRebalancedPageNumber = 0;
             this.rebuildWordSelectionIndex();
             this.useCenteredAyahLayout = normalizedPayload.useCenteredAyahLayout;
             this.qpcPageFontFamily = normalizedPayload.qpcPageFontFamily;
@@ -2023,7 +2043,13 @@ document.addEventListener('alpine:init', () => {
 
         queuePageReveal(layoutToken, delayMs = 180) {
             this._revealTimer = window.setTimeout(() => {
+                this._revealTimer = null;
+
                 if (layoutToken !== this._layoutToken) {
+                    if (this.hasRenderablePage()) {
+                        this.queuePageReveal(this._layoutToken, 120);
+                    }
+
                     return;
                 }
 
@@ -2046,7 +2072,6 @@ document.addEventListener('alpine:init', () => {
                 }
 
                 this.isFittingPage = false;
-                this._revealTimer = null;
             }, delayMs);
         },
 
@@ -2131,6 +2156,15 @@ document.addEventListener('alpine:init', () => {
             await this.waitForPageFontReady();
             await nextAnimationFrame();
             await this.waitForStableRenderedText(10);
+
+            try {
+                this.rebalanceRectangularAyahLineWordSpacing();
+            } catch (_) {
+                this.lineWordGapAdjustments = {};
+            }
+
+            await this.nextTickAsync();
+            await nextAnimationFrame();
 
             this.fitPageToViewport();
             this.queuePageReveal(layoutToken, revealDelayMs);
@@ -4443,12 +4477,148 @@ document.addEventListener('alpine:init', () => {
             return '';
         },
 
+        lineWordGapExtraEm(line) {
+            if (!this.isRectangularAyahLine(line)) {
+                return 0;
+            }
+
+            const lineNumber = Math.max(0, Math.trunc(Number(line?.line_number ?? 0)));
+            const rawExtraGap = Number(this.lineWordGapAdjustments?.[lineNumber] ?? 0);
+
+            if (!Number.isFinite(rawExtraGap) || rawExtraGap <= 0) {
+                return 0;
+            }
+
+            return Math.max(0, Math.min(0.16, rawExtraGap));
+        },
+
+        rebalanceRectangularAyahLineWordSpacing() {
+            const currentPageNumber = Math.max(1, Math.trunc(Number(this.pageNumber ?? 1)));
+
+            if (this._lastWordGapRebalancedPageNumber === currentPageNumber) {
+                return;
+            }
+
+            this._lastWordGapRebalancedPageNumber = currentPageNumber;
+
+            if (this.useCenteredAyahLayout || !Array.isArray(this.mushafLines)) {
+                this.lineWordGapAdjustments = {};
+
+                return;
+            }
+
+            const contentElement = this.$refs.pageContent;
+
+            if (!(contentElement instanceof Element)) {
+                this.lineWordGapAdjustments = {};
+
+                return;
+            }
+
+            const ayahLinesByNumber = new Map(
+                this.mushafLines
+                    .filter(
+                        (line) =>
+                            String(line?.line_type ?? '') === 'ayah' &&
+                            !Boolean(line?.is_centered) &&
+                            Array.isArray(line?.words),
+                    )
+                    .map((line) => [Math.max(0, Math.trunc(Number(line?.line_number ?? 0))), line]),
+            );
+
+            if (ayahLinesByNumber.size < 2) {
+                this.lineWordGapAdjustments = {};
+
+                return;
+            }
+
+            const lineElements = Array.from(
+                contentElement.querySelectorAll('[data-quran-line][data-quran-line-type="ayah"]'),
+            );
+            const measurements = [];
+
+            lineElements.forEach((lineElement) => {
+                const lineNumber = Math.max(
+                    0,
+                    Math.trunc(Number(lineElement.getAttribute('data-quran-line-number') ?? 0)),
+                );
+                const line = ayahLinesByNumber.get(lineNumber);
+                const textElement = lineElement.querySelector('[data-quran-line-text]');
+
+                if (!line || !(textElement instanceof Element)) {
+                    return;
+                }
+
+                const lineWidth = Number(textElement.getBoundingClientRect().width ?? 0);
+
+                if (!Number.isFinite(lineWidth) || lineWidth <= 1) {
+                    return;
+                }
+
+                const words = Array.isArray(line?.words) ? line.words : [];
+                const wordCount = words.length;
+                const gapCount = Math.max(0, wordCount - 1);
+
+                if (gapCount < 1) {
+                    return;
+                }
+
+                const computedStyle = window.getComputedStyle(textElement);
+                const fontSize = Math.max(
+                    8,
+                    Number.parseFloat(computedStyle.fontSize || '16') || 16,
+                );
+
+                measurements.push({
+                    lineNumber,
+                    width: lineWidth,
+                    gapCount,
+                    fontSize,
+                });
+            });
+
+            if (measurements.length < 2) {
+                this.lineWordGapAdjustments = {};
+
+                return;
+            }
+
+            const sortedWidths = measurements
+                .map((entry) => entry.width)
+                .sort((first, second) => first - second);
+            const targetWidth =
+                sortedWidths[Math.floor((sortedWidths.length - 1) * 0.88)] ??
+                sortedWidths[sortedWidths.length - 1] ??
+                0;
+            const gapAdjustments = {};
+
+            measurements.forEach((entry) => {
+                const widthDeficit = targetWidth - entry.width;
+
+                if (widthDeficit <= 2) {
+                    return;
+                }
+
+                const extraGapPx = widthDeficit / entry.gapCount;
+                const normalizedGapEm = Math.max(0, Math.min(0.16, extraGapPx / entry.fontSize));
+
+                if (normalizedGapEm <= 0.003) {
+                    return;
+                }
+
+                gapAdjustments[entry.lineNumber] = Number(normalizedGapEm.toFixed(4));
+            });
+
+            this.lineWordGapAdjustments = gapAdjustments;
+        },
+
         lineEntryStyle(line) {
             const lineNumber = Math.max(0, Number(line?.line_number ?? 0));
             const marginBlockStart = this.lineMarginBlockStart(line);
             const marginBlockEnd = this.lineMarginBlockEnd(line);
+            const wordGapExtra = this.lineWordGapExtraEm(line);
 
-            return `--quran-line-index: ${lineNumber}; margin-block-start: ${marginBlockStart}; margin-block-end: ${marginBlockEnd};`;
+            return `--quran-line-index: ${lineNumber}; --quran-word-gap-extra: ${wordGapExtra}em; margin-block-start: ${marginBlockStart}; margin-block-end: ${marginBlockEnd};`;
         },
 
         isAyahLineWithWords(line) {
