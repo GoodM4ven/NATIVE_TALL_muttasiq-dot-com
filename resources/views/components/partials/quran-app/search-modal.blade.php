@@ -85,34 +85,6 @@
             data-quran-surah-grid
             x-cloak
             x-ref="surahDirectoryGrid"
-            x-effect="
-                const activeSurahNumber = Number(search?.activeSurahNumber ?? 0);
-
-                if (!search.modalOpen || activeSurahNumber < 1) {
-                    return;
-                }
-
-                $nextTick(() => {
-                    const activeTile = $el.querySelector('.quran-surah-tile--active');
-
-                    if (!(activeTile instanceof HTMLElement)) {
-                        return;
-                    }
-
-                    const hostRect = $el.getBoundingClientRect();
-                    const tileRect = activeTile.getBoundingClientRect();
-                    const isAlreadyVisible = tileRect.top >= hostRect.top && tileRect.bottom <= hostRect.bottom;
-
-                    if (isAlreadyVisible) {
-                        return;
-                    }
-
-                    const targetScrollTop = activeTile.offsetTop - (($el.clientHeight - activeTile.clientHeight) / 2);
-                    const maxScrollTop = Math.max(0, $el.scrollHeight - $el.clientHeight);
-
-                    $el.scrollTop = Math.max(0, Math.min(maxScrollTop, targetScrollTop));
-                });
-            "
         >
             <template
                 x-for="entry in search.surahDirectory"

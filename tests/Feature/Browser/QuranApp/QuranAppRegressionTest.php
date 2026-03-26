@@ -457,35 +457,61 @@ JS,
     $surahTileFocusState = $page->script(
         <<<'JS'
 (() => {
-  const grids = Array.from(
-    document.querySelectorAll('#quran-reader-search-modal .quran-surah-grid'),
-  ).filter((element) => {
-    if (!(element instanceof HTMLElement)) {
-      return false;
-    }
+  const searchInputs = Array.from(document.querySelectorAll('#quran-reader-search-input'))
+    .filter((element) => element instanceof HTMLInputElement)
+    .map((element) => {
+      const modal = element.closest('.fi-modal');
 
-    const styles = window.getComputedStyle(element);
-    const modal = element.closest('.fi-modal');
-    const isOpenModal = modal instanceof HTMLElement ? modal.classList.contains('fi-modal-open') : true;
+      if (!(modal instanceof HTMLElement)) {
+        return null;
+      }
 
-    return (
-      isOpenModal
-      && element.clientHeight > 16
-      && styles.display !== 'none'
-      && styles.visibility !== 'hidden'
+      const styles = window.getComputedStyle(modal);
+      const zIndex = Number(styles.zIndex ?? '0');
+
+      return {
+        modal,
+        isOpen: modal.classList.contains('fi-modal-open'),
+        isVisible: styles.display !== 'none' && styles.visibility !== 'hidden',
+        zIndex: Number.isFinite(zIndex) ? zIndex : 0,
+      };
+    })
+    .filter((entry) => entry !== null)
+    .sort(
+      (left, right) =>
+        Number(right.isOpen) - Number(left.isOpen)
+        || Number(right.isVisible) - Number(left.isVisible)
+        || right.zIndex - left.zIndex,
     );
-  });
-  const grid = grids[0] ?? null;
+
+  const activeModal = searchInputs[0]?.modal ?? null;
+
+  if (!(activeModal instanceof HTMLElement)) {
+    return {
+      surahNumber: 0,
+      scrollTop: 0,
+      isTileVisible: false,
+    };
+  }
+
+  const grid = activeModal.querySelector('.quran-surah-grid');
   const activeTile = grid instanceof HTMLElement ? grid.querySelector('.quran-surah-tile--active') : null;
 
   if (!(grid instanceof HTMLElement) || !(activeTile instanceof HTMLElement)) {
     return {
       surahNumber: 0,
+      scrollTop: 0,
+      isTileVisible: false,
     };
   }
 
+  const gridRect = grid.getBoundingClientRect();
+  const tileRect = activeTile.getBoundingClientRect();
+
   return {
     surahNumber: Number(activeTile.getAttribute('data-surah-number') ?? 0),
+    scrollTop: Math.max(0, Math.trunc(Number(grid.scrollTop ?? 0))),
+    isTileVisible: tileRect.top >= gridRect.top - 4 && tileRect.bottom <= gridRect.bottom + 4,
   };
 })()
 JS,
@@ -494,6 +520,8 @@ JS,
     expect($surahTileFocusState)->toBeArray();
     expect((int) ($surahTileFocusState['surahNumber'] ?? 0))
         ->toBe((int) ($targetSurahSelection['surahNumber'] ?? 0));
+    expect((bool) ($surahTileFocusState['isTileVisible'] ?? false))->toBeTrue();
+    expect((int) ($surahTileFocusState['scrollTop'] ?? 0))->toBeGreaterThan(24);
 });
 
 it('restores the saved last page across quran modes and refresh', function () {

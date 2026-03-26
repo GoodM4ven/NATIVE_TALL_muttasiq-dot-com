@@ -1317,6 +1317,7 @@
                     x-on:click="
                         warmSearchIndex();
                         $wire.mountAction('searchQuran');
+                        queueSurahDirectoryAutoFocus();
                     "
                     x-bind:aria-label="'ابحث في ' + currentSurahTitle()"
                 >

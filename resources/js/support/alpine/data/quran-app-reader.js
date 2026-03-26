@@ -584,6 +584,7 @@ document.addEventListener('alpine:init', () => {
         _stopLivewireMorphedHook: null,
         _searchResultsAutoAnimateStop: null,
         _searchModalCloseDebounceTimer: null,
+        _searchModalOpenInFlight: null,
         _surahDirectoryAutoFocusToken: 0,
         _surahDirectoryAutoFocusTimer: null,
         _surahDirectoryAutoFocusRaf: null,
@@ -4938,6 +4939,35 @@ document.addEventListener('alpine:init', () => {
         },
 
         resolveSurahDirectoryGridElement() {
+            const isElementInOpenModal = (element) => {
+                if (!(element instanceof HTMLElement) || !element.isConnected) {
+                    return false;
+                }
+
+                const modalElement = element.closest('.fi-modal');
+
+                if (!(modalElement instanceof HTMLElement)) {
+                    return true;
+                }
+
+                return modalElement.classList.contains('fi-modal-open');
+            };
+
+            const isElementVisible = (element) => {
+                if (!(element instanceof HTMLElement)) {
+                    return false;
+                }
+
+                const styles = window.getComputedStyle(element);
+
+                return (
+                    element.clientHeight > 16 &&
+                    element.clientWidth > 16 &&
+                    styles.display !== 'none' &&
+                    styles.visibility !== 'hidden'
+                );
+            };
+
             const candidates = [];
 
             if (this.$refs.surahDirectoryGrid instanceof Element) {
@@ -4962,27 +4992,33 @@ document.addEventListener('alpine:init', () => {
                     }
                 });
 
-            const visibleCandidate = candidates.find((element) => {
-                if (!(element instanceof HTMLElement)) {
-                    return false;
-                }
+            const uniqueCandidates = Array.from(new Set(candidates));
 
-                const styles = window.getComputedStyle(element);
+            const visibleOpenModalCandidate = uniqueCandidates.find(
+                (element) => isElementInOpenModal(element) && isElementVisible(element),
+            );
 
-                return (
-                    element.clientHeight > 16 &&
-                    styles.display !== 'none' &&
-                    styles.visibility !== 'hidden'
-                );
-            });
+            if (visibleOpenModalCandidate instanceof Element) {
+                return visibleOpenModalCandidate;
+            }
 
-            return visibleCandidate ?? candidates[0] ?? null;
+            const visibleCandidate = uniqueCandidates.find((element) => isElementVisible(element));
+
+            if (visibleCandidate instanceof Element) {
+                return visibleCandidate;
+            }
+
+            const openModalCandidate = uniqueCandidates.find((element) =>
+                isElementInOpenModal(element),
+            );
+
+            return openModalCandidate ?? uniqueCandidates[0] ?? null;
         },
 
         scrollSurahDirectoryToActive({ behavior = 'smooth' } = {}) {
             const gridElement = this.resolveSurahDirectoryGridElement();
 
-            if (!(gridElement instanceof Element)) {
+            if (!(gridElement instanceof HTMLElement) || !gridElement.isConnected) {
                 return false;
             }
 
@@ -4999,8 +5035,27 @@ document.addEventListener('alpine:init', () => {
                 return false;
             }
 
+            const beforeScrollTop = Math.max(0, Math.trunc(Number(gridElement.scrollTop ?? 0)));
+
+            try {
+                activeTile.scrollIntoView({
+                    block: 'center',
+                    inline: 'nearest',
+                    behavior,
+                });
+            } catch (_) {
+                activeTile.scrollIntoView();
+            }
+
             const gridRect = gridElement.getBoundingClientRect();
             const tileRect = activeTile.getBoundingClientRect();
+            const isTileVisible =
+                tileRect.top >= gridRect.top - 4 && tileRect.bottom <= gridRect.bottom + 4;
+
+            if (isTileVisible) {
+                return true;
+            }
+
             const tileTop = tileRect.top - gridRect.top + gridElement.scrollTop;
             const tileHeight = activeTile.clientHeight;
             const maxScrollTop = Math.max(0, gridElement.scrollHeight - gridElement.clientHeight);
@@ -5011,8 +5066,16 @@ document.addEventListener('alpine:init', () => {
                 Math.min(maxScrollTop, Math.trunc(targetScrollTop)),
             );
 
-            if ('scrollTo' in gridElement) {
-                gridElement.scrollTo({ top: normalizedScrollTop, behavior });
+            if (Math.abs(beforeScrollTop - normalizedScrollTop) <= 1) {
+                return true;
+            }
+
+            if (typeof gridElement.scrollTo === 'function') {
+                try {
+                    gridElement.scrollTo({ top: normalizedScrollTop, behavior });
+                } catch (_) {
+                    gridElement.scrollTop = normalizedScrollTop;
+                }
             } else {
                 gridElement.scrollTop = normalizedScrollTop;
             }
@@ -5066,7 +5129,27 @@ document.addEventListener('alpine:init', () => {
             const attemptAutoFocus = (attempt = 0) => {
                 const normalizedAttempt = Math.max(0, Math.trunc(Number(attempt) || 0));
 
-                if (token !== this._surahDirectoryAutoFocusToken || !this.search.modalOpen) {
+                if (token !== this._surahDirectoryAutoFocusToken) {
+                    return;
+                }
+
+                const modalIsVisible = this.search.modalOpen || this.isSearchModalWindowVisible();
+
+                if (!modalIsVisible) {
+                    if (normalizedAttempt >= 28) {
+                        return;
+                    }
+
+                    this._surahDirectoryAutoFocusRaf = requestAnimationFrame(() => {
+                        this._surahDirectoryAutoFocusRaf = null;
+                        this._surahDirectoryAutoFocusTimer = window.setTimeout(
+                            () => {
+                                attemptAutoFocus(normalizedAttempt + 1);
+                            },
+                            normalizedAttempt < 8 ? 36 : 72,
+                        );
+                    });
+
                     return;
                 }
 
@@ -5357,40 +5440,178 @@ document.addEventListener('alpine:init', () => {
             }, 140);
         },
 
+        searchModalInputElement() {
+            const candidates = Array.from(
+                document.querySelectorAll('#quran-reader-search-input'),
+            ).filter((element) => element instanceof HTMLInputElement && element.isConnected);
+
+            if (candidates.length === 0) {
+                return this.$refs.searchModalInput instanceof HTMLInputElement
+                    ? this.$refs.searchModalInput
+                    : null;
+            }
+
+            const isVisible = (element) => {
+                if (!(element instanceof HTMLElement) || !element.isConnected) {
+                    return false;
+                }
+
+                const styles = window.getComputedStyle(element);
+
+                return (
+                    element.clientHeight > 8 &&
+                    element.clientWidth > 8 &&
+                    styles.display !== 'none' &&
+                    styles.visibility !== 'hidden'
+                );
+            };
+
+            const rankedCandidates = candidates
+                .map((element) => {
+                    const modalElement = element.closest('.fi-modal');
+                    const modalStyles =
+                        modalElement instanceof HTMLElement
+                            ? window.getComputedStyle(modalElement)
+                            : null;
+                    const modalZIndex = Number(modalStyles?.zIndex ?? '0');
+                    const isOpenModal =
+                        modalElement instanceof HTMLElement
+                            ? modalElement.classList.contains('fi-modal-open')
+                            : false;
+
+                    return {
+                        element,
+                        visible: isVisible(element),
+                        isOpenModal,
+                        zIndex: Number.isFinite(modalZIndex) ? modalZIndex : 0,
+                    };
+                })
+                .sort(
+                    (left, right) =>
+                        Number(right.visible) - Number(left.visible) ||
+                        Number(right.isOpenModal) - Number(left.isOpenModal) ||
+                        right.zIndex - left.zIndex,
+                );
+
+            return rankedCandidates[0]?.element ?? null;
+        },
+
         searchModalWindowElement() {
-            const modalWindowIds = [this.searchModalDomId, this.searchModalId]
-                .map((value) => String(value ?? '').trim())
-                .filter((value) => value !== '');
+            const candidates = [];
+            const isVisible = (element) => {
+                if (!(element instanceof HTMLElement) || !element.isConnected) {
+                    return false;
+                }
 
-            for (const modalWindowId of modalWindowIds) {
-                const element = document.getElementById(modalWindowId);
+                const styles = window.getComputedStyle(element);
 
-                if (element instanceof Element) {
+                return (
+                    element.clientHeight > 16 &&
+                    element.clientWidth > 16 &&
+                    styles.display !== 'none' &&
+                    styles.visibility !== 'hidden'
+                );
+            };
+
+            const modalWindowFromElement = (element) => {
+                if (!(element instanceof Element)) {
+                    return null;
+                }
+
+                if (element.classList.contains('fi-modal-window')) {
                     return element;
                 }
+
+                const nestedWindow = element.querySelector('.fi-modal-window');
+
+                return nestedWindow instanceof Element ? nestedWindow : null;
+            };
+
+            const pushCandidate = (element) => {
+                if (!(element instanceof Element)) {
+                    return;
+                }
+
+                candidates.push(element);
+            };
+
+            const searchInput = this.searchModalInputElement();
+
+            if (searchInput instanceof HTMLElement) {
+                const fromInput = searchInput.closest('.fi-modal-window');
+                pushCandidate(fromInput);
             }
 
-            const actionModalIds = [this.searchActionModalId]
+            [this.searchActionModalId]
                 .map((value) => String(value ?? '').trim())
-                .filter((value) => value !== '');
+                .filter((value) => value !== '')
+                .forEach((actionModalId) => {
+                    const escapedId = window.CSS?.escape
+                        ? window.CSS.escape(actionModalId)
+                        : actionModalId;
+                    const actionModalCandidates = [
+                        ...document.querySelectorAll(`#${escapedId}`),
+                        ...document.querySelectorAll(`[data-fi-modal-id="${escapedId}"]`),
+                    ];
 
-            for (const actionModalId of actionModalIds) {
-                const modalElement =
-                    document.getElementById(actionModalId) ??
-                    document.querySelector(`[data-fi-modal-id="${actionModalId}"]`);
+                    actionModalCandidates.forEach((modalElement) => {
+                        pushCandidate(modalWindowFromElement(modalElement));
+                    });
+                });
 
-                if (!(modalElement instanceof Element)) {
-                    continue;
-                }
+            [this.searchModalDomId, this.searchModalId]
+                .map((value) => String(value ?? '').trim())
+                .filter((value) => value !== '')
+                .forEach((modalWindowId) => {
+                    const escapedId = window.CSS?.escape
+                        ? window.CSS.escape(modalWindowId)
+                        : modalWindowId;
 
-                const modalWindowElement = modalElement.querySelector('.fi-modal-window');
+                    document.querySelectorAll(`#${escapedId}`).forEach((element) => {
+                        pushCandidate(modalWindowFromElement(element));
+                    });
+                });
 
-                if (modalWindowElement instanceof Element) {
-                    return modalWindowElement;
-                }
+            const uniqueCandidates = Array.from(new Set(candidates)).filter(
+                (element) => element instanceof HTMLElement && element.isConnected,
+            );
+
+            if (uniqueCandidates.length === 0) {
+                return null;
             }
 
-            return null;
+            const visibleCandidates = uniqueCandidates.filter((element) => isVisible(element));
+
+            if (visibleCandidates.length > 0) {
+                const rankedVisibleCandidates = visibleCandidates
+                    .map((element) => {
+                        const modalElement = element.closest('.fi-modal');
+                        const modalStyles =
+                            modalElement instanceof HTMLElement
+                                ? window.getComputedStyle(modalElement)
+                                : null;
+                        const modalZIndex = Number(modalStyles?.zIndex ?? '0');
+                        const isOpenModal =
+                            modalElement instanceof HTMLElement
+                                ? modalElement.classList.contains('fi-modal-open')
+                                : false;
+
+                        return {
+                            element,
+                            zIndex: Number.isFinite(modalZIndex) ? modalZIndex : 0,
+                            isOpenModal,
+                        };
+                    })
+                    .sort(
+                        (left, right) =>
+                            Number(right.isOpenModal) - Number(left.isOpenModal) ||
+                            right.zIndex - left.zIndex,
+                    );
+
+                return rankedVisibleCandidates[0]?.element ?? null;
+            }
+
+            return uniqueCandidates[0] ?? null;
         },
 
         searchStreamTargetElement() {
@@ -5626,7 +5847,23 @@ document.addEventListener('alpine:init', () => {
             }
 
             if (kind === 'opened') {
-                this.handleSearchModalOpened();
+                if (this.search.modalOpen) {
+                    this.queueSurahDirectoryAutoFocus();
+
+                    return;
+                }
+
+                if (this._searchModalOpenInFlight) {
+                    return;
+                }
+
+                this._searchModalOpenInFlight = Promise.resolve(this.handleSearchModalOpened())
+                    .catch(() => {
+                        //
+                    })
+                    .finally(() => {
+                        this._searchModalOpenInFlight = null;
+                    });
 
                 return;
             }
@@ -5684,7 +5921,7 @@ document.addEventListener('alpine:init', () => {
             this.setupSearchStreamObserver();
             this.clearSearchStreamTarget();
             this.ensureSearchResultAnimations();
-            this.$refs.searchModalInput?.focus?.();
+            this.searchModalInputElement()?.focus?.();
             this.queueSurahDirectoryAutoFocus();
             this._surahDirectoryPostOpenTimers = [260, 560, 920].map((delayMs) =>
                 window.setTimeout(() => {
