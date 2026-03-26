@@ -448,7 +448,7 @@ document.addEventListener('alpine:init', () => {
             searchIndexUrl: String(config?.api?.searchIndexUrl ?? ''),
         },
         cacheNames: {
-            pages: 'quran-reader-pages-v11',
+            pages: 'quran-reader-pages-v12',
             fonts: 'quran-reader-fonts-v4',
             search: 'quran-reader-search-v3',
         },

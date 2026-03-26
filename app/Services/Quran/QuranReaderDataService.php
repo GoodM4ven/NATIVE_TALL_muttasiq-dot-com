@@ -1367,6 +1367,8 @@ class QuranReaderDataService
 
         $lines = [];
 
+        $ayahWordPositions = [];
+
         foreach ($lineRows as $lineRow) {
             $lineType = (string) $lineRow->line_type;
             $lineNumber = (int) $lineRow->line_number;
@@ -1383,7 +1385,6 @@ class QuranReaderDataService
                 $currentSegmentMeta = null;
                 $currentSegmentJoiner = '';
                 $currentSegmentEndsAyah = false;
-                $ayahWordPositions = [];
 
                 for ($wordIndex = $firstWordIndex; $wordIndex <= $lastWordIndex; $wordIndex++) {
                     $word = $displayWordsByIndex[$wordIndex] ?? null;

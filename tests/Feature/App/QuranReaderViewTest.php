@@ -173,7 +173,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderScriptSource)->toContain('if (matchedKnownId) {')
         ->and($quranReaderScriptSource)->toContain('deriveSurahDirectoryFromItems(items = [])')
         ->and($quranReaderScriptSource)->toContain('resetNavigationQueueForPriorityJump()')
-        ->and($quranReaderScriptSource)->toContain("pages: 'quran-reader-pages-v11'")
+        ->and($quranReaderScriptSource)->toContain("pages: 'quran-reader-pages-v12'")
         ->and($quranReaderScriptSource)->toContain("fonts: 'quran-reader-fonts-v4'")
         ->and($quranReaderScriptSource)->toContain('requestSearchModalClose({ skipLayout = false } = {})')
         ->and($quranReaderScriptSource)->toContain('recordNavigationHistory({')
