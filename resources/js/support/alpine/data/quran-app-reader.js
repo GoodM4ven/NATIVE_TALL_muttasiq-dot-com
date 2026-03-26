@@ -84,6 +84,7 @@ const wait = async (durationMs) => {
 };
 
 const wordPressHoldDelayMs = 750;
+const wordPressDragThresholdPx = 14;
 const bookmarkHoldDelayMs = 680;
 const copyPopoverVisibleDurationMs = 920;
 const navigationSettleDelayMs = 140;
@@ -570,6 +571,8 @@ document.addEventListener('alpine:init', () => {
         _activeModalIds: new Set(),
         _isModalLifecycleSettling: false,
         _wordPressHoldTimer: null,
+        _wordBySelectionKey: new Map(),
+        _ayahNumberByIndex: new Map(),
         _suppressNextWordClick: false,
         _skipNextSearchModalCloseLayout: false,
         _lastKnownModalOpenState: false,
@@ -585,6 +588,11 @@ document.addEventListener('alpine:init', () => {
             holdTriggered: false,
             word: null,
             target: null,
+            dragActive: false,
+            trailWordKeys: [],
+            trailWords: [],
+            trailAyahIndexes: [],
+            lastAnchor: null,
         },
 
         init() {
@@ -1668,6 +1676,7 @@ document.addEventListener('alpine:init', () => {
             this.ready = normalizedPayload.ready;
             this.maxPage = normalizedPayload.maxPage;
             this.mushafLines = normalizedPayload.mushafLines;
+            this.rebuildWordSelectionIndex();
             this.useCenteredAyahLayout = normalizedPayload.useCenteredAyahLayout;
             this.qpcPageFontFamily = normalizedPayload.qpcPageFontFamily;
             this.qpcPageFontUrl = normalizedPayload.qpcPageFontUrl;
@@ -3062,6 +3071,299 @@ document.addEventListener('alpine:init', () => {
             return this.readerPanelCenterPoint();
         },
 
+        normalizeSelectableWordMeta(word, fallbackWordIndex = 0) {
+            return {
+                ayahIndex: Math.max(0, Math.trunc(Number(word?.ayah_index ?? 0))),
+                ayahNumber: Math.max(0, Math.trunc(Number(word?.ayah_number ?? 0))),
+                wordIndex: Math.max(
+                    0,
+                    Math.trunc(Number(word?.word_index ?? fallbackWordIndex ?? 0)),
+                ),
+            };
+        },
+
+        wordSelectionKeyFromMeta(meta = {}) {
+            const ayahIndex = Math.max(0, Math.trunc(Number(meta?.ayahIndex ?? 0)));
+            const wordIndex = Math.max(0, Math.trunc(Number(meta?.wordIndex ?? 0)));
+
+            if (ayahIndex < 1 || wordIndex < 1) {
+                return null;
+            }
+
+            return `${ayahIndex}:${wordIndex}`;
+        },
+
+        rebuildWordSelectionIndex() {
+            this._wordBySelectionKey = new Map();
+            this._ayahNumberByIndex = new Map();
+
+            if (!Array.isArray(this.mushafLines)) {
+                return;
+            }
+
+            this.mushafLines.forEach((line) => {
+                if (!Array.isArray(line?.words)) {
+                    return;
+                }
+
+                line.words.forEach((word, wordOffset) => {
+                    const wordMeta = this.normalizeSelectableWordMeta(word, wordOffset + 1);
+                    const selectionKey = this.wordSelectionKeyFromMeta(wordMeta);
+
+                    if (selectionKey && !this._wordBySelectionKey.has(selectionKey)) {
+                        this._wordBySelectionKey.set(selectionKey, word);
+                    }
+
+                    if (
+                        wordMeta.ayahIndex > 0 &&
+                        wordMeta.ayahNumber > 0 &&
+                        !this._ayahNumberByIndex.has(wordMeta.ayahIndex)
+                    ) {
+                        this._ayahNumberByIndex.set(wordMeta.ayahIndex, wordMeta.ayahNumber);
+                    }
+                });
+            });
+        },
+
+        wordFromButtonElement(buttonElement) {
+            if (!(buttonElement instanceof Element)) {
+                return null;
+            }
+
+            const wordMeta = {
+                ayahIndex: Math.max(
+                    0,
+                    Math.trunc(Number(buttonElement.getAttribute('data-quran-ayah-index') ?? 0)),
+                ),
+                wordIndex: Math.max(
+                    0,
+                    Math.trunc(Number(buttonElement.getAttribute('data-quran-word-index') ?? 0)),
+                ),
+                ayahNumber: Math.max(
+                    0,
+                    Math.trunc(Number(buttonElement.getAttribute('data-quran-ayah-number') ?? 0)),
+                ),
+            };
+            const selectionKey = this.wordSelectionKeyFromMeta(wordMeta);
+
+            if (selectionKey) {
+                const indexedWord = this._wordBySelectionKey.get(selectionKey);
+
+                if (indexedWord) {
+                    return indexedWord;
+                }
+            }
+
+            const fallbackText = normalizeTextValue(buttonElement.textContent);
+
+            if (!fallbackText || wordMeta.ayahIndex < 1) {
+                return null;
+            }
+
+            return {
+                ayah_index: wordMeta.ayahIndex,
+                ayah_number: wordMeta.ayahNumber,
+                word_index: wordMeta.wordIndex,
+                text: fallbackText,
+                copy_text: fallbackText,
+            };
+        },
+
+        wordButtonElementFromPoint(x, y) {
+            if (typeof document === 'undefined' || !Number.isFinite(x) || !Number.isFinite(y)) {
+                return null;
+            }
+
+            const elementAtPoint = document.elementFromPoint(x, y);
+
+            if (!(elementAtPoint instanceof Element)) {
+                return null;
+            }
+
+            const buttonElement = elementAtPoint.closest('[data-quran-word-button]');
+
+            if (!(buttonElement instanceof Element)) {
+                return null;
+            }
+
+            return buttonElement;
+        },
+
+        collectWordPressTrailWord(word, activationAnchor = null) {
+            if (!this.wordPress.active) {
+                return false;
+            }
+
+            const wordMeta = this.normalizeSelectableWordMeta(word);
+
+            if (wordMeta.ayahIndex < 1) {
+                return false;
+            }
+
+            if (wordMeta.ayahNumber > 0 && !this._ayahNumberByIndex.has(wordMeta.ayahIndex)) {
+                this._ayahNumberByIndex.set(wordMeta.ayahIndex, wordMeta.ayahNumber);
+            }
+
+            if (this.interactionTargetsWords()) {
+                const selectionKey = this.wordSelectionKeyFromMeta(wordMeta);
+
+                if (!selectionKey || this.wordPress.trailWordKeys.includes(selectionKey)) {
+                    if (activationAnchor) {
+                        this.wordPress.lastAnchor = activationAnchor;
+                    }
+
+                    return false;
+                }
+
+                this.wordPress.trailWordKeys.push(selectionKey);
+                this.wordPress.trailWords.push(word);
+            } else if (!this.wordPress.trailAyahIndexes.includes(wordMeta.ayahIndex)) {
+                this.wordPress.trailAyahIndexes.push(wordMeta.ayahIndex);
+            } else {
+                if (activationAnchor) {
+                    this.wordPress.lastAnchor = activationAnchor;
+                }
+
+                return false;
+            }
+
+            if (activationAnchor) {
+                this.wordPress.lastAnchor = activationAnchor;
+            }
+
+            return true;
+        },
+
+        ayahSplitterToken(ayahIndex, fallbackAyahNumber = 0) {
+            const normalizedAyahIndex = Math.max(0, Math.trunc(Number(ayahIndex ?? 0)));
+            const mappedAyahNumber = Math.max(
+                0,
+                Math.trunc(Number(this._ayahNumberByIndex.get(normalizedAyahIndex) ?? 0)),
+            );
+            const normalizedFallbackAyahNumber = Math.max(
+                0,
+                Math.trunc(Number(fallbackAyahNumber ?? 0)),
+            );
+            const ayahNumber =
+                normalizedFallbackAyahNumber || mappedAyahNumber || normalizedAyahIndex;
+
+            if (ayahNumber < 1) {
+                return null;
+            }
+
+            return `۝${ayahNumber}`;
+        },
+
+        composeDraggedWordSelectionText() {
+            if (!Array.isArray(this.wordPress.trailWords) || this.wordPress.trailWords.length < 1) {
+                return null;
+            }
+
+            const ayahGroups = [];
+
+            this.wordPress.trailWords.forEach((word) => {
+                const wordText = this.extractWordText(word);
+                const wordMeta = this.normalizeSelectableWordMeta(word);
+
+                if (!wordText || wordMeta.ayahIndex < 1) {
+                    return;
+                }
+
+                const currentGroup = ayahGroups[ayahGroups.length - 1] ?? null;
+
+                if (!currentGroup || currentGroup.ayahIndex !== wordMeta.ayahIndex) {
+                    ayahGroups.push({
+                        ayahIndex: wordMeta.ayahIndex,
+                        ayahNumber: wordMeta.ayahNumber,
+                        words: [wordText],
+                    });
+
+                    return;
+                }
+
+                currentGroup.words.push(wordText);
+            });
+
+            if (ayahGroups.length < 1) {
+                return null;
+            }
+
+            const shouldAppendAyahSplitters = ayahGroups.length > 1;
+            const parts = [];
+
+            ayahGroups.forEach((group) => {
+                const groupedText = normalizeTextValue(group.words.join(' '));
+
+                if (!groupedText) {
+                    return;
+                }
+
+                parts.push(groupedText);
+
+                if (!shouldAppendAyahSplitters) {
+                    return;
+                }
+
+                const splitter = this.ayahSplitterToken(group.ayahIndex, group.ayahNumber);
+
+                if (splitter) {
+                    parts.push(splitter);
+                }
+            });
+
+            return normalizeTextValue(parts.join(' '));
+        },
+
+        composeDraggedAyahSelectionText() {
+            if (
+                !Array.isArray(this.wordPress.trailAyahIndexes) ||
+                this.wordPress.trailAyahIndexes.length < 1
+            ) {
+                return null;
+            }
+
+            const normalizedAyahIndexes = this.wordPress.trailAyahIndexes
+                .map((ayahIndex) => Math.max(0, Math.trunc(Number(ayahIndex ?? 0))))
+                .filter((ayahIndex) => ayahIndex > 0);
+
+            if (normalizedAyahIndexes.length < 1) {
+                return null;
+            }
+
+            const shouldAppendAyahSplitters = normalizedAyahIndexes.length > 1;
+            const parts = [];
+
+            normalizedAyahIndexes.forEach((ayahIndex) => {
+                const ayahText = this.extractAyahText(ayahIndex);
+
+                if (!ayahText) {
+                    return;
+                }
+
+                parts.push(ayahText);
+
+                if (!shouldAppendAyahSplitters) {
+                    return;
+                }
+
+                const splitter = this.ayahSplitterToken(ayahIndex);
+
+                if (splitter) {
+                    parts.push(splitter);
+                }
+            });
+
+            return normalizeTextValue(parts.join(' '));
+        },
+
+        composeDraggedSelectionText() {
+            if (this.interactionTargetsWords()) {
+                return this.composeDraggedWordSelectionText();
+            }
+
+            return this.composeDraggedAyahSelectionText();
+        },
+
         extractWordText(word) {
             const copyText = normalizeTextValue(word?.copy_text);
 
@@ -3377,6 +3679,15 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        async copyDraggedSelection(activationAnchor = null) {
+            const draggedText = this.composeDraggedSelectionText();
+            const copied = await this.writeClipboardText(draggedText);
+
+            if (copied) {
+                this.showCopyFeedback(activationAnchor);
+            }
+        },
+
         clearWordPressState() {
             if (this._wordPressHoldTimer !== null) {
                 clearTimeout(this._wordPressHoldTimer);
@@ -3390,6 +3701,11 @@ document.addEventListener('alpine:init', () => {
             this.wordPress.holdTriggered = false;
             this.wordPress.word = null;
             this.wordPress.target = null;
+            this.wordPress.dragActive = false;
+            this.wordPress.trailWordKeys = [];
+            this.wordPress.trailWords = [];
+            this.wordPress.trailAyahIndexes = [];
+            this.wordPress.lastAnchor = null;
         },
 
         onWordPointerDown(event, word) {
@@ -3420,6 +3736,16 @@ document.addEventListener('alpine:init', () => {
                     : event?.target instanceof Element
                       ? event.target
                       : null;
+            this.wordPress.dragActive = false;
+            this.wordPress.trailWordKeys = [];
+            this.wordPress.trailWords = [];
+            this.wordPress.trailAyahIndexes = [];
+            this.wordPress.lastAnchor = null;
+            this.collectWordPressTrailWord(word, {
+                x: point.x,
+                y: point.y,
+                target: this.wordPress.target,
+            });
             this._wordPressHoldTimer = window.setTimeout(() => {
                 if (!this.wordPress.active || !this.wordPress.word) {
                     return;
@@ -3437,7 +3763,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         onWordPointerMove(event) {
-            if (!this.wordPress.active) {
+            if (!this.wordPress.active || this.wordPress.holdTriggered) {
                 return;
             }
 
@@ -3458,12 +3784,96 @@ document.addEventListener('alpine:init', () => {
             const deltaX = Math.abs(point.x - this.wordPress.startX);
             const deltaY = Math.abs(point.y - this.wordPress.startY);
 
-            if (deltaX > 14 || deltaY > 14) {
-                this.clearWordPressState();
+            if (!this.wordPress.dragActive) {
+                if (deltaX <= wordPressDragThresholdPx && deltaY <= wordPressDragThresholdPx) {
+                    return;
+                }
+
+                this.wordPress.dragActive = true;
+
+                if (this._wordPressHoldTimer !== null) {
+                    clearTimeout(this._wordPressHoldTimer);
+                    this._wordPressHoldTimer = null;
+                }
+            }
+
+            const buttonAtPoint = this.wordButtonElementFromPoint(point.x, point.y);
+            const hoveredWord = this.wordFromButtonElement(buttonAtPoint);
+            const activationAnchor = {
+                x: point.x,
+                y: point.y,
+                target:
+                    buttonAtPoint ??
+                    (event?.currentTarget instanceof Element ? event.currentTarget : null),
+            };
+
+            if (hoveredWord) {
+                this.collectWordPressTrailWord(hoveredWord, activationAnchor);
+                this.setHoveredSegment(hoveredWord);
+            } else {
+                this.wordPress.lastAnchor = activationAnchor;
             }
         },
 
-        onWordPointerUp() {
+        onWordPointerUp(event = null) {
+            if (!this.wordPress.active) {
+                this.clearWordPressState();
+
+                return;
+            }
+
+            const point = this.swipePoint(event);
+
+            if (
+                this.wordPress.pointerId !== null &&
+                point?.pointerId !== null &&
+                this.wordPress.pointerId !== point.pointerId
+            ) {
+                return;
+            }
+
+            if (this.wordPress.dragActive) {
+                let activationAnchor = this.activationAnchorFromEvent(event);
+                let shouldSuppressNextWordClick = false;
+
+                if (point) {
+                    const buttonAtPoint = this.wordButtonElementFromPoint(point.x, point.y);
+                    const releaseWord = this.wordFromButtonElement(buttonAtPoint);
+                    const releaseAnchor = {
+                        x: point.x,
+                        y: point.y,
+                        target: buttonAtPoint ?? activationAnchor?.target ?? null,
+                    };
+
+                    if (releaseWord) {
+                        this.collectWordPressTrailWord(releaseWord, releaseAnchor);
+                        shouldSuppressNextWordClick = true;
+                    } else {
+                        this.wordPress.lastAnchor = releaseAnchor;
+                    }
+
+                    activationAnchor = releaseAnchor;
+                }
+
+                if (
+                    !shouldSuppressNextWordClick &&
+                    activationAnchor?.target instanceof Element &&
+                    activationAnchor.target.closest('[data-quran-word-button]')
+                ) {
+                    shouldSuppressNextWordClick = true;
+                }
+
+                void this.copyDraggedSelection(
+                    activationAnchor ??
+                        this.wordPress.lastAnchor ?? {
+                            x: this.wordPress.startX,
+                            y: this.wordPress.startY,
+                            target: this.wordPress.target,
+                        },
+                );
+                this._suppressNextWordClick = shouldSuppressNextWordClick;
+            }
+
             this.clearWordPressState();
         },
 
@@ -3472,7 +3882,6 @@ document.addEventListener('alpine:init', () => {
         },
 
         onWordPointerLeave(word) {
-            this.clearWordPressState();
             this.clearHoveredSegment(word);
         },
 

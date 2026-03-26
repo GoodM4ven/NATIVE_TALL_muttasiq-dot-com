@@ -1409,6 +1409,8 @@
                             x-bind:data-fit-state="isFittingPage ? 'fitting' : 'ready'"
                             x-bind:style="pageContentStyle()"
                             x-on:click="clearAyahSelectionOnBackground($event)"
+                            x-on:pointerup.window.passive="onWordPointerUp($event)"
+                            x-on:pointercancel.window.passive="onWordPointerCancel()"
                             x-on:mouseleave="clearHoveredSegment()"
                             x-ref="pageContent"
                         >
@@ -1470,8 +1472,12 @@
                                                             <span class="inline-flex items-baseline">
                                                                 <button
                                                                     class="quran-word-button px-0 outline-none transition"
+                                                                    data-quran-word-button
                                                                     type="button"
                                                                     tabindex="-1"
+                                                                    x-bind:data-quran-ayah-index="Number(word?.ayah_index ?? 0)"
+                                                                    x-bind:data-quran-word-index="Number(word?.word_index ?? 0)"
+                                                                    x-bind:data-quran-ayah-number="Number(word?.ayah_number ?? 0)"
                                                                     x-bind:class="{
                                                                         'quran-segment-active': isWordActive(word),
                                                                         'quran-segment-hovered': isWordHovered(word),
