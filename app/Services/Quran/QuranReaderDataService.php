@@ -1264,6 +1264,7 @@ class QuranReaderDataService
 
         $displayWordsByIndex = [];
         $copyWordsByAyahPosition = [];
+        $copyWordsByGlobalWordIndex = [];
 
         if ($wordRangeStart !== null && $wordRangeEnd !== null) {
             $displayWordsByIndex = $this->loadQpcDisplayWordsByIndex($wordRangeStart, $wordRangeEnd + 1);
@@ -1314,9 +1315,10 @@ class QuranReaderDataService
 
         unset($surahNumbers[0], $ayahNumbers[0]);
 
-        if ($displayWordsByIndex !== [] && Schema::hasTable('quran_words')) {
+        if (Schema::hasTable('quran_words') && $surahNumbers !== [] && $ayahNumbers !== []) {
             $copyWordRows = DB::table('quran_words')
                 ->select([
+                    'global_word_index',
                     'surah_number',
                     'ayah_number',
                     'word_position',
@@ -1330,6 +1332,7 @@ class QuranReaderDataService
                 ->orderBy('word_position')
                 ->get();
 
+            $copyWordsByGlobalWordIndex = QuranWordCopyText::buildMapByGlobalWordIndex($copyWordRows);
             $copyWordsByAyahPosition = QuranWordCopyText::buildMapByAyahPosition($copyWordRows);
         }
 
@@ -1396,12 +1399,28 @@ class QuranReaderDataService
                     $ayahWordPositions[$pairKey] = (int) ($ayahWordPositions[$pairKey] ?? 0) + 1;
                     $wordPosition = $ayahWordPositions[$pairKey];
                     $wordCopyTextKey = QuranWordCopyText::ayahWordKey($wordSurahNumber, $wordAyahNumber, $wordPosition);
-                    $wordCopyText = $wordCopyTextKey !== null
-                        ? trim((string) ($copyWordsByAyahPosition[$wordCopyTextKey] ?? ''))
-                        : '';
+                    $wordCopyText = trim((string) ($copyWordsByGlobalWordIndex[(int) $word['global_word_index']] ?? ''));
+
+                    if ($wordCopyText === '' && $wordCopyTextKey !== null) {
+                        $wordCopyText = trim((string) ($copyWordsByAyahPosition[$wordCopyTextKey] ?? ''));
+                    }
+
+                    if ($wordCopyText === '' && ! ((bool) $word['is_glyph'])) {
+                        $wordCopyText = trim((string) $word['copy_text']);
+                    }
 
                     if ($wordCopyText === '') {
-                        $wordCopyText = trim((string) ($word['copy_text'] ?? $wordText));
+                        $wordCopyText = trim((string) $wordText);
+                    }
+
+                    if (preg_match('/[\x{FB50}-\x{FDFF}\x{FE70}-\x{FEFF}]/u', $wordCopyText)) {
+                        $wordCopyText = '';
+                    }
+
+                    if ($wordCopyText === '') {
+                        $wordCopyText = $wordCopyTextKey !== null
+                        ? trim((string) ($copyWordsByAyahPosition[$wordCopyTextKey] ?? ''))
+                        : '';
                     }
 
                     $verseMeta = $verseMetaByPair[$pairKey] ?? null;

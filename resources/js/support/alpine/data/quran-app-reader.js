@@ -2723,6 +2723,12 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            if (event.target?.closest?.('[data-quran-line-text]')) {
+                this.resetSwipeState();
+
+                return;
+            }
+
             if (event.target?.closest?.('input, textarea, select, [contenteditable="true"]')) {
                 this.resetSwipeState();
 

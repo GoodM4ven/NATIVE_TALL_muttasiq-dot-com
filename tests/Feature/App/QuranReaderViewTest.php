@@ -623,3 +623,156 @@ it('builds meaningful late-page copy payloads for ayahs and words', function () 
         expect($actualWordTokens)->toContain((string) $expectedToken);
     }
 });
+
+it('builds canonical copy payloads for every ayah in the quran dataset', function () {
+    if (! \Illuminate\Support\Facades\Schema::hasTable('quran_verses')) {
+        $this->markTestSkipped('Quran verses table is unavailable.');
+    }
+
+    /** @var \App\Services\Quran\QuranReaderDataService $service */
+    $service = app(\App\Services\Quran\QuranReaderDataService::class);
+    \Illuminate\Support\Facades\Cache::flush();
+
+    $normalize = static fn (?string $text): string => (string) preg_replace(
+        '/\s+/u',
+        ' ',
+        trim((string) $text),
+    );
+
+    $expectedAyahTextByIndex = [];
+
+    foreach (\Illuminate\Support\Facades\DB::table('quran_verses')
+        ->select(['ayah_index', 'text_uthmani', 'text_searchable_typed'])
+        ->orderBy('ayah_index')
+        ->get() as $verseRow) {
+        $ayahIndex = (int) ($verseRow->ayah_index ?? 0);
+
+        if ($ayahIndex < 1) {
+            continue;
+        }
+
+        $normalizedAyahText = $normalize(
+            \GoodMaven\Arabicable\Support\Quran\QuranWordCopyText::normalizeToken(
+                (string) ($verseRow->text_uthmani ?? ''),
+                (string) ($verseRow->text_searchable_typed ?? ''),
+            ) ?? '',
+        );
+
+        if ($normalizedAyahText === '') {
+            continue;
+        }
+
+        $expectedAyahTextByIndex[$ayahIndex] = $normalizedAyahText;
+    }
+
+    $pageNumbers = \Illuminate\Support\Facades\DB::table('quran_mushaf_lines')
+        ->distinct()
+        ->orderBy('page_number')
+        ->pluck('page_number')
+        ->map(static fn ($value): int => max(0, (int) $value))
+        ->filter(static fn (int $pageNumber): bool => $pageNumber > 0)
+        ->values()
+        ->all();
+
+    if ($expectedAyahTextByIndex === [] || $pageNumbers === []) {
+        $this->markTestSkipped('Canonical Quran ayah rows are unavailable.');
+    }
+
+    $presentationFormPattern = '/[\x{FB50}-\x{FDFF}\x{FE70}-\x{FEFF}]/u';
+    $actualAyahTextsByIndex = [];
+    $invalidWordCopyEntries = [];
+    $invalidAyahCopyEntries = [];
+
+    foreach ($pageNumbers as $pageNumber) {
+        $page = $service->resolvePage((int) $pageNumber);
+        $lines = collect($page['mushafLines'] ?? []);
+        $payloadEntries = $lines->flatMap(static function (array $line): array {
+            $segmentEntries = collect($line['segments'] ?? [])
+                ->map(static fn (array $segment): array => [
+                    'ayah_index' => (int) ($segment['ayah_index'] ?? 0),
+                    'copy_text' => (string) ($segment['copy_text'] ?? ''),
+                    'ayah_copy_text' => (string) ($segment['ayah_copy_text'] ?? ''),
+                ])
+                ->all();
+
+            $wordEntries = collect($line['words'] ?? [])
+                ->map(static fn (array $word): array => [
+                    'ayah_index' => (int) ($word['ayah_index'] ?? 0),
+                    'copy_text' => (string) ($word['copy_text'] ?? ''),
+                    'ayah_copy_text' => (string) ($word['ayah_copy_text'] ?? ''),
+                ])
+                ->all();
+
+            return [...$segmentEntries, ...$wordEntries];
+        });
+
+        foreach ($payloadEntries as $entry) {
+            $ayahIndex = (int) ($entry['ayah_index'] ?? 0);
+
+            if ($ayahIndex < 1) {
+                continue;
+            }
+
+            $copyText = $normalize((string) ($entry['copy_text'] ?? ''));
+            $ayahCopyText = $normalize((string) ($entry['ayah_copy_text'] ?? ''));
+
+            if ($copyText !== '' && preg_match($presentationFormPattern, $copyText)) {
+                $invalidWordCopyEntries[] = [
+                    'page' => (int) $pageNumber,
+                    'ayah_index' => $ayahIndex,
+                    'copy_text' => $copyText,
+                ];
+            }
+
+            if ($ayahCopyText !== '' && preg_match($presentationFormPattern, $ayahCopyText)) {
+                $invalidAyahCopyEntries[] = [
+                    'page' => (int) $pageNumber,
+                    'ayah_index' => $ayahIndex,
+                    'ayah_copy_text' => $ayahCopyText,
+                ];
+            }
+
+            if ($ayahCopyText !== '') {
+                $actualAyahTextsByIndex[$ayahIndex] ??= [];
+                $actualAyahTextsByIndex[$ayahIndex][$ayahCopyText] = true;
+            }
+        }
+    }
+
+    $expectedAyahIndexes = array_keys($expectedAyahTextByIndex);
+    $actualAyahIndexes = array_keys($actualAyahTextsByIndex);
+    sort($expectedAyahIndexes);
+    sort($actualAyahIndexes);
+
+    $missingAyahIndexes = array_values(array_diff($expectedAyahIndexes, $actualAyahIndexes));
+    $unexpectedAyahIndexes = array_values(array_diff($actualAyahIndexes, $expectedAyahIndexes));
+    $mismatchedAyahs = [];
+
+    foreach ($expectedAyahTextByIndex as $ayahIndex => $expectedAyahText) {
+        $actualAyahTexts = array_keys($actualAyahTextsByIndex[$ayahIndex] ?? []);
+
+        if ($actualAyahTexts === []) {
+            continue;
+        }
+
+        foreach ($actualAyahTexts as $actualAyahText) {
+            if ($actualAyahText === $expectedAyahText) {
+                continue;
+            }
+
+            $mismatchedAyahs[] = [
+                'ayah_index' => (int) $ayahIndex,
+                'expected' => $expectedAyahText,
+                'actual' => $actualAyahText,
+            ];
+
+            break;
+        }
+    }
+
+    expect(array_slice($invalidWordCopyEntries, 0, 10))->toBeEmpty()
+        ->and(array_slice($invalidAyahCopyEntries, 0, 10))->toBeEmpty()
+        ->and(array_slice($missingAyahIndexes, 0, 20))->toBeEmpty()
+        ->and(array_slice($unexpectedAyahIndexes, 0, 20))->toBeEmpty()
+        ->and(array_slice($mismatchedAyahs, 0, 10))->toBeEmpty();
+});

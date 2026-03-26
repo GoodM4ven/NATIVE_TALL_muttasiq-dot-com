@@ -1119,6 +1119,141 @@ JS);
         ->and($outOfOrderCopiedAyahText)->toMatch('/\b6\b.*\b7\b/u')
         ->and($outOfOrderCopiedAyahText)->toMatch('/~\s*\[[^\]]+\]\s*$/u');
 
+    $crossSurahPageNumber = (int) \Illuminate\Support\Facades\DB::table('quran_mushaf_lines')
+        ->select('page_number')
+        ->where('line_type', 'ayah')
+        ->whereNotNull('surah_number')
+        ->groupBy('page_number')
+        ->havingRaw('COUNT(DISTINCT surah_number) > 1')
+        ->orderBy('page_number')
+        ->value('page_number');
+
+    if ($crossSurahPageNumber > 0) {
+        $page->script(
+            quranReaderCommandScript(
+                "data.dispatchPageNavigationRequest({$crossSurahPageNumber}, 'test-cross-surah-multi-copy');",
+            ),
+        );
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript('data.pageNumber'),
+            $crossSurahPageNumber,
+            6_000,
+        );
+        waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
+
+        $crossSurahSelection = $page->script(<<<'JS'
+(() => {
+  const wordButtons = Array.from(document.querySelectorAll('.quran-page-lines .quran-word-button'))
+    .filter((button) => button instanceof HTMLButtonElement && !button.disabled)
+    .map((button) => ({
+      button,
+      surahNumber: Number(button.getAttribute('data-quran-surah-number') ?? 0),
+      ayahNumber: Number(button.getAttribute('data-quran-ayah-number') ?? 0),
+    }))
+    .filter((entry) => entry.surahNumber > 0 && entry.ayahNumber > 0);
+
+  if (wordButtons.length < 2) {
+    return null;
+  }
+
+  let boundaryStart = null;
+  let boundaryEnd = null;
+
+  for (let index = 0; index < wordButtons.length - 1; index += 1) {
+    const currentWord = wordButtons[index];
+    const nextWord = wordButtons[index + 1];
+
+    if (currentWord.surahNumber === nextWord.surahNumber) {
+      continue;
+    }
+
+    boundaryStart = currentWord;
+    boundaryEnd = nextWord;
+
+    break;
+  }
+
+  if (!boundaryStart || !boundaryEnd) {
+    return null;
+  }
+
+  const pointFor = (button) => {
+    const rect = button.getBoundingClientRect();
+
+    return {
+      x: rect.left + (rect.width / 2),
+      y: rect.top + (rect.height / 2),
+    };
+  };
+
+  const startPoint = pointFor(boundaryStart.button);
+  const endPoint = pointFor(boundaryEnd.button);
+
+  boundaryStart.button.dispatchEvent(
+    new PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 917,
+      pointerType: 'mouse',
+      clientX: startPoint.x,
+      clientY: startPoint.y,
+    }),
+  );
+
+  boundaryEnd.button.dispatchEvent(
+    new PointerEvent('pointermove', {
+      bubbles: true,
+      pointerId: 917,
+      pointerType: 'mouse',
+      clientX: endPoint.x,
+      clientY: endPoint.y,
+    }),
+  );
+
+  boundaryEnd.button.dispatchEvent(
+    new PointerEvent('pointerup', {
+      bubbles: true,
+      pointerId: 917,
+      pointerType: 'mouse',
+      clientX: endPoint.x,
+      clientY: endPoint.y,
+    }),
+  );
+
+  return {
+    firstAyahNumber: boundaryStart.ayahNumber,
+    secondAyahNumber: boundaryEnd.ayahNumber,
+  };
+})()
+JS);
+
+        expect($crossSurahSelection)->toBeArray()
+            ->and((int) ($crossSurahSelection['firstAyahNumber'] ?? 0))->toBeGreaterThan(0)
+            ->and((int) ($crossSurahSelection['secondAyahNumber'] ?? 0))->toBeGreaterThan(0);
+
+        waitForScriptWithTimeout($page, 'Number(window.__copiedTexts?.length ?? 0) >= 6', true, 6_000);
+
+        $copiedTexts = $page->script('window.__copiedTexts');
+        $crossSurahCopiedText = trim((string) ($copiedTexts[5] ?? ''));
+        $splitterMatches = [];
+        preg_match_all('/\(([0-9٠-٩]+)\)/u', $crossSurahCopiedText, $splitterMatches);
+        $splitterValues = collect($splitterMatches[1] ?? [])
+            ->map(static fn (string $token): int => (int) strtr(
+                $token,
+                ['٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4', '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9'],
+            ))
+            ->all();
+        $expectedSplitterValues = [
+            (int) ($crossSurahSelection['firstAyahNumber'] ?? 0),
+            (int) ($crossSurahSelection['secondAyahNumber'] ?? 0),
+        ];
+
+        expect($crossSurahCopiedText)->not->toBe('')
+            ->and($crossSurahCopiedText)->not->toContain('۝')
+            ->and($crossSurahCopiedText)->not->toMatch('/[\x{FB50}-\x{FDFF}\x{FE70}-\x{FEFF}]/u')
+            ->and($splitterValues)->toBe($expectedSplitterValues);
+    }
+
     scriptClick($page, '[data-quran-open-history]');
     waitForScriptWithTimeout(
         $page,
@@ -1147,6 +1282,138 @@ JS,
     safeClick($page, '.fi-modal-window .fi-modal-close-btn');
     waitForScriptWithTimeout($page, modalClosedScript(), true, 6_000);
 
+    $page->assertNoJavaScriptErrors();
+});
+
+it('allows swipe navigation from quran line gaps but not from quran text lines', function () {
+    $page = visit('/');
+
+    resetBrowserState($page);
+    waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
+    hashAction($page, '#quran-app-tilawa', true);
+
+    waitForScript($page, homeDataScript('data.activeView'), 'quran-app-tilawa');
+    waitForScript($page, 'window.location.hash', '#quran-app-tilawa');
+    waitForQuranReaderVisible($page);
+    waitForScript($page, quranReaderDataScript('data.ready && data.mushafLines.length > 0'), true);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
+
+    $startingPageNumber = (int) $page->script(quranReaderDataScript('Number(data.pageNumber ?? 0)'));
+    expect($startingPageNumber)->toBeGreaterThan(0);
+
+    $didSwipeFromTextLine = $page->script(<<<'JS'
+(() => {
+  const wordButton = document.querySelector('.quran-page-lines .quran-word-button');
+
+  if (!(wordButton instanceof HTMLButtonElement)) {
+    return false;
+  }
+
+  const rect = wordButton.getBoundingClientRect();
+  const startPoint = {
+    x: rect.left + (rect.width / 2),
+    y: rect.top + (rect.height / 2),
+  };
+  const endPoint = {
+    x: startPoint.x + 170,
+    y: startPoint.y,
+  };
+
+  wordButton.dispatchEvent(
+    new PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 918,
+      pointerType: 'mouse',
+      clientX: startPoint.x,
+      clientY: startPoint.y,
+    }),
+  );
+
+  wordButton.dispatchEvent(
+    new PointerEvent('pointerup', {
+      bubbles: true,
+      pointerId: 918,
+      pointerType: 'mouse',
+      clientX: endPoint.x,
+      clientY: endPoint.y,
+    }),
+  );
+
+  return true;
+})()
+JS);
+
+    expect($didSwipeFromTextLine)->toBeTrue();
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.pageNumber'), $startingPageNumber, 6_000);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
+
+    $didSwipeFromLineGap = $page->script(<<<'JS'
+(() => {
+  const linesContainer = document.querySelector('.quran-page-lines');
+  const lineEntries = Array.from(document.querySelectorAll('.quran-page-lines [data-quran-line]'))
+    .filter((entry) => entry instanceof HTMLElement);
+
+  if (!(linesContainer instanceof HTMLElement) || lineEntries.length < 2) {
+    return false;
+  }
+
+  let gapPoint = null;
+
+  for (let index = 0; index < lineEntries.length - 1; index += 1) {
+    const currentRect = lineEntries[index].getBoundingClientRect();
+    const nextRect = lineEntries[index + 1].getBoundingClientRect();
+    const gapHeight = nextRect.top - currentRect.bottom;
+
+    if (gapHeight > 4) {
+      gapPoint = {
+        x: currentRect.left + (currentRect.width / 2),
+        y: currentRect.bottom + (gapHeight / 2),
+      };
+
+      break;
+    }
+  }
+
+  if (!gapPoint) {
+    const containerRect = linesContainer.getBoundingClientRect();
+    gapPoint = {
+      x: containerRect.left + (containerRect.width / 2),
+      y: containerRect.top + 4,
+    };
+  }
+
+  const endPoint = {
+    x: gapPoint.x + 170,
+    y: gapPoint.y,
+  };
+
+  linesContainer.dispatchEvent(
+    new PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 919,
+      pointerType: 'mouse',
+      clientX: gapPoint.x,
+      clientY: gapPoint.y,
+    }),
+  );
+
+  linesContainer.dispatchEvent(
+    new PointerEvent('pointerup', {
+      bubbles: true,
+      pointerId: 919,
+      pointerType: 'mouse',
+      clientX: endPoint.x,
+      clientY: endPoint.y,
+    }),
+  );
+
+  return true;
+})()
+JS);
+
+    expect($didSwipeFromLineGap)->toBeTrue();
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.pageNumber'), $startingPageNumber + 1, 6_000);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
     $page->assertNoJavaScriptErrors();
 });
 
