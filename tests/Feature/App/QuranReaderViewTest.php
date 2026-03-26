@@ -215,7 +215,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
     expect($quranReaderDataServiceSource)->not->toBeFalse()
         ->and($quranReaderDataServiceSource)->toContain('p\'.$pageNumber.\'.woff2')
         ->and($quranReaderDataServiceSource)->toContain("'format' => 'woff2'")
-        ->and($quranReaderDataServiceSource)->toContain('quran-reader-page-v15')
+        ->and($quranReaderDataServiceSource)->toContain('quran-reader-page-v17')
         ->and($quranReaderDataServiceSource)->toContain('quran-reader-surah-directory-v2')
         ->and($quranReaderDataServiceSource)->toContain('injectSyntheticBasmallahAfterSurahHeaders')
         ->and($quranReaderDataServiceSource)->toContain('applyTargetedSurahHeaderCarryovers')
@@ -349,15 +349,19 @@ it('injects visible basmallah lines under late-page surah headers', function () 
     config()->set('arabicable.quran_fonts.basmalah.preferred', 'quran-common-ligature');
 
     $page = $service->resolvePage(604);
-    $basmallahLines = collect($page['mushafLines'] ?? [])
+    $mushafLines = collect($page['mushafLines'] ?? []);
+    $basmallahLines = $mushafLines
         ->filter(static fn (array $line): bool => ($line['line_type'] ?? '') === 'basmallah')
         ->values();
+    $firstAyahLine = $mushafLines
+        ->first(static fn (array $line): bool => ($line['line_type'] ?? '') === 'ayah' && ($line['words'] ?? []) !== []);
 
     expect($basmallahLines)->toHaveCount(3)
         ->and($page['basmallahFontFamily'] ?? null)->toBe('QuranCommon')
         ->and($page['basmallahFontFormat'] ?? null)->toBe('woff2')
         ->and($page['basmallahText'] ?? null)->toBe("\u{FDFD}")
-        ->and(filled($page['basmallahFontUrl'] ?? null))->toBeTrue();
+        ->and(filled($page['basmallahFontUrl'] ?? null))->toBeTrue()
+        ->and($firstAyahLine)->toBeArray();
 
     $this->get((string) $page['basmallahFontUrl'])->assertSuccessful();
 
@@ -424,19 +428,20 @@ it('uses canonical verse text for ayah copy payload and excludes neighboring aya
         ' ',
         trim((string) $text),
     );
+    $normalizeForClipboard = static fn (?string $uthmani, ?string $typed): string => $normalize(
+        \GoodMaven\Arabicable\Support\Quran\QuranWordCopyText::normalizeToken($uthmani, $typed) ?? '',
+    );
 
     $page = $service->resolvePage(1, (int) $firstAyah->ayah_index);
     $lines = collect($page['mushafLines'] ?? []);
     $firstAyahIndex = (int) $firstAyah->ayah_index;
-    $expectedFirstAyahText = $normalize(
-        trim((string) ($firstAyah->text_uthmani ?? '')) !== ''
-            ? (string) $firstAyah->text_uthmani
-            : (string) ($firstAyah->text_searchable_typed ?? ''),
+    $expectedFirstAyahText = $normalizeForClipboard(
+        (string) ($firstAyah->text_uthmani ?? ''),
+        (string) ($firstAyah->text_searchable_typed ?? ''),
     );
-    $secondAyahText = $normalize(
-        trim((string) ($secondAyah->text_uthmani ?? '')) !== ''
-            ? (string) $secondAyah->text_uthmani
-            : (string) ($secondAyah->text_searchable_typed ?? ''),
+    $secondAyahText = $normalizeForClipboard(
+        (string) ($secondAyah->text_uthmani ?? ''),
+        (string) ($secondAyah->text_searchable_typed ?? ''),
     );
     $secondAyahFirstToken = collect(preg_split('/\s+/u', $secondAyahText) ?: [])
         ->filter(static fn ($token): bool => is_string($token) && trim($token) !== '')
@@ -472,4 +477,102 @@ it('uses canonical verse text for ayah copy payload and excludes neighboring aya
         ->and($ayahCopyTexts)->not->toBeEmpty()
         ->and($ayahCopyTexts)->toContain($expectedFirstAyahText)
         ->and($ayahCopyTexts->join(' '))->not->toContain($secondAyahFirstToken);
+});
+
+it('builds meaningful late-page copy payloads for ayahs and words', function () {
+    if (! \Illuminate\Support\Facades\Schema::hasTable('quran_verses') || ! \Illuminate\Support\Facades\Schema::hasTable('quran_words')) {
+        $this->markTestSkipped('Quran verses or words table is unavailable.');
+    }
+
+    /** @var \App\Services\Quran\QuranReaderDataService $service */
+    $service = app(\App\Services\Quran\QuranReaderDataService::class);
+    \Illuminate\Support\Facades\Cache::flush();
+
+    $page = $service->resolvePage(604);
+    $lines = collect($page['mushafLines'] ?? []);
+
+    /** @var object|null $targetAyah */
+    $targetAyah = \Illuminate\Support\Facades\DB::table('quran_verses')
+        ->select(['ayah_index', 'text_uthmani', 'text_searchable_typed'])
+        ->where('surah_number', 112)
+        ->where('ayah_number', 1)
+        ->first();
+
+    if (! is_object($targetAyah)) {
+        $this->markTestSkipped('Required late-page ayah is unavailable.');
+    }
+
+    $normalize = static fn (?string $text): string => (string) preg_replace(
+        '/\s+/u',
+        ' ',
+        trim((string) $text),
+    );
+
+    $expectedAyahText = $normalize(
+        \GoodMaven\Arabicable\Support\Quran\QuranWordCopyText::normalizeToken(
+            (string) ($targetAyah->text_uthmani ?? ''),
+            (string) ($targetAyah->text_searchable_typed ?? ''),
+        ) ?? '',
+    );
+    $targetAyahIndex = (int) ($targetAyah->ayah_index ?? 0);
+
+    $payloadEntries = $lines->flatMap(function (array $line): array {
+        $wordEntries = collect($line['words'] ?? [])
+            ->map(static fn (array $word): array => [
+                'ayah_index' => (int) ($word['ayah_index'] ?? 0),
+                'copy_text' => (string) ($word['copy_text'] ?? ''),
+                'ayah_copy_text' => (string) ($word['ayah_copy_text'] ?? ''),
+            ])
+            ->all();
+
+        $segmentEntries = collect($line['segments'] ?? [])
+            ->map(static fn (array $segment): array => [
+                'ayah_index' => (int) ($segment['ayah_index'] ?? 0),
+                'copy_text' => (string) ($segment['copy_text'] ?? ''),
+                'ayah_copy_text' => (string) ($segment['ayah_copy_text'] ?? ''),
+            ])
+            ->all();
+
+        return [...$wordEntries, ...$segmentEntries];
+    });
+
+    $ayahCopyTexts = $payloadEntries
+        ->filter(static fn (array $entry): bool => (int) ($entry['ayah_index'] ?? 0) === $targetAyahIndex)
+        ->map(static fn (array $entry): string => $normalize((string) ($entry['ayah_copy_text'] ?? '')))
+        ->filter(static fn (string $text): bool => $text !== '')
+        ->unique()
+        ->values();
+
+    $expectedWordTokens = collect(\Illuminate\Support\Facades\DB::table('quran_words')
+        ->select(['token_uthmani', 'token_searchable_typed'])
+        ->where('surah_number', 112)
+        ->where('ayah_number', 1)
+        ->orderBy('word_position')
+        ->get())
+        ->map(static fn (object $word): string => $normalize(
+            \GoodMaven\Arabicable\Support\Quran\QuranWordCopyText::normalizeToken(
+                (string) ($word->token_uthmani ?? ''),
+                (string) ($word->token_searchable_typed ?? ''),
+            ) ?? '',
+        ))
+        ->filter(static fn (string $token): bool => $token !== '')
+        ->values();
+
+    $actualWordTokens = $payloadEntries
+        ->filter(static fn (array $entry): bool => (int) ($entry['ayah_index'] ?? 0) === $targetAyahIndex)
+        ->map(static fn (array $entry): string => $normalize((string) ($entry['copy_text'] ?? '')))
+        ->filter(static fn (string $token): bool => $token !== '')
+        ->filter(static fn (string $token): bool => ! preg_match('/[\x{FB50}-\x{FDFF}\x{FE70}-\x{FEFF}]/u', $token))
+        ->unique()
+        ->values();
+
+    expect($expectedAyahText)->not->toBe('')
+        ->and($ayahCopyTexts)->not->toBeEmpty()
+        ->and($ayahCopyTexts)->toContain($expectedAyahText)
+        ->and($expectedWordTokens)->not->toBeEmpty()
+        ->and($actualWordTokens->join(' '))->not->toMatch('/[\x{06D6}-\x{06ED}\x{0640}]/u');
+
+    foreach ($expectedWordTokens as $expectedToken) {
+        expect($actualWordTokens)->toContain((string) $expectedToken);
+    }
 });

@@ -142,12 +142,16 @@ const normalizeTextValue = (value) => {
 };
 
 const arabicHarakatPattern = /[\u0610-\u061A\u064B-\u0653\u0656-\u065F\u0670\u06D6-\u06ED]/gu;
+const arabicPresentationFormsPattern = /[\uFB50-\uFDFF\uFE70-\uFEFF]/u;
 
 const stripArabicHarakat = (value) =>
     String(value ?? '')
         .replace(arabicHarakatPattern, '')
         .replace(/\s+/g, ' ')
         .trim();
+
+const hasArabicPresentationForms = (value) =>
+    arabicPresentationFormsPattern.test(String(value ?? ''));
 
 const normalizeTags = (value) => {
     const source = Array.isArray(value) ? value : String(value ?? '').split(',');
@@ -3059,7 +3063,25 @@ document.addEventListener('alpine:init', () => {
         },
 
         extractWordText(word) {
-            return normalizeTextValue(word?.copy_text ?? word?.text);
+            const copyText = normalizeTextValue(word?.copy_text);
+
+            if (copyText && !hasArabicPresentationForms(copyText)) {
+                return copyText;
+            }
+
+            const displayText = normalizeTextValue(word?.text);
+
+            if (displayText && !hasArabicPresentationForms(displayText)) {
+                return displayText;
+            }
+
+            const canonicalAyahText = normalizeTextValue(word?.ayah_copy_text);
+
+            if (canonicalAyahText) {
+                return canonicalAyahText;
+            }
+
+            return copyText ?? displayText;
         },
 
         canonicalAyahCopyText(ayahIndex) {
