@@ -89,6 +89,7 @@ const copyPopoverVisibleDurationMs = 920;
 const navigationSettleDelayMs = 140;
 const navigationRevealLockDurationMs = 420;
 const defaultBasmallahBottomGapScale = -0.18;
+const openingSpreadFinalScaleMultiplier = 0.72;
 const fitRobustWidthQuantile = 0.88;
 const fitRobustWidthOutlierThreshold = 1.2;
 const fitDefaultProfile = Object.freeze({
@@ -2278,9 +2279,9 @@ document.addEventListener('alpine:init', () => {
                     compressionLeadingFloor: 0.92,
                     compressionGapFloor: 0.34,
                     compressionSurahHeaderFloor: 0.9,
-                    compressionTypeScaleCeiling: 0.68,
-                    layoutTypeScaleBase: 0.6,
-                    layoutTypeScaleGain: 0.04,
+                    compressionTypeScaleCeiling: 0.6,
+                    layoutTypeScaleBase: 0.56,
+                    layoutTypeScaleGain: 0.03,
                     layoutLeadingBase: 1,
                     layoutLeadingDrop: 0.04,
                     layoutGapBase: 0.5,
@@ -2292,15 +2293,15 @@ document.addEventListener('alpine:init', () => {
                     baseLeadingMultiplier: 1,
                     baseGapMultiplier: 1,
                     minimumCompressionLevel: 0,
-                    targetWidthRatio: 0.8,
-                    targetHeightRatio: 0.88,
+                    targetWidthRatio: 0.68,
+                    targetHeightRatio: 0.76,
                     widthDeficitWeight: 0.34,
                     heightDeficitWeight: 0.14,
                     compressionPenaltyWeight: 0.01,
                     strictWidthOverflowTolerance: 1.03,
                     strictHeightOverflowTolerance: 1.0,
                     candidateSteps: 24,
-                    maxScaleMultiplier: 0.84,
+                    maxScaleMultiplier: 0.56,
                 };
             }
 
@@ -2508,6 +2509,18 @@ document.addEventListener('alpine:init', () => {
                 normalizedScale = Math.max(
                     minScale,
                     Math.min(maxScale, Number((normalizedScale * overflowAdjust).toFixed(4))),
+                );
+            }
+
+            const normalizedPageNumber = Math.max(1, Math.trunc(Number(this.pageNumber ?? 1)));
+
+            if (normalizedPageNumber <= 2) {
+                normalizedScale = Math.max(
+                    minScale,
+                    Math.min(
+                        maxScale,
+                        Number((normalizedScale * openingSpreadFinalScaleMultiplier).toFixed(4)),
+                    ),
                 );
             }
 
