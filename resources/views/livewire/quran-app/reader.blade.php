@@ -470,7 +470,6 @@
                 transform 160ms ease,
                 background-color 220ms ease,
                 box-shadow 220ms ease;
-            box-shadow: 0 10px 20px color-mix(in srgb, var(--gray-900) 18%, transparent);
         }
 
         #quran-reader-bookmark-toggle.quran-bookmark-toggle-button:hover {
