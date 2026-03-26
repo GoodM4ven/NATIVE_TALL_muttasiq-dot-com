@@ -114,7 +114,7 @@ class QuranReaderDataService
         $normalizedPage = $maxPage > 0 ? max(1, min($pageNumber, $maxPage)) : 1;
         $basmallahConfigFingerprint = $this->basmallahConfigFingerprint();
         $cacheKey = sprintf(
-            'quran-reader-page-v17:%d:%s',
+            'quran-reader-page-v19:%d:%s',
             $normalizedPage,
             $basmallahConfigFingerprint,
         );
@@ -1324,31 +1324,6 @@ class QuranReaderDataService
             }
         }
 
-        if ($displayWordsByIndex !== [] && $canonicalWordsByIndex !== []) {
-            foreach ($displayWordsByIndex as $displayWordIndex => $displayWord) {
-                $canonicalWordMeta = $canonicalWordsByIndex[(int) $displayWordIndex] ?? null;
-
-                if ($canonicalWordMeta === null) {
-                    continue;
-                }
-
-                $canonicalSurahNumber = (int) $canonicalWordMeta['surah_number'];
-                $canonicalAyahNumber = (int) $canonicalWordMeta['ayah_number'];
-
-                if ($canonicalSurahNumber > 0) {
-                    $displayWord['surah_number'] = $canonicalSurahNumber;
-                }
-
-                if ($canonicalAyahNumber > 0) {
-                    $displayWord['ayah_number'] = $canonicalAyahNumber;
-                }
-
-                $displayWord['copy_text'] = trim((string) $canonicalWordMeta['copy_text']);
-
-                $displayWordsByIndex[(int) $displayWordIndex] = $displayWord;
-            }
-        }
-
         $verseMetaByPair = [];
         $surahNumbers = [];
         $ayahNumbers = [];
@@ -1360,13 +1335,7 @@ class QuranReaderDataService
 
         unset($surahNumbers[0], $ayahNumbers[0]);
 
-        if (
-            $copyWordsByGlobalWordIndex === [] &&
-            $copyWordsByAyahPosition === [] &&
-            Schema::hasTable('quran_words') &&
-            $surahNumbers !== [] &&
-            $ayahNumbers !== []
-        ) {
+        if (Schema::hasTable('quran_words') && $surahNumbers !== [] && $ayahNumbers !== []) {
             $copyWordRows = DB::table('quran_words')
                 ->select([
                     'global_word_index',
@@ -1383,6 +1352,8 @@ class QuranReaderDataService
                 ->orderBy('word_position')
                 ->get();
 
+            // QPC page word indices are not guaranteed to align with quran_words global indices.
+            // Resolve copy tokens by (surah, ayah, word_position) from the displayed page context.
             $copyWordsByGlobalWordIndex = QuranWordCopyText::buildMapByGlobalWordIndex($copyWordRows);
             $copyWordsByAyahPosition = QuranWordCopyText::buildMapByAyahPosition($copyWordRows);
         }
@@ -1451,28 +1422,40 @@ class QuranReaderDataService
                     $ayahWordPositions[$pairKey] = (int) ($ayahWordPositions[$pairKey] ?? 0) + 1;
                     $wordPosition = $ayahWordPositions[$pairKey];
                     $wordCopyTextKey = QuranWordCopyText::ayahWordKey($wordSurahNumber, $wordAyahNumber, $wordPosition);
-                    $wordCopyText = trim((string) ($copyWordsByGlobalWordIndex[(int) $word['global_word_index']] ?? ''));
+                    $wordCopyText = '';
 
-                    if ($wordCopyText === '' && $wordCopyTextKey !== null) {
+                    if ($wordCopyTextKey !== null) {
                         $wordCopyText = trim((string) ($copyWordsByAyahPosition[$wordCopyTextKey] ?? ''));
                     }
 
-                    if ($wordCopyText === '' && ! ((bool) $word['is_glyph'])) {
-                        $wordCopyText = trim((string) $word['copy_text']);
+                    if ($wordCopyText === '' && $wordCopyTextKey === null) {
+                        $wordCopyText = trim((string) ($copyWordsByGlobalWordIndex[(int) $word['global_word_index']] ?? ''));
                     }
 
-                    if ($wordCopyText === '') {
+                    if ($wordCopyText === '' && ! ((bool) $word['is_glyph'])) {
+                        $wordCopyText = trim((string) ($word['copy_text'] ?? ''));
+                    }
+
+                    if ($wordCopyText === '' && ! ((bool) $word['is_glyph'])) {
                         $wordCopyText = trim((string) $wordText);
                     }
 
                     if (preg_match('/[\x{FB50}-\x{FDFF}\x{FE70}-\x{FEFF}]/u', $wordCopyText)) {
-                        $wordCopyText = '';
+                        if ((bool) $word['is_glyph']) {
+                            $wordCopyText = '';
+                        } else {
+                            $wordCopyText = $wordCopyTextKey !== null
+                                ? trim((string) ($copyWordsByAyahPosition[$wordCopyTextKey] ?? ''))
+                                : '';
+                        }
                     }
 
-                    if ($wordCopyText === '') {
-                        $wordCopyText = $wordCopyTextKey !== null
-                        ? trim((string) ($copyWordsByAyahPosition[$wordCopyTextKey] ?? ''))
-                        : '';
+                    if ($wordCopyText === '' && ! ((bool) $word['is_glyph'])) {
+                        $wordCopyText = trim((string) ($word['copy_text'] ?? ''));
+                    }
+
+                    if ($wordCopyText === '' && ! ((bool) $word['is_glyph'])) {
+                        $wordCopyText = trim((string) $wordText);
                     }
 
                     $verseMeta = $verseMetaByPair[$pairKey] ?? null;
@@ -1525,7 +1508,9 @@ class QuranReaderDataService
 
                     $currentPairKey = $pairKey;
                     $currentSegmentTokens[] = $wordText;
-                    $currentSegmentCopyTokens[] = $wordCopyText;
+                    if ($wordCopyText !== '') {
+                        $currentSegmentCopyTokens[] = $wordCopyText;
+                    }
                     $currentSegmentEndsAyah = $wordEndsAyah;
                 }
 

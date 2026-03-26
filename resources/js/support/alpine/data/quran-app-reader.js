@@ -223,7 +223,9 @@ const normalizeHistoryEntry = (entry = {}) => {
         0,
     );
     const rawSource = String(entry?.source ?? '').trim();
-    const source = rawSource === 'surah-directory' ? 'surah-directory' : 'search-result';
+    const source = ['surah-directory', 'bookmark-navigation'].includes(rawSource)
+        ? rawSource
+        : 'search-result';
     const createdAt = Number(entry?.created_at ?? entry?.createdAt ?? Date.now());
 
     return {
@@ -449,7 +451,7 @@ document.addEventListener('alpine:init', () => {
             searchIndexUrl: String(config?.api?.searchIndexUrl ?? ''),
         },
         cacheNames: {
-            pages: 'quran-reader-pages-v12',
+            pages: 'quran-reader-pages-v13',
             fonts: 'quran-reader-fonts-v4',
             search: 'quran-reader-search-v3',
         },
@@ -585,6 +587,7 @@ document.addEventListener('alpine:init', () => {
         _surahDirectoryAutoFocusToken: 0,
         _surahDirectoryAutoFocusTimer: null,
         _surahDirectoryAutoFocusRaf: null,
+        _surahDirectoryPostOpenTimers: [],
         _modalLayoutResumeTimer: null,
         _activeModalIds: new Set(),
         _isModalLifecycleSettling: false,
@@ -640,16 +643,21 @@ document.addEventListener('alpine:init', () => {
                 storedLastPageNumber ?? this.pageNumber,
                 this.maxPage || this.initialPayload.maxPage,
             );
+            const shouldRestoreSavedPage =
+                restoredPage !== this.initialPayload.pageNumber && this.ready;
 
-            this.pageNumber = restoredPage;
             this.pageInput = restoredPage;
             this._lastPageInputVisualValue = restoredPage;
             writeLastPageNumber(restoredPage);
 
-            if (restoredPage !== this.initialPayload.pageNumber && this.ready) {
+            if (!shouldRestoreSavedPage) {
+                this.pageNumber = restoredPage;
+            } else {
+                this.isFittingPage = true;
                 this.goToPage(restoredPage, {
                     direction: restoredPage > this.initialPayload.pageNumber ? 'next' : 'prev',
                     animate: false,
+                    forceRefit: true,
                 });
             }
 
@@ -904,14 +912,27 @@ document.addEventListener('alpine:init', () => {
         },
 
         historyEntrySourceLabel(entry) {
-            return String(entry?.source ?? '') === 'surah-directory' ? 'تنقّل سريع' : 'بحث';
+            const source = String(entry?.source ?? '');
+
+            if (source === 'surah-directory') {
+                return 'تنقّل سريع';
+            }
+
+            if (source === 'bookmark-navigation') {
+                return 'إشارة مرجعية';
+            }
+
+            return 'بحث';
         },
 
         historyEntryContextLabel(entry) {
             const surahNumber = Math.max(0, Math.trunc(Number(entry?.surah_number ?? 0)));
             const ayahNumber = Math.max(0, Math.trunc(Number(entry?.ayah_number ?? 0)));
 
-            if (String(entry?.source ?? '') === 'surah-directory') {
+            if (
+                String(entry?.source ?? '') === 'surah-directory' ||
+                String(entry?.source ?? '') === 'bookmark-navigation'
+            ) {
                 return this.surahLabel(surahNumber > 0 ? surahNumber : this.currentSurahNumber());
             }
 
@@ -974,8 +995,12 @@ document.addEventListener('alpine:init', () => {
             const normalizedSurahNumber = Math.max(0, Math.trunc(Number(surahNumber ?? 0)));
             const normalizedAyahNumber = Math.max(0, Math.trunc(Number(ayahNumber ?? 0)));
             const normalizedAyahIndex = Math.max(0, Math.trunc(Number(ayahIndex ?? 0)));
-            const normalizedSource =
-                String(source ?? '') === 'surah-directory' ? 'surah-directory' : 'search-result';
+            const sourceValue = String(source ?? '');
+            const normalizedSource = ['surah-directory', 'bookmark-navigation'].includes(
+                sourceValue,
+            )
+                ? sourceValue
+                : 'search-result';
             const normalizedQuery = normalizeTextValue(query);
 
             this.navigationHistory = [
@@ -4913,17 +4938,45 @@ document.addEventListener('alpine:init', () => {
         },
 
         resolveSurahDirectoryGridElement() {
+            const candidates = [];
+
             if (this.$refs.surahDirectoryGrid instanceof Element) {
-                return this.$refs.surahDirectoryGrid;
+                candidates.push(this.$refs.surahDirectoryGrid);
             }
 
             const modalWindow = this.searchModalWindowElement();
 
-            if (!(modalWindow instanceof Element)) {
-                return null;
+            if (modalWindow instanceof Element) {
+                const modalScopedGrid = modalWindow.querySelector('[data-quran-surah-grid]');
+
+                if (modalScopedGrid instanceof Element) {
+                    candidates.push(modalScopedGrid);
+                }
             }
 
-            return modalWindow.querySelector('[data-quran-surah-grid]');
+            document
+                .querySelectorAll('#quran-reader-search-modal [data-quran-surah-grid]')
+                .forEach((node) => {
+                    if (node instanceof Element) {
+                        candidates.push(node);
+                    }
+                });
+
+            const visibleCandidate = candidates.find((element) => {
+                if (!(element instanceof HTMLElement)) {
+                    return false;
+                }
+
+                const styles = window.getComputedStyle(element);
+
+                return (
+                    element.clientHeight > 16 &&
+                    styles.display !== 'none' &&
+                    styles.visibility !== 'hidden'
+                );
+            });
+
+            return visibleCandidate ?? candidates[0] ?? null;
         },
 
         scrollSurahDirectoryToActive({ behavior = 'smooth' } = {}) {
@@ -4946,10 +4999,12 @@ document.addEventListener('alpine:init', () => {
                 return false;
             }
 
-            const tileTop = activeTile.offsetTop;
+            const gridRect = gridElement.getBoundingClientRect();
+            const tileRect = activeTile.getBoundingClientRect();
+            const tileTop = tileRect.top - gridRect.top + gridElement.scrollTop;
             const tileHeight = activeTile.clientHeight;
             const maxScrollTop = Math.max(0, gridElement.scrollHeight - gridElement.clientHeight);
-            const targetScrollTop = tileTop - tileHeight * 3;
+            const targetScrollTop = tileTop - (gridElement.clientHeight - tileHeight) / 2;
 
             const normalizedScrollTop = Math.max(
                 0,
@@ -4976,6 +5031,13 @@ document.addEventListener('alpine:init', () => {
             if (this._surahDirectoryAutoFocusRaf !== null) {
                 cancelAnimationFrame(this._surahDirectoryAutoFocusRaf);
                 this._surahDirectoryAutoFocusRaf = null;
+            }
+
+            if (Array.isArray(this._surahDirectoryPostOpenTimers)) {
+                this._surahDirectoryPostOpenTimers.forEach((timerId) => {
+                    clearTimeout(timerId);
+                });
+                this._surahDirectoryPostOpenTimers = [];
             }
         },
 
@@ -5013,22 +5075,19 @@ document.addEventListener('alpine:init', () => {
                 const isGridReady =
                     gridElement instanceof HTMLElement &&
                     activeTile instanceof HTMLElement &&
-                    this.isSearchModalWindowVisible() &&
                     gridElement.clientHeight > 16 &&
                     activeTile.getClientRects().length > 0;
 
                 if (isGridReady) {
-                    this.scrollSurahDirectoryToActive({
-                        behavior: normalizedAttempt === 0 ? 'auto' : 'smooth',
-                    });
+                    this.scrollSurahDirectoryToActive({ behavior: 'auto' });
                     activeTile.focus({ preventScroll: true });
 
-                    if (normalizedAttempt < 2) {
+                    if (normalizedAttempt < 8) {
                         this._surahDirectoryAutoFocusTimer = window.setTimeout(
                             () => {
                                 attemptAutoFocus(normalizedAttempt + 1);
                             },
-                            normalizedAttempt === 0 ? 140 : 240,
+                            normalizedAttempt === 0 ? 140 : 180,
                         );
                     }
 
@@ -5215,8 +5274,20 @@ document.addEventListener('alpine:init', () => {
         },
 
         currentSurahTriggerLabel() {
+            const currentSurahNumber = Math.max(
+                1,
+                Math.trunc(Number(this.currentSurahNumber() ?? 1)),
+            );
+
             if (this.surahTriggerCaption !== '') {
-                return this.surahTriggerCaption;
+                const captionSurahNumber = Math.max(
+                    1,
+                    Math.trunc(Number(this.surahTriggerSurahNumber ?? 1)),
+                );
+
+                if (captionSurahNumber === currentSurahNumber) {
+                    return this.surahTriggerCaption;
+                }
             }
 
             return this.resolveCurrentSurahTriggerLabel();
@@ -5615,6 +5686,15 @@ document.addEventListener('alpine:init', () => {
             this.ensureSearchResultAnimations();
             this.$refs.searchModalInput?.focus?.();
             this.queueSurahDirectoryAutoFocus();
+            this._surahDirectoryPostOpenTimers = [260, 560, 920].map((delayMs) =>
+                window.setTimeout(() => {
+                    if (!this.search.modalOpen) {
+                        return;
+                    }
+
+                    this.scrollSurahDirectoryToActive({ behavior: 'auto' });
+                }, delayMs),
+            );
         },
 
         handleSearchModalClosed() {
@@ -5748,6 +5828,11 @@ document.addEventListener('alpine:init', () => {
             await this.layoutPageGuaranteed({ revealDelayMs: 220, maxAttempts: 5 });
             this.activeAyahIndex = 0;
             this.activeWordIndex = 0;
+            this.recordNavigationHistory({
+                source: 'bookmark-navigation',
+                pageNumber: targetPage,
+                surahNumber: this.currentSurahNumber(),
+            });
         },
 
         async confirmSearchSelection() {

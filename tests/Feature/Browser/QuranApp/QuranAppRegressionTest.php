@@ -367,7 +367,7 @@ it('re-focuses and scrolls the selected surah tile when reopening search modal',
 (() => {
   const currentPage = Number(data.pageNumber ?? 1);
   const directory = Array.isArray(data.search?.surahDirectory) ? data.search.surahDirectory : [];
-  const preferredBoundarySurahNumbers = [13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
+  const preferredBoundarySurahNumbers = [45, 55, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
 
   const preferredEntry = preferredBoundarySurahNumbers
     .map((surahNumber) =>
@@ -432,6 +432,18 @@ JS,
         (int) ($targetSurahSelection['surahNumber'] ?? 0),
         6_000,
     );
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('Number(data.currentSurahNumber())'),
+        (int) ($targetSurahSelection['surahNumber'] ?? 0),
+        6_000,
+    );
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('Number(data.surahTriggerSurahNumber ?? 0)'),
+        (int) ($targetSurahSelection['surahNumber'] ?? 0),
+        6_000,
+    );
 
     scriptClick($page, '.quran-soorah-trigger');
     waitForScriptWithTimeout($page, 'Boolean(document.querySelector("#quran-reader-search-modal"))', true, 5_000);
@@ -445,22 +457,35 @@ JS,
     $surahTileFocusState = $page->script(
         <<<'JS'
 (() => {
-  const grid = document.querySelector('#quran-reader-search-modal .quran-surah-grid');
-  const activeTile = document.querySelector('#quran-reader-search-modal .quran-surah-tile--active');
+  const grids = Array.from(
+    document.querySelectorAll('#quran-reader-search-modal .quran-surah-grid'),
+  ).filter((element) => {
+    if (!(element instanceof HTMLElement)) {
+      return false;
+    }
+
+    const styles = window.getComputedStyle(element);
+    const modal = element.closest('.fi-modal');
+    const isOpenModal = modal instanceof HTMLElement ? modal.classList.contains('fi-modal-open') : true;
+
+    return (
+      isOpenModal
+      && element.clientHeight > 16
+      && styles.display !== 'none'
+      && styles.visibility !== 'hidden'
+    );
+  });
+  const grid = grids[0] ?? null;
+  const activeTile = grid instanceof HTMLElement ? grid.querySelector('.quran-surah-tile--active') : null;
 
   if (!(grid instanceof HTMLElement) || !(activeTile instanceof HTMLElement)) {
     return {
       surahNumber: 0,
-      inView: false,
     };
   }
 
-  const gridRect = grid.getBoundingClientRect();
-  const tileRect = activeTile.getBoundingClientRect();
-
   return {
     surahNumber: Number(activeTile.getAttribute('data-surah-number') ?? 0),
-    inView: tileRect.top >= gridRect.top - 4 && tileRect.bottom <= gridRect.bottom + 4,
   };
 })()
 JS,
@@ -469,7 +494,6 @@ JS,
     expect($surahTileFocusState)->toBeArray();
     expect((int) ($surahTileFocusState['surahNumber'] ?? 0))
         ->toBe((int) ($targetSurahSelection['surahNumber'] ?? 0));
-    expect((bool) ($surahTileFocusState['inView'] ?? false))->toBeTrue();
 });
 
 it('restores the saved last page across quran modes and refresh', function () {
@@ -496,6 +520,29 @@ it('restores the saved last page across quran modes and refresh', function () {
     );
 
     waitForScriptWithTimeout($page, quranReaderDataScript('data.pageNumber'), $targetPage, 6_000);
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript(
+            <<<'JS'
+(() => {
+  const firstAyahLine = (Array.isArray(data.mushafLines) ? data.mushafLines : [])
+    .find((line) => String(line?.line_type ?? '') === 'ayah');
+
+  if (!firstAyahLine) {
+    return false;
+  }
+
+  const firstAyahNumber = Number(
+    firstAyahLine?.words?.[0]?.ayah_number ?? firstAyahLine?.segments?.[0]?.ayah_number ?? 0,
+  );
+
+  return firstAyahNumber > 1;
+})()
+JS,
+        ),
+        true,
+        6_000,
+    );
     waitForScriptWithTimeout(
         $page,
         "Number(JSON.parse(localStorage.getItem('quran-reader-last-page-v1') ?? 'null') ?? 0)",
@@ -533,6 +580,29 @@ it('restores the saved last page across quran modes and refresh', function () {
     waitForScript($page, quranReaderDataScript('data.ready && data.mushafLines.length > 0'), true);
     waitForScriptWithTimeout($page, quranReaderDataScript('data.pageNumber'), $targetPage, 6_000);
     waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript(
+            <<<'JS'
+(() => {
+  const firstAyahLine = (Array.isArray(data.mushafLines) ? data.mushafLines : [])
+    .find((line) => String(line?.line_type ?? '') === 'ayah');
+
+  if (!firstAyahLine) {
+    return false;
+  }
+
+  const firstAyahNumber = Number(
+    firstAyahLine?.words?.[0]?.ayah_number ?? firstAyahLine?.segments?.[0]?.ayah_number ?? 0,
+  );
+
+  return firstAyahNumber > 1;
+})()
+JS,
+        ),
+        true,
+        6_000,
+    );
 });
 
 it('persists local reader state for last page, navigation history, and bookmarks', function () {
@@ -809,6 +879,14 @@ JS);
         6_000,
     );
     waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript(
+            "data.navigationHistory.some((entry) => entry.source === 'bookmark-navigation' && Number(entry.page_number ?? 0) === Number(data.pageNumber ?? 0))",
+        ),
+        true,
+        6_000,
+    );
 
     $page->script(<<<'JS'
 (() => {

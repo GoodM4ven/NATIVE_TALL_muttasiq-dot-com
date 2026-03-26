@@ -173,7 +173,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderScriptSource)->toContain('if (matchedKnownId) {')
         ->and($quranReaderScriptSource)->toContain('deriveSurahDirectoryFromItems(items = [])')
         ->and($quranReaderScriptSource)->toContain('resetNavigationQueueForPriorityJump()')
-        ->and($quranReaderScriptSource)->toContain("pages: 'quran-reader-pages-v12'")
+        ->and($quranReaderScriptSource)->toContain("pages: 'quran-reader-pages-v13'")
         ->and($quranReaderScriptSource)->toContain("fonts: 'quran-reader-fonts-v4'")
         ->and($quranReaderScriptSource)->toContain('requestSearchModalClose({ skipLayout = false } = {})')
         ->and($quranReaderScriptSource)->toContain('recordNavigationHistory({')
@@ -260,7 +260,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
     expect($quranReaderDataServiceSource)->not->toBeFalse()
         ->and($quranReaderDataServiceSource)->toContain('p\'.$pageNumber.\'.woff2')
         ->and($quranReaderDataServiceSource)->toContain("'format' => 'woff2'")
-        ->and($quranReaderDataServiceSource)->toContain('quran-reader-page-v17')
+        ->and($quranReaderDataServiceSource)->toContain('quran-reader-page-v19')
         ->and($quranReaderDataServiceSource)->toContain('quran-reader-surah-directory-v2')
         ->and($quranReaderDataServiceSource)->toContain('injectSyntheticBasmallahAfterSurahHeaders')
         ->and($quranReaderDataServiceSource)->toContain('applyTargetedSurahHeaderCarryovers')
@@ -688,6 +688,60 @@ it('does not render basmallah below surah nine header', function () {
     }
 
     expect(array_slice($surahNineBasmallahEntries, 0, 10))->toBeEmpty();
+});
+
+it('keeps qpc late-page surah metadata aligned for headers and copy payload', function () {
+    if (! \Illuminate\Support\Facades\Schema::hasTable('quran_mushaf_lines')) {
+        $this->markTestSkipped('Quran mushaf lines table is unavailable.');
+    }
+
+    /** @var \App\Services\Quran\QuranReaderDataService $service */
+    $service = app(\App\Services\Quran\QuranReaderDataService::class);
+    \Illuminate\Support\Facades\Cache::flush();
+
+    $page499 = $service->resolvePage(499);
+    $firstAyahLineOn499 = collect($page499['mushafLines'] ?? [])->first(
+        static fn (array $line): bool => ($line['line_type'] ?? '') === 'ayah',
+    );
+    $firstWordOn499 = collect(is_array($firstAyahLineOn499) ? ($firstAyahLineOn499['words'] ?? []) : [])->first();
+
+    expect($firstWordOn499)->toBeArray()
+        ->and((int) ($firstWordOn499['surah_number'] ?? 0))->toBe(45)
+        ->and((int) ($firstWordOn499['ayah_number'] ?? 0))->toBe(1);
+
+    $page187 = $service->resolvePage(187);
+    $linesOn187 = array_values(array_filter($page187['mushafLines'] ?? [], 'is_array'));
+
+    $surahNineHeaderIndex = null;
+
+    foreach ($linesOn187 as $lineIndex => $line) {
+        if (
+            ($line['line_type'] ?? null) === 'surah_name' &&
+            (int) ($line['surah_number'] ?? 0) === 9
+        ) {
+            $surahNineHeaderIndex = $lineIndex;
+
+            break;
+        }
+    }
+
+    expect($surahNineHeaderIndex)->not->toBeNull();
+
+    $lineAfterSurahNineHeader = $linesOn187[(int) $surahNineHeaderIndex + 1] ?? null;
+
+    expect($lineAfterSurahNineHeader)->toBeArray()
+        ->and((string) ($lineAfterSurahNineHeader['line_type'] ?? ''))->not->toBe('basmallah');
+
+    $firstAyahAfterSurahNineHeader = collect(array_slice($linesOn187, (int) $surahNineHeaderIndex + 1))->first(
+        static fn (array $line): bool => ($line['line_type'] ?? '') === 'ayah',
+    );
+    $firstWordAfterSurahNineHeader = collect(
+        is_array($firstAyahAfterSurahNineHeader) ? ($firstAyahAfterSurahNineHeader['words'] ?? []) : [],
+    )->first();
+
+    expect($firstWordAfterSurahNineHeader)->toBeArray()
+        ->and((int) ($firstWordAfterSurahNineHeader['surah_number'] ?? 0))->toBe(9)
+        ->and((int) ($firstWordAfterSurahNineHeader['ayah_number'] ?? 0))->toBe(1);
 });
 
 it('builds canonical copy payloads for every ayah in the quran dataset', function () {
