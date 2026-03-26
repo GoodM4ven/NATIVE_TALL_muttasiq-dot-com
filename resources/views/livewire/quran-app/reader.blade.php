@@ -564,7 +564,7 @@
         }
 
         .quran-copy-popover {
-            position: absolute;
+            position: fixed;
             z-index: 90;
             pointer-events: none;
             display: inline-flex;
@@ -586,6 +586,38 @@
             line-height: 1;
             white-space: nowrap;
             direction: rtl;
+        }
+
+        .quran-copy-popover-enter {
+            transition:
+                opacity 180ms cubic-bezier(0.2, 0.75, 0.25, 1),
+                transform 180ms cubic-bezier(0.2, 0.75, 0.25, 1);
+        }
+
+        .quran-copy-popover-enter-start {
+            opacity: 0;
+            transform: translate(-50%, -118%) scale(0.84);
+        }
+
+        .quran-copy-popover-enter-end {
+            opacity: 1;
+            transform: translate(-50%, -132%) scale(1);
+        }
+
+        .quran-copy-popover-leave {
+            transition:
+                opacity 220ms cubic-bezier(0.4, 0, 1, 1),
+                transform 220ms cubic-bezier(0.4, 0, 1, 1);
+        }
+
+        .quran-copy-popover-leave-start {
+            opacity: 1;
+            transform: translate(-50%, -132%) scale(1);
+        }
+
+        .quran-copy-popover-leave-end {
+            opacity: 0;
+            transform: translate(-50%, -156%) scale(1);
         }
 
         .quran-soorah-trigger {
@@ -1636,25 +1668,27 @@
                 </button>
             </footer>
 
-            <div
-                class="quran-copy-popover"
-                data-quran-copy-popover
-                x-cloak
-                x-show="copyFeedback.visible"
-                x-bind:style="copyFeedbackStyle()"
-                x-transition:enter="transition duration-140 ease-out"
-                x-transition:enter-start="opacity-0 scale-75"
-                x-transition:enter-end="opacity-100 scale-100"
-                x-transition:leave="transition duration-260 ease-in"
-                x-transition:leave-start="opacity-100 scale-100"
-                x-transition:leave-end="opacity-0 scale-75"
-            >
-                <x-icon
-                    class="h-3.5 w-3.5"
-                    :name="'heroicon-o-clipboard'"
-                />
-                <span>تم النسخ</span>
-            </div>
+            <template x-teleport="body">
+                <div
+                    class="quran-copy-popover"
+                    data-quran-copy-popover
+                    x-cloak
+                    x-show="copyFeedback.visible"
+                    x-bind:style="copyFeedbackStyle()"
+                    x-transition:enter="quran-copy-popover-enter"
+                    x-transition:enter-start="quran-copy-popover-enter-start"
+                    x-transition:enter-end="quran-copy-popover-enter-end"
+                    x-transition:leave="quran-copy-popover-leave"
+                    x-transition:leave-start="quran-copy-popover-leave-start"
+                    x-transition:leave-end="quran-copy-popover-leave-end"
+                >
+                    <x-icon
+                        class="h-3.5 w-3.5"
+                        :name="'heroicon-o-clipboard'"
+                    />
+                    <span>تم النسخ</span>
+                </div>
+            </template>
         </section>
 
         <x-filament-actions::modals />

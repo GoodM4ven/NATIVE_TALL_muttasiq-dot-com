@@ -68,8 +68,6 @@ const clampPage = (value, maxPage) => {
     return Math.max(1, rounded);
 };
 
-const clampNumber = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
-
 const nextAnimationFrame = async () => {
     await new Promise((resolve) => {
         requestAnimationFrame(() => {
@@ -571,6 +569,7 @@ document.addEventListener('alpine:init', () => {
             startY: 0,
             holdTriggered: false,
             word: null,
+            target: null,
         },
 
         init() {
@@ -2624,6 +2623,32 @@ document.addEventListener('alpine:init', () => {
             return null;
         },
 
+        activationAnchorFromEvent(event = null) {
+            const targetElement =
+                event?.currentTarget instanceof Element
+                    ? event.currentTarget
+                    : event?.target instanceof Element
+                      ? event.target
+                      : null;
+            const point = this.swipePoint(event);
+
+            if (point && Number.isFinite(point.x) && Number.isFinite(point.y)) {
+                return {
+                    x: point.x,
+                    y: point.y,
+                    target: targetElement,
+                };
+            }
+
+            if (targetElement instanceof Element) {
+                return {
+                    target: targetElement,
+                };
+            }
+
+            return null;
+        },
+
         onSwipeStart(event) {
             if (event.target?.closest?.('[data-no-swipe]')) {
                 this.resetSwipeState();
@@ -2996,37 +3021,6 @@ document.addEventListener('alpine:init', () => {
             return this.readerPanelCenterPoint();
         },
 
-        copyPointToReaderPanel(point = null) {
-            const x = Number(point?.x);
-            const y = Number(point?.y);
-
-            if (!Number.isFinite(x) || !Number.isFinite(y)) {
-                return null;
-            }
-
-            const panelElement = this.$refs.readerPanel;
-            const panelRect = panelElement?.getBoundingClientRect?.();
-
-            if (
-                !Number.isFinite(panelRect?.left) ||
-                !Number.isFinite(panelRect?.top) ||
-                !Number.isFinite(panelRect?.width) ||
-                !Number.isFinite(panelRect?.height)
-            ) {
-                return null;
-            }
-
-            const panelInsetX = 18;
-            const panelInsetY = 18;
-            const maxX = Math.max(panelInsetX, panelRect.width - panelInsetX);
-            const maxY = Math.max(panelInsetY, panelRect.height - panelInsetY);
-
-            return {
-                x: clampNumber(x - panelRect.left, panelInsetX, maxX),
-                y: clampNumber(y - panelRect.top, panelInsetY, maxY),
-            };
-        },
-
         extractWordText(word) {
             return normalizeTextValue(word?.text);
         },
@@ -3196,8 +3190,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         showCopyFeedback(anchor = null) {
-            const viewportPoint = this.copyPointFromAnchor(anchor);
-            const point = this.copyPointToReaderPanel(viewportPoint);
+            const point = this.copyPointFromAnchor(anchor);
 
             if (!point) {
                 return;
@@ -3262,6 +3255,7 @@ document.addEventListener('alpine:init', () => {
             this.wordPress.startY = 0;
             this.wordPress.holdTriggered = false;
             this.wordPress.word = null;
+            this.wordPress.target = null;
         },
 
         onWordPointerDown(event, word) {
@@ -3286,6 +3280,12 @@ document.addEventListener('alpine:init', () => {
             this.wordPress.startY = point.y;
             this.wordPress.holdTriggered = false;
             this.wordPress.word = word;
+            this.wordPress.target =
+                event?.currentTarget instanceof Element
+                    ? event.currentTarget
+                    : event?.target instanceof Element
+                      ? event.target
+                      : null;
             this._wordPressHoldTimer = window.setTimeout(() => {
                 if (!this.wordPress.active || !this.wordPress.word) {
                     return;
@@ -3297,6 +3297,7 @@ document.addEventListener('alpine:init', () => {
                 this.selectHoldSegment(this.wordPress.word, {
                     x: this.wordPress.startX,
                     y: this.wordPress.startY,
+                    target: this.wordPress.target,
                 });
             }, wordPressHoldDelayMs);
         },
@@ -3349,7 +3350,7 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            this.selectDefaultSegment(word, event);
+            this.selectDefaultSegment(word, this.activationAnchorFromEvent(event));
         },
 
         setHoveredSegment(word) {
