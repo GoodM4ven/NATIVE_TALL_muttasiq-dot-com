@@ -338,7 +338,7 @@
         .quran-top-strip {
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            /* justify-content: space-between; */
             padding: 0.8rem 1rem 0.5rem;
         }
 
@@ -346,7 +346,7 @@
             display: inline-flex;
             align-items: center;
             justify-content: flex-end;
-            gap: 0.42rem;
+            gap: 0.52rem;
             min-width: 5.8rem;
         }
 
@@ -388,13 +388,13 @@
         }
 
         #quran-reader-history-toggle.quran-history-toggle-button {
-            width: 3.125rem;
-            height: 3.125rem;
+            width: 2.35rem;
+            height: 2.35rem;
             position: relative;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            background-color: rgb(44 44 44);
+            background-color: color-mix(in srgb, var(--primary-600) 74%, var(--primary-500));
             border-radius: 999px;
             cursor: pointer;
             transition-duration: 0.3s;
@@ -404,8 +404,8 @@
         }
 
         #quran-reader-history-toggle .quran-history-toggle-icon {
-            width: 2rem;
-            height: 2rem;
+            width: 1.5rem;
+            height: 1.5rem;
         }
 
         #quran-reader-history-toggle .quran-history-toggle-icon path {
@@ -414,7 +414,7 @@
         }
 
         #quran-reader-history-toggle.quran-history-toggle-button:hover {
-            background-color: rgb(56 56 56);
+            background-color: color-mix(in srgb, var(--primary-500) 68%, var(--primary-400));
         }
 
         #quran-reader-history-toggle.quran-history-toggle-button:hover .quran-history-toggle-icon {
@@ -457,9 +457,9 @@
             position: relative;
             overflow: hidden;
             cursor: pointer;
-            background-color: teal;
-            width: 2.8125rem;
-            height: 2.8125rem;
+            background-color: color-mix(in srgb, var(--warning-600) 90%, var(--warning-700));
+            width: 2.35rem;
+            height: 2.35rem;
             border-radius: 0.625rem;
             display: inline-flex;
             align-items: center;
@@ -475,7 +475,7 @@
 
         #quran-reader-bookmark-toggle.quran-bookmark-toggle-button:hover {
             transform: translateY(-0.04rem);
-            background-color: #008080;
+            background-color: color-mix(in srgb, var(--warning-500) 50%, var(--warning-600));
         }
 
         #quran-reader-bookmark-toggle.quran-bookmark-toggle-button:active {
@@ -485,13 +485,13 @@
         #quran-reader-bookmark-toggle.quran-bookmark-toggle-button:focus-visible {
             box-shadow:
                 0 0 0 2px color-mix(in srgb, var(--quran-page-bg) 76%, transparent),
-                0 0 0 4px rgb(0 128 128 / 45%);
+                0 0 0 4px color-mix(in srgb, var(--warning-800) 80%, transparent);
         }
 
         #quran-reader-bookmark-toggle .quran-bookmark-toggle-fill {
             position: absolute;
-            width: 0.625rem;
-            height: 0.625rem;
+            width: 0.5rem;
+            height: 0.5rem;
             background: rgb(255 255 255 / 25%);
             border-radius: 999px;
             transform: scale(0);
