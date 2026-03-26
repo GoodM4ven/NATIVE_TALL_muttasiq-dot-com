@@ -1047,13 +1047,76 @@ JS);
     waitForScriptWithTimeout($page, 'Number(window.__copiedTexts?.length ?? 0) >= 3', true, 6_000);
     waitForScriptWithTimeout($page, 'Number(window.__copiedTexts?.length ?? 0) >= 4', true, 6_000);
 
+    $didOutOfOrderAyahDragCopy = $page->script(<<<'JS'
+(() => {
+  const ayahSevenWord = document.querySelector('.quran-page-lines .quran-word-button[data-quran-ayah-number="7"]');
+  const ayahSixWord = document.querySelector('.quran-page-lines .quran-word-button[data-quran-ayah-number="6"]');
+
+  if (!(ayahSevenWord instanceof HTMLButtonElement) || !(ayahSixWord instanceof HTMLButtonElement)) {
+    return false;
+  }
+
+  const pointFor = (button) => {
+    const rect = button.getBoundingClientRect();
+
+    return {
+      x: rect.left + (rect.width / 2),
+      y: rect.top + (rect.height / 2),
+    };
+  };
+
+  const ayahSevenPoint = pointFor(ayahSevenWord);
+  const ayahSixPoint = pointFor(ayahSixWord);
+
+  ayahSevenWord.dispatchEvent(
+    new PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 916,
+      pointerType: 'mouse',
+      clientX: ayahSevenPoint.x,
+      clientY: ayahSevenPoint.y,
+    }),
+  );
+
+  ayahSixWord.dispatchEvent(
+    new PointerEvent('pointermove', {
+      bubbles: true,
+      pointerId: 916,
+      pointerType: 'mouse',
+      clientX: ayahSixPoint.x,
+      clientY: ayahSixPoint.y,
+    }),
+  );
+
+  ayahSixWord.dispatchEvent(
+    new PointerEvent('pointerup', {
+      bubbles: true,
+      pointerId: 916,
+      pointerType: 'mouse',
+      clientX: ayahSixPoint.x,
+      clientY: ayahSixPoint.y,
+    }),
+  );
+
+  return true;
+})()
+JS);
+
+    expect($didOutOfOrderAyahDragCopy)->toBeTrue();
+
+    waitForScriptWithTimeout($page, 'Number(window.__copiedTexts?.length ?? 0) >= 5', true, 6_000);
+
     $copiedTexts = $page->script('window.__copiedTexts');
+    $outOfOrderCopiedAyahText = trim((string) ($copiedTexts[4] ?? ''));
 
     expect($copiedTexts)->toBeArray()
         ->and(trim((string) ($copiedTexts[0] ?? '')))->not->toBe('')
         ->and(trim((string) ($copiedTexts[1] ?? '')))->not->toBe('')
         ->and(trim((string) ($copiedTexts[2] ?? '')))->not->toBe('')
-        ->and(trim((string) ($copiedTexts[3] ?? '')))->not->toBe('');
+        ->and(trim((string) ($copiedTexts[3] ?? '')))->not->toBe('')
+        ->and($outOfOrderCopiedAyahText)->not->toBe('')
+        ->and($outOfOrderCopiedAyahText)->not->toContain('۝')
+        ->and($outOfOrderCopiedAyahText)->toMatch('/\b6\b.*\b7\b/u');
 
     scriptClick($page, '[data-quran-open-history]');
     waitForScriptWithTimeout(

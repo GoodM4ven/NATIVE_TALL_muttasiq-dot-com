@@ -69,6 +69,14 @@ trait HasControlPanelSettingsTab
                             ->default((bool) ($generalDefinitions[Setting::DOES_SKIP_GUIDANCE_PANELS]['default'] ?? false))
                             ->extraFieldWrapperAttributes(['class' => 'relative z-20 mt-3 sm:mt-0'])
                             ->label($generalDefinitions[Setting::DOES_SKIP_GUIDANCE_PANELS]['label']),
+
+                        Components\Checkbox::make(Setting::DOES_USE_WESTERN_NUMERALS)
+                            ->default((bool) ($generalDefinitions[Setting::DOES_USE_WESTERN_NUMERALS]['default'] ?? true))
+                            ->extraFieldWrapperAttributes(['class' => 'relative z-20 mt-3 sm:mt-0'])
+                            ->label($generalDefinitions[Setting::DOES_USE_WESTERN_NUMERALS]['label'])
+                            ->belowContent([
+                                Text::make((string) ($generalDefinitions[Setting::DOES_USE_WESTERN_NUMERALS]['help'] ?? ''))->size(TextSize::ExtraSmall),
+                            ]),
                     ]),
 
                 Text::make(new HtmlString('<hr class="border-0 h-px bg-linear-to-r from-transparent via-gray-400 to-transparent mt-5">'))

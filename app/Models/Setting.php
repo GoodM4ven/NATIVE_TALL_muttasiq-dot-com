@@ -27,6 +27,8 @@ class Setting extends Model
 
     public const DOES_SKIP_GUIDANCE_PANELS = 'does_skip_notice_panels';
 
+    public const DOES_USE_WESTERN_NUMERALS = 'does_use_western_numerals';
+
     public const DOES_QURAN_TARGET_WORDS_BY_DEFAULT = 'does_quran_target_words_by_default';
 
     public const DOES_QURAN_PRESERVE_HARAKAT_ON_COPY = 'does_quran_preserve_harakat_on_copy';
@@ -98,6 +100,12 @@ class Setting extends Model
             self::DOES_SKIP_GUIDANCE_PANELS => [
                 'default' => false,
                 'label' => '3. تجاوز رسائل التعريف والتهنئة والتلميحات المساعدة.',
+                'group' => self::GROUP_GENERAL,
+                'type' => 'boolean',
+            ],
+            self::DOES_USE_WESTERN_NUMERALS => [
+                'default' => true,
+                'label' => '4. استخدام الأرقام الغربية (123) بدل العربية (١٢٣) في العرض.',
                 'group' => self::GROUP_GENERAL,
                 'type' => 'boolean',
             ],

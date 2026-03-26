@@ -158,6 +158,8 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderScriptSource)->toContain('const copiedHighlightVisibleDurationMs = 3000;')
         ->and($quranReaderScriptSource)->toContain('const wordClickSuppressionResetMs = 180;')
         ->and($quranReaderScriptSource)->toContain('const navigationHistoryLimit = 100;')
+        ->and($quranReaderScriptSource)->toContain('const defaultWesternNumerals = Object.freeze([')
+        ->and($quranReaderScriptSource)->toContain('const defaultArabicNumerals = Object.freeze([')
         ->and($quranReaderScriptSource)->toContain("const lastPageStorageKey = 'quran-reader-last-page-v1';")
         ->and($quranReaderScriptSource)->toContain("const navigationHistoryStorageKey = 'quran-reader-navigation-history-v1';")
         ->and($quranReaderScriptSource)->toContain("const bookmarksStorageKey = 'quran-reader-bookmarks-v1';")
@@ -194,7 +196,11 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderScriptSource)->toContain('isAyahClusterCopied(cluster)')
         ->and($quranReaderScriptSource)->toContain('writeClipboardText(text)')
         ->and($quranReaderScriptSource)->toContain("preserveHarakatOnCopy: 'does_quran_preserve_harakat_on_copy'")
+        ->and($quranReaderScriptSource)->toContain("useWesternNumerals: 'does_use_western_numerals'")
         ->and($quranReaderScriptSource)->toContain('doesPreserveHarakatOnCopy: true')
+        ->and($quranReaderScriptSource)->toContain('doesUseWesternNumerals: true')
+        ->and($quranReaderScriptSource)->toContain('formatAyahTokenNumber(value)')
+        ->and($quranReaderScriptSource)->toContain('return this.formatAyahTokenNumber(ayahNumber);')
         ->and($quranReaderScriptSource)->toContain('normalizeCopiedText(text)')
         ->and($quranReaderScriptSource)->toContain('copyFeedbackStyle()');
 
@@ -219,7 +225,12 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderClassSource)->toContain("'x-on:blur' => '\$event.target.value = String(Math.min(Math.max(1, Math.trunc(Number(\$event.target.value || 1) || 1)), Math.max(1, Number(\$event.target.max) || 1)));'")
         ->and($quranReaderClassSource)->toContain("view('livewire.quran-app.reader'")
         ->and($quranReaderClassSource)->toContain('Setting::DOES_QURAN_PRESERVE_HARAKAT_ON_COPY')
+        ->and($quranReaderClassSource)->toContain('Setting::DOES_USE_WESTERN_NUMERALS')
         ->and($quranReaderClassSource)->toContain("'preserveHarakatOnCopy' =>")
+        ->and($quranReaderClassSource)->toContain("'useWesternNumerals' =>")
+        ->and($quranReaderClassSource)->toContain("'numeralCharacters' => [")
+        ->and($quranReaderClassSource)->toContain('use GoodMaven\Arabicable\Enums\ArabicSpecialCharacters;')
+        ->and($quranReaderClassSource)->toContain('\\arabicable_special_characters(only: ArabicSpecialCharacters::IndianNumerals)')
         ->and($quranReaderClassSource)->toContain('QuranReaderDataService');
 
     expect($navigationHistoryActionSource)
@@ -247,11 +258,14 @@ it('wires quran reader entry points from main menu to hash navigation and view m
 
     expect($settingModelSource)->not->toBeFalse()
         ->and($settingModelSource)->toContain("DOES_QURAN_PRESERVE_HARAKAT_ON_COPY = 'does_quran_preserve_harakat_on_copy'")
+        ->and($settingModelSource)->toContain("DOES_USE_WESTERN_NUMERALS = 'does_use_western_numerals'")
         ->and($settingModelSource)->toContain("'default' => true")
-        ->and($settingModelSource)->toContain('الحفاظ على الحركات عند نسخ نص الآيات');
+        ->and($settingModelSource)->toContain('الحفاظ على الحركات عند نسخ نص الآيات')
+        ->and($settingModelSource)->toContain('استخدام الأرقام الغربية (0123) بدل العربية (٠١٢٣) في العرض');
 
     expect($controlPanelSettingsTabSource)->not->toBeFalse()
-        ->and($controlPanelSettingsTabSource)->toContain('Setting::DOES_QURAN_PRESERVE_HARAKAT_ON_COPY');
+        ->and($controlPanelSettingsTabSource)->toContain('Setting::DOES_QURAN_PRESERVE_HARAKAT_ON_COPY')
+        ->and($controlPanelSettingsTabSource)->toContain('Setting::DOES_USE_WESTERN_NUMERALS');
 
     expect($routesSource)->not->toBeFalse()
         ->and($routesSource)->toContain('p\'.$page.\'.woff2')

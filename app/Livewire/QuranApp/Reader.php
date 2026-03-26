@@ -14,6 +14,7 @@ use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Support\Enums\Alignment;
 use Filament\Support\Enums\Width;
+use GoodMaven\Arabicable\Enums\ArabicSpecialCharacters;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\HtmlString;
@@ -247,10 +248,27 @@ class Reader extends Component implements HasActions, HasSchemas
         $normalizedSettings = Setting::normalizeSettings(
             array_replace(Setting::defaults(), $storedSettings),
         );
+        $westernNumerals = array_values(
+            array_map(
+                static fn (mixed $character): string => (string) $character,
+                \arabicable_special_characters(only: ArabicSpecialCharacters::IndianNumerals),
+            ),
+        );
+        $arabicNumerals = array_values(
+            array_map(
+                static fn (mixed $character): string => (string) $character,
+                \arabicable_special_characters(only: ArabicSpecialCharacters::ArabicNumerals),
+            ),
+        );
         $quranReaderSettings = [
             'enableVisualEnhancements' => (bool) ($normalizedSettings[Setting::DOES_ENABLE_VISUAL_ENHANCEMENTS] ?? true),
             'targetWordsByDefault' => (bool) ($normalizedSettings[Setting::DOES_QURAN_TARGET_WORDS_BY_DEFAULT] ?? false),
             'preserveHarakatOnCopy' => (bool) ($normalizedSettings[Setting::DOES_QURAN_PRESERVE_HARAKAT_ON_COPY] ?? true),
+            'useWesternNumerals' => (bool) ($normalizedSettings[Setting::DOES_USE_WESTERN_NUMERALS] ?? true),
+            'numeralCharacters' => [
+                'western' => count($westernNumerals) === 10 ? $westernNumerals : ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
+                'arabic' => count($arabicNumerals) === 10 ? $arabicNumerals : ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'],
+            ],
         ];
         $this->maxPage = max(1, $readerData['maxPage']);
 

@@ -23,6 +23,7 @@ const controlPanelSettingKeys = Object.freeze({
     enableVisualEnhancements: 'enable_visual_enhancements',
     targetWordsByDefault: 'does_quran_target_words_by_default',
     preserveHarakatOnCopy: 'does_quran_preserve_harakat_on_copy',
+    useWesternNumerals: 'does_use_western_numerals',
 });
 
 const normalizePayload = (payload = {}) => ({
@@ -143,6 +144,9 @@ const normalizeTextValue = (value) => {
 
     return normalized === '' ? null : normalized;
 };
+
+const defaultWesternNumerals = Object.freeze(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
+const defaultArabicNumerals = Object.freeze(['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩']);
 
 const arabicHarakatPattern = /[\u0610-\u061A\u064B-\u0653\u0656-\u065F\u0670\u06D6-\u06ED]/gu;
 const arabicPresentationFormsPattern = /[\uFB50-\uFDFF\uFE70-\uFEFF]/u;
@@ -482,6 +486,9 @@ document.addEventListener('alpine:init', () => {
         doesEnableVisualEnhancements: true,
         doesTargetWordsByDefault: false,
         doesPreserveHarakatOnCopy: true,
+        doesUseWesternNumerals: true,
+        westernNumeralCharacters: defaultWesternNumerals.slice(),
+        arabicNumeralCharacters: defaultArabicNumerals.slice(),
         isLoadingPage: false,
         isFittingPage: true,
         pageMotionClass: '',
@@ -2856,6 +2863,46 @@ document.addEventListener('alpine:init', () => {
             return Boolean(fallback);
         },
 
+        normalizeNumeralCharacters(characters, fallback = defaultWesternNumerals) {
+            if (!Array.isArray(characters)) {
+                return fallback.slice();
+            }
+
+            const normalizedCharacters = characters
+                .map((character) => String(character ?? ''))
+                .filter((character) => character !== '');
+
+            if (normalizedCharacters.length !== 10) {
+                return fallback.slice();
+            }
+
+            return normalizedCharacters;
+        },
+
+        formatAyahTokenNumber(value) {
+            const numericValue = Math.max(0, Math.trunc(Number(value ?? 0)));
+
+            if (numericValue < 1) {
+                return null;
+            }
+
+            const westernText = String(numericValue);
+
+            if (this.doesUseWesternNumerals) {
+                return westernText;
+            }
+
+            return westernText.replace(/\d/g, (digit) => {
+                const digitIndex = Number(digit);
+
+                if (!Number.isInteger(digitIndex)) {
+                    return digit;
+                }
+
+                return this.arabicNumeralCharacters[digitIndex] ?? digit;
+            });
+        },
+
         applyControlPanelSettings(controlPanel = {}) {
             const input =
                 controlPanel && typeof controlPanel === 'object' && !Array.isArray(controlPanel)
@@ -2873,6 +2920,10 @@ document.addEventListener('alpine:init', () => {
                 input,
                 controlPanelSettingKeys.preserveHarakatOnCopy,
             );
+            const hasUseWesternNumerals = Object.prototype.hasOwnProperty.call(
+                input,
+                controlPanelSettingKeys.useWesternNumerals,
+            );
             const defaultVisualEnhancements = this.normalizeBooleanFlag(
                 this.initialSettings?.enableVisualEnhancements,
                 true,
@@ -2884,6 +2935,19 @@ document.addEventListener('alpine:init', () => {
             const defaultPreserveHarakatOnCopy = this.normalizeBooleanFlag(
                 this.initialSettings?.preserveHarakatOnCopy,
                 true,
+            );
+            const defaultUseWesternNumerals = this.normalizeBooleanFlag(
+                this.initialSettings?.useWesternNumerals,
+                true,
+            );
+
+            this.westernNumeralCharacters = this.normalizeNumeralCharacters(
+                this.initialSettings?.numeralCharacters?.western,
+                defaultWesternNumerals,
+            );
+            this.arabicNumeralCharacters = this.normalizeNumeralCharacters(
+                this.initialSettings?.numeralCharacters?.arabic,
+                defaultArabicNumerals,
             );
 
             this.doesEnableVisualEnhancements = this.normalizeBooleanFlag(
@@ -2902,6 +2966,12 @@ document.addEventListener('alpine:init', () => {
                 hasPreserveHarakatOnCopy
                     ? input[controlPanelSettingKeys.preserveHarakatOnCopy]
                     : defaultPreserveHarakatOnCopy,
+                true,
+            );
+            this.doesUseWesternNumerals = this.normalizeBooleanFlag(
+                hasUseWesternNumerals
+                    ? input[controlPanelSettingKeys.useWesternNumerals]
+                    : defaultUseWesternNumerals,
                 true,
             );
         },
@@ -3355,7 +3425,7 @@ document.addEventListener('alpine:init', () => {
                 return null;
             }
 
-            return `۝${ayahNumber}`;
+            return `(${this.formatAyahTokenNumber(ayahNumber)})`;
         },
 
         composeDraggedWordSelectionText() {
@@ -3363,29 +3433,70 @@ document.addEventListener('alpine:init', () => {
                 return null;
             }
 
-            const ayahGroups = [];
+            const orderedUniqueWords = [];
+            const normalizedWords = this.wordPress.trailWords
+                .map((word) => {
+                    const wordText = this.extractWordText(word);
+                    const wordMeta = this.normalizeSelectableWordMeta(word);
 
-            this.wordPress.trailWords.forEach((word) => {
-                const wordText = this.extractWordText(word);
-                const wordMeta = this.normalizeSelectableWordMeta(word);
+                    if (!wordText || wordMeta.ayahIndex < 1) {
+                        return null;
+                    }
 
-                if (!wordText || wordMeta.ayahIndex < 1) {
+                    return {
+                        wordText,
+                        ayahIndex: wordMeta.ayahIndex,
+                        ayahNumber: wordMeta.ayahNumber,
+                        wordIndex: Math.max(0, Math.trunc(Number(wordMeta.wordIndex ?? 0))),
+                        selectionKey: this.wordSelectionKeyFromMeta(wordMeta),
+                    };
+                })
+                .filter((entry) => entry !== null)
+                .sort((firstEntry, secondEntry) => {
+                    if (firstEntry.ayahIndex !== secondEntry.ayahIndex) {
+                        return firstEntry.ayahIndex - secondEntry.ayahIndex;
+                    }
+
+                    if (firstEntry.wordIndex !== secondEntry.wordIndex) {
+                        return firstEntry.wordIndex - secondEntry.wordIndex;
+                    }
+
+                    return firstEntry.wordText.localeCompare(secondEntry.wordText, 'ar');
+                });
+            const usedWordKeys = new Set();
+
+            normalizedWords.forEach((entry) => {
+                const uniqueKey =
+                    entry.selectionKey ?? `${entry.ayahIndex}:${entry.wordIndex}:${entry.wordText}`;
+
+                if (usedWordKeys.has(uniqueKey)) {
                     return;
                 }
 
+                usedWordKeys.add(uniqueKey);
+                orderedUniqueWords.push(entry);
+            });
+
+            if (orderedUniqueWords.length < 1) {
+                return null;
+            }
+
+            const ayahGroups = [];
+
+            orderedUniqueWords.forEach((entry) => {
                 const currentGroup = ayahGroups[ayahGroups.length - 1] ?? null;
 
-                if (!currentGroup || currentGroup.ayahIndex !== wordMeta.ayahIndex) {
+                if (!currentGroup || currentGroup.ayahIndex !== entry.ayahIndex) {
                     ayahGroups.push({
-                        ayahIndex: wordMeta.ayahIndex,
-                        ayahNumber: wordMeta.ayahNumber,
-                        words: [wordText],
+                        ayahIndex: entry.ayahIndex,
+                        ayahNumber: entry.ayahNumber,
+                        words: [entry.wordText],
                     });
 
                     return;
                 }
 
-                currentGroup.words.push(wordText);
+                currentGroup.words.push(entry.wordText);
             });
 
             if (ayahGroups.length < 1) {
@@ -3428,7 +3539,8 @@ document.addEventListener('alpine:init', () => {
 
             const normalizedAyahIndexes = this.wordPress.trailAyahIndexes
                 .map((ayahIndex) => Math.max(0, Math.trunc(Number(ayahIndex ?? 0))))
-                .filter((ayahIndex) => ayahIndex > 0);
+                .filter((ayahIndex) => ayahIndex > 0)
+                .sort((firstAyahIndex, secondAyahIndex) => firstAyahIndex - secondAyahIndex);
 
             if (normalizedAyahIndexes.length < 1) {
                 return null;
