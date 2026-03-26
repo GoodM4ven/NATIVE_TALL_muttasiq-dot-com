@@ -26,6 +26,10 @@ class Reader extends Component implements HasActions, HasSchemas
 
     private const SEARCH_STREAM_TARGET = 'quran-search-results-stream';
 
+    private const HISTORY_MODAL_ID = 'quran-reader-history-modal';
+
+    private const BOOKMARKS_MODAL_ID = 'quran-reader-bookmarks-modal';
+
     public int $pageNumber = 1;
 
     public int $activeAyahIndex = 0;
@@ -189,6 +193,44 @@ class Reader extends Component implements HasActions, HasSchemas
 
                 $this->dispatch('quran-go-page', page: $targetPage);
             });
+    }
+
+    public function navigationHistoryAction(): Action
+    {
+        return Action::make('navigationHistory')
+            ->modalHeading('سجل التنقّل')
+            ->modalDescription('آخر انتقالات البحث والتنقّل السريع بين السور. يبقى المعلّم فقط خارج حدّ آخر 100 عنصر.')
+            ->modalAutofocus(false)
+            ->modalWidth(Width::FiveExtraLarge)
+            ->modalSubmitAction(false)
+            ->modalCancelActionLabel('إغلاق')
+            ->extraModalWindowAttributes([
+                'id' => self::HISTORY_MODAL_ID,
+                'dir' => 'ltr',
+            ])
+            ->modalContent(
+                fn (): HtmlString => new HtmlString(Blade::render('<x-partials.quran-app.history-modal />')),
+            )
+            ->action(static fn (): null => null);
+    }
+
+    public function bookmarksManagerAction(): Action
+    {
+        return Action::make('bookmarksManager')
+            ->modalHeading('إدارة علامات الصفحات')
+            ->modalDescription('انقر للانتقال، عدّل العنوان مباشرة، أو استبدل الصفحة المحفوظة بالصفحة الحالية.')
+            ->modalAutofocus(false)
+            ->slideOver()
+            ->modalWidth(Width::FiveExtraLarge)
+            ->modalSubmitAction(false)
+            ->modalCancelActionLabel('إغلاق')
+            ->extraModalWindowAttributes([
+                'id' => self::BOOKMARKS_MODAL_ID,
+            ])
+            ->modalContent(
+                fn (): HtmlString => new HtmlString(Blade::render('<x-partials.quran-app.bookmarks-modal />')),
+            )
+            ->action(static fn (): null => null);
     }
 
     public function render(): View

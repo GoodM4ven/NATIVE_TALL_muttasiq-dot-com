@@ -457,7 +457,7 @@
             .quran-app-gate-caption {
                 top: clamp(0.85rem, 4.2vw, 1.5rem);
             }
-            
+
             .quran-app-sector__chip {
                 font-size: clamp(1.28rem, 2.7vw, 2.05rem);
             }

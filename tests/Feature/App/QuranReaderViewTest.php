@@ -13,10 +13,18 @@ it('wires quran reader entry points from main menu to hash navigation and view m
     );
     $quranReaderViewSource = file_get_contents(resource_path('views/livewire/quran-app/reader.blade.php'));
     $quranSearchModalViewSource = file_get_contents(resource_path('views/components/partials/quran-app/search-modal.blade.php'));
+    $quranHistoryModalViewSource = file_get_contents(resource_path('views/components/partials/quran-app/history-modal.blade.php'));
+    $quranBookmarksModalViewSource = file_get_contents(resource_path('views/components/partials/quran-app/bookmarks-modal.blade.php'));
     $quranReaderScriptSource = file_get_contents(
         resource_path('js/support/alpine/data/quran-app-reader.js'),
     );
     $quranReaderClassSource = file_get_contents(app_path('Livewire/QuranApp/Reader.php'));
+    $navigationHistoryActionSource = (string) \Illuminate\Support\Str::of($quranReaderClassSource)
+        ->after('public function navigationHistoryAction(): Action')
+        ->before('public function bookmarksManagerAction(): Action');
+    $bookmarksManagerActionSource = (string) \Illuminate\Support\Str::of($quranReaderClassSource)
+        ->after('public function bookmarksManagerAction(): Action')
+        ->before('public function render(): View');
     $quranReaderDataServiceSource = file_get_contents(app_path('Services/Quran/QuranReaderDataService.php'));
     $routesSource = file_get_contents(base_path('routes/web.php'));
     $appJsSource = file_get_contents(resource_path('js/app.js'));
@@ -88,11 +96,18 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderViewSource)->toContain('top: 0;')
         ->and($quranReaderViewSource)->toContain('x-data="quranAppReader({')
         ->and($quranReaderViewSource)->toContain("searchModalId: @js('quran-reader-search-modal')")
+        ->and($quranReaderViewSource)->toContain("historyModalId: @js('quran-reader-history-modal')")
+        ->and($quranReaderViewSource)->toContain("bookmarksModalId: @js('quran-reader-bookmarks-modal')")
         ->and($quranReaderViewSource)->toContain("x-on:x-modal-opened.window=\"handleModalLifecycleEvent('opened', \$event)\"")
         ->and($quranReaderViewSource)->toContain("x-on:close-modal.window=\"handleModalLifecycleEvent('closing', \$event)\"")
         ->and($quranReaderViewSource)->toContain("x-on:x-modal-closed.window=\"handleModalLifecycleEvent('closed', \$event)\"")
         ->and($quranReaderViewSource)->toContain('x-on:control-panel-updated.window="applyControlPanelSettings($event.detail?.controlPanel ?? {})"')
         ->and($quranReaderViewSource)->toContain("\$wire.mountAction('searchQuran');")
+        ->and($quranReaderViewSource)->toContain("\$wire.mountAction('navigationHistory')")
+        ->and($quranReaderViewSource)->toContain('x-on:pointerdown="onBookmarkButtonPointerDown($event)"')
+        ->and($quranReaderViewSource)->toContain('x-on:click.prevent="onBookmarkButtonClick()"')
+        ->and($quranReaderViewSource)->toContain('data-quran-copy-popover')
+        ->and($quranReaderViewSource)->toContain('x-show="copyFeedback.visible"')
         ->and($quranReaderViewSource)->toContain('class="quran-page-slider outline-none"')
         ->and($quranReaderViewSource)->toContain('x-bind:disabled="isLastNavigationPage()"')
         ->and($quranReaderViewSource)->toContain("'quran-swipe-hint-chev-static': isFirstNavigationPage()")
@@ -117,8 +132,26 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranSearchModalViewSource)->toContain('goToSearchResult(result)')
         ->and($quranSearchModalViewSource)->toContain('goToSurahFromDirectory(entry)');
 
+    expect($quranHistoryModalViewSource)->not->toBeFalse()
+        ->and($quranHistoryModalViewSource)->toContain('navigationHistory.length')
+        ->and($quranHistoryModalViewSource)->toContain('goToHistoryEntry(entry)')
+        ->and($quranHistoryModalViewSource)->toContain('updateHistoryEntryTags(entry.id, $event.target.value)')
+        ->and($quranHistoryModalViewSource)->toContain('clearNavigationHistory()');
+
+    expect($quranBookmarksModalViewSource)->not->toBeFalse()
+        ->and($quranBookmarksModalViewSource)->toContain('bookmarks.length')
+        ->and($quranBookmarksModalViewSource)->toContain('goToBookmark(bookmark)')
+        ->and($quranBookmarksModalViewSource)->toContain('updateBookmarkTitle(bookmark.id, $event.target.value)')
+        ->and($quranBookmarksModalViewSource)->toContain('replaceBookmarkPage(bookmark.id)')
+        ->and($quranBookmarksModalViewSource)->toContain('removeBookmark(bookmark.id)');
+
     expect($quranReaderScriptSource)->not->toBeFalse()
         ->and($quranReaderScriptSource)->toContain('const wordPressHoldDelayMs = 750;')
+        ->and($quranReaderScriptSource)->toContain('const bookmarkHoldDelayMs = 680;')
+        ->and($quranReaderScriptSource)->toContain('const navigationHistoryLimit = 100;')
+        ->and($quranReaderScriptSource)->toContain("const lastPageStorageKey = 'quran-reader-last-page-v1';")
+        ->and($quranReaderScriptSource)->toContain("const navigationHistoryStorageKey = 'quran-reader-navigation-history-v1';")
+        ->and($quranReaderScriptSource)->toContain("const bookmarksStorageKey = 'quran-reader-bookmarks-v1';")
         ->and($quranReaderScriptSource)->toContain("search: 'quran-reader-search-v3'")
         ->and($quranReaderScriptSource)->toContain('_lastPageInputCommitPage: 0')
         ->and($quranReaderScriptSource)->toContain('_skipNextSearchModalCloseLayout: false')
@@ -131,7 +164,16 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderScriptSource)->toContain("pages: 'quran-reader-pages-v11'")
         ->and($quranReaderScriptSource)->toContain("fonts: 'quran-reader-fonts-v4'")
         ->and($quranReaderScriptSource)->toContain('requestSearchModalClose({ skipLayout = false } = {})')
-        ->and($quranReaderScriptSource)->toContain('isAyahClusterActive(cluster)');
+        ->and($quranReaderScriptSource)->toContain('recordNavigationHistory({')
+        ->and($quranReaderScriptSource)->toContain('toggleCurrentPageBookmark()')
+        ->and($quranReaderScriptSource)->toContain('openBookmarksManager()')
+        ->and($quranReaderScriptSource)->toContain('goToHistoryEntry(entry)')
+        ->and($quranReaderScriptSource)->toContain('goToBookmark(bookmark)')
+        ->and($quranReaderScriptSource)->toContain('isAyahClusterActive(cluster)')
+        ->and($quranReaderScriptSource)->toContain('copyWordSelection(word, activationAnchor = null)')
+        ->and($quranReaderScriptSource)->toContain('copyAyahSelection(ayahIndex, activationAnchor = null)')
+        ->and($quranReaderScriptSource)->toContain('writeClipboardText(text)')
+        ->and($quranReaderScriptSource)->toContain('copyFeedbackStyle()');
 
     expect($quranReaderClassSource)->not->toBeFalse()
         ->and($quranReaderClassSource)->toContain('implements HasActions, HasSchemas')
@@ -140,14 +182,28 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderClassSource)->toContain('public function searchQuranAction(): Action')
         ->and($quranReaderClassSource)->toContain("TextInput::make('search')")
         ->and($quranReaderClassSource)->toContain('public function jumpToPageAction(): Action')
+        ->and($quranReaderClassSource)->toContain('public function navigationHistoryAction(): Action')
+        ->and($quranReaderClassSource)->toContain('public function bookmarksManagerAction(): Action')
         ->and($quranReaderClassSource)->toContain('->modalContentFooter(')
         ->and($quranReaderClassSource)->toContain("Blade::render('<x-partials.quran-app.search-modal />')")
+        ->and($quranReaderClassSource)->toContain("Blade::render('<x-partials.quran-app.history-modal />')")
+        ->and($quranReaderClassSource)->toContain("Blade::render('<x-partials.quran-app.bookmarks-modal />')")
         ->and($quranReaderClassSource)->toContain('->extraModalWindowAttributes([')
         ->and($quranReaderClassSource)->toContain("'id' => 'quran-reader-search-modal'")
+        ->and($quranReaderClassSource)->toContain("'id' => self::HISTORY_MODAL_ID")
+        ->and($quranReaderClassSource)->toContain("'id' => self::BOOKMARKS_MODAL_ID")
         ->and($quranReaderClassSource)->toContain("'x-on:input' => '\$event.target.value = String(Math.min(Math.max(1, Math.trunc(Number(\$event.target.value || 1) || 1)), Math.max(1, Number(\$event.target.max) || 1)));'")
         ->and($quranReaderClassSource)->toContain("'x-on:blur' => '\$event.target.value = String(Math.min(Math.max(1, Math.trunc(Number(\$event.target.value || 1) || 1)), Math.max(1, Number(\$event.target.max) || 1)));'")
         ->and($quranReaderClassSource)->toContain("view('livewire.quran-app.reader'")
         ->and($quranReaderClassSource)->toContain('QuranReaderDataService');
+
+    expect($navigationHistoryActionSource)
+        ->toContain('modalHeading(\'سجل التنقّل\')')
+        ->not->toContain('->slideOver()');
+
+    expect($bookmarksManagerActionSource)
+        ->toContain('modalHeading(\'إدارة علامات الصفحات\')')
+        ->toContain('->slideOver()');
 
     expect($quranReaderDataServiceSource)->not->toBeFalse()
         ->and($quranReaderDataServiceSource)->toContain('p\'.$pageNumber.\'.woff2')
@@ -183,6 +239,9 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($filamentComponentsCssSource)->toContain('.quran-page-counter-field')
         ->and($filamentComponentsCssSource)->toContain('#quran-reader-page-counter-input')
         ->and($filamentComponentsCssSource)->toContain('#quran-reader-search-input')
+        ->and($filamentComponentsCssSource)->toContain('#quran-reader-history-modal')
+        ->and($filamentComponentsCssSource)->toContain('#quran-reader-bookmarks-modal')
+        ->and($filamentComponentsCssSource)->toContain('.quran-manager-table')
         ->and($filamentComponentsCssSource)->toContain('.quran-surah-grid-caption::before')
         ->and($filamentComponentsCssSource)->toContain('.fi-input-wrp-suffix .fi-input-wrp-label');
 });

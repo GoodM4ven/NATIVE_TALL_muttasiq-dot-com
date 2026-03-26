@@ -83,8 +83,257 @@ const wait = async (durationMs) => {
 };
 
 const wordPressHoldDelayMs = 750;
+const bookmarkHoldDelayMs = 680;
+const copyPopoverVisibleDurationMs = 920;
 const navigationSettleDelayMs = 140;
 const navigationRevealLockDurationMs = 420;
+const defaultBasmallahBottomGapScale = -0.18;
+const fitRobustWidthQuantile = 0.88;
+const fitRobustWidthOutlierThreshold = 1.2;
+const fitDefaultProfile = Object.freeze({
+    compressionLeadingFloor: 0.46,
+    compressionGapFloor: 0,
+    compressionSurahHeaderFloor: 0.58,
+    compressionTypeScaleCeiling: 1.28,
+    layoutTypeScaleBase: 1.1207142857142858,
+    layoutTypeScaleGain: 0.18,
+    layoutLeadingBase: 0.805,
+    layoutLeadingDrop: 0.12,
+    layoutGapBase: 0.5589285714285714,
+    layoutGapDrop: 0.2,
+    layoutSurahHeaderBase: 0.87,
+    layoutSurahHeaderDrop: 0.08,
+    layoutBasmallahBase: -0.33785714285714286,
+    layoutBasmallahDrop: 0.08,
+    baseLeadingMultiplier: 1,
+    baseGapMultiplier: 1,
+    minimumCompressionLevel: 0,
+    targetWidthRatio: 0.9,
+    targetHeightRatio: 0.93,
+    widthDeficitWeight: 0.55,
+    heightDeficitWeight: 0.08,
+    compressionPenaltyWeight: 0.002,
+    strictWidthOverflowTolerance: 1.06,
+    strictHeightOverflowTolerance: 1.01,
+    candidateSteps: 28,
+    maxScaleMultiplier: 1,
+});
+const navigationHistoryLimit = 100;
+const lastPageStorageKey = 'quran-reader-last-page-v1';
+const navigationHistoryStorageKey = 'quran-reader-navigation-history-v1';
+const bookmarksStorageKey = 'quran-reader-bookmarks-v1';
+
+const uniqueLocalId = () => {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+    }
+
+    return `quran-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+};
+
+const normalizeTextValue = (value) => {
+    const normalized = String(value ?? '')
+        .trim()
+        .replace(/\s+/g, ' ');
+
+    return normalized === '' ? null : normalized;
+};
+
+const normalizeTags = (value) => {
+    const source = Array.isArray(value) ? value : String(value ?? '').split(',');
+    const uniqueTags = [];
+    const usedTags = new Set();
+
+    source.forEach((tag) => {
+        const normalizedTag = normalizeTextValue(tag);
+
+        if (!normalizedTag) {
+            return;
+        }
+
+        const uniqueKey = normalizedTag.toLowerCase();
+
+        if (usedTags.has(uniqueKey)) {
+            return;
+        }
+
+        usedTags.add(uniqueKey);
+        uniqueTags.push(normalizedTag);
+    });
+
+    return uniqueTags;
+};
+
+const readLocalStorage = (key, fallbackValue) => {
+    if (typeof localStorage === 'undefined') {
+        return fallbackValue;
+    }
+
+    try {
+        const rawValue = localStorage.getItem(key);
+
+        if (rawValue === null) {
+            return fallbackValue;
+        }
+
+        return JSON.parse(rawValue);
+    } catch (_) {
+        return fallbackValue;
+    }
+};
+
+const writeLocalStorage = (key, value) => {
+    if (typeof localStorage === 'undefined') {
+        return;
+    }
+
+    try {
+        localStorage.setItem(key, JSON.stringify(value));
+    } catch (_) {
+        //
+    }
+};
+
+const normalizeHistoryEntry = (entry = {}) => {
+    const normalizedPageNumber = clampPage(
+        entry?.page_number ?? entry?.pageNumber ?? entry?.page ?? 1,
+        0,
+    );
+    const rawSource = String(entry?.source ?? '').trim();
+    const source = rawSource === 'surah-directory' ? 'surah-directory' : 'search-result';
+    const createdAt = Number(entry?.created_at ?? entry?.createdAt ?? Date.now());
+
+    return {
+        id: String(entry?.id ?? uniqueLocalId()),
+        source,
+        page_number: normalizedPageNumber,
+        surah_number: Math.max(0, Math.trunc(Number(entry?.surah_number ?? 0))),
+        ayah_number: Math.max(0, Math.trunc(Number(entry?.ayah_number ?? 0))),
+        ayah_index: Math.max(0, Math.trunc(Number(entry?.ayah_index ?? 0))),
+        query: normalizeTextValue(entry?.query),
+        tags: normalizeTags(entry?.tags),
+        created_at: Number.isFinite(createdAt) ? Math.trunc(createdAt) : Date.now(),
+    };
+};
+
+const pruneNavigationHistory = (entries = []) => {
+    const sortedEntries = entries
+        .slice()
+        .sort((firstEntry, secondEntry) => secondEntry.created_at - firstEntry.created_at);
+    const taggedEntries = [];
+    const untaggedEntries = [];
+
+    sortedEntries.forEach((entry) => {
+        if (Array.isArray(entry.tags) && entry.tags.length > 0) {
+            taggedEntries.push(entry);
+
+            return;
+        }
+
+        untaggedEntries.push(entry);
+    });
+
+    return [...taggedEntries, ...untaggedEntries.slice(0, navigationHistoryLimit)].sort(
+        (firstEntry, secondEntry) => secondEntry.created_at - firstEntry.created_at,
+    );
+};
+
+const normalizeNavigationHistory = (entries = []) => {
+    if (!Array.isArray(entries)) {
+        return [];
+    }
+
+    const normalizedEntries = [];
+    const usedIds = new Set();
+
+    entries.forEach((entry) => {
+        const normalizedEntry = normalizeHistoryEntry(entry);
+
+        if (usedIds.has(normalizedEntry.id)) {
+            return;
+        }
+
+        usedIds.add(normalizedEntry.id);
+        normalizedEntries.push(normalizedEntry);
+    });
+
+    return pruneNavigationHistory(normalizedEntries);
+};
+
+const readNavigationHistory = () =>
+    normalizeNavigationHistory(readLocalStorage(navigationHistoryStorageKey, []));
+
+const writeNavigationHistory = (entries = []) => {
+    const normalizedEntries = normalizeNavigationHistory(entries);
+    writeLocalStorage(navigationHistoryStorageKey, normalizedEntries);
+
+    return normalizedEntries;
+};
+
+const normalizeBookmarkEntry = (entry = {}) => {
+    const normalizedPageNumber = clampPage(
+        entry?.page_number ?? entry?.pageNumber ?? entry?.page ?? 1,
+        0,
+    );
+    const updatedAt = Number(entry?.updated_at ?? entry?.updatedAt ?? Date.now());
+    const createdAt = Number(entry?.created_at ?? entry?.createdAt ?? updatedAt);
+
+    return {
+        id: String(entry?.id ?? uniqueLocalId()),
+        page_number: normalizedPageNumber,
+        title: normalizeTextValue(entry?.title),
+        created_at: Number.isFinite(createdAt) ? Math.trunc(createdAt) : Date.now(),
+        updated_at: Number.isFinite(updatedAt) ? Math.trunc(updatedAt) : Date.now(),
+    };
+};
+
+const normalizeBookmarks = (entries = []) => {
+    if (!Array.isArray(entries)) {
+        return [];
+    }
+
+    const uniqueById = [];
+    const usedIds = new Set();
+
+    entries.forEach((entry) => {
+        const normalizedEntry = normalizeBookmarkEntry(entry);
+
+        if (usedIds.has(normalizedEntry.id)) {
+            return;
+        }
+
+        usedIds.add(normalizedEntry.id);
+        uniqueById.push(normalizedEntry);
+    });
+
+    return uniqueById.sort(
+        (firstEntry, secondEntry) => secondEntry.updated_at - firstEntry.updated_at,
+    );
+};
+
+const readBookmarks = () => normalizeBookmarks(readLocalStorage(bookmarksStorageKey, []));
+
+const writeBookmarks = (entries = []) => {
+    const normalizedEntries = normalizeBookmarks(entries);
+    writeLocalStorage(bookmarksStorageKey, normalizedEntries);
+
+    return normalizedEntries;
+};
+
+const readLastPageNumber = () => {
+    const rawValue = readLocalStorage(lastPageStorageKey, null);
+    const parsedValue = Number(rawValue);
+
+    if (!Number.isFinite(parsedValue)) {
+        return null;
+    }
+
+    return Math.max(1, Math.trunc(parsedValue));
+};
+
+const writeLastPageNumber = (pageNumber) => {
+    writeLocalStorage(lastPageStorageKey, Math.max(1, Math.trunc(Number(pageNumber) || 1)));
+};
 
 const openCacheSafely = async (cacheName) => {
     if (!cacheName || typeof window === 'undefined' || typeof window.caches === 'undefined') {
@@ -188,6 +437,8 @@ document.addEventListener('alpine:init', () => {
         searchModalId: String(config?.searchModalId ?? ''),
         searchModalDomId: String(config?.searchModalDomId ?? ''),
         searchActionModalId: String(config?.searchActionModalId ?? ''),
+        historyModalId: String(config?.historyModalId ?? ''),
+        bookmarksModalId: String(config?.bookmarksModalId ?? ''),
         initialSettings:
             config?.settings && typeof config.settings === 'object' ? config.settings : {},
 
@@ -213,12 +464,6 @@ document.addEventListener('alpine:init', () => {
         hoveredWordIndex: 0,
         doesEnableVisualEnhancements: true,
         doesTargetWordsByDefault: false,
-        panelProbeLines: [],
-        panelProbeUseCenteredAyahLayout: true,
-        panelProbeFontFamily: null,
-        panelProbeFontUrl: null,
-        panelProbeFontFormat: null,
-        panelWidthPx: null,
         isLoadingPage: false,
         isFittingPage: true,
         pageMotionClass: '',
@@ -258,6 +503,23 @@ document.addEventListener('alpine:init', () => {
             surahDirectory: [],
             activeSurahNumber: 1,
         },
+        navigationHistory: [],
+        bookmarks: [],
+        historyModalOpen: false,
+        bookmarksModalOpen: false,
+        copyFeedback: {
+            visible: false,
+            x: 0,
+            y: 0,
+            timer: null,
+            serial: 0,
+        },
+        bookmarkButtonPress: {
+            pointerId: null,
+            holdTriggered: false,
+            suppressClick: false,
+            timer: null,
+        },
 
         _pendingPageLoads: new Map(),
         _pagePayloadByPage: new Map(),
@@ -268,8 +530,6 @@ document.addEventListener('alpine:init', () => {
         _layoutMutationObserver: null,
         _layoutResizeObserver: null,
         _viewportChangeDebounceTimer: null,
-        _canonicalWidthPromise: null,
-        _panelWidthBucket: null,
         _onWindowViewportChange: null,
         _onVisualViewportChange: null,
         _onSwitchView: null,
@@ -322,15 +582,19 @@ document.addEventListener('alpine:init', () => {
             );
             this.refreshSurahTriggerCaption(false);
             this.syncSearchActiveSurahNumber();
+            this.navigationHistory = readNavigationHistory();
+            this.bookmarks = readBookmarks();
 
+            const storedLastPageNumber = readLastPageNumber();
             const restoredPage = clampPage(
-                this.pageNumber,
+                storedLastPageNumber ?? this.pageNumber,
                 this.maxPage || this.initialPayload.maxPage,
             );
 
             this.pageNumber = restoredPage;
             this.pageInput = restoredPage;
             this._lastPageInputVisualValue = restoredPage;
+            writeLastPageNumber(restoredPage);
 
             if (restoredPage !== this.initialPayload.pageNumber && this.ready) {
                 this.goToPage(restoredPage, {
@@ -462,6 +726,9 @@ document.addEventListener('alpine:init', () => {
                 this._wordPressHoldTimer = null;
             }
 
+            this.hideCopyFeedback();
+            this.clearBookmarkButtonPressState();
+
             if (this.pageCounterPulse.timer !== null) {
                 clearTimeout(this.pageCounterPulse.timer);
                 this.pageCounterPulse.timer = null;
@@ -533,7 +800,6 @@ document.addEventListener('alpine:init', () => {
         async bootstrap() {
             await this.ensurePersistentStorage();
             await this.ensureCurrentPageLoaded();
-            await this.ensureCanonicalPanelWidth();
             await this.layoutPageGuaranteed({ revealDelayMs: 240 });
             this.queueStartupPreload();
             this.warmSearchIndex();
@@ -554,6 +820,323 @@ document.addEventListener('alpine:init', () => {
             } catch (_) {
                 this.storage.isPersisted = false;
             }
+        },
+
+        persistLastPageNumber(pageNumber = this.pageNumber) {
+            writeLastPageNumber(pageNumber);
+        },
+
+        persistNavigationHistory() {
+            this.navigationHistory = writeNavigationHistory(this.navigationHistory);
+        },
+
+        persistBookmarks() {
+            this.bookmarks = writeBookmarks(this.bookmarks);
+        },
+
+        historyEntryTagsAsText(entry) {
+            if (!Array.isArray(entry?.tags)) {
+                return '';
+            }
+
+            return entry.tags.join(', ');
+        },
+
+        historyEntrySourceLabel(entry) {
+            return String(entry?.source ?? '') === 'surah-directory' ? 'تنقّل سريع' : 'بحث';
+        },
+
+        historyEntryContextLabel(entry) {
+            const surahNumber = Math.max(0, Math.trunc(Number(entry?.surah_number ?? 0)));
+            const ayahNumber = Math.max(0, Math.trunc(Number(entry?.ayah_number ?? 0)));
+
+            if (String(entry?.source ?? '') === 'surah-directory') {
+                return this.surahLabel(surahNumber > 0 ? surahNumber : this.currentSurahNumber());
+            }
+
+            if (surahNumber > 0 && ayahNumber > 0) {
+                return `${this.surahLabel(surahNumber)} · آية ${ayahNumber}`;
+            }
+
+            if (surahNumber > 0) {
+                return this.surahLabel(surahNumber);
+            }
+
+            const query = normalizeTextValue(entry?.query);
+
+            if (query) {
+                return `بحث: ${query}`;
+            }
+
+            return 'انتقال عبر البحث';
+        },
+
+        updateHistoryEntryTags(entryId, rawTags) {
+            const normalizedEntryId = String(entryId ?? '').trim();
+
+            if (!normalizedEntryId) {
+                return;
+            }
+
+            const parsedTags = normalizeTags(rawTags);
+
+            this.navigationHistory = this.navigationHistory.map((entry) => {
+                if (String(entry?.id ?? '') !== normalizedEntryId) {
+                    return entry;
+                }
+
+                return {
+                    ...entry,
+                    tags: parsedTags,
+                    created_at: Number(entry?.created_at ?? Date.now()),
+                };
+            });
+            this.persistNavigationHistory();
+        },
+
+        clearNavigationHistory() {
+            this.navigationHistory = this.navigationHistory.filter(
+                (entry) => Array.isArray(entry?.tags) && entry.tags.length > 0,
+            );
+            this.persistNavigationHistory();
+        },
+
+        recordNavigationHistory({
+            source = 'search-result',
+            pageNumber = this.pageNumber,
+            surahNumber = 0,
+            ayahNumber = 0,
+            ayahIndex = 0,
+            query = null,
+        } = {}) {
+            const normalizedPageNumber = clampPage(pageNumber, this.maxPage);
+            const normalizedSurahNumber = Math.max(0, Math.trunc(Number(surahNumber ?? 0)));
+            const normalizedAyahNumber = Math.max(0, Math.trunc(Number(ayahNumber ?? 0)));
+            const normalizedAyahIndex = Math.max(0, Math.trunc(Number(ayahIndex ?? 0)));
+            const normalizedSource =
+                String(source ?? '') === 'surah-directory' ? 'surah-directory' : 'search-result';
+            const normalizedQuery = normalizeTextValue(query);
+
+            this.navigationHistory = [
+                normalizeHistoryEntry({
+                    id: uniqueLocalId(),
+                    source: normalizedSource,
+                    page_number: normalizedPageNumber,
+                    surah_number: normalizedSurahNumber,
+                    ayah_number: normalizedAyahNumber,
+                    ayah_index: normalizedAyahIndex,
+                    query: normalizedQuery,
+                    tags: [],
+                    created_at: Date.now(),
+                }),
+                ...this.navigationHistory,
+            ];
+            this.persistNavigationHistory();
+        },
+
+        bookmarkedPageEntry(pageNumber = this.pageNumber) {
+            const normalizedPageNumber = clampPage(pageNumber, this.maxPage);
+
+            return (
+                this.bookmarks.find(
+                    (bookmark) =>
+                        clampPage(bookmark?.page_number ?? 1, this.maxPage) ===
+                        normalizedPageNumber,
+                ) ?? null
+            );
+        },
+
+        isCurrentPageBookmarked() {
+            return this.bookmarkedPageEntry(this.pageNumber) !== null;
+        },
+
+        defaultBookmarkTitle(pageNumber = this.pageNumber) {
+            const normalizedPageNumber = clampPage(pageNumber, this.maxPage);
+            const surahTitle = this.currentSurahTitle();
+
+            return `${surahTitle} · صفحة ${normalizedPageNumber}`;
+        },
+
+        addBookmark({
+            pageNumber = this.pageNumber,
+            title = null,
+            preserveCreatedAt = null,
+            id = null,
+        } = {}) {
+            const normalizedPageNumber = clampPage(pageNumber, this.maxPage);
+            const timestamp = Date.now();
+            const existingEntry = this.bookmarkedPageEntry(normalizedPageNumber);
+            const nextId = String(id ?? existingEntry?.id ?? uniqueLocalId());
+            const normalizedTitle =
+                normalizeTextValue(title) ?? this.defaultBookmarkTitle(normalizedPageNumber);
+
+            this.bookmarks = this.bookmarks.filter(
+                (bookmark) => String(bookmark?.id ?? '') !== String(existingEntry?.id ?? ''),
+            );
+            this.bookmarks.unshift(
+                normalizeBookmarkEntry({
+                    id: nextId,
+                    page_number: normalizedPageNumber,
+                    title: normalizedTitle,
+                    created_at:
+                        preserveCreatedAt !== null
+                            ? Number(preserveCreatedAt)
+                            : Number(existingEntry?.created_at ?? timestamp),
+                    updated_at: timestamp,
+                }),
+            );
+            this.persistBookmarks();
+        },
+
+        toggleCurrentPageBookmark() {
+            const existingEntry = this.bookmarkedPageEntry(this.pageNumber);
+
+            if (existingEntry) {
+                this.removeBookmark(existingEntry.id);
+
+                return;
+            }
+
+            this.addBookmark({ pageNumber: this.pageNumber });
+        },
+
+        removeBookmark(bookmarkId) {
+            const normalizedBookmarkId = String(bookmarkId ?? '').trim();
+
+            if (!normalizedBookmarkId) {
+                return;
+            }
+
+            this.bookmarks = this.bookmarks.filter(
+                (bookmark) => String(bookmark?.id ?? '') !== normalizedBookmarkId,
+            );
+            this.persistBookmarks();
+        },
+
+        updateBookmarkTitle(bookmarkId, title) {
+            const normalizedBookmarkId = String(bookmarkId ?? '').trim();
+
+            if (!normalizedBookmarkId) {
+                return;
+            }
+
+            const normalizedTitle = normalizeTextValue(title);
+
+            this.bookmarks = this.bookmarks.map((bookmark) => {
+                if (String(bookmark?.id ?? '') !== normalizedBookmarkId) {
+                    return bookmark;
+                }
+
+                return {
+                    ...bookmark,
+                    title: normalizedTitle,
+                    updated_at: Date.now(),
+                };
+            });
+            this.persistBookmarks();
+        },
+
+        replaceBookmarkPage(bookmarkId) {
+            const normalizedBookmarkId = String(bookmarkId ?? '').trim();
+            const targetBookmark = this.bookmarks.find(
+                (bookmark) => String(bookmark?.id ?? '') === normalizedBookmarkId,
+            );
+
+            if (!targetBookmark) {
+                return;
+            }
+
+            const samePageBookmark = this.bookmarkedPageEntry(this.pageNumber);
+
+            this.bookmarks = this.bookmarks.filter((bookmark) => {
+                const normalizedBookmarkEntryId = String(bookmark?.id ?? '');
+
+                if (normalizedBookmarkEntryId === normalizedBookmarkId) {
+                    return false;
+                }
+
+                if (
+                    samePageBookmark &&
+                    normalizedBookmarkEntryId === String(samePageBookmark?.id ?? '') &&
+                    normalizedBookmarkEntryId !== normalizedBookmarkId
+                ) {
+                    return false;
+                }
+
+                return true;
+            });
+
+            this.bookmarks.unshift(
+                normalizeBookmarkEntry({
+                    ...targetBookmark,
+                    page_number: this.pageNumber,
+                    updated_at: Date.now(),
+                }),
+            );
+            this.persistBookmarks();
+        },
+
+        clearBookmarkButtonPressState({ resetSuppressClick = true } = {}) {
+            if (this.bookmarkButtonPress.timer !== null) {
+                clearTimeout(this.bookmarkButtonPress.timer);
+                this.bookmarkButtonPress.timer = null;
+            }
+
+            this.bookmarkButtonPress.pointerId = null;
+            this.bookmarkButtonPress.holdTriggered = false;
+
+            if (resetSuppressClick) {
+                this.bookmarkButtonPress.suppressClick = false;
+            }
+        },
+
+        onBookmarkButtonPointerDown(event) {
+            this.clearBookmarkButtonPressState();
+            this.bookmarkButtonPress.pointerId = Number(event?.pointerId ?? 0) || null;
+            this.bookmarkButtonPress.holdTriggered = false;
+            this.bookmarkButtonPress.suppressClick = false;
+            this.bookmarkButtonPress.timer = window.setTimeout(() => {
+                this.bookmarkButtonPress.timer = null;
+                this.bookmarkButtonPress.holdTriggered = true;
+                this.bookmarkButtonPress.suppressClick = true;
+                this.openBookmarksManager();
+            }, bookmarkHoldDelayMs);
+        },
+
+        onBookmarkButtonPointerUp(event) {
+            const pointerId = Number(event?.pointerId ?? 0) || null;
+
+            if (
+                this.bookmarkButtonPress.pointerId !== null &&
+                pointerId !== null &&
+                this.bookmarkButtonPress.pointerId !== pointerId
+            ) {
+                return;
+            }
+
+            if (this.bookmarkButtonPress.timer !== null) {
+                clearTimeout(this.bookmarkButtonPress.timer);
+                this.bookmarkButtonPress.timer = null;
+            }
+        },
+
+        onBookmarkButtonPointerCancel() {
+            this.clearBookmarkButtonPressState();
+        },
+
+        onBookmarkButtonClick() {
+            if (this.bookmarkButtonPress.suppressClick) {
+                this.clearBookmarkButtonPressState();
+
+                return;
+            }
+
+            this.toggleCurrentPageBookmark();
+            this.clearBookmarkButtonPressState();
+        },
+
+        openBookmarksManager() {
+            this.$wire.mountAction('bookmarksManager');
         },
 
         pageDataUrl(pageNumber) {
@@ -949,6 +1532,7 @@ document.addEventListener('alpine:init', () => {
 
                 this.pageInput = normalizedPage;
                 this._lastPageInputVisualValue = normalizedPage;
+                this.persistLastPageNumber(normalizedPage);
 
                 if (forceRefit) {
                     await this.layoutPageGuaranteed({ revealDelayMs: 200 });
@@ -970,6 +1554,7 @@ document.addEventListener('alpine:init', () => {
 
                 const payload = await payloadPromise;
                 this.applyPayload(payload, { setPageNumber: true });
+                this.persistLastPageNumber(this.pageNumber);
                 this.refreshSurahTriggerCaption(animate);
                 this.syncSearchActiveSurahNumber();
                 this.activeAyahIndex =
@@ -1104,6 +1689,7 @@ document.addEventListener('alpine:init', () => {
                     normalizedPayload.pageNumber,
                     normalizedPayload.maxPage,
                 );
+                this.persistLastPageNumber(this.pageNumber);
             }
 
             if (this.pageInput !== this.pageNumber) {
@@ -1378,164 +1964,10 @@ document.addEventListener('alpine:init', () => {
                 clearTimeout(this._viewportChangeDebounceTimer);
             }
 
-            this._viewportChangeDebounceTimer = window.setTimeout(async () => {
+            this._viewportChangeDebounceTimer = window.setTimeout(() => {
                 this._viewportChangeDebounceTimer = null;
-                const currentBucket = this.viewportWidthBucket();
-
-                if (this._panelWidthBucket !== currentBucket) {
-                    this.panelWidthPx = null;
-                    await this.ensureCanonicalPanelWidth();
-                }
-
                 this.scheduleLayout({ revealDelayMs: 150 });
             }, 90);
-        },
-
-        viewportWidthBucket() {
-            const width = Number(window.innerWidth ?? 0);
-
-            if (width >= 1536) {
-                return '2xl';
-            }
-
-            if (width >= 1280) {
-                return 'xl';
-            }
-
-            if (width >= 1024) {
-                return 'lg';
-            }
-
-            if (width >= 768) {
-                return 'md';
-            }
-
-            if (width >= 640) {
-                return 'sm';
-            }
-
-            return 'base';
-        },
-
-        async ensureCanonicalPanelWidth() {
-            const currentBucket = this.viewportWidthBucket();
-
-            if (
-                Number.isFinite(Number(this.panelWidthPx)) &&
-                Number(this.panelWidthPx) > 0 &&
-                this._panelWidthBucket === currentBucket
-            ) {
-                return;
-            }
-
-            if (this._canonicalWidthPromise) {
-                await this._canonicalWidthPromise;
-
-                return;
-            }
-
-            this._canonicalWidthPromise = (async () => {
-                const probePage = this.maxPage >= 3 ? 3 : this.pageNumber;
-                let payload = null;
-
-                if (probePage === this.pageNumber && this.mushafLines.length > 0) {
-                    payload = {
-                        mushafLines: this.mushafLines,
-                        useCenteredAyahLayout: this.useCenteredAyahLayout,
-                    };
-                } else {
-                    try {
-                        payload = await this.getPagePayload(probePage);
-                    } catch (_) {
-                        payload = null;
-                    }
-                }
-
-                if (!payload) {
-                    return;
-                }
-
-                this.panelProbeLines = Array.isArray(payload?.mushafLines)
-                    ? payload.mushafLines
-                    : [];
-                this.panelProbeUseCenteredAyahLayout = Boolean(
-                    payload?.useCenteredAyahLayout ?? this.useCenteredAyahLayout,
-                );
-                this.panelProbeFontFamily = payload?.qpcPageFontFamily ?? null;
-                this.panelProbeFontUrl = payload?.qpcPageFontUrl ?? null;
-                this.panelProbeFontFormat = payload?.qpcPageFontFormat ?? null;
-
-                if (this.panelProbeLines.length < 1) {
-                    return;
-                }
-
-                this.syncDynamicFontFace({
-                    styleId: 'quran-reader-dynamic-probe-font',
-                    family: this.panelProbeFontFamily,
-                    url: this.panelProbeFontUrl,
-                    format: this.panelProbeFontFormat,
-                });
-
-                await this.nextTickAsync();
-                await this.waitForFontReady(this.panelProbeFontFamily);
-                await nextAnimationFrame();
-
-                const rootElement = this.$el;
-                const panelElement = this.$refs.readerPanel;
-                const viewportElement = this.$refs.pageViewport;
-                const surfaceElement = this.$refs.pageSurface;
-                const frameElement = this.$refs.pageFrame;
-                const probeElement = this.$refs.pageThreeProbe;
-
-                if (
-                    !rootElement ||
-                    !panelElement ||
-                    !viewportElement ||
-                    !surfaceElement ||
-                    !frameElement ||
-                    !probeElement
-                ) {
-                    return;
-                }
-
-                const previousScale = this.pageScale;
-                rootElement.style.setProperty('--quran-page-scale', '1');
-
-                const probeSize = this.measureRenderedBounds(probeElement);
-                const contentTargetWidth = Math.max(1, probeSize.width);
-                const viewportStyles = window.getComputedStyle(viewportElement);
-                const surfaceStyles = window.getComputedStyle(surfaceElement);
-                const panelStyles = window.getComputedStyle(panelElement);
-                const panelChromeWidth =
-                    Number.parseFloat(viewportStyles.paddingLeft || '0') +
-                    Number.parseFloat(viewportStyles.paddingRight || '0') +
-                    Number.parseFloat(surfaceStyles.paddingLeft || '0') +
-                    Number.parseFloat(surfaceStyles.paddingRight || '0') +
-                    Number.parseFloat(panelStyles.borderLeftWidth || '0') +
-                    Number.parseFloat(panelStyles.borderRightWidth || '0');
-                const desiredPanelWidth = Math.ceil(contentTargetWidth + panelChromeWidth + 6);
-                const viewportMaxWidth = Math.max(320, Math.floor(window.innerWidth * 0.96));
-                const clampedPanelWidth = Math.max(
-                    300,
-                    Math.min(viewportMaxWidth, desiredPanelWidth),
-                );
-
-                if (
-                    this.panelWidthPx === null ||
-                    Math.abs(Number(this.panelWidthPx) - clampedPanelWidth) >= 1
-                ) {
-                    this.panelWidthPx = clampedPanelWidth;
-                }
-                this._panelWidthBucket = currentBucket;
-
-                rootElement.style.setProperty('--quran-page-scale', String(previousScale || 1));
-            })();
-
-            try {
-                await this._canonicalWidthPromise;
-            } finally {
-                this._canonicalWidthPromise = null;
-            }
         },
 
         scheduleLayout({ revealDelayMs = 180 } = {}) {
@@ -1633,11 +2065,12 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        measureRenderedBounds(contentElement) {
+        measureRenderedBounds(contentElement, { useRobustWidth = true } = {}) {
             const lineTargets = Array.from(
                 contentElement.querySelectorAll('[data-quran-line-text]'),
             );
             const targets = lineTargets.length > 0 ? lineTargets : [contentElement];
+            const widths = [];
 
             let minLeft = Number.POSITIVE_INFINITY;
             let minTop = Number.POSITIVE_INFINITY;
@@ -1651,6 +2084,7 @@ document.addEventListener('alpine:init', () => {
                     return;
                 }
 
+                widths.push(rect.width);
                 minLeft = Math.min(minLeft, rect.left);
                 minTop = Math.min(minTop, rect.top);
                 maxRight = Math.max(maxRight, rect.right);
@@ -1663,13 +2097,263 @@ document.addEventListener('alpine:init', () => {
                 return {
                     width: Math.max(1, Number(fallbackRect.width ?? 1)),
                     height: Math.max(1, Number(fallbackRect.height ?? 1)),
+                    strictWidth: Math.max(1, Number(fallbackRect.width ?? 1)),
+                    robustWidth: Math.max(1, Number(fallbackRect.width ?? 1)),
                 };
             }
 
+            const strictWidth = Math.max(1, maxRight - minLeft);
+            let robustWidth = strictWidth;
+            const shouldUseRobustWidth =
+                Boolean(useRobustWidth) &&
+                Boolean(this.useCenteredAyahLayout) &&
+                widths.length >= 7;
+
+            if (shouldUseRobustWidth) {
+                const sortedWidths = widths.slice().sort((first, second) => first - second);
+                const medianIndex = Math.floor((sortedWidths.length - 1) * 0.5);
+                const quantileIndex = Math.floor(
+                    (sortedWidths.length - 1) * fitRobustWidthQuantile,
+                );
+                const medianWidth = sortedWidths[medianIndex] ?? strictWidth;
+                const quantileWidth = sortedWidths[quantileIndex] ?? strictWidth;
+                const candidateRobustWidth = Math.max(quantileWidth, medianWidth * 1.02);
+
+                if (strictWidth > candidateRobustWidth * fitRobustWidthOutlierThreshold) {
+                    robustWidth = candidateRobustWidth;
+                }
+            }
+
             return {
-                width: Math.max(1, maxRight - minLeft),
+                width: Math.max(1, robustWidth),
                 height: Math.max(1, maxBottom - minTop),
+                strictWidth,
+                robustWidth: Math.max(1, robustWidth),
             };
+        },
+
+        resetFitLayoutVariables(rootElement) {
+            this.applyFitLayoutVariables(rootElement, {
+                pageTypeScale: 1,
+                pageLeadingMultiplier: 1,
+                pageGapMultiplier: 1,
+                pageSurahHeaderScale: 1,
+                basmallahBottomGapScale: defaultBasmallahBottomGapScale,
+            });
+        },
+
+        applyFitLayoutVariables(rootElement, layout = {}) {
+            if (!(rootElement instanceof HTMLElement)) {
+                return;
+            }
+
+            rootElement.style.setProperty(
+                '--quran-page-type-scale',
+                String(layout.pageTypeScale ?? 1),
+            );
+            rootElement.style.setProperty(
+                '--quran-page-leading-multiplier',
+                String(layout.pageLeadingMultiplier ?? 1),
+            );
+            rootElement.style.setProperty(
+                '--quran-page-gap-multiplier',
+                String(layout.pageGapMultiplier ?? 1),
+            );
+            rootElement.style.setProperty(
+                '--quran-page-surah-header-scale',
+                String(layout.pageSurahHeaderScale ?? 1),
+            );
+            rootElement.style.setProperty(
+                '--quran-basmallah-bottom-gap-scale',
+                String(layout.basmallahBottomGapScale ?? defaultBasmallahBottomGapScale),
+            );
+        },
+
+        fitLayoutFromCompressionLevel(level) {
+            const normalizedLevel = Math.max(0, Math.min(1, Number(level) || 0));
+            const profile = this.resolveFitProfile();
+            const normalizedBaseLeadingMultiplier = Math.max(
+                0.2,
+                Number(profile.baseLeadingMultiplier ?? 1),
+            );
+            const normalizedBaseGapMultiplier = Math.max(0, Number(profile.baseGapMultiplier ?? 1));
+            const pageTypeScaleRaw =
+                Number(profile.layoutTypeScaleBase ?? 1) +
+                normalizedLevel * Number(profile.layoutTypeScaleGain ?? 0);
+            const pageLeadingRaw =
+                Number(profile.layoutLeadingBase ?? 1) -
+                normalizedLevel * Number(profile.layoutLeadingDrop ?? 0);
+            const pageGapRaw =
+                Number(profile.layoutGapBase ?? 1) -
+                normalizedLevel * Number(profile.layoutGapDrop ?? 0);
+            const pageSurahHeaderRaw =
+                Number(profile.layoutSurahHeaderBase ?? 1) -
+                normalizedLevel * Number(profile.layoutSurahHeaderDrop ?? 0);
+            const basmallahBottomGapRaw =
+                Number(profile.layoutBasmallahBase ?? defaultBasmallahBottomGapScale) -
+                normalizedLevel * Number(profile.layoutBasmallahDrop ?? 0);
+
+            return {
+                pageTypeScale: Math.min(
+                    profile.compressionTypeScaleCeiling,
+                    Math.max(0.2, pageTypeScaleRaw),
+                ),
+                pageLeadingMultiplier: Math.max(
+                    0.2,
+                    Math.max(profile.compressionLeadingFloor, pageLeadingRaw) *
+                        normalizedBaseLeadingMultiplier,
+                ),
+                pageGapMultiplier: Math.max(
+                    0,
+                    Math.max(profile.compressionGapFloor, pageGapRaw) * normalizedBaseGapMultiplier,
+                ),
+                pageSurahHeaderScale: Math.max(
+                    profile.compressionSurahHeaderFloor,
+                    pageSurahHeaderRaw,
+                ),
+                basmallahBottomGapScale: basmallahBottomGapRaw,
+            };
+        },
+
+        fitScore({ fillWidth, fillHeight, compressionLevel }) {
+            const profile = this.resolveFitProfile();
+            const normalizedFillWidth = Math.max(0, Math.min(1, Number(fillWidth) || 0));
+            const normalizedFillHeight = Math.max(0, Math.min(1, Number(fillHeight) || 0));
+            const normalizedCompression = Math.max(0, Math.min(1, Number(compressionLevel) || 0));
+            const minimumFill = Math.min(normalizedFillWidth, normalizedFillHeight);
+            const areaFill = normalizedFillWidth * normalizedFillHeight;
+            const balancePenalty = Math.abs(normalizedFillWidth - normalizedFillHeight);
+            const widthDeficit = Math.max(0, profile.targetWidthRatio - normalizedFillWidth);
+            const heightDeficit = Math.max(0, profile.targetHeightRatio - normalizedFillHeight);
+
+            return (
+                minimumFill * 0.48 +
+                Math.sqrt(Math.max(0, areaFill)) * 0.16 -
+                balancePenalty * 0.03 -
+                widthDeficit * profile.widthDeficitWeight -
+                heightDeficit * profile.heightDeficitWeight -
+                normalizedCompression * profile.compressionPenaltyWeight
+            );
+        },
+
+        resolveFitProfile() {
+            const lines = Array.isArray(this.mushafLines) ? this.mushafLines : [];
+            const pageNumber = Math.max(1, Math.trunc(Number(this.pageNumber ?? 1)));
+            const ayahLines = lines.filter((line) => String(line?.line_type ?? '') === 'ayah');
+            const ayahLineCount = ayahLines.length;
+            const centeredAyahLineCount = ayahLines.filter((line) =>
+                Boolean(line?.is_centered),
+            ).length;
+            const surahHeaderCount = lines.filter(
+                (line) => String(line?.line_type ?? '') === 'surah_name',
+            ).length;
+            const basmallahCount = lines.filter(
+                (line) => String(line?.line_type ?? '') === 'basmallah',
+            ).length;
+            const centeredAyahRatio = ayahLineCount > 0 ? centeredAyahLineCount / ayahLineCount : 0;
+            const isOpeningSpread = pageNumber <= 2;
+            const isLineHeavyCenteredPage =
+                !isOpeningSpread &&
+                surahHeaderCount === 0 &&
+                basmallahCount === 0 &&
+                ayahLineCount >= 14 &&
+                centeredAyahRatio >= 0.85;
+            const isMultiSurahSegmentedPage =
+                !isOpeningSpread && surahHeaderCount >= 2 && basmallahCount >= 2;
+
+            if (isOpeningSpread) {
+                return {
+                    ...fitDefaultProfile,
+                    compressionLeadingFloor: 0.92,
+                    compressionGapFloor: 0.34,
+                    compressionSurahHeaderFloor: 0.9,
+                    compressionTypeScaleCeiling: 0.68,
+                    layoutTypeScaleBase: 0.6,
+                    layoutTypeScaleGain: 0.04,
+                    layoutLeadingBase: 1,
+                    layoutLeadingDrop: 0.04,
+                    layoutGapBase: 0.5,
+                    layoutGapDrop: 0.1,
+                    layoutSurahHeaderBase: 1,
+                    layoutSurahHeaderDrop: 0.03,
+                    layoutBasmallahBase: -0.18,
+                    layoutBasmallahDrop: 0.04,
+                    baseLeadingMultiplier: 1,
+                    baseGapMultiplier: 1,
+                    minimumCompressionLevel: 0,
+                    targetWidthRatio: 0.8,
+                    targetHeightRatio: 0.88,
+                    widthDeficitWeight: 0.34,
+                    heightDeficitWeight: 0.14,
+                    compressionPenaltyWeight: 0.01,
+                    strictWidthOverflowTolerance: 1.03,
+                    strictHeightOverflowTolerance: 1.0,
+                    candidateSteps: 24,
+                    maxScaleMultiplier: 0.84,
+                };
+            }
+
+            if (isLineHeavyCenteredPage) {
+                return {
+                    ...fitDefaultProfile,
+                    compressionLeadingFloor: 0.52,
+                    compressionGapFloor: 0.1,
+                    compressionSurahHeaderFloor: 0.58,
+                    compressionTypeScaleCeiling: 1.92,
+                    layoutTypeScaleBase: 1.774286,
+                    layoutTypeScaleGain: 0.16,
+                    layoutLeadingBase: 0.88,
+                    layoutLeadingDrop: 0.22,
+                    layoutGapBase: 0.428571,
+                    layoutGapDrop: 0.26,
+                    layoutSurahHeaderBase: 0.92,
+                    layoutSurahHeaderDrop: 0.1,
+                    layoutBasmallahBase: -0.27714285714285714,
+                    layoutBasmallahDrop: 0.12,
+                    baseLeadingMultiplier: 1,
+                    baseGapMultiplier: 1,
+                    minimumCompressionLevel: 0.48,
+                    targetWidthRatio: 0.95,
+                    targetHeightRatio: 0.9,
+                    widthDeficitWeight: 0.86,
+                    heightDeficitWeight: 0.05,
+                    compressionPenaltyWeight: 0,
+                    strictWidthOverflowTolerance: 1.04,
+                    strictHeightOverflowTolerance: 1.0,
+                    candidateSteps: 36,
+                    maxScaleMultiplier: 1.08,
+                };
+            }
+
+            if (isMultiSurahSegmentedPage) {
+                return {
+                    ...fitDefaultProfile,
+                    compressionLeadingFloor: 0.66,
+                    compressionGapFloor: 0.34,
+                    compressionSurahHeaderFloor: 0.72,
+                    compressionTypeScaleCeiling: 1.42,
+                    layoutTypeScaleBase: 1.1207142857142858,
+                    layoutTypeScaleGain: 0.14,
+                    layoutLeadingBase: 0.8049999999999999,
+                    layoutLeadingDrop: 0.1,
+                    layoutGapBase: 0.5589285714285714,
+                    layoutGapDrop: 0.18,
+                    layoutSurahHeaderBase: 0.87,
+                    layoutSurahHeaderDrop: 0.08,
+                    layoutBasmallahBase: -0.33785714285714286,
+                    layoutBasmallahDrop: 0.1,
+                    minimumCompressionLevel: 0.18,
+                    targetWidthRatio: 0.88,
+                    targetHeightRatio: 0.94,
+                    widthDeficitWeight: 0.42,
+                    heightDeficitWeight: 0.14,
+                    compressionPenaltyWeight: 0.008,
+                    candidateSteps: 30,
+                    maxScaleMultiplier: 1,
+                };
+            }
+
+            return { ...fitDefaultProfile };
         },
 
         fitPageToViewport() {
@@ -1681,11 +2365,20 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            this.resetFitLayoutVariables(rootElement);
             rootElement.style.setProperty('--quran-page-scale', '1');
 
+            const frameRect = frameElement.getBoundingClientRect();
+            const frameParentRect = frameElement.parentElement?.getBoundingClientRect?.() ?? null;
             const availableWidth = Math.max(
                 1,
-                frameElement.parentElement?.clientWidth ?? frameElement.clientWidth,
+                Number(
+                    frameParentRect?.width ??
+                        frameRect?.width ??
+                        frameElement.parentElement?.clientWidth ??
+                        frameElement.clientWidth ??
+                        1,
+                ),
             );
             const computedRootStyles = window.getComputedStyle(rootElement);
             const fitHeightRatio = Math.min(
@@ -1697,45 +2390,113 @@ document.addEventListener('alpine:init', () => {
                     ) || 1,
                 ),
             );
-            const availableHeight = Math.max(1, frameElement.clientHeight * fitHeightRatio);
+            const availableHeight = Math.max(
+                1,
+                Number(frameRect?.height ?? frameElement.clientHeight ?? 1) * fitHeightRatio,
+            );
             const minScale = Math.max(
                 0.05,
                 Number.parseFloat(computedRootStyles.getPropertyValue('--quran-min-page-scale')) ||
                     0.1,
             );
+            const profile = this.resolveFitProfile();
             const maxScale = Math.max(
                 minScale,
-                Number.parseFloat(computedRootStyles.getPropertyValue('--quran-max-page-scale')) ||
-                    1,
+                (Number.parseFloat(computedRootStyles.getPropertyValue('--quran-max-page-scale')) ||
+                    1) * Math.max(0.2, Number(profile.maxScaleMultiplier ?? 1)),
             );
-            const naturalSize = this.measureRenderedBounds(contentElement);
-            const initialScale = Math.min(
-                availableWidth / Math.max(1, naturalSize.width),
-                availableHeight / Math.max(1, naturalSize.height),
-                maxScale,
+            const candidateSteps = Math.max(10, Math.trunc(Number(profile.candidateSteps) || 28));
+            const minimumCompressionLevel = Math.max(
+                0,
+                Math.min(1, Number(profile.minimumCompressionLevel ?? 0)),
             );
+            let bestLayout = this.fitLayoutFromCompressionLevel(0);
+            let bestScale = minScale;
+            let bestScore = Number.NEGATIVE_INFINITY;
 
-            let normalizedScale = Number.isFinite(initialScale)
-                ? Math.max(minScale, Math.min(maxScale, initialScale))
-                : 1;
+            for (let step = 0; step <= candidateSteps; step += 1) {
+                const compressionLevel =
+                    minimumCompressionLevel +
+                    (step / candidateSteps) * (1 - minimumCompressionLevel);
+                const layout = this.fitLayoutFromCompressionLevel(compressionLevel);
 
-            for (let attempt = 0; attempt < 3; attempt += 1) {
+                this.applyFitLayoutVariables(rootElement, layout);
+                rootElement.style.setProperty('--quran-page-scale', '1');
+
+                const naturalSize = this.measureRenderedBounds(contentElement);
+                const widthRatio = availableWidth / Math.max(1, naturalSize.width);
+                const heightRatio = availableHeight / Math.max(1, naturalSize.height);
+                const candidateScale = Math.max(
+                    minScale,
+                    Math.min(maxScale, widthRatio, heightRatio),
+                );
+                const fillWidth =
+                    (Math.max(1, naturalSize.width) * Math.max(minScale, candidateScale)) /
+                    availableWidth;
+                const fillHeight =
+                    (Math.max(1, naturalSize.height) * Math.max(minScale, candidateScale)) /
+                    availableHeight;
+                const score = this.fitScore({
+                    fillWidth,
+                    fillHeight,
+                    compressionLevel,
+                });
+
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestLayout = layout;
+                    bestScale = Math.max(minScale, candidateScale);
+                }
+            }
+
+            this.applyFitLayoutVariables(rootElement, bestLayout);
+            let normalizedScale = Math.max(minScale, Math.min(maxScale, bestScale));
+
+            for (let attempt = 0; attempt < 6; attempt += 1) {
                 rootElement.style.setProperty('--quran-page-scale', String(normalizedScale));
 
                 const measured = this.measureRenderedBounds(contentElement);
                 const adjustScale = Math.min(
                     availableWidth / Math.max(1, measured.width),
                     availableHeight / Math.max(1, measured.height),
-                    1,
                 );
 
-                if (adjustScale >= 0.999) {
+                if (!Number.isFinite(adjustScale) || Math.abs(adjustScale - 1) < 0.01) {
                     break;
                 }
 
                 normalizedScale = Math.max(
                     minScale,
-                    Number((normalizedScale * adjustScale).toFixed(4)),
+                    Math.min(maxScale, Number((normalizedScale * adjustScale).toFixed(4))),
+                );
+            }
+
+            rootElement.style.setProperty('--quran-page-scale', String(normalizedScale));
+            const strictMeasured = this.measureRenderedBounds(contentElement, {
+                useRobustWidth: false,
+            });
+            const strictWidthOverflowThreshold =
+                availableWidth * Number(profile.strictWidthOverflowTolerance ?? 1.06);
+            const strictHeightOverflowThreshold =
+                availableHeight * Number(profile.strictHeightOverflowTolerance ?? 1.01);
+            const widthOverflowAdjust =
+                strictMeasured.width > strictWidthOverflowThreshold &&
+                strictMeasured.width > 0 &&
+                strictWidthOverflowThreshold > 0
+                    ? strictWidthOverflowThreshold / strictMeasured.width
+                    : 1;
+            const heightOverflowAdjust =
+                strictMeasured.height > strictHeightOverflowThreshold &&
+                strictMeasured.height > 0 &&
+                strictHeightOverflowThreshold > 0
+                    ? strictHeightOverflowThreshold / strictMeasured.height
+                    : 1;
+            const overflowAdjust = Math.min(widthOverflowAdjust, heightOverflowAdjust);
+
+            if (overflowAdjust < 1) {
+                normalizedScale = Math.max(
+                    minScale,
+                    Math.min(maxScale, Number((normalizedScale * overflowAdjust).toFixed(4))),
                 );
             }
 
@@ -2068,7 +2829,7 @@ document.addEventListener('alpine:init', () => {
             const normalizedAyahIndex = Number(ayahIndex);
 
             if (!Number.isFinite(normalizedAyahIndex) || normalizedAyahIndex < 1) {
-                return;
+                return false;
             }
             const normalized = Math.trunc(normalizedAyahIndex);
 
@@ -2078,20 +2839,22 @@ document.addEventListener('alpine:init', () => {
                 this.activeWordIndex = 0;
                 this.hoveredWordIndex = 0;
 
-                return;
+                return false;
             }
 
             this.activeAyahIndex = normalized;
             this.hoveredAyahIndex = 0;
             this.activeWordIndex = 0;
             this.hoveredWordIndex = 0;
+
+            return true;
         },
 
         selectWord(wordIndex) {
             const normalizedWordIndex = Number(wordIndex);
 
             if (!Number.isFinite(normalizedWordIndex) || normalizedWordIndex < 1) {
-                return;
+                return false;
             }
 
             const normalized = Math.trunc(normalizedWordIndex);
@@ -2102,33 +2865,351 @@ document.addEventListener('alpine:init', () => {
                 this.activeAyahIndex = 0;
                 this.hoveredAyahIndex = 0;
 
-                return;
+                return false;
             }
 
             this.activeWordIndex = normalized;
             this.hoveredWordIndex = 0;
             this.activeAyahIndex = 0;
             this.hoveredAyahIndex = 0;
+
+            return true;
         },
 
-        selectDefaultSegment(word) {
+        selectDefaultSegment(word, activationAnchor = null) {
             if (this.interactionTargetsWords()) {
-                this.selectWord(Number(word?.word_index ?? 0));
+                const isActivated = this.selectWord(Number(word?.word_index ?? 0));
+
+                if (isActivated) {
+                    void this.copyWordSelection(word, activationAnchor);
+                }
 
                 return;
             }
 
-            this.selectAyah(Number(word?.ayah_index ?? 0));
+            const ayahIndex = Math.max(0, Math.trunc(Number(word?.ayah_index ?? 0)));
+            const isActivated = this.selectAyah(ayahIndex);
+
+            if (isActivated) {
+                void this.copyAyahSelection(ayahIndex, activationAnchor);
+            }
         },
 
-        selectHoldSegment(word) {
+        selectHoldSegment(word, activationAnchor = null) {
             if (this.interactionTargetsWords()) {
-                this.selectAyah(Number(word?.ayah_index ?? 0));
+                const ayahIndex = Math.max(0, Math.trunc(Number(word?.ayah_index ?? 0)));
+                const isActivated = this.selectAyah(ayahIndex);
+
+                if (isActivated) {
+                    void this.copyAyahSelection(ayahIndex, activationAnchor);
+                }
 
                 return;
             }
 
-            this.selectWord(Number(word?.word_index ?? 0));
+            const isActivated = this.selectWord(Number(word?.word_index ?? 0));
+
+            if (isActivated) {
+                void this.copyWordSelection(word, activationAnchor);
+            }
+        },
+
+        copyFeedbackStyle() {
+            const x = Number(this.copyFeedback?.x ?? 0);
+            const y = Number(this.copyFeedback?.y ?? 0);
+            const normalizedX = Number.isFinite(x) ? Math.round(x) : 0;
+            const normalizedY = Number.isFinite(y) ? Math.round(y) : 0;
+
+            return `left: ${normalizedX}px; top: ${normalizedY}px;`;
+        },
+
+        copyPointFromElement(element) {
+            if (!(element instanceof Element)) {
+                return null;
+            }
+
+            const rect = element.getBoundingClientRect();
+
+            if (!Number.isFinite(rect?.left) || !Number.isFinite(rect?.top)) {
+                return null;
+            }
+
+            return {
+                x: rect.left + rect.width / 2,
+                y: rect.top,
+            };
+        },
+
+        readerPanelCenterPoint() {
+            const panelElement = this.$refs.readerPanel;
+            const panelRect = panelElement?.getBoundingClientRect?.();
+
+            if (
+                !Number.isFinite(panelRect?.left) ||
+                !Number.isFinite(panelRect?.top) ||
+                !Number.isFinite(panelRect?.width)
+            ) {
+                return {
+                    x: Math.max(0, Math.round((window.innerWidth ?? 0) / 2)),
+                    y: Math.max(0, Math.round((window.innerHeight ?? 0) / 2)),
+                };
+            }
+
+            return {
+                x: panelRect.left + panelRect.width / 2,
+                y: panelRect.top + 56,
+            };
+        },
+
+        copyPointFromAnchor(anchor = null) {
+            const directX = Number(anchor?.x);
+            const directY = Number(anchor?.y);
+
+            if (Number.isFinite(directX) && Number.isFinite(directY)) {
+                return {
+                    x: directX,
+                    y: directY,
+                };
+            }
+
+            const swipePoint = this.swipePoint(anchor);
+
+            if (swipePoint && Number.isFinite(swipePoint.x) && Number.isFinite(swipePoint.y)) {
+                return {
+                    x: swipePoint.x,
+                    y: swipePoint.y,
+                };
+            }
+
+            const targetPoint = this.copyPointFromElement(anchor?.target ?? null);
+
+            if (targetPoint) {
+                return targetPoint;
+            }
+
+            return this.readerPanelCenterPoint();
+        },
+
+        extractWordText(word) {
+            return normalizeTextValue(word?.text);
+        },
+
+        ayahSegments(ayahIndex) {
+            const normalizedAyahIndex = Math.max(0, Math.trunc(Number(ayahIndex ?? 0)));
+
+            if (normalizedAyahIndex < 1 || !Array.isArray(this.mushafLines)) {
+                return [];
+            }
+
+            const segments = [];
+
+            this.mushafLines.forEach((line) => {
+                if (!Array.isArray(line?.segments)) {
+                    return;
+                }
+
+                line.segments.forEach((segment) => {
+                    const segmentAyahIndex = Math.max(
+                        0,
+                        Math.trunc(Number(segment?.ayah_index ?? 0)),
+                    );
+
+                    if (segmentAyahIndex !== normalizedAyahIndex) {
+                        return;
+                    }
+
+                    const segmentText = normalizeTextValue(segment?.text);
+
+                    if (!segmentText) {
+                        return;
+                    }
+
+                    segments.push(segmentText);
+                });
+            });
+
+            return segments;
+        },
+
+        composeAyahTextFromWords(ayahIndex) {
+            const normalizedAyahIndex = Math.max(0, Math.trunc(Number(ayahIndex ?? 0)));
+
+            if (normalizedAyahIndex < 1 || !Array.isArray(this.mushafLines)) {
+                return null;
+            }
+
+            const words = [];
+
+            this.mushafLines.forEach((line) => {
+                if (!Array.isArray(line?.words)) {
+                    return;
+                }
+
+                line.words.forEach((word) => {
+                    const wordAyahIndex = Math.max(0, Math.trunc(Number(word?.ayah_index ?? 0)));
+
+                    if (wordAyahIndex !== normalizedAyahIndex) {
+                        return;
+                    }
+
+                    const text = normalizeTextValue(word?.text);
+
+                    if (!text) {
+                        return;
+                    }
+
+                    words.push({
+                        text,
+                        isGlyph: Boolean(word?.is_glyph),
+                    });
+                });
+            });
+
+            if (words.length < 1) {
+                return null;
+            }
+
+            let joined = '';
+
+            words.forEach((word, index) => {
+                if (index === 0) {
+                    joined = word.text;
+
+                    return;
+                }
+
+                joined += word.isGlyph ? word.text : ` ${word.text}`;
+            });
+
+            return normalizeTextValue(joined);
+        },
+
+        extractAyahText(ayahIndex) {
+            const segments = this.ayahSegments(ayahIndex);
+
+            if (segments.length > 0) {
+                return normalizeTextValue(segments.join(' '));
+            }
+
+            return this.composeAyahTextFromWords(ayahIndex);
+        },
+
+        fallbackCopyText(text) {
+            if (typeof document === 'undefined') {
+                return false;
+            }
+
+            const textarea = document.createElement('textarea');
+            textarea.value = String(text ?? '');
+            textarea.setAttribute('readonly', '');
+            textarea.style.position = 'fixed';
+            textarea.style.top = '-1000px';
+            textarea.style.left = '-1000px';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+
+            const selection = window.getSelection?.() ?? null;
+            const originalRange =
+                selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+
+            textarea.focus();
+            textarea.select();
+            textarea.setSelectionRange(0, textarea.value.length);
+
+            let copied = false;
+
+            try {
+                copied = Boolean(document.execCommand?.('copy'));
+            } catch (_) {
+                copied = false;
+            }
+
+            textarea.remove();
+
+            if (selection && originalRange) {
+                selection.removeAllRanges();
+                selection.addRange(originalRange);
+            }
+
+            return copied;
+        },
+
+        async writeClipboardText(text) {
+            const normalizedText = normalizeTextValue(text);
+
+            if (!normalizedText) {
+                return false;
+            }
+
+            if (
+                typeof navigator !== 'undefined' &&
+                navigator.clipboard &&
+                typeof navigator.clipboard.writeText === 'function'
+            ) {
+                try {
+                    await navigator.clipboard.writeText(normalizedText);
+
+                    return true;
+                } catch (_) {
+                    return this.fallbackCopyText(normalizedText);
+                }
+            }
+
+            return this.fallbackCopyText(normalizedText);
+        },
+
+        showCopyFeedback(anchor = null) {
+            const point = this.copyPointFromAnchor(anchor);
+
+            if (!point) {
+                return;
+            }
+
+            this.copyFeedback.x = point.x;
+            this.copyFeedback.y = point.y;
+            this.copyFeedback.visible = true;
+            this.copyFeedback.serial += 1;
+            const serial = this.copyFeedback.serial;
+
+            if (this.copyFeedback.timer !== null) {
+                clearTimeout(this.copyFeedback.timer);
+            }
+
+            this.copyFeedback.timer = window.setTimeout(() => {
+                if (this.copyFeedback.serial !== serial) {
+                    return;
+                }
+
+                this.copyFeedback.visible = false;
+                this.copyFeedback.timer = null;
+            }, copyPopoverVisibleDurationMs);
+        },
+
+        hideCopyFeedback() {
+            if (this.copyFeedback.timer !== null) {
+                clearTimeout(this.copyFeedback.timer);
+                this.copyFeedback.timer = null;
+            }
+
+            this.copyFeedback.visible = false;
+        },
+
+        async copyWordSelection(word, activationAnchor = null) {
+            const wordText = this.extractWordText(word);
+            const copied = await this.writeClipboardText(wordText);
+
+            if (copied) {
+                this.showCopyFeedback(activationAnchor);
+            }
+        },
+
+        async copyAyahSelection(ayahIndex, activationAnchor = null) {
+            const ayahText = this.extractAyahText(ayahIndex);
+            const copied = await this.writeClipboardText(ayahText);
+
+            if (copied) {
+                this.showCopyFeedback(activationAnchor);
+            }
         },
 
         clearWordPressState() {
@@ -2175,7 +3256,10 @@ document.addEventListener('alpine:init', () => {
                 this.wordPress.holdTriggered = true;
                 this._suppressNextWordClick = true;
                 this._lastWordHoldAt = Date.now();
-                this.selectHoldSegment(this.wordPress.word);
+                this.selectHoldSegment(this.wordPress.word, {
+                    x: this.wordPress.startX,
+                    y: this.wordPress.startY,
+                });
             }, wordPressHoldDelayMs);
         },
 
@@ -2227,7 +3311,7 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            this.selectDefaultSegment(word);
+            this.selectDefaultSegment(word, event);
         },
 
         setHoveredSegment(word) {
@@ -2373,11 +3457,11 @@ document.addEventListener('alpine:init', () => {
 
         lineMarginBlockStart(line) {
             if (this.isSurahHeaderLine(line)) {
-                return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * 0.28)';
+                return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * 0.28)';
             }
 
             if (this.isBasmallahLine(line)) {
-                return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * 0.12)';
+                return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * 0.12)';
             }
 
             return '0px';
@@ -2386,14 +3470,14 @@ document.addEventListener('alpine:init', () => {
         lineMarginBlockEnd(line) {
             if (this.isSurahHeaderLine(line)) {
                 if (this.nextLineType(line) === 'basmallah') {
-                    return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * -0.44)';
+                    return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * -0.44)';
                 }
 
-                return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * -0.1)';
+                return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * -0.1)';
             }
 
             if (this.isBasmallahLine(line)) {
-                return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-basmallah-bottom-gap-scale, 0.04))';
+                return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * var(--quran-basmallah-bottom-gap-scale, 0.04))';
             }
 
             return '0px';
@@ -2425,26 +3509,6 @@ document.addEventListener('alpine:init', () => {
 
         ayahLineClass(line) {
             if (this.isRectangularAyahLine(line)) {
-                return 'quran-ayah-line quran-ayah-line-run quran-ayah-line-run-rect font-quran';
-            }
-
-            return 'quran-ayah-line quran-ayah-line-run quran-ayah-line-run-centered font-quran';
-        },
-
-        probeLineAlignmentClass(line) {
-            if (line?.line_type === 'ayah' && !this.panelProbeUseCenteredAyahLayout) {
-                return 'text-right';
-            }
-
-            if (Boolean(line?.is_centered)) {
-                return 'text-center';
-            }
-
-            return '';
-        },
-
-        probeAyahLineClass(line) {
-            if (line?.line_type === 'ayah' && !this.panelProbeUseCenteredAyahLayout) {
                 return 'quran-ayah-line quran-ayah-line-run quran-ayah-line-run-rect font-quran';
             }
 
@@ -2515,16 +3579,6 @@ document.addEventListener('alpine:init', () => {
             return `font-family: '${family}', 'Scheherazade New', 'Amiri', 'Noto Naskh Arabic', 'Traditional Arabic', serif; color: var(--quran-ink); font-feature-settings: 'liga' 1, 'calt' 1;`;
         },
 
-        probeBasmallahLineStyle(line) {
-            const family = String(this.basmallahFontFamily ?? '').trim();
-
-            if (!family) {
-                return "font-family: 'Scheherazade New', 'Amiri', 'Noto Naskh Arabic', 'Traditional Arabic', serif; color: var(--quran-ink); font-feature-settings: 'liga' 1, 'calt' 1;";
-            }
-
-            return `font-family: '${family}', 'Scheherazade New', 'Amiri', 'Noto Naskh Arabic', 'Traditional Arabic', serif; color: var(--quran-ink); font-feature-settings: 'liga' 1, 'calt' 1;`;
-        },
-
         basmallahDisplayText(line) {
             const configuredText = this.preferredBasmallahText();
             const text = this.lineText(line);
@@ -2551,16 +3605,6 @@ document.addEventListener('alpine:init', () => {
             }
 
             return `font-family: '${family}', 'MadinaQuran', 'Amiri', 'Traditional Arabic', serif;`;
-        },
-
-        probeLineFontStyle() {
-            const family = String(this.panelProbeFontFamily ?? '').trim();
-
-            if (!family) {
-                return 'color: var(--quran-ink);';
-            }
-
-            return `font-family: '${family}', 'MadinaQuran', 'Amiri', 'Traditional Arabic', serif; color: var(--quran-ink);`;
         },
 
         isWordActive(word) {
@@ -3341,6 +4385,30 @@ document.addEventListener('alpine:init', () => {
             });
         },
 
+        isModalWindowVisibleById(modalId) {
+            const normalizedModalId = String(modalId ?? '').trim();
+
+            if (!normalizedModalId) {
+                return false;
+            }
+
+            const modalWindowElement = document.getElementById(normalizedModalId);
+
+            if (!(modalWindowElement instanceof Element)) {
+                return false;
+            }
+
+            const modalElement = modalWindowElement.closest('.fi-modal');
+
+            if (modalElement && !modalElement.classList.contains('fi-modal-open')) {
+                return false;
+            }
+
+            const styles = window.getComputedStyle(modalWindowElement);
+
+            return styles.display !== 'none' && styles.visibility !== 'hidden';
+        },
+
         isSearchModalWindowVisible() {
             const modalWindowElement = this.searchModalWindowElement();
 
@@ -3393,10 +4461,57 @@ document.addEventListener('alpine:init', () => {
             return this.search.modalOpen || this._lastKnownModalOpenState;
         },
 
+        isHistoryModalEvent(kind, event) {
+            const modalId = String(event?.detail?.id ?? '').trim();
+            const knownIds = [this.historyModalId]
+                .map((value) => String(value ?? '').trim())
+                .filter((value) => value !== '');
+            const matchedKnownId = modalId !== '' && knownIds.includes(modalId);
+
+            if (matchedKnownId) {
+                return true;
+            }
+
+            if (kind === 'opened') {
+                return this.isModalWindowVisibleById(this.historyModalId);
+            }
+
+            return this.historyModalOpen;
+        },
+
+        isBookmarksModalEvent(kind, event) {
+            const modalId = String(event?.detail?.id ?? '').trim();
+            const knownIds = [this.bookmarksModalId]
+                .map((value) => String(value ?? '').trim())
+                .filter((value) => value !== '');
+            const matchedKnownId = modalId !== '' && knownIds.includes(modalId);
+
+            if (matchedKnownId) {
+                return true;
+            }
+
+            if (kind === 'opened') {
+                return this.isModalWindowVisibleById(this.bookmarksModalId);
+            }
+
+            return this.bookmarksModalOpen;
+        },
+
         handleModalLifecycleEvent(kind, event) {
             this.trackModalLifecycle(kind, event);
+            const isSearchModalEvent = this.isSearchModalEvent(kind, event);
+            const isHistoryModalEvent = this.isHistoryModalEvent(kind, event);
+            const isBookmarksModalEvent = this.isBookmarksModalEvent(kind, event);
 
-            if (!this.isSearchModalEvent(kind, event)) {
+            if (isHistoryModalEvent) {
+                this.historyModalOpen = kind === 'opened';
+            }
+
+            if (isBookmarksModalEvent) {
+                this.bookmarksModalOpen = kind === 'opened';
+            }
+
+            if (!isSearchModalEvent) {
                 return;
             }
 
@@ -3480,14 +4595,10 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        async requestSearchModalClose({ skipLayout = false } = {}) {
-            const modalId = [this.searchActionModalId, this.searchModalId, this.searchModalDomId]
+        async requestModalCloseByKnownIds(knownModalIds = [], { onFallback = null } = {}) {
+            const modalId = knownModalIds
                 .map((value) => String(value ?? '').trim())
                 .find((value) => value !== '');
-
-            if (skipLayout) {
-                this._skipNextSearchModalCloseLayout = true;
-            }
 
             if (typeof this.$wire?.unmountAction === 'function') {
                 try {
@@ -3500,7 +4611,9 @@ document.addEventListener('alpine:init', () => {
             }
 
             if (!modalId) {
-                this.handleSearchModalClosed();
+                if (typeof onFallback === 'function') {
+                    onFallback();
+                }
 
                 return;
             }
@@ -3514,11 +4627,82 @@ document.addEventListener('alpine:init', () => {
             );
         },
 
+        async requestSearchModalClose({ skipLayout = false } = {}) {
+            if (skipLayout) {
+                this._skipNextSearchModalCloseLayout = true;
+            }
+
+            await this.requestModalCloseByKnownIds(
+                [this.searchActionModalId, this.searchModalId, this.searchModalDomId],
+                {
+                    onFallback: () => {
+                        this.handleSearchModalClosed();
+                    },
+                },
+            );
+        },
+
+        async requestHistoryModalClose() {
+            await this.requestModalCloseByKnownIds([this.historyModalId], {
+                onFallback: () => {
+                    this.historyModalOpen = false;
+                },
+            });
+        },
+
+        async requestBookmarksModalClose() {
+            await this.requestModalCloseByKnownIds([this.bookmarksModalId], {
+                onFallback: () => {
+                    this.bookmarksModalOpen = false;
+                },
+            });
+        },
+
         requestReaderGateNavigation(_source = 'generic') {
             this.resetSwipeState();
             this.clearWordPressState();
             void this.requestSearchModalClose({ skipLayout: true });
             window.dispatchEvent(new CustomEvent('quran-go-gate'));
+        },
+
+        async goToHistoryEntry(entry) {
+            const targetPage = clampPage(Number(entry?.page_number ?? 1), this.maxPage);
+            const ayahIndex = Math.max(0, Math.trunc(Number(entry?.ayah_index ?? 0)));
+            const direction = this.resolveNavigationDirection(targetPage);
+
+            this.resetNavigationQueueForPriorityJump();
+            await this.requestHistoryModalClose();
+            await this.navigateToPage(targetPage, {
+                direction,
+                animate: true,
+                activeAyahIndex: ayahIndex,
+                forceRefit: true,
+                source: 'history-entry',
+                commitNow: true,
+                settleDelayMs: 0,
+            });
+            await this.layoutPageGuaranteed({ revealDelayMs: 220, maxAttempts: 5 });
+            this.activeWordIndex = 0;
+        },
+
+        async goToBookmark(bookmark) {
+            const targetPage = clampPage(Number(bookmark?.page_number ?? 1), this.maxPage);
+            const direction = this.resolveNavigationDirection(targetPage);
+
+            this.resetNavigationQueueForPriorityJump();
+            await this.requestBookmarksModalClose();
+            await this.navigateToPage(targetPage, {
+                direction,
+                animate: true,
+                activeAyahIndex: 0,
+                forceRefit: true,
+                source: 'bookmark',
+                commitNow: true,
+                settleDelayMs: 0,
+            });
+            await this.layoutPageGuaranteed({ revealDelayMs: 220, maxAttempts: 5 });
+            this.activeAyahIndex = 0;
+            this.activeWordIndex = 0;
         },
 
         async confirmSearchSelection() {
@@ -3552,6 +4736,11 @@ document.addEventListener('alpine:init', () => {
             await this.layoutPageGuaranteed({ revealDelayMs: 220, maxAttempts: 5 });
             this.activeAyahIndex = 0;
             this.activeWordIndex = 0;
+            this.recordNavigationHistory({
+                source: 'surah-directory',
+                pageNumber,
+                surahNumber,
+            });
         },
 
         searchRequestUrl(query = '') {
@@ -3714,6 +4903,9 @@ document.addEventListener('alpine:init', () => {
             const targetPage = clampPage(Number(result?.page_number ?? 1), this.maxPage);
             const ayahIndex = Math.max(0, Math.trunc(Number(result?.ayah_index ?? 0)));
             const direction = this.resolveNavigationDirection(targetPage);
+            const activeQuery = this.search.query;
+            const surahNumber = Math.max(1, Math.trunc(Number(result?.surah_number ?? 1)));
+            const ayahNumber = Math.max(0, Math.trunc(Number(result?.ayah_number ?? 0)));
 
             this.resetNavigationQueueForPriorityJump();
             await this.requestSearchModalClose();
@@ -3728,6 +4920,14 @@ document.addEventListener('alpine:init', () => {
             });
             await this.layoutPageGuaranteed({ revealDelayMs: 220, maxAttempts: 5 });
             this.activeWordIndex = 0;
+            this.recordNavigationHistory({
+                source: 'search-result',
+                pageNumber: targetPage,
+                surahNumber,
+                ayahNumber,
+                ayahIndex,
+                query: activeQuery,
+            });
         },
     }));
 });

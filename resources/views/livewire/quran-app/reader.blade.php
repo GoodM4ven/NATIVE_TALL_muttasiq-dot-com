@@ -22,12 +22,16 @@
             --quran-page-border: color-mix(in srgb, var(--warning-300) 58%, transparent);
             --quran-page-scale: 1;
             --quran-min-page-scale: 0.1;
-            --quran-max-page-scale: 1;
+            --quran-max-page-scale: 1.85;
             --quran-type-scale: 1;
             --quran-leading-scale: 1;
             --quran-gap-scale: 1;
-            --quran-fit-height-ratio: 0.72;
-            --quran-line-gap: 1.3rem;
+            --quran-page-type-scale: 1;
+            --quran-page-leading-multiplier: 1;
+            --quran-page-gap-multiplier: 1;
+            --quran-page-surah-header-scale: 1;
+            --quran-fit-height-ratio: 0.95;
+            --quran-line-gap: 2.3rem;
             --quran-basmallah-bottom-gap-scale: -0.18;
             --quran-font-size-rect: 2.08rem;
             --quran-font-size-center: 2.02rem;
@@ -42,7 +46,7 @@
                 --quran-type-scale: 0.94;
                 --quran-leading-scale: 1.02;
                 --quran-gap-scale: 0.92;
-                --quran-fit-height-ratio: 0.68;
+                --quran-fit-height-ratio: 0.92;
             }
         }
 
@@ -51,7 +55,7 @@
                 --quran-type-scale: 0.965;
                 --quran-leading-scale: 1.01;
                 --quran-gap-scale: 0.96;
-                --quran-fit-height-ratio: 0.7;
+                --quran-fit-height-ratio: 0.93;
             }
         }
 
@@ -60,7 +64,7 @@
                 --quran-type-scale: 0.985;
                 --quran-leading-scale: 1;
                 --quran-gap-scale: 0.99;
-                --quran-fit-height-ratio: 0.72;
+                --quran-fit-height-ratio: 0.94;
             }
         }
 
@@ -69,7 +73,7 @@
                 --quran-type-scale: 1;
                 --quran-leading-scale: 1;
                 --quran-gap-scale: 1;
-                --quran-fit-height-ratio: 0.74;
+                --quran-fit-height-ratio: 0.95;
             }
         }
 
@@ -78,16 +82,16 @@
                 --quran-type-scale: 1.03;
                 --quran-leading-scale: 1.02;
                 --quran-gap-scale: 1.08;
-                --quran-fit-height-ratio: 0.76;
+                --quran-fit-height-ratio: 0.96;
             }
         }
 
         @media (min-width: 1536px) {
             .quran-reader {
-                --quran-type-scale: 1.08;
-                --quran-leading-scale: 0.9;
-                --quran-gap-scale: 1.05;
-                --quran-fit-height-ratio: 0.9;
+                --quran-type-scale: 2.2;
+                --quran-leading-scale: 1;
+                --quran-gap-scale: 1.35;
+                --quran-fit-height-ratio: 0.97;
             }
         }
 
@@ -202,7 +206,7 @@
             width: 100%;
             max-width: 100%;
             padding: 0.42rem 0;
-            font-size: calc(var(--quran-font-size-meta) * 1.5 * var(--quran-type-scale) * var(--quran-page-scale));
+            font-size: calc(var(--quran-font-size-meta) * 1.5 * var(--quran-type-scale) * var(--quran-page-type-scale) * var(--quran-page-surah-header-scale) * var(--quran-page-scale));
             line-height: 1;
             color: color-mix(in srgb, var(--primary-600) 86%, var(--quran-ink));
             background: transparent;
@@ -256,7 +260,7 @@
             direction: rtl;
             display: flex;
             flex-direction: column;
-            gap: calc(var(--quran-line-gap) * var(--quran-gap-scale));
+            gap: calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier));
         }
 
         .quran-page-lines * {
@@ -295,18 +299,18 @@
         }
 
         .quran-ayah-line-run-rect {
-            font-size: calc(var(--quran-font-size-rect) * var(--quran-type-scale) * var(--quran-page-scale));
-            line-height: calc(var(--quran-line-height-rect) * var(--quran-leading-scale));
+            font-size: calc(var(--quran-font-size-rect) * var(--quran-type-scale) * var(--quran-page-type-scale) * var(--quran-page-scale));
+            line-height: calc(var(--quran-line-height-rect) * var(--quran-leading-scale) * var(--quran-page-leading-multiplier));
         }
 
         .quran-ayah-line-run-centered {
-            font-size: calc(var(--quran-font-size-center) * var(--quran-type-scale) * var(--quran-page-scale));
-            line-height: calc(var(--quran-line-height-center) * var(--quran-leading-scale));
+            font-size: calc(var(--quran-font-size-center) * var(--quran-type-scale) * var(--quran-page-type-scale) * var(--quran-page-scale));
+            line-height: calc(var(--quran-line-height-center) * var(--quran-leading-scale) * var(--quran-page-leading-multiplier));
         }
 
         .quran-meta-line {
-            font-size: calc(var(--quran-font-size-meta) * var(--quran-type-scale) * var(--quran-page-scale));
-            line-height: calc(var(--quran-line-height-meta) * var(--quran-leading-scale));
+            font-size: calc(var(--quran-font-size-meta) * var(--quran-type-scale) * var(--quran-page-type-scale) * var(--quran-page-scale));
+            line-height: calc(var(--quran-line-height-meta) * var(--quran-leading-scale) * var(--quran-page-leading-multiplier));
         }
 
         .quran-basmallah-line {
@@ -315,8 +319,8 @@
             justify-content: center;
             gap: 0.22ch;
             white-space: nowrap;
-            font-size: calc(var(--quran-font-size-center) * var(--quran-type-scale) * var(--quran-page-scale));
-            line-height: calc(var(--quran-line-height-center) * var(--quran-leading-scale));
+            font-size: calc(var(--quran-font-size-center) * var(--quran-type-scale) * var(--quran-page-type-scale) * var(--quran-page-scale));
+            line-height: calc(var(--quran-line-height-center) * var(--quran-leading-scale) * var(--quran-page-leading-multiplier));
         }
 
         .quran-basmallah-word {
@@ -336,6 +340,76 @@
             align-items: center;
             justify-content: space-between;
             padding: 0.8rem 1rem 0.5rem;
+        }
+
+        .quran-top-actions {
+            display: inline-flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.42rem;
+            min-width: 5.8rem;
+        }
+
+        .quran-top-action {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.15rem;
+            height: 2.15rem;
+            border-radius: 999px;
+            border: 1px solid color-mix(in srgb, var(--primary-500) 52%, transparent);
+            background: color-mix(in srgb, var(--quran-chip-bg) 90%, transparent);
+            color: color-mix(in srgb, var(--quran-panel-text) 88%, var(--primary-500));
+            transition:
+                transform 160ms ease,
+                border-color 220ms ease,
+                background-color 220ms ease,
+                box-shadow 220ms ease;
+            box-shadow: 0 8px 18px color-mix(in srgb, var(--gray-900) 16%, transparent);
+        }
+
+        .quran-top-action:hover {
+            transform: translateY(-0.04rem);
+            border-color: color-mix(in srgb, var(--primary-500) 72%, transparent);
+            background: color-mix(in srgb, var(--quran-chip-hover) 70%, transparent);
+        }
+
+        .quran-top-action:active {
+            transform: scale(0.96);
+        }
+
+        .quran-top-action.quran-top-action--active {
+            border-color: color-mix(in srgb, var(--warning-500) 72%, transparent);
+            background: color-mix(in srgb, var(--warning-300) 28%, transparent);
+            box-shadow:
+                inset 0 0 0 1px color-mix(in srgb, var(--warning-200) 74%, transparent),
+                0 10px 20px color-mix(in srgb, var(--warning-700) 18%, transparent);
+            color: color-mix(in srgb, var(--warning-800) 92%, var(--quran-panel-text));
+        }
+
+        .quran-copy-popover {
+            position: fixed;
+            z-index: 90;
+            pointer-events: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.28rem;
+            transform: translate(-50%, -132%);
+            border-radius: 999px;
+            border: 1px solid color-mix(in srgb, var(--primary-500) 54%, transparent);
+            background: color-mix(in srgb, var(--background) 88%, transparent);
+            color: color-mix(in srgb, var(--primary-900) 92%, var(--quran-panel-text));
+            box-shadow:
+                inset 0 0 0 1px color-mix(in srgb, var(--primary-100) 24%, transparent),
+                0 8px 18px color-mix(in srgb, var(--gray-900) 20%, transparent);
+            padding: 0.26rem 0.56rem;
+            font-family: 'IBM Plex Sans Arabic', 'Manrope', ui-sans-serif, system-ui, sans-serif;
+            font-size: 0.74rem;
+            font-weight: 700;
+            line-height: 1;
+            white-space: nowrap;
+            direction: rtl;
         }
 
         .quran-soorah-trigger {
@@ -955,7 +1029,9 @@
         prefetchRadius: @js(is_platform('native') ? 3 : 2),
         searchModalId: @js('quran-reader-search-modal'),
         searchModalDomId: @js('quran-reader-search-modal'),
-        searchActionModalId: @js('fi-' . $this->getId() . '-action-0'),
+        searchActionModalId: @js(''),
+        historyModalId: @js('quran-reader-history-modal'),
+        bookmarksModalId: @js('quran-reader-bookmarks-modal'),
         settings: @js($quranReaderSettings ?? ['enableVisualEnhancements' => true, 'targetWordsByDefault' => false]),
     })"
     x-bind:class="{ 'quran-reader--visual-enhancements-disabled': !doesEnableVisualEnhancements }"
@@ -1020,7 +1096,50 @@
                     </span>
                     <span class="quran-soorah-trigger-circle"></span>
                 </button>
-                <div class="min-w-14"></div>
+                <div class="quran-top-actions">
+                    <button
+                        class="quran-top-action outline-none"
+                        data-quran-open-history
+                        type="button"
+                        aria-label="سجل التنقل"
+                        x-on:click="$wire.mountAction('navigationHistory')"
+                    >
+                        <x-icon
+                            class="h-4 w-4"
+                            :name="'heroicon-o-clock'"
+                        />
+                    </button>
+
+                    <button
+                        class="quran-top-action outline-none"
+                        data-quran-bookmark-toggle
+                        type="button"
+                        x-bind:class="{
+                            'quran-top-action--active': (typeof isCurrentPageBookmarked === 'function' ?
+                                isCurrentPageBookmarked() : false)
+                        }"
+                        x-bind:aria-label="(typeof isCurrentPageBookmarked === 'function' && isCurrentPageBookmarked()) ?
+                        'إزالة علامة الصفحة الحالية' : 'حفظ الصفحة الحالية كعلامة'"
+                        x-on:pointerdown="onBookmarkButtonPointerDown($event)"
+                        x-on:pointerup="onBookmarkButtonPointerUp($event)"
+                        x-on:pointercancel="onBookmarkButtonPointerCancel()"
+                        x-on:pointerleave="onBookmarkButtonPointerCancel()"
+                        x-on:click.prevent="onBookmarkButtonClick()"
+                    >
+                        <x-icon
+                            class="h-4 w-4"
+                            :name="'heroicon-o-bookmark'"
+                            x-cloak
+                            x-show="!(typeof isCurrentPageBookmarked === 'function' ? isCurrentPageBookmarked() : false)"
+                        />
+                        <x-icon
+                            class="h-4 w-4"
+                            :name="'heroicon-s-bookmark'"
+                            x-cloak
+                            x-show="typeof isCurrentPageBookmarked === 'function' ? isCurrentPageBookmarked() : false"
+                        />
+                    </button>
+                </div>
             </header>
 
             <div
@@ -1331,109 +1450,23 @@
             </footer>
 
             <div
-                class="pointer-events-none fixed left-[-200vw] top-0 opacity-0"
-                aria-hidden="true"
+                class="quran-copy-popover"
+                data-quran-copy-popover
+                x-cloak
+                x-show="copyFeedback.visible"
+                x-bind:style="copyFeedbackStyle()"
+                x-transition:enter="transition duration-140 ease-out"
+                x-transition:enter-start="opacity-0 scale-75"
+                x-transition:enter-end="opacity-100 scale-100"
+                x-transition:leave="transition duration-260 ease-in"
+                x-transition:leave-start="opacity-100 scale-100"
+                x-transition:leave-end="opacity-0 scale-75"
             >
-                <div
-                    style="
-                        width: max-content;
-                        display: flex;
-                        flex-direction: column;
-                        gap: calc(var(--quran-line-gap) * var(--quran-gap-scale));
-                    "
-                    x-ref="pageThreeProbe"
-                >
-                    <template
-                        x-for="line in panelProbeLines"
-                        :key="`quran-probe-line-${line.line_number}-${line.line_type}`"
-                    >
-                        <template x-if="shouldRenderLine(line)">
-                            <div
-                                x-bind:class="probeLineAlignmentClass(line)"
-                                x-bind:style="lineEntryStyle(line)"
-                            >
-                                <template x-if="isBasmallahLine(line)">
-                                    <div
-                                        class="font-quran quran-basmallah-line"
-                                        data-quran-line-text
-                                        x-bind:style="probeBasmallahLineStyle(line)"
-                                    >
-                                        <template x-if="isBasmallahLineWithWords(line)">
-                                            <template
-                                                x-for="(word, wordIndex) in line.words"
-                                                :key="`quran-probe-basmallah-word-${line.line_number}-${word.word_index ?? wordIndex}`"
-                                            >
-                                                <span
-                                                    class="quran-basmallah-word"
-                                                    x-text="word.text"
-                                                ></span>
-                                            </template>
-                                        </template>
-                                        <template x-if="!isBasmallahLineWithWords(line)">
-                                            <span x-text="basmallahDisplayText(line)"></span>
-                                        </template>
-                                    </div>
-                                </template>
-                                <template x-if="!isBasmallahLine(line) && isAyahLineWithWords(line)">
-                                    <div
-                                        data-quran-line-text
-                                        x-bind:class="probeAyahLineClass(line)"
-                                        x-bind:style="probeLineFontStyle()"
-                                    >
-                                        <template
-                                            x-for="(cluster, clusterIndex) in lineWordClusters(line)"
-                                            :key="`quran-probe-cluster-${line.line_number}-${cluster.key ?? clusterIndex}`"
-                                        >
-                                            <span class="quran-segment-cluster">
-                                                <template
-                                                    x-for="(word, wordIndex) in cluster.words"
-                                                    :key="`quran-probe-word-${line.line_number}-${word.word_index ?? wordIndex}`"
-                                                >
-                                                    <span class="inline-flex items-baseline">
-                                                        <span
-                                                            class="quran-word-button px-0"
-                                                            x-text="word.text"
-                                                        ></span>
-                                                        <template x-if="showAyahMarker(word)">
-                                                            <span
-                                                                class="quran-ayah-marker mr-0.5 text-[0.92rem]"
-                                                                style="color: var(--quran-subtle);"
-                                                                x-text="'۝' + word.ayah_number"
-                                                            ></span>
-                                                        </template>
-                                                    </span>
-                                                </template>
-                                            </span>
-                                        </template>
-                                    </div>
-                                </template>
-                                <template x-if="!isBasmallahLine(line) && !isAyahLineWithWords(line)">
-                                    <template x-if="isSurahHeaderLine(line)">
-                                        <div
-                                            class="quran-surah-header-line"
-                                            data-quran-line-text
-                                            x-bind:class="{ 'quran-surah-header-line--fatiha': Number(line?.surah_number ?? 0) === 1 }"
-                                            x-bind:style="surahHeaderLineStyle(line)"
-                                        >
-                                            <span
-                                                class="quran-surah-header-glyph"
-                                                x-text="surahHeaderLineText(line)"
-                                            ></span>
-                                        </div>
-                                    </template>
-                                    <template x-if="!isSurahHeaderLine(line)">
-                                        <div
-                                            class="font-quran quran-meta-line"
-                                            data-quran-line-text
-                                            x-bind:style="metaLineStyle(line)"
-                                            x-text="lineText(line)"
-                                        ></div>
-                                    </template>
-                                </template>
-                            </div>
-                        </template>
-                    </template>
-                </div>
+                <x-icon
+                    class="h-3.5 w-3.5"
+                    :name="'heroicon-o-clipboard'"
+                />
+                <span>تم النسخ</span>
             </div>
         </section>
 

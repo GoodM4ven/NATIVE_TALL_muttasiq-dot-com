@@ -521,4 +521,194 @@
         color: var(--quran-subtle);
         direction: ltr;
     }
+
+    #quran-reader-history-modal,
+    #quran-reader-bookmarks-modal {
+        border-color: color-mix(in srgb, var(--quran-panel-border) 86%, transparent);
+        background: linear-gradient(
+            180deg,
+            color-mix(in srgb, var(--quran-panel-bg) 98%, transparent),
+            color-mix(in srgb, var(--quran-page-surface) 98%, transparent)
+        );
+        box-shadow:
+            0 28px 68px color-mix(in srgb, var(--gray-950) 30%, transparent),
+            inset 0 0 0 1px color-mix(in srgb, var(--quran-chip-border) 20%, transparent);
+        backdrop-filter: blur(16px) saturate(1.02);
+        -webkit-backdrop-filter: blur(16px) saturate(1.02);
+    }
+
+    #quran-reader-history-modal {
+        direction: ltr;
+    }
+
+    #quran-reader-history-modal .fi-modal-header,
+    #quran-reader-history-modal .fi-modal-content,
+    #quran-reader-history-modal .fi-modal-footer,
+    #quran-reader-bookmarks-modal .fi-modal-header,
+    #quran-reader-bookmarks-modal .fi-modal-content,
+    #quran-reader-bookmarks-modal .fi-modal-footer {
+        direction: rtl;
+    }
+
+    #quran-reader-history-modal > .fi-modal-header,
+    #quran-reader-bookmarks-modal > .fi-modal-header {
+        border-bottom: 1px solid color-mix(in srgb, var(--quran-chip-border) 34%, transparent);
+        background: color-mix(in srgb, var(--quran-page-surface) 40%, transparent);
+    }
+
+    #quran-reader-history-modal .fi-modal-content,
+    #quran-reader-bookmarks-modal .fi-modal-content {
+        padding: 0.9rem 1rem 1rem;
+        background: transparent;
+    }
+
+    .quran-manager-shell {
+        display: grid;
+        gap: 0.72rem;
+    }
+
+    .quran-manager-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.45rem;
+    }
+
+    .quran-manager-toolbar-note {
+        font-size: 0.78rem;
+        line-height: 1.65;
+        color: color-mix(in srgb, var(--quran-subtle) 84%, var(--quran-panel-text));
+    }
+
+    .quran-manager-toolbar-button {
+        border: 1px solid color-mix(in srgb, var(--warning-500) 46%, transparent);
+        border-radius: 0.72rem;
+        background: color-mix(in srgb, var(--warning-100) 64%, white 36%);
+        color: color-mix(in srgb, var(--warning-800) 88%, var(--quran-panel-text));
+        font-size: 0.72rem;
+        font-weight: 700;
+        line-height: 1;
+        padding: 0.44rem 0.62rem;
+        transition:
+            transform 150ms ease,
+            border-color 180ms ease;
+    }
+
+    .quran-manager-toolbar-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .quran-manager-toolbar-button:not(:disabled):hover {
+        transform: translateY(-0.04rem);
+        border-color: color-mix(in srgb, var(--warning-500) 72%, transparent);
+    }
+
+    .quran-manager-table-shell {
+        border: 1px solid color-mix(in srgb, var(--quran-chip-border) 30%, transparent);
+        border-radius: 0.92rem;
+        overflow: auto;
+        max-height: min(68dvh, 46rem);
+        background: color-mix(in srgb, var(--quran-page-surface) 58%, transparent);
+    }
+
+    .quran-manager-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 39rem;
+    }
+
+    .quran-manager-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        text-align: right;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        padding: 0.62rem 0.66rem;
+        color: color-mix(in srgb, var(--quran-subtle) 82%, var(--quran-panel-text));
+        background: color-mix(in srgb, var(--quran-page-surface) 92%, transparent);
+        border-bottom: 1px solid color-mix(in srgb, var(--quran-chip-border) 38%, transparent);
+        white-space: nowrap;
+    }
+
+    .quran-manager-table tbody tr {
+        border-bottom: 1px solid color-mix(in srgb, var(--quran-chip-border) 22%, transparent);
+    }
+
+    .quran-manager-table tbody td {
+        vertical-align: middle;
+        text-align: right;
+        font-size: 0.8rem;
+        line-height: 1.65;
+        padding: 0.58rem 0.66rem;
+        color: color-mix(in srgb, var(--quran-panel-text) 92%, var(--primary-900));
+    }
+
+    .quran-manager-empty {
+        text-align: center !important;
+        opacity: 0.78;
+        font-weight: 600;
+        padding-block: 1.4rem !important;
+    }
+
+    .quran-manager-link {
+        border: 1px solid color-mix(in srgb, var(--primary-500) 36%, transparent);
+        border-radius: 0.62rem;
+        background: color-mix(in srgb, var(--primary-50) 62%, transparent);
+        color: color-mix(in srgb, var(--primary-700) 86%, var(--quran-panel-text));
+        font-size: 0.74rem;
+        font-weight: 700;
+        line-height: 1;
+        padding: 0.36rem 0.56rem;
+        transition:
+            transform 150ms ease,
+            border-color 180ms ease;
+    }
+
+    .quran-manager-link:hover {
+        transform: translateY(-0.04rem);
+        border-color: color-mix(in srgb, var(--primary-500) 66%, transparent);
+    }
+
+    .quran-manager-input {
+        width: 100%;
+        min-width: 11rem;
+        border: 1px solid color-mix(in srgb, var(--quran-chip-border) 44%, transparent);
+        border-radius: 0.66rem;
+        background: color-mix(in srgb, var(--quran-page-surface) 88%, transparent);
+        color: color-mix(in srgb, var(--quran-panel-text) 95%, var(--primary-900));
+        font-size: 0.74rem;
+        line-height: 1.25;
+        padding: 0.38rem 0.5rem;
+    }
+
+    .quran-manager-input::placeholder {
+        color: color-mix(in srgb, var(--quran-subtle) 56%, transparent);
+    }
+
+    .quran-manager-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.34rem;
+    }
+
+    .quran-manager-action-button {
+        border: 1px solid color-mix(in srgb, var(--primary-500) 40%, transparent);
+        border-radius: 0.58rem;
+        background: color-mix(in srgb, var(--primary-50) 56%, transparent);
+        color: color-mix(in srgb, var(--primary-700) 86%, var(--quran-panel-text));
+        font-size: 0.7rem;
+        font-weight: 700;
+        line-height: 1;
+        padding: 0.36rem 0.5rem;
+    }
+
+    .quran-manager-action-button--danger {
+        border-color: color-mix(in srgb, var(--danger-500) 48%, transparent);
+        background: color-mix(in srgb, var(--danger-100) 64%, transparent);
+        color: color-mix(in srgb, var(--danger-700) 84%, var(--quran-panel-text));
+    }
 }
