@@ -199,6 +199,9 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         )
         ->and($quranReaderScriptSource)->toContain('isNavigationBurstActive()')
         ->and($quranReaderScriptSource)->toContain('runFitPageToViewportLazily()')
+        ->and($quranReaderScriptSource)->toContain(
+            'const uniquePriorityPages = Array.from(new Set(normalizedPages));',
+        )
         ->and($quranReaderScriptSource)->toContain('abortActivePageLoad()')
         ->and($quranReaderScriptSource)->toContain('beginActivePageLoadAbortController()')
         ->and($quranReaderScriptSource)->toContain("error?.name === 'AbortError'")

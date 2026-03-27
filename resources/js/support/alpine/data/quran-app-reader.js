@@ -1753,6 +1753,12 @@ document.addEventListener('alpine:init', () => {
             return normalizedSource === 'keyboard' || normalizedSource === 'swipe';
         },
 
+        isFastFitPrioritySource(source = 'generic') {
+            const normalizedSource = String(source ?? '').trim();
+
+            return normalizedSource === 'surah-directory' || normalizedSource === 'search-result';
+        },
+
         resolveIdleWarmupPauseDuration(source = 'generic') {
             return this.isHighFrequencyNavigationSource(source)
                 ? idleWarmupPauseOnHighFrequencyNavigationMs
@@ -2145,12 +2151,19 @@ document.addEventListener('alpine:init', () => {
                     this.prefetchNeighborPages(normalizedPage);
                 }
 
+                const shouldUseFastFitPriority = this.isFastFitPrioritySource(source);
                 await this.layoutPageGuaranteed({
-                    revealDelayMs: this.isHighFrequencyNavigationSource(source) ? 180 : 220,
-                    maxAttempts: this.isHighFrequencyNavigationSource(source) ? 3 : 4,
-                    useIdleFit: !['surah-directory', 'search-result'].includes(
-                        String(source ?? '').trim(),
-                    ),
+                    revealDelayMs: shouldUseFastFitPriority
+                        ? 170
+                        : this.isHighFrequencyNavigationSource(source)
+                          ? 180
+                          : 220,
+                    maxAttempts: shouldUseFastFitPriority
+                        ? 3
+                        : this.isHighFrequencyNavigationSource(source)
+                          ? 3
+                          : 4,
+                    useIdleFit: !shouldUseFastFitPriority,
                 });
                 didCompletePageTransition = true;
             } catch (error) {
@@ -3793,8 +3806,7 @@ document.addEventListener('alpine:init', () => {
                 Date.now() >= this._idleWarmupPausedUntil &&
                 !this.isLoadingPage &&
                 !this.isNavigationBurstActive() &&
-                this._pendingNavigationRequest === null &&
-                !this._navigationRevealLocked
+                this._pendingNavigationRequest === null
             );
         },
 
@@ -3807,28 +3819,36 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            const pendingPages = [];
+            if (prepend) {
+                const uniquePriorityPages = Array.from(new Set(normalizedPages));
+                const priorityPageSet = new Set(uniquePriorityPages);
 
+                this._idleWarmupQueue = this._idleWarmupQueue.filter(
+                    (queuedPage) => !priorityPageSet.has(queuedPage),
+                );
+                this._idleWarmupQueue = [...uniquePriorityPages, ...this._idleWarmupQueue];
+                uniquePriorityPages.forEach((page) => {
+                    this._idleWarmupQueuedPages.add(page);
+                });
+
+                return;
+            }
+
+            const appendPages = [];
             normalizedPages.forEach((page) => {
                 if (this._idleWarmupQueuedPages.has(page)) {
                     return;
                 }
 
                 this._idleWarmupQueuedPages.add(page);
-                pendingPages.push(page);
+                appendPages.push(page);
             });
 
-            if (pendingPages.length === 0) {
+            if (appendPages.length === 0) {
                 return;
             }
 
-            if (prepend) {
-                this._idleWarmupQueue = [...pendingPages, ...this._idleWarmupQueue];
-
-                return;
-            }
-
-            this._idleWarmupQueue.push(...pendingPages);
+            this._idleWarmupQueue.push(...appendPages);
         },
 
         buildBackgroundWarmupSweep(centerPage = this.pageNumber) {
@@ -7494,9 +7514,9 @@ document.addEventListener('alpine:init', () => {
             );
         },
 
-        async waitForModalLifecycleToSettle(maxAttempts = 22, delayMs = 40) {
-            const attempts = Math.max(1, Math.trunc(Number(maxAttempts) || 22));
-            const waitDelayMs = Math.max(16, Math.trunc(Number(delayMs) || 40));
+        async waitForModalLifecycleToSettle(maxAttempts = 14, delayMs = 24) {
+            const attempts = Math.max(1, Math.trunc(Number(maxAttempts) || 14));
+            const waitDelayMs = Math.max(12, Math.trunc(Number(delayMs) || 24));
 
             for (let attempt = 0; attempt < attempts; attempt += 1) {
                 if (
@@ -7612,12 +7632,14 @@ document.addEventListener('alpine:init', () => {
                 commitNow: true,
                 settleDelayMs: 0,
             });
-            this._bypassNextFitCache = true;
-            await this.layoutPageGuaranteed({
-                revealDelayMs: 220,
-                maxAttempts: 6,
-                useIdleFit: false,
-            });
+            if (this._lastFittedPageNumber !== this.pageNumber) {
+                this._bypassNextFitCache = true;
+                await this.layoutPageGuaranteed({
+                    revealDelayMs: 160,
+                    maxAttempts: 3,
+                    useIdleFit: false,
+                });
+            }
             this.search.activeSurahNumber = surahNumber;
             this.activeAyahIndex = 0;
             this.activeWordIndex = 0;
@@ -7805,12 +7827,14 @@ document.addEventListener('alpine:init', () => {
                 commitNow: true,
                 settleDelayMs: 0,
             });
-            this._bypassNextFitCache = true;
-            await this.layoutPageGuaranteed({
-                revealDelayMs: 220,
-                maxAttempts: 6,
-                useIdleFit: false,
-            });
+            if (this._lastFittedPageNumber !== this.pageNumber) {
+                this._bypassNextFitCache = true;
+                await this.layoutPageGuaranteed({
+                    revealDelayMs: 160,
+                    maxAttempts: 3,
+                    useIdleFit: false,
+                });
+            }
             this.activeWordIndex = 0;
             this.recordNavigationHistory({
                 source: 'search-result',
