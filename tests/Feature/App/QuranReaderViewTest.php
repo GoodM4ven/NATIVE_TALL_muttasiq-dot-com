@@ -108,6 +108,12 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderViewSource)->toContain("\$wire.mountAction('navigationHistory')")
         ->and($quranReaderViewSource)->toContain('x-on:pointerdown="onBookmarkButtonPointerDown($event)"')
         ->and($quranReaderViewSource)->toContain('x-on:click.prevent="onBookmarkButtonClick()"')
+        ->and($quranReaderViewSource)->toContain(
+            "x-bind:class=\"{ 'quran-bookmark-toggle-button--bookmarked': isCurrentPageBookmarked() }\"",
+        )
+        ->and($quranReaderViewSource)->toContain(
+            "x-bind:aria-pressed=\"isCurrentPageBookmarked() ? 'true' : 'false'\"",
+        )
         ->and($quranReaderViewSource)->toContain('data-quran-copy-popover')
         ->and($quranReaderViewSource)->toContain('x-show="copyFeedback.visible"')
         ->and($quranReaderViewSource)->toContain('class="quran-page-slider outline-none"')
@@ -183,7 +189,14 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderScriptSource)->toContain('registerNavigationBurst(source = \'generic\')')
         ->and($quranReaderScriptSource)->toContain('navigationBurstRemainingMsFor(source = \'generic\')')
         ->and($quranReaderScriptSource)->toContain('resolveNavigationCommitDelay(source = \'generic\', delayMs = navigationSettleDelayMs)')
-        ->and($quranReaderScriptSource)->toContain('shouldSuspendPageCounterMorph()')
+        ->and($quranReaderScriptSource)->toContain(
+            'shouldSuspendPageCounterMorph({ source = \'generic\' } = {})',
+        )
+        ->and($quranReaderScriptSource)->toContain('clampPage(value, maxPage = this.maxPage)')
+        ->and($quranReaderScriptSource)->toContain('resetCurrentPageFitStyles()')
+        ->and($quranReaderScriptSource)->toContain(
+            'shouldDeferPostModalTargetFit(pageNumber = this.pageNumber, source = \'generic\')',
+        )
         ->and($quranReaderScriptSource)->toContain('isNavigationBurstActive()')
         ->and($quranReaderScriptSource)->toContain('runFitPageToViewportLazily()')
         ->and($quranReaderScriptSource)->toContain('abortActivePageLoad()')

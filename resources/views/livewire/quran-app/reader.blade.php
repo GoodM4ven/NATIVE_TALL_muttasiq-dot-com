@@ -1284,10 +1284,14 @@
     })"
     x-bind:class="{ 'quran-reader--visual-enhancements-disabled': !doesEnableVisualEnhancements }"
     x-on:control-panel-updated.window="applyControlPanelSettings($event.detail?.controlPanel ?? {})"
+    x-on:open-modal.window="handleModalLifecycleEvent('opened', $event)"
     x-on:x-modal-opened.window="handleModalLifecycleEvent('opened', $event)"
     x-on:close-modal.window="handleModalLifecycleEvent('closing', $event)"
     x-on:close-modal-quietly.window="handleModalLifecycleEvent('closing', $event)"
     x-on:x-modal-closed.window="handleModalLifecycleEvent('closed', $event)"
+    x-on:opened-form-component-action-modal.window="handleModalLifecycleEvent('opened', $event)"
+    x-on:closing-form-component-action-modal.window="handleModalLifecycleEvent('closing', $event)"
+    x-on:closed-form-component-action-modal.window="handleModalLifecycleEvent('closed', $event)"
 >
     @if (!$ready)
         <section
@@ -1367,29 +1371,9 @@
                         id="quran-reader-bookmark-toggle"
                         data-quran-bookmark-toggle
                         type="button"
-                        x-bind:class="{
-                            'quran-bookmark-toggle-button--bookmarked': (
-                                typeof bookmarks !== 'undefined' &&
-                                Array.isArray(bookmarks) &&
-                                bookmarks.some((bookmark) =>
-                                    Number(bookmark?.page_number ?? 0) === Number(pageNumber),
-                                )
-                            )
-                        }"
-                        x-bind:aria-pressed="(
-                            typeof bookmarks !== 'undefined' &&
-                            Array.isArray(bookmarks) &&
-                            bookmarks.some((bookmark) =>
-                                Number(bookmark?.page_number ?? 0) === Number(pageNumber),
-                            )
-                        ) ? 'true' : 'false'"
-                        x-bind:aria-label="(
-                            typeof bookmarks !== 'undefined' &&
-                            Array.isArray(bookmarks) &&
-                            bookmarks.some((bookmark) =>
-                                Number(bookmark?.page_number ?? 0) === Number(pageNumber),
-                            )
-                        ) ? 'إزالة علامة الصفحة الحالية' : 'حفظ الصفحة الحالية كعلامة'"
+                        x-bind:class="{ 'quran-bookmark-toggle-button--bookmarked': isCurrentPageBookmarked() }"
+                        x-bind:aria-pressed="isCurrentPageBookmarked() ? 'true' : 'false'"
+                        x-bind:aria-label="isCurrentPageBookmarked() ? 'إزالة علامة الصفحة الحالية' : 'حفظ الصفحة الحالية كعلامة'"
                         x-on:pointerdown="onBookmarkButtonPointerDown($event)"
                         x-on:pointerup="onBookmarkButtonPointerUp($event)"
                         x-on:pointercancel="onBookmarkButtonPointerCancel()"

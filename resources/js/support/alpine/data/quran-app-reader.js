@@ -92,6 +92,7 @@ const bookmarkHoldDelayMs = 680;
 const copyPopoverVisibleDurationMs = 920;
 const copiedHighlightVisibleDurationMs = 3000;
 const wordClickSuppressionResetMs = 180;
+const pageCounterPulseDurationMs = 540;
 const navigationSettleDelayMs = 28;
 const navigationBurstInputThresholdMs = 140;
 const navigationBurstSettleDelayMs = 72;
@@ -101,6 +102,12 @@ const openingSpreadFinalScaleMultiplier = 0.72;
 const fitRobustWidthQuantile = 0.88;
 const fitRobustWidthOutlierThreshold = 1.2;
 const fitResultCacheLimit = 180;
+const fitCacheStorageVersion = 2;
+const fitCacheStorageKey = 'quran-reader-fit-cache-v2';
+const fitCacheViewportBucketSizePx = 24;
+const idleWarmupPauseOnHighFrequencyNavigationMs = 520;
+const idleWarmupPauseOnStandardNavigationMs = 160;
+const idleWarmupResumeDelayMs = 220;
 const fitDefaultProfile = Object.freeze({
     compressionLeadingFloor: 0.46,
     compressionGapFloor: 0,
@@ -536,6 +543,7 @@ document.addEventListener('alpine:init', () => {
         storage: {
             isPersisted: false,
             persistRequested: false,
+            fitCacheBreakpoint: '',
         },
         search: {
             query: '',
@@ -600,6 +608,10 @@ document.addEventListener('alpine:init', () => {
         _fitRunCounter: 0,
         _lastFittedPageNumber: 0,
         _fitResultByContext: new Map(),
+        _fitSanityCheckTimer: null,
+        _fitCachePersistWriteTimer: null,
+        _fitCacheBreakpoint: '',
+        _bypassNextFitCache: false,
         _pageInputCommitTimer: null,
         _searchRequestSerial: 0,
         _searchStreamObserver: null,
@@ -613,6 +625,9 @@ document.addEventListener('alpine:init', () => {
         _surahDirectoryAutoFocusRaf: null,
         _surahDirectoryPostOpenTimers: [],
         _modalLayoutResumeTimer: null,
+        _postModalTargetFitPage: 0,
+        _postModalTargetFitRetries: 0,
+        _postModalTargetFitTimer: null,
         _activeModalIds: new Set(),
         _isModalLifecycleSettling: false,
         _wordPressHoldTimer: null,
@@ -629,6 +644,15 @@ document.addEventListener('alpine:init', () => {
         _lastPageInputVisualValue: 1,
         _lastWordHoldAt: 0,
         _lastWordGapRebalancedPageNumber: 0,
+        _idleWarmupQueue: [],
+        _idleWarmupQueuedPages: new Set(),
+        _idleWarmupHandle: null,
+        _idleWarmupHandleKind: null,
+        _idleWarmupPausedUntil: 0,
+        _idleWarmupInFlight: false,
+        _idleWarmupInFlightPage: 0,
+        _idleWarmupAbortController: null,
+        _idleWarmupHasBackgroundSweepQueued: false,
         wordPress: {
             active: false,
             pointerId: null,
@@ -803,8 +827,15 @@ document.addEventListener('alpine:init', () => {
                 this._modalLayoutResumeTimer = null;
             }
 
+            if (this._postModalTargetFitTimer !== null) {
+                clearTimeout(this._postModalTargetFitTimer);
+                this._postModalTargetFitTimer = null;
+            }
+
             this._activeModalIds.clear();
             this._isModalLifecycleSettling = false;
+            this._postModalTargetFitPage = 0;
+            this._postModalTargetFitRetries = 0;
 
             if (this._wordPressHoldTimer !== null) {
                 clearTimeout(this._wordPressHoldTimer);
@@ -819,6 +850,16 @@ document.addEventListener('alpine:init', () => {
             if (this._copiedHighlightTimer !== null) {
                 clearTimeout(this._copiedHighlightTimer);
                 this._copiedHighlightTimer = null;
+            }
+
+            if (this._fitSanityCheckTimer !== null) {
+                clearTimeout(this._fitSanityCheckTimer);
+                this._fitSanityCheckTimer = null;
+            }
+
+            if (this._fitCachePersistWriteTimer !== null) {
+                clearTimeout(this._fitCachePersistWriteTimer);
+                this._fitCachePersistWriteTimer = null;
             }
 
             this.hideCopyFeedback();
@@ -844,13 +885,20 @@ document.addEventListener('alpine:init', () => {
             }
 
             this.abortActivePageLoad();
+            this.abortIdleWarmupFetch();
+            this.cancelIdleWarmupHandle();
             this._pendingNavigationRequest = null;
             this._navigationRevealLocked = false;
             this.isTransitioningOutPage = false;
             this.clearNavigationBurstState();
             this._layoutActivePromise = null;
             this._queuedLayoutRequest = null;
-            this.clearFitResultCache();
+            this._bypassNextFitCache = false;
+            this._idleWarmupQueue = [];
+            this._idleWarmupQueuedPages.clear();
+            this._idleWarmupInFlightPage = 0;
+            this.clearFitResultCache({ persist: false });
+            this.flushPersistedFitCacheWrite();
         },
 
         initializeLayoutObservers() {
@@ -899,11 +947,243 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        resolveCurrentBreakpointName() {
+            if (
+                typeof window === 'undefined' ||
+                !window.Alpine ||
+                typeof window.Alpine.store !== 'function'
+            ) {
+                return '';
+            }
+
+            const breakpointStore = window.Alpine.store('bp');
+
+            return String(breakpointStore?.current ?? '').trim();
+        },
+
+        viewportBucketValue(value) {
+            const normalizedValue = Math.max(0, Math.round(Number(value) || 0));
+
+            if (normalizedValue <= 0) {
+                return 0;
+            }
+
+            const bucket = Math.max(8, Math.trunc(Number(fitCacheViewportBucketSizePx) || 24));
+
+            return Math.max(bucket, Math.round(normalizedValue / bucket) * bucket);
+        },
+
+        normalizeFitCacheEntry(entry) {
+            if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+                return null;
+            }
+
+            if (!entry.layout || typeof entry.layout !== 'object' || Array.isArray(entry.layout)) {
+                return null;
+            }
+
+            const scale = Number(entry.scale);
+
+            if (!Number.isFinite(scale) || scale <= 0) {
+                return null;
+            }
+
+            return {
+                layout: { ...entry.layout },
+                scale: Number(scale.toFixed(4)),
+            };
+        },
+
+        trimFitResultCache() {
+            while (this._fitResultByContext.size > fitResultCacheLimit) {
+                const oldestCacheKey = this._fitResultByContext.keys().next().value;
+
+                if (!oldestCacheKey) {
+                    break;
+                }
+
+                this._fitResultByContext.delete(oldestCacheKey);
+            }
+        },
+
+        rememberFitResult(cacheKey, entry, { persist = true } = {}) {
+            if (String(cacheKey ?? '').trim() === '') {
+                return;
+            }
+
+            const normalizedEntry = this.normalizeFitCacheEntry(entry);
+
+            if (!normalizedEntry) {
+                return;
+            }
+
+            this._fitResultByContext.set(cacheKey, normalizedEntry);
+            this.trimFitResultCache();
+
+            if (persist) {
+                this.queuePersistedFitCacheWrite();
+            }
+        },
+
+        forgetFitResult(cacheKey, { persist = true } = {}) {
+            if (String(cacheKey ?? '').trim() === '') {
+                return;
+            }
+
+            this._fitResultByContext.delete(cacheKey);
+
+            if (persist) {
+                this.queuePersistedFitCacheWrite();
+            }
+        },
+
+        syncFitCacheBreakpoint({ persist = true } = {}) {
+            const currentBreakpoint = this.resolveCurrentBreakpointName();
+
+            if (this._fitCacheBreakpoint === '') {
+                this._fitCacheBreakpoint = currentBreakpoint;
+                this.storage.fitCacheBreakpoint = currentBreakpoint;
+
+                return;
+            }
+
+            if (currentBreakpoint === this._fitCacheBreakpoint) {
+                return;
+            }
+
+            this._fitCacheBreakpoint = currentBreakpoint;
+            this.storage.fitCacheBreakpoint = currentBreakpoint;
+            this.clearFitResultCache({ persist: false });
+
+            if (persist) {
+                writeLocalStorage(fitCacheStorageKey, {
+                    version: fitCacheStorageVersion,
+                    breakpoint: currentBreakpoint,
+                    updated_at: Date.now(),
+                    entries: {},
+                    order: [],
+                });
+            }
+        },
+
+        hydratePersistedFitCache() {
+            const persistedCache = readLocalStorage(fitCacheStorageKey, null);
+
+            if (!persistedCache || typeof persistedCache !== 'object') {
+                return;
+            }
+
+            const persistedVersion = Math.trunc(Number(persistedCache?.version ?? 0));
+
+            if (persistedVersion !== fitCacheStorageVersion) {
+                return;
+            }
+
+            const persistedBreakpoint = String(persistedCache?.breakpoint ?? '').trim();
+            const currentBreakpoint = this.resolveCurrentBreakpointName();
+
+            if (
+                persistedBreakpoint !== '' &&
+                currentBreakpoint !== '' &&
+                persistedBreakpoint !== currentBreakpoint
+            ) {
+                writeLocalStorage(fitCacheStorageKey, {
+                    version: fitCacheStorageVersion,
+                    breakpoint: currentBreakpoint,
+                    updated_at: Date.now(),
+                    entries: {},
+                    order: [],
+                });
+
+                return;
+            }
+
+            const persistedEntries =
+                persistedCache?.entries &&
+                typeof persistedCache.entries === 'object' &&
+                !Array.isArray(persistedCache.entries)
+                    ? persistedCache.entries
+                    : {};
+            const persistedOrder = Array.isArray(persistedCache?.order)
+                ? persistedCache.order.map((key) => String(key ?? '').trim()).filter(Boolean)
+                : Object.keys(persistedEntries);
+
+            this._fitResultByContext.clear();
+
+            persistedOrder.forEach((cacheKey) => {
+                const normalizedEntry = this.normalizeFitCacheEntry(persistedEntries[cacheKey]);
+
+                if (!normalizedEntry) {
+                    return;
+                }
+
+                this._fitResultByContext.set(cacheKey, normalizedEntry);
+            });
+
+            this.trimFitResultCache();
+            this._fitCacheBreakpoint = currentBreakpoint;
+            this.storage.fitCacheBreakpoint = currentBreakpoint;
+        },
+
+        queuePersistedFitCacheWrite(delayMs = 140) {
+            if (typeof window === 'undefined') {
+                return;
+            }
+
+            if (this._fitCachePersistWriteTimer !== null) {
+                clearTimeout(this._fitCachePersistWriteTimer);
+                this._fitCachePersistWriteTimer = null;
+            }
+
+            this._fitCachePersistWriteTimer = window.setTimeout(
+                () => {
+                    this._fitCachePersistWriteTimer = null;
+                    this.flushPersistedFitCacheWrite();
+                },
+                Math.max(24, Math.trunc(Number(delayMs) || 140)),
+            );
+        },
+
+        flushPersistedFitCacheWrite() {
+            const currentBreakpoint = this.resolveCurrentBreakpointName();
+            const entries = {};
+            const order = [];
+            const cacheEntries = Array.from(this._fitResultByContext.entries()).slice(
+                -fitResultCacheLimit,
+            );
+
+            cacheEntries.forEach(([cacheKey, entry]) => {
+                const normalizedEntry = this.normalizeFitCacheEntry(entry);
+
+                if (!normalizedEntry) {
+                    return;
+                }
+
+                entries[cacheKey] = normalizedEntry;
+                order.push(cacheKey);
+            });
+
+            writeLocalStorage(fitCacheStorageKey, {
+                version: fitCacheStorageVersion,
+                breakpoint: currentBreakpoint,
+                viewport_bucket: {
+                    width: this.viewportBucketValue(window.innerWidth),
+                    height: this.viewportBucketValue(window.innerHeight),
+                },
+                updated_at: Date.now(),
+                entries,
+                order,
+            });
+        },
+
         async bootstrap() {
             await this.ensurePersistentStorage();
+            this.syncFitCacheBreakpoint({ persist: false });
+            this.hydratePersistedFitCache();
             await this.ensureCurrentPageLoaded();
             await this.layoutPageGuaranteed({ revealDelayMs: 240 });
             this.queueStartupPreload();
+            this.scheduleIdleWarmup();
             this.warmSearchIndex();
         },
 
@@ -1389,7 +1669,11 @@ document.addEventListener('alpine:init', () => {
                 .map((digit) => (digit === ' ' ? '' : digit));
         },
 
-        triggerPageCounterPulse(previousValue, nextValue) {
+        clampPage(value, maxPage = this.maxPage) {
+            return clampPage(value, maxPage);
+        },
+
+        triggerPageCounterPulse(previousValue, nextValue, { source = 'generic' } = {}) {
             if (this.pageCounterPulse.timer !== null) {
                 clearTimeout(this.pageCounterPulse.timer);
                 this.pageCounterPulse.timer = null;
@@ -1397,32 +1681,41 @@ document.addEventListener('alpine:init', () => {
 
             const morph = this.buildDigitMorphSegments(previousValue, nextValue);
 
-            this.pageCounterPulse.isActive = false;
             this.pageCounterPulse.segments = morph.segments;
             this.pageCounterPulse.hasChanges = morph.hasChanges;
 
-            if (!morph.hasChanges || this.shouldSuspendPageCounterMorph()) {
+            if (!morph.hasChanges || this.shouldSuspendPageCounterMorph({ source })) {
                 this.pageCounterPulse.isActive = false;
 
                 return;
             }
 
-            requestAnimationFrame(() => {
-                this.pageCounterPulse.isActive = true;
-            });
+            if (!this.pageCounterPulse.isActive) {
+                requestAnimationFrame(() => {
+                    this.pageCounterPulse.isActive = true;
+                });
+            }
 
             this.pageCounterPulse.timer = window.setTimeout(() => {
                 this.pageCounterPulse.isActive = false;
                 this.pageCounterPulse.timer = null;
-            }, 540);
+            }, pageCounterPulseDurationMs);
         },
 
-        shouldSuspendPageCounterMorph() {
-            return (
-                this.isLoadingPage ||
-                this._pendingNavigationRequest !== null ||
-                this.isNavigationBurstActive()
-            );
+        shouldSuspendPageCounterMorph({ source = 'generic' } = {}) {
+            const normalizedSource = String(source ?? 'generic').trim();
+
+            if (
+                normalizedSource === 'keyboard' ||
+                normalizedSource === 'swipe' ||
+                normalizedSource === 'page-input' ||
+                normalizedSource === 'page-slider' ||
+                normalizedSource === 'page-slider-commit'
+            ) {
+                return false;
+            }
+
+            return this.isLoadingPage;
         },
 
         navigationBasePage() {
@@ -1458,6 +1751,12 @@ document.addEventListener('alpine:init', () => {
             const normalizedSource = String(source ?? '').trim();
 
             return normalizedSource === 'keyboard' || normalizedSource === 'swipe';
+        },
+
+        resolveIdleWarmupPauseDuration(source = 'generic') {
+            return this.isHighFrequencyNavigationSource(source)
+                ? idleWarmupPauseOnHighFrequencyNavigationMs
+                : idleWarmupPauseOnStandardNavigationMs;
         },
 
         clearNavigationBurstState() {
@@ -1590,9 +1889,14 @@ document.addEventListener('alpine:init', () => {
                 direction,
             );
             const previousInputPage = clampPage(this.pageInput, this.maxPage);
+            this.pauseIdleWarmup(this.resolveIdleWarmupPauseDuration(source), {
+                preservePage: normalizedTargetPage,
+            });
 
             if (previousInputPage !== normalizedTargetPage) {
-                this.triggerPageCounterPulse(previousInputPage, normalizedTargetPage);
+                this.triggerPageCounterPulse(previousInputPage, normalizedTargetPage, {
+                    source,
+                });
             }
 
             this.pageInput = normalizedTargetPage;
@@ -1773,7 +2077,9 @@ document.addEventListener('alpine:init', () => {
 
             if (normalizedPage === this.pageNumber && this.mushafLines.length > 0) {
                 if (this.pageInput !== normalizedPage) {
-                    this.triggerPageCounterPulse(this.pageInput, normalizedPage);
+                    this.triggerPageCounterPulse(this.pageInput, normalizedPage, {
+                        source,
+                    });
                 }
 
                 this.pageInput = normalizedPage;
@@ -1842,6 +2148,9 @@ document.addEventListener('alpine:init', () => {
                 await this.layoutPageGuaranteed({
                     revealDelayMs: this.isHighFrequencyNavigationSource(source) ? 180 : 220,
                     maxAttempts: this.isHighFrequencyNavigationSource(source) ? 3 : 4,
+                    useIdleFit: !['surah-directory', 'search-result'].includes(
+                        String(source ?? '').trim(),
+                    ),
                 });
                 didCompletePageTransition = true;
             } catch (error) {
@@ -1873,6 +2182,8 @@ document.addEventListener('alpine:init', () => {
                         void this.commitPendingNavigation();
                     }
                 }
+
+                this.scheduleIdleWarmup();
             }
         },
 
@@ -1886,7 +2197,9 @@ document.addEventListener('alpine:init', () => {
             const previousVisualPage = clampPage(this._lastPageInputVisualValue, this.maxPage);
 
             if (normalizedInputPage !== previousVisualPage) {
-                this.triggerPageCounterPulse(previousVisualPage, normalizedInputPage);
+                this.triggerPageCounterPulse(previousVisualPage, normalizedInputPage, {
+                    source: 'page-input',
+                });
             }
 
             this._lastPageInputVisualValue = normalizedInputPage;
@@ -1950,6 +2263,7 @@ document.addEventListener('alpine:init', () => {
 
         applyPayload(payload, { setPageNumber = false, persistPageNumber = true } = {}) {
             const normalizedPayload = normalizePayload(payload);
+            const previousPageNumber = Math.max(1, Math.trunc(Number(this.pageNumber ?? 1)));
 
             this.ready = normalizedPayload.ready;
             this.maxPage = normalizedPayload.maxPage;
@@ -2001,7 +2315,9 @@ document.addEventListener('alpine:init', () => {
             }
 
             if (this.pageInput !== this.pageNumber) {
-                this.triggerPageCounterPulse(this.pageInput, this.pageNumber);
+                this.triggerPageCounterPulse(this.pageInput, this.pageNumber, {
+                    source: 'payload-sync',
+                });
             }
 
             this.pageInput = this.pageNumber;
@@ -2009,6 +2325,14 @@ document.addEventListener('alpine:init', () => {
             this.syncPageFontFace();
             this.syncBasmallahFontFace();
             this.syncSurahHeaderFontFace();
+
+            if (
+                this.pageNumber !== previousPageNumber ||
+                this._lastFittedPageNumber !== this.pageNumber
+            ) {
+                this.resetCurrentPageFitStyles();
+                this._lastFittedPageNumber = 0;
+            }
         },
 
         async nextTickAsync() {
@@ -2123,8 +2447,12 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        clearFitResultCache() {
+        clearFitResultCache({ persist = true } = {}) {
             this._fitResultByContext.clear();
+
+            if (persist) {
+                this.queuePersistedFitCacheWrite();
+            }
         },
 
         normalizeLayoutRequest({ revealDelayMs = 180, maxAttempts = 4 } = {}) {
@@ -2215,10 +2543,163 @@ document.addEventListener('alpine:init', () => {
                 () => {
                     this._modalLayoutResumeTimer = null;
                     this._isModalLifecycleSettling = false;
-                    this.scheduleLayout({ revealDelayMs: 240 });
+                    this._bypassNextFitCache = true;
+                    void this.layoutPageGuaranteed({ revealDelayMs: 240, maxAttempts: 5 });
                 },
                 Math.max(0, Math.trunc(Number(delayMs) || 220)),
             );
+        },
+
+        clearPendingPostModalTargetFit() {
+            if (this._postModalTargetFitTimer !== null) {
+                clearTimeout(this._postModalTargetFitTimer);
+                this._postModalTargetFitTimer = null;
+            }
+
+            this._postModalTargetFitPage = 0;
+            this._postModalTargetFitRetries = 0;
+        },
+
+        queuePendingPostModalTargetFit(pageNumber) {
+            const normalizedPageNumber = clampPage(Number(pageNumber ?? 0), this.maxPage);
+
+            if (normalizedPageNumber <= 0) {
+                this.clearPendingPostModalTargetFit();
+
+                return;
+            }
+
+            this._postModalTargetFitPage = normalizedPageNumber;
+            this._postModalTargetFitRetries = 0;
+        },
+
+        async fitSpecificPageAfterModalClose(
+            pageNumber,
+            { revealDelayMs = 240, maxAttempts = 6 } = {},
+        ) {
+            const normalizedPageNumber = clampPage(Number(pageNumber ?? 0), this.maxPage);
+
+            if (
+                normalizedPageNumber <= 0 ||
+                this.pageNumber !== normalizedPageNumber ||
+                !this.hasRenderablePage() ||
+                this.isLoadingPage ||
+                this._navigationRevealLocked ||
+                this._isModalLifecycleSettling ||
+                this._activeModalIds.size > 0 ||
+                this.openModalCount() > 0
+            ) {
+                return false;
+            }
+
+            this.pauseIdleWarmup(960);
+            this._bypassNextFitCache = true;
+            this.isFittingPage = true;
+            this.clearLayoutTimers();
+
+            await this.nextTickAsync();
+            await this.layoutPageGuaranteed({
+                revealDelayMs,
+                maxAttempts,
+            });
+
+            if (this._lastFittedPageNumber !== normalizedPageNumber) {
+                this._bypassNextFitCache = true;
+                await this.layoutPageGuaranteed({
+                    revealDelayMs: 180,
+                    maxAttempts: Math.max(4, maxAttempts - 1),
+                });
+            }
+
+            return this._lastFittedPageNumber === normalizedPageNumber;
+        },
+
+        schedulePendingModalCloseFit(
+            pageNumber,
+            { retries = 36, delayMs = 90, revealDelayMs = 240, maxAttempts = 6 } = {},
+        ) {
+            const normalizedPageNumber = clampPage(Number(pageNumber ?? 0), this.maxPage);
+
+            if (normalizedPageNumber <= 0) {
+                this.clearPendingPostModalTargetFit();
+
+                return;
+            }
+
+            if (this._postModalTargetFitPage !== normalizedPageNumber) {
+                this._postModalTargetFitRetries = Math.max(0, Math.trunc(Number(retries) || 36));
+            } else {
+                this._postModalTargetFitRetries = Math.max(
+                    this._postModalTargetFitRetries,
+                    Math.max(0, Math.trunc(Number(retries) || 36)),
+                );
+            }
+
+            this._postModalTargetFitPage = normalizedPageNumber;
+
+            if (this._postModalTargetFitTimer !== null) {
+                clearTimeout(this._postModalTargetFitTimer);
+                this._postModalTargetFitTimer = null;
+            }
+
+            const attemptFit = () => {
+                if (this._postModalTargetFitPage !== normalizedPageNumber) {
+                    return;
+                }
+
+                const canFitNow =
+                    this.pageNumber === normalizedPageNumber &&
+                    this.hasRenderablePage() &&
+                    !this.isLoadingPage &&
+                    !this._navigationRevealLocked &&
+                    !this._isModalLifecycleSettling &&
+                    this._activeModalIds.size === 0 &&
+                    this.openModalCount() <= 0;
+
+                if (canFitNow) {
+                    void this.fitSpecificPageAfterModalClose(normalizedPageNumber, {
+                        revealDelayMs,
+                        maxAttempts,
+                    }).finally(() => {
+                        if (this._postModalTargetFitPage === normalizedPageNumber) {
+                            this.clearPendingPostModalTargetFit();
+                        }
+                    });
+
+                    return;
+                }
+
+                if (this._postModalTargetFitRetries <= 0) {
+                    this.clearPendingPostModalTargetFit();
+
+                    return;
+                }
+
+                this._postModalTargetFitRetries -= 1;
+                this._postModalTargetFitTimer = window.setTimeout(
+                    () => {
+                        this._postModalTargetFitTimer = null;
+                        attemptFit();
+                    },
+                    Math.max(36, Math.trunc(Number(delayMs) || 90)),
+                );
+            };
+
+            attemptFit();
+        },
+
+        shouldDeferPostModalTargetFit(pageNumber = this.pageNumber, source = 'generic') {
+            const normalizedPageNumber = clampPage(Number(pageNumber ?? 0), this.maxPage);
+            const normalizedSource = String(source ?? 'generic').trim();
+
+            if (
+                normalizedPageNumber <= 0 ||
+                this._postModalTargetFitPage !== normalizedPageNumber
+            ) {
+                return false;
+            }
+
+            return normalizedSource === 'surah-directory' || normalizedSource === 'search-result';
         },
 
         resumeLayoutWhenNoOpenModals(attempt = 0) {
@@ -2262,6 +2743,7 @@ document.addEventListener('alpine:init', () => {
                     this._activeModalIds.add(modalId);
                 }
 
+                this._bypassNextFitCache = true;
                 this.holdPageHiddenForModalLifecycle();
 
                 return;
@@ -2269,6 +2751,7 @@ document.addEventListener('alpine:init', () => {
 
             if (kind === 'closing') {
                 if (modalId === '' || this._activeModalIds.has(modalId) || openModalCount > 0) {
+                    this._bypassNextFitCache = true;
                     this.holdPageHiddenForModalLifecycle();
                     this.resumeLayoutWhenNoOpenModals();
                 }
@@ -2281,6 +2764,7 @@ document.addEventListener('alpine:init', () => {
                     this._activeModalIds.delete(modalId);
                 }
 
+                this._bypassNextFitCache = true;
                 this.holdPageHiddenForModalLifecycle();
 
                 window.setTimeout(() => {
@@ -2319,11 +2803,24 @@ document.addEventListener('alpine:init', () => {
                     return;
                 }
 
+                if (this._lastFittedPageNumber !== this.pageNumber) {
+                    const adjusted = this.applySafetyScaleForCurrentPageOverflow();
+
+                    if (adjusted) {
+                        this.scheduleLayout({
+                            revealDelayMs: 120,
+                            maxAttempts: 5,
+                        });
+                    }
+                }
+
                 this.isFittingPage = false;
             }, delayMs);
         },
 
         handleViewportChange() {
+            this.syncFitCacheBreakpoint();
+
             if (this._viewportChangeDebounceTimer !== null) {
                 clearTimeout(this._viewportChangeDebounceTimer);
             }
@@ -2405,7 +2902,7 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        async layoutPage({ revealDelayMs = 180 } = {}) {
+        async layoutPage({ revealDelayMs = 180, useIdleFit = true } = {}) {
             const layoutToken = this.beginLayoutCycle();
 
             await this.nextTickAsync();
@@ -2422,7 +2919,11 @@ document.addEventListener('alpine:init', () => {
             await this.nextTickAsync();
             await nextAnimationFrame();
 
-            await this.runFitPageToViewportLazily();
+            if (useIdleFit) {
+                await this.runFitPageToViewportLazily();
+            } else {
+                this.fitPageToViewport();
+            }
             this.queuePageReveal(layoutToken, revealDelayMs);
         },
 
@@ -2447,7 +2948,11 @@ document.addEventListener('alpine:init', () => {
             this.fitPageToViewport();
         },
 
-        async layoutPageGuaranteed({ revealDelayMs = 180, maxAttempts = 4 } = {}) {
+        async layoutPageGuaranteed({
+            revealDelayMs = 180,
+            maxAttempts = 4,
+            useIdleFit = true,
+        } = {}) {
             const layoutRequest = this.normalizeLayoutRequest({
                 revealDelayMs,
                 maxAttempts,
@@ -2465,6 +2970,7 @@ document.addEventListener('alpine:init', () => {
                     const fitRunsBeforeAttempt = this._fitRunCounter;
                     await this.layoutPage({
                         revealDelayMs: attempt === 0 ? layoutRequest.revealDelayMs : 160,
+                        useIdleFit,
                     });
 
                     if (
@@ -2566,6 +3072,20 @@ document.addEventListener('alpine:init', () => {
                 pageSurahHeaderScale: 1,
                 basmallahBottomGapScale: defaultBasmallahBottomGapScale,
             });
+        },
+
+        resetCurrentPageFitStyles() {
+            const rootElement = this.$el;
+
+            if (!(rootElement instanceof HTMLElement)) {
+                this.pageScale = 1;
+
+                return;
+            }
+
+            this.resetFitLayoutVariables(rootElement);
+            rootElement.style.setProperty('--quran-page-scale', '1');
+            this.pageScale = 1;
         },
 
         applyFitLayoutVariables(rootElement, layout = {}) {
@@ -2782,6 +3302,150 @@ document.addEventListener('alpine:init', () => {
             return { ...fitDefaultProfile };
         },
 
+        scheduleFitSanityCheck({
+            cacheKey = '',
+            pageNumber = this.pageNumber,
+            availableWidth = 0,
+            availableHeight = 0,
+            strictWidthOverflowTolerance = 1.06,
+            strictHeightOverflowTolerance = 1.01,
+        } = {}) {
+            const normalizedCacheKey = String(cacheKey ?? '').trim();
+            const normalizedPageNumber = Math.max(
+                1,
+                Math.trunc(Number(pageNumber ?? this.pageNumber)),
+            );
+            const normalizedAvailableWidth = Math.max(1, Number(availableWidth) || 1);
+            const normalizedAvailableHeight = Math.max(1, Number(availableHeight) || 1);
+            const widthOverflowThreshold =
+                normalizedAvailableWidth * Number(strictWidthOverflowTolerance ?? 1.06);
+            const heightOverflowThreshold =
+                normalizedAvailableHeight * Number(strictHeightOverflowTolerance ?? 1.01);
+
+            if (this._fitSanityCheckTimer !== null) {
+                clearTimeout(this._fitSanityCheckTimer);
+                this._fitSanityCheckTimer = null;
+            }
+
+            this._fitSanityCheckTimer = window.setTimeout(() => {
+                this._fitSanityCheckTimer = null;
+
+                if (
+                    Math.max(1, Math.trunc(Number(this.pageNumber ?? 1))) !== normalizedPageNumber
+                ) {
+                    return;
+                }
+
+                const contentElement = this.$refs.pageContent;
+
+                if (!(contentElement instanceof Element)) {
+                    return;
+                }
+
+                const measured = this.measureRenderedBounds(contentElement, {
+                    useRobustWidth: false,
+                });
+                const hasOverflow =
+                    measured.width > widthOverflowThreshold ||
+                    measured.height > heightOverflowThreshold;
+
+                if (!hasOverflow) {
+                    return;
+                }
+
+                if (normalizedCacheKey !== '') {
+                    this.forgetFitResult(normalizedCacheKey);
+                }
+
+                this.scheduleLayout({
+                    revealDelayMs: 120,
+                    maxAttempts: 5,
+                });
+            }, 160);
+        },
+
+        applySafetyScaleForCurrentPageOverflow() {
+            const rootElement = this.$el;
+            const frameElement = this.$refs.pageFrame;
+            const contentElement = this.$refs.pageContent;
+
+            if (!rootElement || !frameElement || !contentElement) {
+                return false;
+            }
+
+            const frameRect = frameElement.getBoundingClientRect();
+            const frameParentRect = frameElement.parentElement?.getBoundingClientRect?.() ?? null;
+            const availableWidth = Math.max(
+                1,
+                Number(
+                    frameParentRect?.width ??
+                        frameRect?.width ??
+                        frameElement.parentElement?.clientWidth ??
+                        frameElement.clientWidth ??
+                        1,
+                ),
+            );
+            const computedRootStyles = window.getComputedStyle(rootElement);
+            const fitHeightRatio = Math.min(
+                1,
+                Math.max(
+                    0.5,
+                    Number.parseFloat(
+                        computedRootStyles.getPropertyValue('--quran-fit-height-ratio'),
+                    ) || 1,
+                ),
+            );
+            const availableHeight = Math.max(
+                1,
+                Number(frameRect?.height ?? frameElement.clientHeight ?? 1) * fitHeightRatio,
+            );
+            const minScale = Math.max(
+                0.05,
+                Number.parseFloat(computedRootStyles.getPropertyValue('--quran-min-page-scale')) ||
+                    0.1,
+            );
+            const maxScale = Math.max(
+                minScale,
+                Number.parseFloat(computedRootStyles.getPropertyValue('--quran-max-page-scale')) ||
+                    1,
+            );
+            const measured = this.measureRenderedBounds(contentElement, {
+                useRobustWidth: false,
+            });
+
+            if (measured.width <= 1 || measured.height <= 1) {
+                return false;
+            }
+
+            const adjustScale = Math.min(
+                availableWidth / Math.max(1, measured.width),
+                availableHeight / Math.max(1, measured.height),
+            );
+
+            if (!Number.isFinite(adjustScale) || adjustScale >= 0.995) {
+                return false;
+            }
+
+            const currentScale = Math.max(
+                minScale,
+                Math.min(
+                    maxScale,
+                    Number.parseFloat(rootElement.style.getPropertyValue('--quran-page-scale')) ||
+                        Number(this.pageScale) ||
+                        1,
+                ),
+            );
+            const nextScale = Math.max(
+                minScale,
+                Math.min(maxScale, Number((currentScale * adjustScale).toFixed(4))),
+            );
+
+            rootElement.style.setProperty('--quran-page-scale', String(nextScale));
+            this.pageScale = nextScale;
+
+            return true;
+        },
+
         fitPageToViewport() {
             const rootElement = this.$el;
             const frameElement = this.$refs.pageFrame;
@@ -2837,10 +3501,18 @@ document.addEventListener('alpine:init', () => {
                 Math.min(1, Number(profile.minimumCompressionLevel ?? 0)),
             );
             const normalizedPageNumber = Math.max(1, Math.trunc(Number(this.pageNumber ?? 1)));
+            const breakpointName = this.resolveCurrentBreakpointName();
+            const isModalLayoutContext =
+                this._bypassNextFitCache ||
+                this._isModalLifecycleSettling ||
+                this._activeModalIds.size > 0 ||
+                this.openModalCount() > 0;
             const fitCacheKey = [
                 normalizedPageNumber,
-                Math.round(availableWidth),
-                Math.round(availableHeight),
+                breakpointName || 'bp-unknown',
+                this.viewportBucketValue(availableWidth),
+                this.viewportBucketValue(availableHeight),
+                isModalLayoutContext ? 'modal-open' : 'modal-closed',
                 this.useCenteredAyahLayout ? 'centered' : 'rect',
                 this.mushafLines.length,
                 String(this.qpcPageFontFamily ?? ''),
@@ -2856,7 +3528,9 @@ document.addEventListener('alpine:init', () => {
                 availableWidth * Number(profile.strictWidthOverflowTolerance ?? 1.06);
             const strictHeightOverflowThreshold =
                 availableHeight * Number(profile.strictHeightOverflowTolerance ?? 1.01);
-            const cachedFitResult = this._fitResultByContext.get(fitCacheKey);
+            const cachedFitResult = isModalLayoutContext
+                ? null
+                : this._fitResultByContext.get(fitCacheKey);
 
             if (
                 cachedFitResult &&
@@ -2882,11 +3556,23 @@ document.addEventListener('alpine:init', () => {
                     this.pageScale = cachedScale;
                     this._fitRunCounter += 1;
                     this._lastFittedPageNumber = this.pageNumber;
+                    this.scheduleFitSanityCheck({
+                        cacheKey: fitCacheKey,
+                        pageNumber: normalizedPageNumber,
+                        availableWidth,
+                        availableHeight,
+                        strictWidthOverflowTolerance: Number(
+                            profile.strictWidthOverflowTolerance ?? 1.06,
+                        ),
+                        strictHeightOverflowTolerance: Number(
+                            profile.strictHeightOverflowTolerance ?? 1.01,
+                        ),
+                    });
 
                     return;
                 }
 
-                this._fitResultByContext.delete(fitCacheKey);
+                this.forgetFitResult(fitCacheKey);
             }
 
             let bestLayout = this.fitLayoutFromCompressionLevel(0);
@@ -2987,20 +3673,27 @@ document.addEventListener('alpine:init', () => {
 
             rootElement.style.setProperty('--quran-page-scale', String(normalizedScale));
             this.pageScale = normalizedScale;
-            this._fitResultByContext.set(fitCacheKey, {
-                layout: { ...bestLayout },
-                scale: normalizedScale,
+            this.rememberFitResult(
+                fitCacheKey,
+                {
+                    layout: { ...bestLayout },
+                    scale: normalizedScale,
+                },
+                {
+                    persist: !isModalLayoutContext,
+                },
+            );
+            this.scheduleFitSanityCheck({
+                cacheKey: fitCacheKey,
+                pageNumber: normalizedPageNumber,
+                availableWidth,
+                availableHeight,
+                strictWidthOverflowTolerance: Number(profile.strictWidthOverflowTolerance ?? 1.06),
+                strictHeightOverflowTolerance: Number(
+                    profile.strictHeightOverflowTolerance ?? 1.01,
+                ),
             });
-
-            while (this._fitResultByContext.size > fitResultCacheLimit) {
-                const oldestCacheKey = this._fitResultByContext.keys().next().value;
-
-                if (!oldestCacheKey) {
-                    break;
-                }
-
-                this._fitResultByContext.delete(oldestCacheKey);
-            }
+            this._bypassNextFitCache = false;
 
             this._fitRunCounter += 1;
             this._lastFittedPageNumber = this.pageNumber;
@@ -3025,6 +3718,236 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        cancelIdleWarmupHandle() {
+            if (this._idleWarmupHandle === null) {
+                return;
+            }
+
+            if (
+                this._idleWarmupHandleKind === 'idle' &&
+                typeof window.cancelIdleCallback === 'function'
+            ) {
+                window.cancelIdleCallback(this._idleWarmupHandle);
+            } else {
+                clearTimeout(this._idleWarmupHandle);
+            }
+
+            this._idleWarmupHandle = null;
+            this._idleWarmupHandleKind = null;
+        },
+
+        abortIdleWarmupFetch() {
+            if (
+                typeof AbortController === 'undefined' ||
+                !(this._idleWarmupAbortController instanceof AbortController)
+            ) {
+                return;
+            }
+
+            this._idleWarmupAbortController.abort();
+            this._idleWarmupAbortController = null;
+        },
+
+        beginIdleWarmupAbortController() {
+            if (typeof AbortController === 'undefined') {
+                this._idleWarmupAbortController = null;
+
+                return null;
+            }
+
+            this.abortIdleWarmupFetch();
+            this._idleWarmupAbortController = new AbortController();
+
+            return this._idleWarmupAbortController;
+        },
+
+        pauseIdleWarmup(
+            durationMs = idleWarmupPauseOnHighFrequencyNavigationMs,
+            { preservePage = 0 } = {},
+        ) {
+            const normalizedPreservePage = Math.max(0, Math.trunc(Number(preservePage) || 0));
+            const shouldPreserveInFlightPage =
+                normalizedPreservePage > 0 &&
+                this._idleWarmupInFlightPage === normalizedPreservePage;
+
+            this._idleWarmupPausedUntil = Math.max(
+                this._idleWarmupPausedUntil,
+                Date.now() +
+                    Math.max(
+                        80,
+                        Math.trunc(
+                            Number(durationMs) || idleWarmupPauseOnHighFrequencyNavigationMs,
+                        ),
+                    ),
+            );
+
+            if (!shouldPreserveInFlightPage) {
+                this.abortIdleWarmupFetch();
+            }
+
+            this.cancelIdleWarmupHandle();
+        },
+
+        canRunIdleWarmup() {
+            return (
+                Date.now() >= this._idleWarmupPausedUntil &&
+                !this.isLoadingPage &&
+                !this.isNavigationBurstActive() &&
+                this._pendingNavigationRequest === null &&
+                !this._navigationRevealLocked
+            );
+        },
+
+        enqueueIdleWarmupPages(pages = [], { prepend = false } = {}) {
+            const normalizedPages = (Array.isArray(pages) ? pages : [])
+                .map((page) => clampPage(page, this.maxPage))
+                .filter((page) => page >= 1 && (this.maxPage < 1 || page <= this.maxPage));
+
+            if (normalizedPages.length === 0) {
+                return;
+            }
+
+            const pendingPages = [];
+
+            normalizedPages.forEach((page) => {
+                if (this._idleWarmupQueuedPages.has(page)) {
+                    return;
+                }
+
+                this._idleWarmupQueuedPages.add(page);
+                pendingPages.push(page);
+            });
+
+            if (pendingPages.length === 0) {
+                return;
+            }
+
+            if (prepend) {
+                this._idleWarmupQueue = [...pendingPages, ...this._idleWarmupQueue];
+
+                return;
+            }
+
+            this._idleWarmupQueue.push(...pendingPages);
+        },
+
+        buildBackgroundWarmupSweep(centerPage = this.pageNumber) {
+            const maxPage = Math.max(1, Math.trunc(Number(this.maxPage || 0)));
+            const startPage = clampPage(centerPage, maxPage);
+            const sweep = [];
+
+            for (let offset = 0; offset < maxPage; offset += 1) {
+                const nextPage = startPage + offset;
+                const previousPage = startPage - offset;
+
+                if (offset === 0) {
+                    sweep.push(startPage);
+
+                    continue;
+                }
+
+                if (nextPage >= 1 && nextPage <= maxPage) {
+                    sweep.push(nextPage);
+                }
+
+                if (previousPage >= 1 && previousPage <= maxPage) {
+                    sweep.push(previousPage);
+                }
+            }
+
+            return sweep;
+        },
+
+        scheduleIdleWarmup(delayMs = 0) {
+            if (this._idleWarmupQueue.length === 0 || this._idleWarmupHandle !== null) {
+                return;
+            }
+
+            const normalizedDelay = Math.max(0, Math.trunc(Number(delayMs) || 0));
+
+            if (typeof window.requestIdleCallback === 'function') {
+                this._idleWarmupHandleKind = 'idle';
+                this._idleWarmupHandle = window.requestIdleCallback(
+                    (deadline) => {
+                        this._idleWarmupHandle = null;
+                        this._idleWarmupHandleKind = null;
+                        void this.processIdleWarmupQueue(deadline);
+                    },
+                    {
+                        timeout: Math.max(120, normalizedDelay || idleWarmupResumeDelayMs),
+                    },
+                );
+
+                return;
+            }
+
+            this._idleWarmupHandleKind = 'timeout';
+            this._idleWarmupHandle = window.setTimeout(
+                () => {
+                    this._idleWarmupHandle = null;
+                    this._idleWarmupHandleKind = null;
+                    void this.processIdleWarmupQueue(null);
+                },
+                Math.max(60, normalizedDelay || idleWarmupResumeDelayMs),
+            );
+        },
+
+        async processIdleWarmupQueue(deadline = null) {
+            if (this._idleWarmupInFlight) {
+                this.scheduleIdleWarmup(idleWarmupResumeDelayMs);
+
+                return;
+            }
+
+            if (!this.canRunIdleWarmup()) {
+                this.scheduleIdleWarmup(idleWarmupResumeDelayMs);
+
+                return;
+            }
+
+            if (
+                deadline &&
+                typeof deadline.timeRemaining === 'function' &&
+                deadline.timeRemaining() < 6
+            ) {
+                this.scheduleIdleWarmup(80);
+
+                return;
+            }
+
+            const nextPage = this._idleWarmupQueue.shift();
+
+            if (!Number.isFinite(Number(nextPage)) || Number(nextPage) < 1) {
+                this.scheduleIdleWarmup();
+
+                return;
+            }
+
+            this._idleWarmupQueuedPages.delete(nextPage);
+            this._idleWarmupInFlight = true;
+            this._idleWarmupInFlightPage = Math.max(0, Math.trunc(Number(nextPage) || 0));
+            const idleAbortController = this.beginIdleWarmupAbortController();
+
+            try {
+                await this.prefetchPage(nextPage, {
+                    signal: idleAbortController?.signal ?? null,
+                });
+            } catch (_) {
+                // Ignore idle warmup failures and continue queue progress.
+            } finally {
+                if (this._idleWarmupAbortController === idleAbortController) {
+                    this._idleWarmupAbortController = null;
+                }
+
+                this._idleWarmupInFlight = false;
+                this._idleWarmupInFlightPage = 0;
+            }
+
+            if (this._idleWarmupQueue.length > 0) {
+                this.scheduleIdleWarmup(40);
+            }
+        },
+
         queueStartupPreload() {
             const pages = [];
 
@@ -3045,20 +3968,29 @@ document.addEventListener('alpine:init', () => {
             );
 
             window.setTimeout(() => {
-                uniquePages.forEach((page) => {
-                    this.prefetchPage(page);
-                });
+                this.enqueueIdleWarmupPages(uniquePages, { prepend: true });
+
+                if (!this._idleWarmupHasBackgroundSweepQueued && this.maxPage > 0) {
+                    this._idleWarmupHasBackgroundSweepQueued = true;
+                    this.enqueueIdleWarmupPages(this.buildBackgroundWarmupSweep(this.pageNumber));
+                }
+
+                this.scheduleIdleWarmup();
             }, 40);
         },
 
         prefetchNeighborPages(pageNumber) {
+            const pages = [];
+
             for (let offset = 1; offset <= this.prefetchRadius; offset += 1) {
-                this.prefetchPage(pageNumber + offset);
-                this.prefetchPage(pageNumber - offset);
+                pages.push(pageNumber + offset, pageNumber - offset);
             }
+
+            this.enqueueIdleWarmupPages(pages, { prepend: true });
+            this.scheduleIdleWarmup();
         },
 
-        async prefetchPage(pageNumber) {
+        async prefetchPage(pageNumber, { signal = null } = {}) {
             const normalizedPage = clampPage(pageNumber, this.maxPage);
 
             if (normalizedPage < 1 || (this.maxPage > 0 && normalizedPage > this.maxPage)) {
@@ -3066,7 +3998,9 @@ document.addEventListener('alpine:init', () => {
             }
 
             try {
-                await this.getPagePayload(normalizedPage);
+                await this.getPagePayload(normalizedPage, {
+                    signal,
+                });
             } catch (_) {
                 // Ignore background prefetch failures.
             }
@@ -6398,6 +7332,8 @@ document.addEventListener('alpine:init', () => {
                     return;
                 }
 
+                this.clearPendingPostModalTargetFit();
+
                 if (this._searchModalOpenInFlight) {
                     return;
                 }
@@ -6415,6 +7351,15 @@ document.addEventListener('alpine:init', () => {
 
             if (kind === 'closing' || kind === 'closed') {
                 this.handleSearchModalClosed();
+
+                if (this._postModalTargetFitPage > 0) {
+                    this.schedulePendingModalCloseFit(this._postModalTargetFitPage, {
+                        retries: kind === 'closed' ? 42 : 18,
+                        delayMs: kind === 'closed' ? 90 : 110,
+                        revealDelayMs: 230,
+                        maxAttempts: 6,
+                    });
+                }
             }
         },
 
@@ -6549,6 +7494,25 @@ document.addEventListener('alpine:init', () => {
             );
         },
 
+        async waitForModalLifecycleToSettle(maxAttempts = 22, delayMs = 40) {
+            const attempts = Math.max(1, Math.trunc(Number(maxAttempts) || 22));
+            const waitDelayMs = Math.max(16, Math.trunc(Number(delayMs) || 40));
+
+            for (let attempt = 0; attempt < attempts; attempt += 1) {
+                if (
+                    this.openModalCount() <= 0 &&
+                    !this._isModalLifecycleSettling &&
+                    this._activeModalIds.size === 0
+                ) {
+                    return true;
+                }
+
+                await wait(waitDelayMs);
+            }
+
+            return this.openModalCount() <= 0;
+        },
+
         async requestHistoryModalClose() {
             await this.requestModalCloseByKnownIds([this.historyModalId], {
                 onFallback: () => {
@@ -6635,8 +7599,10 @@ document.addEventListener('alpine:init', () => {
 
             this.resetNavigationQueueForPriorityJump();
             await this.requestSearchModalClose();
+            await this.waitForModalLifecycleToSettle();
             this.activeAyahIndex = 0;
             this.activeWordIndex = 0;
+            this._bypassNextFitCache = true;
             await this.navigateToPage(pageNumber, {
                 direction,
                 animate: true,
@@ -6646,7 +7612,12 @@ document.addEventListener('alpine:init', () => {
                 commitNow: true,
                 settleDelayMs: 0,
             });
-            await this.layoutPageGuaranteed({ revealDelayMs: 220, maxAttempts: 5 });
+            this._bypassNextFitCache = true;
+            await this.layoutPageGuaranteed({
+                revealDelayMs: 220,
+                maxAttempts: 6,
+                useIdleFit: false,
+            });
             this.search.activeSurahNumber = surahNumber;
             this.activeAyahIndex = 0;
             this.activeWordIndex = 0;
@@ -6823,6 +7794,8 @@ document.addEventListener('alpine:init', () => {
 
             this.resetNavigationQueueForPriorityJump();
             await this.requestSearchModalClose();
+            await this.waitForModalLifecycleToSettle();
+            this._bypassNextFitCache = true;
             await this.navigateToPage(targetPage, {
                 direction,
                 animate: true,
@@ -6832,7 +7805,12 @@ document.addEventListener('alpine:init', () => {
                 commitNow: true,
                 settleDelayMs: 0,
             });
-            await this.layoutPageGuaranteed({ revealDelayMs: 220, maxAttempts: 5 });
+            this._bypassNextFitCache = true;
+            await this.layoutPageGuaranteed({
+                revealDelayMs: 220,
+                maxAttempts: 6,
+                useIdleFit: false,
+            });
             this.activeWordIndex = 0;
             this.recordNavigationHistory({
                 source: 'search-result',
