@@ -281,7 +281,7 @@
         }
 
         .quran-page-lines {
-            transition: opacity 300ms ease;
+            transition: opacity 180ms ease;
             opacity: 0;
             user-select: none;
             -webkit-user-select: none;
@@ -300,12 +300,22 @@
             cursor: default;
         }
 
+        .quran-page-lines[data-fit-state='fading-out'] {
+            opacity: 0;
+            visibility: visible;
+            transition: opacity 120ms ease-out;
+        }
+
         .quran-page-lines[data-fit-state='fitting'] {
             opacity: 0;
+            visibility: hidden;
+            transition: none;
         }
 
         .quran-page-lines[data-fit-state='ready'] {
             opacity: 1;
+            visibility: visible;
+            transition: opacity 180ms ease-in;
         }
 
         .quran-page-lines[data-fit-state='ready'] [data-quran-line] {
@@ -1358,12 +1368,28 @@
                         data-quran-bookmark-toggle
                         type="button"
                         x-bind:class="{
-                            'quran-bookmark-toggle-button--bookmarked': (typeof isCurrentPageBookmarked === 'function' ?
-                                isCurrentPageBookmarked() : false)
+                            'quran-bookmark-toggle-button--bookmarked': (
+                                typeof bookmarks !== 'undefined' &&
+                                Array.isArray(bookmarks) &&
+                                bookmarks.some((bookmark) =>
+                                    Number(bookmark?.page_number ?? 0) === Number(pageNumber),
+                                )
+                            )
                         }"
-                        x-bind:aria-pressed="(typeof isCurrentPageBookmarked === 'function' && isCurrentPageBookmarked()) ? 'true' : 'false'"
-                        x-bind:aria-label="(typeof isCurrentPageBookmarked === 'function' && isCurrentPageBookmarked()) ?
-                        'إزالة علامة الصفحة الحالية' : 'حفظ الصفحة الحالية كعلامة'"
+                        x-bind:aria-pressed="(
+                            typeof bookmarks !== 'undefined' &&
+                            Array.isArray(bookmarks) &&
+                            bookmarks.some((bookmark) =>
+                                Number(bookmark?.page_number ?? 0) === Number(pageNumber),
+                            )
+                        ) ? 'true' : 'false'"
+                        x-bind:aria-label="(
+                            typeof bookmarks !== 'undefined' &&
+                            Array.isArray(bookmarks) &&
+                            bookmarks.some((bookmark) =>
+                                Number(bookmark?.page_number ?? 0) === Number(pageNumber),
+                            )
+                        ) ? 'إزالة علامة الصفحة الحالية' : 'حفظ الصفحة الحالية كعلامة'"
                         x-on:pointerdown="onBookmarkButtonPointerDown($event)"
                         x-on:pointerup="onBookmarkButtonPointerUp($event)"
                         x-on:pointercancel="onBookmarkButtonPointerCancel()"
@@ -1438,7 +1464,7 @@
                     >
                         <div
                             class="quran-page-lines mx-auto"
-                            x-bind:data-fit-state="isFittingPage ? 'fitting' : 'ready'"
+                            x-bind:data-fit-state="typeof pageFitState === 'function' ? pageFitState() : (isFittingPage ? 'fitting' : 'ready')"
                             x-bind:style="pageContentStyle()"
                             x-on:click="clearAyahSelectionOnBackground($event)"
                             x-on:pointerup.window.passive="onWordPointerUp($event)"

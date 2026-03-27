@@ -17,6 +17,14 @@ class QuranReaderDataService
 {
     private const SEARCH_INTERSECTION_CANDIDATE_LIMIT = 7000;
 
+    private const READY_CACHE_KEY = 'quran-reader-ready-v2';
+
+    private const MAX_PAGE_CACHE_KEY = 'quran-reader-max-page-v2';
+
+    private const SEARCH_RESULTS_CACHE_PREFIX = 'quran-reader-search-results-v1';
+
+    private const DISPLAYED_PAGE_CACHE_PREFIX = 'quran-reader-display-page-v1';
+
     /**
      * @var array<int, int>
      */
@@ -26,21 +34,25 @@ class QuranReaderDataService
 
     public function isReady(): bool
     {
-        $hasVersesTable = Schema::hasTable('quran_verses');
-        $hasWordsTable = Schema::hasTable('quran_words');
-        $hasMushafLinesTable = Schema::hasTable('quran_mushaf_lines');
-        $hasTypedSearchColumn = $hasVersesTable && Schema::hasColumn('quran_verses', 'text_searchable_typed');
+        return (bool) Cache::memo()->remember(self::READY_CACHE_KEY, now()->addMinutes(5), static function (): bool {
+            $hasVersesTable = Schema::hasTable('quran_verses');
+            $hasWordsTable = Schema::hasTable('quran_words');
+            $hasMushafLinesTable = Schema::hasTable('quran_mushaf_lines');
+            $hasTypedSearchColumn = $hasVersesTable && Schema::hasColumn('quran_verses', 'text_searchable_typed');
 
-        return $hasVersesTable && $hasWordsTable && $hasMushafLinesTable && $hasTypedSearchColumn;
+            return $hasVersesTable && $hasWordsTable && $hasMushafLinesTable && $hasTypedSearchColumn;
+        });
     }
 
     public function maxPage(): int
     {
-        if (! $this->isReady()) {
-            return 0;
-        }
+        return (int) Cache::memo()->remember(self::MAX_PAGE_CACHE_KEY, now()->addMinutes(30), function (): int {
+            if (! $this->isReady()) {
+                return 0;
+            }
 
-        return (int) DB::table('quran_mushaf_lines')->max('page_number');
+            return (int) DB::table('quran_mushaf_lines')->max('page_number');
+        });
     }
 
     /**
@@ -308,15 +320,33 @@ class QuranReaderDataService
         }
 
         $resolvedLimit = max(1, min(60, $limit));
-        $hasTypedWordColumn = Schema::hasTable('quran_words')
-            && Schema::hasColumn('quran_words', 'token_searchable_typed');
+        $hasTypedWordColumn = $this->hasQuranWordColumn('token_searchable_typed');
+        $cacheKey = sprintf(
+            '%s:%d:%d:%s',
+            self::SEARCH_RESULTS_CACHE_PREFIX,
+            $resolvedLimit,
+            $hasTypedWordColumn ? 1 : 0,
+            sha1($normalizedQuery),
+        );
 
-        return $this->buildSearchMatches(
+        $cachedMatches = Cache::memo()->get($cacheKey);
+
+        if (is_array($cachedMatches)) {
+            $this->emitSearchProgress($onProgress, $cachedMatches, 'complete', true);
+
+            return $cachedMatches;
+        }
+
+        $resolvedMatches = $this->buildSearchMatches(
             $normalizedQuery,
             $resolvedLimit,
             $hasTypedWordColumn,
             $onProgress,
         );
+
+        Cache::memo()->put($cacheKey, $resolvedMatches, now()->addHours(12));
+
+        return $resolvedMatches;
     }
 
     /**
@@ -1137,6 +1167,23 @@ class QuranReaderDataService
             return null;
         }
 
+        $cacheKey = sprintf(
+            '%s:%d:%d',
+            self::DISPLAYED_PAGE_CACHE_PREFIX,
+            $surahNumber,
+            $ayahNumber,
+        );
+        $cachedPage = (int) Cache::memo()->remember(
+            $cacheKey,
+            now()->addDays(30),
+            fn (): int => $this->resolveMushafPageFromQpcWordsUncached($surahNumber, $ayahNumber) ?? 0,
+        );
+
+        return $cachedPage > 0 ? $cachedPage : null;
+    }
+
+    private function resolveMushafPageFromQpcWordsUncached(int $surahNumber, int $ayahNumber): ?int
+    {
         $databasePath = $this->resolveQpcDisplayWordsDatabasePath();
 
         if ($databasePath === null) {

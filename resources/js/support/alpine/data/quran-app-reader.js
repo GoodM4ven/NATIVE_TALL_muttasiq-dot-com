@@ -92,12 +92,15 @@ const bookmarkHoldDelayMs = 680;
 const copyPopoverVisibleDurationMs = 920;
 const copiedHighlightVisibleDurationMs = 3000;
 const wordClickSuppressionResetMs = 180;
-const navigationSettleDelayMs = 140;
+const navigationSettleDelayMs = 28;
+const navigationBurstInputThresholdMs = 140;
+const navigationBurstSettleDelayMs = 72;
 const navigationRevealLockDurationMs = 420;
 const defaultBasmallahBottomGapScale = -0.18;
 const openingSpreadFinalScaleMultiplier = 0.72;
 const fitRobustWidthQuantile = 0.88;
 const fitRobustWidthOutlierThreshold = 1.2;
+const fitResultCacheLimit = 180;
 const fitDefaultProfile = Object.freeze({
     compressionLeadingFloor: 0.46,
     compressionGapFloor: 0,
@@ -372,7 +375,13 @@ const openCacheSafely = async (cacheName) => {
     }
 };
 
-const fetchJsonWithCache = async ({ url, cacheName, preferCache = true, forceNetwork = false }) => {
+const fetchJsonWithCache = async ({
+    url,
+    cacheName,
+    preferCache = true,
+    forceNetwork = false,
+    signal = null,
+}) => {
     const cache = await openCacheSafely(cacheName);
 
     if (cache && preferCache && !forceNetwork) {
@@ -387,6 +396,7 @@ const fetchJsonWithCache = async ({ url, cacheName, preferCache = true, forceNet
         const response = await fetch(url, {
             credentials: 'same-origin',
             cache: 'no-store',
+            signal,
         });
 
         if (!response.ok) {
@@ -399,6 +409,10 @@ const fetchJsonWithCache = async ({ url, cacheName, preferCache = true, forceNet
 
         return await response.json();
     } catch (error) {
+        if (error?.name === 'AbortError') {
+            throw error;
+        }
+
         if (cache) {
             const stale = await cache.match(url);
 
@@ -497,6 +511,7 @@ document.addEventListener('alpine:init', () => {
         arabicNumeralCharacters: defaultArabicNumerals.slice(),
         isLoadingPage: false,
         isFittingPage: true,
+        isTransitioningOutPage: false,
         pageMotionClass: '',
         surahTriggerCaption: '',
         surahTriggerCaptionAnimClass: '',
@@ -560,10 +575,13 @@ document.addEventListener('alpine:init', () => {
 
         _pendingPageLoads: new Map(),
         _pagePayloadByPage: new Map(),
+        _activePageAbortController: null,
         _searchIndexPromise: null,
         _layoutToken: 0,
         _layoutRaf: null,
         _revealTimer: null,
+        _layoutActivePromise: null,
+        _queuedLayoutRequest: null,
         _layoutMutationObserver: null,
         _layoutResizeObserver: null,
         _viewportChangeDebounceTimer: null,
@@ -576,8 +594,12 @@ document.addEventListener('alpine:init', () => {
         _navigationDebounceTimer: null,
         _navigationRevealUnlockTimer: null,
         _navigationRevealLocked: false,
+        _navigationBurstLastInputAt: 0,
+        _navigationBurstCount: 0,
+        _navigationBurstFreezeUntil: 0,
         _fitRunCounter: 0,
         _lastFittedPageNumber: 0,
+        _fitResultByContext: new Map(),
         _pageInputCommitTimer: null,
         _searchRequestSerial: 0,
         _searchStreamObserver: null,
@@ -821,8 +843,14 @@ document.addEventListener('alpine:init', () => {
                 this._stopLivewireMorphedHook = null;
             }
 
+            this.abortActivePageLoad();
             this._pendingNavigationRequest = null;
             this._navigationRevealLocked = false;
+            this.isTransitioningOutPage = false;
+            this.clearNavigationBurstState();
+            this._layoutActivePromise = null;
+            this._queuedLayoutRequest = null;
+            this.clearFitResultCache();
         },
 
         initializeLayoutObservers() {
@@ -1230,11 +1258,43 @@ document.addEventListener('alpine:init', () => {
             this.$wire.mountAction('bookmarksManager');
         },
 
+        readerRootStyle() {
+            return '';
+        },
+
         pageDataUrl(pageNumber) {
             return this.api.pageDataTemplate.replace('__PAGE__', String(pageNumber));
         },
 
-        async getPagePayload(pageNumber, { preferCache = true, forceNetwork = false } = {}) {
+        abortActivePageLoad() {
+            if (
+                typeof AbortController === 'undefined' ||
+                !(this._activePageAbortController instanceof AbortController)
+            ) {
+                return;
+            }
+
+            this._activePageAbortController.abort();
+            this._activePageAbortController = null;
+        },
+
+        beginActivePageLoadAbortController() {
+            if (typeof AbortController === 'undefined') {
+                this._activePageAbortController = null;
+
+                return null;
+            }
+
+            this.abortActivePageLoad();
+            this._activePageAbortController = new AbortController();
+
+            return this._activePageAbortController;
+        },
+
+        async getPagePayload(
+            pageNumber,
+            { preferCache = true, forceNetwork = false, signal = null } = {},
+        ) {
             const normalizedPage = clampPage(pageNumber, this.maxPage);
 
             if (this._pagePayloadByPage.has(normalizedPage) && !forceNetwork) {
@@ -1249,19 +1309,28 @@ document.addEventListener('alpine:init', () => {
 
             const url = this.pageDataUrl(normalizedPage);
             const loadPromise = (async () => {
-                const payload = normalizePayload(
-                    await fetchJsonWithCache({
-                        url,
-                        cacheName: this.cacheNames.pages,
-                        preferCache,
-                        forceNetwork,
-                    }),
-                );
+                try {
+                    const payload = normalizePayload(
+                        await fetchJsonWithCache({
+                            url,
+                            cacheName: this.cacheNames.pages,
+                            preferCache,
+                            forceNetwork,
+                            signal,
+                        }),
+                    );
 
-                this._pagePayloadByPage.set(normalizedPage, payload);
-                await this.prefetchFontAsset(payload);
+                    this._pagePayloadByPage.set(normalizedPage, payload);
+                    await this.prefetchFontAsset(payload);
 
-                return payload;
+                    return payload;
+                } catch (error) {
+                    if (error?.name === 'AbortError') {
+                        return null;
+                    }
+
+                    throw error;
+                }
             })();
 
             this._pendingPageLoads.set(normalizedPage, loadPromise);
@@ -1332,7 +1401,9 @@ document.addEventListener('alpine:init', () => {
             this.pageCounterPulse.segments = morph.segments;
             this.pageCounterPulse.hasChanges = morph.hasChanges;
 
-            if (!morph.hasChanges) {
+            if (!morph.hasChanges || this.shouldSuspendPageCounterMorph()) {
+                this.pageCounterPulse.isActive = false;
+
                 return;
             }
 
@@ -1344,6 +1415,14 @@ document.addEventListener('alpine:init', () => {
                 this.pageCounterPulse.isActive = false;
                 this.pageCounterPulse.timer = null;
             }, 540);
+        },
+
+        shouldSuspendPageCounterMorph() {
+            return (
+                this.isLoadingPage ||
+                this._pendingNavigationRequest !== null ||
+                this.isNavigationBurstActive()
+            );
         },
 
         navigationBasePage() {
@@ -1373,6 +1452,55 @@ document.addEventListener('alpine:init', () => {
             const basePage = this.navigationBasePage();
 
             return targetPage >= basePage ? 'next' : 'prev';
+        },
+
+        isHighFrequencyNavigationSource(source = 'generic') {
+            const normalizedSource = String(source ?? '').trim();
+
+            return normalizedSource === 'keyboard' || normalizedSource === 'swipe';
+        },
+
+        clearNavigationBurstState() {
+            this._navigationBurstLastInputAt = 0;
+            this._navigationBurstCount = 0;
+            this._navigationBurstFreezeUntil = 0;
+        },
+
+        isNavigationBurstActive() {
+            return this._navigationBurstFreezeUntil > Date.now();
+        },
+
+        registerNavigationBurst(source = 'generic') {
+            if (!this.isHighFrequencyNavigationSource(source)) {
+                return;
+            }
+
+            const now = Date.now();
+            const elapsedSinceLastInput = now - this._navigationBurstLastInputAt;
+            const isBurstContinuation = elapsedSinceLastInput <= navigationBurstInputThresholdMs;
+
+            this._navigationBurstCount = isBurstContinuation ? this._navigationBurstCount + 1 : 1;
+            this._navigationBurstLastInputAt = now;
+            this._navigationBurstFreezeUntil =
+                now +
+                (isBurstContinuation ? navigationBurstSettleDelayMs : navigationSettleDelayMs);
+        },
+
+        navigationBurstRemainingMsFor(source = 'generic') {
+            if (!this.isHighFrequencyNavigationSource(source)) {
+                return 0;
+            }
+
+            return Math.max(0, this._navigationBurstFreezeUntil - Date.now());
+        },
+
+        resolveNavigationCommitDelay(source = 'generic', delayMs = navigationSettleDelayMs) {
+            const normalizedDelay = Math.max(
+                0,
+                Math.trunc(Number(delayMs) || navigationSettleDelayMs),
+            );
+
+            return Math.max(normalizedDelay, this.navigationBurstRemainingMsFor(source));
         },
 
         schedulePendingNavigationCommit(delayMs = navigationSettleDelayMs) {
@@ -1421,6 +1549,14 @@ document.addEventListener('alpine:init', () => {
             }
 
             const request = this._pendingNavigationRequest;
+            const burstRemainingMs = this.navigationBurstRemainingMsFor(request.source);
+
+            if (burstRemainingMs > 0) {
+                this.schedulePendingNavigationCommit(burstRemainingMs);
+
+                return;
+            }
+
             this._pendingNavigationRequest = null;
 
             await this.goToPage(request.targetPage, {
@@ -1428,6 +1564,7 @@ document.addEventListener('alpine:init', () => {
                 animate: request.animate,
                 activeAyahIndex: request.activeAyahIndex,
                 forceRefit: request.forceRefit,
+                source: request.source,
             });
 
             if (request.animate) {
@@ -1460,6 +1597,7 @@ document.addEventListener('alpine:init', () => {
 
             this.pageInput = normalizedTargetPage;
             this._lastPageInputVisualValue = normalizedTargetPage;
+            this.registerNavigationBurst(source);
 
             this._pendingNavigationRequest = {
                 targetPage: normalizedTargetPage,
@@ -1474,13 +1612,23 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            const resolvedCommitDelay = this.resolveNavigationCommitDelay(source, settleDelayMs);
+
             if (commitNow) {
-                await this.commitPendingNavigation();
+                if (this.navigationBurstRemainingMsFor(source) <= 0) {
+                    await this.commitPendingNavigation();
+
+                    return;
+                }
+
+                this.schedulePendingNavigationCommit(
+                    this.resolveNavigationCommitDelay(source, settleDelayMs),
+                );
 
                 return;
             }
 
-            this.schedulePendingNavigationCommit(settleDelayMs);
+            this.schedulePendingNavigationCommit(resolvedCommitDelay);
         },
 
         async nextPage(source = 'generic') {
@@ -1566,6 +1714,7 @@ document.addEventListener('alpine:init', () => {
 
             this._pendingNavigationRequest = null;
             this._navigationRevealLocked = false;
+            this.clearNavigationBurstState();
         },
 
         async onGlobalArrowNavigate(direction, event = null) {
@@ -1579,6 +1728,10 @@ document.addEventListener('alpine:init', () => {
                 )
             ) {
                 return;
+            }
+
+            if (event?.cancelable) {
+                event.preventDefault();
             }
 
             if (direction === 'left') {
@@ -1605,7 +1758,13 @@ document.addEventListener('alpine:init', () => {
 
         async goToPage(
             pageNumber,
-            { direction = 'next', animate = true, activeAyahIndex = null, forceRefit = false } = {},
+            {
+                direction = 'next',
+                animate = true,
+                activeAyahIndex = null,
+                forceRefit = false,
+                source = 'generic',
+            } = {},
         ) {
             const normalizedPage = clampPage(pageNumber, this.maxPage);
             this.clearWordPressState();
@@ -1630,17 +1789,38 @@ document.addEventListener('alpine:init', () => {
 
             this.isLoadingPage = true;
             let didCompletePageTransition = false;
+            const pageAbortController = this.beginActivePageLoadAbortController();
 
             try {
-                const payloadPromise = this.getPagePayload(normalizedPage);
+                const payloadPromise = this.getPagePayload(normalizedPage, {
+                    signal: pageAbortController?.signal ?? null,
+                });
+                const transitionDelayMs = this.isHighFrequencyNavigationSource(source) ? 68 : 128;
 
                 if (this.mushafLines.length > 0) {
-                    this.isFittingPage = true;
+                    this.isTransitioningOutPage = true;
+                    this.isFittingPage = false;
                     await this.nextTickAsync();
-                    await wait(180);
+                    await wait(transitionDelayMs);
+                    this.isTransitioningOutPage = false;
+                    this.isFittingPage = true;
                 }
 
                 const payload = await payloadPromise;
+
+                if (payload === null) {
+                    return;
+                }
+
+                const pendingTargetPage = Math.max(
+                    0,
+                    Math.trunc(Number(this._pendingNavigationRequest?.targetPage ?? 0)),
+                );
+
+                if (pendingTargetPage > 0 && pendingTargetPage !== normalizedPage) {
+                    return;
+                }
+
                 this.applyPayload(payload, { setPageNumber: true });
                 this.persistLastPageNumber(this.pageNumber);
                 this.refreshSurahTriggerCaption(animate);
@@ -1655,19 +1835,36 @@ document.addEventListener('alpine:init', () => {
                     this.playPageMotion(direction);
                 }
 
-                this.prefetchNeighborPages(normalizedPage);
-                await this.layoutPageGuaranteed({ revealDelayMs: 220 });
+                if (this.navigationBurstRemainingMsFor(source) <= 0) {
+                    this.prefetchNeighborPages(normalizedPage);
+                }
+
+                await this.layoutPageGuaranteed({
+                    revealDelayMs: this.isHighFrequencyNavigationSource(source) ? 180 : 220,
+                    maxAttempts: this.isHighFrequencyNavigationSource(source) ? 3 : 4,
+                });
                 didCompletePageTransition = true;
-            } catch (_) {
+            } catch (error) {
+                if (error?.name === 'AbortError') {
+                    return;
+                }
+
                 if (this.hasRenderablePage()) {
                     this.isFittingPage = false;
                 }
             } finally {
+                if (this._activePageAbortController === pageAbortController) {
+                    this._activePageAbortController = null;
+                }
+
                 this.isLoadingPage = false;
+                this.isTransitioningOutPage = false;
 
                 if (!didCompletePageTransition && this.hasRenderablePage()) {
                     this.scheduleLayout({ revealDelayMs: 150 });
                 }
+
+                this.flushQueuedLayoutRequest();
 
                 if (this._pendingNavigationRequest !== null) {
                     if (this._navigationRevealLocked) {
@@ -1926,6 +2123,57 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        clearFitResultCache() {
+            this._fitResultByContext.clear();
+        },
+
+        normalizeLayoutRequest({ revealDelayMs = 180, maxAttempts = 4 } = {}) {
+            return {
+                revealDelayMs: Math.max(0, Math.trunc(Number(revealDelayMs) || 180)),
+                maxAttempts: Math.max(2, Math.trunc(Number(maxAttempts) || 4)),
+            };
+        },
+
+        queueLayoutRequest(request = {}) {
+            const normalizedRequest = this.normalizeLayoutRequest(request);
+
+            if (this._queuedLayoutRequest === null) {
+                this._queuedLayoutRequest = normalizedRequest;
+
+                return;
+            }
+
+            this._queuedLayoutRequest = {
+                revealDelayMs: Math.min(
+                    this._queuedLayoutRequest.revealDelayMs,
+                    normalizedRequest.revealDelayMs,
+                ),
+                maxAttempts: Math.max(
+                    this._queuedLayoutRequest.maxAttempts,
+                    normalizedRequest.maxAttempts,
+                ),
+            };
+        },
+
+        flushQueuedLayoutRequest() {
+            if (this._queuedLayoutRequest === null) {
+                return;
+            }
+
+            if (
+                this._isModalLifecycleSettling ||
+                this._activeModalIds.size > 0 ||
+                this.isLoadingPage ||
+                !this.hasRenderablePage()
+            ) {
+                return;
+            }
+
+            const queuedRequest = this._queuedLayoutRequest;
+            this._queuedLayoutRequest = null;
+            this.scheduleLayout(queuedRequest);
+        },
+
         openModalCount() {
             return Array.from(document.querySelectorAll('.fi-modal')).filter((modalElement) =>
                 modalElement.classList.contains('fi-modal-open'),
@@ -2086,9 +2334,20 @@ document.addEventListener('alpine:init', () => {
             }, 90);
         },
 
-        scheduleLayout({ revealDelayMs = 180 } = {}) {
+        scheduleLayout({ revealDelayMs = 180, maxAttempts = 4 } = {}) {
             if (this._isModalLifecycleSettling || this._activeModalIds.size > 0) {
                 this.holdPageHiddenForModalLifecycle();
+
+                return;
+            }
+
+            const layoutRequest = this.normalizeLayoutRequest({
+                revealDelayMs,
+                maxAttempts,
+            });
+
+            if (this.isLoadingPage || this._layoutActivePromise) {
+                this.queueLayoutRequest(layoutRequest);
 
                 return;
             }
@@ -2097,10 +2356,7 @@ document.addEventListener('alpine:init', () => {
 
             this._layoutRaf = requestAnimationFrame(() => {
                 this._layoutRaf = null;
-                void this.layoutPageGuaranteed({
-                    revealDelayMs,
-                    maxAttempts: 4,
-                });
+                void this.layoutPageGuaranteed(layoutRequest);
             });
         },
 
@@ -2166,27 +2422,72 @@ document.addEventListener('alpine:init', () => {
             await this.nextTickAsync();
             await nextAnimationFrame();
 
-            this.fitPageToViewport();
+            await this.runFitPageToViewportLazily();
             this.queuePageReveal(layoutToken, revealDelayMs);
         },
 
-        async layoutPageGuaranteed({ revealDelayMs = 180, maxAttempts = 4 } = {}) {
-            const attempts = Math.max(2, Math.trunc(Number(maxAttempts) || 4));
-
-            for (let attempt = 0; attempt < attempts; attempt += 1) {
-                const fitRunsBeforeAttempt = this._fitRunCounter;
-                await this.layoutPage({
-                    revealDelayMs: attempt === 0 ? revealDelayMs : 160,
+        async runFitPageToViewportLazily() {
+            if (typeof window.requestIdleCallback === 'function') {
+                await new Promise((resolve) => {
+                    window.requestIdleCallback(
+                        () => {
+                            this.fitPageToViewport();
+                            resolve();
+                        },
+                        {
+                            timeout: 80,
+                        },
+                    );
                 });
 
-                if (
-                    this._fitRunCounter > fitRunsBeforeAttempt &&
-                    this._lastFittedPageNumber === this.pageNumber
-                ) {
-                    return;
+                return;
+            }
+
+            await wait(0);
+            this.fitPageToViewport();
+        },
+
+        async layoutPageGuaranteed({ revealDelayMs = 180, maxAttempts = 4 } = {}) {
+            const layoutRequest = this.normalizeLayoutRequest({
+                revealDelayMs,
+                maxAttempts,
+            });
+
+            if (this._layoutActivePromise) {
+                this.queueLayoutRequest(layoutRequest);
+                await this._layoutActivePromise;
+
+                return;
+            }
+
+            const runLayoutPromise = (async () => {
+                for (let attempt = 0; attempt < layoutRequest.maxAttempts; attempt += 1) {
+                    const fitRunsBeforeAttempt = this._fitRunCounter;
+                    await this.layoutPage({
+                        revealDelayMs: attempt === 0 ? layoutRequest.revealDelayMs : 160,
+                    });
+
+                    if (
+                        this._fitRunCounter > fitRunsBeforeAttempt &&
+                        this._lastFittedPageNumber === this.pageNumber
+                    ) {
+                        return;
+                    }
+
+                    await wait(55);
+                }
+            })();
+
+            this._layoutActivePromise = runLayoutPromise;
+
+            try {
+                await runLayoutPromise;
+            } finally {
+                if (this._layoutActivePromise === runLayoutPromise) {
+                    this._layoutActivePromise = null;
                 }
 
-                await wait(55);
+                this.flushQueuedLayoutRequest();
             }
         },
 
@@ -2535,6 +2836,59 @@ document.addEventListener('alpine:init', () => {
                 0,
                 Math.min(1, Number(profile.minimumCompressionLevel ?? 0)),
             );
+            const normalizedPageNumber = Math.max(1, Math.trunc(Number(this.pageNumber ?? 1)));
+            const fitCacheKey = [
+                normalizedPageNumber,
+                Math.round(availableWidth),
+                Math.round(availableHeight),
+                this.useCenteredAyahLayout ? 'centered' : 'rect',
+                this.mushafLines.length,
+                String(this.qpcPageFontFamily ?? ''),
+                String(this.basmallahFontFamily ?? ''),
+                String(this.surahHeaderFontFamily ?? ''),
+                Number(minScale).toFixed(3),
+                Number(maxScale).toFixed(3),
+                Number(profile.minimumCompressionLevel ?? 0).toFixed(3),
+                Number(profile.targetWidthRatio ?? 0).toFixed(3),
+                Number(profile.targetHeightRatio ?? 0).toFixed(3),
+            ].join('|');
+            const strictWidthOverflowThreshold =
+                availableWidth * Number(profile.strictWidthOverflowTolerance ?? 1.06);
+            const strictHeightOverflowThreshold =
+                availableHeight * Number(profile.strictHeightOverflowTolerance ?? 1.01);
+            const cachedFitResult = this._fitResultByContext.get(fitCacheKey);
+
+            if (
+                cachedFitResult &&
+                cachedFitResult.layout &&
+                Number.isFinite(Number(cachedFitResult.scale))
+            ) {
+                const cachedScale = Math.max(
+                    minScale,
+                    Math.min(maxScale, Number(cachedFitResult.scale)),
+                );
+
+                this.applyFitLayoutVariables(rootElement, cachedFitResult.layout);
+                rootElement.style.setProperty('--quran-page-scale', String(cachedScale));
+
+                const cachedMeasured = this.measureRenderedBounds(contentElement, {
+                    useRobustWidth: false,
+                });
+                const cacheStillFits =
+                    cachedMeasured.width <= strictWidthOverflowThreshold &&
+                    cachedMeasured.height <= strictHeightOverflowThreshold;
+
+                if (cacheStillFits) {
+                    this.pageScale = cachedScale;
+                    this._fitRunCounter += 1;
+                    this._lastFittedPageNumber = this.pageNumber;
+
+                    return;
+                }
+
+                this._fitResultByContext.delete(fitCacheKey);
+            }
+
             let bestLayout = this.fitLayoutFromCompressionLevel(0);
             let bestScale = minScale;
             let bestScore = Number.NEGATIVE_INFINITY;
@@ -2600,10 +2954,6 @@ document.addEventListener('alpine:init', () => {
             const strictMeasured = this.measureRenderedBounds(contentElement, {
                 useRobustWidth: false,
             });
-            const strictWidthOverflowThreshold =
-                availableWidth * Number(profile.strictWidthOverflowTolerance ?? 1.06);
-            const strictHeightOverflowThreshold =
-                availableHeight * Number(profile.strictHeightOverflowTolerance ?? 1.01);
             const widthOverflowAdjust =
                 strictMeasured.width > strictWidthOverflowThreshold &&
                 strictMeasured.width > 0 &&
@@ -2625,8 +2975,6 @@ document.addEventListener('alpine:init', () => {
                 );
             }
 
-            const normalizedPageNumber = Math.max(1, Math.trunc(Number(this.pageNumber ?? 1)));
-
             if (normalizedPageNumber <= 2) {
                 normalizedScale = Math.max(
                     minScale,
@@ -2639,6 +2987,21 @@ document.addEventListener('alpine:init', () => {
 
             rootElement.style.setProperty('--quran-page-scale', String(normalizedScale));
             this.pageScale = normalizedScale;
+            this._fitResultByContext.set(fitCacheKey, {
+                layout: { ...bestLayout },
+                scale: normalizedScale,
+            });
+
+            while (this._fitResultByContext.size > fitResultCacheLimit) {
+                const oldestCacheKey = this._fitResultByContext.keys().next().value;
+
+                if (!oldestCacheKey) {
+                    break;
+                }
+
+                this._fitResultByContext.delete(oldestCacheKey);
+            }
+
             this._fitRunCounter += 1;
             this._lastFittedPageNumber = this.pageNumber;
         },
@@ -2911,6 +3274,18 @@ document.addEventListener('alpine:init', () => {
 
         readerPanelStyle() {
             return 'touch-action: pan-y;';
+        },
+
+        pageFitState() {
+            if (this.isTransitioningOutPage) {
+                return 'fading-out';
+            }
+
+            if (this.isFittingPage) {
+                return 'fitting';
+            }
+
+            return 'ready';
         },
 
         normalizeBooleanFlag(value, fallback = false) {

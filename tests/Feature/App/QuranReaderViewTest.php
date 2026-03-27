@@ -123,7 +123,9 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderViewSource)->toContain('x-bind:data-quran-surah-number=')
         ->and($quranReaderViewSource)->toContain('quran-segment-cluster-copied')
         ->and($quranReaderViewSource)->toContain('quran-segment-copied')
-        ->and($quranReaderViewSource)->toContain('x-bind:data-fit-state="isFittingPage ? \'fitting\' : \'ready\'"')
+        ->and($quranReaderViewSource)->toContain(
+            'x-bind:data-fit-state="typeof pageFitState === \'function\' ? pageFitState() : (isFittingPage ? \'fitting\' : \'ready\')"',
+        )
         ->and($quranReaderViewSource)->toContain('x-for="line in mushafLines"')
         ->and($quranReaderViewSource)->toContain('x-bind:data-quran-line-number="Number(line?.line_number ?? 0)"')
         ->and($quranReaderViewSource)->toContain('x-bind:data-quran-line-type="String(line?.line_type ?? \'\')"')
@@ -160,6 +162,8 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderScriptSource)->toContain('const bookmarkHoldDelayMs = 680;')
         ->and($quranReaderScriptSource)->toContain('const copiedHighlightVisibleDurationMs = 3000;')
         ->and($quranReaderScriptSource)->toContain('const wordClickSuppressionResetMs = 180;')
+        ->and($quranReaderScriptSource)->toContain('const navigationBurstInputThresholdMs = 140;')
+        ->and($quranReaderScriptSource)->toContain('const navigationBurstSettleDelayMs = 72;')
         ->and($quranReaderScriptSource)->toContain('const navigationHistoryLimit = 100;')
         ->and($quranReaderScriptSource)->toContain('const defaultWesternNumerals = Object.freeze([')
         ->and($quranReaderScriptSource)->toContain('const defaultArabicNumerals = Object.freeze([')
@@ -169,11 +173,22 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderScriptSource)->toContain("search: 'quran-reader-search-v3'")
         ->and($quranReaderScriptSource)->toContain('_lastPageInputCommitPage: 0')
         ->and($quranReaderScriptSource)->toContain('_skipNextSearchModalCloseLayout: false')
+        ->and($quranReaderScriptSource)->toContain('_navigationBurstFreezeUntil: 0')
+        ->and($quranReaderScriptSource)->toContain('_activePageAbortController: null')
         ->and($quranReaderScriptSource)->toContain('[this.searchActionModalId]')
         ->and($quranReaderScriptSource)->toContain('document.querySelectorAll(`[data-fi-modal-id="${escapedId}"]`)')
         ->and($quranReaderScriptSource)->toContain('const matchedKnownId = modalId !== \'\' && knownIds.includes(modalId);')
         ->and($quranReaderScriptSource)->toContain('if (matchedKnownId) {')
         ->and($quranReaderScriptSource)->toContain('deriveSurahDirectoryFromItems(items = [])')
+        ->and($quranReaderScriptSource)->toContain('registerNavigationBurst(source = \'generic\')')
+        ->and($quranReaderScriptSource)->toContain('navigationBurstRemainingMsFor(source = \'generic\')')
+        ->and($quranReaderScriptSource)->toContain('resolveNavigationCommitDelay(source = \'generic\', delayMs = navigationSettleDelayMs)')
+        ->and($quranReaderScriptSource)->toContain('shouldSuspendPageCounterMorph()')
+        ->and($quranReaderScriptSource)->toContain('isNavigationBurstActive()')
+        ->and($quranReaderScriptSource)->toContain('runFitPageToViewportLazily()')
+        ->and($quranReaderScriptSource)->toContain('abortActivePageLoad()')
+        ->and($quranReaderScriptSource)->toContain('beginActivePageLoadAbortController()')
+        ->and($quranReaderScriptSource)->toContain("error?.name === 'AbortError'")
         ->and($quranReaderScriptSource)->toContain('resetNavigationQueueForPriorityJump()')
         ->and($quranReaderScriptSource)->toContain("pages: 'quran-reader-pages-v13'")
         ->and($quranReaderScriptSource)->toContain("fonts: 'quran-reader-fonts-v4'")
@@ -398,6 +413,39 @@ it('normalizes invisible directional chars in quran search queries while preserv
         ->and((int) ($invocationItems[0]['surah_number'] ?? 0))->toBe(40)
         ->and((int) ($invocationItems[0]['ayah_number'] ?? 0))->toBe(60)
         ->and((string) ($invocationItems[0]['match_strategy'] ?? ''))->toBe('exact_phrase');
+});
+
+it('caches repeated quran search queries while preserving complete progress emission', function () {
+    /** @var \App\Services\Quran\QuranReaderDataService $service */
+    $service = app(\App\Services\Quran\QuranReaderDataService::class);
+
+    if (! $service->isReady()) {
+        $this->markTestSkipped('Quran reader search dependencies are unavailable.');
+    }
+
+    \Illuminate\Support\Facades\Cache::flush();
+
+    $query = 'يا بني أقم الصلاة';
+    $firstResults = $service->searchProgressively($query, 24);
+    $progressEvents = [];
+    $secondResults = $service->searchProgressively(
+        $query,
+        24,
+        function (array $matches, string $stage, bool $isComplete) use (&$progressEvents): void {
+            $progressEvents[] = [
+                'stage' => $stage,
+                'is_complete' => $isComplete,
+                'count' => count($matches),
+            ];
+        },
+    );
+
+    expect($firstResults)->toBeArray()->not->toBeEmpty()
+        ->and($secondResults)->toEqual($firstResults)
+        ->and($progressEvents)->toHaveCount(1)
+        ->and($progressEvents[0]['stage'])->toBe('complete')
+        ->and($progressEvents[0]['is_complete'])->toBeTrue()
+        ->and((int) $progressEvents[0]['count'])->toBe(count($firstResults));
 });
 
 it('injects visible basmallah lines under late-page surah headers', function () {
