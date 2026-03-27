@@ -160,7 +160,7 @@ class Reader extends Component implements HasActions, HasSchemas
         return Action::make('jumpToPage')
             ->modalHeading('الانتقال إلى صفحة')
             ->modalDescription('أدخل رقم الصفحة المراد الانتقال إليها.')
-            ->modalAutofocus(false)
+            ->modalAutofocus(true)
             ->modalWidth(Width::Small)
             ->modalSubmitActionLabel('انتقال')
             ->extraModalWindowAttributes([
@@ -175,6 +175,7 @@ class Reader extends Component implements HasActions, HasSchemas
                     ->label('الصفحة')
                     ->type('number')
                     ->inputMode('numeric')
+                    ->autofocus()
                     ->extraFieldWrapperAttributes([
                         'id' => 'quran-reader-page-counter-field',
                         'class' => 'quran-page-counter-field',
@@ -184,6 +185,8 @@ class Reader extends Component implements HasActions, HasSchemas
                         'min' => '1',
                         'max' => (string) max(1, $this->maxPage),
                         'step' => '1',
+                        'x-init' => '$nextTick(() => { $el.focus(); $el.select(); });',
+                        'x-on:focus' => '$event.target.select();',
                         'x-on:input' => '$event.target.value = String(Math.min(Math.max(1, Math.trunc(Number($event.target.value || 1) || 1)), Math.max(1, Number($event.target.max) || 1)));',
                         'x-on:blur' => '$event.target.value = String(Math.min(Math.max(1, Math.trunc(Number($event.target.value || 1) || 1)), Math.max(1, Number($event.target.max) || 1)));',
                     ], merge: true)

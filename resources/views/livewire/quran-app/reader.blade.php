@@ -447,6 +447,8 @@
         #quran-reader-history-toggle .quran-history-toggle-icon {
             width: 1.5rem;
             height: 1.5rem;
+            transform: rotate(0deg);
+            transition: transform 460ms cubic-bezier(0.22, 1, 0.36, 1);
         }
 
         #quran-reader-history-toggle .quran-history-toggle-icon path {
@@ -459,39 +461,11 @@
         }
 
         #quran-reader-history-toggle.quran-history-toggle-button:hover .quran-history-toggle-icon {
-            animation: quran-history-bell-ring 0.9s both;
+            transform: rotate(360deg);
         }
 
         #quran-reader-history-toggle.quran-history-toggle-button:active {
             transform: scale(0.8);
-        }
-
-        @keyframes quran-history-bell-ring {
-
-            0%,
-            100% {
-                transform-origin: top;
-            }
-
-            15% {
-                transform: rotateZ(10deg);
-            }
-
-            30% {
-                transform: rotateZ(-10deg);
-            }
-
-            45% {
-                transform: rotateZ(5deg);
-            }
-
-            60% {
-                transform: rotateZ(-5deg);
-            }
-
-            75% {
-                transform: rotateZ(2deg);
-            }
         }
 
         #quran-reader-bookmark-toggle.quran-bookmark-toggle-button {
@@ -1278,6 +1252,7 @@
         searchModalId: @js('quran-reader-search-modal'),
         searchModalDomId: @js('quran-reader-search-modal'),
         searchActionModalId: @js(''),
+        jumpPageModalId: @js('quran-reader-jump-page-modal'),
         historyModalId: @js('quran-reader-history-modal'),
         bookmarksModalId: @js('quran-reader-bookmarks-modal'),
         settings: @js($quranReaderSettings ?? ['enableVisualEnhancements' => true, 'targetWordsByDefault' => false, 'preserveHarakatOnCopy' => true, 'appendSurahAffixOnMultiCopy' => true, 'appendSurahAffixAlwaysOnCopy' => false, 'useWesternNumerals' => true]),

@@ -636,6 +636,25 @@
 
     .quran-manager-table tbody tr {
         border-bottom: 1px solid color-mix(in srgb, var(--quran-chip-border) 22%, transparent);
+        transform-origin: center;
+        transition:
+            background-color 240ms ease,
+            transform 240ms ease,
+            opacity 240ms ease,
+            filter 240ms ease;
+    }
+
+    .quran-manager-table tbody tr.quran-manager-row--updated {
+        animation: quran-manager-row-updated 520ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .quran-manager-table tbody tr.quran-manager-row--replacing {
+        animation: quran-manager-row-replacing 560ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .quran-manager-table tbody tr.quran-manager-row--removing {
+        animation: quran-manager-row-removing 220ms cubic-bezier(0.4, 0, 1, 1) forwards;
+        pointer-events: none;
     }
 
     .quran-manager-table tbody td {
@@ -710,5 +729,53 @@
         border-color: color-mix(in srgb, var(--danger-500) 48%, transparent);
         background: color-mix(in srgb, var(--danger-100) 64%, transparent);
         color: color-mix(in srgb, var(--danger-700) 84%, var(--quran-panel-text));
+    }
+
+    @keyframes quran-manager-row-updated {
+        0% {
+            background: color-mix(in srgb, var(--primary-200) 44%, transparent);
+            box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary-500) 46%, transparent);
+            transform: translateY(-0.05rem) scale(1.005);
+        }
+
+        100% {
+            background: transparent;
+            box-shadow: inset 0 0 0 0 color-mix(in srgb, var(--primary-500) 0%, transparent);
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    @keyframes quran-manager-row-removing {
+        0% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            filter: saturate(1);
+        }
+
+        100% {
+            opacity: 0;
+            transform: translateY(-0.16rem) scale(0.97);
+            filter: saturate(0.72);
+        }
+    }
+
+    @keyframes quran-manager-row-replacing {
+        0% {
+            background: color-mix(in srgb, var(--warning-200) 46%, transparent);
+            transform: translateY(0.08rem) scale(0.985);
+            filter: saturate(0.9);
+        }
+
+        45% {
+            background: color-mix(in srgb, var(--warning-100) 40%, transparent);
+            transform: translateY(-0.08rem) scale(1.01);
+            filter: saturate(1.12);
+        }
+
+        100% {
+            background: transparent;
+            transform: translateY(0) scale(1);
+            filter: saturate(1);
+        }
     }
 }

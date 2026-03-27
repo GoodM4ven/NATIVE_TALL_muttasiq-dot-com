@@ -17,7 +17,7 @@
                     <th>إجراءات</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody x-ref="bookmarksRowsList">
                 <template x-if="bookmarks.length === 0">
                     <tr>
                         <td
@@ -31,7 +31,10 @@
                     x-for="bookmark in bookmarks"
                     :key="`quran-bookmark-entry-${bookmark.id}`"
                 >
-                    <tr data-quran-bookmark-row>
+                    <tr
+                        data-quran-bookmark-row
+                        x-bind:class="bookmarkRowEffectClass(bookmark)"
+                    >
                         <td>
                             <button
                                 class="quran-manager-link"
@@ -46,7 +49,7 @@
                                 class="quran-manager-input"
                                 data-quran-bookmark-title
                                 type="text"
-                                placeholder="عنوان العلامة"
+                                placeholder="-"
                                 x-bind:value="bookmark.title ?? ''"
                                 x-on:input.debounce.350ms="updateBookmarkTitle(bookmark.id, $event.target.value)"
                             />

@@ -89,6 +89,9 @@ const wait = async (durationMs) => {
 const wordPressHoldDelayMs = 750;
 const wordPressDragThresholdPx = 14;
 const bookmarkHoldDelayMs = 680;
+const managerRowRemoveAnimationDurationMs = 220;
+const managerRowUpdateAnimationDurationMs = 520;
+const managerRowReplaceAnimationDurationMs = 560;
 const copyPopoverVisibleDurationMs = 920;
 const copiedHighlightVisibleDurationMs = 3000;
 const wordClickSuppressionResetMs = 180;
@@ -483,6 +486,7 @@ document.addEventListener('alpine:init', () => {
         searchModalId: String(config?.searchModalId ?? ''),
         searchModalDomId: String(config?.searchModalDomId ?? ''),
         searchActionModalId: String(config?.searchActionModalId ?? ''),
+        jumpPageModalId: String(config?.jumpPageModalId ?? ''),
         historyModalId: String(config?.historyModalId ?? ''),
         bookmarksModalId: String(config?.bookmarksModalId ?? ''),
         initialSettings:
@@ -563,6 +567,10 @@ document.addEventListener('alpine:init', () => {
         bookmarks: [],
         historyModalOpen: false,
         bookmarksModalOpen: false,
+        managerRowEffects: {
+            history: {},
+            bookmarks: {},
+        },
         copyFeedback: {
             visible: false,
             x: 0,
@@ -618,6 +626,8 @@ document.addEventListener('alpine:init', () => {
         _lastSearchStreamPayloadRaw: '',
         _stopLivewireMorphedHook: null,
         _searchResultsAutoAnimateStop: null,
+        _historyRowsAutoAnimateStop: null,
+        _bookmarksRowsAutoAnimateStop: null,
         _searchModalCloseDebounceTimer: null,
         _searchModalOpenInFlight: null,
         _surahDirectoryAutoFocusToken: 0,
@@ -653,6 +663,7 @@ document.addEventListener('alpine:init', () => {
         _idleWarmupInFlightPage: 0,
         _idleWarmupAbortController: null,
         _idleWarmupHasBackgroundSweepQueued: false,
+        _managerRowEffectTimers: new Map(),
         wordPress: {
             active: false,
             pointerId: null,
@@ -688,6 +699,7 @@ document.addEventListener('alpine:init', () => {
             this.syncSearchActiveSurahNumber();
             this.navigationHistory = readNavigationHistory();
             this.bookmarks = readBookmarks();
+            this.dispatchManagerModalsVisibilityState();
 
             const storedLastPageNumber = readLastPageNumber();
             const restoredPage = clampPage(
@@ -878,6 +890,28 @@ document.addEventListener('alpine:init', () => {
                 this._searchResultsAutoAnimateStop();
                 this._searchResultsAutoAnimateStop = null;
             }
+
+            if (typeof this._historyRowsAutoAnimateStop === 'function') {
+                this._historyRowsAutoAnimateStop();
+                this._historyRowsAutoAnimateStop = null;
+            }
+
+            if (typeof this._bookmarksRowsAutoAnimateStop === 'function') {
+                this._bookmarksRowsAutoAnimateStop();
+                this._bookmarksRowsAutoAnimateStop = null;
+            }
+
+            this._managerRowEffectTimers.forEach((timerId) => {
+                clearTimeout(timerId);
+            });
+            this._managerRowEffectTimers.clear();
+            this.managerRowEffects = {
+                history: {},
+                bookmarks: {},
+            };
+            this.historyModalOpen = false;
+            this.bookmarksModalOpen = false;
+            this.dispatchManagerModalsVisibilityState();
 
             if (typeof this._stopLivewireMorphedHook === 'function') {
                 this._stopLivewireMorphedHook();
@@ -1266,6 +1300,150 @@ document.addEventListener('alpine:init', () => {
             return 'انتقال عبر البحث';
         },
 
+        historyEntrySurahName(entry) {
+            const surahNumber = Math.max(0, Math.trunc(Number(entry?.surah_number ?? 0)));
+            const resolvedName = this.surahNameOnly(surahNumber);
+
+            if (resolvedName !== '') {
+                return resolvedName;
+            }
+
+            return '-';
+        },
+
+        dispatchManagerModalsVisibilityState() {
+            window.dispatchEvent(
+                new CustomEvent('quran-manager-modals-visibility', {
+                    detail: {
+                        open: this.historyModalOpen || this.bookmarksModalOpen,
+                    },
+                }),
+            );
+        },
+
+        managerRowEffectClass(collection, itemId) {
+            const normalizedCollection = collection === 'history' ? 'history' : 'bookmarks';
+            const normalizedItemId = String(itemId ?? '').trim();
+
+            if (normalizedItemId === '') {
+                return '';
+            }
+
+            const effect = this.managerRowEffects?.[normalizedCollection]?.[normalizedItemId] ?? '';
+
+            if (effect === 'updated') {
+                return 'quran-manager-row--updated';
+            }
+
+            if (effect === 'replacing') {
+                return 'quran-manager-row--replacing';
+            }
+
+            if (effect === 'removing') {
+                return 'quran-manager-row--removing';
+            }
+
+            return '';
+        },
+
+        historyRowEffectClass(entry) {
+            return this.managerRowEffectClass('history', entry?.id);
+        },
+
+        bookmarkRowEffectClass(bookmark) {
+            return this.managerRowEffectClass('bookmarks', bookmark?.id);
+        },
+
+        managerRowEffectTimerKey(collection, itemId) {
+            return `${collection}:${itemId}`;
+        },
+
+        clearManagerRowEffectTimer(collection, itemId) {
+            const timerKey = this.managerRowEffectTimerKey(collection, itemId);
+            const timerId = this._managerRowEffectTimers.get(timerKey);
+
+            if (timerId !== undefined) {
+                clearTimeout(timerId);
+                this._managerRowEffectTimers.delete(timerKey);
+            }
+        },
+
+        setManagerRowEffect(collection, itemId, effect) {
+            const normalizedCollection = collection === 'history' ? 'history' : 'bookmarks';
+            const normalizedItemId = String(itemId ?? '').trim();
+
+            if (normalizedItemId === '') {
+                return;
+            }
+
+            const nextCollectionEffects = {
+                ...(this.managerRowEffects?.[normalizedCollection] ?? {}),
+            };
+
+            if (String(effect ?? '').trim() === '') {
+                delete nextCollectionEffects[normalizedItemId];
+            } else {
+                nextCollectionEffects[normalizedItemId] = String(effect ?? '');
+            }
+
+            this.managerRowEffects = {
+                ...this.managerRowEffects,
+                [normalizedCollection]: nextCollectionEffects,
+            };
+        },
+
+        markManagerRowUpdated(collection, itemId) {
+            const normalizedCollection = collection === 'history' ? 'history' : 'bookmarks';
+            const normalizedItemId = String(itemId ?? '').trim();
+
+            if (normalizedItemId === '') {
+                return;
+            }
+
+            this.clearManagerRowEffectTimer(normalizedCollection, normalizedItemId);
+            this.setManagerRowEffect(normalizedCollection, normalizedItemId, 'updated');
+
+            const timerKey = this.managerRowEffectTimerKey(normalizedCollection, normalizedItemId);
+            const timerId = window.setTimeout(() => {
+                this.setManagerRowEffect(normalizedCollection, normalizedItemId, '');
+                this._managerRowEffectTimers.delete(timerKey);
+            }, managerRowUpdateAnimationDurationMs);
+
+            this._managerRowEffectTimers.set(timerKey, timerId);
+        },
+
+        markManagerRowReplaced(collection, itemId) {
+            const normalizedCollection = collection === 'history' ? 'history' : 'bookmarks';
+            const normalizedItemId = String(itemId ?? '').trim();
+
+            if (normalizedItemId === '') {
+                return;
+            }
+
+            this.clearManagerRowEffectTimer(normalizedCollection, normalizedItemId);
+            this.setManagerRowEffect(normalizedCollection, normalizedItemId, 'replacing');
+
+            const timerKey = this.managerRowEffectTimerKey(normalizedCollection, normalizedItemId);
+            const timerId = window.setTimeout(() => {
+                this.setManagerRowEffect(normalizedCollection, normalizedItemId, '');
+                this._managerRowEffectTimers.delete(timerKey);
+            }, managerRowReplaceAnimationDurationMs);
+
+            this._managerRowEffectTimers.set(timerKey, timerId);
+        },
+
+        markManagerRowsRemoving(collection, itemIds = []) {
+            const normalizedCollection = collection === 'history' ? 'history' : 'bookmarks';
+
+            itemIds
+                .map((itemId) => String(itemId ?? '').trim())
+                .filter((itemId) => itemId !== '')
+                .forEach((itemId) => {
+                    this.clearManagerRowEffectTimer(normalizedCollection, itemId);
+                    this.setManagerRowEffect(normalizedCollection, itemId, 'removing');
+                });
+        },
+
         updateHistoryEntryTags(entryId, rawTags) {
             const normalizedEntryId = String(entryId ?? '').trim();
 
@@ -1287,13 +1465,32 @@ document.addEventListener('alpine:init', () => {
                 };
             });
             this.persistNavigationHistory();
+            this.markManagerRowUpdated('history', normalizedEntryId);
         },
 
         clearNavigationHistory() {
-            this.navigationHistory = this.navigationHistory.filter(
-                (entry) => Array.isArray(entry?.tags) && entry.tags.length > 0,
-            );
-            this.persistNavigationHistory();
+            const removableIds = this.navigationHistory
+                .filter((entry) => !Array.isArray(entry?.tags) || entry.tags.length === 0)
+                .map((entry) => String(entry?.id ?? '').trim())
+                .filter((entryId) => entryId !== '');
+
+            if (removableIds.length === 0) {
+                return;
+            }
+
+            this.markManagerRowsRemoving('history', removableIds);
+
+            window.setTimeout(() => {
+                this.navigationHistory = this.navigationHistory.filter((entry) => {
+                    const normalizedEntryId = String(entry?.id ?? '').trim();
+
+                    return !removableIds.includes(normalizedEntryId);
+                });
+                this.persistNavigationHistory();
+                removableIds.forEach((entryId) => {
+                    this.setManagerRowEffect('history', entryId, '');
+                });
+            }, managerRowRemoveAnimationDurationMs);
         },
 
         recordNavigationHistory({
@@ -1366,8 +1563,7 @@ document.addEventListener('alpine:init', () => {
             const timestamp = Date.now();
             const existingEntry = this.bookmarkedPageEntry(normalizedPageNumber);
             const nextId = String(id ?? existingEntry?.id ?? uniqueLocalId());
-            const normalizedTitle =
-                normalizeTextValue(title) ?? this.defaultBookmarkTitle(normalizedPageNumber);
+            const normalizedTitle = normalizeTextValue(title);
 
             this.bookmarks = this.bookmarks.filter(
                 (bookmark) => String(bookmark?.id ?? '') !== String(existingEntry?.id ?? ''),
@@ -1385,6 +1581,7 @@ document.addEventListener('alpine:init', () => {
                 }),
             );
             this.persistBookmarks();
+            this.markManagerRowUpdated('bookmarks', nextId);
         },
 
         toggleCurrentPageBookmark() {
@@ -1406,10 +1603,15 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            this.bookmarks = this.bookmarks.filter(
-                (bookmark) => String(bookmark?.id ?? '') !== normalizedBookmarkId,
-            );
-            this.persistBookmarks();
+            this.markManagerRowsRemoving('bookmarks', [normalizedBookmarkId]);
+
+            window.setTimeout(() => {
+                this.bookmarks = this.bookmarks.filter(
+                    (bookmark) => String(bookmark?.id ?? '') !== normalizedBookmarkId,
+                );
+                this.persistBookmarks();
+                this.setManagerRowEffect('bookmarks', normalizedBookmarkId, '');
+            }, managerRowRemoveAnimationDurationMs);
         },
 
         updateBookmarkTitle(bookmarkId, title) {
@@ -1433,6 +1635,7 @@ document.addEventListener('alpine:init', () => {
                 };
             });
             this.persistBookmarks();
+            this.markManagerRowUpdated('bookmarks', normalizedBookmarkId);
         },
 
         replaceBookmarkPage(bookmarkId) {
@@ -1451,7 +1654,7 @@ document.addEventListener('alpine:init', () => {
                 const normalizedBookmarkEntryId = String(bookmark?.id ?? '');
 
                 if (normalizedBookmarkEntryId === normalizedBookmarkId) {
-                    return false;
+                    return true;
                 }
 
                 if (
@@ -1464,15 +1667,33 @@ document.addEventListener('alpine:init', () => {
 
                 return true;
             });
+            this.bookmarks = this.bookmarks.map((bookmark) => {
+                if (String(bookmark?.id ?? '') !== normalizedBookmarkId) {
+                    return bookmark;
+                }
 
-            this.bookmarks.unshift(
-                normalizeBookmarkEntry({
-                    ...targetBookmark,
+                return normalizeBookmarkEntry({
+                    ...bookmark,
                     page_number: this.pageNumber,
                     updated_at: Date.now(),
-                }),
-            );
+                });
+            });
+            this.bookmarks = this.bookmarks.slice().sort((firstEntry, secondEntry) => {
+                const firstId = String(firstEntry?.id ?? '');
+                const secondId = String(secondEntry?.id ?? '');
+
+                if (firstId === normalizedBookmarkId && secondId !== normalizedBookmarkId) {
+                    return -1;
+                }
+
+                if (firstId !== normalizedBookmarkId && secondId === normalizedBookmarkId) {
+                    return 1;
+                }
+
+                return Number(secondEntry?.updated_at ?? 0) - Number(firstEntry?.updated_at ?? 0);
+            });
             this.persistBookmarks();
+            this.markManagerRowReplaced('bookmarks', normalizedBookmarkId);
         },
 
         clearBookmarkButtonPressState({ resetSuppressClick = true } = {}) {
@@ -5111,9 +5332,10 @@ document.addEventListener('alpine:init', () => {
             }
 
             const shouldAppendAyahSplitters = ayahGroups.length > 1;
+            const shouldAppendSurahAffixes = this.shouldAppendDraggedSurahAffix();
             const parts = [];
 
-            ayahGroups.forEach((group) => {
+            ayahGroups.forEach((group, groupIndex) => {
                 const groupedText = normalizeTextValue(group.words.join(' '));
 
                 if (!groupedText) {
@@ -5123,14 +5345,32 @@ document.addEventListener('alpine:init', () => {
                 parts.push(groupedText);
 
                 if (!shouldAppendAyahSplitters) {
+                    if (!shouldAppendSurahAffixes) {
+                        return;
+                    }
+                } else {
+                    const splitter = this.ayahSplitterToken(group.ayahIndex, group.ayahNumber);
+
+                    if (splitter) {
+                        parts.push(splitter);
+                    }
+                }
+
+                if (!shouldAppendSurahAffixes) {
                     return;
                 }
 
-                const splitter = this.ayahSplitterToken(group.ayahIndex, group.ayahNumber);
+                const currentSurahNumber = this.surahNumberForAyahIndex(group.ayahIndex);
+                const nextGroup = ayahGroups[groupIndex + 1] ?? null;
+                const nextSurahNumber = nextGroup
+                    ? this.surahNumberForAyahIndex(nextGroup.ayahIndex)
+                    : 0;
 
-                if (splitter) {
-                    parts.push(splitter);
+                if (currentSurahNumber < 1 || currentSurahNumber === nextSurahNumber) {
+                    return;
                 }
+
+                parts.push(`~ [${this.surahLabel(currentSurahNumber)}]`);
             });
 
             return normalizeTextValue(parts.join(' '));
@@ -5151,9 +5391,10 @@ document.addEventListener('alpine:init', () => {
             }
 
             const shouldAppendAyahSplitters = normalizedAyahIndexes.length > 1;
+            const shouldAppendSurahAffixes = this.shouldAppendDraggedSurahAffix();
             const parts = [];
 
-            normalizedAyahIndexes.forEach((ayahIndex) => {
+            normalizedAyahIndexes.forEach((ayahIndex, ayahIndexPosition) => {
                 const ayahText = this.extractAyahText(ayahIndex);
 
                 if (!ayahText) {
@@ -5163,14 +5404,30 @@ document.addEventListener('alpine:init', () => {
                 parts.push(ayahText);
 
                 if (!shouldAppendAyahSplitters) {
+                    if (!shouldAppendSurahAffixes) {
+                        return;
+                    }
+                } else {
+                    const splitter = this.ayahSplitterToken(ayahIndex);
+
+                    if (splitter) {
+                        parts.push(splitter);
+                    }
+                }
+
+                if (!shouldAppendSurahAffixes) {
                     return;
                 }
 
-                const splitter = this.ayahSplitterToken(ayahIndex);
+                const currentSurahNumber = this.surahNumberForAyahIndex(ayahIndex);
+                const nextAyahIndex = normalizedAyahIndexes[ayahIndexPosition + 1] ?? 0;
+                const nextSurahNumber = this.surahNumberForAyahIndex(nextAyahIndex);
 
-                if (splitter) {
-                    parts.push(splitter);
+                if (currentSurahNumber < 1 || currentSurahNumber === nextSurahNumber) {
+                    return;
                 }
+
+                parts.push(`~ [${this.surahLabel(currentSurahNumber)}]`);
             });
 
             return normalizeTextValue(parts.join(' '));
@@ -5187,13 +5444,7 @@ document.addEventListener('alpine:init', () => {
                 return null;
             }
 
-            const surahAffixes = this.draggedSelectionSurahAffixes();
-
-            if (!Array.isArray(surahAffixes) || surahAffixes.length < 1) {
-                return normalizedSelectionText;
-            }
-
-            return normalizeTextValue(`${normalizedSelectionText} ${surahAffixes.join(' ')}`);
+            return normalizedSelectionText;
         },
 
         extractWordText(word) {
@@ -6995,6 +7246,39 @@ document.addEventListener('alpine:init', () => {
             return rankedCandidates[0]?.element ?? null;
         },
 
+        jumpPageInputElement() {
+            const inputElement = document.getElementById('quran-reader-page-counter-input');
+
+            if (inputElement instanceof HTMLInputElement && inputElement.isConnected) {
+                return inputElement;
+            }
+
+            return null;
+        },
+
+        syncJumpPageModalInputValue({ shouldSelect = true } = {}) {
+            const inputElement = this.jumpPageInputElement();
+
+            if (!(inputElement instanceof HTMLInputElement)) {
+                return false;
+            }
+
+            const normalizedPageNumber = this.clampPage(this.pageNumber, this.maxPage);
+            const nextValue = String(normalizedPageNumber);
+
+            if (inputElement.value !== nextValue) {
+                inputElement.value = nextValue;
+                inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+
+            if (shouldSelect) {
+                inputElement.focus();
+                inputElement.select();
+            }
+
+            return true;
+        },
+
         searchModalWindowElement() {
             const candidates = [];
             const isVisible = (element) => {
@@ -7327,18 +7611,75 @@ document.addEventListener('alpine:init', () => {
             return this.bookmarksModalOpen;
         },
 
+        isJumpPageModalEvent(kind, event) {
+            const modalId = String(event?.detail?.id ?? '').trim();
+            const knownIds = [this.jumpPageModalId]
+                .map((value) => String(value ?? '').trim())
+                .filter((value) => value !== '');
+            const matchedKnownId = modalId !== '' && knownIds.includes(modalId);
+
+            if (matchedKnownId) {
+                return true;
+            }
+
+            if (kind === 'opened') {
+                return this.isModalWindowVisibleById(this.jumpPageModalId);
+            }
+
+            return false;
+        },
+
         handleModalLifecycleEvent(kind, event) {
             this.trackModalLifecycle(kind, event);
             const isSearchModalEvent = this.isSearchModalEvent(kind, event);
             const isHistoryModalEvent = this.isHistoryModalEvent(kind, event);
             const isBookmarksModalEvent = this.isBookmarksModalEvent(kind, event);
+            const isJumpPageModalEvent = this.isJumpPageModalEvent(kind, event);
+            let shouldSyncManagerModalsVisibility = false;
+
+            if (isJumpPageModalEvent && kind === 'opened') {
+                this.$nextTick(() => {
+                    this.syncJumpPageModalInputValue();
+                    window.setTimeout(() => {
+                        this.syncJumpPageModalInputValue();
+                    }, 40);
+                });
+            }
 
             if (isHistoryModalEvent) {
-                this.historyModalOpen = kind === 'opened';
+                if (kind === 'opened') {
+                    this.historyModalOpen = true;
+                    this.$nextTick(() => {
+                        this.ensureHistoryRowsAnimations();
+                    });
+                }
+
+                if (kind === 'closed') {
+                    this.historyModalOpen = false;
+                    this.teardownHistoryRowsAnimations();
+                }
+
+                shouldSyncManagerModalsVisibility = true;
             }
 
             if (isBookmarksModalEvent) {
-                this.bookmarksModalOpen = kind === 'opened';
+                if (kind === 'opened') {
+                    this.bookmarksModalOpen = true;
+                    this.$nextTick(() => {
+                        this.ensureBookmarksRowsAnimations();
+                    });
+                }
+
+                if (kind === 'closed') {
+                    this.bookmarksModalOpen = false;
+                    this.teardownBookmarksRowsAnimations();
+                }
+
+                shouldSyncManagerModalsVisibility = true;
+            }
+
+            if (shouldSyncManagerModalsVisibility) {
+                this.dispatchManagerModalsVisibilityState();
             }
 
             if (!isSearchModalEvent) {
@@ -7381,6 +7722,68 @@ document.addEventListener('alpine:init', () => {
                     });
                 }
             }
+        },
+
+        ensureHistoryRowsAnimations() {
+            if (typeof window.autoAnimate !== 'function') {
+                return;
+            }
+
+            if (typeof this._historyRowsAutoAnimateStop === 'function') {
+                return;
+            }
+
+            const historyRowsContainer = this.$refs.historyRowsList;
+
+            if (!(historyRowsContainer instanceof Element)) {
+                return;
+            }
+
+            this._historyRowsAutoAnimateStop = window.autoAnimate(historyRowsContainer, {
+                duration: 260,
+                easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+                disrespectUserMotionPreference: true,
+            });
+        },
+
+        ensureBookmarksRowsAnimations() {
+            if (typeof window.autoAnimate !== 'function') {
+                return;
+            }
+
+            if (typeof this._bookmarksRowsAutoAnimateStop === 'function') {
+                return;
+            }
+
+            const bookmarksRowsContainer = this.$refs.bookmarksRowsList;
+
+            if (!(bookmarksRowsContainer instanceof Element)) {
+                return;
+            }
+
+            this._bookmarksRowsAutoAnimateStop = window.autoAnimate(bookmarksRowsContainer, {
+                duration: 260,
+                easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+                disrespectUserMotionPreference: true,
+            });
+        },
+
+        teardownHistoryRowsAnimations() {
+            if (typeof this._historyRowsAutoAnimateStop !== 'function') {
+                return;
+            }
+
+            this._historyRowsAutoAnimateStop();
+            this._historyRowsAutoAnimateStop = null;
+        },
+
+        teardownBookmarksRowsAnimations() {
+            if (typeof this._bookmarksRowsAutoAnimateStop !== 'function') {
+                return;
+            }
+
+            this._bookmarksRowsAutoAnimateStop();
+            this._bookmarksRowsAutoAnimateStop = null;
         },
 
         ensureSearchResultAnimations() {
@@ -7537,6 +7940,8 @@ document.addEventListener('alpine:init', () => {
             await this.requestModalCloseByKnownIds([this.historyModalId], {
                 onFallback: () => {
                     this.historyModalOpen = false;
+                    this.teardownHistoryRowsAnimations();
+                    this.dispatchManagerModalsVisibilityState();
                 },
             });
         },
@@ -7545,6 +7950,8 @@ document.addEventListener('alpine:init', () => {
             await this.requestModalCloseByKnownIds([this.bookmarksModalId], {
                 onFallback: () => {
                     this.bookmarksModalOpen = false;
+                    this.teardownBookmarksRowsAnimations();
+                    this.dispatchManagerModalsVisibilityState();
                 },
             });
         },

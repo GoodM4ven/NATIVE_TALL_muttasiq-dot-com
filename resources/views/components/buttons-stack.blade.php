@@ -27,6 +27,7 @@
         interactionUnlockId: null,
         isInteractionLocked: false,
         actionOpenState: false,
+        isQuranManagerModalOpen: false,
         stackTransitionMs: 200,
         shouldManageDisplay(item) {
             if (!item) {
@@ -57,6 +58,7 @@
             this.observeItems();
             this.observeRespecting();
             this.setRespectingStack();
+            this.syncQuranManagerModalStateFromDom();
             this.scheduleLayout(3);
         },
         destroy() {
@@ -254,6 +256,63 @@
     
             this.scheduleLayout(3);
         },
+        syncQuranManagerModalState(isOpen) {
+            const nextState = isOpen === true;
+    
+            if (this.isQuranManagerModalOpen === nextState) {
+                return;
+            }
+    
+            this.isQuranManagerModalOpen = nextState;
+    
+            if (this.isQuranManagerModalOpen) {
+                this.closeQuickStack();
+                this.releaseInteractionLock();
+            }
+    
+            this.scheduleLayout(2);
+        },
+        isQuranManagerModalWindowVisible(modalWindowId) {
+            const normalizedId = String(modalWindowId ?? '').trim();
+    
+            if (normalizedId === '') {
+                return false;
+            }
+    
+            const modalWindowElement = document.getElementById(normalizedId);
+    
+            if (!(modalWindowElement instanceof Element)) {
+                return false;
+            }
+    
+            const modalElement = modalWindowElement.closest('.fi-modal');
+    
+            if (modalElement && !modalElement.classList.contains('fi-modal-open')) {
+                return false;
+            }
+    
+            const styles = window.getComputedStyle(modalWindowElement);
+    
+            return styles.display !== 'none' && styles.visibility !== 'hidden';
+        },
+        syncQuranManagerModalStateFromDom() {
+            const isOpen =
+                this.isQuranManagerModalWindowVisible('quran-reader-history-modal') ||
+                this.isQuranManagerModalWindowVisible('quran-reader-bookmarks-modal');
+    
+            this.syncQuranManagerModalState(isOpen);
+        },
+        rootClasses() {
+            const classes = [this.anchorClasses(), 'transition-opacity duration-220 ease-out'];
+    
+            if (this.isQuranManagerModalOpen) {
+                classes.push('opacity-0 pointer-events-none');
+            } else {
+                classes.push('opacity-100');
+            }
+    
+            return classes.filter((value) => value !== '').join(' ');
+        },
         bindClickHandler() {
             this.handleClick = (event) => {
                 if (!this.respectingStack) {
@@ -425,10 +484,12 @@
     x-on:hashchange.window="scheduleLayout(3)"
     x-on:resize.window="scheduleLayout(2, { afterDom: false })"
     x-on:orientationchange.window="scheduleLayout(2, { afterDom: false })"
-    x-on:open-modal.window="closeQuickStack(); releaseInteractionLock(); scheduleLayout(3)"
-    x-on:x-modal-opened.window="scheduleLayout(3)"
-    x-on:close-modal.window="scheduleLayout(4)"
-    x-on:close-modal-quietly.window="scheduleLayout(4)"
+    x-on:open-modal.window="closeQuickStack(); releaseInteractionLock(); scheduleLayout(3); window.setTimeout(() => syncQuranManagerModalStateFromDom(), 0)"
+    x-on:x-modal-opened.window="scheduleLayout(3); syncQuranManagerModalStateFromDom()"
+    x-on:close-modal.window="scheduleLayout(4); window.setTimeout(() => syncQuranManagerModalStateFromDom(), 0)"
+    x-on:close-modal-quietly.window="scheduleLayout(4); window.setTimeout(() => syncQuranManagerModalStateFromDom(), 0)"
+    x-on:x-modal-closed.window="scheduleLayout(4); syncQuranManagerModalStateFromDom()"
+    x-on:quran-manager-modals-visibility.window="syncQuranManagerModalState($event.detail?.open === true)"
     x-on:click.window="
         if (!respectingStack) return;
         if ($refs.stack && $refs.stack.contains($event.target)) return;
@@ -442,7 +503,7 @@
         releaseInteractionLock();
         scheduleLayout(2, { afterDom: false });
     "
-    x-bind:class="anchorClasses()"
+    x-bind:class="rootClasses()"
 >
     <div
         class="relative"

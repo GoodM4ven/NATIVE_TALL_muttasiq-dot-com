@@ -24,12 +24,12 @@
             <thead>
                 <tr>
                     <th>الانتقال</th>
-                    <th>التفاصيل</th>
+                    <th>السورة</th>
                     <th>النوع</th>
                     <th>الوسوم</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody x-ref="historyRowsList">
                 <template x-if="navigationHistory.length === 0">
                     <tr>
                         <td
@@ -43,7 +43,10 @@
                     x-for="entry in navigationHistory"
                     :key="`quran-history-entry-${entry.id}`"
                 >
-                    <tr data-quran-history-row>
+                    <tr
+                        data-quran-history-row
+                        x-bind:class="historyRowEffectClass(entry)"
+                    >
                         <td>
                             <button
                                 class="quran-manager-link"
@@ -53,7 +56,7 @@
                                 x-text="`صفحة ${entry.page_number}`"
                             ></button>
                         </td>
-                        <td x-text="historyEntryContextLabel(entry)"></td>
+                        <td x-text="historyEntrySurahName(entry)"></td>
                         <td x-text="historyEntrySourceLabel(entry)"></td>
                         <td>
                             <input
