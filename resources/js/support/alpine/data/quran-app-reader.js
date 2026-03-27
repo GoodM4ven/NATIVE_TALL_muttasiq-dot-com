@@ -1318,6 +1318,7 @@ document.addEventListener('alpine:init', () => {
                 new CustomEvent('quran-manager-modals-visibility', {
                     detail: {
                         open:
+                            this.search.modalOpen ||
                             this.historyModalOpen ||
                             this.bookmarksModalOpen ||
                             this.jumpPageModalOpen,
@@ -7554,14 +7555,49 @@ document.addEventListener('alpine:init', () => {
             });
         },
 
-        isModalWindowVisibleById(modalId) {
+        modalWindowElementById(modalId) {
             const normalizedModalId = String(modalId ?? '').trim();
 
             if (!normalizedModalId) {
-                return false;
+                return null;
             }
 
-            const modalWindowElement = document.getElementById(normalizedModalId);
+            const resolveModalWindowFromElement = (element) => {
+                if (!(element instanceof Element)) {
+                    return null;
+                }
+
+                if (element.classList.contains('fi-modal-window')) {
+                    return element;
+                }
+
+                const nestedModalWindow = element.querySelector('.fi-modal-window');
+
+                return nestedModalWindow instanceof Element ? nestedModalWindow : null;
+            };
+
+            const directElement = document.getElementById(normalizedModalId);
+            const directModalWindow = resolveModalWindowFromElement(directElement);
+
+            if (directModalWindow) {
+                return directModalWindow;
+            }
+
+            const escapedId = window.CSS?.escape
+                ? window.CSS.escape(normalizedModalId)
+                : normalizedModalId;
+            const modalByDataId = document.querySelector(`[data-fi-modal-id="${escapedId}"]`);
+            const modalWindowFromDataId = resolveModalWindowFromElement(modalByDataId);
+
+            if (modalWindowFromDataId) {
+                return modalWindowFromDataId;
+            }
+
+            return null;
+        },
+
+        isModalWindowVisibleById(modalId) {
+            const modalWindowElement = this.modalWindowElementById(modalId);
 
             if (!(modalWindowElement instanceof Element)) {
                 return false;
@@ -7895,6 +7931,7 @@ document.addEventListener('alpine:init', () => {
             this._lastKnownModalOpenState = true;
             this._skipNextSearchModalCloseLayout = false;
             this.refreshSurahTriggerCaption(false);
+            this.dispatchManagerModalsVisibilityState();
 
             if (this.search.preserveActiveSurahOnNextOpen) {
                 this.search.preserveActiveSurahOnNextOpen = false;
@@ -7938,6 +7975,7 @@ document.addEventListener('alpine:init', () => {
             this.search.results = [];
             this.search.readyResult = null;
             this.search.isOpen = false;
+            this.dispatchManagerModalsVisibilityState();
 
             if (this._searchModalCloseDebounceTimer !== null) {
                 clearTimeout(this._searchModalCloseDebounceTimer);

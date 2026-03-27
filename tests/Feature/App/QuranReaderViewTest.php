@@ -55,7 +55,8 @@ it('wires quran reader entry points from main menu to hash navigation and view m
     expect($buttonsStackSource)->not->toBeFalse()
         ->and($buttonsStackSource)->toContain('syncQuranManagerModalState(isOpen)')
         ->and($buttonsStackSource)->toContain('x-on:quran-manager-modals-visibility.window')
-        ->and($buttonsStackSource)->toContain('opacity-0 pointer-events-none');
+        ->and($buttonsStackSource)->toContain('shouldHideStackItems()')
+        ->and($buttonsStackSource)->toContain('applyStackItemVisibility(item)');
 
     expect($colorfulBackgroundSource)->not->toBeFalse()
         ->and($colorfulBackgroundSource)->toContain('views[`quran-app-tilawa`].isOpen')

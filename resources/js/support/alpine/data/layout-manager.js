@@ -60,8 +60,21 @@ document.addEventListener('alpine:init', () => {
             // ? Keep track of Filament action events
             window.addEventListener('open-modal', () => (this.isActionOpen = true));
             window.addEventListener('x-modal-opened', () => (this.isActionOpen = true));
+            window.addEventListener(
+                'opened-form-component-action-modal',
+                () => (this.isActionOpen = true),
+            );
             window.addEventListener('close-modal', () => (this.isActionOpen = false));
             window.addEventListener('close-modal-quietly', () => (this.isActionOpen = false));
+            window.addEventListener('x-modal-closed', () => (this.isActionOpen = false));
+            window.addEventListener(
+                'closing-form-component-action-modal',
+                () => (this.isActionOpen = false),
+            );
+            window.addEventListener(
+                'closed-form-component-action-modal',
+                () => (this.isActionOpen = false),
+            );
 
             // // ? Auto-scroll to the top instantly upon load
             // if ('scrollRestoration' in history) history.scrollRestoration = 'manual';

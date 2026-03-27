@@ -20,6 +20,7 @@
         items: [],
         observer: null,
         attributeObserver: null,
+        modalObserver: null,
         layoutFrameId: null,
         isLayoutQueued: false,
         pendingLayoutPasses: 0,
@@ -57,6 +58,7 @@
             this.bindClickHandler();
             this.observeItems();
             this.observeRespecting();
+            this.observeModalVisibility();
             this.setRespectingStack();
             this.syncQuranManagerModalStateFromDom();
             this.scheduleLayout(3);
@@ -68,6 +70,10 @@
     
             if (this.attributeObserver) {
                 this.attributeObserver.disconnect();
+            }
+    
+            if (this.modalObserver) {
+                this.modalObserver.disconnect();
             }
     
             if (this.$refs.stack) {
@@ -103,6 +109,41 @@
             this.attributeObserver.observe(this.$el, {
                 attributes: true,
                 attributeFilter: ['data-respecting-stack'],
+            });
+        },
+        observeModalVisibility() {
+            if (typeof MutationObserver === 'undefined' || !(document.body instanceof Element)) {
+                return;
+            }
+    
+            this.modalObserver = new MutationObserver((mutations) => {
+                const hasModalMutation = mutations.some((mutation) => {
+                    if (!(mutation.target instanceof Element)) {
+                        return false;
+                    }
+    
+                    if (
+                        mutation.target.classList.contains('fi-modal') ||
+                        mutation.target.classList.contains('fi-modal-window')
+                    ) {
+                        return true;
+                    }
+    
+                    return mutation.target.closest('.fi-modal') !== null;
+                });
+    
+                if (!hasModalMutation) {
+                    return;
+                }
+    
+                this.scheduleQuranManagerModalStateSync();
+            });
+    
+            this.modalObserver.observe(document.body, {
+                subtree: true,
+                childList: true,
+                attributes: true,
+                attributeFilter: ['class', 'style'],
             });
         },
         refreshItems() {
@@ -272,6 +313,29 @@
     
             this.scheduleLayout(2);
         },
+        shouldHideStackItems() {
+            return this.isQuranManagerModalOpen || this.actionOpenState;
+        },
+        applyStackItemVisibility(item) {
+            if (!(item instanceof Element)) {
+                return;
+            }
+    
+            const shouldHide = this.shouldHideStackItems();
+    
+            item.style.opacity = shouldHide ? '0' : '1';
+            item.style.pointerEvents = shouldHide ? 'none' : '';
+        },
+        hasAnyOpenFilamentModal() {
+            return document.querySelector('.fi-modal.fi-modal-open') !== null;
+        },
+        scheduleQuranManagerModalStateSync() {
+            [0, 24, 64, 140].forEach((delayMs) => {
+                window.setTimeout(() => {
+                    this.syncQuranManagerModalStateFromDom();
+                }, delayMs);
+            });
+        },
         isQuranManagerModalWindowVisible(modalWindowId) {
             const normalizedId = String(modalWindowId ?? '').trim();
     
@@ -279,7 +343,25 @@
                 return false;
             }
     
-            const modalWindowElement = document.getElementById(normalizedId);
+            const resolveModalWindowFromElement = (element) => {
+                if (!(element instanceof Element)) {
+                    return null;
+                }
+    
+                if (element.classList.contains('fi-modal-window')) {
+                    return element;
+                }
+    
+                const nestedModalWindow = element.querySelector('.fi-modal-window');
+    
+                return nestedModalWindow instanceof Element ? nestedModalWindow : null;
+            };
+            const directElement = document.getElementById(normalizedId);
+            const directModalWindow = resolveModalWindowFromElement(directElement);
+            const escapedId = window.CSS?.escape ? window.CSS.escape(normalizedId) : normalizedId;
+            const modalByDataId = document.querySelector(`[data-fi-modal-id='${escapedId}']`);
+            const modalWindowFromDataId = resolveModalWindowFromElement(modalByDataId);
+            const modalWindowElement = directModalWindow ?? modalWindowFromDataId ?? null;
     
             if (!(modalWindowElement instanceof Element)) {
                 return false;
@@ -319,6 +401,8 @@
         },
         syncQuranManagerModalStateFromDom() {
             const isOpen =
+                this.hasAnyOpenFilamentModal() ||
+                this.isQuranManagerModalWindowVisible('quran-reader-search-modal') ||
                 this.isQuranManagerModalWindowVisible('quran-reader-history-modal') ||
                 this.isQuranManagerModalWindowVisible('quran-reader-bookmarks-modal') ||
                 this.isQuranManagerModalWindowVisible('quran-reader-jump-page-modal') ||
@@ -327,15 +411,7 @@
             this.syncQuranManagerModalState(isOpen);
         },
         rootClasses() {
-            const classes = [this.anchorClasses(), 'transition-opacity duration-220 ease-out'];
-    
-            if (this.isQuranManagerModalOpen || this.actionOpenState) {
-                classes.push('opacity-0 pointer-events-none');
-            } else {
-                classes.push('opacity-100');
-            }
-    
-            return classes.filter((value) => value !== '').join(' ');
+            return this.anchorClasses();
         },
         bindClickHandler() {
             this.handleClick = (event) => {
@@ -447,14 +523,20 @@
             }
     
             if (!this.respectingStack) {
-                this.items.forEach((item) => this.resetItem(item));
+                this.items.forEach((item) => {
+                    this.resetItem(item);
+                    this.applyStackItemVisibility(item);
+                });
                 return;
             }
     
             const visibleItems = this.visibleItems();
     
             if (!visibleItems.length) {
-                this.items.forEach((item) => this.resetItem(item));
+                this.items.forEach((item) => {
+                    this.resetItem(item);
+                    this.applyStackItemVisibility(item);
+                });
                 return;
             }
     
@@ -478,12 +560,13 @@
                 item.style.left = '0';
                 item.style.right = 'auto';
                 item.style.transform = `translateX(${translateX}rem)`;
-                item.style.transition = `transform ${this.stackTransitionMs}ms ease`;
+                item.style.transition = `transform ${this.stackTransitionMs}ms ease, opacity ${this.stackTransitionMs}ms ease`;
                 item.style.willChange = 'transform';
                 item.style.zIndex = String(this.itemZIndex(index));
                 if (this.shouldManageDisplay(item)) {
                     item.style.display = 'block';
                 }
+                this.applyStackItemVisibility(item);
             });
         },
         resetItem(item) {
@@ -508,11 +591,14 @@
     x-on:hashchange.window="scheduleLayout(3)"
     x-on:resize.window="scheduleLayout(2, { afterDom: false })"
     x-on:orientationchange.window="scheduleLayout(2, { afterDom: false })"
-    x-on:open-modal.window="closeQuickStack(); releaseInteractionLock(); scheduleLayout(3); window.setTimeout(() => syncQuranManagerModalStateFromDom(), 0)"
-    x-on:x-modal-opened.window="scheduleLayout(3); syncQuranManagerModalStateFromDom()"
-    x-on:close-modal.window="scheduleLayout(4); window.setTimeout(() => syncQuranManagerModalStateFromDom(), 0)"
-    x-on:close-modal-quietly.window="scheduleLayout(4); window.setTimeout(() => syncQuranManagerModalStateFromDom(), 0)"
-    x-on:x-modal-closed.window="scheduleLayout(4); syncQuranManagerModalStateFromDom()"
+    x-on:open-modal.window="closeQuickStack(); releaseInteractionLock(); scheduleLayout(3); scheduleQuranManagerModalStateSync()"
+    x-on:x-modal-opened.window="scheduleLayout(3); scheduleQuranManagerModalStateSync()"
+    x-on:opened-form-component-action-modal.window="scheduleLayout(3); scheduleQuranManagerModalStateSync()"
+    x-on:close-modal.window="scheduleLayout(4); scheduleQuranManagerModalStateSync()"
+    x-on:close-modal-quietly.window="scheduleLayout(4); scheduleQuranManagerModalStateSync()"
+    x-on:x-modal-closed.window="scheduleLayout(4); scheduleQuranManagerModalStateSync()"
+    x-on:closing-form-component-action-modal.window="scheduleLayout(4); scheduleQuranManagerModalStateSync()"
+    x-on:closed-form-component-action-modal.window="scheduleLayout(4); scheduleQuranManagerModalStateSync()"
     x-on:quran-manager-modals-visibility.window="syncQuranManagerModalState($event.detail?.open === true)"
     x-on:click.window="
         if (!respectingStack) return;
