@@ -567,6 +567,7 @@ document.addEventListener('alpine:init', () => {
         bookmarks: [],
         historyModalOpen: false,
         bookmarksModalOpen: false,
+        jumpPageModalOpen: false,
         managerRowEffects: {
             history: {},
             bookmarks: {},
@@ -911,6 +912,7 @@ document.addEventListener('alpine:init', () => {
             };
             this.historyModalOpen = false;
             this.bookmarksModalOpen = false;
+            this.jumpPageModalOpen = false;
             this.dispatchManagerModalsVisibilityState();
 
             if (typeof this._stopLivewireMorphedHook === 'function') {
@@ -1315,7 +1317,10 @@ document.addEventListener('alpine:init', () => {
             window.dispatchEvent(
                 new CustomEvent('quran-manager-modals-visibility', {
                     detail: {
-                        open: this.historyModalOpen || this.bookmarksModalOpen,
+                        open:
+                            this.historyModalOpen ||
+                            this.bookmarksModalOpen ||
+                            this.jumpPageModalOpen,
                     },
                 }),
             );
@@ -7256,10 +7261,60 @@ document.addEventListener('alpine:init', () => {
             return null;
         },
 
-        syncJumpPageModalInputValue({ shouldSelect = true } = {}) {
+        isJumpPageInputVisible() {
             const inputElement = this.jumpPageInputElement();
 
             if (!(inputElement instanceof HTMLInputElement)) {
+                return false;
+            }
+
+            const modalElement = inputElement.closest('.fi-modal');
+
+            if (modalElement && !modalElement.classList.contains('fi-modal-open')) {
+                return false;
+            }
+
+            const styles = window.getComputedStyle(inputElement);
+
+            return (
+                inputElement.clientHeight > 8 &&
+                inputElement.clientWidth > 8 &&
+                styles.display !== 'none' &&
+                styles.visibility !== 'hidden'
+            );
+        },
+
+        queueJumpPageModalInputSync({ shouldSelect = true } = {}) {
+            let didSyncOnce = false;
+
+            [0, 30, 80, 170].forEach((delayMs) => {
+                window.setTimeout(() => {
+                    if (didSyncOnce) {
+                        return;
+                    }
+
+                    const didSync = this.syncJumpPageModalInputValue({
+                        shouldSelect,
+                    });
+
+                    if (!didSync) {
+                        return;
+                    }
+
+                    didSyncOnce = true;
+
+                    if (!this.jumpPageModalOpen) {
+                        this.jumpPageModalOpen = true;
+                        this.dispatchManagerModalsVisibilityState();
+                    }
+                }, delayMs);
+            });
+        },
+
+        syncJumpPageModalInputValue({ shouldSelect = true } = {}) {
+            const inputElement = this.jumpPageInputElement();
+
+            if (!(inputElement instanceof HTMLInputElement) || !this.isJumpPageInputVisible()) {
                 return false;
             }
 
@@ -7623,10 +7678,13 @@ document.addEventListener('alpine:init', () => {
             }
 
             if (kind === 'opened') {
-                return this.isModalWindowVisibleById(this.jumpPageModalId);
+                return (
+                    this.isModalWindowVisibleById(this.jumpPageModalId) ||
+                    this.isJumpPageInputVisible()
+                );
             }
 
-            return false;
+            return this.jumpPageModalOpen;
         },
 
         handleModalLifecycleEvent(kind, event) {
@@ -7637,13 +7695,36 @@ document.addEventListener('alpine:init', () => {
             const isJumpPageModalEvent = this.isJumpPageModalEvent(kind, event);
             let shouldSyncManagerModalsVisibility = false;
 
-            if (isJumpPageModalEvent && kind === 'opened') {
+            if (kind === 'opened') {
                 this.$nextTick(() => {
-                    this.syncJumpPageModalInputValue();
-                    window.setTimeout(() => {
-                        this.syncJumpPageModalInputValue();
-                    }, 40);
+                    this.queueJumpPageModalInputSync();
                 });
+            }
+
+            if (isJumpPageModalEvent) {
+                if (kind === 'opened') {
+                    this.jumpPageModalOpen = true;
+                    shouldSyncManagerModalsVisibility = true;
+                }
+
+                if (kind === 'closing' || kind === 'closed') {
+                    window.setTimeout(
+                        () => {
+                            const isStillVisible = this.isJumpPageInputVisible();
+
+                            if (isStillVisible) {
+                                this.jumpPageModalOpen = true;
+
+                                return;
+                            }
+
+                            this.jumpPageModalOpen = false;
+                            this.dispatchManagerModalsVisibilityState();
+                        },
+                        kind === 'closed' ? 0 : 48,
+                    );
+                    shouldSyncManagerModalsVisibility = true;
+                }
             }
 
             if (isHistoryModalEvent) {
@@ -7970,6 +8051,8 @@ document.addEventListener('alpine:init', () => {
 
             this.resetNavigationQueueForPriorityJump();
             await this.requestHistoryModalClose();
+            await this.waitForModalLifecycleToSettle();
+            this._bypassNextFitCache = true;
             await this.navigateToPage(targetPage, {
                 direction,
                 animate: true,
@@ -7979,7 +8062,14 @@ document.addEventListener('alpine:init', () => {
                 commitNow: true,
                 settleDelayMs: 0,
             });
-            await this.layoutPageGuaranteed({ revealDelayMs: 220, maxAttempts: 5 });
+            if (this._lastFittedPageNumber !== this.pageNumber) {
+                this._bypassNextFitCache = true;
+                await this.layoutPageGuaranteed({
+                    revealDelayMs: 160,
+                    maxAttempts: 3,
+                    useIdleFit: false,
+                });
+            }
             this.activeWordIndex = 0;
         },
 
@@ -7989,6 +8079,8 @@ document.addEventListener('alpine:init', () => {
 
             this.resetNavigationQueueForPriorityJump();
             await this.requestBookmarksModalClose();
+            await this.waitForModalLifecycleToSettle();
+            this._bypassNextFitCache = true;
             await this.navigateToPage(targetPage, {
                 direction,
                 animate: true,
@@ -7998,7 +8090,14 @@ document.addEventListener('alpine:init', () => {
                 commitNow: true,
                 settleDelayMs: 0,
             });
-            await this.layoutPageGuaranteed({ revealDelayMs: 220, maxAttempts: 5 });
+            if (this._lastFittedPageNumber !== this.pageNumber) {
+                this._bypassNextFitCache = true;
+                await this.layoutPageGuaranteed({
+                    revealDelayMs: 160,
+                    maxAttempts: 3,
+                    useIdleFit: false,
+                });
+            }
             this.activeAyahIndex = 0;
             this.activeWordIndex = 0;
             this.recordNavigationHistory({

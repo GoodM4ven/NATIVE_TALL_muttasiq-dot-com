@@ -295,17 +295,41 @@
     
             return styles.display !== 'none' && styles.visibility !== 'hidden';
         },
+        isJumpPageInputVisible() {
+            const inputElement = document.getElementById('quran-reader-page-counter-input');
+    
+            if (!(inputElement instanceof HTMLInputElement) || !inputElement.isConnected) {
+                return false;
+            }
+    
+            const modalElement = inputElement.closest('.fi-modal');
+    
+            if (modalElement && !modalElement.classList.contains('fi-modal-open')) {
+                return false;
+            }
+    
+            const styles = window.getComputedStyle(inputElement);
+    
+            return (
+                inputElement.clientHeight > 8 &&
+                inputElement.clientWidth > 8 &&
+                styles.display !== 'none' &&
+                styles.visibility !== 'hidden'
+            );
+        },
         syncQuranManagerModalStateFromDom() {
             const isOpen =
                 this.isQuranManagerModalWindowVisible('quran-reader-history-modal') ||
-                this.isQuranManagerModalWindowVisible('quran-reader-bookmarks-modal');
+                this.isQuranManagerModalWindowVisible('quran-reader-bookmarks-modal') ||
+                this.isQuranManagerModalWindowVisible('quran-reader-jump-page-modal') ||
+                this.isJumpPageInputVisible();
     
             this.syncQuranManagerModalState(isOpen);
         },
         rootClasses() {
             const classes = [this.anchorClasses(), 'transition-opacity duration-220 ease-out'];
     
-            if (this.isQuranManagerModalOpen) {
+            if (this.isQuranManagerModalOpen || this.actionOpenState) {
                 classes.push('opacity-0 pointer-events-none');
             } else {
                 classes.push('opacity-100');

@@ -762,14 +762,14 @@
     @keyframes quran-manager-row-replacing {
         0% {
             background: color-mix(in srgb, var(--warning-200) 46%, transparent);
-            transform: translateY(0.08rem) scale(0.985);
+            transform: translateY(0) scale(1);
             filter: saturate(0.9);
         }
 
         45% {
             background: color-mix(in srgb, var(--warning-100) 40%, transparent);
-            transform: translateY(-0.08rem) scale(1.01);
-            filter: saturate(1.12);
+            transform: translateY(0.05rem) scale(0.96);
+            filter: saturate(1.08);
         }
 
         100% {
