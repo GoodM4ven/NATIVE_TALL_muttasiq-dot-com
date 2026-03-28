@@ -2592,3 +2592,266 @@ JS,
 
     $page->assertNoJavaScriptErrors();
 });
+
+it('animates wird page counter morph and slider tween for chevron keyboard and swipe navigation', function () {
+    $page = visit('/');
+
+    resetBrowserState($page);
+    waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
+    hashAction($page, '#quran-app-tilawa', true);
+
+    waitForScript($page, homeDataScript('data.activeView'), 'quran-app-tilawa');
+    waitForScript($page, 'window.location.hash', '#quran-app-tilawa');
+    waitForQuranReaderVisible($page);
+    waitForScript($page, quranReaderDataScript('data.ready && data.mushafLines.length > 0'), true);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
+
+    scriptClick($page, '[data-quran-wird-toggle]');
+    waitForScriptWithTimeout($page, quranReaderDataScript('Boolean(data.wirdModeActive)'), true, 6_000);
+    waitForScriptWithTimeout($page, quranReaderDataScript('Number(data.pageNumber ?? 0) > 0'), true, 6_000);
+
+    $startSliderTweenMonitor = function () use ($page): void {
+        $page->script(
+            quranReaderCommandScript(
+                <<<'JS'
+window.__sawFractionalWirdSlider = false;
+
+if (typeof window.__stopWirdSliderTweenMonitor === 'function') {
+  window.__stopWirdSliderTweenMonitor();
+}
+
+const monitorInterval = window.setInterval(() => {
+  const visualStep = Number(data.wirdSliderVisualStep ?? NaN);
+
+  if (!Number.isFinite(visualStep)) {
+    return;
+  }
+
+  if (Math.abs(visualStep - Math.trunc(visualStep)) > 0.001) {
+    window.__sawFractionalWirdSlider = true;
+  }
+}, 16);
+
+window.__stopWirdSliderTweenMonitor = () => {
+  window.clearInterval(monitorInterval);
+};
+JS,
+            ),
+        );
+    };
+
+    $resetPulseState = function () use ($page): void {
+        $page->script(
+            quranReaderCommandScript(
+                <<<'JS'
+data.pageCounterPulse.isActive = false;
+data.pageCounterPulse.hasChanges = false;
+data.pageCounterPulse.segments = [];
+JS,
+            ),
+        );
+    };
+
+    $stopSliderTweenMonitor = function () use ($page): void {
+        $page->script(<<<'JS'
+(() => {
+  if (typeof window.__stopWirdSliderTweenMonitor === 'function') {
+    window.__stopWirdSliderTweenMonitor();
+  }
+})()
+JS);
+    };
+
+    $baselinePage = (int) $page->script(quranReaderDataScript('Number(data.pageNumber ?? 0)'));
+    expect($baselinePage)->toBeGreaterThan(0);
+
+    $startSliderTweenMonitor();
+    $resetPulseState();
+    safeClick($page, '.quran-bottom-strip-nav-next');
+    waitForScriptWithTimeout($page, quranReaderDataScript('Number(data.pageNumber ?? 0)'), $baselinePage + 1, 6_000);
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript(
+            'Boolean(data.pageCounterPulse.hasChanges && Array.isArray(data.pageCounterPulse.segments) && data.pageCounterPulse.segments.some((segment) => Boolean(segment?.changed)))',
+        ),
+        true,
+        2_000,
+    );
+    waitForScriptWithTimeout($page, 'Boolean(window.__sawFractionalWirdSlider)', true, 3_000);
+    $stopSliderTweenMonitor();
+
+    $afterChevronPage = (int) $page->script(quranReaderDataScript('Number(data.pageNumber ?? 0)'));
+
+    $startSliderTweenMonitor();
+    $resetPulseState();
+    $page->script(<<<'JS'
+(() => {
+  window.dispatchEvent(new KeyboardEvent('keyup', {
+    bubbles: true,
+    cancelable: true,
+    key: 'ArrowRight',
+  }));
+})()
+JS);
+    waitForScriptWithTimeout($page, quranReaderDataScript('Number(data.pageNumber ?? 0)'), $afterChevronPage - 1, 6_000);
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript(
+            'Boolean(data.pageCounterPulse.hasChanges && Array.isArray(data.pageCounterPulse.segments) && data.pageCounterPulse.segments.some((segment) => Boolean(segment?.changed)))',
+        ),
+        true,
+        2_000,
+    );
+    waitForScriptWithTimeout($page, 'Boolean(window.__sawFractionalWirdSlider)', true, 3_000);
+    $stopSliderTweenMonitor();
+
+    $beforeSwipePage = (int) $page->script(quranReaderDataScript('Number(data.pageNumber ?? 0)'));
+    $startSliderTweenMonitor();
+    $resetPulseState();
+    $didSwipeFromGap = $page->script(<<<'JS'
+(() => {
+  const linesContainer = document.querySelector('.quran-page-lines');
+  const lineEntries = Array.from(document.querySelectorAll('.quran-page-lines [data-quran-line]'))
+    .filter((entry) => entry instanceof HTMLElement);
+
+  if (!(linesContainer instanceof HTMLElement) || lineEntries.length < 2) {
+    return false;
+  }
+
+  let gapPoint = null;
+
+  for (let index = 0; index < lineEntries.length - 1; index += 1) {
+    const currentRect = lineEntries[index].getBoundingClientRect();
+    const nextRect = lineEntries[index + 1].getBoundingClientRect();
+    const gapHeight = nextRect.top - currentRect.bottom;
+
+    if (gapHeight > 4) {
+      gapPoint = {
+        x: currentRect.left + (currentRect.width / 2),
+        y: currentRect.bottom + (gapHeight / 2),
+      };
+      break;
+    }
+  }
+
+  if (!gapPoint) {
+    return false;
+  }
+
+  const endPoint = {
+    x: gapPoint.x + 170,
+    y: gapPoint.y,
+  };
+
+  linesContainer.dispatchEvent(new PointerEvent('pointerdown', {
+    bubbles: true,
+    pointerId: 981,
+    pointerType: 'mouse',
+    clientX: gapPoint.x,
+    clientY: gapPoint.y,
+  }));
+
+  linesContainer.dispatchEvent(new PointerEvent('pointerup', {
+    bubbles: true,
+    pointerId: 981,
+    pointerType: 'mouse',
+    clientX: endPoint.x,
+    clientY: endPoint.y,
+  }));
+
+  return true;
+})()
+JS);
+    expect($didSwipeFromGap)->toBeTrue();
+    waitForScriptWithTimeout($page, quranReaderDataScript('Number(data.pageNumber ?? 0)'), $beforeSwipePage + 1, 6_000);
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript(
+            'Boolean(data.pageCounterPulse.hasChanges && Array.isArray(data.pageCounterPulse.segments) && data.pageCounterPulse.segments.some((segment) => Boolean(segment?.changed)))',
+        ),
+        true,
+        2_000,
+    );
+    waitForScriptWithTimeout($page, 'Boolean(window.__sawFractionalWirdSlider)', true, 3_000);
+    $stopSliderTweenMonitor();
+
+    $page->assertNoJavaScriptErrors();
+});
+
+it('keeps wird committed progress monotonic and completion badge sticky while browsing back', function () {
+    $page = visit('/');
+
+    resetBrowserState($page);
+    waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
+    hashAction($page, '#quran-app-tilawa', true);
+
+    waitForScript($page, homeDataScript('data.activeView'), 'quran-app-tilawa');
+    waitForScript($page, 'window.location.hash', '#quran-app-tilawa');
+    waitForQuranReaderVisible($page);
+    waitForScript($page, quranReaderDataScript('data.ready && data.mushafLines.length > 0'), true);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
+
+    scriptClick($page, '[data-quran-wird-toggle]');
+    waitForScriptWithTimeout($page, quranReaderDataScript('Boolean(data.wirdModeActive)'), true, 6_000);
+
+    $initialPage = (int) $page->script(quranReaderDataScript('Number(data.pageNumber ?? 0)'));
+    $initialCommittedPercent = (int) $page->script(quranReaderDataScript('Number(data.wirdProgressPercent() ?? 0)'));
+
+    safeClick($page, '.quran-bottom-strip-nav-next');
+    waitForScriptWithTimeout($page, quranReaderDataScript('Number(data.pageNumber ?? 0)'), $initialPage + 1, 6_000);
+
+    $committedAfterNext = (int) $page->script(quranReaderDataScript('Number(data.wirdProgressPercent() ?? 0)'));
+    expect($committedAfterNext)->toBeGreaterThan($initialCommittedPercent);
+
+    safeClick($page, '.quran-bottom-strip-nav-prev');
+    waitForScriptWithTimeout($page, quranReaderDataScript('Number(data.pageNumber ?? 0)'), $initialPage, 6_000);
+
+    $committedAfterPrev = (int) $page->script(quranReaderDataScript('Number(data.wirdProgressPercent() ?? 0)'));
+    expect($committedAfterPrev)->toBe($committedAfterNext);
+
+    $page->script(
+        quranReaderCommandScript(
+            <<<'JS'
+const record = data.ensureWirdDailyRecord();
+data.markWirdAsCompleted(record);
+data.wirdModeActive = true;
+data.wirdBrowseStep = data.wirdRangeState(record).maxStep;
+data.syncWirdSliderVisualStep(record);
+JS,
+        ),
+    );
+
+    waitForScriptWithTimeout($page, quranReaderDataScript('Boolean(data.ensureWirdDailyRecord()?.completed)'), true, 6_000);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.wirdProgressPercentLabel()'), 'مكتمل', 6_000);
+
+    $committedAtCompletion = (int) $page->script(quranReaderDataScript('Number(data.wirdProgressPercent() ?? 0)'));
+    $browseBeforeBack = (int) $page->script(quranReaderDataScript('Number(data.wirdBrowsePercent() ?? 0)'));
+    $expectedPageAfterBack = (int) $page->script(quranReaderDataScript(<<<'JS'
+(() => {
+    const record = data.ensureWirdDailyRecord();
+    const range = data.wirdRangeState(record);
+    const nextBrowseStep = Math.max(0, data.wirdBrowseStepValue(record) - 1);
+
+    return Number(data.absolutePageToPageNumber(range.startAbsolutePage + nextBrowseStep) ?? 0);
+})()
+JS));
+
+    safeClick($page, '.quran-bottom-strip-nav-prev');
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('Number(data.pageNumber ?? 0)'),
+        $expectedPageAfterBack,
+        6_000,
+    );
+
+    waitForScriptWithTimeout($page, quranReaderDataScript('Boolean(data.ensureWirdDailyRecord()?.completed)'), true, 6_000);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.wirdProgressPercentLabel()'), 'مكتمل', 6_000);
+
+    $committedAfterBackWhileComplete = (int) $page->script(quranReaderDataScript('Number(data.wirdProgressPercent() ?? 0)'));
+    $browseAfterBack = (int) $page->script(quranReaderDataScript('Number(data.wirdBrowsePercent() ?? 0)'));
+
+    expect($committedAfterBackWhileComplete)->toBe($committedAtCompletion)
+        ->and($browseAfterBack)->toBeLessThan($browseBeforeBack);
+
+    $page->assertNoJavaScriptErrors();
+});

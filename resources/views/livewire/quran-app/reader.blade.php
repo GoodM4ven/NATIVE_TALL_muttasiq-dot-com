@@ -431,6 +431,7 @@
 
         .quran-wird-progress-button {
             --quran-wird-progress-percent: 0%;
+            --quran-wird-progress-browse-percent: 0%;
             --quran-wird-frame-cut: 0.82rem;
             --quran-wird-frame-cut-inner: 0.7rem;
             position: relative;
@@ -491,7 +492,7 @@
                     color-mix(in srgb, var(--gray-300) 24%, transparent) 0 0.62rem,
                     color-mix(in srgb, var(--gray-100) 14%, transparent) 0.62rem 1.04rem);
             pointer-events: none;
-            z-index: 2;
+            z-index: 3;
             opacity: 0.48;
         }
 
@@ -505,18 +506,31 @@
             position: absolute;
             inset-block: 0.16rem;
             inset-inline-start: 0;
-            width: var(--quran-wird-progress-percent);
             clip-path: polygon(var(--quran-wird-frame-cut-inner) 0,
                     calc(100% - var(--quran-wird-frame-cut-inner)) 0,
                     100% 50%,
                     calc(100% - var(--quran-wird-frame-cut-inner)) 100%,
                     var(--quran-wird-frame-cut-inner) 100%,
                     0 50%);
+            transition: width 420ms cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .quran-wird-progress-fill--committed {
+            width: var(--quran-wird-progress-percent);
             background: linear-gradient(90deg,
                     color-mix(in srgb, var(--success-600) 74%, transparent),
                     color-mix(in srgb, var(--success-400) 58%, transparent));
-            transition: width 420ms cubic-bezier(0.22, 1, 0.36, 1);
             z-index: 1;
+        }
+
+        .quran-wird-progress-fill--browse {
+            width: var(--quran-wird-progress-browse-percent);
+            inset-block: 0.16rem;
+            background: linear-gradient(90deg,
+                    color-mix(in srgb, white 86%, var(--gray-100) 14%),
+                    color-mix(in srgb, var(--gray-200) 56%, transparent));
+            opacity: 0.34;
+            z-index: 2;
         }
 
         .quran-wird-progress-button.quran-wird-progress-button--completed {
@@ -525,7 +539,7 @@
 
         .quran-wird-progress-content {
             position: relative;
-            z-index: 3;
+            z-index: 4;
             display: flex;
             width: 100%;
             align-items: center;
@@ -1574,7 +1588,11 @@
                         x-on:click="toggleWirdMode()"
                     >
                         <span
-                            class="quran-wird-progress-fill"
+                            class="quran-wird-progress-fill quran-wird-progress-fill--committed"
+                            aria-hidden="true"
+                        ></span>
+                        <span
+                            class="quran-wird-progress-fill quran-wird-progress-fill--browse"
                             aria-hidden="true"
                         ></span>
                         <span class="quran-wird-progress-content">
@@ -1921,6 +1939,7 @@
                         aria-label="التنقل بين صفحات المصحف"
                         x-bind:min="sliderMin()"
                         x-bind:max="sliderMax()"
+                        x-bind:step="wirdModeActive ? 0.01 : 1"
                         x-bind:value="sliderValue()"
                         x-on:input="onSliderInput($event)"
                         x-on:change="onSliderCommit($event)"

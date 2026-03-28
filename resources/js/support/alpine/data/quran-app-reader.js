@@ -543,6 +543,7 @@ document.addEventListener('alpine:init', () => {
         wirdModeActive: false,
         wirdNormalPageBeforeMode: 1,
         wirdBrowseStep: null,
+        wirdSliderVisualStep: null,
         wirdTodayKey: '',
         wirdDailyRecord: null,
         wirdState: null,
@@ -650,6 +651,7 @@ document.addEventListener('alpine:init', () => {
         _fitCacheBreakpoint: '',
         _bypassNextFitCache: false,
         _suppressFitCacheWriteUntil: 0,
+        _wirdSliderVisualTweenRaf: null,
         _wirdSliderInputCommitTimer: null,
         _wirdSliderPendingStep: null,
         _pageInputCommitTimer: null,
@@ -871,7 +873,13 @@ document.addEventListener('alpine:init', () => {
                 this._wirdSliderInputCommitTimer = null;
             }
 
+            if (this._wirdSliderVisualTweenRaf !== null) {
+                cancelAnimationFrame(this._wirdSliderVisualTweenRaf);
+                this._wirdSliderVisualTweenRaf = null;
+            }
+
             this._wirdSliderPendingStep = null;
+            this.wirdSliderVisualStep = null;
 
             if (this._pageInputTweenRaf !== null) {
                 cancelAnimationFrame(this._pageInputTweenRaf);
@@ -1478,12 +1486,24 @@ document.addEventListener('alpine:init', () => {
                     min: 0,
                     max: maxStep,
                 });
-                const completed = Boolean(parsedRecord?.completed) || currentStep >= maxStep;
+                const progressStep = this.normalizeIntegerFlag(
+                    parsedRecord?.progressStep,
+                    currentStep,
+                    {
+                        min: 0,
+                        max: maxStep,
+                    },
+                );
+                const completed =
+                    Boolean(parsedRecord?.completed) ||
+                    currentStep >= maxStep ||
+                    progressStep >= maxStep;
 
                 normalizedState.dayRecords[dateKey] = {
                     startAbsolutePage,
                     requiredPages,
                     currentStep,
+                    progressStep: completed ? maxStep : Math.max(currentStep, progressStep),
                     completed,
                     signature: String(parsedRecord?.signature ?? '').trim(),
                     createdAt: this.normalizeIntegerFlag(parsedRecord?.createdAt, updatedAt, {
@@ -1545,9 +1565,13 @@ document.addEventListener('alpine:init', () => {
                 min: 0,
                 max: maxStep,
             });
+            const progressStep = this.normalizeIntegerFlag(record?.progressStep, currentStep, {
+                min: 0,
+                max: maxStep,
+            });
             const nextAbsolutePage = record?.completed
                 ? startAbsolutePage + requiredPages
-                : startAbsolutePage + currentStep;
+                : startAbsolutePage + progressStep;
 
             this.wirdState.nextAbsolutePage = Math.max(1, nextAbsolutePage);
         },
@@ -1622,14 +1646,24 @@ document.addEventListener('alpine:init', () => {
                           max: maxStep,
                       })
                     : 0;
+                const carriedProgressStep = canCarryExistingProgress
+                    ? this.normalizeIntegerFlag(record?.progressStep, currentStep, {
+                          min: 0,
+                          max: maxStep,
+                      })
+                    : currentStep;
                 const completed = canCarryExistingProgress
-                    ? Boolean(record?.completed) || currentStep >= maxStep
+                    ? Boolean(record?.completed) || carriedProgressStep >= maxStep
                     : false;
+                const progressStep = completed
+                    ? maxStep
+                    : Math.max(currentStep, carriedProgressStep);
 
                 record = {
                     startAbsolutePage,
                     requiredPages,
                     currentStep,
+                    progressStep,
                     completed,
                     signature,
                     createdAt: canCarryExistingProgress
@@ -1648,7 +1682,22 @@ document.addEventListener('alpine:init', () => {
                     min: 0,
                     max: maxStep,
                 });
+                record.progressStep = this.normalizeIntegerFlag(
+                    record.progressStep,
+                    record.currentStep,
+                    {
+                        min: 0,
+                        max: maxStep,
+                    },
+                );
                 record.completed = Boolean(record.completed);
+
+                if (record.completed) {
+                    record.progressStep = maxStep;
+                } else {
+                    record.progressStep = Math.max(record.progressStep, record.currentStep);
+                }
+
                 record.signature = signature;
             }
 
@@ -1679,12 +1728,20 @@ document.addEventListener('alpine:init', () => {
                 min: 0,
                 max: maxStep,
             });
+            const progressStep = this.normalizeIntegerFlag(
+                normalizedRecord?.progressStep,
+                currentStep,
+                {
+                    min: 0,
+                    max: maxStep,
+                },
+            );
 
             if (normalizedRecord?.completed) {
                 return requiredPages;
             }
 
-            return currentStep;
+            return progressStep;
         },
 
         wirdRemainingPages(record = this.wirdDailyRecord) {
@@ -1745,6 +1802,54 @@ document.addEventListener('alpine:init', () => {
             });
         },
 
+        wirdProgressStep(record = this.wirdDailyRecord) {
+            const normalizedRecord =
+                record && typeof record === 'object' ? record : this.ensureWirdDailyRecord();
+            const requiredPages = Math.max(
+                1,
+                this.normalizeIntegerFlag(normalizedRecord?.requiredPages, 1, { min: 1 }),
+            );
+            const maxStep = Math.max(0, requiredPages - 1);
+            const currentStep = this.wirdCurrentStep(normalizedRecord);
+            const progressStep = this.normalizeIntegerFlag(
+                normalizedRecord?.progressStep,
+                currentStep,
+                {
+                    min: 0,
+                    max: maxStep,
+                },
+            );
+
+            if (normalizedRecord?.completed) {
+                return maxStep;
+            }
+
+            return Math.max(currentStep, progressStep);
+        },
+
+        wirdBrowseStepForProgress(record = this.wirdDailyRecord) {
+            const normalizedRecord =
+                record && typeof record === 'object' ? record : this.ensureWirdDailyRecord();
+
+            if (normalizedRecord?.completed) {
+                return this.wirdBrowseStepValue(normalizedRecord);
+            }
+
+            return this.wirdCurrentStep(normalizedRecord);
+        },
+
+        wirdBrowsePercent(record = this.wirdDailyRecord) {
+            const normalizedRecord =
+                record && typeof record === 'object' ? record : this.ensureWirdDailyRecord();
+            const requiredPages = Math.max(
+                1,
+                this.normalizeIntegerFlag(normalizedRecord?.requiredPages, 1, { min: 1 }),
+            );
+            const browseStep = this.wirdBrowseStepForProgress(normalizedRecord);
+
+            return Math.max(0, Math.min(100, Math.round((browseStep / requiredPages) * 100)));
+        },
+
         wirdRangeState(record = this.wirdDailyRecord) {
             const normalizedRecord =
                 record && typeof record === 'object' ? record : this.ensureWirdDailyRecord();
@@ -1800,6 +1905,135 @@ document.addEventListener('alpine:init', () => {
             return this.absolutePageToPageNumber(range.startAbsolutePage + normalizedStep);
         },
 
+        clearWirdSliderVisualTween() {
+            if (this._wirdSliderVisualTweenRaf === null) {
+                return;
+            }
+
+            cancelAnimationFrame(this._wirdSliderVisualTweenRaf);
+            this._wirdSliderVisualTweenRaf = null;
+        },
+
+        syncWirdSliderVisualStep(record = this.wirdDailyRecord) {
+            if (!this.wirdModeActive) {
+                this.clearWirdSliderVisualTween();
+                this.wirdSliderVisualStep = null;
+
+                return;
+            }
+
+            const range = this.wirdRangeState(record);
+            const activeStep = this.wirdActiveStepForNavigation(range.record);
+            this.clearWirdSliderVisualTween();
+            this.wirdSliderVisualStep = activeStep;
+        },
+
+        wirdSliderDisplayStep(record = this.wirdDailyRecord) {
+            if (!this.wirdModeActive) {
+                return null;
+            }
+
+            const range = this.wirdRangeState(record);
+            const activeStep = this.wirdActiveStepForNavigation(range.record);
+            const visualStep = Number(this.wirdSliderVisualStep);
+
+            if (!Number.isFinite(visualStep)) {
+                return activeStep;
+            }
+
+            return Math.max(0, Math.min(range.maxStep, visualStep));
+        },
+
+        animateWirdSliderVisualStepTo(
+            targetStep,
+            { durationMs = 220, record = this.wirdDailyRecord } = {},
+        ) {
+            if (!this.wirdModeActive) {
+                this.syncWirdSliderVisualStep(record);
+
+                return;
+            }
+
+            const range = this.wirdRangeState(record);
+            const normalizedTargetStep = Math.max(
+                0,
+                Math.min(range.maxStep, Number(targetStep ?? 0)),
+            );
+            const startingStep = Number(this.wirdSliderDisplayStep(range.record));
+
+            if (!Number.isFinite(startingStep)) {
+                this.wirdSliderVisualStep = normalizedTargetStep;
+
+                return;
+            }
+
+            const normalizedDurationMs = Math.max(120, Math.trunc(Number(durationMs) || 220));
+            const delta = normalizedTargetStep - startingStep;
+
+            if (Math.abs(delta) < 0.001) {
+                this.wirdSliderVisualStep = normalizedTargetStep;
+
+                return;
+            }
+
+            this.clearWirdSliderVisualTween();
+            this.wirdSliderVisualStep = startingStep;
+
+            const startedAt = performance.now();
+
+            const tick = (timestamp) => {
+                if (!this.wirdModeActive) {
+                    this._wirdSliderVisualTweenRaf = null;
+
+                    return;
+                }
+
+                const elapsed = Math.max(0, timestamp - startedAt);
+                const progress = Math.max(0, Math.min(1, elapsed / normalizedDurationMs));
+                const easedProgress =
+                    progress < 0.5
+                        ? 2 * progress * progress
+                        : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+
+                this.wirdSliderVisualStep = startingStep + delta * easedProgress;
+
+                if (progress >= 1) {
+                    this._wirdSliderVisualTweenRaf = null;
+                    this.wirdSliderVisualStep = normalizedTargetStep;
+
+                    return;
+                }
+
+                this._wirdSliderVisualTweenRaf = requestAnimationFrame(tick);
+            };
+
+            this._wirdSliderVisualTweenRaf = requestAnimationFrame(tick);
+        },
+
+        applyWirdNavigationVisualState(
+            targetPage,
+            targetStep,
+            { source = 'generic', sliderDurationMs = 220 } = {},
+        ) {
+            const normalizedTargetPage = clampPage(targetPage, this.maxPage);
+            const previousVisualPage = clampPage(
+                this._lastPageInputVisualValue || this.pageInput || this.pageNumber,
+                this.maxPage,
+            );
+
+            if (normalizedTargetPage !== previousVisualPage) {
+                this.triggerPageCounterPulse(previousVisualPage, normalizedTargetPage, {
+                    source: `wird-${String(source ?? 'generic').trim() || 'generic'}`,
+                });
+            }
+
+            this.pageInput = normalizedTargetPage;
+            this._lastPageInputVisualValue = normalizedTargetPage;
+            this.animateWirdSliderVisualStepTo(targetStep, {
+                durationMs: sliderDurationMs,
+            });
+        },
+
         sliderMin() {
             return this.wirdModeActive ? 0 : 1;
         },
@@ -1819,7 +2053,7 @@ document.addEventListener('alpine:init', () => {
                 return clampPage(this.pageInput, this.maxPage);
             }
 
-            return this.wirdActiveStepForNavigation();
+            return this.wirdSliderDisplayStep();
         },
 
         formatReaderNumber(value, fallback = '0') {
@@ -1863,7 +2097,7 @@ document.addEventListener('alpine:init', () => {
                 1,
                 this.normalizeIntegerFlag(record?.requiredPages, 1, { min: 1 }),
             );
-            const activeIndex = this.wirdCurrentStep(record) + 1;
+            const activeIndex = this.wirdProgressStep(record) + 1;
             const current = record?.completed
                 ? requiredPages
                 : Math.min(requiredPages, Math.max(1, activeIndex));
@@ -1872,7 +2106,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         wirdProgressBarStyle() {
-            return `--quran-wird-progress-percent: ${this.wirdProgressPercent()}%;`;
+            return `--quran-wird-progress-percent: ${this.wirdProgressPercent()}%; --quran-wird-progress-browse-percent: ${this.wirdBrowsePercent()}%;`;
         },
 
         clearWirdEntryRevealTimers() {
@@ -1992,6 +2226,7 @@ document.addEventListener('alpine:init', () => {
 
             const wirdRange = this.wirdRangeState(record);
             this.wirdBrowseStep = record?.completed ? wirdRange.maxStep : null;
+            this.syncWirdSliderVisualStep(record);
 
             const targetAbsolutePage = record?.completed
                 ? wirdRange.startAbsolutePage + this.wirdBrowseStep
@@ -2033,6 +2268,7 @@ document.addEventListener('alpine:init', () => {
             this.wirdBrowseStep = null;
             this.clearWirdEntryRevealTimers();
             this._wirdEntryLayoutSuppressedUntil = 0;
+            this.syncWirdSliderVisualStep();
 
             if (!restoreNormalPage) {
                 return;
@@ -2097,10 +2333,12 @@ document.addEventListener('alpine:init', () => {
             );
 
             record.currentStep = Math.max(0, requiredPages - 1);
+            record.progressStep = Math.max(0, requiredPages - 1);
             record.completed = true;
             record.updatedAt = Date.now();
             this.wirdDailyRecord = record;
             this.wirdBrowseStep = Math.max(0, requiredPages - 1);
+            this.syncWirdSliderVisualStep(record);
             this.reconcileWirdNextAbsolutePage(record);
             this.persistWirdState();
         },
@@ -2145,6 +2383,9 @@ document.addEventListener('alpine:init', () => {
                     this.normalizeIntegerFlag(record?.startAbsolutePage, 1, { min: 1 }),
                 );
                 const targetPage = this.absolutePageToPageNumber(startAbsolutePage + browseStep);
+                this.applyWirdNavigationVisualState(targetPage, browseStep, {
+                    source,
+                });
 
                 await this.goToPage(targetPage, {
                     direction: isNextDirection ? 'next' : 'prev',
@@ -2173,13 +2414,21 @@ document.addEventListener('alpine:init', () => {
             }
 
             record.currentStep = isNextDirection ? currentStep + 1 : currentStep - 1;
-            record.completed = false;
+            record.progressStep = this.normalizeIntegerFlag(record?.progressStep, currentStep, {
+                min: 0,
+                max: maxStep,
+            });
+            record.progressStep = Math.max(record.progressStep, record.currentStep);
+            record.completed = Boolean(record.completed);
             record.updatedAt = Date.now();
             this.wirdDailyRecord = record;
             this.reconcileWirdNextAbsolutePage(record);
             this.persistWirdState();
 
             const targetPage = this.absolutePageToPageNumber(this.wirdCurrentAbsolutePage(record));
+            this.applyWirdNavigationVisualState(targetPage, record.currentStep, {
+                source,
+            });
 
             await this.goToPage(targetPage, {
                 direction: isNextDirection ? 'next' : 'prev',
@@ -2215,8 +2464,18 @@ document.addEventListener('alpine:init', () => {
             if (record?.completed) {
                 this.wirdBrowseStep = normalizedStep;
             } else {
+                const maxStep = Math.max(0, range.maxStep);
                 record.currentStep = normalizedStep;
-                record.completed = false;
+                record.progressStep = this.normalizeIntegerFlag(
+                    record?.progressStep,
+                    normalizedStep,
+                    {
+                        min: 0,
+                        max: maxStep,
+                    },
+                );
+                record.progressStep = Math.max(record.progressStep, normalizedStep);
+                record.completed = Boolean(record.completed);
                 record.updatedAt = Date.now();
                 this.wirdDailyRecord = record;
                 this.wirdBrowseStep = null;
@@ -2227,6 +2486,8 @@ document.addEventListener('alpine:init', () => {
             if (targetPage === this.pageNumber && this.hasRenderablePage()) {
                 this.pageInput = targetPage;
                 this._lastPageInputVisualValue = targetPage;
+                this.clearWirdSliderVisualTween();
+                this.wirdSliderVisualStep = normalizedStep;
                 await this.ensureWirdEntryPageVisible(targetPage);
                 this.queueWirdEntryRevealRecovery(targetPage);
 
@@ -3642,6 +3903,8 @@ document.addEventListener('alpine:init', () => {
 
             this.pageInput = targetPage;
             this._lastPageInputVisualValue = targetPage;
+            this.clearWirdSliderVisualTween();
+            this.wirdSliderVisualStep = step;
             this.scheduleWirdSliderStepNavigation(step, {
                 source: 'slider-input',
             });
@@ -3668,6 +3931,8 @@ document.addEventListener('alpine:init', () => {
                 max: range.maxStep,
             });
             this._wirdSliderPendingStep = null;
+            this.clearWirdSliderVisualTween();
+            this.wirdSliderVisualStep = step;
             await this.navigateWirdToStep(step, 'slider');
         },
 
