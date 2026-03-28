@@ -392,6 +392,10 @@
             min-width: 0;
         }
 
+        .quran-top-actions.quran-top-actions--wird-active {
+            gap: 0;
+        }
+
         .quran-top-actions-secondary {
             flex: 0 0 2.35rem;
             inline-size: 2.35rem;
@@ -427,6 +431,8 @@
 
         .quran-wird-progress-button {
             --quran-wird-progress-percent: 0%;
+            --quran-wird-frame-cut: 0.82rem;
+            --quran-wird-frame-cut-inner: 0.7rem;
             position: relative;
             display: inline-flex;
             flex: 1 1 auto;
@@ -434,19 +440,15 @@
             justify-content: stretch;
             min-width: min(13rem, 50vw);
             min-height: 2.5rem;
-            padding: 0.2rem;
+            padding: 0.16rem;
             border-radius: 999px;
-            border: 1px solid color-mix(in srgb, var(--success-600) 44%, transparent);
-            background: color-mix(in srgb, var(--gray-100) 82%, transparent);
+            border: 0;
+            background: transparent;
             color: color-mix(in srgb, var(--gray-900) 82%, var(--quran-panel-text));
-            box-shadow:
-                inset 0 0 0 1px color-mix(in srgb, var(--gray-200) 46%, transparent),
-                0 8px 18px color-mix(in srgb, var(--gray-900) 12%, transparent);
             overflow: hidden;
             transition:
                 transform 180ms ease,
                 box-shadow 260ms ease,
-                border-color 260ms ease,
                 min-width 320ms cubic-bezier(0.2, 1, 0.36, 1);
         }
 
@@ -458,10 +460,18 @@
             content: '';
             position: absolute;
             inset: 0;
-            background: repeating-linear-gradient(115deg,
-                    color-mix(in srgb, var(--gray-300) 24%, transparent) 0 0.62rem,
-                    color-mix(in srgb, var(--gray-100) 14%, transparent) 0.62rem 1.04rem);
-            opacity: 0.5;
+            border-radius: 999px;
+            clip-path: polygon(var(--quran-wird-frame-cut) 0,
+                    calc(100% - var(--quran-wird-frame-cut)) 0,
+                    100% 50%,
+                    calc(100% - var(--quran-wird-frame-cut)) 100%,
+                    var(--quran-wird-frame-cut) 100%,
+                    0 50%);
+            /* box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--success-500) 50%, transparent); */
+            background: linear-gradient(180deg,
+                    color-mix(in srgb, var(--gray-100) 88%, white 12%),
+                    color-mix(in srgb, var(--gray-200) 66%, transparent));
+            opacity: 1;
             pointer-events: none;
             z-index: 0;
         }
@@ -469,28 +479,23 @@
         .quran-wird-progress-button::after {
             content: '';
             position: absolute;
-            inset: 0.3rem 0.52rem;
-            background:
-                linear-gradient(135deg,
-                    transparent 36%,
-                    color-mix(in srgb, var(--success-500) 46%, transparent) 36% 42%,
-                    transparent 42%) left center / 0.76rem 58% no-repeat,
-                linear-gradient(-135deg,
-                    transparent 36%,
-                    color-mix(in srgb, var(--success-500) 46%, transparent) 36% 42%,
-                    transparent 42%) right center / 0.76rem 58% no-repeat;
+            inset: 0.16rem;
+            border-radius: 999px;
+            clip-path: polygon(var(--quran-wird-frame-cut-inner) 0,
+                    calc(100% - var(--quran-wird-frame-cut-inner)) 0,
+                    100% 50%,
+                    calc(100% - var(--quran-wird-frame-cut-inner)) 100%,
+                    var(--quran-wird-frame-cut-inner) 100%,
+                    0 50%);
+            background: repeating-linear-gradient(115deg,
+                    color-mix(in srgb, var(--gray-300) 24%, transparent) 0 0.62rem,
+                    color-mix(in srgb, var(--gray-100) 14%, transparent) 0.62rem 1.04rem);
             pointer-events: none;
             z-index: 2;
-            opacity: 0.8;
+            opacity: 0.48;
         }
 
-        .quran-wird-progress-button:hover {
-            transform: translateY(-0.04rem);
-            border-color: color-mix(in srgb, var(--success-500) 52%, transparent);
-            box-shadow:
-                inset 0 0 0 1px color-mix(in srgb, var(--success-200) 30%, transparent),
-                0 10px 20px color-mix(in srgb, var(--success-900) 14%, transparent);
-        }
+        .quran-wird-progress-button:hover {}
 
         .quran-wird-progress-button:active {
             transform: scale(0.985);
@@ -498,9 +503,15 @@
 
         .quran-wird-progress-fill {
             position: absolute;
-            inset-block: 0;
+            inset-block: 0.16rem;
             inset-inline-start: 0;
             width: var(--quran-wird-progress-percent);
+            clip-path: polygon(var(--quran-wird-frame-cut-inner) 0,
+                    calc(100% - var(--quran-wird-frame-cut-inner)) 0,
+                    100% 50%,
+                    calc(100% - var(--quran-wird-frame-cut-inner)) 100%,
+                    var(--quran-wird-frame-cut-inner) 100%,
+                    0 50%);
             background: linear-gradient(90deg,
                     color-mix(in srgb, var(--success-600) 74%, transparent),
                     color-mix(in srgb, var(--success-400) 58%, transparent));
@@ -509,7 +520,7 @@
         }
 
         .quran-wird-progress-button.quran-wird-progress-button--completed {
-            border-color: color-mix(in srgb, var(--success-600) 64%, transparent);
+            box-shadow: 0 10px 20px color-mix(in srgb, var(--success-900) 16%, transparent);
         }
 
         .quran-wird-progress-content {
@@ -570,7 +581,6 @@
         }
 
         .quran-top-action:hover {
-            transform: translateY(-0.04rem);
             border-color: color-mix(in srgb, var(--primary-500) 72%, transparent);
             background: color-mix(in srgb, var(--quran-chip-hover) 70%, transparent);
         }
@@ -648,7 +658,6 @@
         }
 
         #quran-reader-bookmark-toggle.quran-bookmark-toggle-button:hover {
-            transform: translateY(-0.04rem);
             background-color: color-mix(in srgb, var(--warning-500) 50%, var(--warning-600));
         }
 
@@ -962,7 +971,6 @@
         .quran-top-strip:not(.quran-top-strip--wird-active) .quran-soorah-trigger:hover {
             color: color-mix(in srgb, var(--primary-50) 92%, var(--gray-900));
             box-shadow: 0 0 0 0.75rem transparent;
-            transform: translateY(-0.04rem);
         }
 
         .quran-top-strip:not(.quran-top-strip--wird-active) .quran-soorah-trigger:hover .quran-soorah-trigger-icon {
@@ -1121,15 +1129,12 @@
         }
 
         .quran-page-slider-chip:hover {
-            /* transform: translateY(-0.04rem); */
             box-shadow:
                 inset 0 0 0 1px color-mix(in srgb, var(--primary-300) 24%, transparent),
                 0 8px 16px color-mix(in srgb, var(--primary-800) 20%, transparent);
         }
 
-        .quran-page-slider-chip:active {
-            /* transform: translateY(0); */
-        }
+        .quran-page-slider-chip:active {}
 
         .quran-page-slider-chip.quran-page-slider-chip--disabled {
             opacity: 0.68;
