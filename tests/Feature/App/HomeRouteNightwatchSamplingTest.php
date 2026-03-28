@@ -3,11 +3,16 @@
 declare(strict_types=1);
 
 use App\Filament\Pages\Dashboard;
+use App\Filament\Widgets\WebAthkarGateActivityChart;
 use App\Filament\Widgets\WebHomeActivityChart;
+use App\Filament\Widgets\WebQuranGateActivityChart;
 use App\Http\Middleware\TrackWebHomeMetrics;
+use App\Livewire\WebHomeViewTracker;
 use App\Services\Monitoring\WebHomeActivityTracker;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
+
+use function Pest\Livewire\livewire;
 
 beforeEach(function () {
     config([
@@ -31,7 +36,10 @@ it('wires home route/dashboard to web home metrics middleware and widget', funct
     $dashboard = app(Dashboard::class);
     $providerSource = file_get_contents(app_path('Providers/FilamentServiceProvider.php'));
 
-    expect($dashboard->getWidgets())->toContain(WebHomeActivityChart::class)
+    expect($dashboard->getWidgets())
+        ->toContain(WebHomeActivityChart::class)
+        ->toContain(WebAthkarGateActivityChart::class)
+        ->toContain(WebQuranGateActivityChart::class)
         ->and($providerSource)->not->toBeFalse()
         ->and($providerSource)->toContain('Dashboard::class');
 });
@@ -160,4 +168,37 @@ it('persists web home metrics in the configured cache store even when default ca
     ]);
 
     Cache::store('file')->flush();
+});
+
+it('tracks gate-scoped metrics from Livewire view switches without affecting global counters', function () {
+    config([
+        'app.custom.security.web_home_metrics.enabled' => true,
+        'app.custom.security.web_home_metrics.cache_store' => 'array',
+        'nativephp-internal.running' => false,
+        'nativephp-internal.platform' => null,
+    ]);
+
+    $this->withServerVariables([
+        'REMOTE_ADDR' => '203.0.113.77',
+        'HTTP_USER_AGENT' => 'Scoped Agent',
+    ])->get('/')->assertSuccessful();
+
+    livewire(WebHomeViewTracker::class)
+        ->call('trackGateView', WebHomeActivityTracker::CONTEXT_ATHKAR_GATE)
+        ->call('trackGateView', WebHomeActivityTracker::CONTEXT_ATHKAR_GATE)
+        ->call('trackGateView', WebHomeActivityTracker::CONTEXT_QURAN_GATE);
+
+    $tracker = app(WebHomeActivityTracker::class);
+
+    expect($tracker->todaySummary())->toBe([
+        'hits' => 1,
+        'unique_visitors' => 1,
+    ])->and($tracker->todaySummary(WebHomeActivityTracker::CONTEXT_ATHKAR_GATE))->toBe([
+        'hits' => 2,
+        'unique_visitors' => 1,
+    ])->and($tracker->todaySummary(WebHomeActivityTracker::CONTEXT_QURAN_GATE))->toBe([
+        'hits' => 1,
+        'unique_visitors' => 1,
+    ])->and($tracker->dailySeries(1, WebHomeActivityTracker::CONTEXT_ATHKAR_GATE)['hits'])->toBe([2])
+        ->and($tracker->dailySeries(1, WebHomeActivityTracker::CONTEXT_QURAN_GATE)['hits'])->toBe([1]);
 });

@@ -12,26 +12,42 @@ use Illuminate\Support\Str;
 
 class WebHomeActivityTracker
 {
-    public function track(Request $request): void
+    public const CONTEXT_HOME = 'home';
+
+    public const CONTEXT_ATHKAR_GATE = 'athkar-app-gate';
+
+    public const CONTEXT_QURAN_GATE = 'quran-app-gate';
+
+    /**
+     * @var array<int, string>
+     */
+    private const CONTEXTS = [
+        self::CONTEXT_HOME,
+        self::CONTEXT_ATHKAR_GATE,
+        self::CONTEXT_QURAN_GATE,
+    ];
+
+    public function track(Request $request, string $context = self::CONTEXT_HOME): void
     {
+        $context = $this->normalizeContext($context);
         $now = CarbonImmutable::now();
         $cache = $this->cache();
 
         $this->incrementWithTtl(
             cache: $cache,
-            key: $this->dailyHitsKey($now),
+            key: $this->dailyHitsKey($now, $context),
             ttlSeconds: $this->dailyCounterTtlSeconds($now),
         );
         $this->incrementWithTtl(
             cache: $cache,
-            key: $this->hourlyHitsKey($now),
+            key: $this->hourlyHitsKey($now, $context),
             ttlSeconds: $this->hourlyCounterTtlSeconds($now),
         );
 
         $fingerprint = $this->fingerprint($request);
 
         $isNewDailyVisitor = $cache->add(
-            $this->dailySeenKey($now, $fingerprint),
+            $this->dailySeenKey($now, $fingerprint, $context),
             true,
             now()->addDays($this->retentionDays()),
         );
@@ -39,13 +55,13 @@ class WebHomeActivityTracker
         if ($isNewDailyVisitor) {
             $this->incrementWithTtl(
                 cache: $cache,
-                key: $this->dailyUniqueKey($now),
+                key: $this->dailyUniqueKey($now, $context),
                 ttlSeconds: $this->dailyCounterTtlSeconds($now),
             );
         }
 
         $isNewHourlyVisitor = $cache->add(
-            $this->hourlySeenKey($now, $fingerprint),
+            $this->hourlySeenKey($now, $fingerprint, $context),
             true,
             now()->addDays(2),
         );
@@ -53,7 +69,7 @@ class WebHomeActivityTracker
         if ($isNewHourlyVisitor) {
             $this->incrementWithTtl(
                 cache: $cache,
-                key: $this->hourlyUniqueKey($now),
+                key: $this->hourlyUniqueKey($now, $context),
                 ttlSeconds: $this->hourlyCounterTtlSeconds($now),
             );
         }
@@ -62,8 +78,9 @@ class WebHomeActivityTracker
     /**
      * @return array{labels: array<int, string>, hits: array<int, int>, unique_visitors: array<int, int>}
      */
-    public function dailySeries(int $days): array
+    public function dailySeries(int $days, string $context = self::CONTEXT_HOME): array
     {
+        $context = $this->normalizeContext($context);
         $days = max(1, $days);
         $endDate = CarbonImmutable::today();
         $cache = $this->cache();
@@ -75,8 +92,8 @@ class WebHomeActivityTracker
         for ($offset = $days - 1; $offset >= 0; $offset--) {
             $date = $endDate->subDays($offset);
             $labels[] = $date->format('M d');
-            $hits[] = (int) $cache->get($this->dailyHitsKey($date), 0);
-            $uniqueVisitors[] = (int) $cache->get($this->dailyUniqueKey($date), 0);
+            $hits[] = (int) $cache->get($this->dailyHitsKey($date, $context), 0);
+            $uniqueVisitors[] = (int) $cache->get($this->dailyUniqueKey($date, $context), 0);
         }
 
         return [
@@ -89,22 +106,24 @@ class WebHomeActivityTracker
     /**
      * @return array{hits: int, unique_visitors: int}
      */
-    public function todaySummary(): array
+    public function todaySummary(string $context = self::CONTEXT_HOME): array
     {
+        $context = $this->normalizeContext($context);
         $today = CarbonImmutable::today();
         $cache = $this->cache();
 
         return [
-            'hits' => (int) $cache->get($this->dailyHitsKey($today), 0),
-            'unique_visitors' => (int) $cache->get($this->dailyUniqueKey($today), 0),
+            'hits' => (int) $cache->get($this->dailyHitsKey($today, $context), 0),
+            'unique_visitors' => (int) $cache->get($this->dailyUniqueKey($today, $context), 0),
         ];
     }
 
     /**
      * @return array{hits: int, unique_visitors: int}
      */
-    public function last24HoursSummary(): array
+    public function last24HoursSummary(string $context = self::CONTEXT_HOME): array
     {
+        $context = $this->normalizeContext($context);
         $currentHour = CarbonImmutable::now()->startOfHour();
         $hits = 0;
         $uniqueVisitors = 0;
@@ -112,8 +131,8 @@ class WebHomeActivityTracker
 
         for ($offset = 0; $offset < 24; $offset++) {
             $hour = $currentHour->subHours($offset);
-            $hits += (int) $cache->get($this->hourlyHitsKey($hour), 0);
-            $uniqueVisitors += (int) $cache->get($this->hourlyUniqueKey($hour), 0);
+            $hits += (int) $cache->get($this->hourlyHitsKey($hour, $context), 0);
+            $uniqueVisitors += (int) $cache->get($this->hourlyUniqueKey($hour, $context), 0);
         }
 
         return [
@@ -167,33 +186,51 @@ class WebHomeActivityTracker
         return hash('sha256', $ipAddress.'|'.$userAgent);
     }
 
-    private function dailyHitsKey(CarbonImmutable $date): string
+    private function dailyHitsKey(CarbonImmutable $date, string $context): string
     {
-        return 'metrics:web-home:daily:hits:'.$date->format('Ymd');
+        return $this->metricPrefix($context).':daily:hits:'.$date->format('Ymd');
     }
 
-    private function dailyUniqueKey(CarbonImmutable $date): string
+    private function dailyUniqueKey(CarbonImmutable $date, string $context): string
     {
-        return 'metrics:web-home:daily:unique:'.$date->format('Ymd');
+        return $this->metricPrefix($context).':daily:unique:'.$date->format('Ymd');
     }
 
-    private function dailySeenKey(CarbonImmutable $date, string $fingerprint): string
+    private function dailySeenKey(CarbonImmutable $date, string $fingerprint, string $context): string
     {
-        return 'metrics:web-home:daily:seen:'.$date->format('Ymd').':'.$fingerprint;
+        return $this->metricPrefix($context).':daily:seen:'.$date->format('Ymd').':'.$fingerprint;
     }
 
-    private function hourlyHitsKey(CarbonImmutable $date): string
+    private function hourlyHitsKey(CarbonImmutable $date, string $context): string
     {
-        return 'metrics:web-home:hourly:hits:'.$date->format('YmdH');
+        return $this->metricPrefix($context).':hourly:hits:'.$date->format('YmdH');
     }
 
-    private function hourlyUniqueKey(CarbonImmutable $date): string
+    private function hourlyUniqueKey(CarbonImmutable $date, string $context): string
     {
-        return 'metrics:web-home:hourly:unique:'.$date->format('YmdH');
+        return $this->metricPrefix($context).':hourly:unique:'.$date->format('YmdH');
     }
 
-    private function hourlySeenKey(CarbonImmutable $date, string $fingerprint): string
+    private function hourlySeenKey(CarbonImmutable $date, string $fingerprint, string $context): string
     {
-        return 'metrics:web-home:hourly:seen:'.$date->format('YmdH').':'.$fingerprint;
+        return $this->metricPrefix($context).':hourly:seen:'.$date->format('YmdH').':'.$fingerprint;
+    }
+
+    private function normalizeContext(string $context): string
+    {
+        return in_array($context, self::CONTEXTS, true)
+            ? $context
+            : self::CONTEXT_HOME;
+    }
+
+    private function metricPrefix(string $context): string
+    {
+        $context = $this->normalizeContext($context);
+
+        if ($context === self::CONTEXT_HOME) {
+            return 'metrics:web-home';
+        }
+
+        return 'metrics:web-home:view:'.$context;
     }
 }

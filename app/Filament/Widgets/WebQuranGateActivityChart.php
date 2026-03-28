@@ -7,9 +7,9 @@ namespace App\Filament\Widgets;
 use App\Services\Monitoring\WebHomeActivityTracker;
 use Filament\Widgets\ChartWidget;
 
-class WebHomeActivityChart extends ChartWidget
+class WebQuranGateActivityChart extends ChartWidget
 {
-    protected ?string $heading = 'نشاط زيارات الواجهة الرئيسية';
+    protected ?string $heading = 'نشاط زيارات بوابة القرآن';
 
     protected int|string|array $columnSpan = 'full';
 
@@ -24,7 +24,7 @@ class WebHomeActivityChart extends ChartWidget
         $tracker = app(WebHomeActivityTracker::class);
         $activity = $tracker->dailySeries(
             days: $tracker->chartDays(),
-            context: WebHomeActivityTracker::CONTEXT_HOME,
+            context: WebHomeActivityTracker::CONTEXT_QURAN_GATE,
         );
 
         return [
@@ -58,8 +58,8 @@ class WebHomeActivityChart extends ChartWidget
     public function getDescription(): ?string
     {
         $tracker = app(WebHomeActivityTracker::class);
-        $today = $tracker->todaySummary(WebHomeActivityTracker::CONTEXT_HOME);
-        $last24Hours = $tracker->last24HoursSummary(WebHomeActivityTracker::CONTEXT_HOME);
+        $today = $tracker->todaySummary(WebHomeActivityTracker::CONTEXT_QURAN_GATE);
+        $last24Hours = $tracker->last24HoursSummary(WebHomeActivityTracker::CONTEXT_QURAN_GATE);
 
         return sprintf(
             'اليوم: %d نشط / %d زيارات. آخر 24 ساعة: %d نشط / %d زيارات.',

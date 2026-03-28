@@ -206,6 +206,10 @@
             <livewire:startup-sync defer />
         @endif
 
+        @if ((bool) config('app.custom.security.web_home_metrics.enabled', false) && is_platform('web'))
+            <livewire:web-home-view-tracker />
+        @endif
+
         <livewire:js-error-reporter />
     </div>
 </x-app>
