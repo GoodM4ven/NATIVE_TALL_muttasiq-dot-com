@@ -6,7 +6,6 @@ use App\Filament\Pages\ManageSettings;
 use App\Models\Setting;
 use App\Models\User;
 use Filament\Facades\Filament;
-use Illuminate\Support\Carbon;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\get;
@@ -92,7 +91,7 @@ it('saves settings and normalizes inverted min/max text-size values', function (
     expect((int) Setting::query()->where('name', Setting::QURAN_WIRD_KHATMAT_TARGET)->value('value'))
         ->toBe(4);
 
-    $expectedMonthlyMaximum = Carbon::now()->daysInMonth * Setting::QURAN_WIRD_KHATMAT_MAX;
+    $expectedMonthlyMaximum = Setting::QURAN_WIRD_KHATMAT_MONTHLY_MAX;
 
     livewire(ManageSettings::class)
         ->fillForm([

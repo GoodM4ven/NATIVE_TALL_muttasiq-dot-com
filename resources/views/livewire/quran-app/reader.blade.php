@@ -429,6 +429,7 @@
             transform: translateX(-0.6rem) scale(0.84);
         }
 
+        /* Credits: https://dribbble.com/shots/26540115-Progress-Bar */
         .quran-wird-progress-button {
             --quran-wird-progress-percent: 0%;
             --quran-wird-progress-browse-percent: 0%;
@@ -448,7 +449,6 @@
             color: color-mix(in srgb, var(--gray-900) 82%, var(--quran-panel-text));
             overflow: hidden;
             transition:
-                transform 180ms ease,
                 box-shadow 260ms ease,
                 min-width 320ms cubic-bezier(0.2, 1, 0.36, 1);
         }
@@ -499,7 +499,64 @@
         .quran-wird-progress-button:hover {}
 
         .quran-wird-progress-button:active {
-            transform: scale(0.985);
+            box-shadow: 0 8px 18px color-mix(in srgb, var(--success-900) 14%, transparent);
+        }
+
+        .quran-wird-progress-hover-wave {
+            position: absolute;
+            inset: 0.26rem;
+            border-radius: 999px;
+            border: 1px solid color-mix(in srgb, var(--success-400) 45%, transparent);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 2;
+            transform: scale(0.96);
+            animation: none;
+        }
+
+        .quran-wird-progress-hover-wave--second {
+            animation-delay: 0.95s;
+        }
+
+        .quran-wird-progress-hover-sheen {
+            position: absolute;
+            inset: 0.12rem;
+            border-radius: 999px;
+            pointer-events: none;
+            z-index: 3;
+            overflow: hidden;
+            opacity: 0;
+        }
+
+        .quran-wird-progress-hover-sheen::before {
+            content: '';
+            position: absolute;
+            inset-block: 0;
+            inset-inline-start: -130%;
+            width: 44%;
+            background: linear-gradient(120deg,
+                    transparent 0%,
+                    rgb(255 255 255 / 6%) 20%,
+                    rgb(255 255 255 / 28%) 55%,
+                    rgb(255 255 255 / 6%) 80%,
+                    transparent 100%);
+            transform: skewX(-18deg);
+        }
+
+        .quran-wird-progress-button:hover .quran-wird-progress-hover-wave,
+        .quran-wird-progress-button:focus-visible .quran-wird-progress-hover-wave {
+            opacity: 1;
+            animation: quran-wird-hover-wave 1.9s ease-out infinite;
+        }
+
+        .quran-wird-progress-button:hover .quran-wird-progress-hover-sheen,
+        .quran-wird-progress-button:focus-visible .quran-wird-progress-hover-sheen {
+            opacity: 1;
+        }
+
+        .quran-wird-progress-button:hover .quran-wird-progress-hover-sheen::before,
+        .quran-wird-progress-button:focus-visible .quran-wird-progress-hover-sheen::before {
+            animation: quran-wird-hover-sheen 1.45s ease-in-out infinite;
         }
 
         .quran-wird-progress-fill {
@@ -535,6 +592,37 @@
 
         .quran-wird-progress-button.quran-wird-progress-button--completed {
             box-shadow: 0 10px 20px color-mix(in srgb, var(--success-900) 16%, transparent);
+        }
+
+        .quran-reader--visual-enhancements-disabled .quran-wird-progress-hover-wave,
+        .quran-reader--visual-enhancements-disabled .quran-wird-progress-hover-sheen {
+            display: none;
+        }
+
+        @keyframes quran-wird-hover-wave {
+            0% {
+                transform: scale(0.96);
+                opacity: 0.72;
+            }
+
+            78% {
+                opacity: 0.14;
+            }
+
+            100% {
+                transform: scale(1.08);
+                opacity: 0;
+            }
+        }
+
+        @keyframes quran-wird-hover-sheen {
+            0% {
+                inset-inline-start: -130%;
+            }
+
+            100% {
+                inset-inline-start: 140%;
+            }
         }
 
         .quran-wird-progress-content {
@@ -1588,6 +1676,18 @@
                         x-on:click="toggleWirdMode()"
                     >
                         <span
+                            class="quran-wird-progress-hover-wave quran-wird-progress-hover-wave--first"
+                            aria-hidden="true"
+                        ></span>
+                        <span
+                            class="quran-wird-progress-hover-wave quran-wird-progress-hover-wave--second"
+                            aria-hidden="true"
+                        ></span>
+                        <span
+                            class="quran-wird-progress-hover-sheen"
+                            aria-hidden="true"
+                        ></span>
+                        <span
                             class="quran-wird-progress-fill quran-wird-progress-fill--committed"
                             aria-hidden="true"
                         ></span>
@@ -1840,7 +1940,7 @@
                     class="quran-swipe-hint quran-swipe-hint-button quran-bottom-strip-nav-prev select-none outline-none"
                     type="button"
                     aria-label="الصفحة السابقة"
-                    x-on:click.stop.prevent="$dispatch('quran-go-prev')"
+                    x-on:click.stop.prevent="goPreviousFromChevron()"
                 >
                     <span
                         class="quran-swipe-hint-chev"
@@ -1939,7 +2039,7 @@
                         aria-label="التنقل بين صفحات المصحف"
                         x-bind:min="sliderMin()"
                         x-bind:max="sliderMax()"
-                        x-bind:step="wirdModeActive ? 0.01 : 1"
+                        x-bind:step="1"
                         x-bind:value="sliderValue()"
                         x-on:input="onSliderInput($event)"
                         x-on:change="onSliderCommit($event)"
@@ -1950,7 +2050,7 @@
                     type="button"
                     aria-label="الصفحة التالية"
                     x-bind:disabled="!wirdModeActive && isLastNavigationPage()"
-                    x-on:click.stop.prevent="$dispatch('quran-go-next')"
+                    x-on:click.stop.prevent="goNextFromChevron()"
                 >
                     <span
                         class="quran-swipe-hint-chev quran-swipe-hint-chev-opposite"

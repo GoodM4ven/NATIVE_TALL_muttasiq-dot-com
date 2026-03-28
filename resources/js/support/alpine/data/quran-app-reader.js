@@ -152,7 +152,7 @@ const wirdFrequencyModeMonthly = 0;
 const wirdFrequencyModeDaily = 1;
 const wirdKhatmatTargetMin = 1;
 const wirdDailyKhatmatTargetMax = 4;
-const wirdMaxDaysInMonth = 31;
+const wirdMonthlyKhatmatTargetMax = 20;
 const wirdRecordRetentionDays = 120;
 
 const uniqueLocalId = () => {
@@ -593,6 +593,7 @@ document.addEventListener('alpine:init', () => {
             preserveActiveSurahOnNextOpen: false,
         },
         navigationHistory: [],
+        historyTagDraftById: {},
         bookmarks: [],
         historyModalOpen: false,
         bookmarksModalOpen: false,
@@ -653,7 +654,6 @@ document.addEventListener('alpine:init', () => {
         _suppressFitCacheWriteUntil: 0,
         _wirdSliderVisualTweenRaf: null,
         _wirdSliderInputCommitTimer: null,
-        _wirdSliderPendingStep: null,
         _pageInputCommitTimer: null,
         _pageInputTweenRaf: null,
         _searchRequestSerial: 0,
@@ -735,6 +735,7 @@ document.addEventListener('alpine:init', () => {
             this.refreshSurahTriggerCaption(false);
             this.syncSearchActiveSurahNumber();
             this.navigationHistory = readNavigationHistory();
+            this.syncHistoryTagDrafts();
             this.bookmarks = readBookmarks();
             this.dispatchManagerModalsVisibilityState();
 
@@ -878,7 +879,6 @@ document.addEventListener('alpine:init', () => {
                 this._wirdSliderVisualTweenRaf = null;
             }
 
-            this._wirdSliderPendingStep = null;
             this.wirdSliderVisualStep = null;
 
             if (this._pageInputTweenRaf !== null) {
@@ -1362,10 +1362,7 @@ document.addEventListener('alpine:init', () => {
             return new Date(year, month, 0).getDate();
         },
 
-        resolveWirdKhatmatTargetMax({
-            frequencyMode = this.wirdFrequencyMode,
-            dateKey = currentDateKey(),
-        } = {}) {
+        resolveWirdKhatmatTargetMax({ frequencyMode = this.wirdFrequencyMode } = {}) {
             const normalizedFrequencyMode = this.normalizeWirdFrequencyMode(
                 frequencyMode,
                 wirdFrequencyModeMonthly,
@@ -1375,24 +1372,18 @@ document.addEventListener('alpine:init', () => {
                 return wirdDailyKhatmatTargetMax;
             }
 
-            const daysInMonth = Math.max(
-                1,
-                this.resolveDaysInMonthFromDateKey(this.normalizeWirdDateKey(dateKey)),
-            );
-
-            return Math.max(wirdKhatmatTargetMin, daysInMonth * wirdDailyKhatmatTargetMax);
+            return wirdMonthlyKhatmatTargetMax;
         },
 
         normalizeWirdKhatmatTarget(
             value,
             fallback = 1,
-            { frequencyMode = this.wirdFrequencyMode, dateKey = currentDateKey() } = {},
+            { frequencyMode = this.wirdFrequencyMode } = {},
         ) {
             return this.normalizeIntegerFlag(value, fallback, {
                 min: wirdKhatmatTargetMin,
                 max: this.resolveWirdKhatmatTargetMax({
                     frequencyMode,
-                    dateKey,
                 }),
             });
         },
@@ -1410,7 +1401,6 @@ document.addEventListener('alpine:init', () => {
             const normalizedDateKey = this.normalizeWirdDateKey(dateKey);
             const normalizedKhatmatTarget = this.normalizeWirdKhatmatTarget(khatmatTarget, 1, {
                 frequencyMode: normalizedFrequencyMode,
-                dateKey: normalizedDateKey,
             });
 
             if (normalizedFrequencyMode === wirdFrequencyModeDaily) {
@@ -1905,6 +1895,19 @@ document.addEventListener('alpine:init', () => {
             return this.absolutePageToPageNumber(range.startAbsolutePage + normalizedStep);
         },
 
+        wirdStepForPage(pageNumber, record = this.wirdDailyRecord) {
+            const range = this.wirdRangeState(record);
+            const targetPage = clampPage(pageNumber, this.maxPage);
+
+            for (let step = 0; step <= range.maxStep; step += 1) {
+                if (this.absolutePageToPageNumber(range.startAbsolutePage + step) === targetPage) {
+                    return step;
+                }
+            }
+
+            return null;
+        },
+
         clearWirdSliderVisualTween() {
             if (this._wirdSliderVisualTweenRaf === null) {
                 return;
@@ -2264,6 +2267,16 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            this.resetNavigationQueueForPriorityJump();
+            this.abortActivePageLoad();
+
+            if (this._wirdSliderInputCommitTimer !== null) {
+                clearTimeout(this._wirdSliderInputCommitTimer);
+                this._wirdSliderInputCommitTimer = null;
+            }
+
+            this.clearWirdSliderVisualTween();
+
             this.wirdModeActive = false;
             this.wirdBrowseStep = null;
             this.clearWirdEntryRevealTimers();
@@ -2280,7 +2293,7 @@ document.addEventListener('alpine:init', () => {
                 this.maxPage,
             );
 
-            if (targetPage === this.pageNumber) {
+            if (targetPage === this.pageNumber && this.hasRenderablePage()) {
                 this.pageInput = targetPage;
                 this._lastPageInputVisualValue = targetPage;
                 this.persistLastPageNumber(targetPage, { force: true });
@@ -2306,8 +2319,6 @@ document.addEventListener('alpine:init', () => {
 
                 return;
             }
-
-            this.resetNavigationQueueForPriorityJump();
             const direction = this.resolveNavigationDirection(targetPage);
 
             await this.animatePageInputTo(targetPage, {
@@ -2320,6 +2331,8 @@ document.addEventListener('alpine:init', () => {
                 forceRefit: true,
                 source: 'wird-exit',
             });
+
+            await this.ensureWirdEntryPageVisible(targetPage);
         },
 
         markWirdAsCompleted(record = this.wirdDailyRecord) {
@@ -2364,15 +2377,33 @@ document.addEventListener('alpine:init', () => {
                 max: maxStep,
             });
             const isNextDirection = direction === 'next';
+            const pageStep = this.wirdStepForPage(this.pageNumber, record);
 
             if (record?.completed) {
                 let browseStep = this.wirdBrowseStepValue(record);
 
+                if (pageStep !== null) {
+                    browseStep = this.normalizeIntegerFlag(browseStep, pageStep, {
+                        min: 0,
+                        max: maxStep,
+                    });
+                }
+
                 if (isNextDirection && browseStep >= maxStep) {
+                    await this.exitWirdMode({
+                        restoreNormalPage: true,
+                        reason: 'boundary-next',
+                    });
+
                     return;
                 }
 
                 if (!isNextDirection && browseStep <= 0) {
+                    await this.exitWirdMode({
+                        restoreNormalPage: true,
+                        reason: 'boundary-prev',
+                    });
+
                     return;
                 }
 
@@ -2398,8 +2429,15 @@ document.addEventListener('alpine:init', () => {
             }
 
             this.wirdBrowseStep = null;
+            const effectiveCurrentStep =
+                pageStep === null
+                    ? currentStep
+                    : this.normalizeIntegerFlag(currentStep, pageStep, {
+                          min: 0,
+                          max: maxStep,
+                      });
 
-            if (isNextDirection && currentStep >= maxStep) {
+            if (isNextDirection && effectiveCurrentStep >= maxStep) {
                 this.markWirdAsCompleted(record);
                 await this.exitWirdMode({
                     restoreNormalPage: true,
@@ -2409,15 +2447,26 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            if (!isNextDirection && currentStep <= 0) {
+            if (!isNextDirection && effectiveCurrentStep <= 0) {
+                await this.exitWirdMode({
+                    restoreNormalPage: true,
+                    reason: 'boundary-prev',
+                });
+
                 return;
             }
 
-            record.currentStep = isNextDirection ? currentStep + 1 : currentStep - 1;
-            record.progressStep = this.normalizeIntegerFlag(record?.progressStep, currentStep, {
-                min: 0,
-                max: maxStep,
-            });
+            record.currentStep = isNextDirection
+                ? effectiveCurrentStep + 1
+                : effectiveCurrentStep - 1;
+            record.progressStep = this.normalizeIntegerFlag(
+                record?.progressStep,
+                effectiveCurrentStep,
+                {
+                    min: 0,
+                    max: maxStep,
+                },
+            );
             record.progressStep = Math.max(record.progressStep, record.currentStep);
             record.completed = Boolean(record.completed);
             record.updatedAt = Date.now();
@@ -2505,46 +2554,210 @@ document.addEventListener('alpine:init', () => {
             this.queueWirdEntryRevealRecovery(targetPage);
         },
 
-        scheduleWirdSliderStepNavigation(step, { delayMs = 110, source = 'slider-input' } = {}) {
-            const range = this.wirdRangeState();
-            const normalizedStep = this.normalizeIntegerFlag(step, this.sliderValue(), {
-                min: 0,
-                max: range.maxStep,
-            });
-
-            this._wirdSliderPendingStep = normalizedStep;
-
-            if (this._wirdSliderInputCommitTimer !== null) {
-                clearTimeout(this._wirdSliderInputCommitTimer);
-                this._wirdSliderInputCommitTimer = null;
-            }
-
-            this._wirdSliderInputCommitTimer = window.setTimeout(
-                () => {
-                    this._wirdSliderInputCommitTimer = null;
-                    const pendingStep = this._wirdSliderPendingStep;
-                    this._wirdSliderPendingStep = null;
-
-                    if (!Number.isFinite(Number(pendingStep))) {
-                        return;
-                    }
-
-                    if (!this.wirdModeActive) {
-                        return;
-                    }
-
-                    void this.navigateWirdToStep(pendingStep, source);
-                },
-                Math.max(40, Math.trunc(Number(delayMs) || 110)),
-            );
-        },
-
         persistNavigationHistory() {
             this.navigationHistory = writeNavigationHistory(this.navigationHistory);
         },
 
         persistBookmarks() {
             this.bookmarks = writeBookmarks(this.bookmarks);
+        },
+
+        normalizeHistoryEntryId(entryId) {
+            return String(entryId ?? '').trim();
+        },
+
+        historyTagsMatch(currentTags = [], nextTags = []) {
+            if (currentTags.length !== nextTags.length) {
+                return false;
+            }
+
+            return currentTags.every((tag, index) => tag === nextTags[index]);
+        },
+
+        historyEntryById(entryId) {
+            const normalizedEntryId = this.normalizeHistoryEntryId(entryId);
+
+            if (!normalizedEntryId) {
+                return null;
+            }
+
+            return (
+                this.navigationHistory.find(
+                    (entry) => this.normalizeHistoryEntryId(entry?.id) === normalizedEntryId,
+                ) ?? null
+            );
+        },
+
+        syncHistoryTagDraftForEntry(entryId) {
+            const normalizedEntryId = this.normalizeHistoryEntryId(entryId);
+
+            if (!normalizedEntryId) {
+                return;
+            }
+
+            const existingEntry = this.historyEntryById(normalizedEntryId);
+
+            if (!existingEntry) {
+                if (
+                    this.historyTagDraftById &&
+                    Object.prototype.hasOwnProperty.call(
+                        this.historyTagDraftById,
+                        normalizedEntryId,
+                    )
+                ) {
+                    const nextDrafts = { ...this.historyTagDraftById };
+                    delete nextDrafts[normalizedEntryId];
+                    this.historyTagDraftById = nextDrafts;
+                }
+
+                return;
+            }
+
+            const currentDraft = String(this.historyTagDraftById?.[normalizedEntryId] ?? '').trim();
+
+            if (currentDraft !== '') {
+                return;
+            }
+
+            this.historyTagDraftById = {
+                ...this.historyTagDraftById,
+                [normalizedEntryId]: '',
+            };
+        },
+
+        syncHistoryTagDrafts() {
+            const nextDrafts = {};
+
+            this.navigationHistory.forEach((entry) => {
+                const normalizedEntryId = this.normalizeHistoryEntryId(entry?.id);
+
+                if (!normalizedEntryId) {
+                    return;
+                }
+
+                nextDrafts[normalizedEntryId] = String(
+                    this.historyTagDraftById?.[normalizedEntryId] ?? '',
+                );
+            });
+
+            this.historyTagDraftById = nextDrafts;
+        },
+
+        historyTagDraft(entryId) {
+            const normalizedEntryId = this.normalizeHistoryEntryId(entryId);
+
+            if (!normalizedEntryId) {
+                return '';
+            }
+
+            return String(this.historyTagDraftById?.[normalizedEntryId] ?? '');
+        },
+
+        setHistoryTagDraft(entryId, value) {
+            const normalizedEntryId = this.normalizeHistoryEntryId(entryId);
+
+            if (!normalizedEntryId) {
+                return;
+            }
+
+            this.historyTagDraftById = {
+                ...this.historyTagDraftById,
+                [normalizedEntryId]: String(value ?? ''),
+            };
+        },
+
+        historyTagSuggestions(entryId) {
+            const normalizedEntryId = this.normalizeHistoryEntryId(entryId);
+            const entry = this.historyEntryById(normalizedEntryId);
+            const existingTags = new Set(
+                (Array.isArray(entry?.tags) ? entry.tags : []).map((tag) =>
+                    String(tag ?? '').toLocaleLowerCase(),
+                ),
+            );
+            const draftValue = this.historyTagDraft(normalizedEntryId).toLocaleLowerCase().trim();
+            const suggestions = [];
+            const usedSuggestions = new Set();
+
+            this.navigationHistory.forEach((historyEntry) => {
+                (Array.isArray(historyEntry?.tags) ? historyEntry.tags : []).forEach((rawTag) => {
+                    const normalizedTag = String(rawTag ?? '').trim();
+
+                    if (normalizedTag === '') {
+                        return;
+                    }
+
+                    const normalizedKey = normalizedTag.toLocaleLowerCase();
+
+                    if (existingTags.has(normalizedKey) || usedSuggestions.has(normalizedKey)) {
+                        return;
+                    }
+
+                    if (draftValue !== '' && !normalizedKey.includes(draftValue)) {
+                        return;
+                    }
+
+                    usedSuggestions.add(normalizedKey);
+                    suggestions.push(normalizedTag);
+                });
+            });
+
+            return suggestions.slice(0, 18);
+        },
+
+        commitHistoryTagDraft(entryId, { clearInput = true } = {}) {
+            const normalizedEntryId = this.normalizeHistoryEntryId(entryId);
+
+            if (!normalizedEntryId) {
+                return;
+            }
+
+            const draftValue = this.historyTagDraft(normalizedEntryId);
+            const parsedDraftTags = normalizeTags(draftValue);
+
+            if (parsedDraftTags.length < 1) {
+                if (clearInput) {
+                    this.setHistoryTagDraft(normalizedEntryId, '');
+                }
+
+                return;
+            }
+
+            const entry = this.historyEntryById(normalizedEntryId);
+            const existingTags = Array.isArray(entry?.tags) ? entry.tags : [];
+            const nextTags = normalizeTags([...existingTags, ...parsedDraftTags]);
+
+            this.updateHistoryEntryTags(normalizedEntryId, nextTags, {
+                markUpdated: true,
+            });
+
+            if (clearInput) {
+                this.setHistoryTagDraft(normalizedEntryId, '');
+            }
+        },
+
+        removeHistoryEntryTag(entryId, tagValue) {
+            const normalizedEntryId = this.normalizeHistoryEntryId(entryId);
+            const normalizedTagValue = String(tagValue ?? '').trim();
+
+            if (!normalizedEntryId || normalizedTagValue === '') {
+                return;
+            }
+
+            const entry = this.historyEntryById(normalizedEntryId);
+
+            if (!entry || !Array.isArray(entry?.tags)) {
+                return;
+            }
+
+            const nextTags = entry.tags.filter(
+                (tag) =>
+                    String(tag ?? '').toLocaleLowerCase() !==
+                    normalizedTagValue.toLocaleLowerCase(),
+            );
+
+            this.updateHistoryEntryTags(normalizedEntryId, nextTags, {
+                markUpdated: true,
+            });
         },
 
         historyEntryTagsAsText(entry) {
@@ -2745,19 +2958,28 @@ document.addEventListener('alpine:init', () => {
                 });
         },
 
-        updateHistoryEntryTags(entryId, rawTags) {
-            const normalizedEntryId = String(entryId ?? '').trim();
+        updateHistoryEntryTags(entryId, rawTags, { markUpdated = true } = {}) {
+            const normalizedEntryId = this.normalizeHistoryEntryId(entryId);
 
             if (!normalizedEntryId) {
                 return;
             }
 
             const parsedTags = normalizeTags(rawTags);
+            let didUpdateEntry = false;
 
             this.navigationHistory = this.navigationHistory.map((entry) => {
-                if (String(entry?.id ?? '') !== normalizedEntryId) {
+                if (this.normalizeHistoryEntryId(entry?.id) !== normalizedEntryId) {
                     return entry;
                 }
+
+                const currentTags = normalizeTags(entry?.tags ?? []);
+
+                if (this.historyTagsMatch(currentTags, parsedTags)) {
+                    return entry;
+                }
+
+                didUpdateEntry = true;
 
                 return {
                     ...entry,
@@ -2765,8 +2987,20 @@ document.addEventListener('alpine:init', () => {
                     created_at: Number(entry?.created_at ?? Date.now()),
                 };
             });
+
+            if (!didUpdateEntry) {
+                this.syncHistoryTagDraftForEntry(normalizedEntryId);
+
+                return;
+            }
+
             this.persistNavigationHistory();
-            this.markManagerRowUpdated('history', normalizedEntryId);
+
+            if (markUpdated) {
+                this.markManagerRowUpdated('history', normalizedEntryId);
+            }
+
+            this.syncHistoryTagDraftForEntry(normalizedEntryId);
         },
 
         clearNavigationHistory() {
@@ -2788,6 +3022,7 @@ document.addEventListener('alpine:init', () => {
                     return !removableIds.includes(normalizedEntryId);
                 });
                 this.persistNavigationHistory();
+                this.syncHistoryTagDrafts();
                 removableIds.forEach((entryId) => {
                     this.setManagerRowEffect('history', entryId, '');
                 });
@@ -2829,6 +3064,7 @@ document.addEventListener('alpine:init', () => {
                 ...this.navigationHistory,
             ];
             this.persistNavigationHistory();
+            this.syncHistoryTagDrafts();
         },
 
         bookmarkedPageEntry(pageNumber = this.pageNumber) {
@@ -3574,6 +3810,11 @@ document.addEventListener('alpine:init', () => {
         isFirstNavigationPage() {
             if (this.wirdModeActive) {
                 const record = this.ensureWirdDailyRecord();
+                const pageStep = this.wirdStepForPage(this.pageNumber, record);
+
+                if (pageStep !== null) {
+                    return pageStep <= 0;
+                }
 
                 if (record?.completed) {
                     return this.wirdBrowseStepValue(record) <= 0;
@@ -3592,6 +3833,11 @@ document.addEventListener('alpine:init', () => {
                     1,
                     this.normalizeIntegerFlag(record?.requiredPages, 1, { min: 1 }),
                 );
+                const pageStep = this.wirdStepForPage(this.pageNumber, record);
+
+                if (pageStep !== null) {
+                    return pageStep >= requiredPages - 1;
+                }
 
                 if (record?.completed) {
                     return this.wirdBrowseStepValue(record) >= requiredPages - 1;
@@ -3604,7 +3850,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         async goNextFromChevron() {
-            if (this.isLastNavigationPage()) {
+            if (!this.wirdModeActive && this.isLastNavigationPage()) {
                 return;
             }
 
@@ -3903,11 +4149,14 @@ document.addEventListener('alpine:init', () => {
 
             this.pageInput = targetPage;
             this._lastPageInputVisualValue = targetPage;
+
+            if (this._wirdSliderInputCommitTimer !== null) {
+                clearTimeout(this._wirdSliderInputCommitTimer);
+                this._wirdSliderInputCommitTimer = null;
+            }
+
             this.clearWirdSliderVisualTween();
             this.wirdSliderVisualStep = step;
-            this.scheduleWirdSliderStepNavigation(step, {
-                source: 'slider-input',
-            });
         },
 
         async onSliderCommit(event = null) {
@@ -3930,7 +4179,6 @@ document.addEventListener('alpine:init', () => {
                 min: 0,
                 max: range.maxStep,
             });
-            this._wirdSliderPendingStep = null;
             this.clearWirdSliderVisualTween();
             this.wirdSliderVisualStep = step;
             await this.navigateWirdToStep(step, 'slider');
@@ -6531,7 +6779,10 @@ document.addEventListener('alpine:init', () => {
             }, copiedHighlightVisibleDurationMs);
         },
 
-        setWordClickSuppression(enabled = false) {
+        setWordClickSuppression(
+            enabled = false,
+            { durationMs = wordClickSuppressionResetMs } = {},
+        ) {
             this._suppressNextWordClick = Boolean(enabled);
 
             if (this._suppressWordClickResetTimer !== null) {
@@ -6543,10 +6794,13 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            this._suppressWordClickResetTimer = window.setTimeout(() => {
-                this._suppressNextWordClick = false;
-                this._suppressWordClickResetTimer = null;
-            }, wordClickSuppressionResetMs);
+            this._suppressWordClickResetTimer = window.setTimeout(
+                () => {
+                    this._suppressNextWordClick = false;
+                    this._suppressWordClickResetTimer = null;
+                },
+                Math.max(120, Math.trunc(Number(durationMs) || wordClickSuppressionResetMs)),
+            );
         },
 
         normalizeSelectableWordMeta(word, fallbackWordIndex = 0) {
@@ -7577,6 +7831,12 @@ document.addEventListener('alpine:init', () => {
                         },
                 );
                 this.setWordClickSuppression(shouldSuppressNextWordClick);
+            }
+
+            if (this.wordPress.holdTriggered) {
+                this.setWordClickSuppression(true, {
+                    durationMs: 520,
+                });
             }
 
             this.clearWordPressState();
@@ -9136,6 +9396,10 @@ document.addEventListener('alpine:init', () => {
         },
 
         applySearchStreamPayload(payload) {
+            if (!this.search.modalOpen) {
+                return;
+            }
+
             const requestSerial = Math.max(0, Math.trunc(Number(payload?.request_serial ?? 0)));
 
             if (requestSerial !== this._searchRequestSerial) {
@@ -9325,6 +9589,25 @@ document.addEventListener('alpine:init', () => {
             return this.jumpPageModalOpen;
         },
 
+        queueSearchModalCloseSync({ delayMs = 0 } = {}) {
+            const normalizedDelayMs = Math.max(0, Math.trunc(Number(delayMs) || 0));
+
+            window.setTimeout(() => {
+                const hasStaleSearchState =
+                    this.search.modalOpen ||
+                    String(this.search.query ?? '').trim() !== '' ||
+                    Number(this.search.results?.length ?? 0) > 0;
+
+                if (!hasStaleSearchState) {
+                    return;
+                }
+
+                if (!this.isSearchModalWindowVisible()) {
+                    this.handleSearchModalClosed();
+                }
+            }, normalizedDelayMs);
+        },
+
         handleModalLifecycleEvent(kind, event) {
             this.trackModalLifecycle(kind, event);
             const isSearchModalEvent = this.isSearchModalEvent(kind, event);
@@ -9336,6 +9619,12 @@ document.addEventListener('alpine:init', () => {
             if (kind === 'opened') {
                 this.$nextTick(() => {
                     this.queueJumpPageModalInputSync();
+                });
+            }
+
+            if (kind === 'closing' || kind === 'closed') {
+                this.queueSearchModalCloseSync({
+                    delayMs: kind === 'closed' ? 0 : 96,
                 });
             }
 
@@ -9402,20 +9691,26 @@ document.addEventListener('alpine:init', () => {
             }
 
             if (!isSearchModalEvent) {
+                if (
+                    (kind === 'closing' || kind === 'closed') &&
+                    this.search.modalOpen &&
+                    !this.isSearchModalWindowVisible()
+                ) {
+                    this.handleSearchModalClosed();
+                }
+
                 return;
             }
 
             if (kind === 'opened') {
-                if (this.search.modalOpen) {
-                    this.queueSurahDirectoryAutoFocus();
-
-                    return;
-                }
-
                 this.clearPendingPostModalTargetFit();
 
                 if (this._searchModalOpenInFlight) {
                     return;
+                }
+
+                if (this.search.modalOpen) {
+                    this.handleSearchModalClosed();
                 }
 
                 this._searchModalOpenInFlight = Promise.resolve(this.handleSearchModalOpened())
@@ -9571,12 +9866,14 @@ document.addEventListener('alpine:init', () => {
             this.cancelSurahDirectoryAutoFocus();
             this.teardownSearchStreamObserver();
             this.clearSearchStreamTarget();
+            this._searchRequestSerial += 1;
             this.search.modalOpen = false;
             this._lastKnownModalOpenState = false;
             this.search.query = '';
             this.search.results = [];
             this.search.readyResult = null;
             this.search.isOpen = false;
+            this.search.isLoading = false;
             this.dispatchManagerModalsVisibilityState();
 
             if (this._searchModalCloseDebounceTimer !== null) {
@@ -9636,6 +9933,10 @@ document.addEventListener('alpine:init', () => {
                     },
                 },
             );
+
+            if (this.search.modalOpen && !this.isSearchModalWindowVisible()) {
+                this.handleSearchModalClosed();
+            }
         },
 
         async waitForModalLifecycleToSettle(maxAttempts = 14, delayMs = 24) {

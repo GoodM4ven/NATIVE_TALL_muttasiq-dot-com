@@ -217,7 +217,7 @@ trait HasControlPanelSettingsTab
         $maximum = Setting::quranWirdKhatmatMaxForFrequency($frequencyMode);
         $limitSummary = $frequencyMode === Setting::QURAN_WIRD_FREQUENCY_DAILY
             ? 'الحد الأقصى في الوضع اليومي: 4 ختمات.'
-            : sprintf('الحد الأقصى في الوضع الشهري لهذا الشهر: %d ختمة.', $maximum);
+            : sprintf('الحد الأقصى في الوضع الشهري: %d ختمة.', $maximum);
 
         $normalizedBaseHelp = trim($baseHelp);
 

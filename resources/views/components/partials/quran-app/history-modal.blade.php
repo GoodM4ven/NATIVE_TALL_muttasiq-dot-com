@@ -59,14 +59,50 @@
                         <td x-text="historyEntrySurahName(entry)"></td>
                         <td x-text="historyEntrySourceLabel(entry)"></td>
                         <td>
-                            <input
-                                class="quran-manager-input"
-                                data-quran-history-tags
-                                type="text"
-                                placeholder="وسوم مفصولة بفاصلة"
-                                x-bind:value="historyEntryTagsAsText(entry)"
-                                x-on:input.debounce.450ms="updateHistoryEntryTags(entry.id, $event.target.value)"
-                            />
+                            <div class="quran-manager-tags-field">
+                                <template
+                                    x-for="tag in (Array.isArray(entry.tags) ? entry.tags : [])"
+                                    :key="`quran-history-tag-${entry.id}-${tag}`"
+                                >
+                                    <span class="quran-manager-tag-chip">
+                                        <span x-text="tag"></span>
+                                        <button
+                                            class="quran-manager-tag-chip-remove"
+                                            type="button"
+                                            aria-label="حذف الوسم"
+                                            x-on:click.stop.prevent="removeHistoryEntryTag(entry.id, tag)"
+                                        >
+                                            ×
+                                        </button>
+                                    </span>
+                                </template>
+
+                                <input
+                                    class="quran-manager-tags-entry"
+                                    data-quran-history-tags
+                                    type="text"
+                                    placeholder="أضف وسمًا..."
+                                    x-bind:list="`quran-history-tags-suggestions-${entry.id}`"
+                                    x-bind:value="historyTagDraft(entry.id)"
+                                    x-on:input="setHistoryTagDraft(entry.id, $event.target.value)"
+                                    x-on:keydown="
+                                        if (['Enter', 'Tab', ','].includes($event.key)) {
+                                            $event.preventDefault();
+                                            commitHistoryTagDraft(entry.id);
+                                        }
+                                    "
+                                    x-on:blur="commitHistoryTagDraft(entry.id)"
+                                />
+
+                                <datalist x-bind:id="`quran-history-tags-suggestions-${entry.id}`">
+                                    <template
+                                        x-for="tagSuggestion in historyTagSuggestions(entry.id)"
+                                        :key="`quran-history-tag-suggestion-${entry.id}-${tagSuggestion}`"
+                                    >
+                                        <option x-bind:value="tagSuggestion"></option>
+                                    </template>
+                                </datalist>
+                            </div>
                         </td>
                     </tr>
                 </template>

@@ -67,3 +67,24 @@ test('it normalizes settings payload values by their definitions', function () {
     expect($normalized[Setting::MINIMUM_MAIN_TEXT_SIZE])->toBe(Setting::MIN_MAIN_TEXT_SIZE_MIN);
     expect($normalized[Setting::MAXIMUM_MAIN_TEXT_SIZE])->toBe(Setting::MAX_MAIN_TEXT_SIZE_MIN);
 });
+
+test('it caps wird khatamat target to fixed daily and monthly maxima', function () {
+    expect(Setting::quranWirdKhatmatMaxForFrequency(Setting::QURAN_WIRD_FREQUENCY_DAILY))
+        ->toBe(Setting::QURAN_WIRD_KHATMAT_MAX);
+    expect(Setting::quranWirdKhatmatMaxForFrequency(Setting::QURAN_WIRD_FREQUENCY_MONTHLY))
+        ->toBe(Setting::QURAN_WIRD_KHATMAT_MONTHLY_MAX);
+
+    $normalizedMonthly = Setting::normalizeSettings([
+        Setting::QURAN_WIRD_FREQUENCY_MODE => Setting::QURAN_WIRD_FREQUENCY_MONTHLY,
+        Setting::QURAN_WIRD_KHATMAT_TARGET => 999,
+    ]);
+    $normalizedDaily = Setting::normalizeSettings([
+        Setting::QURAN_WIRD_FREQUENCY_MODE => Setting::QURAN_WIRD_FREQUENCY_DAILY,
+        Setting::QURAN_WIRD_KHATMAT_TARGET => 999,
+    ]);
+
+    expect($normalizedMonthly[Setting::QURAN_WIRD_KHATMAT_TARGET])
+        ->toBe(Setting::QURAN_WIRD_KHATMAT_MONTHLY_MAX);
+    expect($normalizedDaily[Setting::QURAN_WIRD_KHATMAT_TARGET])
+        ->toBe(Setting::QURAN_WIRD_KHATMAT_MAX);
+});

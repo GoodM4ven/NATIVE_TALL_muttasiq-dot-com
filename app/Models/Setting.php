@@ -51,9 +51,7 @@ class Setting extends Model
 
     public const QURAN_WIRD_KHATMAT_MAX = 4;
 
-    public const QURAN_WIRD_MAX_DAYS_IN_MONTH = 31;
-
-    public const QURAN_WIRD_KHATMAT_MONTHLY_MAX = self::QURAN_WIRD_KHATMAT_MAX * self::QURAN_WIRD_MAX_DAYS_IN_MONTH;
+    public const QURAN_WIRD_KHATMAT_MONTHLY_MAX = 20;
 
     public const MINIMUM_MAIN_TEXT_SIZE = 'minimum_main_text_size';
 
@@ -178,7 +176,7 @@ class Setting extends Model
             self::QURAN_WIRD_KHATMAT_TARGET => [
                 'default' => 1,
                 'label' => '6. عدد الختمات المستهدفة للوِرد.',
-                'help' => 'في الوضع اليومي: الحد الأقصى 4 ختمات/يوم. في الوضع الشهري: الحد الأقصى المكافئ لـ 4 ختمات يوميًا خلال الشهر.',
+                'help' => 'في الوضع اليومي: الحد الأقصى 4 ختمات/يوم. في الوضع الشهري: الحد الأقصى 20 ختمة.',
                 'group' => self::GROUP_QURAN,
                 'type' => 'integer',
                 'min' => self::QURAN_WIRD_KHATMAT_MIN,
@@ -198,10 +196,8 @@ class Setting extends Model
         ];
     }
 
-    public static function quranWirdKhatmatMaxForFrequency(
-        int $frequencyMode,
-        ?\DateTimeInterface $date = null,
-    ): int {
+    public static function quranWirdKhatmatMaxForFrequency(int $frequencyMode): int
+    {
         $normalizedFrequencyMode = max(
             self::QURAN_WIRD_FREQUENCY_MONTHLY,
             min(self::QURAN_WIRD_FREQUENCY_DAILY, $frequencyMode),
@@ -211,22 +207,15 @@ class Setting extends Model
             return self::QURAN_WIRD_KHATMAT_MAX;
         }
 
-        $daysInMonth = (int) (($date ?? now())->format('t'));
-
-        return max(
-            self::QURAN_WIRD_KHATMAT_MIN,
-            $daysInMonth * self::QURAN_WIRD_KHATMAT_MAX,
-        );
+        return self::QURAN_WIRD_KHATMAT_MONTHLY_MAX;
     }
 
     /**
      * @return array<int, string>
      */
-    public static function quranWirdKhatmatOptionsForFrequency(
-        int $frequencyMode,
-        ?\DateTimeInterface $date = null,
-    ): array {
-        $maximum = self::quranWirdKhatmatMaxForFrequency($frequencyMode, $date);
+    public static function quranWirdKhatmatOptionsForFrequency(int $frequencyMode): array
+    {
+        $maximum = self::quranWirdKhatmatMaxForFrequency($frequencyMode);
         $options = [];
 
         for ($count = self::QURAN_WIRD_KHATMAT_MIN; $count <= $maximum; $count++) {
