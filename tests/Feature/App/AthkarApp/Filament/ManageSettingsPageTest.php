@@ -6,6 +6,7 @@ use App\Filament\Pages\ManageSettings;
 use App\Models\Setting;
 use App\Models\User;
 use Filament\Facades\Filament;
+use Illuminate\Support\Carbon;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\get;
@@ -60,6 +61,8 @@ it('saves settings and normalizes inverted min/max text-size values', function (
             Setting::DOES_AUTOMATICALLY_SWITCH_COMPLETED_ATHKAR => false,
             Setting::MINIMUM_MAIN_TEXT_SIZE => 18,
             Setting::MAXIMUM_MAIN_TEXT_SIZE => 22,
+            Setting::QURAN_WIRD_FREQUENCY_MODE => Setting::QURAN_WIRD_FREQUENCY_DAILY,
+            Setting::QURAN_WIRD_KHATMAT_TARGET => 4,
         ])
         ->call('save')
         ->assertHasNoFormErrors()
@@ -83,10 +86,20 @@ it('saves settings and normalizes inverted min/max text-size values', function (
     expect((int) Setting::query()->where('name', Setting::MAXIMUM_MAIN_TEXT_SIZE)->value('value'))
         ->toBe(22);
 
+    expect((int) Setting::query()->where('name', Setting::QURAN_WIRD_FREQUENCY_MODE)->value('value'))
+        ->toBe(Setting::QURAN_WIRD_FREQUENCY_DAILY);
+
+    expect((int) Setting::query()->where('name', Setting::QURAN_WIRD_KHATMAT_TARGET)->value('value'))
+        ->toBe(4);
+
+    $expectedMonthlyMaximum = Carbon::now()->daysInMonth * Setting::QURAN_WIRD_KHATMAT_MAX;
+
     livewire(ManageSettings::class)
         ->fillForm([
             Setting::MINIMUM_MAIN_TEXT_SIZE => 22,
             Setting::MAXIMUM_MAIN_TEXT_SIZE => 18,
+            Setting::QURAN_WIRD_FREQUENCY_MODE => Setting::QURAN_WIRD_FREQUENCY_MONTHLY,
+            Setting::QURAN_WIRD_KHATMAT_TARGET => $expectedMonthlyMaximum,
         ])
         ->call('save')
         ->assertHasNoFormErrors();
@@ -95,4 +108,17 @@ it('saves settings and normalizes inverted min/max text-size values', function (
     $max = (int) Setting::query()->where('name', Setting::MAXIMUM_MAIN_TEXT_SIZE)->value('value');
 
     expect($min)->toBeLessThanOrEqual($max);
+
+    expect((int) Setting::query()->where('name', Setting::QURAN_WIRD_FREQUENCY_MODE)->value('value'))
+        ->toBe(Setting::QURAN_WIRD_FREQUENCY_MONTHLY);
+    expect((int) Setting::query()->where('name', Setting::QURAN_WIRD_KHATMAT_TARGET)->value('value'))
+        ->toBe($expectedMonthlyMaximum);
+
+    $normalizedWirdSettings = Setting::normalizeSettings([
+        Setting::QURAN_WIRD_FREQUENCY_MODE => Setting::QURAN_WIRD_FREQUENCY_MONTHLY,
+        Setting::QURAN_WIRD_KHATMAT_TARGET => 999,
+    ]);
+
+    expect((int) ($normalizedWirdSettings[Setting::QURAN_WIRD_KHATMAT_TARGET] ?? 0))
+        ->toBe($expectedMonthlyMaximum);
 });

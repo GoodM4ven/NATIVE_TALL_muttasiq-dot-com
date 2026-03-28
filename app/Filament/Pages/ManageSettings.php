@@ -11,8 +11,12 @@ use Filament\Forms\Components;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Actions;
+use Filament\Schemas\Components\Component as SchemaComponent;
 use Filament\Schemas\Components\Form;
+use Filament\Schemas\Components\FusedGroup;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 
@@ -121,13 +125,22 @@ class ManageSettings extends Page
 
     /**
      * @param  array<string, array{default: bool|int, label: string, group: string, type: 'boolean'|'integer', help?: string, min?: int, max?: int}>  $definitions
-     * @return array<int, Components\Checkbox|Components\TextInput>
+     * @return array<int, SchemaComponent>
      */
     private function buildFieldsFromDefinitions(array $definitions): array
     {
         $fields = [];
+        $hasWirdFrequency = array_key_exists(Setting::QURAN_WIRD_FREQUENCY_MODE, $definitions);
+        $hasWirdKhatmat = array_key_exists(Setting::QURAN_WIRD_KHATMAT_TARGET, $definitions);
 
         foreach ($definitions as $name => $definition) {
+            if (
+                $name === Setting::QURAN_WIRD_FREQUENCY_MODE ||
+                $name === Setting::QURAN_WIRD_KHATMAT_TARGET
+            ) {
+                continue;
+            }
+
             if ($definition['type'] === 'boolean') {
                 $fields[] = Components\Checkbox::make($name)
                     ->label($definition['label']);
@@ -144,6 +157,65 @@ class ManageSettings extends Page
             }
         }
 
+        if ($hasWirdFrequency && $hasWirdKhatmat) {
+            $wirdFrequencyDefinition = $definitions[Setting::QURAN_WIRD_FREQUENCY_MODE];
+            $wirdKhatmatDefinition = $definitions[Setting::QURAN_WIRD_KHATMAT_TARGET];
+
+            $fields[] = FusedGroup::make([
+                Components\Radio::make(Setting::QURAN_WIRD_FREQUENCY_MODE)
+                    ->label($wirdFrequencyDefinition['label'])
+                    ->options(Setting::quranWirdFrequencyModeOptions())
+                    ->inline()
+                    ->live()
+                    ->afterStateUpdated(function (Set $set, Get $get, mixed $state): void {
+                        $maximum = Setting::quranWirdKhatmatMaxForFrequency((int) $state);
+                        $current = (int) $get(Setting::QURAN_WIRD_KHATMAT_TARGET);
+
+                        if ($current > $maximum) {
+                            $set(Setting::QURAN_WIRD_KHATMAT_TARGET, $maximum);
+                        }
+                    })
+                    ->helperText($wirdFrequencyDefinition['help'] ?? null)
+                    ->columnSpan(1),
+
+                Components\Select::make(Setting::QURAN_WIRD_KHATMAT_TARGET)
+                    ->label($wirdKhatmatDefinition['label'])
+                    ->options(
+                        fn (Get $get): array => Setting::quranWirdKhatmatOptionsForFrequency(
+                            (int) $get(Setting::QURAN_WIRD_FREQUENCY_MODE),
+                        ),
+                    )
+                    ->native(false)
+                    ->live()
+                    ->selectablePlaceholder(false)
+                    ->helperText(
+                        fn (Get $get): string => $this->wirdKhatmatHelperText(
+                            (int) $get(Setting::QURAN_WIRD_FREQUENCY_MODE),
+                            $wirdKhatmatDefinition['help'] ?? '',
+                        ),
+                    )
+                    ->columnSpan(1),
+            ])
+                ->label('إعداد الوِرد')
+                ->columns(2);
+        }
+
         return $fields;
+    }
+
+    private function wirdKhatmatHelperText(int $frequencyMode, string $baseHelp): string
+    {
+        $maximum = Setting::quranWirdKhatmatMaxForFrequency($frequencyMode);
+        $limitSummary = $frequencyMode === Setting::QURAN_WIRD_FREQUENCY_DAILY
+            ? 'الحد الأقصى في الوضع اليومي: 4 ختمات.'
+            : sprintf('الحد الأقصى في الوضع الشهري لهذا الشهر: %d ختمة.', $maximum);
+
+        $normalizedBaseHelp = trim($baseHelp);
+
+        if ($normalizedBaseHelp === '') {
+            return $limitSummary;
+        }
+
+        return sprintf('%s %s', $normalizedBaseHelp, $limitSummary);
     }
 }

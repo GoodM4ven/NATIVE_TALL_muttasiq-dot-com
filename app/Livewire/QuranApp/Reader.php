@@ -270,6 +270,8 @@ class Reader extends Component implements HasActions, HasSchemas
             'appendSurahAffixOnMultiCopy' => (bool) ($normalizedSettings[Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ON_MULTI_COPY] ?? true),
             'appendSurahAffixAlwaysOnCopy' => (bool) ($normalizedSettings[Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ALWAYS_ON_COPY] ?? false),
             'useWesternNumerals' => (bool) ($normalizedSettings[Setting::DOES_USE_WESTERN_NUMERALS] ?? true),
+            'wirdFrequencyMode' => (int) ($normalizedSettings[Setting::QURAN_WIRD_FREQUENCY_MODE] ?? Setting::QURAN_WIRD_FREQUENCY_MONTHLY),
+            'wirdKhatmatTarget' => (int) ($normalizedSettings[Setting::QURAN_WIRD_KHATMAT_TARGET] ?? 1),
             'numeralCharacters' => [
                 'western' => count($westernNumerals) === 10 ? $westernNumerals : ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
                 'arabic' => count($arabicNumerals) === 10 ? $arabicNumerals : ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'],

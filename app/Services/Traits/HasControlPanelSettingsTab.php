@@ -7,9 +7,12 @@ namespace App\Services\Traits;
 use App\Models\Setting;
 use Filament\Forms\Components;
 use Filament\Forms\Components\Slider\Enums\PipsMode;
+use Filament\Schemas\Components\FusedGroup;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\Text;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Support\Enums\FontWeight;
 use Filament\Support\Enums\TextSize;
 use Illuminate\Support\HtmlString;
@@ -127,6 +130,47 @@ trait HasControlPanelSettingsTab
                             ->belowContent([
                                 Text::make((string) ($quranDefinitions[Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ALWAYS_ON_COPY]['help'] ?? ''))->size(TextSize::ExtraSmall),
                             ]),
+
+                        FusedGroup::make([
+                            Components\Radio::make(Setting::QURAN_WIRD_FREQUENCY_MODE)
+                                ->default((int) ($quranDefinitions[Setting::QURAN_WIRD_FREQUENCY_MODE]['default'] ?? Setting::QURAN_WIRD_FREQUENCY_MONTHLY))
+                                ->label($quranDefinitions[Setting::QURAN_WIRD_FREQUENCY_MODE]['label'])
+                                ->options(Setting::quranWirdFrequencyModeOptions())
+                                ->inline()
+                                ->live()
+                                ->afterStateUpdated(function (Set $set, Get $get, mixed $state): void {
+                                    $maximum = Setting::quranWirdKhatmatMaxForFrequency((int) $state);
+                                    $current = (int) $get(Setting::QURAN_WIRD_KHATMAT_TARGET);
+
+                                    if ($current > $maximum) {
+                                        $set(Setting::QURAN_WIRD_KHATMAT_TARGET, $maximum);
+                                    }
+                                })
+                                ->helperText($quranDefinitions[Setting::QURAN_WIRD_FREQUENCY_MODE]['help'] ?? null)
+                                ->columnSpan(1),
+
+                            Components\Select::make(Setting::QURAN_WIRD_KHATMAT_TARGET)
+                                ->default((int) ($quranDefinitions[Setting::QURAN_WIRD_KHATMAT_TARGET]['default'] ?? 1))
+                                ->label($quranDefinitions[Setting::QURAN_WIRD_KHATMAT_TARGET]['label'])
+                                ->options(
+                                    fn (Get $get): array => Setting::quranWirdKhatmatOptionsForFrequency(
+                                        (int) $get(Setting::QURAN_WIRD_FREQUENCY_MODE),
+                                    ),
+                                )
+                                ->native(false)
+                                ->live()
+                                ->selectablePlaceholder(false)
+                                ->helperText(
+                                    fn (Get $get): string => $this->wirdKhatmatHelperText(
+                                        (int) $get(Setting::QURAN_WIRD_FREQUENCY_MODE),
+                                        (string) ($quranDefinitions[Setting::QURAN_WIRD_KHATMAT_TARGET]['help'] ?? ''),
+                                    ),
+                                )
+                                ->columnSpan(1),
+                        ])
+                            ->label('إعداد الوِرد')
+                            ->columns(2)
+                            ->columnSpanFull(),
                     ]),
 
                 Text::make(new HtmlString('<hr class="border-0 h-px bg-linear-to-r from-transparent via-gray-400 to-transparent mt-5">'))
@@ -162,5 +206,21 @@ trait HasControlPanelSettingsTab
                             ]),
                     ]),
             ]);
+    }
+
+    private function wirdKhatmatHelperText(int $frequencyMode, string $baseHelp): string
+    {
+        $maximum = Setting::quranWirdKhatmatMaxForFrequency($frequencyMode);
+        $limitSummary = $frequencyMode === Setting::QURAN_WIRD_FREQUENCY_DAILY
+            ? 'الحد الأقصى في الوضع اليومي: 4 ختمات.'
+            : sprintf('الحد الأقصى في الوضع الشهري لهذا الشهر: %d ختمة.', $maximum);
+
+        $normalizedBaseHelp = trim($baseHelp);
+
+        if ($normalizedBaseHelp === '') {
+            return $limitSummary;
+        }
+
+        return sprintf('%s %s', $normalizedBaseHelp, $limitSummary);
     }
 }

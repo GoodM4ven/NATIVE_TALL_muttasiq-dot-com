@@ -379,16 +379,143 @@
         .quran-top-strip {
             display: flex;
             align-items: center;
-            /* justify-content: space-between; */
+            gap: 0.65rem;
             padding: 0.8rem 1rem 0.5rem;
         }
 
         .quran-top-actions {
-            display: inline-flex;
+            display: flex;
+            flex: 1 1 auto;
             align-items: center;
             justify-content: flex-end;
             gap: 0.52rem;
-            min-width: 5.8rem;
+            min-width: 0;
+        }
+
+        .quran-top-actions-secondary {
+            flex: 0 0 auto;
+            max-width: 2.35rem;
+            transition:
+                opacity 260ms ease,
+                transform 280ms ease,
+                max-width 320ms ease,
+                margin 320ms ease;
+        }
+
+        .quran-top-actions.quran-top-actions--wird-active .quran-top-actions-secondary {
+            max-width: 0;
+            opacity: 0;
+            margin: 0;
+            transform: scale(0.82);
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .quran-wird-progress-button {
+            --quran-wird-progress-percent: 0%;
+            position: relative;
+            display: inline-flex;
+            flex: 1 1 auto;
+            align-items: center;
+            justify-content: stretch;
+            min-width: min(13rem, 50vw);
+            min-height: 2.35rem;
+            border-radius: 999px;
+            border: 1px solid color-mix(in srgb, var(--success-600) 44%, transparent);
+            background: color-mix(in srgb, var(--gray-100) 82%, transparent);
+            color: color-mix(in srgb, var(--gray-900) 82%, var(--quran-panel-text));
+            box-shadow:
+                inset 0 0 0 1px color-mix(in srgb, var(--gray-200) 46%, transparent),
+                0 8px 18px color-mix(in srgb, var(--gray-900) 12%, transparent);
+            overflow: hidden;
+            transition:
+                transform 180ms ease,
+                box-shadow 260ms ease,
+                border-color 260ms ease,
+                min-width 320ms cubic-bezier(0.2, 1, 0.36, 1);
+        }
+
+        .quran-top-actions.quran-top-actions--wird-active .quran-wird-progress-button {
+            min-width: 100%;
+        }
+
+        .quran-wird-progress-button::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(115deg,
+                    color-mix(in srgb, var(--gray-300) 24%, transparent) 0 0.62rem,
+                    color-mix(in srgb, var(--gray-100) 14%, transparent) 0.62rem 1.04rem);
+            opacity: 0.5;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .quran-wird-progress-button:hover {
+            transform: translateY(-0.04rem);
+            border-color: color-mix(in srgb, var(--success-500) 52%, transparent);
+            box-shadow:
+                inset 0 0 0 1px color-mix(in srgb, var(--success-200) 30%, transparent),
+                0 10px 20px color-mix(in srgb, var(--success-900) 14%, transparent);
+        }
+
+        .quran-wird-progress-button:active {
+            transform: scale(0.985);
+        }
+
+        .quran-wird-progress-fill {
+            position: absolute;
+            inset-block: 0;
+            inset-inline-start: 0;
+            width: var(--quran-wird-progress-percent);
+            background: linear-gradient(90deg,
+                    color-mix(in srgb, var(--success-600) 74%, transparent),
+                    color-mix(in srgb, var(--success-400) 58%, transparent));
+            transition: width 420ms cubic-bezier(0.22, 1, 0.36, 1);
+            z-index: 1;
+        }
+
+        .quran-wird-progress-button.quran-wird-progress-button--completed {
+            border-color: color-mix(in srgb, var(--success-600) 64%, transparent);
+        }
+
+        .quran-wird-progress-content {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            width: 100%;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.52rem;
+            padding-inline: 0.58rem;
+            line-height: 1;
+            font-family: 'IBM Plex Sans Arabic', 'Readex Pro', ui-sans-serif, system-ui, sans-serif;
+            direction: ltr;
+        }
+
+        .quran-wird-progress-percent {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 2.54rem;
+            min-height: 1.56rem;
+            padding-inline: 0.52rem;
+            border-radius: 999px;
+            border: 1px solid color-mix(in srgb, var(--success-800) 42%, transparent);
+            background: color-mix(in srgb, var(--success-100) 56%, transparent);
+            color: color-mix(in srgb, var(--success-900) 84%, var(--quran-panel-text));
+            font-size: 0.68rem;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+        }
+
+        .quran-wird-progress-count {
+            font-size: 0.78rem;
+            font-weight: 900;
+            letter-spacing: 0.01em;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
         }
 
         .quran-top-action {
@@ -662,6 +789,23 @@
             -webkit-user-select: none;
         }
 
+        .quran-soorah-trigger.quran-soorah-trigger--disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            box-shadow: 0 0 0 1.4px color-mix(in srgb, var(--gray-500) 52%, transparent);
+            transform: none;
+        }
+
+        .quran-soorah-trigger.quran-soorah-trigger--disabled .quran-soorah-trigger-icon {
+            opacity: 0.44;
+            /* transform: translateX(0) scale(0.92); */
+        }
+
+        .quran-soorah-trigger.quran-soorah-trigger--disabled .quran-soorah-trigger-circle {
+            opacity: 0;
+            /* transform: translate(-50%, -50%) scale(0); */
+        }
+
         .quran-soorah-trigger-icon {
             position: absolute;
             inset-inline-start: 0.82rem;
@@ -725,6 +869,15 @@
             animation: quran-caption-enter-backward 180ms ease both;
         }
 
+        .quran-reader--wird-active .quran-soorah-trigger,
+        .quran-reader--wird-active .quran-soorah-trigger-icon,
+        .quran-reader--wird-active .quran-soorah-trigger-circle,
+        .quran-reader--wird-active .quran-soorah-trigger-text,
+        .quran-reader--wird-active .quran-soorah-trigger-text-inner {
+            transition: none;
+            animation: none;
+        }
+
         @keyframes quran-caption-leave-forward {
             from {
                 opacity: 1;
@@ -773,28 +926,28 @@
             }
         }
 
-        .quran-soorah-trigger:hover {
+        .quran-top-strip:not(.quran-top-strip--wird-active) .quran-soorah-trigger:hover {
             color: color-mix(in srgb, var(--primary-50) 92%, var(--gray-900));
             box-shadow: 0 0 0 0.75rem transparent;
             transform: translateY(-0.04rem);
         }
 
-        .quran-soorah-trigger:hover .quran-soorah-trigger-icon {
+        .quran-top-strip:not(.quran-top-strip--wird-active) .quran-soorah-trigger:hover .quran-soorah-trigger-icon {
             inset-inline-start: 1.25rem;
             opacity: 1;
             transform: translateX(-0.2rem) scale(1);
         }
 
-        .quran-soorah-trigger:hover .quran-soorah-trigger-text {
+        .quran-top-strip:not(.quran-top-strip--wird-active) .quran-soorah-trigger:hover .quran-soorah-trigger-text {
             transform: translateX(-0.62rem);
         }
 
-        .quran-soorah-trigger:hover .quran-soorah-trigger-circle {
+        .quran-top-strip:not(.quran-top-strip--wird-active) .quran-soorah-trigger:hover .quran-soorah-trigger-circle {
             transform: translate(-50%, -50%) scale(18);
             opacity: 1;
         }
 
-        .quran-soorah-trigger:active {
+        .quran-top-strip:not(.quran-top-strip--wird-active) .quran-soorah-trigger:active {
             transform: scale(0.97);
             box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--primary-500) 58%, transparent);
         }
@@ -865,6 +1018,12 @@
             cursor: pointer;
         }
 
+        .quran-page-slider:disabled {
+            cursor: not-allowed;
+            filter: saturate(0.2);
+            opacity: 0.62;
+        }
+
         .quran-page-slider::-webkit-slider-thumb {
             appearance: none;
             -webkit-appearance: none;
@@ -876,6 +1035,12 @@
                     color-mix(in srgb, var(--primary-100) 92%, white),
                     color-mix(in srgb, var(--primary-200) 80%, var(--primary-50)));
             box-shadow: 0 4px 10px color-mix(in srgb, var(--primary-800) 20%, transparent);
+        }
+
+        .quran-page-slider:disabled::-webkit-slider-thumb,
+        .quran-page-slider:disabled::-moz-range-thumb {
+            border-color: color-mix(in srgb, var(--gray-500) 55%, transparent);
+            box-shadow: none;
         }
 
         .quran-page-slider::-moz-range-thumb {
@@ -931,6 +1096,14 @@
 
         .quran-page-slider-chip:active {
             /* transform: translateY(0); */
+        }
+
+        .quran-page-slider-chip.quran-page-slider-chip--disabled {
+            opacity: 0.68;
+            cursor: not-allowed;
+            box-shadow:
+                inset 0 0 0 1px color-mix(in srgb, var(--gray-500) 8%, transparent),
+                0 4px 10px color-mix(in srgb, var(--gray-900) 12%, transparent);
         }
 
         .quran-page-chip-current-wrap {
@@ -1255,9 +1428,12 @@
         jumpPageModalId: @js('quran-reader-jump-page-modal'),
         historyModalId: @js('quran-reader-history-modal'),
         bookmarksModalId: @js('quran-reader-bookmarks-modal'),
-        settings: @js($quranReaderSettings ?? ['enableVisualEnhancements' => true, 'targetWordsByDefault' => false, 'preserveHarakatOnCopy' => true, 'appendSurahAffixOnMultiCopy' => true, 'appendSurahAffixAlwaysOnCopy' => false, 'useWesternNumerals' => true]),
+        settings: @js($quranReaderSettings ?? ['enableVisualEnhancements' => true, 'targetWordsByDefault' => false, 'preserveHarakatOnCopy' => true, 'appendSurahAffixOnMultiCopy' => true, 'appendSurahAffixAlwaysOnCopy' => false, 'useWesternNumerals' => true, 'wirdFrequencyMode' => 0, 'wirdKhatmatTarget' => 1]),
     })"
-    x-bind:class="{ 'quran-reader--visual-enhancements-disabled': !doesEnableVisualEnhancements }"
+    x-bind:class="{
+        'quran-reader--visual-enhancements-disabled': !doesEnableVisualEnhancements,
+        'quran-reader--wird-active': wirdModeActive,
+    }"
     x-on:control-panel-updated.window="applyControlPanelSettings($event.detail?.controlPanel ?? {})"
     x-on:open-modal.window="handleModalLifecycleEvent('opened', $event)"
     x-on:x-modal-opened.window="handleModalLifecycleEvent('opened', $event)"
@@ -1298,13 +1474,19 @@
             <header
                 class="quran-top-strip"
                 data-no-swipe
+                x-bind:class="{ 'quran-top-strip--wird-active': wirdModeActive }"
             >
                 <!-- Credits: uiverse.io/gharsh11032000/loud-chicken-53 -->
                 <button
                     class="quran-soorah-trigger w-[13.4rem] shrink-0 outline-none"
                     type="button"
                     dir="rtl"
+                    x-bind:disabled="wirdModeActive"
+                    x-bind:class="{ 'quran-soorah-trigger--disabled': wirdModeActive }"
                     x-on:click="
+                        if (wirdModeActive) {
+                            return;
+                        }
                         warmSearchIndex();
                         $wire.mountAction('searchQuran');
                         queueSurahDirectoryAutoFocus();
@@ -1324,15 +1506,18 @@
                     </span>
                     <span class="quran-soorah-trigger-circle"></span>
                 </button>
-                <div class="quran-top-actions">
+                <div
+                    class="quran-top-actions"
+                    x-bind:class="{ 'quran-top-actions--wird-active': wirdModeActive }"
+                >
                     <!-- Credits: https://uiverse.io/vinodjangid07/tricky-bullfrog-41 -->
                     <button
-                        class="quran-history-toggle-button outline-none"
+                        class="quran-history-toggle-button quran-top-actions-secondary outline-none"
                         id="quran-reader-history-toggle"
                         data-quran-open-history
                         type="button"
                         aria-label="سجل التنقل"
-                        x-on:click="$wire.mountAction('navigationHistory')"
+                        x-on:click="if (!wirdModeActive) { $wire.mountAction('navigationHistory') }"
                     >
                         <x-icon
                             class="quran-history-toggle-icon"
@@ -1340,9 +1525,35 @@
                         />
                     </button>
 
+                    <button
+                        class="quran-wird-progress-button outline-none"
+                        data-quran-wird-toggle
+                        type="button"
+                        x-bind:style="wirdProgressBarStyle()"
+                        x-bind:class="{ 'quran-wird-progress-button--completed': ensureWirdDailyRecord()?.completed }"
+                        x-bind:aria-pressed="wirdModeActive ? 'true' : 'false'"
+                        x-bind:aria-label="wirdModeActive ? 'إيقاف وضع الوِرد والعودة للقراءة الحرة' : 'تشغيل وضع الوِرد اليومي'"
+                        x-on:click="toggleWirdMode()"
+                    >
+                        <span
+                            class="quran-wird-progress-fill"
+                            aria-hidden="true"
+                        ></span>
+                        <span class="quran-wird-progress-content">
+                            <span
+                                class="quran-wird-progress-percent"
+                                x-text="wirdProgressPercentLabel()"
+                            ></span>
+                            <span
+                                class="quran-wird-progress-count"
+                                x-text="wirdProgressCounterLabel()"
+                            ></span>
+                        </span>
+                    </button>
+
                     <!-- Credits: https://uiverse.io/vinodjangid07/breezy-goose-71 -->
                     <button
-                        class="quran-bookmark-toggle-button outline-none"
+                        class="quran-bookmark-toggle-button quran-top-actions-secondary outline-none"
                         id="quran-reader-bookmark-toggle"
                         data-quran-bookmark-toggle
                         type="button"
@@ -1353,7 +1564,7 @@
                         x-on:pointerup="onBookmarkButtonPointerUp($event)"
                         x-on:pointercancel="onBookmarkButtonPointerCancel()"
                         x-on:pointerleave="onBookmarkButtonPointerCancel()"
-                        x-on:click.prevent="onBookmarkButtonClick()"
+                        x-on:click.prevent="if (!wirdModeActive) { onBookmarkButtonClick() }"
                     >
                         <span
                             class="quran-bookmark-toggle-fill"
@@ -1596,9 +1807,11 @@
                         <button
                             class="quran-page-slider-chip outline-none"
                             type="button"
-                            aria-label="إدخال رقم صفحة"
+                            x-bind:aria-label="wirdModeActive ? 'وضع الوِرد اليومي مفعل' : 'إدخال رقم صفحة'"
                             x-bind:style="`--quran-counter-digit-count: ${pageCounterDigitLength()};`"
-                            x-on:click="$wire.mountAction('jumpToPage')"
+                            x-bind:disabled="wirdModeActive"
+                            x-bind:class="{ 'quran-page-slider-chip--disabled': wirdModeActive }"
+                            x-on:click="if (!wirdModeActive) { $wire.mountAction('jumpToPage') }"
                         >
                             <span class="quran-page-chip-total me-1.5">
                                 <template
@@ -1670,6 +1883,7 @@
                         aria-label="التنقل بين صفحات المصحف"
                         min="1"
                         x-bind:max="Math.max(1, maxPage)"
+                        x-bind:disabled="wirdModeActive"
                         x-model.number="pageInput"
                         x-on:input="onSliderInput()"
                         x-on:change="onSliderCommit()"
@@ -1679,20 +1893,20 @@
                     class="quran-swipe-hint quran-swipe-hint-button quran-bottom-strip-nav-next select-none outline-none"
                     type="button"
                     aria-label="الصفحة التالية"
-                    x-bind:disabled="isLastNavigationPage()"
+                    x-bind:disabled="!wirdModeActive && isLastNavigationPage()"
                     x-on:click.stop.prevent="$dispatch('quran-go-next')"
                 >
                     <span
                         class="quran-swipe-hint-chev quran-swipe-hint-chev-opposite"
-                        x-bind:class="{ 'quran-swipe-hint-chev-static': isLastNavigationPage() }"
+                        x-bind:class="{ 'quran-swipe-hint-chev-static': !wirdModeActive && isLastNavigationPage() }"
                     >›</span>
                     <span
                         class="quran-swipe-hint-chev quran-swipe-hint-chev-opposite"
-                        x-bind:class="{ 'quran-swipe-hint-chev-static': isLastNavigationPage() }"
+                        x-bind:class="{ 'quran-swipe-hint-chev-static': !wirdModeActive && isLastNavigationPage() }"
                     >›</span>
                     <span
                         class="quran-swipe-hint-chev quran-swipe-hint-chev-opposite"
-                        x-bind:class="{ 'quran-swipe-hint-chev-static': isLastNavigationPage() }"
+                        x-bind:class="{ 'quran-swipe-hint-chev-static': !wirdModeActive && isLastNavigationPage() }"
                     >›</span>
                 </button>
             </footer>

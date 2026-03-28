@@ -26,6 +26,8 @@ const controlPanelSettingKeys = Object.freeze({
     appendSurahAffixOnMultiCopy: 'does_quran_append_surah_affix_on_multi_copy',
     appendSurahAffixAlwaysOnCopy: 'does_quran_append_surah_affix_always_on_copy',
     useWesternNumerals: 'does_use_western_numerals',
+    wirdFrequencyMode: 'quran_wird_frequency_mode',
+    wirdKhatmatTarget: 'quran_wird_khatmat_target',
 });
 
 const normalizePayload = (payload = {}) => ({
@@ -143,6 +145,14 @@ const navigationHistoryLimit = 100;
 const lastPageStorageKey = 'quran-reader-last-page-v1';
 const navigationHistoryStorageKey = 'quran-reader-navigation-history-v1';
 const bookmarksStorageKey = 'quran-reader-bookmarks-v1';
+const wirdProgressStorageKey = 'quran-reader-wird-progress-v1';
+const wirdProgressStorageVersion = 1;
+const wirdFrequencyModeMonthly = 0;
+const wirdFrequencyModeDaily = 1;
+const wirdKhatmatTargetMin = 1;
+const wirdDailyKhatmatTargetMax = 4;
+const wirdMaxDaysInMonth = 31;
+const wirdRecordRetentionDays = 120;
 
 const uniqueLocalId = () => {
     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -228,6 +238,15 @@ const writeLocalStorage = (key, value) => {
     } catch (_) {
         //
     }
+};
+
+const currentDateKey = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
 };
 
 const normalizeHistoryEntry = (entry = {}) => {
@@ -518,6 +537,13 @@ document.addEventListener('alpine:init', () => {
         doesAppendSurahAffixOnMultiCopy: true,
         doesAppendSurahAffixAlwaysOnCopy: false,
         doesUseWesternNumerals: true,
+        wirdFrequencyMode: wirdFrequencyModeMonthly,
+        wirdKhatmatTarget: 1,
+        wirdModeActive: false,
+        wirdNormalPageBeforeMode: 1,
+        wirdTodayKey: '',
+        wirdDailyRecord: null,
+        wirdState: null,
         westernNumeralCharacters: defaultWesternNumerals.slice(),
         arabicNumeralCharacters: defaultArabicNumerals.slice(),
         isLoadingPage: false,
@@ -724,6 +750,8 @@ document.addEventListener('alpine:init', () => {
                     forceRefit: true,
                 });
             }
+
+            this.ensureWirdDailyRecord({ forceRebuild: true });
 
             this._onWindowViewportChange = () => {
                 this.handleViewportChange();
@@ -1240,8 +1268,624 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        persistLastPageNumber(pageNumber = this.pageNumber) {
+        persistLastPageNumber(pageNumber = this.pageNumber, { force = false } = {}) {
+            if (this.wirdModeActive && !force) {
+                return;
+            }
+
             writeLastPageNumber(pageNumber);
+        },
+
+        normalizeIntegerFlag(value, fallback = 0, { min = 0, max = Number.MAX_SAFE_INTEGER } = {}) {
+            const numericValue = Number(value);
+            const fallbackValue = Number.isFinite(Number(fallback)) ? Number(fallback) : 0;
+            const normalizedValue = Number.isFinite(numericValue)
+                ? Math.trunc(numericValue)
+                : fallbackValue;
+
+            return Math.max(min, Math.min(max, normalizedValue));
+        },
+
+        resolveReaderMaxPage() {
+            const currentMax = Number(this.maxPage ?? 0);
+            const initialMax = Number(this.initialPayload?.maxPage ?? 0);
+
+            if (Number.isFinite(currentMax) && currentMax > 0) {
+                return Math.trunc(currentMax);
+            }
+
+            if (Number.isFinite(initialMax) && initialMax > 0) {
+                return Math.trunc(initialMax);
+            }
+
+            return 604;
+        },
+
+        normalizeWirdFrequencyMode(value, fallback = wirdFrequencyModeMonthly) {
+            return this.normalizeIntegerFlag(value, fallback, {
+                min: wirdFrequencyModeMonthly,
+                max: wirdFrequencyModeDaily,
+            });
+        },
+
+        normalizeWirdDateKey(value, fallback = currentDateKey()) {
+            const normalized = String(value ?? '').trim();
+
+            if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+                return normalized;
+            }
+
+            return fallback;
+        },
+
+        resolveDaysInMonthFromDateKey(dateKey = currentDateKey()) {
+            const normalizedDateKey = this.normalizeWirdDateKey(dateKey);
+            const year = Number(normalizedDateKey.slice(0, 4));
+            const month = Number(normalizedDateKey.slice(5, 7));
+
+            if (!Number.isFinite(year) || !Number.isFinite(month) || month < 1 || month > 12) {
+                return 30;
+            }
+
+            return new Date(year, month, 0).getDate();
+        },
+
+        resolveWirdKhatmatTargetMax({
+            frequencyMode = this.wirdFrequencyMode,
+            dateKey = currentDateKey(),
+        } = {}) {
+            const normalizedFrequencyMode = this.normalizeWirdFrequencyMode(
+                frequencyMode,
+                wirdFrequencyModeMonthly,
+            );
+
+            if (normalizedFrequencyMode === wirdFrequencyModeDaily) {
+                return wirdDailyKhatmatTargetMax;
+            }
+
+            const daysInMonth = Math.max(
+                1,
+                this.resolveDaysInMonthFromDateKey(this.normalizeWirdDateKey(dateKey)),
+            );
+
+            return Math.max(wirdKhatmatTargetMin, daysInMonth * wirdDailyKhatmatTargetMax);
+        },
+
+        normalizeWirdKhatmatTarget(
+            value,
+            fallback = 1,
+            { frequencyMode = this.wirdFrequencyMode, dateKey = currentDateKey() } = {},
+        ) {
+            return this.normalizeIntegerFlag(value, fallback, {
+                min: wirdKhatmatTargetMin,
+                max: this.resolveWirdKhatmatTargetMax({
+                    frequencyMode,
+                    dateKey,
+                }),
+            });
+        },
+
+        resolveWirdRequiredPages({
+            dateKey = currentDateKey(),
+            frequencyMode = this.wirdFrequencyMode,
+            khatmatTarget = this.wirdKhatmatTarget,
+        } = {}) {
+            const maxPage = this.resolveReaderMaxPage();
+            const normalizedFrequencyMode = this.normalizeWirdFrequencyMode(
+                frequencyMode,
+                wirdFrequencyModeMonthly,
+            );
+            const normalizedDateKey = this.normalizeWirdDateKey(dateKey);
+            const normalizedKhatmatTarget = this.normalizeWirdKhatmatTarget(khatmatTarget, 1, {
+                frequencyMode: normalizedFrequencyMode,
+                dateKey: normalizedDateKey,
+            });
+
+            if (normalizedFrequencyMode === wirdFrequencyModeDaily) {
+                return maxPage * normalizedKhatmatTarget;
+            }
+
+            const daysInMonth = Math.max(1, this.resolveDaysInMonthFromDateKey(normalizedDateKey));
+
+            return Math.max(1, Math.ceil((maxPage * normalizedKhatmatTarget) / daysInMonth));
+        },
+
+        normalizeWirdState(rawState = null) {
+            const maxPage = this.resolveReaderMaxPage();
+            const maxRequiredPages = maxPage * wirdDailyKhatmatTargetMax;
+            const stateInput =
+                rawState && typeof rawState === 'object' && !Array.isArray(rawState)
+                    ? rawState
+                    : {};
+            const normalizedState = {
+                version: wirdProgressStorageVersion,
+                nextAbsolutePage: Math.max(
+                    1,
+                    this.normalizeIntegerFlag(stateInput?.nextAbsolutePage, 1, {
+                        min: 1,
+                    }),
+                ),
+                dayRecords: {},
+            };
+            const now = Date.now();
+            const cutoffMs = now - wirdRecordRetentionDays * 24 * 60 * 60 * 1000;
+            const dayRecords =
+                stateInput?.dayRecords &&
+                typeof stateInput.dayRecords === 'object' &&
+                !Array.isArray(stateInput.dayRecords)
+                    ? stateInput.dayRecords
+                    : {};
+
+            Object.entries(dayRecords).forEach(([rawDateKey, rawRecord]) => {
+                const dateKey = this.normalizeWirdDateKey(rawDateKey, '');
+
+                if (dateKey === '') {
+                    return;
+                }
+
+                const parsedRecord =
+                    rawRecord && typeof rawRecord === 'object' && !Array.isArray(rawRecord)
+                        ? rawRecord
+                        : {};
+                const updatedAt = this.normalizeIntegerFlag(parsedRecord?.updatedAt, now, {
+                    min: 0,
+                });
+
+                if (updatedAt < cutoffMs) {
+                    return;
+                }
+
+                const startAbsolutePage = Math.max(
+                    1,
+                    this.normalizeIntegerFlag(
+                        parsedRecord?.startAbsolutePage,
+                        normalizedState.nextAbsolutePage,
+                        {
+                            min: 1,
+                        },
+                    ),
+                );
+                const requiredPages = this.normalizeIntegerFlag(parsedRecord?.requiredPages, 1, {
+                    min: 1,
+                    max: maxRequiredPages,
+                });
+                const maxStep = Math.max(0, requiredPages - 1);
+                const currentStep = this.normalizeIntegerFlag(parsedRecord?.currentStep, 0, {
+                    min: 0,
+                    max: maxStep,
+                });
+                const completed = Boolean(parsedRecord?.completed) || currentStep >= maxStep;
+
+                normalizedState.dayRecords[dateKey] = {
+                    startAbsolutePage,
+                    requiredPages,
+                    currentStep,
+                    completed,
+                    signature: String(parsedRecord?.signature ?? '').trim(),
+                    createdAt: this.normalizeIntegerFlag(parsedRecord?.createdAt, updatedAt, {
+                        min: 0,
+                    }),
+                    updatedAt,
+                };
+            });
+
+            return normalizedState;
+        },
+
+        hydrateWirdState() {
+            this.wirdState = this.normalizeWirdState(
+                readLocalStorage(wirdProgressStorageKey, null),
+            );
+
+            return this.wirdState;
+        },
+
+        persistWirdState() {
+            if (!this.wirdState || typeof this.wirdState !== 'object') {
+                this.wirdState = this.normalizeWirdState(null);
+            }
+
+            writeLocalStorage(wirdProgressStorageKey, this.wirdState);
+        },
+
+        absolutePageToPageNumber(absolutePage) {
+            const maxPage = this.resolveReaderMaxPage();
+            const normalizedAbsolutePage = Math.max(
+                1,
+                this.normalizeIntegerFlag(absolutePage, 1, { min: 1 }),
+            );
+
+            return ((normalizedAbsolutePage - 1) % maxPage) + 1;
+        },
+
+        reconcileWirdNextAbsolutePage(record = this.wirdDailyRecord) {
+            if (
+                !record ||
+                typeof record !== 'object' ||
+                !this.wirdState ||
+                typeof this.wirdState !== 'object'
+            ) {
+                return;
+            }
+
+            const startAbsolutePage = Math.max(
+                1,
+                this.normalizeIntegerFlag(record?.startAbsolutePage, 1, { min: 1 }),
+            );
+            const requiredPages = Math.max(
+                1,
+                this.normalizeIntegerFlag(record?.requiredPages, 1, { min: 1 }),
+            );
+            const maxStep = Math.max(0, requiredPages - 1);
+            const currentStep = this.normalizeIntegerFlag(record?.currentStep, 0, {
+                min: 0,
+                max: maxStep,
+            });
+            const nextAbsolutePage = record?.completed
+                ? startAbsolutePage + requiredPages
+                : startAbsolutePage + currentStep;
+
+            this.wirdState.nextAbsolutePage = Math.max(1, nextAbsolutePage);
+        },
+
+        resolveWirdRecordSignature() {
+            const normalizedFrequencyMode = this.normalizeWirdFrequencyMode(
+                this.wirdFrequencyMode,
+                wirdFrequencyModeMonthly,
+            );
+
+            return [
+                normalizedFrequencyMode,
+                this.normalizeWirdKhatmatTarget(this.wirdKhatmatTarget, 1, {
+                    frequencyMode: normalizedFrequencyMode,
+                }),
+                this.resolveReaderMaxPage(),
+            ].join(':');
+        },
+
+        ensureWirdDailyRecord({ forceRebuild = false } = {}) {
+            if (!this.wirdState || typeof this.wirdState !== 'object') {
+                this.hydrateWirdState();
+            }
+
+            const previousNextAbsolutePage = Math.max(
+                1,
+                this.normalizeIntegerFlag(this.wirdState?.nextAbsolutePage, 1, { min: 1 }),
+            );
+            const dateKey = currentDateKey();
+            const signature = this.resolveWirdRecordSignature();
+            const dayRecords =
+                this.wirdState?.dayRecords &&
+                typeof this.wirdState.dayRecords === 'object' &&
+                !Array.isArray(this.wirdState.dayRecords)
+                    ? this.wirdState.dayRecords
+                    : {};
+            let record = dayRecords[dateKey] ?? null;
+            const shouldRebuild =
+                forceRebuild ||
+                !record ||
+                typeof record !== 'object' ||
+                String(record?.signature ?? '') !== signature;
+
+            this.wirdTodayKey = dateKey;
+
+            if (shouldRebuild) {
+                const startAbsolutePage = Math.max(
+                    1,
+                    this.normalizeIntegerFlag(this.wirdState?.nextAbsolutePage, 1, { min: 1 }),
+                );
+
+                record = {
+                    startAbsolutePage,
+                    requiredPages: this.resolveWirdRequiredPages({
+                        dateKey,
+                    }),
+                    currentStep: 0,
+                    completed: false,
+                    signature,
+                    createdAt: Date.now(),
+                    updatedAt: Date.now(),
+                };
+
+                this.wirdState.dayRecords[dateKey] = record;
+            } else {
+                const maxStep = Math.max(0, Number(record.requiredPages ?? 1) - 1);
+
+                record.currentStep = this.normalizeIntegerFlag(record.currentStep, 0, {
+                    min: 0,
+                    max: maxStep,
+                });
+                record.completed = Boolean(record.completed);
+                record.signature = signature;
+            }
+
+            this.wirdDailyRecord = record;
+            this.reconcileWirdNextAbsolutePage(record);
+            const didNextAbsolutePageChange =
+                Math.max(
+                    1,
+                    this.normalizeIntegerFlag(this.wirdState?.nextAbsolutePage, 1, { min: 1 }),
+                ) !== previousNextAbsolutePage;
+
+            if (shouldRebuild || didNextAbsolutePageChange) {
+                this.persistWirdState();
+            }
+
+            return this.wirdDailyRecord;
+        },
+
+        wirdCompletedPages(record = this.wirdDailyRecord) {
+            const normalizedRecord =
+                record && typeof record === 'object' ? record : this.ensureWirdDailyRecord();
+            const requiredPages = Math.max(
+                1,
+                this.normalizeIntegerFlag(normalizedRecord?.requiredPages, 1, { min: 1 }),
+            );
+            const maxStep = Math.max(0, requiredPages - 1);
+            const currentStep = this.normalizeIntegerFlag(normalizedRecord?.currentStep, 0, {
+                min: 0,
+                max: maxStep,
+            });
+
+            if (normalizedRecord?.completed) {
+                return requiredPages;
+            }
+
+            return currentStep;
+        },
+
+        wirdRemainingPages(record = this.wirdDailyRecord) {
+            const normalizedRecord =
+                record && typeof record === 'object' ? record : this.ensureWirdDailyRecord();
+            const requiredPages = Math.max(
+                1,
+                this.normalizeIntegerFlag(normalizedRecord?.requiredPages, 1, { min: 1 }),
+            );
+
+            return Math.max(0, requiredPages - this.wirdCompletedPages(normalizedRecord));
+        },
+
+        wirdProgressPercent(record = this.wirdDailyRecord) {
+            const normalizedRecord =
+                record && typeof record === 'object' ? record : this.ensureWirdDailyRecord();
+            const requiredPages = Math.max(
+                1,
+                this.normalizeIntegerFlag(normalizedRecord?.requiredPages, 1, { min: 1 }),
+            );
+            const completedPages = this.wirdCompletedPages(normalizedRecord);
+
+            return Math.max(0, Math.min(100, Math.round((completedPages / requiredPages) * 100)));
+        },
+
+        wirdCurrentAbsolutePage(record = this.wirdDailyRecord) {
+            const normalizedRecord =
+                record && typeof record === 'object' ? record : this.ensureWirdDailyRecord();
+            const startAbsolutePage = Math.max(
+                1,
+                this.normalizeIntegerFlag(normalizedRecord?.startAbsolutePage, 1, { min: 1 }),
+            );
+            const requiredPages = Math.max(
+                1,
+                this.normalizeIntegerFlag(normalizedRecord?.requiredPages, 1, { min: 1 }),
+            );
+            const maxStep = Math.max(0, requiredPages - 1);
+            const currentStep = this.normalizeIntegerFlag(normalizedRecord?.currentStep, 0, {
+                min: 0,
+                max: maxStep,
+            });
+
+            return startAbsolutePage + currentStep;
+        },
+
+        wirdCurrentStep(record = this.wirdDailyRecord) {
+            const normalizedRecord =
+                record && typeof record === 'object' ? record : this.ensureWirdDailyRecord();
+            const requiredPages = Math.max(
+                1,
+                this.normalizeIntegerFlag(normalizedRecord?.requiredPages, 1, { min: 1 }),
+            );
+            const maxStep = Math.max(0, requiredPages - 1);
+
+            return this.normalizeIntegerFlag(normalizedRecord?.currentStep, 0, {
+                min: 0,
+                max: maxStep,
+            });
+        },
+
+        formatReaderNumber(value, fallback = '0') {
+            const normalizedNumber = Number(value);
+
+            if (!Number.isFinite(normalizedNumber)) {
+                return fallback;
+            }
+
+            const westernText = String(Math.max(0, Math.trunc(normalizedNumber)));
+
+            if (this.doesUseWesternNumerals) {
+                return westernText;
+            }
+
+            return westernText.replace(/\d/g, (digit) => {
+                const digitIndex = Number(digit);
+
+                if (!Number.isInteger(digitIndex)) {
+                    return digit;
+                }
+
+                return this.arabicNumeralCharacters[digitIndex] ?? digit;
+            });
+        },
+
+        wirdProgressPercentLabel() {
+            const record = this.ensureWirdDailyRecord();
+            const percent = this.wirdProgressPercent(record);
+
+            if (record?.completed) {
+                return 'مكتمل';
+            }
+
+            return `${this.formatReaderNumber(percent)}%`;
+        },
+
+        wirdProgressCounterLabel() {
+            const record = this.ensureWirdDailyRecord();
+            const requiredPages = Math.max(
+                1,
+                this.normalizeIntegerFlag(record?.requiredPages, 1, { min: 1 }),
+            );
+            const activeIndex = this.wirdCurrentStep(record) + 1;
+            const current = record?.completed
+                ? requiredPages
+                : Math.min(requiredPages, Math.max(1, activeIndex));
+
+            return `${this.formatReaderNumber(current)} / ${this.formatReaderNumber(requiredPages)}`;
+        },
+
+        wirdProgressBarStyle() {
+            return `--quran-wird-progress-percent: ${this.wirdProgressPercent()}%;`;
+        },
+
+        async toggleWirdMode() {
+            if (this.wirdModeActive) {
+                await this.exitWirdMode({
+                    restoreNormalPage: true,
+                    reason: 'manual-toggle',
+                });
+
+                return;
+            }
+
+            await this.enterWirdMode();
+        },
+
+        async enterWirdMode() {
+            if (this.isLoadingPage || !this.ready) {
+                return;
+            }
+
+            const record = this.ensureWirdDailyRecord();
+
+            if (!record || typeof record !== 'object') {
+                return;
+            }
+
+            this.resetNavigationQueueForPriorityJump();
+            this.wirdNormalPageBeforeMode = clampPage(this.pageNumber, this.maxPage);
+            this.wirdModeActive = true;
+
+            const targetAbsolutePage = this.wirdCurrentAbsolutePage(record);
+            const targetPage = this.absolutePageToPageNumber(targetAbsolutePage);
+
+            await this.goToPage(targetPage, {
+                direction: this.resolveNavigationDirection(targetPage),
+                animate: true,
+                forceRefit: true,
+                source: 'wird-enter',
+            });
+        },
+
+        async exitWirdMode({ restoreNormalPage = true, reason = 'manual' } = {}) {
+            if (!this.wirdModeActive) {
+                return;
+            }
+
+            this.wirdModeActive = false;
+
+            if (!restoreNormalPage) {
+                return;
+            }
+
+            const fallbackPage = readLastPageNumber() ?? this.pageNumber;
+            const targetPage = clampPage(
+                this.wirdNormalPageBeforeMode || fallbackPage,
+                this.maxPage,
+            );
+
+            if (targetPage === this.pageNumber) {
+                this.persistLastPageNumber(targetPage, { force: true });
+
+                return;
+            }
+
+            this.resetNavigationQueueForPriorityJump();
+
+            await this.goToPage(targetPage, {
+                direction: this.resolveNavigationDirection(targetPage),
+                animate: reason !== 'auto-complete',
+                forceRefit: true,
+                source: 'wird-exit',
+            });
+        },
+
+        markWirdAsCompleted(record = this.wirdDailyRecord) {
+            if (!record || typeof record !== 'object') {
+                return;
+            }
+
+            const requiredPages = Math.max(
+                1,
+                this.normalizeIntegerFlag(record?.requiredPages, 1, { min: 1 }),
+            );
+
+            record.currentStep = Math.max(0, requiredPages - 1);
+            record.completed = true;
+            record.updatedAt = Date.now();
+            this.wirdDailyRecord = record;
+            this.reconcileWirdNextAbsolutePage(record);
+            this.persistWirdState();
+        },
+
+        async stepWird(direction = 'next', source = 'generic') {
+            if (!this.wirdModeActive) {
+                return;
+            }
+
+            const record = this.ensureWirdDailyRecord();
+
+            if (!record || typeof record !== 'object') {
+                return;
+            }
+
+            const requiredPages = Math.max(
+                1,
+                this.normalizeIntegerFlag(record?.requiredPages, 1, { min: 1 }),
+            );
+            const maxStep = Math.max(0, requiredPages - 1);
+            const currentStep = this.normalizeIntegerFlag(record?.currentStep, 0, {
+                min: 0,
+                max: maxStep,
+            });
+            const isNextDirection = direction === 'next';
+
+            if (isNextDirection && currentStep >= maxStep) {
+                this.markWirdAsCompleted(record);
+                await this.exitWirdMode({
+                    restoreNormalPage: true,
+                    reason: 'auto-complete',
+                });
+
+                return;
+            }
+
+            if (!isNextDirection && currentStep <= 0) {
+                return;
+            }
+
+            record.currentStep = isNextDirection ? currentStep + 1 : currentStep - 1;
+            record.completed = false;
+            record.updatedAt = Date.now();
+            this.wirdDailyRecord = record;
+            this.reconcileWirdNextAbsolutePage(record);
+            this.persistWirdState();
+
+            const targetPage = this.absolutePageToPageNumber(this.wirdCurrentAbsolutePage(record));
+
+            await this.goToPage(targetPage, {
+                direction: isNextDirection ? 'next' : 'prev',
+                animate: true,
+                forceRefit: true,
+                source: `wird-${source}`,
+            });
         },
 
         persistNavigationHistory() {
@@ -2169,6 +2813,12 @@ document.addEventListener('alpine:init', () => {
         },
 
         async nextPage(source = 'generic') {
+            if (this.wirdModeActive) {
+                await this.stepWird('next', source);
+
+                return;
+            }
+
             const basePage = this.navigationBasePage();
 
             await this.navigateToPage(basePage + 1, {
@@ -2178,6 +2828,12 @@ document.addEventListener('alpine:init', () => {
         },
 
         async previousPage(source = 'generic') {
+            if (this.wirdModeActive) {
+                await this.stepWird('prev', source);
+
+                return;
+            }
+
             const basePage = this.navigationBasePage();
 
             if (basePage <= 1) {
@@ -2193,10 +2849,24 @@ document.addEventListener('alpine:init', () => {
         },
 
         isFirstNavigationPage() {
+            if (this.wirdModeActive) {
+                return this.wirdCurrentStep() <= 0;
+            }
+
             return this.navigationBasePage() <= 1;
         },
 
         isLastNavigationPage() {
+            if (this.wirdModeActive) {
+                const record = this.ensureWirdDailyRecord();
+                const requiredPages = Math.max(
+                    1,
+                    this.normalizeIntegerFlag(record?.requiredPages, 1, { min: 1 }),
+                );
+
+                return this.wirdCurrentStep(record) >= requiredPages - 1;
+            }
+
             return this.maxPage > 0 && this.navigationBasePage() >= this.maxPage;
         },
 
@@ -2214,6 +2884,10 @@ document.addEventListener('alpine:init', () => {
 
         async handleRequestedNavigation(kind, detail = {}) {
             this.resetSwipeState();
+
+            if (this.wirdModeActive && kind === 'page') {
+                return;
+            }
 
             if (kind === 'next') {
                 await this.goNextFromChevron();
@@ -2446,10 +3120,18 @@ document.addEventListener('alpine:init', () => {
         },
 
         async onSliderInput() {
+            if (this.wirdModeActive) {
+                return;
+            }
+
             this.onPageInputInput();
         },
 
         async onSliderCommit() {
+            if (this.wirdModeActive) {
+                return;
+            }
+
             const targetPage = clampPage(this.pageInput, this.maxPage);
             this.pageInput = targetPage;
             this._lastPageInputVisualValue = targetPage;
@@ -2457,6 +3139,10 @@ document.addEventListener('alpine:init', () => {
         },
 
         async onPageInputBlur() {
+            if (this.wirdModeActive) {
+                return;
+            }
+
             const now = Date.now();
             const targetPage = clampPage(this.pageInput, this.maxPage);
 
@@ -2475,6 +3161,10 @@ document.addEventListener('alpine:init', () => {
         },
 
         async onPageInputCommit({ force = false, commitNow = false, source = 'page-input' } = {}) {
+            if (this.wirdModeActive) {
+                return;
+            }
+
             if (this._pageInputCommitTimer !== null) {
                 clearTimeout(this._pageInputCommitTimer);
                 this._pageInputCommitTimer = null;
@@ -4578,6 +5268,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         applyControlPanelSettings(controlPanel = {}) {
+            const previousWirdSignature = this.resolveWirdRecordSignature();
             const input =
                 controlPanel && typeof controlPanel === 'object' && !Array.isArray(controlPanel)
                     ? controlPanel
@@ -4606,6 +5297,14 @@ document.addEventListener('alpine:init', () => {
                 input,
                 controlPanelSettingKeys.useWesternNumerals,
             );
+            const hasWirdFrequencyMode = Object.prototype.hasOwnProperty.call(
+                input,
+                controlPanelSettingKeys.wirdFrequencyMode,
+            );
+            const hasWirdKhatmatTarget = Object.prototype.hasOwnProperty.call(
+                input,
+                controlPanelSettingKeys.wirdKhatmatTarget,
+            );
             const defaultVisualEnhancements = this.normalizeBooleanFlag(
                 this.initialSettings?.enableVisualEnhancements,
                 true,
@@ -4629,6 +5328,17 @@ document.addEventListener('alpine:init', () => {
             const defaultUseWesternNumerals = this.normalizeBooleanFlag(
                 this.initialSettings?.useWesternNumerals,
                 true,
+            );
+            const defaultWirdFrequencyMode = this.normalizeWirdFrequencyMode(
+                this.initialSettings?.wirdFrequencyMode,
+                wirdFrequencyModeMonthly,
+            );
+            const defaultWirdKhatmatTarget = this.normalizeWirdKhatmatTarget(
+                this.initialSettings?.wirdKhatmatTarget,
+                1,
+                {
+                    frequencyMode: defaultWirdFrequencyMode,
+                },
             );
 
             this.westernNumeralCharacters = this.normalizeNumeralCharacters(
@@ -4676,6 +5386,36 @@ document.addEventListener('alpine:init', () => {
                     : defaultUseWesternNumerals,
                 true,
             );
+            this.wirdFrequencyMode = this.normalizeWirdFrequencyMode(
+                hasWirdFrequencyMode
+                    ? input[controlPanelSettingKeys.wirdFrequencyMode]
+                    : defaultWirdFrequencyMode,
+                defaultWirdFrequencyMode,
+            );
+            this.wirdKhatmatTarget = this.normalizeWirdKhatmatTarget(
+                hasWirdKhatmatTarget
+                    ? input[controlPanelSettingKeys.wirdKhatmatTarget]
+                    : defaultWirdKhatmatTarget,
+                defaultWirdKhatmatTarget,
+                {
+                    frequencyMode: this.wirdFrequencyMode,
+                },
+            );
+
+            const nextWirdSignature = this.resolveWirdRecordSignature();
+
+            if (nextWirdSignature !== previousWirdSignature) {
+                this.ensureWirdDailyRecord({ forceRebuild: true });
+
+                if (this.wirdModeActive) {
+                    void this.exitWirdMode({
+                        restoreNormalPage: true,
+                        reason: 'settings-change',
+                    });
+                }
+            } else {
+                this.ensureWirdDailyRecord();
+            }
         },
 
         interactionTargetsWords() {

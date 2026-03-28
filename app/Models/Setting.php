@@ -39,6 +39,22 @@ class Setting extends Model
 
     public const DOES_QURAN_APPEND_SURAH_AFFIX_ALWAYS_ON_COPY = 'does_quran_append_surah_affix_always_on_copy';
 
+    public const QURAN_WIRD_FREQUENCY_MODE = 'quran_wird_frequency_mode';
+
+    public const QURAN_WIRD_KHATMAT_TARGET = 'quran_wird_khatmat_target';
+
+    public const QURAN_WIRD_FREQUENCY_MONTHLY = 0;
+
+    public const QURAN_WIRD_FREQUENCY_DAILY = 1;
+
+    public const QURAN_WIRD_KHATMAT_MIN = 1;
+
+    public const QURAN_WIRD_KHATMAT_MAX = 4;
+
+    public const QURAN_WIRD_MAX_DAYS_IN_MONTH = 31;
+
+    public const QURAN_WIRD_KHATMAT_MONTHLY_MAX = self::QURAN_WIRD_KHATMAT_MAX * self::QURAN_WIRD_MAX_DAYS_IN_MONTH;
+
     public const MINIMUM_MAIN_TEXT_SIZE = 'minimum_main_text_size';
 
     public const MAXIMUM_MAIN_TEXT_SIZE = 'maximum_main_text_size';
@@ -150,7 +166,74 @@ class Setting extends Model
                 'group' => self::GROUP_QURAN,
                 'type' => 'boolean',
             ],
+            self::QURAN_WIRD_FREQUENCY_MODE => [
+                'default' => self::QURAN_WIRD_FREQUENCY_MONTHLY,
+                'label' => '5. وتيرة الوِرد: ختمات موزعة على الشهر أو هدف يومي مباشر.',
+                'help' => 'شهري: يوزَّع الهدف على أيام الشهر الحالي. يومي: يُحتسب عدد الختمات كاملًا لكل يوم.',
+                'group' => self::GROUP_QURAN,
+                'type' => 'integer',
+                'min' => self::QURAN_WIRD_FREQUENCY_MONTHLY,
+                'max' => self::QURAN_WIRD_FREQUENCY_DAILY,
+            ],
+            self::QURAN_WIRD_KHATMAT_TARGET => [
+                'default' => 1,
+                'label' => '6. عدد الختمات المستهدفة للوِرد.',
+                'help' => 'في الوضع اليومي: الحد الأقصى 4 ختمات/يوم. في الوضع الشهري: الحد الأقصى المكافئ لـ 4 ختمات يوميًا خلال الشهر.',
+                'group' => self::GROUP_QURAN,
+                'type' => 'integer',
+                'min' => self::QURAN_WIRD_KHATMAT_MIN,
+                'max' => self::QURAN_WIRD_KHATMAT_MONTHLY_MAX,
+            ],
         ];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function quranWirdFrequencyModeOptions(): array
+    {
+        return [
+            self::QURAN_WIRD_FREQUENCY_MONTHLY => 'شهري (توزيع الختمات على أيام الشهر)',
+            self::QURAN_WIRD_FREQUENCY_DAILY => 'يومي (ختمات كاملة يوميًا)',
+        ];
+    }
+
+    public static function quranWirdKhatmatMaxForFrequency(
+        int $frequencyMode,
+        ?\DateTimeInterface $date = null,
+    ): int {
+        $normalizedFrequencyMode = max(
+            self::QURAN_WIRD_FREQUENCY_MONTHLY,
+            min(self::QURAN_WIRD_FREQUENCY_DAILY, $frequencyMode),
+        );
+
+        if ($normalizedFrequencyMode === self::QURAN_WIRD_FREQUENCY_DAILY) {
+            return self::QURAN_WIRD_KHATMAT_MAX;
+        }
+
+        $daysInMonth = (int) (($date ?? now())->format('t'));
+
+        return max(
+            self::QURAN_WIRD_KHATMAT_MIN,
+            $daysInMonth * self::QURAN_WIRD_KHATMAT_MAX,
+        );
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function quranWirdKhatmatOptionsForFrequency(
+        int $frequencyMode,
+        ?\DateTimeInterface $date = null,
+    ): array {
+        $maximum = self::quranWirdKhatmatMaxForFrequency($frequencyMode, $date);
+        $options = [];
+
+        for ($count = self::QURAN_WIRD_KHATMAT_MIN; $count <= $maximum; $count++) {
+            $options[$count] = self::quranWirdKhatmaLabel($count);
+        }
+
+        return $options;
     }
 
     /**
@@ -272,7 +355,34 @@ class Setting extends Model
         $normalized[self::MINIMUM_MAIN_TEXT_SIZE] = $minimumMainTextSize;
         $normalized[self::MAXIMUM_MAIN_TEXT_SIZE] = max($maximumMainTextSize, $minimumMainTextSize);
 
+        $wirdFrequencyMode = (int) ($normalized[self::QURAN_WIRD_FREQUENCY_MODE] ?? self::QURAN_WIRD_FREQUENCY_MONTHLY);
+        $wirdKhatmatTarget = (int) ($normalized[self::QURAN_WIRD_KHATMAT_TARGET] ?? self::QURAN_WIRD_KHATMAT_MIN);
+        $wirdKhatmatMax = self::quranWirdKhatmatMaxForFrequency($wirdFrequencyMode);
+        $normalized[self::QURAN_WIRD_KHATMAT_TARGET] = max(
+            self::QURAN_WIRD_KHATMAT_MIN,
+            min($wirdKhatmatMax, $wirdKhatmatTarget),
+        );
+
         return $normalized;
+    }
+
+    private static function quranWirdKhatmaLabel(int $count): string
+    {
+        $normalizedCount = max(self::QURAN_WIRD_KHATMAT_MIN, $count);
+
+        if ($normalizedCount === 1) {
+            return '1 ختمة';
+        }
+
+        if ($normalizedCount === 2) {
+            return '2 ختمتان';
+        }
+
+        if ($normalizedCount <= 10) {
+            return sprintf('%d ختمات', $normalizedCount);
+        }
+
+        return sprintf('%d ختمة', $normalizedCount);
     }
 
     public static function appVersion(): string
