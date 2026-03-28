@@ -98,6 +98,7 @@ const copyPopoverVisibleDurationMs = 920;
 const copiedHighlightVisibleDurationMs = 3000;
 const wordClickSuppressionResetMs = 180;
 const pageCounterPulseDurationMs = 540;
+const wirdModeEntryPageInputTweenDurationMs = 320;
 const navigationSettleDelayMs = 28;
 const navigationBurstInputThresholdMs = 140;
 const navigationBurstSettleDelayMs = 72;
@@ -648,6 +649,7 @@ document.addEventListener('alpine:init', () => {
         _fitCacheBreakpoint: '',
         _bypassNextFitCache: false,
         _pageInputCommitTimer: null,
+        _pageInputTweenRaf: null,
         _searchRequestSerial: 0,
         _searchStreamObserver: null,
         _lastSearchStreamPayloadRaw: '',
@@ -856,6 +858,11 @@ document.addEventListener('alpine:init', () => {
             if (this._pageInputCommitTimer !== null) {
                 clearTimeout(this._pageInputCommitTimer);
                 this._pageInputCommitTimer = null;
+            }
+
+            if (this._pageInputTweenRaf !== null) {
+                cancelAnimationFrame(this._pageInputTweenRaf);
+                this._pageInputTweenRaf = null;
             }
 
             if (this._searchModalCloseDebounceTimer !== null) {
@@ -1775,9 +1782,14 @@ document.addEventListener('alpine:init', () => {
 
             const targetAbsolutePage = this.wirdCurrentAbsolutePage(record);
             const targetPage = this.absolutePageToPageNumber(targetAbsolutePage);
+            const direction = this.resolveNavigationDirection(targetPage);
+
+            await this.animatePageInputTo(targetPage, {
+                source: 'wird-enter',
+            });
 
             await this.goToPage(targetPage, {
-                direction: this.resolveNavigationDirection(targetPage),
+                direction,
                 animate: true,
                 forceRefit: true,
                 source: 'wird-enter',
@@ -1808,9 +1820,14 @@ document.addEventListener('alpine:init', () => {
             }
 
             this.resetNavigationQueueForPriorityJump();
+            const direction = this.resolveNavigationDirection(targetPage);
+
+            await this.animatePageInputTo(targetPage, {
+                source: 'wird-exit',
+            });
 
             await this.goToPage(targetPage, {
-                direction: this.resolveNavigationDirection(targetPage),
+                direction,
                 animate: reason !== 'auto-complete',
                 forceRefit: true,
                 source: 'wird-exit',
@@ -2571,6 +2588,69 @@ document.addEventListener('alpine:init', () => {
                 this.pageCounterPulse.isActive = false;
                 this.pageCounterPulse.timer = null;
             }, pageCounterPulseDurationMs);
+        },
+
+        async animatePageInputTo(
+            targetPage,
+            { source = 'generic', durationMs = wirdModeEntryPageInputTweenDurationMs } = {},
+        ) {
+            const startPage = clampPage(this.pageInput, this.maxPage);
+            const nextPage = clampPage(targetPage, this.maxPage);
+
+            if (nextPage === startPage) {
+                this.pageInput = nextPage;
+                this._lastPageInputVisualValue = nextPage;
+
+                return;
+            }
+
+            if (this._pageInputTweenRaf !== null) {
+                cancelAnimationFrame(this._pageInputTweenRaf);
+                this._pageInputTweenRaf = null;
+            }
+
+            this.triggerPageCounterPulse(startPage, nextPage, { source });
+
+            const resolvedDurationMs = Math.max(
+                120,
+                Math.trunc(Number(durationMs) || wirdModeEntryPageInputTweenDurationMs),
+            );
+
+            await new Promise((resolve) => {
+                const startTimestamp = performance.now();
+                const distance = nextPage - startPage;
+
+                const step = (timestamp) => {
+                    const elapsed = timestamp - startTimestamp;
+                    const progress = Math.max(0, Math.min(1, elapsed / resolvedDurationMs));
+                    const easedProgress =
+                        progress < 0.5
+                            ? 2 * progress * progress
+                            : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+                    const interpolatedPage = clampPage(
+                        Math.round(startPage + distance * easedProgress),
+                        this.maxPage,
+                    );
+
+                    if (interpolatedPage !== this.pageInput) {
+                        this.pageInput = interpolatedPage;
+                        this._lastPageInputVisualValue = interpolatedPage;
+                    }
+
+                    if (progress >= 1) {
+                        this._pageInputTweenRaf = null;
+                        this.pageInput = nextPage;
+                        this._lastPageInputVisualValue = nextPage;
+                        resolve();
+
+                        return;
+                    }
+
+                    this._pageInputTweenRaf = requestAnimationFrame(step);
+                };
+
+                this._pageInputTweenRaf = requestAnimationFrame(step);
+            });
         },
 
         shouldSuspendPageCounterMorph({ source = 'generic' } = {}) {

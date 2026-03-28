@@ -393,22 +393,36 @@
         }
 
         .quran-top-actions-secondary {
-            flex: 0 0 auto;
+            flex: 0 0 2.35rem;
+            inline-size: 2.35rem;
+            block-size: 2.35rem;
             max-width: 2.35rem;
+            opacity: 1;
+            transform: translateX(0) scale(1);
+            overflow: hidden;
             transition:
                 opacity 260ms ease,
-                transform 280ms ease,
+                transform 320ms cubic-bezier(0.2, 1, 0.36, 1),
+                inline-size 320ms cubic-bezier(0.2, 1, 0.36, 1),
                 max-width 320ms ease,
                 margin 320ms ease;
         }
 
         .quran-top-actions.quran-top-actions--wird-active .quran-top-actions-secondary {
+            inline-size: 0;
             max-width: 0;
             opacity: 0;
             margin: 0;
-            transform: scale(0.82);
             pointer-events: none;
             overflow: hidden;
+        }
+
+        .quran-top-actions.quran-top-actions--wird-active #quran-reader-history-toggle.quran-top-actions-secondary {
+            transform: translateX(0.6rem) scale(0.84);
+        }
+
+        .quran-top-actions.quran-top-actions--wird-active #quran-reader-bookmark-toggle.quran-top-actions-secondary {
+            transform: translateX(-0.6rem) scale(0.84);
         }
 
         .quran-wird-progress-button {
@@ -419,7 +433,8 @@
             align-items: center;
             justify-content: stretch;
             min-width: min(13rem, 50vw);
-            min-height: 2.35rem;
+            min-height: 2.5rem;
+            padding: 0.2rem;
             border-radius: 999px;
             border: 1px solid color-mix(in srgb, var(--success-600) 44%, transparent);
             background: color-mix(in srgb, var(--gray-100) 82%, transparent);
@@ -449,6 +464,24 @@
             opacity: 0.5;
             pointer-events: none;
             z-index: 0;
+        }
+
+        .quran-wird-progress-button::after {
+            content: '';
+            position: absolute;
+            inset: 0.3rem 0.52rem;
+            background:
+                linear-gradient(135deg,
+                    transparent 36%,
+                    color-mix(in srgb, var(--success-500) 46%, transparent) 36% 42%,
+                    transparent 42%) left center / 0.76rem 58% no-repeat,
+                linear-gradient(-135deg,
+                    transparent 36%,
+                    color-mix(in srgb, var(--success-500) 46%, transparent) 36% 42%,
+                    transparent 42%) right center / 0.76rem 58% no-repeat;
+            pointer-events: none;
+            z-index: 2;
+            opacity: 0.8;
         }
 
         .quran-wird-progress-button:hover {
@@ -481,13 +514,13 @@
 
         .quran-wird-progress-content {
             position: relative;
-            z-index: 2;
+            z-index: 3;
             display: flex;
             width: 100%;
             align-items: center;
             justify-content: space-between;
             gap: 0.52rem;
-            padding-inline: 0.58rem;
+            padding-inline: 0.98rem;
             line-height: 1;
             font-family: 'IBM Plex Sans Arabic', 'Readex Pro', ui-sans-serif, system-ui, sans-serif;
             direction: ltr;

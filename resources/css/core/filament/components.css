@@ -778,4 +778,52 @@
             filter: saturate(1);
         }
     }
+
+    .quran-wird-frequency-options.fi-fo-radio {
+        padding-block-start: 0.35rem;
+        row-gap: 0.62rem;
+    }
+
+    .quran-wird-frequency-field .fi-fo-field-content-col {
+        padding-inline-start: 0.72rem;
+    }
+
+    .quran-wird-khatmat-field {
+        display: flex;
+        align-items: center;
+        min-height: 100%;
+    }
+
+    .quran-wird-khatmat-field .fi-fo-field-content-col,
+    .quran-wird-khatmat-field .fi-fo-field-content-ctn,
+    .quran-wird-khatmat-field .fi-fo-field-content {
+        display: flex;
+        align-items: center;
+        width: 100%;
+    }
+
+    .quran-wird-khatmat-field .fi-input-wrp {
+        min-height: 3.18rem;
+        width: 100%;
+    }
+
+    .quran-wird-khatmat-field .fi-input-wrp .fi-input-wrp-input {
+        min-height: 3.18rem;
+        display: flex;
+        align-items: center;
+        padding-block: 0 !important;
+    }
+
+    .quran-wird-khatmat-field .fi-select-input .ts-wrapper.single .ts-control,
+    .quran-wird-khatmat-field .fi-select-input .ts-control {
+        min-height: 3.18rem;
+        display: flex;
+        align-items: center;
+        padding-block: 0.36rem;
+    }
+
+    .quran-wird-khatmat-field .fi-select-input .ts-wrapper.single .ts-control > *,
+    .quran-wird-khatmat-field .fi-select-input .ts-control > * {
+        align-self: center;
+    }
 }

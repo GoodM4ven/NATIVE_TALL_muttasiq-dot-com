@@ -138,6 +138,8 @@ trait HasControlPanelSettingsTab
                                 ->options(Setting::quranWirdFrequencyModeOptions())
                                 ->inline()
                                 ->live()
+                                ->extraFieldWrapperAttributes(['class' => 'quran-wird-frequency-field'])
+                                ->extraAttributes(['class' => 'quran-wird-frequency-options'])
                                 ->afterStateUpdated(function (Set $set, Get $get, mixed $state): void {
                                     $maximum = Setting::quranWirdKhatmatMaxForFrequency((int) $state);
                                     $current = (int) $get(Setting::QURAN_WIRD_KHATMAT_TARGET);
@@ -159,6 +161,8 @@ trait HasControlPanelSettingsTab
                                 )
                                 ->native(false)
                                 ->live()
+                                ->extraFieldWrapperAttributes(['class' => 'quran-wird-khatmat-field'])
+                                ->extraAttributes(['class' => 'quran-wird-khatmat-select'])
                                 ->selectablePlaceholder(false)
                                 ->helperText(
                                     fn (Get $get): string => $this->wirdKhatmatHelperText(
