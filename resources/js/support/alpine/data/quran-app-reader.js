@@ -650,6 +650,8 @@ document.addEventListener('alpine:init', () => {
         _fitCacheBreakpoint: '',
         _bypassNextFitCache: false,
         _suppressFitCacheWriteUntil: 0,
+        _wirdSliderInputCommitTimer: null,
+        _wirdSliderPendingStep: null,
         _pageInputCommitTimer: null,
         _pageInputTweenRaf: null,
         _searchRequestSerial: 0,
@@ -863,6 +865,13 @@ document.addEventListener('alpine:init', () => {
                 clearTimeout(this._pageInputCommitTimer);
                 this._pageInputCommitTimer = null;
             }
+
+            if (this._wirdSliderInputCommitTimer !== null) {
+                clearTimeout(this._wirdSliderInputCommitTimer);
+                this._wirdSliderInputCommitTimer = null;
+            }
+
+            this._wirdSliderPendingStep = null;
 
             if (this._pageInputTweenRaf !== null) {
                 cancelAnimationFrame(this._pageInputTweenRaf);
@@ -1766,6 +1775,53 @@ document.addEventListener('alpine:init', () => {
             });
         },
 
+        wirdActiveStepForNavigation(record = this.wirdDailyRecord) {
+            const normalizedRecord =
+                record && typeof record === 'object' ? record : this.ensureWirdDailyRecord();
+
+            if (normalizedRecord?.completed) {
+                return this.wirdBrowseStepValue(normalizedRecord);
+            }
+
+            return this.wirdCurrentStep(normalizedRecord);
+        },
+
+        wirdTargetPageFromStep(step, record = this.wirdDailyRecord) {
+            const range = this.wirdRangeState(record);
+            const normalizedStep = this.normalizeIntegerFlag(
+                step,
+                this.wirdActiveStepForNavigation(record),
+                {
+                    min: 0,
+                    max: range.maxStep,
+                },
+            );
+
+            return this.absolutePageToPageNumber(range.startAbsolutePage + normalizedStep);
+        },
+
+        sliderMin() {
+            return this.wirdModeActive ? 0 : 1;
+        },
+
+        sliderMax() {
+            if (!this.wirdModeActive) {
+                return Math.max(1, this.maxPage);
+            }
+
+            const range = this.wirdRangeState();
+
+            return Math.max(0, range.maxStep);
+        },
+
+        sliderValue() {
+            if (!this.wirdModeActive) {
+                return clampPage(this.pageInput, this.maxPage);
+            }
+
+            return this.wirdActiveStepForNavigation();
+        },
+
         formatReaderNumber(value, fallback = '0') {
             const normalizedNumber = Number(value);
 
@@ -1975,6 +2031,8 @@ document.addEventListener('alpine:init', () => {
 
             this.wirdModeActive = false;
             this.wirdBrowseStep = null;
+            this.clearWirdEntryRevealTimers();
+            this._wirdEntryLayoutSuppressedUntil = 0;
 
             if (!restoreNormalPage) {
                 return;
@@ -1987,7 +2045,28 @@ document.addEventListener('alpine:init', () => {
             );
 
             if (targetPage === this.pageNumber) {
+                this.pageInput = targetPage;
+                this._lastPageInputVisualValue = targetPage;
                 this.persistLastPageNumber(targetPage, { force: true });
+
+                if (
+                    this.hasRenderablePage() &&
+                    (this.isFittingPage || this._lastFittedPageNumber !== targetPage)
+                ) {
+                    this.pauseIdleWarmup(560, {
+                        preservePage: targetPage,
+                    });
+                    this._bypassNextFitCache = true;
+                    await this.layoutPageGuaranteed({
+                        revealDelayMs: 140,
+                        maxAttempts: 4,
+                        useIdleFit: false,
+                    });
+                }
+
+                if (this.hasRenderablePage()) {
+                    this.isFittingPage = false;
+                }
 
                 return;
             }
@@ -2108,6 +2187,95 @@ document.addEventListener('alpine:init', () => {
                 forceRefit: true,
                 source: `wird-${source}`,
             });
+        },
+
+        async navigateWirdToStep(step, source = 'slider') {
+            if (!this.wirdModeActive) {
+                return;
+            }
+
+            const record = this.ensureWirdDailyRecord();
+
+            if (!record || typeof record !== 'object') {
+                return;
+            }
+
+            const range = this.wirdRangeState(record);
+            const normalizedStep = this.normalizeIntegerFlag(
+                step,
+                this.wirdActiveStepForNavigation(record),
+                {
+                    min: 0,
+                    max: range.maxStep,
+                },
+            );
+            const targetPage = this.wirdTargetPageFromStep(normalizedStep, record);
+            const direction = this.resolveNavigationDirection(targetPage);
+
+            if (record?.completed) {
+                this.wirdBrowseStep = normalizedStep;
+            } else {
+                record.currentStep = normalizedStep;
+                record.completed = false;
+                record.updatedAt = Date.now();
+                this.wirdDailyRecord = record;
+                this.wirdBrowseStep = null;
+                this.reconcileWirdNextAbsolutePage(record);
+                this.persistWirdState();
+            }
+
+            if (targetPage === this.pageNumber && this.hasRenderablePage()) {
+                this.pageInput = targetPage;
+                this._lastPageInputVisualValue = targetPage;
+                await this.ensureWirdEntryPageVisible(targetPage);
+                this.queueWirdEntryRevealRecovery(targetPage);
+
+                return;
+            }
+
+            await this.goToPage(targetPage, {
+                direction,
+                animate: true,
+                forceRefit: true,
+                source: `wird-${source}`,
+            });
+
+            await this.ensureWirdEntryPageVisible(targetPage);
+            this.queueWirdEntryRevealRecovery(targetPage);
+        },
+
+        scheduleWirdSliderStepNavigation(step, { delayMs = 110, source = 'slider-input' } = {}) {
+            const range = this.wirdRangeState();
+            const normalizedStep = this.normalizeIntegerFlag(step, this.sliderValue(), {
+                min: 0,
+                max: range.maxStep,
+            });
+
+            this._wirdSliderPendingStep = normalizedStep;
+
+            if (this._wirdSliderInputCommitTimer !== null) {
+                clearTimeout(this._wirdSliderInputCommitTimer);
+                this._wirdSliderInputCommitTimer = null;
+            }
+
+            this._wirdSliderInputCommitTimer = window.setTimeout(
+                () => {
+                    this._wirdSliderInputCommitTimer = null;
+                    const pendingStep = this._wirdSliderPendingStep;
+                    this._wirdSliderPendingStep = null;
+
+                    if (!Number.isFinite(Number(pendingStep))) {
+                        return;
+                    }
+
+                    if (!this.wirdModeActive) {
+                        return;
+                    }
+
+                    void this.navigateWirdToStep(pendingStep, source);
+                },
+                Math.max(40, Math.trunc(Number(delayMs) || 110)),
+            );
         },
 
         persistNavigationHistory() {
@@ -3302,6 +3470,16 @@ document.addEventListener('alpine:init', () => {
 
                 if (forceRefit) {
                     await this.layoutPageGuaranteed({ revealDelayMs: 200 });
+                } else if (this.isFittingPage || this._lastFittedPageNumber !== normalizedPage) {
+                    await this.layoutPageGuaranteed({
+                        revealDelayMs: 140,
+                        maxAttempts: 3,
+                        useIdleFit: false,
+                    });
+                }
+
+                if (this.hasRenderablePage()) {
+                    this.isFittingPage = false;
                 }
 
                 return;
@@ -3309,6 +3487,7 @@ document.addEventListener('alpine:init', () => {
 
             this.isLoadingPage = true;
             let didCompletePageTransition = false;
+            let didAbortPageTransition = false;
             const pageAbortController = this.beginActivePageLoadAbortController();
 
             try {
@@ -3376,6 +3555,8 @@ document.addEventListener('alpine:init', () => {
                 didCompletePageTransition = true;
             } catch (error) {
                 if (error?.name === 'AbortError') {
+                    didAbortPageTransition = true;
+
                     return;
                 }
 
@@ -3392,6 +3573,15 @@ document.addEventListener('alpine:init', () => {
 
                 if (!didCompletePageTransition && this.hasRenderablePage()) {
                     this.scheduleLayout({ revealDelayMs: 150 });
+                }
+
+                if (
+                    didAbortPageTransition &&
+                    this._pendingNavigationRequest === null &&
+                    this.hasRenderablePage() &&
+                    !this._layoutActivePromise
+                ) {
+                    this.isFittingPage = false;
                 }
 
                 this.flushQueuedLayoutRequest();
@@ -3426,23 +3616,59 @@ document.addEventListener('alpine:init', () => {
             this._lastPageInputVisualValue = normalizedInputPage;
         },
 
-        async onSliderInput() {
-            if (this.wirdModeActive) {
+        async onSliderInput(event = null) {
+            if (!this.wirdModeActive) {
+                const targetPage = clampPage(event?.target?.value ?? this.pageInput, this.maxPage);
+
+                this.pageInput = targetPage;
+                this.onPageInputInput();
+
                 return;
             }
 
-            this.onPageInputInput();
-        },
+            const range = this.wirdRangeState();
+            const step = this.normalizeIntegerFlag(event?.target?.value, this.sliderValue(), {
+                min: 0,
+                max: range.maxStep,
+            });
+            const targetPage = this.wirdTargetPageFromStep(step, range.record);
+            const previousVisualPage = clampPage(this._lastPageInputVisualValue, this.maxPage);
 
-        async onSliderCommit() {
-            if (this.wirdModeActive) {
-                return;
+            if (targetPage !== previousVisualPage) {
+                this.triggerPageCounterPulse(previousVisualPage, targetPage, {
+                    source: 'page-slider',
+                });
             }
 
-            const targetPage = clampPage(this.pageInput, this.maxPage);
             this.pageInput = targetPage;
             this._lastPageInputVisualValue = targetPage;
-            this.dispatchPageNavigationRequest(targetPage, 'page-slider-commit');
+            this.scheduleWirdSliderStepNavigation(step, {
+                source: 'slider-input',
+            });
+        },
+
+        async onSliderCommit(event = null) {
+            if (!this.wirdModeActive) {
+                const targetPage = clampPage(event?.target?.value ?? this.pageInput, this.maxPage);
+                this.pageInput = targetPage;
+                this._lastPageInputVisualValue = targetPage;
+                this.dispatchPageNavigationRequest(targetPage, 'page-slider-commit');
+
+                return;
+            }
+
+            if (this._wirdSliderInputCommitTimer !== null) {
+                clearTimeout(this._wirdSliderInputCommitTimer);
+                this._wirdSliderInputCommitTimer = null;
+            }
+
+            const range = this.wirdRangeState();
+            const step = this.normalizeIntegerFlag(event?.target?.value, this.sliderValue(), {
+                min: 0,
+                max: range.maxStep,
+            });
+            this._wirdSliderPendingStep = null;
+            await this.navigateWirdToStep(step, 'slider');
         },
 
         async onPageInputBlur() {
@@ -4092,7 +4318,8 @@ document.addEventListener('alpine:init', () => {
             if (
                 this.wirdModeActive &&
                 this.isWirdEntryLayoutSchedulingSuppressed() &&
-                this.hasRenderablePage()
+                this.hasRenderablePage() &&
+                !this.isFittingPage
             ) {
                 return;
             }

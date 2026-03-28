@@ -1919,12 +1919,11 @@
                         class="quran-page-slider outline-none"
                         type="range"
                         aria-label="التنقل بين صفحات المصحف"
-                        min="1"
-                        x-bind:max="Math.max(1, maxPage)"
-                        x-bind:disabled="wirdModeActive"
-                        x-model.number="pageInput"
-                        x-on:input="onSliderInput()"
-                        x-on:change="onSliderCommit()"
+                        x-bind:min="sliderMin()"
+                        x-bind:max="sliderMax()"
+                        x-bind:value="sliderValue()"
+                        x-on:input="onSliderInput($event)"
+                        x-on:change="onSliderCommit($event)"
                     />
                 </div>
                 <button
