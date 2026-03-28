@@ -108,8 +108,8 @@ const openingSpreadFinalScaleMultiplier = 0.72;
 const fitRobustWidthQuantile = 0.88;
 const fitRobustWidthOutlierThreshold = 1.2;
 const fitResultCacheLimit = 180;
-const fitCacheStorageVersion = 2;
-const fitCacheStorageKey = 'quran-reader-fit-cache-v2';
+const fitCacheStorageVersion = 3;
+const fitCacheStorageKey = 'quran-reader-fit-cache-v3';
 const fitCacheViewportBucketSizePx = 24;
 const idleWarmupPauseOnHighFrequencyNavigationMs = 520;
 const idleWarmupPauseOnStandardNavigationMs = 160;
@@ -542,6 +542,7 @@ document.addEventListener('alpine:init', () => {
         wirdKhatmatTarget: 1,
         wirdModeActive: false,
         wirdNormalPageBeforeMode: 1,
+        wirdBrowseStep: null,
         wirdTodayKey: '',
         wirdDailyRecord: null,
         wirdState: null,
@@ -648,6 +649,7 @@ document.addEventListener('alpine:init', () => {
         _fitCachePersistWriteTimer: null,
         _fitCacheBreakpoint: '',
         _bypassNextFitCache: false,
+        _suppressFitCacheWriteUntil: 0,
         _pageInputCommitTimer: null,
         _pageInputTweenRaf: null,
         _searchRequestSerial: 0,
@@ -970,6 +972,7 @@ document.addEventListener('alpine:init', () => {
             this._layoutActivePromise = null;
             this._queuedLayoutRequest = null;
             this._bypassNextFitCache = false;
+            this._suppressFitCacheWriteUntil = 0;
             this._idleWarmupQueue = [];
             this._idleWarmupQueuedPages.clear();
             this._idleWarmupInFlightPage = 0;
@@ -1733,6 +1736,36 @@ document.addEventListener('alpine:init', () => {
             });
         },
 
+        wirdRangeState(record = this.wirdDailyRecord) {
+            const normalizedRecord =
+                record && typeof record === 'object' ? record : this.ensureWirdDailyRecord();
+            const startAbsolutePage = Math.max(
+                1,
+                this.normalizeIntegerFlag(normalizedRecord?.startAbsolutePage, 1, { min: 1 }),
+            );
+            const requiredPages = Math.max(
+                1,
+                this.normalizeIntegerFlag(normalizedRecord?.requiredPages, 1, { min: 1 }),
+            );
+
+            return {
+                record: normalizedRecord,
+                startAbsolutePage,
+                requiredPages,
+                maxStep: Math.max(0, requiredPages - 1),
+            };
+        },
+
+        wirdBrowseStepValue(record = this.wirdDailyRecord) {
+            const range = this.wirdRangeState(record);
+            const fallbackStep = this.wirdCurrentStep(range.record);
+
+            return this.normalizeIntegerFlag(this.wirdBrowseStep, fallbackStep, {
+                min: 0,
+                max: range.maxStep,
+            });
+        },
+
         formatReaderNumber(value, fallback = '0') {
             const normalizedNumber = Number(value);
 
@@ -1901,7 +1934,12 @@ document.addEventListener('alpine:init', () => {
             this.suppressWirdEntryLayoutScheduling();
             this.clearWirdEntryRevealTimers();
 
-            const targetAbsolutePage = this.wirdCurrentAbsolutePage(record);
+            const wirdRange = this.wirdRangeState(record);
+            this.wirdBrowseStep = record?.completed ? wirdRange.maxStep : null;
+
+            const targetAbsolutePage = record?.completed
+                ? wirdRange.startAbsolutePage + this.wirdBrowseStep
+                : this.wirdCurrentAbsolutePage(record);
             const targetPage = this.absolutePageToPageNumber(targetAbsolutePage);
             const direction = this.resolveNavigationDirection(targetPage);
 
@@ -1936,6 +1974,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             this.wirdModeActive = false;
+            this.wirdBrowseStep = null;
 
             if (!restoreNormalPage) {
                 return;
@@ -1982,6 +2021,7 @@ document.addEventListener('alpine:init', () => {
             record.completed = true;
             record.updatedAt = Date.now();
             this.wirdDailyRecord = record;
+            this.wirdBrowseStep = Math.max(0, requiredPages - 1);
             this.reconcileWirdNextAbsolutePage(record);
             this.persistWirdState();
         },
@@ -2007,6 +2047,37 @@ document.addEventListener('alpine:init', () => {
                 max: maxStep,
             });
             const isNextDirection = direction === 'next';
+
+            if (record?.completed) {
+                let browseStep = this.wirdBrowseStepValue(record);
+
+                if (isNextDirection && browseStep >= maxStep) {
+                    return;
+                }
+
+                if (!isNextDirection && browseStep <= 0) {
+                    return;
+                }
+
+                browseStep = isNextDirection ? browseStep + 1 : browseStep - 1;
+                this.wirdBrowseStep = browseStep;
+                const startAbsolutePage = Math.max(
+                    1,
+                    this.normalizeIntegerFlag(record?.startAbsolutePage, 1, { min: 1 }),
+                );
+                const targetPage = this.absolutePageToPageNumber(startAbsolutePage + browseStep);
+
+                await this.goToPage(targetPage, {
+                    direction: isNextDirection ? 'next' : 'prev',
+                    animate: true,
+                    forceRefit: true,
+                    source: `wird-${source}`,
+                });
+
+                return;
+            }
+
+            this.wirdBrowseStep = null;
 
             if (isNextDirection && currentStep >= maxStep) {
                 this.markWirdAsCompleted(record);
@@ -2835,7 +2906,12 @@ document.addEventListener('alpine:init', () => {
         isHighFrequencyNavigationSource(source = 'generic') {
             const normalizedSource = String(source ?? '').trim();
 
-            return normalizedSource === 'keyboard' || normalizedSource === 'swipe';
+            return (
+                normalizedSource === 'keyboard' ||
+                normalizedSource === 'swipe' ||
+                normalizedSource.endsWith('-keyboard') ||
+                normalizedSource.endsWith('-swipe')
+            );
         },
 
         isFastFitPrioritySource(source = 'generic') {
@@ -3068,7 +3144,13 @@ document.addEventListener('alpine:init', () => {
 
         isFirstNavigationPage() {
             if (this.wirdModeActive) {
-                return this.wirdCurrentStep() <= 0;
+                const record = this.ensureWirdDailyRecord();
+
+                if (record?.completed) {
+                    return this.wirdBrowseStepValue(record) <= 0;
+                }
+
+                return this.wirdCurrentStep(record) <= 0;
             }
 
             return this.navigationBasePage() <= 1;
@@ -3081,6 +3163,10 @@ document.addEventListener('alpine:init', () => {
                     1,
                     this.normalizeIntegerFlag(record?.requiredPages, 1, { min: 1 }),
                 );
+
+                if (record?.completed) {
+                    return this.wirdBrowseStepValue(record) >= requiredPages - 1;
+                }
 
                 return this.wirdCurrentStep(record) >= requiredPages - 1;
             }
@@ -3199,6 +3285,9 @@ document.addEventListener('alpine:init', () => {
             this.clearWordPressState();
             this.hoveredAyahIndex = 0;
             this.hoveredWordIndex = 0;
+            this._suppressFitCacheWriteUntil = this.isHighFrequencyNavigationSource(source)
+                ? Math.max(this._suppressFitCacheWriteUntil, Date.now() + 1600)
+                : this._suppressFitCacheWriteUntil;
 
             if (normalizedPage === this.pageNumber && this.mushafLines.length > 0) {
                 if (this.pageInput !== normalizedPage) {
@@ -3498,7 +3587,7 @@ document.addEventListener('alpine:init', () => {
 
             try {
                 if (family) {
-                    await document.fonts.load(`32px '${family}'`, 'الحمد لله');
+                    await document.fonts.load(`32px '${family}'`, this.preferredPageProbeText());
                 }
 
                 if (basmallahFamily) {
@@ -3516,6 +3605,26 @@ document.addEventListener('alpine:init', () => {
             } catch (_) {
                 // Ignore font loading failures and continue with fallback glyphs.
             }
+        },
+
+        preferredPageProbeText() {
+            if (!Array.isArray(this.mushafLines)) {
+                return 'ﱁﱂﱃ';
+            }
+
+            for (const line of this.mushafLines) {
+                const words = Array.isArray(line?.words) ? line.words : [];
+
+                for (const word of words) {
+                    const text = String(word?.text ?? '').trim();
+
+                    if (text !== '') {
+                        return text;
+                    }
+                }
+            }
+
+            return 'ﱁﱂﱃ';
         },
 
         async waitForFontReady(family) {
@@ -4465,6 +4574,8 @@ document.addEventListener('alpine:init', () => {
             availableHeight = 0,
             strictWidthOverflowTolerance = 1.06,
             strictHeightOverflowTolerance = 1.01,
+            minimumFillWidth = 0.32,
+            minimumFillHeight = 0.22,
         } = {}) {
             const normalizedCacheKey = String(cacheKey ?? '').trim();
             const normalizedPageNumber = Math.max(
@@ -4477,6 +4588,14 @@ document.addEventListener('alpine:init', () => {
                 normalizedAvailableWidth * Number(strictWidthOverflowTolerance ?? 1.06);
             const heightOverflowThreshold =
                 normalizedAvailableHeight * Number(strictHeightOverflowTolerance ?? 1.01);
+            const normalizedMinimumFillWidth = Math.max(
+                0.1,
+                Math.min(1, Number(minimumFillWidth ?? 0.32)),
+            );
+            const normalizedMinimumFillHeight = Math.max(
+                0.1,
+                Math.min(1, Number(minimumFillHeight ?? 0.22)),
+            );
 
             if (this._fitSanityCheckTimer !== null) {
                 clearTimeout(this._fitSanityCheckTimer);
@@ -4504,8 +4623,13 @@ document.addEventListener('alpine:init', () => {
                 const hasOverflow =
                     measured.width > widthOverflowThreshold ||
                     measured.height > heightOverflowThreshold;
+                const fillWidth = measured.width / normalizedAvailableWidth;
+                const fillHeight = measured.height / normalizedAvailableHeight;
+                const hasSuspiciousUnderfill =
+                    fillWidth < normalizedMinimumFillWidth ||
+                    fillHeight < normalizedMinimumFillHeight;
 
-                if (!hasOverflow) {
+                if (!hasOverflow && !hasSuspiciousUnderfill) {
                     return;
                 }
 
@@ -4663,6 +4787,7 @@ document.addEventListener('alpine:init', () => {
                 this._isModalLifecycleSettling ||
                 this._activeModalIds.size > 0 ||
                 this.openModalCount() > 0;
+            const shouldSuppressCachePersistence = Date.now() < this._suppressFitCacheWriteUntil;
             const fitCacheKey = [
                 normalizedPageNumber,
                 breakpointName || 'bp-unknown',
@@ -4684,9 +4809,17 @@ document.addEventListener('alpine:init', () => {
                 availableWidth * Number(profile.strictWidthOverflowTolerance ?? 1.06);
             const strictHeightOverflowThreshold =
                 availableHeight * Number(profile.strictHeightOverflowTolerance ?? 1.01);
-            const cachedFitResult = isModalLayoutContext
-                ? null
-                : this._fitResultByContext.get(fitCacheKey);
+            const ayahLineCount = Array.isArray(this.mushafLines)
+                ? this.mushafLines.filter((line) => String(line?.line_type ?? '') === 'ayah').length
+                : 0;
+            const minimumHealthyFillWidth =
+                normalizedPageNumber <= 2 ? 0.32 : ayahLineCount >= 12 ? 0.52 : 0.36;
+            const minimumHealthyFillHeight =
+                normalizedPageNumber <= 2 ? 0.22 : ayahLineCount >= 12 ? 0.42 : 0.3;
+            const cachedFitResult =
+                isModalLayoutContext || shouldSuppressCachePersistence
+                    ? null
+                    : this._fitResultByContext.get(fitCacheKey);
 
             if (
                 cachedFitResult &&
@@ -4704,11 +4837,16 @@ document.addEventListener('alpine:init', () => {
                 const cachedMeasured = this.measureRenderedBounds(contentElement, {
                     useRobustWidth: false,
                 });
+                const cachedFillWidth = cachedMeasured.width / availableWidth;
+                const cachedFillHeight = cachedMeasured.height / availableHeight;
+                const cacheHasHealthyFill =
+                    cachedFillWidth >= minimumHealthyFillWidth &&
+                    cachedFillHeight >= minimumHealthyFillHeight;
                 const cacheStillFits =
                     cachedMeasured.width <= strictWidthOverflowThreshold &&
                     cachedMeasured.height <= strictHeightOverflowThreshold;
 
-                if (cacheStillFits) {
+                if (cacheStillFits && cacheHasHealthyFill) {
                     this.pageScale = cachedScale;
                     this._fitRunCounter += 1;
                     this._lastFittedPageNumber = this.pageNumber;
@@ -4723,6 +4861,8 @@ document.addEventListener('alpine:init', () => {
                         strictHeightOverflowTolerance: Number(
                             profile.strictHeightOverflowTolerance ?? 1.01,
                         ),
+                        minimumFillWidth: minimumHealthyFillWidth,
+                        minimumFillHeight: minimumHealthyFillHeight,
                     });
 
                     return;
@@ -4829,16 +4969,18 @@ document.addEventListener('alpine:init', () => {
 
             rootElement.style.setProperty('--quran-page-scale', String(normalizedScale));
             this.pageScale = normalizedScale;
-            this.rememberFitResult(
-                fitCacheKey,
-                {
-                    layout: { ...bestLayout },
-                    scale: normalizedScale,
-                },
-                {
-                    persist: !isModalLayoutContext,
-                },
-            );
+            if (!isModalLayoutContext && !shouldSuppressCachePersistence) {
+                this.rememberFitResult(
+                    fitCacheKey,
+                    {
+                        layout: { ...bestLayout },
+                        scale: normalizedScale,
+                    },
+                    {
+                        persist: true,
+                    },
+                );
+            }
             this.scheduleFitSanityCheck({
                 cacheKey: fitCacheKey,
                 pageNumber: normalizedPageNumber,
@@ -4848,6 +4990,8 @@ document.addEventListener('alpine:init', () => {
                 strictHeightOverflowTolerance: Number(
                     profile.strictHeightOverflowTolerance ?? 1.01,
                 ),
+                minimumFillWidth: minimumHealthyFillWidth,
+                minimumFillHeight: minimumHealthyFillHeight,
             });
             this._bypassNextFitCache = false;
 
