@@ -447,7 +447,8 @@
             border: 0;
             background: transparent;
             color: color-mix(in srgb, var(--gray-900) 82%, var(--quran-panel-text));
-            overflow: hidden;
+            overflow: visible;
+            isolation: isolate;
             transition:
                 box-shadow 260ms ease,
                 min-width 320ms cubic-bezier(0.2, 1, 0.36, 1);
@@ -502,61 +503,95 @@
             box-shadow: 0 8px 18px color-mix(in srgb, var(--success-900) 14%, transparent);
         }
 
-        .quran-wird-progress-hover-wave {
+        .quran-wird-progress-aura-water,
+        .quran-wird-progress-aura-reflect {
             position: absolute;
-            inset: 0.26rem;
+            inset: 0.16rem;
             border-radius: 999px;
-            border: 1px solid color-mix(in srgb, var(--success-400) 45%, transparent);
-            opacity: 0;
+            clip-path: polygon(var(--quran-wird-frame-cut-inner) 0,
+                    calc(100% - var(--quran-wird-frame-cut-inner)) 0,
+                    100% 50%,
+                    calc(100% - var(--quran-wird-frame-cut-inner)) 100%,
+                    var(--quran-wird-frame-cut-inner) 100%,
+                    0 50%);
             pointer-events: none;
-            z-index: 2;
-            transform: scale(0.96);
-            animation: none;
+            z-index: 1;
         }
 
-        .quran-wird-progress-hover-wave--second {
-            animation-delay: 0.95s;
+        .quran-wird-progress-aura-water {
+            background:
+                radial-gradient(70% 84% at 18% 28%, rgb(56 189 248 / 44%) 0%, transparent 68%),
+                radial-gradient(66% 88% at 82% 74%, rgb(192 132 252 / 40%) 0%, transparent 72%),
+                radial-gradient(58% 64% at 54% 34%, rgb(251 191 36 / 28%) 0%, transparent 64%);
+            mix-blend-mode: screen;
+            opacity: 0.66;
+            animation:
+                quran-wird-aura-water-flow 7.6s linear infinite,
+                quran-wird-aura-water-breathe 4.8s ease-in-out infinite;
         }
 
-        .quran-wird-progress-hover-sheen {
+        .quran-wird-progress-aura-reflect {
+            background:
+                linear-gradient(115deg,
+                    rgb(255 255 255 / 0%) 12%,
+                    rgb(255 255 255 / 32%) 28%,
+                    rgb(255 255 255 / 0%) 44%,
+                    rgb(236 72 153 / 18%) 62%,
+                    rgb(255 255 255 / 0%) 80%),
+                repeating-linear-gradient(125deg,
+                    rgb(255 255 255 / 0%) 0 0.9rem,
+                    rgb(255 255 255 / 12%) 0.9rem 1.22rem,
+                    rgb(255 255 255 / 0%) 1.22rem 1.68rem);
+            background-size: 190% 180%, 170% 170%;
+            background-position: 12% 48%, 18% 60%;
+            mix-blend-mode: plus-lighter;
+            opacity: 0.42;
+            filter: saturate(1.2);
+            animation: quran-wird-aura-reflect-drift 6.8s ease-in-out infinite;
+        }
+
+        .quran-wird-progress-button:hover .quran-wird-progress-aura-water,
+        .quran-wird-progress-button:focus-visible .quran-wird-progress-aura-water {
+            opacity: 0.82;
+        }
+
+        .quran-wird-progress-hover-shimmer {
             position: absolute;
-            inset: 0.12rem;
+            inset: 0.16rem;
             border-radius: 999px;
+            clip-path: polygon(var(--quran-wird-frame-cut-inner) 0,
+                    calc(100% - var(--quran-wird-frame-cut-inner)) 0,
+                    100% 50%,
+                    calc(100% - var(--quran-wird-frame-cut-inner)) 100%,
+                    var(--quran-wird-frame-cut-inner) 100%,
+                    0 50%);
+            overflow: hidden;
             pointer-events: none;
             z-index: 3;
-            overflow: hidden;
             opacity: 0;
         }
 
-        .quran-wird-progress-hover-sheen::before {
+        .quran-wird-progress-hover-shimmer::before {
             content: '';
             position: absolute;
             inset-block: 0;
-            inset-inline-start: -130%;
-            width: 44%;
-            background: linear-gradient(120deg,
-                    transparent 0%,
-                    rgb(255 255 255 / 6%) 20%,
-                    rgb(255 255 255 / 28%) 55%,
-                    rgb(255 255 255 / 6%) 80%,
-                    transparent 100%);
-            transform: skewX(-18deg);
+            inset-inline-start: -46%;
+            width: 38%;
+            background: linear-gradient(112deg,
+                    rgb(255 255 255 / 0%) 0%,
+                    rgb(255 255 255 / 16%) 28%,
+                    rgb(255 255 255 / 65%) 52%,
+                    rgb(255 255 255 / 16%) 74%,
+                    rgb(255 255 255 / 0%) 100%);
+            filter: blur(0.5px);
         }
 
-        .quran-wird-progress-button:hover .quran-wird-progress-hover-wave,
-        .quran-wird-progress-button:focus-visible .quran-wird-progress-hover-wave {
-            opacity: 1;
-            animation: quran-wird-hover-wave 1.9s ease-out infinite;
-        }
-
-        .quran-wird-progress-button:hover .quran-wird-progress-hover-sheen,
-        .quran-wird-progress-button:focus-visible .quran-wird-progress-hover-sheen {
+        .quran-wird-progress-button--shimmer-running .quran-wird-progress-hover-shimmer {
             opacity: 1;
         }
 
-        .quran-wird-progress-button:hover .quran-wird-progress-hover-sheen::before,
-        .quran-wird-progress-button:focus-visible .quran-wird-progress-hover-sheen::before {
-            animation: quran-wird-hover-sheen 1.45s ease-in-out infinite;
+        .quran-wird-progress-button--shimmer-running .quran-wird-progress-hover-shimmer::before {
+            animation: quran-wird-hover-shimmer-pass 1.18s cubic-bezier(0.24, 0.75, 0.3, 1) 1;
         }
 
         .quran-wird-progress-fill {
@@ -594,34 +629,70 @@
             box-shadow: 0 10px 20px color-mix(in srgb, var(--success-900) 16%, transparent);
         }
 
-        .quran-reader--visual-enhancements-disabled .quran-wird-progress-hover-wave,
-        .quran-reader--visual-enhancements-disabled .quran-wird-progress-hover-sheen {
+        .quran-reader--visual-enhancements-disabled .quran-wird-progress-aura-water,
+        .quran-reader--visual-enhancements-disabled .quran-wird-progress-aura-reflect,
+        .quran-reader--visual-enhancements-disabled .quran-wird-progress-hover-shimmer {
             display: none;
         }
 
-        @keyframes quran-wird-hover-wave {
+        @keyframes quran-wird-aura-water-flow {
             0% {
-                transform: scale(0.96);
-                opacity: 0.72;
+                background-position: 12% 28%, 86% 74%, 54% 38%;
             }
 
-            78% {
-                opacity: 0.14;
+            50% {
+                background-position: 34% 76%, 22% 22%, 66% 64%;
             }
 
             100% {
-                transform: scale(1.08);
-                opacity: 0;
+                background-position: 12% 28%, 86% 74%, 54% 38%;
             }
         }
 
-        @keyframes quran-wird-hover-sheen {
+        @keyframes quran-wird-aura-water-breathe {
             0% {
-                inset-inline-start: -130%;
+                filter: saturate(1.1) brightness(0.98);
+            }
+
+            55% {
+                filter: saturate(1.34) brightness(1.05);
             }
 
             100% {
-                inset-inline-start: 140%;
+                filter: saturate(1.1) brightness(0.98);
+            }
+        }
+
+        @keyframes quran-wird-aura-reflect-drift {
+            0% {
+                background-position: 12% 48%, 18% 60%;
+                opacity: 0.34;
+            }
+
+            48% {
+                background-position: 62% 42%, 64% 38%;
+                opacity: 0.58;
+            }
+
+            100% {
+                background-position: 12% 48%, 18% 60%;
+                opacity: 0.34;
+            }
+        }
+
+        @keyframes quran-wird-hover-shimmer-pass {
+            0% {
+                inset-inline-start: -46%;
+                opacity: 0;
+            }
+
+            16% {
+                opacity: 1;
+            }
+
+            100% {
+                inset-inline-start: 112%;
+                opacity: 0;
             }
         }
 
@@ -1667,24 +1738,32 @@
 
                     <button
                         class="quran-wird-progress-button outline-none"
+                        x-data="{ hovered: $useHover($el) }"
                         data-quran-wird-toggle
                         type="button"
                         x-bind:style="wirdProgressBarStyle()"
-                        x-bind:class="{ 'quran-wird-progress-button--completed': ensureWirdDailyRecord()?.completed }"
+                        x-bind:class="{
+                            'quran-wird-progress-button--completed': ensureWirdDailyRecord()?.completed,
+                            'quran-wird-progress-button--shimmer-running': wirdHoverShimmerRunning,
+                        }"
                         x-bind:aria-pressed="wirdModeActive ? 'true' : 'false'"
                         x-bind:aria-label="wirdModeActive ? 'إيقاف وضع الوِرد والعودة للقراءة الحرة' : 'تشغيل وضع الوِرد اليومي'"
                         x-on:click="toggleWirdMode()"
+                        x-on:mouseenter="startWirdHoverEffects()"
+                        x-on:mouseleave="endWirdHoverEffects()"
+                        x-on:focusin="startWirdHoverEffects()"
+                        x-on:focusout="endWirdHoverEffects()"
                     >
                         <span
-                            class="quran-wird-progress-hover-wave quran-wird-progress-hover-wave--first"
+                            class="quran-wird-progress-aura-water"
                             aria-hidden="true"
                         ></span>
                         <span
-                            class="quran-wird-progress-hover-wave quran-wird-progress-hover-wave--second"
+                            class="quran-wird-progress-aura-reflect"
                             aria-hidden="true"
                         ></span>
                         <span
-                            class="quran-wird-progress-hover-sheen"
+                            class="quran-wird-progress-hover-shimmer"
                             aria-hidden="true"
                         ></span>
                         <span
@@ -1700,6 +1779,13 @@
                                 class="quran-wird-progress-percent"
                                 x-text="wirdProgressPercentLabel()"
                             ></span>
+                            <span
+                                class="translate-y-2.5 opacity-0 transition-all text-xs text-success-200 font-bold"
+                                x-bind:class="{
+                                    'opacity-100! -translate-y-0.5!': hovered || wirdModeActive,
+                                    'text-white! font-normal!': wirdModeActive,
+                                }"
+                            >الورد اليومي</span>
                             <span
                                 class="quran-wird-progress-count"
                                 x-text="wirdProgressCounterLabel()"

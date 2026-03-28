@@ -716,9 +716,17 @@
         width: 100%;
         min-width: 12rem;
         border: 1px solid color-mix(in srgb, var(--quran-chip-border) 44%, transparent);
-        border-radius: 0.66rem;
+        border-radius: 999px;
         background: color-mix(in srgb, var(--quran-page-surface) 88%, transparent);
-        padding: 0.26rem 0.32rem;
+        padding: 0.24rem 0.44rem;
+        transition:
+            border-color 180ms ease,
+            box-shadow 180ms ease;
+    }
+
+    .quran-manager-tags-field:focus-within {
+        border-color: color-mix(in srgb, var(--primary-500) 54%, transparent);
+        box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-300) 32%, transparent);
     }
 
     .quran-manager-tag-chip {
@@ -756,6 +764,7 @@
         min-width: 6.5rem;
         border: 0;
         background: transparent;
+        appearance: none;
         color: color-mix(in srgb, var(--quran-panel-text) 95%, var(--primary-900));
         font-size: 0.74rem;
         line-height: 1.2;
