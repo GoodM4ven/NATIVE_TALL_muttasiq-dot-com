@@ -663,6 +663,8 @@ document.addEventListener('alpine:init', () => {
         _surahDirectoryAutoFocusTimer: null,
         _surahDirectoryAutoFocusRaf: null,
         _surahDirectoryPostOpenTimers: [],
+        _wirdEntryRevealTimers: [],
+        _wirdEntryLayoutSuppressedUntil: 0,
         _modalLayoutResumeTimer: null,
         _postModalTargetFitPage: 0,
         _postModalTargetFitRetries: 0,
@@ -753,7 +755,7 @@ document.addEventListener('alpine:init', () => {
                 });
             }
 
-            this.ensureWirdDailyRecord({ forceRebuild: true });
+            this.ensureWirdDailyRecord();
 
             this._onWindowViewportChange = () => {
                 this.handleViewportChange();
@@ -870,6 +872,8 @@ document.addEventListener('alpine:init', () => {
                 this._searchModalCloseDebounceTimer = null;
             }
 
+            this.clearWirdEntryRevealTimers();
+
             if (this._modalLayoutResumeTimer !== null) {
                 clearTimeout(this._modalLayoutResumeTimer);
                 this._modalLayoutResumeTimer = null;
@@ -884,6 +888,7 @@ document.addEventListener('alpine:init', () => {
             this._isModalLifecycleSettling = false;
             this._postModalTargetFitPage = 0;
             this._postModalTargetFitRetries = 0;
+            this._wirdEntryLayoutSuppressedUntil = 0;
 
             if (this._wordPressHoldTimer !== null) {
                 clearTimeout(this._wordPressHoldTimer);
@@ -1577,20 +1582,49 @@ document.addEventListener('alpine:init', () => {
             this.wirdTodayKey = dateKey;
 
             if (shouldRebuild) {
-                const startAbsolutePage = Math.max(
+                const requiredPages = this.resolveWirdRequiredPages({
+                    dateKey,
+                });
+                const maxStep = Math.max(0, requiredPages - 1);
+                const fallbackStartAbsolutePage = Math.max(
                     1,
                     this.normalizeIntegerFlag(this.wirdState?.nextAbsolutePage, 1, { min: 1 }),
                 );
+                const canCarryExistingProgress =
+                    !forceRebuild && record && typeof record === 'object';
+                const startAbsolutePage = canCarryExistingProgress
+                    ? Math.max(
+                          1,
+                          this.normalizeIntegerFlag(
+                              record?.startAbsolutePage,
+                              fallbackStartAbsolutePage,
+                              {
+                                  min: 1,
+                              },
+                          ),
+                      )
+                    : fallbackStartAbsolutePage;
+                const currentStep = canCarryExistingProgress
+                    ? this.normalizeIntegerFlag(record?.currentStep, 0, {
+                          min: 0,
+                          max: maxStep,
+                      })
+                    : 0;
+                const completed = canCarryExistingProgress
+                    ? Boolean(record?.completed) || currentStep >= maxStep
+                    : false;
 
                 record = {
                     startAbsolutePage,
-                    requiredPages: this.resolveWirdRequiredPages({
-                        dateKey,
-                    }),
-                    currentStep: 0,
-                    completed: false,
+                    requiredPages,
+                    currentStep,
+                    completed,
                     signature,
-                    createdAt: Date.now(),
+                    createdAt: canCarryExistingProgress
+                        ? this.normalizeIntegerFlag(record?.createdAt, Date.now(), {
+                              min: 0,
+                          })
+                        : Date.now(),
                     updatedAt: Date.now(),
                 };
 
@@ -1752,6 +1786,91 @@ document.addEventListener('alpine:init', () => {
             return `--quran-wird-progress-percent: ${this.wirdProgressPercent()}%;`;
         },
 
+        clearWirdEntryRevealTimers() {
+            this._wirdEntryRevealTimers.forEach((timerId) => {
+                clearTimeout(timerId);
+            });
+            this._wirdEntryRevealTimers = [];
+        },
+
+        suppressWirdEntryLayoutScheduling(durationMs = 900) {
+            const normalizedDurationMs = Math.max(120, Math.trunc(Number(durationMs) || 900));
+
+            this._wirdEntryLayoutSuppressedUntil = Math.max(
+                this._wirdEntryLayoutSuppressedUntil,
+                Date.now() + normalizedDurationMs,
+            );
+        },
+
+        isWirdEntryLayoutSchedulingSuppressed() {
+            return Date.now() < this._wirdEntryLayoutSuppressedUntil;
+        },
+
+        queueWirdEntryRevealRecovery(targetPage) {
+            const normalizedTargetPage = clampPage(targetPage, this.maxPage);
+
+            if (normalizedTargetPage < 1) {
+                return;
+            }
+
+            this.clearWirdEntryRevealTimers();
+
+            const timerId = window.setTimeout(() => {
+                this._wirdEntryRevealTimers = this._wirdEntryRevealTimers.filter(
+                    (activeTimerId) => activeTimerId !== timerId,
+                );
+
+                if (
+                    !this.wirdModeActive ||
+                    this.pageNumber !== normalizedTargetPage ||
+                    !this.hasRenderablePage() ||
+                    this.isLoadingPage
+                ) {
+                    return;
+                }
+
+                void (async () => {
+                    if (this.isFittingPage || this._lastFittedPageNumber !== normalizedTargetPage) {
+                        this.pauseIdleWarmup(640, {
+                            preservePage: normalizedTargetPage,
+                        });
+                        this._bypassNextFitCache = true;
+                        await this.layoutPageGuaranteed({
+                            revealDelayMs: 130,
+                            maxAttempts: 3,
+                            useIdleFit: false,
+                        });
+                    }
+
+                    await this.ensureWirdEntryPageVisible(normalizedTargetPage);
+                })();
+            }, 560);
+
+            this._wirdEntryRevealTimers.push(timerId);
+        },
+
+        async ensureWirdEntryPageVisible(targetPage) {
+            const normalizedTargetPage = clampPage(targetPage, this.maxPage);
+
+            if (normalizedTargetPage < 1) {
+                return;
+            }
+
+            await this.nextTickAsync();
+
+            if (this.pageNumber !== normalizedTargetPage || !this.hasRenderablePage()) {
+                return;
+            }
+
+            if (
+                this.pageNumber === normalizedTargetPage &&
+                !this.isLoadingPage &&
+                this._pendingNavigationRequest === null
+            ) {
+                this.isFittingPage = false;
+            }
+        },
+
         async toggleWirdMode() {
             if (this.wirdModeActive) {
                 await this.exitWirdMode({
@@ -1779,6 +1898,8 @@ document.addEventListener('alpine:init', () => {
             this.resetNavigationQueueForPriorityJump();
             this.wirdNormalPageBeforeMode = clampPage(this.pageNumber, this.maxPage);
             this.wirdModeActive = true;
+            this.suppressWirdEntryLayoutScheduling();
+            this.clearWirdEntryRevealTimers();
 
             const targetAbsolutePage = this.wirdCurrentAbsolutePage(record);
             const targetPage = this.absolutePageToPageNumber(targetAbsolutePage);
@@ -1788,12 +1909,25 @@ document.addEventListener('alpine:init', () => {
                 source: 'wird-enter',
             });
 
+            if (targetPage === this.pageNumber && this.hasRenderablePage()) {
+                this.pageInput = targetPage;
+                this._lastPageInputVisualValue = targetPage;
+                this.isFittingPage = false;
+                await this.ensureWirdEntryPageVisible(targetPage);
+                this.queueWirdEntryRevealRecovery(targetPage);
+
+                return;
+            }
+
             await this.goToPage(targetPage, {
                 direction,
                 animate: true,
                 forceRefit: true,
                 source: 'wird-enter',
             });
+
+            await this.ensureWirdEntryPageVisible(targetPage);
+            this.queueWirdEntryRevealRecovery(targetPage);
         },
 
         async exitWirdMode({ restoreNormalPage = true, reason = 'manual' } = {}) {
@@ -2707,7 +2841,11 @@ document.addEventListener('alpine:init', () => {
         isFastFitPrioritySource(source = 'generic') {
             const normalizedSource = String(source ?? '').trim();
 
-            return normalizedSource === 'surah-directory' || normalizedSource === 'search-result';
+            return (
+                normalizedSource === 'surah-directory' ||
+                normalizedSource === 'search-result' ||
+                normalizedSource.startsWith('wird-')
+            );
         },
 
         resolveIdleWarmupPauseDuration(source = 'generic') {
@@ -3842,6 +3980,14 @@ document.addEventListener('alpine:init', () => {
         },
 
         scheduleLayout({ revealDelayMs = 180, maxAttempts = 4 } = {}) {
+            if (
+                this.wirdModeActive &&
+                this.isWirdEntryLayoutSchedulingSuppressed() &&
+                this.hasRenderablePage()
+            ) {
+                return;
+            }
+
             if (this._isModalLifecycleSettling || this._activeModalIds.size > 0) {
                 this.holdPageHiddenForModalLifecycle();
 
