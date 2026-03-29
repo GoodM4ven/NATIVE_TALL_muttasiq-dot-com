@@ -55,58 +55,17 @@ This shared source code base is representing the web version primarily, the one 
 - If the front-end behavior doesn't sync with the back-end. Debug it using Playright browser skill.
   - When Playright is unavailable to the AI agent, warn the user about it.
 
-## Quran Reader Fitting and Cache (Critical)
-- Main implementation is in [resources/js/support/alpine/data/quran-app-reader.js].
-- Bootstrap and rebind flow:
-  - Register native keyboard/swipe listeners through `registerNativeInputListeners()` on initial mount and again after Livewire `morphed` hooks so reader navigation and fit scheduling keep working after DOM replacement.
-  - Reinitialize layout observers after morphs and schedule a fresh layout on reader `switch-view` entries.
-- Rendering visibility is controlled by `pageFitState()`:
-  - `fading-out` when `isTransitioningOutPage` is true.
-  - `fitting` when `isFittingPage` is true (this state intentionally hides `.quran-page-lines`).
-  - `ready` otherwise.
-- Layout lifecycle:
-  - `scheduleLayout()` queues `layoutPageGuaranteed()`.
-  - `layoutPageGuaranteed()` retries `layoutPage()` until fit run count increases for the current page.
-  - `layoutPage()` runs font readiness + text stabilization + `fitPageToViewport()` then `queuePageReveal()`.
-  - `queuePageReveal()` is the final gate that must flip `isFittingPage` to false.
-- Fit execution details:
-  - `fitPageToViewport()` resets CSS fit variables first, measures available frame width/height, resolves the page-specific fit profile, then searches the best compression layout + scale pair before applying `--quran-page-scale`.
-  - `measureRenderedBounds()` prefers robust width for centered ayah pages so a single outlier line does not poison the fit score.
-  - `applySafetyScaleForCurrentPageOverflow()` is only a post-fit overflow guard; it is not the primary fitting mechanism.
-- Fit cache strategy:
-  - Cache map is `_fitResultByContext`, persisted in localStorage key `quran-reader-fit-cache-v3`.
-  - Cache key includes page number, breakpoint, viewport buckets, modal state, layout mode, line count, font families, and fit profile bounds.
-  - Cache reads are bypassed during modal lifecycle (`_bypassNextFitCache`, modal settling, or open modals).
-  - `_suppressFitCacheWriteUntil` suppresses persisted cache writes only. It should not disable healthy in-memory cache reuse for the same stable context.
-  - Fit sanity check (`scheduleFitSanityCheck`) can invalidate suspicious fit entries and force a re-layout.
-- Modal and navigation guards that can keep page hidden:
-  - `_isModalLifecycleSettling` + `_activeModalIds` + `openModalCount()`.
-  - `_pendingNavigationRequest` + `_navigationRevealLocked`.
-  - If these guards stay stale while `isFittingPage` is true, UI can appear as a permanent white/hidden page.
-- Current anti-stuck rules:
-  - `clearStaleRevealGuards()` clears stale modal/navigation guards when they no longer match real DOM/navigation state.
-  - `queuePageReveal()` has a blocked-duration fallback so reveal cannot remain hidden indefinitely once blockers are stale.
-  - `ensureWirdEntryPageVisible()` must be used after `wird` enter/slider/swipe navigation to guarantee visibility recovery.
-- Wird-specific race handling:
-  - `_wirdNavigationRequestSerial` is last-write-wins for rapid interactions.
-  - `queueWirdEntryRevealRecovery()` must be serial-guarded so old timers cannot re-hide a newer page.
-  - Any in-wird navigation (`stepWird`, `navigateWirdToStep`) should clear old wird-entry recovery timers first.
-  - Reader navigation source profiling is centralized in `navigationSourceProfile()`. `keyboard`/`swipe` must resolve to the same profile as `chevron` in both normal mode and wird mode so cache/fit heuristics stay aligned instead of taking a slower divergent branch.
-  - `wirdNavigationSourceProfile()` should remain a thin wrapper over the shared reader navigation profile unless wird mode truly needs unique behavior.
-  - Slider commits must prefer a fresh last `input` step (`_wirdSliderPendingCommitStep`/`_wirdSliderLastInputStep`) over `change` payload, but only when input is recent; otherwise use direct `change` step.
-  - Keep slider focus hygiene: release/commit must blur `.quran-page-slider` so keyboard arrows always route through `onGlobalArrowNavigate()` instead of getting trapped by range-input native handling.
-  - Keep page-event source fidelity in `handleRequestedNavigation()`: preserve incoming `detail.source` (especially `page-jump` and `page-slider-commit`) so navigation heuristics and history attribution do not diverge.
-- History/bookmark manager close handling:
-  - Manager-driven jumps (`goToHistoryEntry()` and `goToBookmark()`) must force a first immediate fit and also queue `schedulePendingModalCloseFit(targetPage, ...)`.
-  - This deferred post-modal fit is required because Filament modal lifecycle can outlive the initial navigation by a few frames; without it, bookmark-navigation replay from history can land on a loaded page that never fully fills the frame.
-  - Treat bookmark-manager navigation and replayed `bookmark-navigation` history entries as modal-close-sensitive fit paths, not as plain generic page jumps.
-- When touching this area, always run the focused browser regression:
-  - `lands on the final wird slider page and keeps the re-entered completed page visible`
-  - `keeps quran text fitted and visible across all reader navigation paths`
-  - This path covers support unlock modal, fast slider scrub to final wird step, completion exit, and re-entry visibility.
-
 ## Finishing
 - When have modified CSS or JS files, use `npm run format:prettier` to format them.
 - When have modified Blade-PHP files, use `npm run format:blade` to format them.
 - When have modified PHP files, ensure `php artisan pint` was ran to format them.
 - When have modified PHP files, run static analysis using `vendor/bin/phpstan analyse`.
+
+## Workflow: Quran Reader Fitting and Cache
+- Main implementation is in [resources/js/support/alpine/data/quran-app-reader.js].
+- Think in terms of one pipeline: schedule layout, fit the current page, then reveal it. If a page is loaded but looks blank, tiny, oversized, or unfitted, assume the reveal step or a post-fit recovery step did not complete.
+- Respect the fit cache, but treat modal state, stale guards, and fresh navigation as cache-risky contexts. Reads should be bypassed when modal lifecycle is still settling, while suppressed write windows are about persistence only, not about disabling healthy reuse.
+- The main failure mode is hidden-page state getting stuck behind modal or navigation guards. When debugging, check `isFittingPage`, modal-settling state, pending navigation state, and whether stale guards need recovery before assuming the fitting math is wrong.
+- `wird` mode and rapid navigation are race-prone. Preserve last-write-wins behavior, keep navigation source profiling consistent with normal reader navigation, and prefer visibility recovery helpers over ad-hoc fixes.
+- History and bookmark manager jumps are special: they often need both an immediate fit and a deferred post-modal refit. Replay of `bookmark-navigation` history is especially sensitive to modal-close timing.
+- When touching this area, run the focused browser regressions `lands on the final wird slider page and keeps the re-entered completed page visible` and `keeps quran text fitted and visible across all reader navigation paths`.
