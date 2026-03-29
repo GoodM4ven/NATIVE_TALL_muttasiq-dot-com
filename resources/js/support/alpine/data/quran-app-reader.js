@@ -830,6 +830,7 @@ document.addEventListener('alpine:init', () => {
         _postModalTargetFitTimer: null,
         _activeModalIds: new Set(),
         _isModalLifecycleSettling: false,
+        _lastModalLifecycleEventAt: 0,
         _wordPressHoldTimer: null,
         _wordBySelectionKey: new Map(),
         _ayahNumberByIndex: new Map(),
@@ -4515,6 +4516,10 @@ document.addEventListener('alpine:init', () => {
                 return pendingTargetPage;
             }
 
+            if (!this.isLoadingPage && this._pendingNavigationRequest === null) {
+                return clampPage(this.pageNumber, this.maxPage);
+            }
+
             const visualPage = clampPage(
                 Number(this.pageInput ?? this._lastPageInputVisualValue ?? this.pageNumber),
                 this.maxPage,
@@ -4525,6 +4530,20 @@ document.addEventListener('alpine:init', () => {
             }
 
             return this.pageNumber;
+        },
+
+        syncPageInputToCurrentPage() {
+            const normalizedCurrentPage = clampPage(this.pageNumber, this.maxPage);
+
+            if (
+                this.pageInput === normalizedCurrentPage &&
+                this._lastPageInputVisualValue === normalizedCurrentPage
+            ) {
+                return;
+            }
+
+            this.pageInput = normalizedCurrentPage;
+            this._lastPageInputVisualValue = normalizedCurrentPage;
         },
 
         resolveNavigationDirection(targetPage, direction = null) {
@@ -5612,6 +5631,33 @@ document.addEventListener('alpine:init', () => {
             ).length;
         },
 
+        recoverStaleModalLifecycleState() {
+            const openModalCount = this.openModalCount();
+
+            if (openModalCount > 0) {
+                return false;
+            }
+
+            if (!this._isModalLifecycleSettling && this._activeModalIds.size === 0) {
+                return false;
+            }
+
+            this._activeModalIds.clear();
+            this._isModalLifecycleSettling = false;
+
+            if (
+                this.hasRenderablePage() &&
+                !this.isLoadingPage &&
+                this._pendingNavigationRequest === null &&
+                !this._layoutActivePromise &&
+                this._revealTimer === null
+            ) {
+                this.isFittingPage = false;
+            }
+
+            return true;
+        },
+
         clearStaleRevealGuards({ allowUnlock = true } = {}) {
             let didClearState = false;
 
@@ -5890,7 +5936,7 @@ document.addEventListener('alpine:init', () => {
             const remainingModalCount = this.openModalCount();
 
             if (remainingModalCount <= 0) {
-                this._activeModalIds.clear();
+                this.recoverStaleModalLifecycleState();
                 this.scheduleLayoutAfterModalLifecycle(220);
 
                 return;
@@ -5914,6 +5960,45 @@ document.addEventListener('alpine:init', () => {
         trackModalLifecycle(kind, event) {
             const modalId = String(event?.detail?.id ?? '').trim();
             const openModalCount = this.openModalCount();
+            const hasTrackedModalId = modalId !== '' && this._activeModalIds.has(modalId);
+            const hasTrackedModalState =
+                this._activeModalIds.size > 0 || this._isModalLifecycleSettling;
+
+            if (
+                (kind === 'closing' || kind === 'closed') &&
+                modalId === '' &&
+                openModalCount <= 0 &&
+                this._activeModalIds.size === 0
+            ) {
+                if (this._isModalLifecycleSettling) {
+                    this._isModalLifecycleSettling = false;
+                    this.scheduleLayoutAfterModalLifecycle(kind === 'closed' ? 120 : 180);
+                }
+
+                return;
+            }
+
+            if (kind === 'closing') {
+                if (modalId === '' && openModalCount <= 0 && !hasTrackedModalState) {
+                    return;
+                }
+
+                if (modalId !== '' && !hasTrackedModalId && openModalCount <= 0) {
+                    return;
+                }
+            }
+
+            if (kind === 'closed') {
+                if (modalId === '' && openModalCount <= 0 && !hasTrackedModalState) {
+                    return;
+                }
+
+                if (modalId !== '' && !hasTrackedModalId && openModalCount <= 0) {
+                    return;
+                }
+            }
+
+            this._lastModalLifecycleEventAt = Date.now();
 
             if (kind === 'opened') {
                 if (modalId !== '') {
@@ -5965,6 +6050,12 @@ document.addEventListener('alpine:init', () => {
                 this.clearStaleRevealGuards({ allowUnlock: false });
 
                 if (this._isModalLifecycleSettling || this._activeModalIds.size > 0) {
+                    if (this.recoverStaleModalLifecycleState()) {
+                        this.queuePageReveal(layoutToken, 90);
+
+                        return;
+                    }
+
                     this.isFittingPage = true;
                     this.queuePageReveal(layoutToken, 120);
 
@@ -6039,6 +6130,7 @@ document.addEventListener('alpine:init', () => {
                     }
                 }
 
+                this.syncPageInputToCurrentPage();
                 this.isFittingPage = false;
             }, delayMs);
         },
@@ -6067,9 +6159,13 @@ document.addEventListener('alpine:init', () => {
             }
 
             if (this._isModalLifecycleSettling || this._activeModalIds.size > 0) {
-                this.holdPageHiddenForModalLifecycle();
+                if (this.recoverStaleModalLifecycleState()) {
+                    this._bypassNextFitCache = true;
+                } else {
+                    this.holdPageHiddenForModalLifecycle();
 
-                return;
+                    return;
+                }
             }
 
             const isWaitingOnlyForReveal =
@@ -6081,6 +6177,7 @@ document.addEventListener('alpine:init', () => {
                 !this._navigationRevealLocked &&
                 !this._isModalLifecycleSettling &&
                 this._activeModalIds.size === 0 &&
+                Date.now() - this._lastModalLifecycleEventAt > 420 &&
                 this.hasRenderablePage();
 
             if (isWaitingOnlyForReveal) {
