@@ -1668,13 +1668,15 @@
             class="quran-reader-panel min-w-75 relative flex h-[clamp(31rem,92svh,62rem)] w-[min(96vw,60rem)] flex-col overflow-hidden rounded-[1.75rem] border 2xl:w-[min(84vw,40rem)]"
             x-bind:style="readerPanelStyle()"
             x-on:pointerdown.passive="onSwipeStart($event)"
+            x-on:pointermove.window.passive="onSwipeMove($event)"
             x-on:pointerup.window.passive="onSwipeEnd($event)"
             x-on:pointercancel.window.passive="onSwipeCancel()"
             x-on:touchstart.passive="onSwipeStart($event)"
+            x-on:touchmove.window.passive="onSwipeMove($event)"
             x-on:touchend.window.passive="onSwipeEnd($event)"
             x-on:touchcancel.window.passive="onSwipeCancel()"
-            x-on:keyup.left.window.prevent="onGlobalArrowNavigate('left', $event)"
-            x-on:keyup.right.window.prevent="onGlobalArrowNavigate('right', $event)"
+            x-on:keydown.left.window.prevent="onGlobalArrowNavigate('left', $event)"
+            x-on:keydown.right.window.prevent="onGlobalArrowNavigate('right', $event)"
             x-on:quran-go-prev.window="handleRequestedNavigation('prev', $event.detail)"
             x-on:quran-go-next.window="handleRequestedNavigation('next', $event.detail)"
             x-on:quran-go-page.window="handleRequestedNavigation('page', $event.detail)"
@@ -1781,9 +1783,10 @@
                                 x-text="wirdProgressPercentLabel()"
                             ></span>
                             <span
-                                class="translate-y-1.5 duration-500 text-xs text-primary-700 font-bold opacity-0 transition-all"
+                                class="text-primary-700 translate-y-1.5 text-xs font-bold opacity-0 transition-all duration-500"
                                 x-bind:class="{
-                                    'opacity-100! -translate-y-0.25!': (hovered || wirdModeActive) && !isSupportLockActive(),
+                                    'opacity-100! -translate-y-0.25!': (hovered || wirdModeActive) && !
+                                        isSupportLockActive(),
                                     'font-normal!': wirdModeActive,
                                 }"
                             >الورد اليومي</span>

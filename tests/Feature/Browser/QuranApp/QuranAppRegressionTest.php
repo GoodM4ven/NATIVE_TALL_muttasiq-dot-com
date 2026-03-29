@@ -2141,6 +2141,22 @@ JS,
     $initialPage = $currentPageNumber();
     expect($initialPage)->toBeGreaterThan(0);
 
+    $sourceProfiles = $page->script(
+        quranReaderDataScript(
+            <<<'JS'
+(() => ({
+  keyboard: String(data.navigationSourceProfile('keyboard') ?? ''),
+  swipe: String(data.navigationSourceProfile('swipe') ?? ''),
+  chevron: String(data.navigationSourceProfile('chevron') ?? ''),
+}))()
+JS,
+        ),
+    );
+    expect($sourceProfiles)->toBeArray();
+    expect((string) ($sourceProfiles['keyboard'] ?? ''))->toBe('chevron');
+    expect((string) ($sourceProfiles['swipe'] ?? ''))->toBe('chevron');
+    expect((string) ($sourceProfiles['chevron'] ?? ''))->toBe('chevron');
+
     safeClick($page, '.quran-bottom-strip-nav-next');
     waitForScriptWithTimeout(
         $page,
@@ -2161,7 +2177,7 @@ JS,
 
     $page->script(<<<'JS'
 (() => {
-  window.dispatchEvent(new KeyboardEvent('keyup', {
+  window.dispatchEvent(new KeyboardEvent('keydown', {
     bubbles: true,
     cancelable: true,
     key: 'ArrowLeft',
@@ -2178,7 +2194,7 @@ JS);
 
     $page->script(<<<'JS'
 (() => {
-  window.dispatchEvent(new KeyboardEvent('keyup', {
+  window.dispatchEvent(new KeyboardEvent('keydown', {
     bubbles: true,
     cancelable: true,
     key: 'ArrowRight',
@@ -2238,7 +2254,7 @@ JS);
     clientY: gapPoint.y,
   }));
 
-  linesContainer.dispatchEvent(new PointerEvent('pointerup', {
+  window.dispatchEvent(new PointerEvent('pointermove', {
     bubbles: true,
     pointerId: Number({{pointerId}}),
     pointerType: 'mouse',
@@ -2309,7 +2325,7 @@ JS,
     clientY: gapPoint.y,
   }));
 
-  linesContainer.dispatchEvent(new PointerEvent('pointerup', {
+  window.dispatchEvent(new PointerEvent('pointermove', {
     bubbles: true,
     pointerId: Number({{pointerId}}),
     pointerType: 'mouse',
@@ -2405,7 +2421,46 @@ JS,
     );
     $assertReaderRenderable();
 
-    scriptClick($page, '[data-quran-wird-toggle]');
+    safeClick($page, '[data-quran-wird-toggle]');
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript(
+            'Boolean(data.wirdModeActive) || Boolean(document.querySelector("#support-unlock-modal"))',
+        ),
+        true,
+        6_000,
+    );
+    $unlockModalVisible = (bool) $page->script('Boolean(document.querySelector("#support-unlock-modal"))');
+
+    if ($unlockModalVisible) {
+        $page->script(
+            <<<'JS'
+(() => {
+  const buttons = Array.from(document.querySelectorAll('#support-unlock-modal button'));
+  const bypassButton = buttons.find((button) =>
+    String(button.textContent ?? '').includes('أشهد الله أني لا أستطيع دعمكم الآن')
+  );
+
+  if (!(bypassButton instanceof HTMLButtonElement)) {
+    return false;
+  }
+
+  bypassButton.click();
+
+  return true;
+})()
+JS,
+        );
+        waitForScriptWithTimeout($page, modalClosedScript(), true, 8_000);
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript('Boolean(data.isSupportLockActive())'),
+            false,
+            8_000,
+        );
+        safeClick($page, '[data-quran-wird-toggle]');
+    }
+
     waitForScriptWithTimeout($page, quranReaderDataScript('Boolean(data.wirdModeActive)'), true, 6_000);
     $assertReaderRenderable();
 
@@ -2742,7 +2797,7 @@ JS);
     $resetPulseState();
     $page->script(<<<'JS'
 (() => {
-  window.dispatchEvent(new KeyboardEvent('keyup', {
+  window.dispatchEvent(new KeyboardEvent('keydown', {
     bubbles: true,
     cancelable: true,
     key: 'ArrowRight',
@@ -2807,7 +2862,7 @@ JS);
     clientY: gapPoint.y,
   }));
 
-  linesContainer.dispatchEvent(new PointerEvent('pointerup', {
+  window.dispatchEvent(new PointerEvent('pointermove', {
     bubbles: true,
     pointerId: 981,
     pointerType: 'mouse',
@@ -2847,6 +2902,52 @@ it('exits wird mode at boundaries for chevron keyboard and swipe navigation', fu
     waitForScript($page, quranReaderDataScript('data.ready && data.mushafLines.length > 0'), true);
     waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
 
+    $enterWirdMode = function () use ($page): void {
+        safeClick($page, '[data-quran-wird-toggle]');
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript(
+                'Boolean(data.wirdModeActive) || Boolean(document.querySelector("#support-unlock-modal"))',
+            ),
+            true,
+            6_000,
+        );
+        $unlockModalVisible = (bool) $page->script(
+            'Boolean(document.querySelector("#support-unlock-modal"))',
+        );
+
+        if ($unlockModalVisible) {
+            $page->script(
+                <<<'JS'
+(() => {
+  const buttons = Array.from(document.querySelectorAll('#support-unlock-modal button'));
+  const bypassButton = buttons.find((button) =>
+    String(button.textContent ?? '').includes('أشهد الله أني لا أستطيع دعمكم الآن')
+  );
+
+  if (!(bypassButton instanceof HTMLButtonElement)) {
+    return false;
+  }
+
+  bypassButton.click();
+
+  return true;
+})()
+JS,
+            );
+            waitForScriptWithTimeout($page, modalClosedScript(), true, 8_000);
+            waitForScriptWithTimeout(
+                $page,
+                quranReaderDataScript('Boolean(data.isSupportLockActive())'),
+                false,
+                8_000,
+            );
+            safeClick($page, '[data-quran-wird-toggle]');
+        }
+
+        waitForScriptWithTimeout($page, quranReaderDataScript('Boolean(data.wirdModeActive)'), true, 6_000);
+    };
+
     $setWirdSliderToStep = function (int $targetStep) use ($page): int {
         $stepData = $page->script(
             quranReaderDataScript(
@@ -2877,8 +2978,7 @@ JS,
         return (int) $stepData;
     };
 
-    scriptClick($page, '[data-quran-wird-toggle]');
-    waitForScriptWithTimeout($page, quranReaderDataScript('Boolean(data.wirdModeActive)'), true, 6_000);
+    $enterWirdMode();
 
     $page->script(
         quranReaderCommandScript(
@@ -2899,8 +2999,7 @@ JS,
     safeClick($page, '.quran-bottom-strip-nav-next');
     waitForScriptWithTimeout($page, quranReaderDataScript('Boolean(data.wirdModeActive)'), false, 6_000);
 
-    scriptClick($page, '[data-quran-wird-toggle]');
-    waitForScriptWithTimeout($page, quranReaderDataScript('Boolean(data.wirdModeActive)'), true, 6_000);
+    $enterWirdMode();
 
     $firstBoundaryPage = $setWirdSliderToStep(0);
     expect($firstBoundaryPage)->toBeGreaterThan(0);
@@ -2908,7 +3007,7 @@ JS,
 
     $page->script(<<<'JS'
 (() => {
-  window.dispatchEvent(new KeyboardEvent('keyup', {
+  window.dispatchEvent(new KeyboardEvent('keydown', {
     bubbles: true,
     cancelable: true,
     key: 'ArrowRight',
@@ -2917,8 +3016,7 @@ JS,
 JS);
     waitForScriptWithTimeout($page, quranReaderDataScript('Boolean(data.wirdModeActive)'), false, 6_000);
 
-    scriptClick($page, '[data-quran-wird-toggle]');
-    waitForScriptWithTimeout($page, quranReaderDataScript('Boolean(data.wirdModeActive)'), true, 6_000);
+    $enterWirdMode();
 
     $swipeBoundaryPage = $setWirdSliderToStep(0);
     expect($swipeBoundaryPage)->toBeGreaterThan(0);
@@ -2945,7 +3043,7 @@ JS);
     clientY: y,
   }));
 
-  linesContainer.dispatchEvent(new PointerEvent('pointerup', {
+  window.dispatchEvent(new PointerEvent('pointermove', {
     bubbles: true,
     pointerId: 1771,
     pointerType: 'mouse',

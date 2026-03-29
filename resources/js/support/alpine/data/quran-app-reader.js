@@ -94,6 +94,7 @@ const bookmarkHoldDelayMs = 680;
 const managerRowRemoveAnimationDurationMs = 220;
 const managerRowUpdateAnimationDurationMs = 520;
 const managerRowReplaceAnimationDurationMs = 560;
+const swipeActivationThresholdPx = 40;
 const copyPopoverVisibleDurationMs = 920;
 const copiedHighlightVisibleDurationMs = 3000;
 const wordClickSuppressionResetMs = 180;
@@ -2568,7 +2569,7 @@ document.addEventListener('alpine:init', () => {
                 ? requiredPages
                 : Math.min(requiredPages, Math.max(1, activeIndex));
 
-            return `${this.formatReaderNumber(current)} / ${this.formatReaderNumber(requiredPages)}`;
+            return `${this.formatReaderNumber(requiredPages)} / ${this.formatReaderNumber(current)}`;
         },
 
         wirdProgressBarStyle() {
@@ -2913,7 +2914,7 @@ document.addEventListener('alpine:init', () => {
             this.persistWirdState();
         },
 
-        wirdNavigationSourceProfile(source = 'generic') {
+        navigationSourceProfile(source = 'generic') {
             const normalizedSource = String(source ?? 'generic').trim();
 
             if (!normalizedSource) {
@@ -2926,12 +2927,16 @@ document.addEventListener('alpine:init', () => {
                 normalizedSource.endsWith('-keyboard') ||
                 normalizedSource.endsWith('-swipe')
             ) {
-                // Match keyboard/swipe in wird mode to chevron path so fit/cache behavior
-                // stays consistent with the fast in-wird navigation profile.
+                // Keep keyboard/swipe aligned with chevron navigation so all
+                // reader interactions use the same fit/cache heuristics.
                 return 'chevron';
             }
 
             return normalizedSource;
+        },
+
+        wirdNavigationSourceProfile(source = 'generic') {
+            return this.navigationSourceProfile(source);
         },
 
         async stepWird(direction = 'next', source = 'generic') {
@@ -4425,8 +4430,10 @@ document.addEventListener('alpine:init', () => {
         },
 
         async nextPage(source = 'generic') {
+            const sourceProfile = this.navigationSourceProfile(source);
+
             if (this.wirdModeActive) {
-                await this.stepWird('next', source);
+                await this.stepWird('next', sourceProfile);
 
                 return;
             }
@@ -4435,13 +4442,15 @@ document.addEventListener('alpine:init', () => {
 
             await this.navigateToPage(basePage + 1, {
                 direction: 'next',
-                source,
+                source: sourceProfile,
             });
         },
 
         async previousPage(source = 'generic') {
+            const sourceProfile = this.navigationSourceProfile(source);
+
             if (this.wirdModeActive) {
-                await this.stepWird('prev', source);
+                await this.stepWird('prev', sourceProfile);
 
                 return;
             }
@@ -4449,14 +4458,14 @@ document.addEventListener('alpine:init', () => {
             const basePage = this.navigationBasePage();
 
             if (basePage <= 1) {
-                this.requestReaderGateNavigation(source);
+                this.requestReaderGateNavigation(sourceProfile);
 
                 return;
             }
 
             await this.navigateToPage(basePage - 1, {
                 direction: 'prev',
-                source,
+                source: sourceProfile,
             });
         },
 
@@ -6954,6 +6963,43 @@ document.addEventListener('alpine:init', () => {
             return null;
         },
 
+        swipeEventSource(event) {
+            return event?.type?.startsWith('touch') ? 'touch' : 'pointer';
+        },
+
+        swipeNavigationDirection(deltaX, deltaY) {
+            if (Date.now() - this._lastWordHoldAt < 360) {
+                return null;
+            }
+
+            const absX = Math.abs(deltaX);
+            const absY = Math.abs(deltaY);
+
+            if (absX < swipeActivationThresholdPx || absX < absY) {
+                return null;
+            }
+
+            return deltaX > 0 ? 'next' : 'prev';
+        },
+
+        async dispatchSwipeNavigation(direction) {
+            this.resetSwipeState();
+
+            if (direction === 'next') {
+                await this.nextPage('swipe');
+
+                return true;
+            }
+
+            if (direction === 'prev') {
+                await this.previousPage('swipe');
+
+                return true;
+            }
+
+            return false;
+        },
+
         activationAnchorFromEvent(event = null) {
             const targetElement =
                 event?.currentTarget instanceof Element
@@ -6999,7 +7045,7 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            const source = event?.type?.startsWith('touch') ? 'touch' : 'pointer';
+            const source = this.swipeEventSource(event);
 
             if (this.swipe.source && this.swipe.source !== source) {
                 return;
@@ -7023,6 +7069,52 @@ document.addEventListener('alpine:init', () => {
             this.swipe.pointerType = point.pointerType;
             this.hoveredAyahIndex = 0;
             this.hoveredWordIndex = 0;
+        },
+
+        async onSwipeMove(event) {
+            if (!this.swipe.active) {
+                return;
+            }
+
+            if (
+                event?.target?.closest?.('[data-no-swipe]') ||
+                event?.target?.closest?.('input, textarea, select, [contenteditable="true"]')
+            ) {
+                this.resetSwipeState();
+
+                return;
+            }
+
+            const source = this.swipeEventSource(event);
+
+            if (this.swipe.source && this.swipe.source !== source) {
+                this.resetSwipeState();
+
+                return;
+            }
+
+            const point = this.swipePoint(event);
+
+            if (!point) {
+                return;
+            }
+
+            if (this.swipe.pointerId !== null && point.pointerId !== this.swipe.pointerId) {
+                this.resetSwipeState();
+
+                return;
+            }
+
+            const direction = this.swipeNavigationDirection(
+                point.x - this.swipe.startX,
+                point.y - this.swipe.startY,
+            );
+
+            if (!direction) {
+                return;
+            }
+
+            await this.dispatchSwipeNavigation(direction);
         },
 
         resetSwipeState() {
@@ -7049,7 +7141,7 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            const source = event?.type?.startsWith('touch') ? 'touch' : 'pointer';
+            const source = this.swipeEventSource(event);
 
             if (this.swipe.source && this.swipe.source !== source) {
                 this.resetSwipeState();
@@ -7071,28 +7163,18 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            const deltaX = point.x - this.swipe.startX;
-            const deltaY = point.y - this.swipe.startY;
-            const absX = Math.abs(deltaX);
-            const absY = Math.abs(deltaY);
+            const direction = this.swipeNavigationDirection(
+                point.x - this.swipe.startX,
+                point.y - this.swipe.startY,
+            );
 
-            this.resetSwipeState();
-
-            if (Date.now() - this._lastWordHoldAt < 360) {
-                return;
-            }
-
-            if (absX < 40 || absX < absY) {
-                return;
-            }
-
-            if (deltaX > 0) {
-                await this.nextPage('swipe');
+            if (!direction) {
+                this.resetSwipeState();
 
                 return;
             }
 
-            await this.previousPage('swipe');
+            await this.dispatchSwipeNavigation(direction);
         },
 
         onSwipeCancel() {
