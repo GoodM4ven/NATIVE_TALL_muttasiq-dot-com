@@ -5645,16 +5645,6 @@ document.addEventListener('alpine:init', () => {
             this._activeModalIds.clear();
             this._isModalLifecycleSettling = false;
 
-            if (
-                this.hasRenderablePage() &&
-                !this.isLoadingPage &&
-                this._pendingNavigationRequest === null &&
-                !this._layoutActivePromise &&
-                this._revealTimer === null
-            ) {
-                this.isFittingPage = false;
-            }
-
             return true;
         },
 
@@ -5765,6 +5755,8 @@ document.addEventListener('alpine:init', () => {
             this._modalLayoutResumeTimer = window.setTimeout(
                 () => {
                     this._modalLayoutResumeTimer = null;
+                    this.clearLayoutTimers();
+                    this.isFittingPage = true;
                     this._isModalLifecycleSettling = false;
                     this._bypassNextFitCache = true;
                     void this.layoutPageGuaranteed({ revealDelayMs: 240, maxAttempts: 5 });
