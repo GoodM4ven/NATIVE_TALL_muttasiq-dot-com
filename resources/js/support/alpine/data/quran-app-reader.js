@@ -11704,6 +11704,12 @@ document.addEventListener('alpine:init', () => {
                     useIdleFit: false,
                 });
             }
+            this.schedulePendingModalCloseFit(targetPage, {
+                retries: 20,
+                delayMs: 72,
+                revealDelayMs: 180,
+                maxAttempts: 5,
+            });
             this.activeWordIndex = 0;
         },
 
@@ -11732,6 +11738,12 @@ document.addEventListener('alpine:init', () => {
                     useIdleFit: false,
                 });
             }
+            this.schedulePendingModalCloseFit(targetPage, {
+                retries: 20,
+                delayMs: 72,
+                revealDelayMs: 180,
+                maxAttempts: 5,
+            });
             this.activeAyahIndex = 0;
             this.activeWordIndex = 0;
             this.recordNavigationHistory({

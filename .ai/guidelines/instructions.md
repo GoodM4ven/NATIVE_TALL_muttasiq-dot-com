@@ -57,6 +57,9 @@ This shared source code base is representing the web version primarily, the one 
 
 ## Quran Reader Fitting and Cache (Critical)
 - Main implementation is in [resources/js/support/alpine/data/quran-app-reader.js].
+- Bootstrap and rebind flow:
+  - Register native keyboard/swipe listeners through `registerNativeInputListeners()` on initial mount and again after Livewire `morphed` hooks so reader navigation and fit scheduling keep working after DOM replacement.
+  - Reinitialize layout observers after morphs and schedule a fresh layout on reader `switch-view` entries.
 - Rendering visibility is controlled by `pageFitState()`:
   - `fading-out` when `isTransitioningOutPage` is true.
   - `fitting` when `isFittingPage` is true (this state intentionally hides `.quran-page-lines`).
@@ -66,10 +69,15 @@ This shared source code base is representing the web version primarily, the one 
   - `layoutPageGuaranteed()` retries `layoutPage()` until fit run count increases for the current page.
   - `layoutPage()` runs font readiness + text stabilization + `fitPageToViewport()` then `queuePageReveal()`.
   - `queuePageReveal()` is the final gate that must flip `isFittingPage` to false.
+- Fit execution details:
+  - `fitPageToViewport()` resets CSS fit variables first, measures available frame width/height, resolves the page-specific fit profile, then searches the best compression layout + scale pair before applying `--quran-page-scale`.
+  - `measureRenderedBounds()` prefers robust width for centered ayah pages so a single outlier line does not poison the fit score.
+  - `applySafetyScaleForCurrentPageOverflow()` is only a post-fit overflow guard; it is not the primary fitting mechanism.
 - Fit cache strategy:
   - Cache map is `_fitResultByContext`, persisted in localStorage key `quran-reader-fit-cache-v3`.
   - Cache key includes page number, breakpoint, viewport buckets, modal state, layout mode, line count, font families, and fit profile bounds.
-  - Cache is bypassed during modal lifecycle (`_bypassNextFitCache`, modal settling, or open modals) and during suppressed persistence windows (`_suppressFitCacheWriteUntil`).
+  - Cache reads are bypassed during modal lifecycle (`_bypassNextFitCache`, modal settling, or open modals).
+  - `_suppressFitCacheWriteUntil` suppresses persisted cache writes only. It should not disable healthy in-memory cache reuse for the same stable context.
   - Fit sanity check (`scheduleFitSanityCheck`) can invalidate suspicious fit entries and force a re-layout.
 - Modal and navigation guards that can keep page hidden:
   - `_isModalLifecycleSettling` + `_activeModalIds` + `openModalCount()`.
@@ -88,8 +96,13 @@ This shared source code base is representing the web version primarily, the one 
   - Slider commits must prefer a fresh last `input` step (`_wirdSliderPendingCommitStep`/`_wirdSliderLastInputStep`) over `change` payload, but only when input is recent; otherwise use direct `change` step.
   - Keep slider focus hygiene: release/commit must blur `.quran-page-slider` so keyboard arrows always route through `onGlobalArrowNavigate()` instead of getting trapped by range-input native handling.
   - Keep page-event source fidelity in `handleRequestedNavigation()`: preserve incoming `detail.source` (especially `page-jump` and `page-slider-commit`) so navigation heuristics and history attribution do not diverge.
+- History/bookmark manager close handling:
+  - Manager-driven jumps (`goToHistoryEntry()` and `goToBookmark()`) must force a first immediate fit and also queue `schedulePendingModalCloseFit(targetPage, ...)`.
+  - This deferred post-modal fit is required because Filament modal lifecycle can outlive the initial navigation by a few frames; without it, bookmark-navigation replay from history can land on a loaded page that never fully fills the frame.
+  - Treat bookmark-manager navigation and replayed `bookmark-navigation` history entries as modal-close-sensitive fit paths, not as plain generic page jumps.
 - When touching this area, always run the focused browser regression:
   - `lands on the final wird slider page and keeps the re-entered completed page visible`
+  - `keeps quran text fitted and visible across all reader navigation paths`
   - This path covers support unlock modal, fast slider scrub to final wird step, completion exit, and re-entry visibility.
 
 ## Finishing

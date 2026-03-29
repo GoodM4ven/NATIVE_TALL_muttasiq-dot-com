@@ -2547,9 +2547,63 @@ JS,
         5_000,
     );
     waitForScriptWithTimeout($page, quranReaderDataScript('Number(data.navigationHistory.length ?? 0) >= 1'), true, 6_000);
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript("String(data.navigationHistory[0]?.source ?? '')"),
+        'bookmark-navigation',
+        6_000,
+    );
     safeClick($page, '#quran-reader-history-modal [data-quran-history-go]');
     waitForScriptWithTimeout($page, modalClosedScript(), true, 6_000);
     $assertReaderRenderable();
+    waitForScriptWithTimeout(
+        $page,
+        <<<'JS'
+(() => {
+  const frame = document.querySelector('[x-ref="pageFrame"]');
+  const lines = document.querySelector('.quran-page-lines');
+
+  if (!frame || !lines) {
+    return false;
+  }
+
+  const frameRect = frame.getBoundingClientRect();
+  const linesRect = lines.getBoundingClientRect();
+
+  if (frameRect.height <= 0 || linesRect.height <= 0) {
+    return false;
+  }
+
+  return (linesRect.height / frameRect.height) >= 0.76;
+})()
+JS,
+        true,
+        6_000,
+    );
+    waitForScriptWithTimeout(
+        $page,
+        <<<'JS'
+(() => {
+  const frame = document.querySelector('[x-ref="pageFrame"]');
+  const lines = document.querySelector('.quran-page-lines');
+
+  if (!frame || !lines) {
+    return false;
+  }
+
+  const frameRect = frame.getBoundingClientRect();
+  const linesRect = lines.getBoundingClientRect();
+
+  if (frameRect.width <= 0 || linesRect.width <= 0) {
+    return false;
+  }
+
+  return (linesRect.width / frameRect.width) >= 0.8;
+})()
+JS,
+        true,
+        6_000,
+    );
 
     scriptClick($page, '.quran-soorah-trigger');
     waitForScriptWithTimeout($page, 'Boolean(document.querySelector("#quran-reader-search-modal"))', true, 5_000);
