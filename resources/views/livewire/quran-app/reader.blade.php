@@ -523,9 +523,6 @@
                 radial-gradient(58% 64% at 54% 34%, rgb(251 191 36 / 28%) 0%, transparent 64%);
             mix-blend-mode: screen;
             opacity: 0.66;
-            animation:
-                quran-wird-aura-water-flow 7.6s linear infinite,
-                quran-wird-aura-water-breathe 4.8s ease-in-out infinite;
         }
 
         .quran-wird-progress-aura-reflect {
@@ -545,7 +542,6 @@
             mix-blend-mode: plus-lighter;
             opacity: 0.42;
             filter: saturate(1.2);
-            animation: quran-wird-aura-reflect-drift 6.8s ease-in-out infinite;
         }
 
         .quran-wird-progress-button:hover .quran-wird-progress-aura-water,
@@ -636,45 +632,48 @@
         @keyframes quran-wird-aura-water-flow {
             0% {
                 background-position: 12% 28%, 86% 74%, 54% 38%;
+                opacity: 1;
             }
 
             50% {
                 background-position: 34% 76%, 22% 22%, 66% 64%;
+                opacity: 0;
             }
 
             100% {
                 background-position: 12% 28%, 86% 74%, 54% 38%;
+                opacity: 1;
             }
         }
 
         @keyframes quran-wird-aura-water-breathe {
             0% {
                 filter: saturate(1.1) brightness(0.98);
+                opacity: 1;
             }
 
             55% {
                 filter: saturate(1.34) brightness(1.05);
+                opacity: 0;
             }
 
             100% {
                 filter: saturate(1.1) brightness(0.98);
+                opacity: 1;
             }
         }
 
         @keyframes quran-wird-aura-reflect-drift {
             0% {
                 background-position: 12% 48%, 18% 60%;
-                opacity: 0.34;
             }
 
             48% {
                 background-position: 62% 42%, 64% 38%;
-                opacity: 0.58;
             }
 
             100% {
                 background-position: 12% 48%, 18% 60%;
-                opacity: 0.34;
             }
         }
 

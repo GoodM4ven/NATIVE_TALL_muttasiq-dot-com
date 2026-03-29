@@ -389,9 +389,9 @@ class Reader extends Component implements HasActions, HasSchemas
     {
         return new HtmlString(
             '<div class="space-y-4 text-right text-sm! leading-7">'
-            .'<p>تطوير المزايا المتقدمة، وإتاحة التطبيق على المخدّمات والمنصات المختلفة، كل هذا يتطلب <strong>وقتًا وجهدًا وتكلفة مستمرة</strong>، بارك الله فيكم... ولذلك نودّ منكم على الأقلّ محاولة التبرع لتطوير تطبيق متسق باستخدام إحدى المنصات المتاحة لذلك، وجزاكم الله خيرا.</p>'
+            .'<p>تطوير المزايا المتقدمة، وإتاحة التطبيق على المخدّمات والمنصات بأجهزتها المختلفة، كل هذا يتطلب <strong>وقتًا وجهدًا وتكلفة مستمرة</strong>، بارك الله فيكم... ولذلك نودّ منكم على الأقلّ محاولة التبرع لتطوير تطبيق متسق باستخدام إحدى المنصات المتاحة لذلك، وجزاكم الله خيرا.</p>'
             .'<div class="rounded-xl border border-gray-200/70 bg-white/70 p-3 text-sm">'
-            .'<p class="mb-2 font-semibold text-gray-900">روابط الدعم:</p>'
+            .'<p class="mb-2 font-semibold text-gray-900">روابط منصات الدعم:</p>'
             .'<div class="flex flex-wrap items-center justify-end gap-2">'
             .$this->supportUnlockLinkMarkup('Buy Me a Coffee', 'https://buymeacoffee.com/goodm4ven')
             .$this->supportUnlockLinkMarkup('Patreon', 'https://patreon.com/GoodM4ven')

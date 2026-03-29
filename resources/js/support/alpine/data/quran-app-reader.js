@@ -155,7 +155,6 @@ const supportUnlockModePermanent = 'permanent';
 const supportUnlockModeWeekly = 'weekly';
 const supportUnlockWeeklyDurationMs = 7 * 24 * 60 * 60 * 1000;
 const supportLockClosedOutlineIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" class="quran-support-lock-badge__icon-svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12 1.5a5.25 5.25 0 0 0-5.25 5.25v3a3 3 0 0 0-3 3v6.75a3 3 0 0 0 3 3h10.5a3 3 0 0 0 3-3v-6.75a3 3 0 0 0-3-3v-3c0-2.9-2.35-5.25-5.25-5.25Zm3.75 8.25v-3a3.75 3.75 0 1 0-7.5 0v3h7.5Z" clip-rule="evenodd" /></svg>`;
-const supportLockOpenOutlineIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" class="quran-support-lock-badge__icon-svg" fill="none" viewBox="0 0 24 24" stroke-width="1.9" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5V6.75a4.5 4.5 0 1 1 9 0v3.75M3.75 21.75h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H3.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>`;
 const wirdFrequencyModeMonthly = 0;
 const wirdFrequencyModeDaily = 1;
 const wirdKhatmatTargetMin = 1;
@@ -546,6 +545,78 @@ const cacheAssetResponse = async ({ url, cacheName }) => {
     }
 };
 
+const supportLockLivewireMorphedEventName = 'quran-support-lock-livewire-morphed';
+
+const ensureSupportLockLivewireMorphBridge = (() => {
+    let isInstalled = false;
+
+    const emitSupportLockLivewireMorphed = () => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+
+        window.dispatchEvent(new CustomEvent(supportLockLivewireMorphedEventName));
+    };
+
+    const install = () => {
+        if (isInstalled || !window.Livewire?.hook) {
+            return;
+        }
+
+        let didRegisterAnyHook = false;
+        const scheduleSupportLockSyncSignal = () => {
+            if (typeof window === 'undefined') {
+                return;
+            }
+
+            window.requestAnimationFrame(() => {
+                emitSupportLockLivewireMorphed();
+            });
+        };
+
+        try {
+            window.Livewire.hook('request', ({ succeed, fail }) => {
+                if (typeof succeed === 'function') {
+                    succeed(() => {
+                        scheduleSupportLockSyncSignal();
+                    });
+                }
+
+                if (typeof fail === 'function') {
+                    fail(() => {
+                        scheduleSupportLockSyncSignal();
+                    });
+                }
+            });
+            didRegisterAnyHook = true;
+        } catch (_) {
+            //
+        }
+
+        ['morphed', 'partial.morphed', 'morph.updated', 'morph.added'].forEach((hookName) => {
+            try {
+                window.Livewire.hook(hookName, () => {
+                    emitSupportLockLivewireMorphed();
+                });
+                didRegisterAnyHook = true;
+            } catch (_) {
+                //
+            }
+        });
+
+        if (didRegisterAnyHook) {
+            isInstalled = true;
+        }
+    };
+
+    if (typeof document !== 'undefined') {
+        document.addEventListener('livewire:init', install, { once: true });
+        document.addEventListener('livewire:initialized', install, { once: true });
+    }
+
+    return install;
+})();
+
 document.addEventListener('alpine:init', () => {
     window.Alpine.data('quranAppReader', (config = {}) => ({
         api: {
@@ -726,6 +797,8 @@ document.addEventListener('alpine:init', () => {
         _searchStreamObserver: null,
         _lastSearchStreamPayloadRaw: '',
         _stopLivewireMorphedHook: null,
+        _supportLockTargetsSyncRaf: null,
+        _onSupportLockLivewireMorphed: null,
         _searchResultsAutoAnimateStop: null,
         _historyRowsAutoAnimateStop: null,
         _bookmarksRowsAutoAnimateStop: null,
@@ -860,6 +933,14 @@ document.addEventListener('alpine:init', () => {
             };
 
             window.addEventListener('switch-view', this._onSwitchView);
+            ensureSupportLockLivewireMorphBridge();
+            this._onSupportLockLivewireMorphed = () => {
+                this.queueSupportLockTargetsUiSync();
+            };
+            window.addEventListener(
+                supportLockLivewireMorphedEventName,
+                this._onSupportLockLivewireMorphed,
+            );
 
             if (this.$wire?.$hook) {
                 this._stopLivewireMorphedHook = this.$wire.$hook('morphed', () => {
@@ -869,6 +950,7 @@ document.addEventListener('alpine:init', () => {
 
                     this.$nextTick(() => {
                         this.initializeLayoutObservers();
+                        this.queueSupportLockTargetsUiSync();
                     });
                     this.scheduleLayout({ revealDelayMs: 170 });
                 });
@@ -876,7 +958,7 @@ document.addEventListener('alpine:init', () => {
 
             this.$nextTick(() => {
                 this.initializeLayoutObservers();
-                this.syncSupportLockTargetsUi();
+                this.queueSupportLockTargetsUiSync();
             });
             this.bootstrap();
         },
@@ -893,6 +975,19 @@ document.addEventListener('alpine:init', () => {
 
             if (this._onSwitchView) {
                 window.removeEventListener('switch-view', this._onSwitchView);
+            }
+
+            if (this._onSupportLockLivewireMorphed) {
+                window.removeEventListener(
+                    supportLockLivewireMorphedEventName,
+                    this._onSupportLockLivewireMorphed,
+                );
+                this._onSupportLockLivewireMorphed = null;
+            }
+
+            if (this._supportLockTargetsSyncRaf !== null) {
+                cancelAnimationFrame(this._supportLockTargetsSyncRaf);
+                this._supportLockTargetsSyncRaf = null;
             }
 
             if (this._layoutRaf !== null) {
@@ -1580,11 +1675,37 @@ document.addEventListener('alpine:init', () => {
             badgeElement.className = 'quran-support-lock-badge';
             badgeElement.innerHTML = `
                 <span class="quran-support-lock-badge__icon quran-support-lock-badge__icon--locked">${supportLockClosedOutlineIconSvg}</span>
-                <span class="quran-support-lock-badge__icon quran-support-lock-badge__icon--unlocked">${supportLockOpenOutlineIconSvg}</span>
             `;
             targetElement.appendChild(badgeElement);
 
             return badgeElement;
+        },
+
+        removeSupportLockBadge(targetElement) {
+            if (!(targetElement instanceof HTMLElement)) {
+                return;
+            }
+
+            const existingBadge = targetElement.querySelector('[data-support-lock-badge]');
+
+            if (existingBadge instanceof HTMLElement) {
+                existingBadge.remove();
+            }
+        },
+
+        queueSupportLockTargetsUiSync() {
+            if (typeof window === 'undefined') {
+                return;
+            }
+
+            if (this._supportLockTargetsSyncRaf !== null) {
+                return;
+            }
+
+            this._supportLockTargetsSyncRaf = window.requestAnimationFrame(() => {
+                this._supportLockTargetsSyncRaf = null;
+                this.syncSupportLockTargetsUi();
+            });
         },
 
         syncSupportLockTargetsUi() {
@@ -1603,17 +1724,14 @@ document.addEventListener('alpine:init', () => {
                 this.bindSupportLockTarget(targetElement);
                 targetElement.classList.add('quran-support-lock-target');
                 targetElement.classList.toggle('quran-support-lock-target--locked', isLocked);
-                targetElement.classList.toggle('quran-support-lock-target--unlocked', !isLocked);
-                targetElement.setAttribute('aria-disabled', isLocked ? 'true' : 'false');
 
-                const badgeElement = this.ensureSupportLockBadge(targetElement);
-                const captionElement = badgeElement?.querySelector(
-                    '.quran-support-lock-badge__caption',
-                );
-                const captionText = targetElement.getAttribute('data-support-lock-caption') ?? '';
-
-                if (captionElement instanceof HTMLElement) {
-                    captionElement.textContent = captionText;
+                if (isLocked) {
+                    targetElement.setAttribute('aria-disabled', 'true');
+                    this.ensureSupportLockBadge(targetElement);
+                } else {
+                    targetElement.removeAttribute('aria-disabled');
+                    targetElement.classList.remove('quran-support-lock-target--unlocked');
+                    this.removeSupportLockBadge(targetElement);
                 }
 
                 const isNaturallyFocusable = [

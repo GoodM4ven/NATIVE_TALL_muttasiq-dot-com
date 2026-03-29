@@ -49,8 +49,6 @@
         padding-bottom: 1rem;
     }
 
-    #support-unlock-modal .fi-modal-heading {}
-
     #support-unlock-modal .fi-modal-description {
         line-height: 1.8;
         opacity: 0.9;
@@ -1031,6 +1029,7 @@
         block-size: 2.35rem;
         transform: translate(-50%, -52%) scale(0.92);
         background: color-mix(in srgb, var(--warning-100) 32%, transparent);
+        color: color-mix(in srgb, var(--primary-900) 88%, var(--gray-900));
         backdrop-filter: blur(4px) saturate(1.04);
         -webkit-backdrop-filter: blur(4px) saturate(1.04);
     }
