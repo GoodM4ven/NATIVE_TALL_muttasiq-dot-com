@@ -1781,10 +1781,10 @@
                                 x-text="wirdProgressPercentLabel()"
                             ></span>
                             <span
-                                class="text-success-200 translate-y-2.5 text-xs font-bold opacity-0 transition-all"
+                                class="translate-y-1.5 duration-500 text-xs text-primary-700 font-bold opacity-0 transition-all"
                                 x-bind:class="{
-                                    'opacity-100! -translate-y-0.5!': (hovered || wirdModeActive) && !isSupportLockActive(),
-                                    'text-white! font-normal!': wirdModeActive,
+                                    'opacity-100! -translate-y-0.25!': (hovered || wirdModeActive) && !isSupportLockActive(),
+                                    'font-normal!': wirdModeActive,
                                 }"
                             >الورد اليومي</span>
                             <span
