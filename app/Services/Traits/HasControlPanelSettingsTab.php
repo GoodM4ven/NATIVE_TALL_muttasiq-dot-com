@@ -65,7 +65,14 @@ trait HasControlPanelSettingsTab
 
                         Components\Checkbox::make(Setting::DOES_ENABLE_VISUAL_ENHANCEMENTS)
                             ->default((bool) ($generalDefinitions[Setting::DOES_ENABLE_VISUAL_ENHANCEMENTS]['default'] ?? true))
-                            ->extraFieldWrapperAttributes(['class' => 'relative z-20 mt-1 sm:mt-3 md:mt-0'])
+                            ->extraFieldWrapperAttributes([
+                                'class' => 'quran-support-lock-target relative z-20 mt-1 sm:mt-3 md:mt-0',
+                                'data-support-lock-target' => 'enable-visual-enhancements',
+                                'data-support-lock-caption' => 'هذا الخيار يحتاج تأكيد دعم المشروع',
+                                'x-on:pointerdown.capture' => 'if (!$el.classList.contains(`quran-support-lock-target--locked`)) { return; } $event.preventDefault(); $event.stopPropagation(); window.dispatchEvent(new CustomEvent(`open-support-unlock-modal`));',
+                                'x-on:click.capture' => 'if (!$el.classList.contains(`quran-support-lock-target--locked`)) { return; } $event.preventDefault(); $event.stopPropagation(); window.dispatchEvent(new CustomEvent(`open-support-unlock-modal`));',
+                                'x-on:keydown.capture' => 'if (![`Enter`, ` `].includes($event.key) || !$el.classList.contains(`quran-support-lock-target--locked`)) { return; } $event.preventDefault(); $event.stopPropagation(); window.dispatchEvent(new CustomEvent(`open-support-unlock-modal`));',
+                            ])
                             ->label($generalDefinitions[Setting::DOES_ENABLE_VISUAL_ENHANCEMENTS]['label']),
 
                         Components\Checkbox::make(Setting::DOES_SKIP_GUIDANCE_PANELS)
@@ -161,7 +168,14 @@ trait HasControlPanelSettingsTab
                                 )
                                 ->native(false)
                                 ->live()
-                                ->extraFieldWrapperAttributes(['class' => 'quran-wird-khatmat-field'])
+                                ->extraFieldWrapperAttributes([
+                                    'class' => 'quran-support-lock-target quran-wird-khatmat-field',
+                                    'data-support-lock-target' => 'wird-khatmat-target',
+                                    'data-support-lock-caption' => 'هذا الخيار يحتاج تأكيد دعم المشروع',
+                                    'x-on:pointerdown.capture' => 'if (!$el.classList.contains(`quran-support-lock-target--locked`)) { return; } $event.preventDefault(); $event.stopPropagation(); window.dispatchEvent(new CustomEvent(`open-support-unlock-modal`));',
+                                    'x-on:click.capture' => 'if (!$el.classList.contains(`quran-support-lock-target--locked`)) { return; } $event.preventDefault(); $event.stopPropagation(); window.dispatchEvent(new CustomEvent(`open-support-unlock-modal`));',
+                                    'x-on:keydown.capture' => 'if (![`Enter`, ` `].includes($event.key) || !$el.classList.contains(`quran-support-lock-target--locked`)) { return; } $event.preventDefault(); $event.stopPropagation(); window.dispatchEvent(new CustomEvent(`open-support-unlock-modal`));',
+                                ])
                                 ->extraAttributes(['class' => 'quran-wird-khatmat-select'])
                                 ->selectablePlaceholder(false)
                                 ->helperText(

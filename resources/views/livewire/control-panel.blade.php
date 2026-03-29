@@ -40,6 +40,15 @@
             },
         }"
         x-on:open-control-panel-modal.window="$wire.openControlPanelModal(window.getAthkarSettingsFromStorage?.() ?? {}, $event.detail?.tab ?? null)"
+        x-on:open-support-unlock-modal.window="
+            window.dispatchEvent(new CustomEvent('close-modal', {
+                detail: { id: controlPanelModalId }
+            }));
+            isControlPanelOpen = false;
+            requestAnimationFrame(() => {
+                window.dispatchEvent(new CustomEvent('open-support-unlock-modal-ready'));
+            });
+        "
         x-on:athkar-reader-maintenance.window="runReaderMaintenancePulse()"
         x-on:x-modal-opened.window="if ($event.detail?.id === controlPanelModalId) isControlPanelOpen = true;"
         x-on:close-modal.window="if ($event.detail?.id === controlPanelModalId) isControlPanelOpen = false;"

@@ -149,6 +149,13 @@ const navigationHistoryStorageKey = 'quran-reader-navigation-history-v1';
 const bookmarksStorageKey = 'quran-reader-bookmarks-v1';
 const wirdProgressStorageKey = 'quran-reader-wird-progress-v1';
 const wirdProgressStorageVersion = 1;
+const supportUnlockStorageKey = 'quran-support-unlock-v1';
+const supportUnlockStorageVersion = 1;
+const supportUnlockModePermanent = 'permanent';
+const supportUnlockModeWeekly = 'weekly';
+const supportUnlockWeeklyDurationMs = 7 * 24 * 60 * 60 * 1000;
+const supportLockClosedOutlineIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" class="quran-support-lock-badge__icon-svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12 1.5a5.25 5.25 0 0 0-5.25 5.25v3a3 3 0 0 0-3 3v6.75a3 3 0 0 0 3 3h10.5a3 3 0 0 0 3-3v-6.75a3 3 0 0 0-3-3v-3c0-2.9-2.35-5.25-5.25-5.25Zm3.75 8.25v-3a3.75 3.75 0 1 0-7.5 0v3h7.5Z" clip-rule="evenodd" /></svg>`;
+const supportLockOpenOutlineIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" class="quran-support-lock-badge__icon-svg" fill="none" viewBox="0 0 24 24" stroke-width="1.9" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5V6.75a4.5 4.5 0 1 1 9 0v3.75M3.75 21.75h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H3.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>`;
 const wirdFrequencyModeMonthly = 0;
 const wirdFrequencyModeDaily = 1;
 const wirdKhatmatTargetMin = 1;
@@ -394,6 +401,56 @@ const writeLastPageNumber = (pageNumber) => {
     writeLocalStorage(lastPageStorageKey, Math.max(1, Math.trunc(Number(pageNumber) || 1)));
 };
 
+const normalizeSupportUnlockState = (value = {}) => {
+    const normalizedValue =
+        value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+    const normalizedMode = String(normalizedValue?.mode ?? '')
+        .trim()
+        .toLowerCase();
+    const grantedAt = Math.max(0, Math.trunc(Number(normalizedValue?.granted_at ?? Date.now())));
+    const now = Date.now();
+
+    if (normalizedMode === supportUnlockModePermanent) {
+        return {
+            version: supportUnlockStorageVersion,
+            mode: supportUnlockModePermanent,
+            granted_at: grantedAt || now,
+            expires_at: null,
+        };
+    }
+
+    if (normalizedMode === supportUnlockModeWeekly) {
+        const rawExpiry = Number(normalizedValue?.expires_at ?? 0);
+        const expiresAt = Math.max(0, Math.trunc(rawExpiry));
+
+        if (expiresAt > now) {
+            return {
+                version: supportUnlockStorageVersion,
+                mode: supportUnlockModeWeekly,
+                granted_at: grantedAt || now,
+                expires_at: expiresAt,
+            };
+        }
+    }
+
+    return {
+        version: supportUnlockStorageVersion,
+        mode: 'locked',
+        granted_at: null,
+        expires_at: null,
+    };
+};
+
+const readSupportUnlockState = () =>
+    normalizeSupportUnlockState(readLocalStorage(supportUnlockStorageKey, null));
+
+const writeSupportUnlockState = (value = {}) => {
+    const normalized = normalizeSupportUnlockState(value);
+    writeLocalStorage(supportUnlockStorageKey, normalized);
+
+    return normalized;
+};
+
 const openCacheSafely = async (cacheName) => {
     if (!cacheName || typeof window === 'undefined' || typeof window.caches === 'undefined') {
         return null;
@@ -580,6 +637,11 @@ document.addEventListener('alpine:init', () => {
             persistRequested: false,
             fitCacheBreakpoint: '',
         },
+        supportUnlock: {
+            mode: 'locked',
+            grantedAt: null,
+            expiresAt: null,
+        },
         search: {
             query: '',
             minQueryLength: 5,
@@ -651,6 +713,7 @@ document.addEventListener('alpine:init', () => {
         _fitResultByContext: new Map(),
         _fitSanityCheckTimer: null,
         _fitCachePersistWriteTimer: null,
+        _supportUnlockExpiryTimer: null,
         _fitCacheBreakpoint: '',
         _bypassNextFitCache: false,
         _suppressFitCacheWriteUntil: 0,
@@ -729,6 +792,7 @@ document.addEventListener('alpine:init', () => {
                     ? this.resolveControlPanelSettingsWithUserOverrides.bind(this)
                     : (defaults = {}) => defaults;
             this.applyControlPanelSettings(resolveControlPanelSettings(this.initialSettings));
+            this.syncSupportUnlockState({ persist: false });
             this.buildSurahDirectory(
                 Array.isArray(this.initialPayload.surahDirectory) &&
                     this.initialPayload.surahDirectory.length > 0
@@ -812,6 +876,7 @@ document.addEventListener('alpine:init', () => {
 
             this.$nextTick(() => {
                 this.initializeLayoutObservers();
+                this.syncSupportLockTargetsUi();
             });
             this.bootstrap();
         },
@@ -941,6 +1006,11 @@ document.addEventListener('alpine:init', () => {
             if (this._fitCachePersistWriteTimer !== null) {
                 clearTimeout(this._fitCachePersistWriteTimer);
                 this._fitCachePersistWriteTimer = null;
+            }
+
+            if (this._supportUnlockExpiryTimer !== null) {
+                clearTimeout(this._supportUnlockExpiryTimer);
+                this._supportUnlockExpiryTimer = null;
             }
 
             this.hideCopyFeedback();
@@ -1283,6 +1353,7 @@ document.addEventListener('alpine:init', () => {
 
         async bootstrap() {
             await this.ensurePersistentStorage();
+            this.syncSupportLockTargetsUi();
             this.syncFitCacheBreakpoint({ persist: false });
             this.hydratePersistedFitCache();
             await this.ensureCurrentPageLoaded();
@@ -1307,6 +1378,262 @@ document.addEventListener('alpine:init', () => {
             } catch (_) {
                 this.storage.isPersisted = false;
             }
+        },
+
+        supportUnlockMode() {
+            return String(this.supportUnlock?.mode ?? 'locked')
+                .trim()
+                .toLowerCase();
+        },
+
+        isSupportUnlockPermanent() {
+            return this.supportUnlockMode() === supportUnlockModePermanent;
+        },
+
+        isSupportUnlockWeeklyActive(referenceTime = Date.now()) {
+            if (this.supportUnlockMode() !== supportUnlockModeWeekly) {
+                return false;
+            }
+
+            const expiresAt = Number(this.supportUnlock?.expiresAt ?? 0);
+
+            return Number.isFinite(expiresAt) && expiresAt > Math.trunc(Number(referenceTime) || 0);
+        },
+
+        isSupportLockActive() {
+            if (this.isSupportUnlockPermanent()) {
+                return false;
+            }
+
+            if (this.isSupportUnlockWeeklyActive()) {
+                return false;
+            }
+
+            if (this.supportUnlockMode() === supportUnlockModeWeekly) {
+                this.syncSupportUnlockState({ persist: true });
+            }
+
+            return true;
+        },
+
+        scheduleSupportUnlockExpiryTimer() {
+            if (this._supportUnlockExpiryTimer !== null) {
+                clearTimeout(this._supportUnlockExpiryTimer);
+                this._supportUnlockExpiryTimer = null;
+            }
+
+            if (!this.isSupportUnlockWeeklyActive()) {
+                return;
+            }
+
+            const expiresAt = Math.max(0, Math.trunc(Number(this.supportUnlock?.expiresAt ?? 0)));
+            const remainingMs = expiresAt - Date.now();
+
+            if (remainingMs <= 0) {
+                this.syncSupportUnlockState({ persist: true });
+                this.syncSupportLockTargetsUi();
+
+                return;
+            }
+
+            this._supportUnlockExpiryTimer = window.setTimeout(
+                () => {
+                    this._supportUnlockExpiryTimer = null;
+                    this.syncSupportUnlockState({ persist: true });
+                    this.syncSupportLockTargetsUi();
+                },
+                Math.max(900, remainingMs),
+            );
+        },
+
+        syncSupportUnlockState({ persist = true } = {}) {
+            const normalized = readSupportUnlockState();
+
+            this.supportUnlock = {
+                mode: normalized.mode,
+                grantedAt: normalized.granted_at,
+                expiresAt: normalized.expires_at,
+            };
+
+            if (persist) {
+                writeSupportUnlockState(normalized);
+            }
+
+            this.scheduleSupportUnlockExpiryTimer();
+
+            return normalized;
+        },
+
+        openSupportUnlockModal() {
+            window.dispatchEvent(new CustomEvent('open-support-unlock-modal'));
+        },
+
+        async applySupportUnlockDecision(mode = null) {
+            const normalizedMode = String(mode ?? '')
+                .trim()
+                .toLowerCase();
+
+            if (
+                normalizedMode !== supportUnlockModePermanent &&
+                normalizedMode !== supportUnlockModeWeekly
+            ) {
+                this.syncSupportUnlockState({ persist: true });
+                this.syncSupportLockTargetsUi();
+
+                return;
+            }
+
+            const grantedAt = Date.now();
+            const persistedState =
+                normalizedMode === supportUnlockModePermanent
+                    ? writeSupportUnlockState({
+                          version: supportUnlockStorageVersion,
+                          mode: supportUnlockModePermanent,
+                          granted_at: grantedAt,
+                          expires_at: null,
+                      })
+                    : writeSupportUnlockState({
+                          version: supportUnlockStorageVersion,
+                          mode: supportUnlockModeWeekly,
+                          granted_at: grantedAt,
+                          expires_at: grantedAt + supportUnlockWeeklyDurationMs,
+                      });
+
+            this.supportUnlock = {
+                mode: persistedState.mode,
+                grantedAt: persistedState.granted_at,
+                expiresAt: persistedState.expires_at,
+            };
+
+            if (normalizedMode === supportUnlockModePermanent) {
+                await this.ensurePersistentStorage();
+            }
+
+            this.scheduleSupportUnlockExpiryTimer();
+            this.syncSupportLockTargetsUi();
+        },
+
+        handleSupportLockTargetInteraction(event) {
+            if (!this.isSupportLockActive()) {
+                return;
+            }
+
+            if (event.type === 'keydown') {
+                const pressedKey = String(event.key ?? '');
+
+                if (pressedKey !== 'Enter' && pressedKey !== ' ') {
+                    return;
+                }
+            }
+
+            if (typeof event.preventDefault === 'function') {
+                event.preventDefault();
+            }
+
+            if (typeof event.stopPropagation === 'function') {
+                event.stopPropagation();
+            }
+
+            if (typeof event.stopImmediatePropagation === 'function') {
+                event.stopImmediatePropagation();
+            }
+
+            this.openSupportUnlockModal();
+        },
+
+        bindSupportLockTarget(targetElement) {
+            if (!(targetElement instanceof HTMLElement)) {
+                return;
+            }
+
+            if (targetElement.dataset.supportLockBound === '1') {
+                return;
+            }
+
+            if (targetElement.getAttribute('x-on:pointerdown.capture') !== null) {
+                return;
+            }
+
+            targetElement.dataset.supportLockBound = '1';
+
+            const onTargetInteraction = (event) => {
+                this.handleSupportLockTargetInteraction(event);
+            };
+
+            targetElement.addEventListener('pointerdown', onTargetInteraction, true);
+            targetElement.addEventListener('keydown', onTargetInteraction, true);
+        },
+
+        ensureSupportLockBadge(targetElement) {
+            if (!(targetElement instanceof HTMLElement)) {
+                return null;
+            }
+
+            const existingBadge = targetElement.querySelector('[data-support-lock-badge]');
+
+            if (existingBadge instanceof HTMLElement) {
+                return existingBadge;
+            }
+
+            const badgeElement = document.createElement('span');
+            badgeElement.setAttribute('data-support-lock-badge', '1');
+            badgeElement.className = 'quran-support-lock-badge';
+            badgeElement.innerHTML = `
+                <span class="quran-support-lock-badge__icon quran-support-lock-badge__icon--locked">${supportLockClosedOutlineIconSvg}</span>
+                <span class="quran-support-lock-badge__icon quran-support-lock-badge__icon--unlocked">${supportLockOpenOutlineIconSvg}</span>
+            `;
+            targetElement.appendChild(badgeElement);
+
+            return badgeElement;
+        },
+
+        syncSupportLockTargetsUi() {
+            if (typeof document === 'undefined') {
+                return;
+            }
+
+            const isLocked = this.isSupportLockActive();
+            const targets = Array.from(document.querySelectorAll('[data-support-lock-target]'));
+
+            targets.forEach((targetElement) => {
+                if (!(targetElement instanceof HTMLElement)) {
+                    return;
+                }
+
+                this.bindSupportLockTarget(targetElement);
+                targetElement.classList.add('quran-support-lock-target');
+                targetElement.classList.toggle('quran-support-lock-target--locked', isLocked);
+                targetElement.classList.toggle('quran-support-lock-target--unlocked', !isLocked);
+                targetElement.setAttribute('aria-disabled', isLocked ? 'true' : 'false');
+
+                const badgeElement = this.ensureSupportLockBadge(targetElement);
+                const captionElement = badgeElement?.querySelector(
+                    '.quran-support-lock-badge__caption',
+                );
+                const captionText = targetElement.getAttribute('data-support-lock-caption') ?? '';
+
+                if (captionElement instanceof HTMLElement) {
+                    captionElement.textContent = captionText;
+                }
+
+                const isNaturallyFocusable = [
+                    'A',
+                    'BUTTON',
+                    'INPUT',
+                    'SELECT',
+                    'TEXTAREA',
+                ].includes(targetElement.tagName);
+
+                if (isLocked && !isNaturallyFocusable && !targetElement.hasAttribute('tabindex')) {
+                    targetElement.setAttribute('tabindex', '0');
+                    targetElement.dataset.supportLockTabInjected = '1';
+                }
+
+                if (!isLocked && targetElement.dataset.supportLockTabInjected === '1') {
+                    targetElement.removeAttribute('tabindex');
+                    delete targetElement.dataset.supportLockTabInjected;
+                }
+            });
         },
 
         persistLastPageNumber(pageNumber = this.pageNumber, { force = false } = {}) {
@@ -2240,6 +2567,12 @@ document.addEventListener('alpine:init', () => {
         },
 
         startWirdHoverEffects() {
+            if (this.isSupportLockActive()) {
+                this.wirdHoverShimmerRunning = false;
+
+                return;
+            }
+
             if (this._wirdHoverShimmerTimer !== null) {
                 clearTimeout(this._wirdHoverShimmerTimer);
                 this._wirdHoverShimmerTimer = null;
@@ -2271,6 +2604,12 @@ document.addEventListener('alpine:init', () => {
         },
 
         async toggleWirdMode() {
+            if (this.isSupportLockActive()) {
+                this.openSupportUnlockModal();
+
+                return;
+            }
+
             if (this.wirdModeActive) {
                 await this.exitWirdMode({
                     restoreNormalPage: true,
@@ -6582,6 +6921,10 @@ document.addEventListener('alpine:init', () => {
             } else {
                 this.ensureWirdDailyRecord();
             }
+
+            this.$nextTick(() => {
+                this.syncSupportLockTargetsUi();
+            });
         },
 
         interactionTargetsWords() {
@@ -9671,6 +10014,12 @@ document.addEventListener('alpine:init', () => {
             const isBookmarksModalEvent = this.isBookmarksModalEvent(kind, event);
             const isJumpPageModalEvent = this.isJumpPageModalEvent(kind, event);
             let shouldSyncManagerModalsVisibility = false;
+
+            if (kind === 'opened' || kind === 'closing' || kind === 'closed') {
+                this.$nextTick(() => {
+                    this.syncSupportLockTargetsUi();
+                });
+            }
 
             if (kind === 'opened') {
                 this.$nextTick(() => {

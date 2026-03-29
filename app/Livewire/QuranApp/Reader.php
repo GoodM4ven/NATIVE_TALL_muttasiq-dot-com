@@ -203,7 +203,7 @@ class Reader extends Component implements HasActions, HasSchemas
     {
         return Action::make('navigationHistory')
             ->modalHeading('سجل التنقّل')
-            ->modalDescription('آخر انتقالات البحث والتنقّل السريع بين السور. يبقى المعلّم فقط خارج حدّ آخر 100 عنصر.')
+            ->modalDescription('آخر الانتقالات بين الصفحات. يبقى الموسوم محفوظًا، زيادة على آخر 100 عنصر.')
             ->modalAutofocus(false)
             ->modalWidth(Width::FiveExtraLarge)
             ->modalSubmitAction(false)
@@ -235,6 +235,42 @@ class Reader extends Component implements HasActions, HasSchemas
                 fn (): HtmlString => new HtmlString(Blade::render('<x-partials.quran-app.bookmarks-modal />')),
             )
             ->action(static fn (): null => null);
+    }
+
+    public function supportUnlockAction(): Action
+    {
+        return Action::make('supportUnlock')
+            ->modalHeading('دعم المشروع')
+            ->modalDescription('قبل استخدام بعض الخصائص المميّزة في التطبيق، نحتاج منك تأكيد دعم تطوير المشروع.')
+            ->modalWidth(Width::ThreeExtraLarge)
+            ->modalSubmitActionLabel('قمت بالدعم')
+            ->modalCancelAction(false)
+            ->extraModalWindowAttributes([
+                'id' => 'support-unlock-modal',
+            ])
+            ->modalContent(fn (): HtmlString => $this->supportUnlockModalContent())
+            ->extraModalFooterActions(fn (Action $action): array => [
+                $action
+                    ->makeModalSubmitAction('supportUnlockWeeklyBypass', arguments: ['mode' => 'weekly'])
+                    ->label('أشهد الله أني لا أستطيع دعمكم الآن')
+                    ->color('gray'),
+            ])
+            ->action(function (array $data, array $arguments): void {
+                $mode = ($arguments['mode'] ?? null) === 'weekly'
+                    ? 'weekly'
+                    : 'permanent';
+
+                $this->dispatch('support-unlock-updated', mode: $mode);
+
+                notify(
+                    iconName: $mode === 'weekly'
+                        ? 'heroicon-o-clock'
+                        : 'heroicon-o-lock-open',
+                    title: $mode === 'weekly'
+                        ? 'تم فتح الخيارات لأسبوع واحد'
+                        : 'تم فتح الخيارات بشكل دائم',
+                );
+            });
     }
 
     public function render(): View
@@ -347,5 +383,35 @@ class Reader extends Component implements HasActions, HasSchemas
             replace: true,
             to: self::SEARCH_STREAM_TARGET,
         );
+    }
+
+    private function supportUnlockModalContent(): HtmlString
+    {
+        return new HtmlString(
+            '<div class="space-y-4 text-right text-sm! leading-7">'
+            .'<p>تطوير المزايا المتقدمة، وإتاحة التطبيق على المخدّمات والمنصات المختلفة، كل هذا يتطلب <strong>وقتًا وجهدًا وتكلفة مستمرة</strong>، بارك الله فيكم... ولذلك نودّ منكم على الأقلّ محاولة التبرع لتطوير تطبيق متسق باستخدام إحدى المنصات المتاحة لذلك، وجزاكم الله خيرا.</p>'
+            .'<div class="rounded-xl border border-gray-200/70 bg-white/70 p-3 text-sm">'
+            .'<p class="mb-2 font-semibold text-gray-900">روابط الدعم:</p>'
+            .'<div class="flex flex-wrap items-center justify-end gap-2">'
+            .$this->supportUnlockLinkMarkup('Buy Me a Coffee', 'https://buymeacoffee.com/goodm4ven')
+            .$this->supportUnlockLinkMarkup('Patreon', 'https://patreon.com/GoodM4ven')
+            .$this->supportUnlockLinkMarkup('GitHub Sponsors', 'https://github.com/sponsors/GoodM4ven')
+            .'</div>'
+            .'</div>'
+            .'</div>',
+        );
+    }
+
+    private function supportUnlockLinkMarkup(string $label, string $url): string
+    {
+        $openLinkNativeAware = htmlspecialchars(open_link_native_aware($url), ENT_QUOTES, 'UTF-8');
+        $safeLabel = e($label);
+
+        return '<button type="button" class="rounded-lg border border-primary-300/70 bg-primary-50/70 px-3 py-1.5 text-xs font-medium text-primary-800 transition hover:bg-primary-100/80"'
+            .' x-on:click.prevent="'.$openLinkNativeAware.'"'
+            .' x-on:keydown.enter.prevent="'.$openLinkNativeAware.'"'
+            .' x-on:keydown.space.prevent="'.$openLinkNativeAware.'">'
+            .$safeLabel
+            .'</button>';
     }
 }

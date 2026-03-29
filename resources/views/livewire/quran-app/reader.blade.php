@@ -499,9 +499,7 @@
 
         .quran-wird-progress-button:hover {}
 
-        .quran-wird-progress-button:active {
-            box-shadow: 0 8px 18px color-mix(in srgb, var(--success-900) 14%, transparent);
-        }
+        .quran-wird-progress-button:active {}
 
         .quran-wird-progress-aura-water,
         .quran-wird-progress-aura-reflect {
@@ -1646,6 +1644,7 @@
         'quran-reader--wird-active': wirdModeActive,
     }"
     x-on:control-panel-updated.window="applyControlPanelSettings($event.detail?.controlPanel ?? {})"
+    x-on:open-support-unlock-modal-ready.window="$wire.mountAction('supportUnlock')"
     x-on:open-modal.window="handleModalLifecycleEvent('opened', $event)"
     x-on:x-modal-opened.window="handleModalLifecycleEvent('opened', $event)"
     x-on:close-modal.window="handleModalLifecycleEvent('closing', $event)"
@@ -1654,6 +1653,7 @@
     x-on:opened-form-component-action-modal.window="handleModalLifecycleEvent('opened', $event)"
     x-on:closing-form-component-action-modal.window="handleModalLifecycleEvent('closing', $event)"
     x-on:closed-form-component-action-modal.window="handleModalLifecycleEvent('closed', $event)"
+    x-on:support-unlock-updated.window="applySupportUnlockDecision($event.detail?.mode ?? null)"
 >
     @if (!$ready)
         <section
@@ -1737,10 +1737,11 @@
                     </button>
 
                     <button
-                        class="quran-wird-progress-button outline-none"
-                        x-data="{ hovered: $useHover($el) }"
+                        class="quran-support-lock-target quran-wird-progress-button outline-none"
                         data-quran-wird-toggle
+                        data-support-lock-target="wird-progress"
                         type="button"
+                        x-data="{ hovered: $useHover($el) }"
                         x-bind:style="wirdProgressBarStyle()"
                         x-bind:class="{
                             'quran-wird-progress-button--completed': ensureWirdDailyRecord()?.completed,
@@ -1761,6 +1762,7 @@
                         <span
                             class="quran-wird-progress-aura-reflect"
                             aria-hidden="true"
+                            x-show="doesEnableVisualEnhancements"
                         ></span>
                         <span
                             class="quran-wird-progress-hover-shimmer"
@@ -1780,9 +1782,9 @@
                                 x-text="wirdProgressPercentLabel()"
                             ></span>
                             <span
-                                class="translate-y-2.5 opacity-0 transition-all text-xs text-success-200 font-bold"
+                                class="text-success-200 translate-y-2.5 text-xs font-bold opacity-0 transition-all"
                                 x-bind:class="{
-                                    'opacity-100! -translate-y-0.5!': hovered || wirdModeActive,
+                                    'opacity-100! -translate-y-0.5!': (hovered || wirdModeActive) && !isSupportLockActive(),
                                     'text-white! font-normal!': wirdModeActive,
                                 }"
                             >الورد اليومي</span>

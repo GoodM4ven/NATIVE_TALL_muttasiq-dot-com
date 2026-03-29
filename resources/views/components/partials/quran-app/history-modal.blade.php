@@ -4,10 +4,6 @@
     dir="rtl"
 >
     <div class="quran-manager-toolbar">
-        <p class="quran-manager-toolbar-note">
-            آخر 100 انتقال غير معلّم، مع الاحتفاظ بجميع العناصر التي تمت إضافة وسوم لها.
-        </p>
-
         <button
             class="quran-manager-toolbar-button"
             data-quran-history-clear
@@ -15,7 +11,7 @@
             x-bind:disabled="navigationHistory.length === 0"
             x-on:click="clearNavigationHistory()"
         >
-            مسح غير المعلّم
+            مسح غير الموسوم
         </button>
     </div>
 
@@ -23,7 +19,7 @@
         <table class="quran-manager-table">
             <thead>
                 <tr>
-                    <th>الانتقال</th>
+                    <th>الصفحة</th>
                     <th>السورة</th>
                     <th>النوع</th>
                     <th>الوسوم</th>
@@ -53,7 +49,7 @@
                                 data-quran-history-go
                                 type="button"
                                 x-on:click="goToHistoryEntry(entry)"
-                                x-text="`صفحة ${entry.page_number}`"
+                                x-text="`${entry.page_number}`"
                             ></button>
                         </td>
                         <td x-text="historyEntrySurahName(entry)"></td>
@@ -78,7 +74,7 @@
                                 </template>
 
                                 <input
-                                    class="quran-manager-tags-entry"
+                                    class="quran-manager-tags-entry outline-none"
                                     data-quran-history-tags
                                     type="text"
                                     placeholder="أضف وسمًا..."
