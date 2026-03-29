@@ -390,12 +390,24 @@ class Reader extends Component implements HasActions, HasSchemas
 
     private function supportUnlockModalContent(): HtmlString
     {
+        $introBeforeStrong = app_arabic_text(
+            'تطوير المزايا المتقدمة، وإتاحة التطبيق على المخدّمات والمنصات بأجهزتها المختلفة، كل هذا يتطلب ',
+        );
+        $introStrong = app_arabic_text('وقتًا وجهدًا وتكلفة مستمرة');
+        $introAfterStrong = app_arabic_text(
+            '، بارك الله فيكم... ولذلك نودّ منكم على الأقلّ محاولة التبرع لتطوير تطبيق متسق باستخدام إحدى المنصات المتاحة لذلك، وجزاكم الله خيرا.',
+        );
+        $supportLinksCaption = app_arabic_text('روابط منصات الدعم:');
+
         return new HtmlString(
-            app_arabic_text(
-                '<div class="space-y-4 text-right text-sm! leading-7">'
-                .'<p>تطوير المزايا المتقدمة، وإتاحة التطبيق على المخدّمات والمنصات بأجهزتها المختلفة، كل هذا يتطلب <strong>وقتًا وجهدًا وتكلفة مستمرة</strong>، بارك الله فيكم... ولذلك نودّ منكم على الأقلّ محاولة التبرع لتطوير تطبيق متسق باستخدام إحدى المنصات المتاحة لذلك، وجزاكم الله خيرا.</p>'
+            '<div class="space-y-4 text-right text-sm! leading-7">'
+                .'<p>'
+                .e($introBeforeStrong)
+                .'<strong>'.e($introStrong).'</strong>'
+                .e($introAfterStrong)
+                .'</p>'
                 .'<div class="rounded-xl border border-gray-200/70 bg-white/70 p-3 text-sm">'
-                .'<p class="mb-2 font-semibold text-gray-900">روابط منصات الدعم:</p>'
+                .'<p class="mb-2 font-semibold text-gray-900">'.e($supportLinksCaption).'</p>'
                 .'<div class="flex flex-wrap items-center justify-end gap-2">'
                 .$this->supportUnlockLinkMarkup('Buy Me a Coffee', 'https://buymeacoffee.com/goodm4ven')
                 .$this->supportUnlockLinkMarkup('Patreon', 'https://patreon.com/GoodM4ven')
@@ -403,7 +415,6 @@ class Reader extends Component implements HasActions, HasSchemas
                 .'</div>'
                 .'</div>'
                 .'</div>',
-            ),
         );
     }
 

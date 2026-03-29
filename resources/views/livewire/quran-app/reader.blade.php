@@ -501,13 +501,6 @@
 
         .quran-wird-progress-button:active {}
 
-        .quran-wird-electric-filter-defs {
-            position: absolute;
-            width: 0;
-            height: 0;
-            pointer-events: none;
-        }
-
         .quran-wird-progress-aura-water,
         .quran-wird-progress-aura-reflect {
             position: absolute;
@@ -551,57 +544,54 @@
             filter: saturate(1.2);
         }
 
-        .quran-wird-progress-aura-electric__glow-1,
-        .quran-wird-progress-aura-electric__glow-2,
-        .quran-wird-progress-aura-electric__overlay-1,
-        .quran-wird-progress-aura-electric__overlay-2,
-        .quran-wird-progress-aura-electric__background {
+        /* Credits: https://codepen.io/pugson/pen/eYNXvyN */
+        .quran-wird-progress-aura-rainbow {
             position: absolute;
-            inset: 0.25rem;
+            -webkit-mask-image: radial-gradient(ellipse at center, black 60%, transparent 100%);
+            mask-image: radial-gradient(ellipse at center, black 60%, transparent 100%);
+            inset: -0.07rem;
             border-radius: 999px;
-        }
-
-        .quran-wird-progress-aura-electric__glow-1 {
-            border: 2px solid color-mix(in srgb, var(--success-500) 64%, white 36%);
-            filter: blur(1px);
-        }
-
-        .quran-wird-progress-aura-electric__glow-2 {
-            border: 2px solid color-mix(in srgb, var(--success-300) 78%, transparent 22%);
-            filter: blur(3px);
-        }
-
-        .quran-wird-progress-aura-electric__overlay-1 {
-            opacity: 0.88;
-            mix-blend-mode: overlay;
-            transform: scale(1.06);
-            filter: blur(10px);
-            background: linear-gradient(-30deg, white, transparent 30%, transparent 70%, white);
-        }
-
-        .quran-wird-progress-aura-electric__overlay-2 {
-            opacity: 0.45;
-            mix-blend-mode: overlay;
-            transform: scale(1.08);
-            filter: blur(12px);
-            background: linear-gradient(-30deg, white, transparent 30%, transparent 70%, white);
-        }
-
-        .quran-wird-progress-aura-electric__background {
+            clip-path: polygon(var(--quran-wird-frame-cut-inner) 0,
+                    calc(100% - var(--quran-wird-frame-cut-inner)) 0,
+                    100% 50%,
+                    calc(100% - var(--quran-wird-frame-cut-inner)) 100%,
+                    var(--quran-wird-frame-cut-inner) 100%,
+                    0 50%);
+            opacity: 0;
+            pointer-events: none;
             z-index: -1;
-            transform: scale(1.12);
-            filter: blur(18px);
-            opacity: 0.34;
-            background:
-                linear-gradient(-30deg,
-                    color-mix(in srgb, var(--success-300) 82%, white 18%),
-                    transparent 46%,
-                    color-mix(in srgb, var(--success-300) 68%, var(--success-200) 32%));
         }
 
-        .quran-wird-progress-button--active-aura .quran-wird-progress-aura-electric {
-            opacity: 0.92;
-            /* animation: quran-wird-electric-border-breathe 5.0s ease-in-out infinite; */
+        .quran-wird-progress-aura-rainbow::before,
+        .quran-wird-progress-aura-rainbow::after {
+            position: absolute;
+            content: '';
+            inset: 0;
+            border-radius: inherit;
+            background: linear-gradient(90deg,
+                    var(--success-300),
+                    var(--success-400),
+                    var(--success-500),
+                    var(--success-400),
+                    var(--success-300));
+            background-size: 200% 200%;
+            animation: quran-wird-rainbow-glow 10s linear infinite;
+        }
+
+        .quran-wird-progress-aura-rainbow::before {
+            filter: blur(12px);
+            transform: scale(1.08);
+            opacity: 0.8;
+        }
+
+        .quran-wird-progress-aura-rainbow::after {
+            filter: blur(18px);
+            transform: scale(1.14);
+            opacity: 0.52;
+        }
+
+        .quran-wird-progress-button--active-aura .quran-wird-progress-aura-rainbow {
+            opacity: 1;
         }
 
         .quran-wird-progress-button:hover .quran-wird-progress-aura-water,
@@ -685,7 +675,7 @@
 
         .quran-reader--visual-enhancements-disabled .quran-wird-progress-aura-water,
         .quran-reader--visual-enhancements-disabled .quran-wird-progress-aura-reflect,
-        .quran-reader--visual-enhancements-disabled .quran-wird-progress-aura-electric,
+        .quran-reader--visual-enhancements-disabled .quran-wird-progress-aura-rainbow,
         .quran-reader--visual-enhancements-disabled .quran-wird-progress-hover-shimmer {
             display: none;
         }
@@ -724,15 +714,13 @@
             }
         }
 
-        @keyframes quran-wird-electric-border-breathe {
-
-            0%,
-            100% {
-                opacity: 0.78;
+        @keyframes quran-wird-rainbow-glow {
+            0% {
+                background-position: 0% 50%;
             }
 
-            50% {
-                opacity: 1;
+            100% {
+                background-position: 200% 50%;
             }
         }
 
@@ -1708,134 +1696,6 @@
     x-on:closed-form-component-action-modal.window="handleModalLifecycleEvent('closed', $event)"
     x-on:support-unlock-updated.window="applySupportUnlockDecision($event.detail?.mode ?? null)"
 >
-    <svg
-        class="quran-wird-electric-filter-defs"
-        aria-hidden="true"
-    >
-        <defs>
-            <filter
-                id="quran-wird-turbulent-displace"
-                color-interpolation-filters="sRGB"
-                x="-20%"
-                y="-20%"
-                width="140%"
-                height="140%"
-            >
-                <feTurbulence
-                    type="turbulence"
-                    baseFrequency="0.02"
-                    numOctaves="10"
-                    result="noise1"
-                    seed="1"
-                />
-                <feOffset
-                    in="noise1"
-                    dx="0"
-                    dy="0"
-                    result="offsetNoise1"
-                >
-                    <animate
-                        values="700; 0"
-                        values="700; 0"
-                        attributeName="dy"
-                        dur="6s"
-                        repeatCount="indefinite"
-                        calcMode="linear"
-                    />
-                </feOffset>
-                <feTurbulence
-                    type="turbulence"
-                    baseFrequency="0.02"
-                    numOctaves="10"
-                    result="noise2"
-                    seed="1"
-                />
-                <feOffset
-                    in="noise2"
-                    dx="0"
-                    dy="0"
-                    result="offsetNoise2"
-                >
-                    <animate
-                        values="0; -700"
-                        values="0; -700"
-                        attributeName="dy"
-                        dur="6s"
-                        repeatCount="indefinite"
-                        calcMode="linear"
-                    />
-                </feOffset>
-                <feTurbulence
-                    type="turbulence"
-                    baseFrequency="0.02"
-                    numOctaves="10"
-                    result="noise3"
-                    seed="2"
-                />
-                <feOffset
-                    in="noise3"
-                    dx="0"
-                    dy="0"
-                    result="offsetNoise3"
-                >
-                    <animate
-                        values="490; 0"
-                        values="490; 0"
-                        attributeName="dx"
-                        dur="6s"
-                        repeatCount="indefinite"
-                        calcMode="linear"
-                    />
-                </feOffset>
-                <feTurbulence
-                    type="turbulence"
-                    baseFrequency="0.02"
-                    numOctaves="10"
-                    result="noise4"
-                    seed="2"
-                />
-                <feOffset
-                    in="noise4"
-                    dx="0"
-                    dy="0"
-                    result="offsetNoise4"
-                >
-                    <animate
-                        values="0; -490"
-                        values="0; -490"
-                        attributeName="dx"
-                        dur="6s"
-                        repeatCount="indefinite"
-                        calcMode="linear"
-                    />
-                </feOffset>
-                <feComposite
-                    in="offsetNoise1"
-                    in2="offsetNoise2"
-                    result="part1"
-                />
-                <feComposite
-                    in="offsetNoise3"
-                    in2="offsetNoise4"
-                    result="part2"
-                />
-                <feBlend
-                    in="part1"
-                    in2="part2"
-                    mode="color-dodge"
-                    result="combinedNoise"
-                />
-                <feDisplacementMap
-                    in="SourceGraphic"
-                    in2="combinedNoise"
-                    scale="20"
-                    xChannelSelector="R"
-                    yChannelSelector="B"
-                />
-            </filter>
-        </defs>
-    </svg>
-
     @if (!$ready)
         <section
             class="quran-reader-panel relative flex h-[clamp(28rem,82svh,50rem)] w-[min(94vw,50rem)] min-w-[18rem] flex-col items-center justify-center gap-4 rounded-[1.75rem] border px-6 py-7 text-center"
@@ -1949,15 +1809,10 @@
                             x-show="doesEnableVisualEnhancements"
                         ></span>
                         <span
-                            class="quran-wird-progress-aura-electric"
+                            class="quran-wird-progress-aura-rainbow"
                             aria-hidden="true"
                             x-show="doesEnableVisualEnhancements && wirdModeActive && !isSupportLockActive()"
-                        >
-                            <span class="quran-wird-progress-aura-electric__glow-2"></span>
-                            <span class="quran-wird-progress-aura-electric__overlay-1"></span>
-                            <span class="quran-wird-progress-aura-electric__overlay-2"></span>
-                            <span class="quran-wird-progress-aura-electric__background"></span>
-                        </span>
+                        ></span>
                         <span
                             class="quran-wird-progress-hover-shimmer"
                             aria-hidden="true"

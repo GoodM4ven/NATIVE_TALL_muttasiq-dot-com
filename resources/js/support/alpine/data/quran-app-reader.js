@@ -4556,6 +4556,15 @@ document.addEventListener('alpine:init', () => {
             );
         },
 
+        isImmediateNavigationSource(source = 'generic') {
+            const normalizedSource = String(source ?? '').trim();
+
+            return (
+                normalizedSource === 'chevron' ||
+                this.isHighFrequencyNavigationSource(normalizedSource)
+            );
+        },
+
         isFastFitPrioritySource(source = 'generic') {
             const normalizedSource = String(source ?? '').trim();
 
@@ -4587,6 +4596,12 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            if (this.isImmediateNavigationSource(source)) {
+                this.clearNavigationBurstState();
+
+                return;
+            }
+
             const now = Date.now();
             const elapsedSinceLastInput = now - this._navigationBurstLastInputAt;
             const isBurstContinuation = elapsedSinceLastInput <= navigationBurstInputThresholdMs;
@@ -4600,6 +4615,10 @@ document.addEventListener('alpine:init', () => {
 
         navigationBurstRemainingMsFor(source = 'generic') {
             if (!this.isHighFrequencyNavigationSource(source)) {
+                return 0;
+            }
+
+            if (this.isImmediateNavigationSource(source)) {
                 return 0;
             }
 
@@ -4644,7 +4663,12 @@ document.addEventListener('alpine:init', () => {
                     this._navigationRevealLocked = false;
 
                     if (this._pendingNavigationRequest !== null) {
-                        this.schedulePendingNavigationCommit(navigationSettleDelayMs);
+                        this.schedulePendingNavigationCommit(
+                            this.resolveNavigationCommitDelay(
+                                this._pendingNavigationRequest?.source ?? 'generic',
+                                0,
+                            ),
+                        );
                     }
                 },
                 Math.max(120, Math.trunc(Number(durationMs) || navigationRevealLockDurationMs)),
@@ -4764,8 +4788,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             const basePage = this.navigationBasePage();
-            const shouldCommitImmediately =
-                sourceProfile === 'chevron' || this.isHighFrequencyNavigationSource(sourceProfile);
+            const shouldCommitImmediately = this.isImmediateNavigationSource(sourceProfile);
 
             await this.navigateToPage(basePage + 1, {
                 direction: 'next',
@@ -4785,8 +4808,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             const basePage = this.navigationBasePage();
-            const shouldCommitImmediately =
-                sourceProfile === 'chevron' || this.isHighFrequencyNavigationSource(sourceProfile);
+            const shouldCommitImmediately = this.isImmediateNavigationSource(sourceProfile);
 
             if (basePage <= 1) {
                 this.requestReaderGateNavigation(sourceProfile);
@@ -5104,7 +5126,12 @@ document.addEventListener('alpine:init', () => {
 
                 if (this._pendingNavigationRequest !== null) {
                     if (this._navigationRevealLocked) {
-                        this.schedulePendingNavigationCommit(navigationSettleDelayMs);
+                        this.schedulePendingNavigationCommit(
+                            this.resolveNavigationCommitDelay(
+                                this._pendingNavigationRequest?.source ?? 'generic',
+                                0,
+                            ),
+                        );
                     } else {
                         void this.commitPendingNavigation();
                     }
