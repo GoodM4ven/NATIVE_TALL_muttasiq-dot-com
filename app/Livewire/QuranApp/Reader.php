@@ -267,8 +267,11 @@ class Reader extends Component implements HasActions, HasSchemas
                         ? 'heroicon-o-clock'
                         : 'heroicon-o-lock-open',
                     title: $mode === 'weekly'
-                        ? 'تم فتح الخيارات لأسبوع واحد'
-                        : 'تم فتح الخيارات بشكل دائم',
+                        ? 'تمت إتاحة الميّزات لأسبوع واحد'
+                        : 'تمت إتاحة الميّزات بشكل دائم',
+                    body: $mode === 'weekly'
+                        ? 'رزقك الله...'
+                        : 'أحسن الله إليك...',
                 );
             });
     }

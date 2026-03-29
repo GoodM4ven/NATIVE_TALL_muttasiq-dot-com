@@ -3064,6 +3064,185 @@ JS,
     $page->assertNoJavaScriptErrors();
 });
 
+it('lands on the final wird slider page and keeps the re-entered completed page visible', function () {
+    $page = visit('/');
+
+    $assertReaderRenderable = function (int $timeoutMs = 8_000) use ($page): void {
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript('data.ready && data.mushafLines.length > 0'),
+            true,
+            $timeoutMs,
+        );
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript('data.isFittingPage'),
+            false,
+            $timeoutMs,
+        );
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript("typeof data.pageFitState === 'function' ? data.pageFitState() : 'ready'"),
+            'ready',
+            $timeoutMs,
+        );
+        waitForScriptWithTimeout(
+            $page,
+            <<<'JS'
+(() => {
+  const lines = document.querySelector('.quran-page-lines');
+  if (!(lines instanceof HTMLElement)) {
+    return false;
+  }
+
+  const styles = window.getComputedStyle(lines);
+  const opacity = Number.parseFloat(styles.opacity || '0');
+  const lineTexts = Array.from(lines.querySelectorAll('[data-quran-line-text]'))
+    .map((line) => String(line.textContent ?? '').replace(/\s+/g, '').trim())
+    .filter((text) => text.length > 0);
+
+  return String(lines.getAttribute('data-fit-state') ?? '') === 'ready'
+    && styles.visibility !== 'hidden'
+    && opacity > 0.35
+    && lineTexts.length > 0;
+})()
+JS,
+            true,
+            $timeoutMs,
+        );
+    };
+
+    resetBrowserState($page);
+    waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
+    hashAction($page, '#quran-app-tilawa', true);
+
+    waitForScript($page, homeDataScript('data.activeView'), 'quran-app-tilawa');
+    waitForScript($page, 'window.location.hash', '#quran-app-tilawa');
+    waitForQuranReaderVisible($page);
+    $assertReaderRenderable();
+
+    $page->script(quranReaderCommandScript('void data.enterWirdMode();'));
+    waitForScriptWithTimeout($page, quranReaderDataScript('Boolean(data.wirdModeActive)'), true, 6_000);
+    $assertReaderRenderable();
+
+    $sliderLanding = $page->script(
+        quranReaderDataScript(
+            <<<'JS'
+(() => {
+  const record = data.ensureWirdDailyRecord();
+  const range = data.wirdRangeState(record);
+  const slider = document.querySelector('.quran-page-slider');
+
+  if (!(slider instanceof HTMLInputElement)) {
+    return null;
+  }
+
+  const currentStep = Number(data.wirdActiveStepForNavigation(record) ?? 0);
+  const firstStep = Math.max(0, Math.min(range.maxStep, currentStep + 1));
+  const finalStep = Math.max(firstStep, Math.min(range.maxStep, firstStep + 3));
+
+  slider.value = String(firstStep);
+  slider.dispatchEvent(new Event('input', { bubbles: true }));
+  slider.dispatchEvent(new Event('change', { bubbles: true }));
+
+  slider.value = String(finalStep);
+  slider.dispatchEvent(new Event('input', { bubbles: true }));
+  slider.dispatchEvent(new Event('change', { bubbles: true }));
+
+  return {
+    finalPage: Number(data.wirdTargetPageFromStep(finalStep, record) ?? 0),
+    finalStep,
+  };
+})()
+JS,
+        ),
+    );
+
+    expect($sliderLanding)->toBeArray();
+    $sliderLandingPage = (int) ($sliderLanding['finalPage'] ?? 0);
+    expect($sliderLandingPage)->toBeGreaterThan(0);
+
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('Number(data.pageNumber ?? 0)'),
+        $sliderLandingPage,
+        8_000,
+    );
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('Number(data.pageInput ?? 0)'),
+        $sliderLandingPage,
+        8_000,
+    );
+    $assertReaderRenderable();
+
+    $completionState = $page->script(
+        quranReaderDataScript(
+            <<<'JS'
+(() => {
+  const record = data.ensureWirdDailyRecord();
+  const range = data.wirdRangeState(record);
+  const preCompleteStep = Math.max(0, range.maxStep - 1);
+
+  return {
+    completedPage: Number(data.wirdTargetPageFromStep(range.maxStep, record) ?? 0),
+    preCompletePage: Number(data.wirdTargetPageFromStep(preCompleteStep, record) ?? 0),
+    preCompleteStep,
+  };
+})()
+JS,
+        ),
+    );
+
+    expect($completionState)->toBeArray();
+    $preCompletePage = (int) ($completionState['preCompletePage'] ?? 0);
+    $completedPage = (int) ($completionState['completedPage'] ?? 0);
+    expect($preCompletePage)->toBeGreaterThan(0);
+    expect($completedPage)->toBeGreaterThan(0);
+
+    $page->script(
+        quranReaderCommandScript(
+            <<<'JS'
+const record = data.ensureWirdDailyRecord();
+const range = data.wirdRangeState(record);
+const preCompleteStep = Math.max(0, range.maxStep - 1);
+
+void data.navigateWirdToStep(preCompleteStep, 'test-pre-complete');
+JS,
+        ),
+    );
+
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('Number(data.pageNumber ?? 0)'),
+        $preCompletePage,
+        8_000,
+    );
+    $assertReaderRenderable();
+
+    $page->script(quranReaderCommandScript("void data.stepWird('next', 'test-complete-exit');"));
+    waitForScriptWithTimeout($page, quranReaderDataScript('Boolean(data.wirdModeActive)'), false, 8_000);
+    $assertReaderRenderable();
+
+    $page->script(quranReaderCommandScript('void data.enterWirdMode();'));
+    waitForScriptWithTimeout($page, quranReaderDataScript('Boolean(data.wirdModeActive)'), true, 8_000);
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('Number(data.pageNumber ?? 0)'),
+        $completedPage,
+        8_000,
+    );
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('Boolean(data.ensureWirdDailyRecord()?.completed)'),
+        true,
+        8_000,
+    );
+    $assertReaderRenderable();
+
+    $page->assertNoJavaScriptErrors();
+});
+
 it('keeps wird committed progress monotonic and completion badge sticky while browsing back', function () {
     $page = visit('/');
 

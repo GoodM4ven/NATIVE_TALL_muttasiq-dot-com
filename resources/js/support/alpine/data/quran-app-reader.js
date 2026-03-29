@@ -790,6 +790,7 @@ document.addEventListener('alpine:init', () => {
         _suppressFitCacheWriteUntil: 0,
         _wirdSliderVisualTweenRaf: null,
         _wirdSliderInputCommitTimer: null,
+        _wirdNavigationRequestSerial: 0,
         _wirdHoverShimmerTimer: null,
         _pageInputCommitTimer: null,
         _pageInputTweenRaf: null,
@@ -2610,7 +2611,12 @@ document.addEventListener('alpine:init', () => {
                 }
 
                 void (async () => {
-                    if (this.isFittingPage || this._lastFittedPageNumber !== normalizedTargetPage) {
+                    const shouldRunRecoveryLayout =
+                        this.isFittingPage ||
+                        (this._lastFittedPageNumber !== normalizedTargetPage &&
+                            this._revealTimer === null);
+
+                    if (shouldRunRecoveryLayout) {
                         this.pauseIdleWarmup(640, {
                             preservePage: normalizedTargetPage,
                         });
@@ -2659,11 +2665,13 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            if (
+            const shouldRunRecoveryLayout =
                 forceRecover ||
-                this.isFittingPage ||
-                this._lastFittedPageNumber !== normalizedTargetPage
-            ) {
+                this._lastFittedPageNumber !== normalizedTargetPage ||
+                !this.isCurrentPageVisiblyReady() ||
+                (this.isFittingPage && this._revealTimer === null);
+
+            if (shouldRunRecoveryLayout) {
                 this.pauseIdleWarmup(560, {
                     preservePage: normalizedTargetPage,
                 });
@@ -2752,6 +2760,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             this.resetNavigationQueueForPriorityJump();
+            this._wirdNavigationRequestSerial += 1;
             this.wirdNormalPageBeforeMode = clampPage(this.pageNumber, this.maxPage);
             this.wirdModeActive = true;
             this.suppressWirdEntryLayoutScheduling();
@@ -2774,7 +2783,6 @@ document.addEventListener('alpine:init', () => {
             if (targetPage === this.pageNumber && this.hasRenderablePage()) {
                 this.pageInput = targetPage;
                 this._lastPageInputVisualValue = targetPage;
-                this.isFittingPage = false;
                 await this.ensureWirdEntryPageVisible(targetPage);
                 this.queueWirdEntryRevealRecovery(targetPage);
 
@@ -2798,6 +2806,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             this.resetNavigationQueueForPriorityJump();
+            this._wirdNavigationRequestSerial += 1;
             this.abortActivePageLoad();
 
             if (this._wirdSliderInputCommitTimer !== null) {
@@ -3005,6 +3014,9 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            const navigationRequestSerial = this._wirdNavigationRequestSerial + 1;
+            this._wirdNavigationRequestSerial = navigationRequestSerial;
+
             const record = this.ensureWirdDailyRecord();
 
             if (!record || typeof record !== 'object') {
@@ -3045,12 +3057,27 @@ document.addEventListener('alpine:init', () => {
                 this.persistWirdState();
             }
 
+            if (
+                navigationRequestSerial !== this._wirdNavigationRequestSerial ||
+                !this.wirdModeActive
+            ) {
+                return;
+            }
+
             if (targetPage === this.pageNumber && this.hasRenderablePage()) {
                 this.pageInput = targetPage;
                 this._lastPageInputVisualValue = targetPage;
                 this.clearWirdSliderVisualTween();
                 this.wirdSliderVisualStep = normalizedStep;
                 await this.ensureWirdEntryPageVisible(targetPage);
+
+                if (
+                    navigationRequestSerial !== this._wirdNavigationRequestSerial ||
+                    !this.wirdModeActive
+                ) {
+                    return;
+                }
+
                 this.queueWirdEntryRevealRecovery(targetPage);
 
                 return;
@@ -3063,7 +3090,22 @@ document.addEventListener('alpine:init', () => {
                 source: `wird-${source}`,
             });
 
+            if (
+                navigationRequestSerial !== this._wirdNavigationRequestSerial ||
+                !this.wirdModeActive
+            ) {
+                return;
+            }
+
             await this.ensureWirdEntryPageVisible(targetPage);
+
+            if (
+                navigationRequestSerial !== this._wirdNavigationRequestSerial ||
+                !this.wirdModeActive
+            ) {
+                return;
+            }
+
             this.queueWirdEntryRevealRecovery(targetPage);
         },
 
@@ -4528,6 +4570,8 @@ document.addEventListener('alpine:init', () => {
                 const payload = await payloadPromise;
 
                 if (payload === null) {
+                    didAbortPageTransition = true;
+
                     return;
                 }
 
@@ -5028,6 +5072,36 @@ document.addEventListener('alpine:init', () => {
             return this.ready && this.mushafLines.length > 0;
         },
 
+        isCurrentPageVisiblyReady() {
+            if (!this.hasRenderablePage()) {
+                return false;
+            }
+
+            const contentElement = this.$refs.pageContent;
+
+            if (!(contentElement instanceof HTMLElement)) {
+                return false;
+            }
+
+            const styles = window.getComputedStyle(contentElement);
+            const opacity = Number.parseFloat(styles.opacity || '0');
+            const visibleLineCount = Array.from(
+                contentElement.querySelectorAll('[data-quran-line-text]'),
+            ).filter(
+                (lineElement) =>
+                    String(lineElement.textContent ?? '')
+                        .replace(/\s+/g, '')
+                        .trim().length > 0,
+            ).length;
+
+            return (
+                this.pageFitState() === 'ready' &&
+                styles.visibility !== 'hidden' &&
+                opacity > 0.35 &&
+                visibleLineCount > 0
+            );
+        },
+
         holdPageHiddenForModalLifecycle() {
             if (!this.hasRenderablePage()) {
                 return;
@@ -5294,11 +5368,36 @@ document.addEventListener('alpine:init', () => {
                     return;
                 }
 
+                if (
+                    (this._isModalLifecycleSettling || this._activeModalIds.size > 0) &&
+                    this.openModalCount() <= 0
+                ) {
+                    this._activeModalIds.clear();
+                    this._isModalLifecycleSettling = false;
+                }
+
                 if (this._isModalLifecycleSettling || this._activeModalIds.size > 0) {
                     this.isFittingPage = true;
                     this.queuePageReveal(layoutToken, 120);
 
                     return;
+                }
+
+                if (
+                    this._pendingNavigationRequest !== null &&
+                    !this._navigationRevealLocked &&
+                    !this.isLoadingPage
+                ) {
+                    const stalePendingTargetPage = clampPage(
+                        Number(this._pendingNavigationRequest?.targetPage ?? 0),
+                        this.maxPage,
+                    );
+
+                    if (stalePendingTargetPage === this.pageNumber) {
+                        this._pendingNavigationRequest = null;
+                    } else {
+                        void this.commitPendingNavigation();
+                    }
                 }
 
                 if (
