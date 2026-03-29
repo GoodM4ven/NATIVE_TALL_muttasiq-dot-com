@@ -2913,6 +2913,27 @@ document.addEventListener('alpine:init', () => {
             this.persistWirdState();
         },
 
+        wirdNavigationSourceProfile(source = 'generic') {
+            const normalizedSource = String(source ?? 'generic').trim();
+
+            if (!normalizedSource) {
+                return 'generic';
+            }
+
+            if (
+                normalizedSource === 'keyboard' ||
+                normalizedSource === 'swipe' ||
+                normalizedSource.endsWith('-keyboard') ||
+                normalizedSource.endsWith('-swipe')
+            ) {
+                // Match keyboard/swipe in wird mode to chevron path so fit/cache behavior
+                // stays consistent with the fast in-wird navigation profile.
+                return 'chevron';
+            }
+
+            return normalizedSource;
+        },
+
         async stepWird(direction = 'next', source = 'generic') {
             if (!this.wirdModeActive) {
                 return;
@@ -2938,6 +2959,7 @@ document.addEventListener('alpine:init', () => {
                 max: maxStep,
             });
             const isNextDirection = direction === 'next';
+            const sourceProfile = this.wirdNavigationSourceProfile(source);
             const pageStep = this.wirdStepForPage(this.pageNumber, record);
 
             if (record?.completed) {
@@ -2976,14 +2998,14 @@ document.addEventListener('alpine:init', () => {
                 );
                 const targetPage = this.absolutePageToPageNumber(startAbsolutePage + browseStep);
                 this.applyWirdNavigationVisualState(targetPage, browseStep, {
-                    source,
+                    source: sourceProfile,
                 });
 
                 await this.goToPage(targetPage, {
                     direction: isNextDirection ? 'next' : 'prev',
                     animate: true,
                     forceRefit: true,
-                    source: `wird-${source}`,
+                    source: `wird-${sourceProfile}`,
                 });
 
                 if (
@@ -3055,14 +3077,14 @@ document.addEventListener('alpine:init', () => {
 
             const targetPage = this.absolutePageToPageNumber(this.wirdCurrentAbsolutePage(record));
             this.applyWirdNavigationVisualState(targetPage, record.currentStep, {
-                source,
+                source: sourceProfile,
             });
 
             await this.goToPage(targetPage, {
                 direction: isNextDirection ? 'next' : 'prev',
                 animate: true,
                 forceRefit: true,
-                source: `wird-${source}`,
+                source: `wird-${sourceProfile}`,
             });
 
             if (

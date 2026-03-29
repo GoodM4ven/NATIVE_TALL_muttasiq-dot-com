@@ -2596,7 +2596,7 @@ JS,
 it('animates wird page counter morph and slider tween for chevron keyboard and swipe navigation', function () {
     $page = visit('/');
 
-    resetBrowserState($page);
+    resetBrowserState($page, true);
     waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
     hashAction($page, '#quran-app-tilawa', true);
 
@@ -2606,9 +2606,65 @@ it('animates wird page counter morph and slider tween for chevron keyboard and s
     waitForScript($page, quranReaderDataScript('data.ready && data.mushafLines.length > 0'), true);
     waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
 
-    scriptClick($page, '[data-quran-wird-toggle]');
+    safeClick($page, '[data-quran-wird-toggle]');
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript(
+            'Boolean(data.wirdModeActive) || Boolean(document.querySelector("#support-unlock-modal"))',
+        ),
+        true,
+        6_000,
+    );
+    $unlockModalVisible = (bool) $page->script('Boolean(document.querySelector("#support-unlock-modal"))');
+
+    if ($unlockModalVisible) {
+        $page->script(
+            <<<'JS'
+(() => {
+  const buttons = Array.from(document.querySelectorAll('#support-unlock-modal button'));
+  const bypassButton = buttons.find((button) =>
+    String(button.textContent ?? '').includes('أشهد الله أني لا أستطيع دعمكم الآن')
+  );
+
+  if (!(bypassButton instanceof HTMLButtonElement)) {
+    return false;
+  }
+
+  bypassButton.click();
+
+  return true;
+})()
+JS,
+        );
+        waitForScriptWithTimeout($page, modalClosedScript(), true, 8_000);
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript('Boolean(data.isSupportLockActive())'),
+            false,
+            8_000,
+        );
+        safeClick($page, '[data-quran-wird-toggle]');
+    }
+
     waitForScriptWithTimeout($page, quranReaderDataScript('Boolean(data.wirdModeActive)'), true, 6_000);
     waitForScriptWithTimeout($page, quranReaderDataScript('Number(data.pageNumber ?? 0) > 0'), true, 6_000);
+
+    $wirdSourceProfiles = $page->script(
+        quranReaderDataScript(
+            <<<'JS'
+(() => ({
+  keyboard: String(data.wirdNavigationSourceProfile('keyboard') ?? ''),
+  swipe: String(data.wirdNavigationSourceProfile('swipe') ?? ''),
+  chevron: String(data.wirdNavigationSourceProfile('chevron') ?? ''),
+}))()
+JS,
+        ),
+    );
+
+    expect($wirdSourceProfiles)->toBeArray();
+    expect((string) ($wirdSourceProfiles['keyboard'] ?? ''))->toBe('chevron');
+    expect((string) ($wirdSourceProfiles['swipe'] ?? ''))->toBe('chevron');
+    expect((string) ($wirdSourceProfiles['chevron'] ?? ''))->toBe('chevron');
 
     $startSliderTweenMonitor = function () use ($page): void {
         $page->script(
