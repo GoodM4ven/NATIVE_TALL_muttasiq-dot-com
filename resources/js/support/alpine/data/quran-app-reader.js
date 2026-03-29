@@ -2930,17 +2930,6 @@ document.addEventListener('alpine:init', () => {
                 return 'generic';
             }
 
-            if (
-                normalizedSource === 'keyboard' ||
-                normalizedSource === 'swipe' ||
-                normalizedSource.endsWith('-keyboard') ||
-                normalizedSource.endsWith('-swipe')
-            ) {
-                // Keep keyboard/swipe aligned with chevron navigation so all
-                // reader interactions use the same fit/cache heuristics.
-                return 'chevron';
-            }
-
             return normalizedSource;
         },
 
@@ -4775,7 +4764,8 @@ document.addEventListener('alpine:init', () => {
             }
 
             const basePage = this.navigationBasePage();
-            const shouldCommitImmediately = sourceProfile === 'chevron';
+            const shouldCommitImmediately =
+                sourceProfile === 'chevron' || this.isHighFrequencyNavigationSource(sourceProfile);
 
             await this.navigateToPage(basePage + 1, {
                 direction: 'next',
@@ -4795,7 +4785,8 @@ document.addEventListener('alpine:init', () => {
             }
 
             const basePage = this.navigationBasePage();
-            const shouldCommitImmediately = sourceProfile === 'chevron';
+            const shouldCommitImmediately =
+                sourceProfile === 'chevron' || this.isHighFrequencyNavigationSource(sourceProfile);
 
             if (basePage <= 1) {
                 this.requestReaderGateNavigation(sourceProfile);
@@ -4853,16 +4844,16 @@ document.addEventListener('alpine:init', () => {
             return this.maxPage > 0 && this.navigationBasePage() >= this.maxPage;
         },
 
-        async goNextFromChevron() {
+        async goNextFromChevron(source = 'chevron') {
             if (!this.wirdModeActive && this.isLastNavigationPage()) {
                 return;
             }
 
-            await this.nextPage('chevron');
+            await this.nextPage(source);
         },
 
-        async goPreviousFromChevron() {
-            await this.previousPage('chevron');
+        async goPreviousFromChevron(source = 'chevron') {
+            await this.previousPage(source);
         },
 
         async handleRequestedNavigation(kind, detail = {}) {
@@ -4941,13 +4932,13 @@ document.addEventListener('alpine:init', () => {
             }
 
             if (direction === 'left') {
-                await this.goNextFromChevron();
+                await this.goNextFromChevron('keyboard');
 
                 return;
             }
 
             if (direction === 'right') {
-                await this.goPreviousFromChevron();
+                await this.goPreviousFromChevron('keyboard');
             }
         },
 
@@ -7459,13 +7450,13 @@ document.addEventListener('alpine:init', () => {
             this.resetSwipeState();
 
             if (direction === 'next') {
-                await this.goNextFromChevron();
+                await this.goNextFromChevron('swipe');
 
                 return true;
             }
 
             if (direction === 'prev') {
-                await this.goPreviousFromChevron();
+                await this.goPreviousFromChevron('swipe');
 
                 return true;
             }

@@ -10,8 +10,9 @@
             isReaderMaintenanceInFlight: false,
             hasQueuedReaderMaintenance: false,
             async openSupportUnlockModal() {
-                window.dispatchEvent(new CustomEvent('close-modal-quietly'));
-                window.dispatchEvent(new CustomEvent('close-modal'));
+                const closePayload = { id: this.controlPanelModalId };
+                window.dispatchEvent(new CustomEvent('close-modal-quietly', { detail: closePayload }));
+                window.dispatchEvent(new CustomEvent('close-modal', { detail: closePayload }));
         
                 try {
                     await $wire.unmountAction(false);

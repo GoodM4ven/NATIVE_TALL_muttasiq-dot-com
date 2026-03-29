@@ -2154,8 +2154,8 @@ JS,
         ),
     );
     expect($sourceProfiles)->toBeArray();
-    expect((string) ($sourceProfiles['keyboard'] ?? ''))->toBe('chevron');
-    expect((string) ($sourceProfiles['swipe'] ?? ''))->toBe('chevron');
+    expect((string) ($sourceProfiles['keyboard'] ?? ''))->toBe('keyboard');
+    expect((string) ($sourceProfiles['swipe'] ?? ''))->toBe('swipe');
     expect((string) ($sourceProfiles['chevron'] ?? ''))->toBe('chevron');
 
     safeClick($page, '.quran-bottom-strip-nav-next');
@@ -2876,8 +2876,8 @@ JS,
     );
 
     expect($wirdSourceProfiles)->toBeArray();
-    expect((string) ($wirdSourceProfiles['keyboard'] ?? ''))->toBe('chevron');
-    expect((string) ($wirdSourceProfiles['swipe'] ?? ''))->toBe('chevron');
+    expect((string) ($wirdSourceProfiles['keyboard'] ?? ''))->toBe('keyboard');
+    expect((string) ($wirdSourceProfiles['swipe'] ?? ''))->toBe('swipe');
     expect((string) ($wirdSourceProfiles['chevron'] ?? ''))->toBe('chevron');
 
     $startSliderTweenMonitor = function () use ($page): void {
