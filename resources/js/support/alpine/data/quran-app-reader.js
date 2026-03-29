@@ -4727,6 +4727,12 @@ document.addEventListener('alpine:init', () => {
                 if (this.navigationBurstRemainingMsFor(source) <= 0) {
                     await this.commitPendingNavigation();
 
+                    if (this._pendingNavigationRequest !== null) {
+                        this.schedulePendingNavigationCommit(
+                            this.resolveNavigationCommitDelay(source, settleDelayMs),
+                        );
+                    }
+
                     return;
                 }
 
@@ -4750,10 +4756,13 @@ document.addEventListener('alpine:init', () => {
             }
 
             const basePage = this.navigationBasePage();
+            const shouldCommitImmediately = sourceProfile === 'chevron';
 
             await this.navigateToPage(basePage + 1, {
                 direction: 'next',
                 source: sourceProfile,
+                commitNow: shouldCommitImmediately,
+                settleDelayMs: shouldCommitImmediately ? 0 : navigationSettleDelayMs,
             });
         },
 
@@ -4767,6 +4776,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             const basePage = this.navigationBasePage();
+            const shouldCommitImmediately = sourceProfile === 'chevron';
 
             if (basePage <= 1) {
                 this.requestReaderGateNavigation(sourceProfile);
@@ -4777,6 +4787,8 @@ document.addEventListener('alpine:init', () => {
             await this.navigateToPage(basePage - 1, {
                 direction: 'prev',
                 source: sourceProfile,
+                commitNow: shouldCommitImmediately,
+                settleDelayMs: shouldCommitImmediately ? 0 : navigationSettleDelayMs,
             });
         },
 
@@ -4856,11 +4868,14 @@ document.addEventListener('alpine:init', () => {
 
             if (kind === 'page') {
                 const requestedPage = clampPage(detail?.page ?? this.pageInput, this.maxPage);
+                const shouldCommitImmediately = requestedSource === 'page-jump';
                 await this.navigateToPage(requestedPage, {
                     direction: this.resolveNavigationDirection(requestedPage),
                     animate: true,
                     source: requestedSource || 'page-event',
                     forceRefit: true,
+                    commitNow: shouldCommitImmediately,
+                    settleDelayMs: shouldCommitImmediately ? 0 : navigationSettleDelayMs,
                 });
 
                 if (requestedSource === 'page-jump' || requestedSource === 'page-slider-commit') {
@@ -6054,6 +6069,21 @@ document.addEventListener('alpine:init', () => {
             if (this._isModalLifecycleSettling || this._activeModalIds.size > 0) {
                 this.holdPageHiddenForModalLifecycle();
 
+                return;
+            }
+
+            const isWaitingOnlyForReveal =
+                this._revealTimer !== null &&
+                this.isFittingPage &&
+                !this.isLoadingPage &&
+                !this._layoutActivePromise &&
+                this._pendingNavigationRequest === null &&
+                !this._navigationRevealLocked &&
+                !this._isModalLifecycleSettling &&
+                this._activeModalIds.size === 0 &&
+                this.hasRenderablePage();
+
+            if (isWaitingOnlyForReveal) {
                 return;
             }
 

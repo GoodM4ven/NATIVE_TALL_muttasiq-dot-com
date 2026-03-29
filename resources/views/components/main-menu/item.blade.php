@@ -8,6 +8,7 @@
 
 @php
     $locked = !$onClickCallback;
+    $resolvedCaption = app_arabic_text((string) $caption);
 @endphp
 
 @once
@@ -130,7 +131,7 @@
         $buttonClasses,
     ]) }}"
     data-main-menu-item
-    data-caption="{{ $caption }}"
+    data-caption="{{ $resolvedCaption }}"
     data-icon-name="{{ $iconName }}"
     data-on-click-callback="{{ $onClickCallback ?? '' }}"
     data-locked="{{ $locked ? 'true' : 'false' }}"
@@ -145,7 +146,7 @@
         },
         shadow: makeBoxShadowFromColor('--primary-500'),
         shadowDark: makeBoxShadowFromColor('--primary-100'),
-        caption: @js($caption),
+        caption: @js($resolvedCaption),
         iconName: @js($iconName),
         onClickCallback: @js($onClickCallback),
         locked: @js($locked),

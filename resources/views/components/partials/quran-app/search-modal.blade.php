@@ -18,7 +18,7 @@
             x-cloak
             x-show="normalizeSearchQuery(search.query).length > 0 && normalizeSearchQuery(search.query).length < search.minQueryLength"
             x-transition.opacity.duration.220ms
-            x-text="`اكتب ${search.minQueryLength} أحرف أو أكثر ليبدأ البحث.`"
+            x-text="`${search.minQueryLength} {{ app_arabic_text('أحرف أو أكثر ليبدأ البحث.') }}`"
         ></div>
 
         <div
@@ -26,7 +26,7 @@
             x-cloak
             x-show="normalizeSearchQuery(search.query).length >= search.minQueryLength && search.isLoading"
             x-transition.opacity.duration.220ms
-        >جاري البحث...</div>
+        >{{ app_arabic_text('جاري البحث...') }}</div>
 
         <div
             class="quran-search-feedback mt-2"
@@ -34,7 +34,7 @@
             x-show="normalizeSearchQuery(search.query).length >= search.minQueryLength && !search.isLoading && search.results.length === 0"
             x-transition.opacity.duration.220ms
         >
-            لا توجد نتائج مطابقة.
+            {{ app_arabic_text('لا توجد نتائج مطابقة.') }}
         </div>
 
         <div
@@ -62,7 +62,7 @@
                 >
                     <span
                         class="quran-search-result-meta"
-                        x-text="surahLabel(result.surah_number) + ' · آية ' + result.ayah_number + ' · صفحة ' + result.page_number"
+                        x-text="surahLabel(result.surah_number) + ' · {{ app_arabic_text('آية') }} ' + result.ayah_number + ' · {{ app_arabic_text('صفحة') }} ' + result.page_number"
                     ></span>
                     <span
                         class="quran-search-result-ayah font-quran"
@@ -79,7 +79,7 @@
     </div>
 
     <div class="quran-surah-grid-shell">
-        <p class="quran-surah-grid-caption">الانتقال المباشر إلى السور</p>
+        <p class="quran-surah-grid-caption">{{ app_arabic_text('الانتقال المباشر إلى السور') }}</p>
         <div
             class="quran-surah-grid"
             data-quran-surah-grid

@@ -165,9 +165,10 @@
         }"
     >
         <p class="whitespace-normal text-center leading-tight">
-            جميع الحقوق محفوظة •
-            متسق @ <span x-text="window.dayjs().calendar('hijri').format('YYYY')"></span> هـ
-            • النسخة
+            {{ app_arabic_text('جميع الحقوق محفوظة') }} •
+            {{ app_arabic_text('متسق') }} @ <span x-text="window.dayjs().calendar('hijri').format('YYYY')"></span>
+            {{ app_arabic_text('هـ') }}
+            • {{ app_arabic_text('النسخة') }}
             <button
                 class="inline whitespace-nowrap rounded-sm font-semibold text-gray-800 underline decoration-gray-400/80 underline-offset-4 transition-colors hover:text-gray-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400/60 dark:text-gray-100 dark:decoration-gray-400/60 dark:hover:text-white dark:focus-visible:ring-gray-200/40"
                 data-testid="copyright-version-button"

@@ -625,12 +625,12 @@
         x-on:pointerleave="handlePointerLeave()"
         x-on:pointermove.passive="handlePointerMove($event)"
     >
-        <p class="quran-app-gate-caption">اختر نمط القراءة الذي يناسب مقصدك</p>
+        <p class="quran-app-gate-caption">{{ app_arabic_text('اختر نمط القراءة الذي يناسب مقصدك') }}</p>
 
         <button
             class="quran-app-sector quran-app-sector--tilawa"
             type="button"
-            aria-label="تلاوة القرآن"
+            aria-label="{{ app_arabic_text('تلاوة القرآن') }}"
             x-bind:class="{
                 'is-active': isModeActive('tilawa'),
                 'is-muted': currentMode() && !isModeActive('tilawa'),
@@ -645,7 +645,7 @@
             <span class="quran-app-sector__media quran-app-sector__media--tilawa">
                 <x-goodmaven::blurred-image
                     class="absolute inset-0"
-                    alt="وضع التلاوة"
+                    alt="{{ app_arabic_text('وضع التلاوة') }}"
                     :imagePath="asset('images/background/quran/tilawa.webp')"
                     :thumbnailImagePath="asset('images/background/quran/tilawa-blur-thumbnail.webp')"
                     :isEagerLoaded="true"
@@ -658,14 +658,14 @@
 
             <span class="quran-app-sector__veil"></span>
             <span class="quran-app-sector__chip quran-app-sector__chip--tilawa font-arabic-serif">
-                <span class="quran-app-sector__chip-text">تلاوة</span>
+                <span class="quran-app-sector__chip-text">{{ app_arabic_text('تلاوة') }}</span>
             </span>
         </button>
 
         <button
             class="quran-app-sector quran-app-sector--tadabbur"
             type="button"
-            aria-label="تدبّر القرآن"
+            aria-label="{{ app_arabic_text('تدبّر القرآن') }}"
             x-bind:aria-disabled="isModeLocked('tadabbur') ? 'true' : 'false'"
             x-bind:class="{
                 'is-active': isModeActive('tadabbur'),
@@ -681,7 +681,7 @@
             <span class="quran-app-sector__media quran-app-sector__media--tadabbur">
                 <x-goodmaven::blurred-image
                     class="absolute inset-0"
-                    alt="وضع التدبّر"
+                    alt="{{ app_arabic_text('وضع التدبّر') }}"
                     :imagePath="asset('images/background/quran/tadabbur.webp')"
                     :thumbnailImagePath="asset('images/background/quran/tadabbur-blur-thumbnail.webp')"
                     :isEagerLoaded="true"
@@ -694,13 +694,13 @@
 
             <span class="quran-app-sector__veil"></span>
             <span class="quran-app-sector__chip quran-app-sector__chip--tadabbur font-arabic-serif">
-                <span class="quran-app-sector__chip-text">تدبّر</span>
+                <span class="quran-app-sector__chip-text">{{ app_arabic_text('تدبّر') }}</span>
                 <span class="quran-app-sector__chip-lock">
                     <x-icon
                         class="quran-app-sector__chip-lock-icon"
                         :name="'heroicon-o-lock-closed'"
                     />
-                    <span class="quran-app-sector__chip-lock-caption">قريبًا</span>
+                    <span class="quran-app-sector__chip-lock-caption">{{ app_arabic_text('قريبًا') }}</span>
                 </span>
             </span>
         </button>
@@ -708,7 +708,7 @@
         <button
             class="quran-app-sector quran-app-sector--hifth"
             type="button"
-            aria-label="حفظ القرآن"
+            aria-label="{{ app_arabic_text('حفظ القرآن') }}"
             x-bind:aria-disabled="isModeLocked('hifth') ? 'true' : 'false'"
             x-bind:class="{
                 'is-active': isModeActive('hifth'),
@@ -724,7 +724,7 @@
             <span class="quran-app-sector__media quran-app-sector__media--hifth">
                 <x-goodmaven::blurred-image
                     class="absolute inset-0"
-                    alt="وضع الحفظ"
+                    alt="{{ app_arabic_text('وضع الحفظ') }}"
                     :imagePath="asset('images/background/quran/hifth.webp')"
                     :thumbnailImagePath="asset('images/background/quran/hifth-blur-thumbnail.webp')"
                     :isEagerLoaded="true"
@@ -737,13 +737,13 @@
 
             <span class="quran-app-sector__veil"></span>
             <span class="quran-app-sector__chip quran-app-sector__chip--hifth font-arabic-serif">
-                <span class="quran-app-sector__chip-text">حفظ</span>
+                <span class="quran-app-sector__chip-text">{{ app_arabic_text('حفظ') }}</span>
                 <span class="quran-app-sector__chip-lock">
                     <x-icon
                         class="quran-app-sector__chip-lock-icon"
                         :name="'heroicon-o-lock-closed'"
                     />
-                    <span class="quran-app-sector__chip-lock-caption">قريبًا</span>
+                    <span class="quran-app-sector__chip-lock-caption">{{ app_arabic_text('قريبًا') }}</span>
                 </span>
             </span>
         </button>

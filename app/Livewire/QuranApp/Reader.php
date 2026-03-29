@@ -123,8 +123,8 @@ class Reader extends Component implements HasActions, HasSchemas
     public function searchQuranAction(): Action
     {
         return Action::make('searchQuran')
-            ->modalHeading('البحث الشامل للقرآن الكريم')
-            ->modalDescription('ابحث عن الآيات وانتقل مباشرة إلى السورة والموضع المقصود...')
+            ->modalHeading(app_arabic_text('البحث الشامل للقرآن الكريم'))
+            ->modalDescription(app_arabic_text('ابحث عن الآيات وانتقل مباشرة إلى السورة والموضع المقصود...'))
             ->modalAutofocus(false)
             ->modalWidth(Width::FiveExtraLarge)
             ->modalSubmitAction(false)
@@ -136,7 +136,7 @@ class Reader extends Component implements HasActions, HasSchemas
                 TextInput::make('search')
                     ->hiddenLabel()
                     ->type('search')
-                    ->placeholder('يا بنيّ أقم الصلاة، وأمر بالمعروف، وانه عن المنكر...')
+                    ->placeholder(app_arabic_text('يا بنيّ أقم الصلاة، وأمر بالمعروف، وانه عن المنكر...'))
                     ->extraFieldWrapperAttributes([
                         'class' => 'quran-search-field-wrapper',
                     ])
@@ -158,11 +158,11 @@ class Reader extends Component implements HasActions, HasSchemas
     public function jumpToPageAction(): Action
     {
         return Action::make('jumpToPage')
-            ->modalHeading('الانتقال إلى صفحة')
-            ->modalDescription('أدخل رقم الصفحة المراد الانتقال إليها.')
+            ->modalHeading(app_arabic_text('الانتقال إلى صفحة'))
+            ->modalDescription(app_arabic_text('أدخل رقم الصفحة المراد الانتقال إليها.'))
             ->modalAutofocus(true)
             ->modalWidth(Width::Small)
-            ->modalSubmitActionLabel('انتقال')
+            ->modalSubmitActionLabel(app_arabic_text('انتقال'))
             ->extraModalWindowAttributes([
                 'id' => 'quran-reader-jump-page-modal',
             ])
@@ -172,7 +172,7 @@ class Reader extends Component implements HasActions, HasSchemas
             ->modalFooterActionsAlignment(Alignment::Center)
             ->schema([
                 TextInput::make('page')
-                    ->label('الصفحة')
+                    ->label(app_arabic_text('الصفحة'))
                     ->type('number')
                     ->inputMode('numeric')
                     ->autofocus()
@@ -188,7 +188,7 @@ class Reader extends Component implements HasActions, HasSchemas
                         'x-init' => '$nextTick(() => { $el.focus(); $el.select(); });',
                         'x-on:focus' => '$event.target.select();',
                         'x-on:input' => '$event.target.value = String(Math.min(Math.max(1, Math.trunc(Number($event.target.value || 1) || 1)), Math.max(1, Number($event.target.max) || 1)));',
-                        'x-on:blur' => '$event.target.value = String(Math.min(Math.max(1, Math.trunc(Number($event.target.value || 1) || 1)), Math.max(1, Number($event.target.max) || 1)));',
+                        'x-on:blur' => '$event.target.value = String(Math.min(Math.max(1, Math.trunc(Number($event.target.value || 1) || 1)), Math.max(1, Number($event.target.max) || 1))); window.setTimeout(() => { if (!document.body.contains($event.target) || $event.target.offsetParent === null) { return; } $event.target.focus(); $event.target.select(); }, 0);',
                     ], merge: true)
                     ->required(),
             ])
@@ -202,12 +202,12 @@ class Reader extends Component implements HasActions, HasSchemas
     public function navigationHistoryAction(): Action
     {
         return Action::make('navigationHistory')
-            ->modalHeading('سجل التنقّل')
-            ->modalDescription('آخر الانتقالات بين الصفحات. يبقى الموسوم محفوظًا، زيادة على آخر 100 عنصر.')
+            ->modalHeading(app_arabic_text('سجل التنقّل'))
+            ->modalDescription(app_arabic_text('آخر الانتقالات بين الصفحات. يبقى الموسوم محفوظًا، زيادة على آخر 100 عنصر.'))
             ->modalAutofocus(false)
             ->modalWidth(Width::FiveExtraLarge)
             ->modalSubmitAction(false)
-            ->modalCancelActionLabel('إغلاق')
+            ->modalCancelActionLabel(app_arabic_text('إغلاق'))
             ->extraModalWindowAttributes([
                 'id' => self::HISTORY_MODAL_ID,
                 'dir' => 'ltr',
@@ -221,13 +221,13 @@ class Reader extends Component implements HasActions, HasSchemas
     public function bookmarksManagerAction(): Action
     {
         return Action::make('bookmarksManager')
-            ->modalHeading('إدارة علامات الصفحات')
-            ->modalDescription('انقر للانتقال، عدّل الملاحظة وأدر الوسوم مباشرة، أو استبدل الصفحة المحفوظة بالصفحة الحالية.')
+            ->modalHeading(app_arabic_text('إدارة علامات الصفحات'))
+            ->modalDescription(app_arabic_text('انقر للانتقال، عدّل الملاحظة وأدر الوسوم مباشرة، أو استبدل الصفحة المحفوظة بالصفحة الحالية.'))
             ->modalAutofocus(false)
             ->slideOver()
             ->modalWidth(Width::FiveExtraLarge)
             ->modalSubmitAction(false)
-            ->modalCancelActionLabel('إغلاق')
+            ->modalCancelActionLabel(app_arabic_text('إغلاق'))
             ->extraModalWindowAttributes([
                 'id' => self::BOOKMARKS_MODAL_ID,
             ])
@@ -240,10 +240,10 @@ class Reader extends Component implements HasActions, HasSchemas
     public function supportUnlockAction(): Action
     {
         return Action::make('supportUnlock')
-            ->modalHeading('دعم المشروع')
-            ->modalDescription('قبل استخدام بعض الخصائص المميّزة في التطبيق، نحتاج منك تأكيد دعم تطوير المشروع.')
+            ->modalHeading(app_arabic_text('دعم المشروع'))
+            ->modalDescription(app_arabic_text('قبل استخدام بعض الخصائص المميّزة في التطبيق، نحتاج منك تأكيد دعم تطوير المشروع.'))
             ->modalWidth(Width::ThreeExtraLarge)
-            ->modalSubmitActionLabel('قمت بالدعم')
+            ->modalSubmitActionLabel(app_arabic_text('قمت بالدعم'))
             ->modalCancelAction(false)
             ->extraModalWindowAttributes([
                 'id' => 'support-unlock-modal',
@@ -252,7 +252,7 @@ class Reader extends Component implements HasActions, HasSchemas
             ->extraModalFooterActions(fn (Action $action): array => [
                 $action
                     ->makeModalSubmitAction('supportUnlockWeeklyBypass', arguments: ['mode' => 'weekly'])
-                    ->label('أشهد الله أني لا أستطيع دعمكم الآن')
+                    ->label(app_arabic_text('أشهد الله أني لا أستطيع دعمكم الآن'))
                     ->color('gray'),
             ])
             ->action(function (array $data, array $arguments): void {
@@ -267,11 +267,11 @@ class Reader extends Component implements HasActions, HasSchemas
                         ? 'heroicon-o-clock'
                         : 'heroicon-o-lock-open',
                     title: $mode === 'weekly'
-                        ? 'تمت إتاحة الميّزات لأسبوع واحد'
-                        : 'تمت إتاحة الميّزات بشكل دائم',
+                        ? app_arabic_text('تمت إتاحة الميّزات لأسبوع واحد')
+                        : app_arabic_text('تمت إتاحة الميّزات بشكل دائم'),
                     body: $mode === 'weekly'
-                        ? 'رزقك الله...'
-                        : 'أحسن الله إليك...',
+                        ? app_arabic_text('رزقك الله...')
+                        : app_arabic_text('أحسن الله إليك...'),
                 );
             });
     }
@@ -391,17 +391,19 @@ class Reader extends Component implements HasActions, HasSchemas
     private function supportUnlockModalContent(): HtmlString
     {
         return new HtmlString(
-            '<div class="space-y-4 text-right text-sm! leading-7">'
-            .'<p>تطوير المزايا المتقدمة، وإتاحة التطبيق على المخدّمات والمنصات بأجهزتها المختلفة، كل هذا يتطلب <strong>وقتًا وجهدًا وتكلفة مستمرة</strong>، بارك الله فيكم... ولذلك نودّ منكم على الأقلّ محاولة التبرع لتطوير تطبيق متسق باستخدام إحدى المنصات المتاحة لذلك، وجزاكم الله خيرا.</p>'
-            .'<div class="rounded-xl border border-gray-200/70 bg-white/70 p-3 text-sm">'
-            .'<p class="mb-2 font-semibold text-gray-900">روابط منصات الدعم:</p>'
-            .'<div class="flex flex-wrap items-center justify-end gap-2">'
-            .$this->supportUnlockLinkMarkup('Buy Me a Coffee', 'https://buymeacoffee.com/goodm4ven')
-            .$this->supportUnlockLinkMarkup('Patreon', 'https://patreon.com/GoodM4ven')
-            .$this->supportUnlockLinkMarkup('GitHub Sponsors', 'https://github.com/sponsors/GoodM4ven')
-            .'</div>'
-            .'</div>'
-            .'</div>',
+            app_arabic_text(
+                '<div class="space-y-4 text-right text-sm! leading-7">'
+                .'<p>تطوير المزايا المتقدمة، وإتاحة التطبيق على المخدّمات والمنصات بأجهزتها المختلفة، كل هذا يتطلب <strong>وقتًا وجهدًا وتكلفة مستمرة</strong>، بارك الله فيكم... ولذلك نودّ منكم على الأقلّ محاولة التبرع لتطوير تطبيق متسق باستخدام إحدى المنصات المتاحة لذلك، وجزاكم الله خيرا.</p>'
+                .'<div class="rounded-xl border border-gray-200/70 bg-white/70 p-3 text-sm">'
+                .'<p class="mb-2 font-semibold text-gray-900">روابط منصات الدعم:</p>'
+                .'<div class="flex flex-wrap items-center justify-end gap-2">'
+                .$this->supportUnlockLinkMarkup('Buy Me a Coffee', 'https://buymeacoffee.com/goodm4ven')
+                .$this->supportUnlockLinkMarkup('Patreon', 'https://patreon.com/GoodM4ven')
+                .$this->supportUnlockLinkMarkup('GitHub Sponsors', 'https://github.com/sponsors/GoodM4ven')
+                .'</div>'
+                .'</div>'
+                .'</div>',
+            ),
         );
     }
 

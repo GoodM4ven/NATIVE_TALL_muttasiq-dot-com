@@ -9,6 +9,19 @@
             controlPanelModalId: @js('fi-' . $this->getId() . '-action-0'),
             isReaderMaintenanceInFlight: false,
             hasQueuedReaderMaintenance: false,
+            async openSupportUnlockModal() {
+                window.dispatchEvent(new CustomEvent('close-modal-quietly'));
+                window.dispatchEvent(new CustomEvent('close-modal'));
+        
+                try {
+                    await $wire.unmountAction(false);
+                } catch (_) {
+                    //
+                }
+        
+                await new Promise((resolve) => window.setTimeout(resolve, 40));
+                await $wire.mountAction('supportUnlock');
+            },
             async runReaderMaintenancePulse() {
                 if (this.isReaderMaintenanceInFlight) {
                     this.hasQueuedReaderMaintenance = true;
@@ -40,6 +53,7 @@
             },
         }"
         x-on:open-control-panel-modal.window="$wire.openControlPanelModal(window.getAthkarSettingsFromStorage?.() ?? {}, $event.detail?.tab ?? null)"
+        x-on:open-support-unlock-modal.window="openSupportUnlockModal()"
         x-on:athkar-reader-maintenance.window="runReaderMaintenancePulse()"
         x-on:x-modal-opened.window="if ($event.detail?.id === controlPanelModalId) isControlPanelOpen = true;"
         x-on:close-modal.window="if ($event.detail?.id === controlPanelModalId) isControlPanelOpen = false;"

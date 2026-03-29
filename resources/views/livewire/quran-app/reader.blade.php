@@ -501,9 +501,15 @@
 
         .quran-wird-progress-button:active {}
 
+        .quran-wird-electric-filter-defs {
+            position: absolute;
+            width: 0;
+            height: 0;
+            pointer-events: none;
+        }
+
         .quran-wird-progress-aura-water,
-        .quran-wird-progress-aura-reflect,
-        .quran-wird-progress-aura-burn {
+        .quran-wird-progress-aura-reflect {
             position: absolute;
             inset: 0.16rem;
             border-radius: 999px;
@@ -545,34 +551,57 @@
             filter: saturate(1.2);
         }
 
-        .quran-wird-progress-aura-burn {
-            inset: -0.32rem;
+        .quran-wird-progress-aura-electric__glow-1,
+        .quran-wird-progress-aura-electric__glow-2,
+        .quran-wird-progress-aura-electric__overlay-1,
+        .quran-wird-progress-aura-electric__overlay-2,
+        .quran-wird-progress-aura-electric__background {
+            position: absolute;
+            inset: 0.25rem;
             border-radius: 999px;
-            clip-path: none;
-            background:
-                radial-gradient(50% 56% at 50% 50%, rgb(251 191 36 / 44%) 0%, rgb(251 191 36 / 0%) 72%),
-                conic-gradient(from 0deg,
-                    rgb(239 68 68 / 0%) 0deg,
-                    rgb(239 68 68 / 36%) 32deg,
-                    rgb(251 191 36 / 58%) 78deg,
-                    rgb(245 158 11 / 28%) 132deg,
-                    rgb(249 115 22 / 42%) 185deg,
-                    rgb(250 204 21 / 62%) 248deg,
-                    rgb(239 68 68 / 30%) 302deg,
-                    rgb(239 68 68 / 0%) 360deg);
-            mix-blend-mode: screen;
-            opacity: 0;
-            filter: blur(1.2px) saturate(1.28);
-            transform: scale(0.92) rotate(0deg);
-            z-index: 0;
-            transition: opacity 220ms ease;
         }
 
-        .quran-wird-progress-button--active-aura .quran-wird-progress-aura-burn {
+        .quran-wird-progress-aura-electric__glow-1 {
+            border: 2px solid color-mix(in srgb, var(--success-500) 64%, white 36%);
+            filter: blur(1px);
+        }
+
+        .quran-wird-progress-aura-electric__glow-2 {
+            border: 2px solid color-mix(in srgb, var(--success-300) 78%, transparent 22%);
+            filter: blur(3px);
+        }
+
+        .quran-wird-progress-aura-electric__overlay-1 {
+            opacity: 0.88;
+            mix-blend-mode: overlay;
+            transform: scale(1.06);
+            filter: blur(10px);
+            background: linear-gradient(-30deg, white, transparent 30%, transparent 70%, white);
+        }
+
+        .quran-wird-progress-aura-electric__overlay-2 {
+            opacity: 0.45;
+            mix-blend-mode: overlay;
+            transform: scale(1.08);
+            filter: blur(12px);
+            background: linear-gradient(-30deg, white, transparent 30%, transparent 70%, white);
+        }
+
+        .quran-wird-progress-aura-electric__background {
+            z-index: -1;
+            transform: scale(1.12);
+            filter: blur(18px);
+            opacity: 0.34;
+            background:
+                linear-gradient(-30deg,
+                    color-mix(in srgb, var(--success-300) 82%, white 18%),
+                    transparent 46%,
+                    color-mix(in srgb, var(--success-300) 68%, var(--success-200) 32%));
+        }
+
+        .quran-wird-progress-button--active-aura .quran-wird-progress-aura-electric {
             opacity: 0.92;
-            animation:
-                quran-wird-aura-burn-spin 2.7s linear infinite,
-                quran-wird-aura-burn-pulse 1.15s ease-in-out infinite;
+            /* animation: quran-wird-electric-border-breathe 5.0s ease-in-out infinite; */
         }
 
         .quran-wird-progress-button:hover .quran-wird-progress-aura-water,
@@ -656,7 +685,7 @@
 
         .quran-reader--visual-enhancements-disabled .quran-wird-progress-aura-water,
         .quran-reader--visual-enhancements-disabled .quran-wird-progress-aura-reflect,
-        .quran-reader--visual-enhancements-disabled .quran-wird-progress-aura-burn,
+        .quran-reader--visual-enhancements-disabled .quran-wird-progress-aura-electric,
         .quran-reader--visual-enhancements-disabled .quran-wird-progress-hover-shimmer {
             display: none;
         }
@@ -695,41 +724,15 @@
             }
         }
 
-        @keyframes quran-wird-aura-reflect-drift {
-            0% {
-                background-position: 12% 48%, 18% 60%;
-            }
-
-            48% {
-                background-position: 62% 42%, 64% 38%;
-            }
-
-            100% {
-                background-position: 12% 48%, 18% 60%;
-            }
-        }
-
-        @keyframes quran-wird-aura-burn-spin {
-            0% {
-                transform: scale(0.92) rotate(0deg);
-            }
-
-            100% {
-                transform: scale(0.92) rotate(360deg);
-            }
-        }
-
-        @keyframes quran-wird-aura-burn-pulse {
+        @keyframes quran-wird-electric-border-breathe {
 
             0%,
             100% {
-                opacity: 0.72;
-                filter: blur(1.2px) saturate(1.2);
+                opacity: 0.78;
             }
 
             50% {
                 opacity: 1;
-                filter: blur(1.9px) saturate(1.34);
             }
         }
 
@@ -885,10 +888,6 @@
 
         #quran-reader-bookmark-toggle.quran-bookmark-toggle-button:hover {
             background-color: color-mix(in srgb, var(--warning-500) 50%, var(--warning-600));
-        }
-
-        #quran-reader-bookmark-toggle.quran-bookmark-toggle-button:active {
-            transform: scale(0.97);
         }
 
         #quran-reader-bookmark-toggle.quran-bookmark-toggle-button:focus-visible {
@@ -1699,7 +1698,6 @@
         'quran-reader--wird-active': wirdModeActive,
     }"
     x-on:control-panel-updated.window="applyControlPanelSettings($event.detail?.controlPanel ?? {})"
-    x-on:open-support-unlock-modal.window="if ($el.offsetParent !== null) { $wire.mountAction('supportUnlock') }"
     x-on:open-modal.window="handleModalLifecycleEvent('opened', $event)"
     x-on:x-modal-opened.window="handleModalLifecycleEvent('opened', $event)"
     x-on:close-modal.window="handleModalLifecycleEvent('closing', $event)"
@@ -1710,13 +1708,141 @@
     x-on:closed-form-component-action-modal.window="handleModalLifecycleEvent('closed', $event)"
     x-on:support-unlock-updated.window="applySupportUnlockDecision($event.detail?.mode ?? null)"
 >
+    <svg
+        class="quran-wird-electric-filter-defs"
+        aria-hidden="true"
+    >
+        <defs>
+            <filter
+                id="quran-wird-turbulent-displace"
+                color-interpolation-filters="sRGB"
+                x="-20%"
+                y="-20%"
+                width="140%"
+                height="140%"
+            >
+                <feTurbulence
+                    type="turbulence"
+                    baseFrequency="0.02"
+                    numOctaves="10"
+                    result="noise1"
+                    seed="1"
+                />
+                <feOffset
+                    in="noise1"
+                    dx="0"
+                    dy="0"
+                    result="offsetNoise1"
+                >
+                    <animate
+                        values="700; 0"
+                        values="700; 0"
+                        attributeName="dy"
+                        dur="6s"
+                        repeatCount="indefinite"
+                        calcMode="linear"
+                    />
+                </feOffset>
+                <feTurbulence
+                    type="turbulence"
+                    baseFrequency="0.02"
+                    numOctaves="10"
+                    result="noise2"
+                    seed="1"
+                />
+                <feOffset
+                    in="noise2"
+                    dx="0"
+                    dy="0"
+                    result="offsetNoise2"
+                >
+                    <animate
+                        values="0; -700"
+                        values="0; -700"
+                        attributeName="dy"
+                        dur="6s"
+                        repeatCount="indefinite"
+                        calcMode="linear"
+                    />
+                </feOffset>
+                <feTurbulence
+                    type="turbulence"
+                    baseFrequency="0.02"
+                    numOctaves="10"
+                    result="noise3"
+                    seed="2"
+                />
+                <feOffset
+                    in="noise3"
+                    dx="0"
+                    dy="0"
+                    result="offsetNoise3"
+                >
+                    <animate
+                        values="490; 0"
+                        values="490; 0"
+                        attributeName="dx"
+                        dur="6s"
+                        repeatCount="indefinite"
+                        calcMode="linear"
+                    />
+                </feOffset>
+                <feTurbulence
+                    type="turbulence"
+                    baseFrequency="0.02"
+                    numOctaves="10"
+                    result="noise4"
+                    seed="2"
+                />
+                <feOffset
+                    in="noise4"
+                    dx="0"
+                    dy="0"
+                    result="offsetNoise4"
+                >
+                    <animate
+                        values="0; -490"
+                        values="0; -490"
+                        attributeName="dx"
+                        dur="6s"
+                        repeatCount="indefinite"
+                        calcMode="linear"
+                    />
+                </feOffset>
+                <feComposite
+                    in="offsetNoise1"
+                    in2="offsetNoise2"
+                    result="part1"
+                />
+                <feComposite
+                    in="offsetNoise3"
+                    in2="offsetNoise4"
+                    result="part2"
+                />
+                <feBlend
+                    in="part1"
+                    in2="part2"
+                    mode="color-dodge"
+                    result="combinedNoise"
+                />
+                <feDisplacementMap
+                    in="SourceGraphic"
+                    in2="combinedNoise"
+                    scale="20"
+                    xChannelSelector="R"
+                    yChannelSelector="B"
+                />
+            </filter>
+        </defs>
+    </svg>
+
     @if (!$ready)
         <section
             class="quran-reader-panel relative flex h-[clamp(28rem,82svh,50rem)] w-[min(94vw,50rem)] min-w-[18rem] flex-col items-center justify-center gap-4 rounded-[1.75rem] border px-6 py-7 text-center"
         >
-            <h2 class="font-quran text-3xl leading-[1.9]">قارئ القرآن</h2>
+            <h2 class="font-quran text-3xl leading-[1.9]">{{ app_arabic_text('قارئ القرآن') }}</h2>
             <p class="text-sm leading-7 opacity-85">
-                بيانات المصحف غير متاحة بعد. تأكد من تجهيز جداول القرآن وبياناتها، ثم أعد فتح قسم الكتاب.
+                {{ app_arabic_text('بيانات المصحف غير متاحة بعد. تأكد من تجهيز جداول القرآن وبياناتها، ثم أعد فتح قسم الكتاب.') }}
             </p>
         </section>
     @else
@@ -1759,7 +1885,7 @@
                         $wire.mountAction('searchQuran');
                         queueSurahDirectoryAutoFocus();
                     "
-                    x-bind:aria-label="'ابحث في ' + currentSurahTitle()"
+                    x-bind:aria-label="@js(app_arabic_text('ابحث في ')) + currentSurahTitle()"
                 >
                     <x-icon
                         class="quran-soorah-trigger-icon"
@@ -1784,7 +1910,7 @@
                         id="quran-reader-history-toggle"
                         data-quran-open-history
                         type="button"
-                        aria-label="سجل التنقل"
+                        aria-label="{{ app_arabic_text('سجل التنقل') }}"
                         x-on:click="if (!wirdModeActive) { $wire.mountAction('navigationHistory') }"
                     >
                         <x-icon
@@ -1803,10 +1929,10 @@
                         x-bind:class="{
                             'quran-wird-progress-button--completed': ensureWirdDailyRecord()?.completed,
                             'quran-wird-progress-button--shimmer-running': wirdHoverShimmerRunning,
-                            'quran-wird-progress-button--active-aura': wirdModeActive,
+                            'quran-wird-progress-button--active-aura': wirdModeActive && !isSupportLockActive(),
                         }"
                         x-bind:aria-pressed="wirdModeActive ? 'true' : 'false'"
-                        x-bind:aria-label="wirdModeActive ? 'إيقاف وضع الوِرد والعودة للقراءة الحرة' : 'تشغيل وضع الوِرد اليومي'"
+                        x-bind:aria-label="wirdModeActive ? @js(app_arabic_text('إيقاف وضع الوِرد والعودة للقراءة الحرة')) : @js(app_arabic_text('تشغيل وضع الوِرد اليومي'))"
                         x-on:click="toggleWirdMode()"
                         x-on:mouseenter="startWirdHoverEffects()"
                         x-on:mouseleave="endWirdHoverEffects()"
@@ -1823,10 +1949,15 @@
                             x-show="doesEnableVisualEnhancements"
                         ></span>
                         <span
-                            class="quran-wird-progress-aura-burn"
+                            class="quran-wird-progress-aura-electric"
                             aria-hidden="true"
-                            x-show="doesEnableVisualEnhancements && wirdModeActive"
-                        ></span>
+                            x-show="doesEnableVisualEnhancements && wirdModeActive && !isSupportLockActive()"
+                        >
+                            <span class="quran-wird-progress-aura-electric__glow-2"></span>
+                            <span class="quran-wird-progress-aura-electric__overlay-1"></span>
+                            <span class="quran-wird-progress-aura-electric__overlay-2"></span>
+                            <span class="quran-wird-progress-aura-electric__background"></span>
+                        </span>
                         <span
                             class="quran-wird-progress-hover-shimmer"
                             aria-hidden="true"
@@ -1851,7 +1982,7 @@
                                         isSupportLockActive(),
                                     'font-normal!': wirdModeActive,
                                 }"
-                            >الورد اليومي</span>
+                            >{{ app_arabic_text('الورد اليومي') }}</span>
                             <span
                                 class="quran-wird-progress-count"
                                 x-text="wirdProgressCounterLabel()"
@@ -1867,7 +1998,7 @@
                         type="button"
                         x-bind:class="{ 'quran-bookmark-toggle-button--bookmarked': isCurrentPageBookmarked() }"
                         x-bind:aria-pressed="isCurrentPageBookmarked() ? 'true' : 'false'"
-                        x-bind:aria-label="isCurrentPageBookmarked() ? 'إزالة علامة الصفحة الحالية' : 'حفظ الصفحة الحالية كعلامة'"
+                        x-bind:aria-label="isCurrentPageBookmarked() ? @js(app_arabic_text('إزالة علامة الصفحة الحالية')) : @js(app_arabic_text('حفظ الصفحة الحالية كعلامة'))"
                         x-on:pointerdown="onBookmarkButtonPointerDown($event)"
                         x-on:pointerup="onBookmarkButtonPointerUp($event)"
                         x-on:pointercancel="onBookmarkButtonPointerCancel()"
@@ -2091,7 +2222,7 @@
                 <button
                     class="quran-swipe-hint quran-swipe-hint-button quran-bottom-strip-nav-prev select-none outline-none"
                     type="button"
-                    aria-label="الصفحة السابقة"
+                    aria-label="{{ app_arabic_text('الصفحة السابقة') }}"
                     x-on:click.stop.prevent="goPreviousFromChevron()"
                 >
                     <span
@@ -2115,7 +2246,7 @@
                         <button
                             class="quran-page-slider-chip outline-none"
                             type="button"
-                            x-bind:aria-label="wirdModeActive ? 'وضع الوِرد اليومي مفعل' : 'إدخال رقم صفحة'"
+                            x-bind:aria-label="wirdModeActive ? @js(app_arabic_text('وضع الوِرد اليومي مفعل')) : @js(app_arabic_text('إدخال رقم صفحة'))"
                             x-bind:style="`--quran-counter-digit-count: ${pageCounterDigitLength()};`"
                             x-bind:disabled="wirdModeActive"
                             x-bind:class="{ 'quran-page-slider-chip--disabled': wirdModeActive }"
@@ -2188,7 +2319,7 @@
                     <input
                         class="quran-page-slider outline-none"
                         type="range"
-                        aria-label="التنقل بين صفحات المصحف"
+                        aria-label="{{ app_arabic_text('التنقل بين صفحات المصحف') }}"
                         x-bind:min="sliderMin()"
                         x-bind:max="sliderMax()"
                         x-bind:step="1"
@@ -2204,7 +2335,7 @@
                 <button
                     class="quran-swipe-hint quran-swipe-hint-button quran-bottom-strip-nav-next select-none outline-none"
                     type="button"
-                    aria-label="الصفحة التالية"
+                    aria-label="{{ app_arabic_text('الصفحة التالية') }}"
                     x-bind:disabled="!wirdModeActive && isLastNavigationPage()"
                     x-on:click.stop.prevent="goNextFromChevron()"
                 >
@@ -2241,7 +2372,7 @@
                         class="h-3.5 w-3.5"
                         :name="'heroicon-o-clipboard'"
                     />
-                    <span>تم النسخ</span>
+                    <span>{{ app_arabic_text('تم النسخ') }}</span>
                 </div>
             </template>
         </section>

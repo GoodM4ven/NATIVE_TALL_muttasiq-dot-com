@@ -14,6 +14,7 @@ use Filament\Actions\Contracts\HasActions;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
+use Illuminate\Support\HtmlString;
 use Illuminate\View\View;
 use Livewire\Component;
 use Throwable;
@@ -40,9 +41,9 @@ class ControlPanel extends Component implements HasActions, HasSchemas
     public function controlPanelAction(): Action
     {
         return Action::make('controlPanel')
-            ->label('لوحة التحكم')
-            ->modalDescription('بعض المعلومات والتفضيلات في كيفية عمل التطبيق')
-            ->modalSubmitActionLabel('حفظ')
+            ->label(app_arabic_text('لوحة التحكم'))
+            ->modalDescription(app_arabic_text('بعض المعلومات والتفضيلات في كيفية عمل التطبيق'))
+            ->modalSubmitActionLabel(app_arabic_text('حفظ'))
             ->extraModalWindowAttributes([
                 'id' => 'control-panel-modal',
             ])
@@ -76,8 +77,50 @@ class ControlPanel extends Component implements HasActions, HasSchemas
                 );
 
                 if (! $isMaintenancePulse) {
-                    notify(iconName: 'mdi.content-save-check', title: 'تم حفظ الإعدادات بنجاح');
+                    notify(
+                        iconName: 'mdi.content-save-check',
+                        title: app_arabic_text('تم حفظ الإعدادات بنجاح'),
+                    );
                 }
+            });
+    }
+
+    public function supportUnlockAction(): Action
+    {
+        return Action::make('supportUnlock')
+            ->modalHeading(app_arabic_text('دعم المشروع'))
+            ->modalDescription(app_arabic_text('قبل استخدام بعض الخصائص المميّزة في التطبيق، نحتاج منك تأكيد دعم تطوير المشروع.'))
+            ->modalWidth(\Filament\Support\Enums\Width::ThreeExtraLarge)
+            ->modalSubmitActionLabel(app_arabic_text('قمت بالدعم'))
+            ->modalCancelAction(false)
+            ->extraModalWindowAttributes([
+                'id' => 'support-unlock-modal',
+            ])
+            ->modalContent(fn (): HtmlString => $this->supportUnlockModalContent())
+            ->extraModalFooterActions(fn (Action $action): array => [
+                $action
+                    ->makeModalSubmitAction('supportUnlockWeeklyBypass', arguments: ['mode' => 'weekly'])
+                    ->label(app_arabic_text('أشهد الله أني لا أستطيع دعمكم الآن'))
+                    ->color('gray'),
+            ])
+            ->action(function (array $data, array $arguments): void {
+                $mode = ($arguments['mode'] ?? null) === 'weekly'
+                    ? 'weekly'
+                    : 'permanent';
+
+                $this->dispatch('support-unlock-updated', mode: $mode);
+
+                notify(
+                    iconName: $mode === 'weekly'
+                        ? 'heroicon-o-clock'
+                        : 'heroicon-o-lock-open',
+                    title: $mode === 'weekly'
+                        ? app_arabic_text('تمت إتاحة الميّزات لأسبوع واحد')
+                        : app_arabic_text('تمت إتاحة الميّزات بشكل دائم'),
+                    body: $mode === 'weekly'
+                        ? app_arabic_text('رزقك الله...')
+                        : app_arabic_text('أحسن الله إليك...'),
+                );
             });
     }
 
@@ -130,6 +173,38 @@ class ControlPanel extends Component implements HasActions, HasSchemas
     public function render(): View
     {
         return view('livewire.control-panel');
+    }
+
+    private function supportUnlockModalContent(): HtmlString
+    {
+        return new HtmlString(
+            app_arabic_text(
+                '<div class="space-y-4 text-right text-sm! leading-7">'
+                .'<p>تطوير المزايا المتقدمة، وإتاحة التطبيق على المخدّمات والمنصات بأجهزتها المختلفة، كل هذا يتطلب <strong>وقتًا وجهدًا وتكلفة مستمرة</strong>، بارك الله فيكم... ولذلك نودّ منكم على الأقلّ محاولة التبرع لتطوير تطبيق متسق باستخدام إحدى المنصات المتاحة لذلك، وجزاكم الله خيرا.</p>'
+                .'<div class="rounded-xl border border-gray-200/70 bg-white/70 p-3 text-sm">'
+                .'<p class="mb-2 font-semibold text-gray-900">روابط منصات الدعم:</p>'
+                .'<div class="flex flex-wrap items-center justify-end gap-2">'
+                .$this->supportUnlockLinkMarkup('Buy Me a Coffee', 'https://buymeacoffee.com/goodm4ven')
+                .$this->supportUnlockLinkMarkup('Patreon', 'https://patreon.com/GoodM4ven')
+                .$this->supportUnlockLinkMarkup('GitHub Sponsors', 'https://github.com/sponsors/GoodM4ven')
+                .'</div>'
+                .'</div>'
+                .'</div>',
+            ),
+        );
+    }
+
+    private function supportUnlockLinkMarkup(string $label, string $url): string
+    {
+        $openLinkNativeAware = htmlspecialchars(open_link_native_aware($url), ENT_QUOTES, 'UTF-8');
+        $safeLabel = e($label);
+
+        return '<button type="button" class="rounded-lg border border-primary-300/70 bg-primary-50/70 px-3 py-1.5 text-xs font-medium text-primary-800 transition hover:bg-primary-100/80"'
+            .' x-on:click.prevent="'.$openLinkNativeAware.'"'
+            .' x-on:keydown.enter.prevent="'.$openLinkNativeAware.'"'
+            .' x-on:keydown.space.prevent="'.$openLinkNativeAware.'">'
+            .$safeLabel
+            .'</button>';
     }
 
     /**

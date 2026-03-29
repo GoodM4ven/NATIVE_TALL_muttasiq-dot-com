@@ -74,7 +74,7 @@ class Setting extends Model
      */
     public static function definitions(): array
     {
-        return [
+        $definitions = [
             self::DOES_AUTOMATICALLY_SWITCH_COMPLETED_ATHKAR => [
                 'default' => true,
                 'label' => '1. الانتقال التلقائي عند اكتمال عدد الذكر.',
@@ -183,6 +183,16 @@ class Setting extends Model
                 'max' => self::QURAN_WIRD_KHATMAT_MONTHLY_MAX,
             ],
         ];
+
+        foreach ($definitions as $name => $definition) {
+            $definitions[$name]['label'] = app_arabic_text($definition['label']);
+
+            if (array_key_exists('help', $definition)) {
+                $definitions[$name]['help'] = app_arabic_text((string) $definition['help']);
+            }
+        }
+
+        return $definitions;
     }
 
     /**
@@ -191,8 +201,8 @@ class Setting extends Model
     public static function quranWirdFrequencyModeOptions(): array
     {
         return [
-            self::QURAN_WIRD_FREQUENCY_MONTHLY => 'شهري (توزيع الختمات على أيام الشهر)',
-            self::QURAN_WIRD_FREQUENCY_DAILY => 'يومي (ختمات كاملة يوميًا)',
+            self::QURAN_WIRD_FREQUENCY_MONTHLY => app_arabic_text('شهري (توزيع الختمات على أيام الشهر)'),
+            self::QURAN_WIRD_FREQUENCY_DAILY => app_arabic_text('يومي (ختمات كاملة يوميًا)'),
         ];
     }
 
@@ -360,18 +370,18 @@ class Setting extends Model
         $normalizedCount = max(self::QURAN_WIRD_KHATMAT_MIN, $count);
 
         if ($normalizedCount === 1) {
-            return '1 ختمة';
+            return app_arabic_text('1 ختمة');
         }
 
         if ($normalizedCount === 2) {
-            return '2 ختمتان';
+            return app_arabic_text('2 ختمتان');
         }
 
         if ($normalizedCount <= 10) {
-            return sprintf('%d ختمات', $normalizedCount);
+            return app_arabic_text(sprintf('%d ختمات', $normalizedCount));
         }
 
-        return sprintf('%d ختمة', $normalizedCount);
+        return app_arabic_text(sprintf('%d ختمة', $normalizedCount));
     }
 
     public static function appVersion(): string

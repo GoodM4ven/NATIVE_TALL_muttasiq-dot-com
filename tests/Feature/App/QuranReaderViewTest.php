@@ -34,7 +34,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
     $filamentComponentsCssSource = file_get_contents(resource_path('css/core/filament/components.css'));
 
     expect($menuSource)->not->toBeFalse()
-        ->and($menuSource)->toContain(":caption=\"'الكتاب'\"")
+        ->and($menuSource)->toContain(":caption=\"app_arabic_text('الكتاب')\"")
         ->and($menuSource)->toContain(":onClickCallback=\"'() => (\$viewNav(`quran-app-gate`))'\"");
 
     expect($homeSource)->not->toBeFalse()
@@ -319,7 +319,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderClassSource)->toContain('->autofocus()')
         ->and($quranReaderClassSource)->toContain("'x-on:focus' => '\$event.target.select();'")
         ->and($quranReaderClassSource)->toContain("'x-on:input' => '\$event.target.value = String(Math.min(Math.max(1, Math.trunc(Number(\$event.target.value || 1) || 1)), Math.max(1, Number(\$event.target.max) || 1)));'")
-        ->and($quranReaderClassSource)->toContain("'x-on:blur' => '\$event.target.value = String(Math.min(Math.max(1, Math.trunc(Number(\$event.target.value || 1) || 1)), Math.max(1, Number(\$event.target.max) || 1)));'")
+        ->and($quranReaderClassSource)->toContain("'x-on:blur' => '\$event.target.value = String(Math.min(Math.max(1, Math.trunc(Number(\$event.target.value || 1) || 1)), Math.max(1, Number(\$event.target.max) || 1))); window.setTimeout(() => { if (!document.body.contains(\$event.target) || \$event.target.offsetParent === null) { return; } \$event.target.focus(); \$event.target.select(); }, 0);'")
         ->and($quranReaderClassSource)->toContain("view('livewire.quran-app.reader'")
         ->and($quranReaderClassSource)->toContain('Setting::DOES_QURAN_PRESERVE_HARAKAT_ON_COPY')
         ->and($quranReaderClassSource)->toContain('Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ON_MULTI_COPY')
@@ -339,11 +339,11 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderClassSource)->toContain('QuranReaderDataService');
 
     expect($navigationHistoryActionSource)
-        ->toContain('modalHeading(\'سجل التنقّل\')')
+        ->toContain('modalHeading(app_arabic_text(\'سجل التنقّل\'))')
         ->not->toContain('->slideOver()');
 
     expect($bookmarksManagerActionSource)
-        ->toContain('modalHeading(\'إدارة علامات الصفحات\')')
+        ->toContain('modalHeading(app_arabic_text(\'إدارة علامات الصفحات\'))')
         ->toContain('->slideOver()');
 
     expect($quranReaderDataServiceSource)->not->toBeFalse()
