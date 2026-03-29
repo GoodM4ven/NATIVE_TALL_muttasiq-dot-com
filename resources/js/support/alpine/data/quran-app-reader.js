@@ -793,6 +793,8 @@ document.addEventListener('alpine:init', () => {
         _wirdSliderVisualTweenRaf: null,
         _wirdSliderInputCommitTimer: null,
         _wirdSliderPendingCommitStep: null,
+        _wirdSliderLastInputStep: null,
+        _wirdSliderLastInputAt: 0,
         _wirdNavigationRequestSerial: 0,
         _wirdHoverShimmerTimer: null,
         _pageInputCommitTimer: null,
@@ -1041,6 +1043,8 @@ document.addEventListener('alpine:init', () => {
                 this._wirdSliderInputCommitTimer = null;
             }
             this._wirdSliderPendingCommitStep = null;
+            this._wirdSliderLastInputStep = null;
+            this._wirdSliderLastInputAt = 0;
 
             if (this._wirdHoverShimmerTimer !== null) {
                 clearTimeout(this._wirdHoverShimmerTimer);
@@ -2842,6 +2846,8 @@ document.addEventListener('alpine:init', () => {
                 this._wirdSliderInputCommitTimer = null;
             }
             this._wirdSliderPendingCommitStep = null;
+            this._wirdSliderLastInputStep = null;
+            this._wirdSliderLastInputAt = 0;
 
             this.clearWirdSliderVisualTween();
 
@@ -4788,6 +4794,8 @@ document.addEventListener('alpine:init', () => {
                     );
 
                     this._wirdSliderPendingCommitStep = null;
+                    this._wirdSliderLastInputStep = null;
+                    this._wirdSliderLastInputAt = 0;
                     this.clearWirdSliderVisualTween();
                     this.wirdSliderVisualStep = commitStep;
                     void this.navigateWirdToStep(commitStep, source);
@@ -4830,6 +4838,8 @@ document.addEventListener('alpine:init', () => {
 
             this.clearWirdSliderVisualTween();
             this.wirdSliderVisualStep = step;
+            this._wirdSliderLastInputStep = step;
+            this._wirdSliderLastInputAt = Date.now();
             this.queueWirdSliderCommit(step, {
                 source: 'slider-input-idle',
                 delayMs: 140,
@@ -4860,8 +4870,14 @@ document.addEventListener('alpine:init', () => {
                     max: range.maxStep,
                 },
             );
-            const commitStep = Number.isFinite(Number(this._wirdSliderPendingCommitStep))
-                ? this.normalizeIntegerFlag(this._wirdSliderPendingCommitStep, directCommitStep, {
+            const hasRecentInputStep =
+                Number.isFinite(Number(this._wirdSliderLastInputStep)) &&
+                Date.now() - this._wirdSliderLastInputAt <= 520;
+            const freshestInputStep = Number.isFinite(Number(this._wirdSliderPendingCommitStep))
+                ? this._wirdSliderPendingCommitStep
+                : this._wirdSliderLastInputStep;
+            const commitStep = hasRecentInputStep
+                ? this.normalizeIntegerFlag(freshestInputStep, directCommitStep, {
                       min: 0,
                       max: range.maxStep,
                   })

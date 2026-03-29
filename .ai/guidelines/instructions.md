@@ -79,7 +79,7 @@ This shared source code base is representing the web version primarily, the one 
   - `_wirdNavigationRequestSerial` is last-write-wins for rapid interactions.
   - `queueWirdEntryRevealRecovery()` must be serial-guarded so old timers cannot re-hide a newer page.
   - Any in-wird navigation (`stepWird`, `navigateWirdToStep`) should clear old wird-entry recovery timers first.
-  - Slider commits must prefer `_wirdSliderPendingCommitStep` (from `input`) over `change` payload, because `change` can be stale/coalesced after fast scrubs.
+  - Slider commits must prefer a fresh last `input` step (`_wirdSliderPendingCommitStep`/`_wirdSliderLastInputStep`) over `change` payload, but only when input is recent; otherwise use direct `change` step.
 - When touching this area, always run the focused browser regression:
   - `lands on the final wird slider page and keeps the re-entered completed page visible`
   - This path covers support unlock modal, fast slider scrub to final wird step, completion exit, and re-entry visibility.

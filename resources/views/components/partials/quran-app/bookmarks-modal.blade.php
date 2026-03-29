@@ -13,7 +13,7 @@
             <thead>
                 <tr>
                     <th>الصفحة</th>
-                    <th>العنوان</th>
+                    <th>ملاحظة</th>
                     <th>إجراءات</th>
                 </tr>
             </thead>
@@ -41,7 +41,7 @@
                                 data-quran-bookmark-go
                                 type="button"
                                 x-on:click="goToBookmark(bookmark)"
-                                x-text="`صفحة ${bookmark.page_number}`"
+                                x-text="`${bookmark.page_number}`"
                             ></button>
                         </td>
                         <td>
