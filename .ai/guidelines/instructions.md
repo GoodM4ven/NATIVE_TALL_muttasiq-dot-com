@@ -51,6 +51,39 @@ This shared source code base is representing the web version primarily, the one 
 - If the front-end behavior doesn't sync with the back-end. Debug it using Playright browser skill.
   - When Playright is unavailable to the AI agent, warn the user about it.
 
+## Quran Reader Fitting and Cache (Critical)
+- Main implementation is in [resources/js/support/alpine/data/quran-app-reader.js].
+- Rendering visibility is controlled by `pageFitState()`:
+  - `fading-out` when `isTransitioningOutPage` is true.
+  - `fitting` when `isFittingPage` is true (this state intentionally hides `.quran-page-lines`).
+  - `ready` otherwise.
+- Layout lifecycle:
+  - `scheduleLayout()` queues `layoutPageGuaranteed()`.
+  - `layoutPageGuaranteed()` retries `layoutPage()` until fit run count increases for the current page.
+  - `layoutPage()` runs font readiness + text stabilization + `fitPageToViewport()` then `queuePageReveal()`.
+  - `queuePageReveal()` is the final gate that must flip `isFittingPage` to false.
+- Fit cache strategy:
+  - Cache map is `_fitResultByContext`, persisted in localStorage key `quran-reader-fit-cache-v3`.
+  - Cache key includes page number, breakpoint, viewport buckets, modal state, layout mode, line count, font families, and fit profile bounds.
+  - Cache is bypassed during modal lifecycle (`_bypassNextFitCache`, modal settling, or open modals) and during suppressed persistence windows (`_suppressFitCacheWriteUntil`).
+  - Fit sanity check (`scheduleFitSanityCheck`) can invalidate suspicious fit entries and force a re-layout.
+- Modal and navigation guards that can keep page hidden:
+  - `_isModalLifecycleSettling` + `_activeModalIds` + `openModalCount()`.
+  - `_pendingNavigationRequest` + `_navigationRevealLocked`.
+  - If these guards stay stale while `isFittingPage` is true, UI can appear as a permanent white/hidden page.
+- Current anti-stuck rules:
+  - `clearStaleRevealGuards()` clears stale modal/navigation guards when they no longer match real DOM/navigation state.
+  - `queuePageReveal()` has a blocked-duration fallback so reveal cannot remain hidden indefinitely once blockers are stale.
+  - `ensureWirdEntryPageVisible()` must be used after `wird` enter/slider/swipe navigation to guarantee visibility recovery.
+- Wird-specific race handling:
+  - `_wirdNavigationRequestSerial` is last-write-wins for rapid interactions.
+  - `queueWirdEntryRevealRecovery()` must be serial-guarded so old timers cannot re-hide a newer page.
+  - Any in-wird navigation (`stepWird`, `navigateWirdToStep`) should clear old wird-entry recovery timers first.
+  - Slider commits must prefer `_wirdSliderPendingCommitStep` (from `input`) over `change` payload, because `change` can be stale/coalesced after fast scrubs.
+- When touching this area, always run the focused browser regression:
+  - `lands on the final wird slider page and keeps the re-entered completed page visible`
+  - This path covers support unlock modal, fast slider scrub to final wird step, completion exit, and re-entry visibility.
+
 ## Finishing
 - When have modified CSS or JS files, use `npm run format:prettier` to format them.
 - When have modified Blade-PHP files, use `npm run format:blade` to format them.

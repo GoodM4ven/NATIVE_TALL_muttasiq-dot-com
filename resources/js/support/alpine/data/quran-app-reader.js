@@ -762,6 +762,8 @@ document.addEventListener('alpine:init', () => {
         _layoutToken: 0,
         _layoutRaf: null,
         _revealTimer: null,
+        _revealBlockedSinceAt: 0,
+        _revealBlockedLayoutToken: 0,
         _layoutActivePromise: null,
         _queuedLayoutRequest: null,
         _layoutMutationObserver: null,
@@ -790,6 +792,7 @@ document.addEventListener('alpine:init', () => {
         _suppressFitCacheWriteUntil: 0,
         _wirdSliderVisualTweenRaf: null,
         _wirdSliderInputCommitTimer: null,
+        _wirdSliderPendingCommitStep: null,
         _wirdNavigationRequestSerial: 0,
         _wirdHoverShimmerTimer: null,
         _pageInputCommitTimer: null,
@@ -1037,6 +1040,7 @@ document.addEventListener('alpine:init', () => {
                 clearTimeout(this._wirdSliderInputCommitTimer);
                 this._wirdSliderInputCommitTimer = null;
             }
+            this._wirdSliderPendingCommitStep = null;
 
             if (this._wirdHoverShimmerTimer !== null) {
                 clearTimeout(this._wirdHoverShimmerTimer);
@@ -2574,6 +2578,14 @@ document.addEventListener('alpine:init', () => {
             this._wirdEntryRevealTimers = [];
         },
 
+        clearWirdEntryRecovery({ resetSuppression = true } = {}) {
+            this.clearWirdEntryRevealTimers();
+
+            if (resetSuppression) {
+                this._wirdEntryLayoutSuppressedUntil = 0;
+            }
+        },
+
         suppressWirdEntryLayoutScheduling(durationMs = 900) {
             const normalizedDurationMs = Math.max(120, Math.trunc(Number(durationMs) || 900));
 
@@ -2587,7 +2599,10 @@ document.addEventListener('alpine:init', () => {
             return Date.now() < this._wirdEntryLayoutSuppressedUntil;
         },
 
-        queueWirdEntryRevealRecovery(targetPage) {
+        queueWirdEntryRevealRecovery(
+            targetPage,
+            navigationRequestSerial = this._wirdNavigationRequestSerial,
+        ) {
             const normalizedTargetPage = clampPage(targetPage, this.maxPage);
 
             if (normalizedTargetPage < 1) {
@@ -2602,6 +2617,7 @@ document.addEventListener('alpine:init', () => {
                 );
 
                 if (
+                    navigationRequestSerial !== this._wirdNavigationRequestSerial ||
                     !this.wirdModeActive ||
                     this.pageNumber !== normalizedTargetPage ||
                     !this.hasRenderablePage() ||
@@ -2611,6 +2627,10 @@ document.addEventListener('alpine:init', () => {
                 }
 
                 void (async () => {
+                    if (navigationRequestSerial !== this._wirdNavigationRequestSerial) {
+                        return;
+                    }
+
                     const shouldRunRecoveryLayout =
                         this.isFittingPage ||
                         (this._lastFittedPageNumber !== normalizedTargetPage &&
@@ -2626,6 +2646,10 @@ document.addEventListener('alpine:init', () => {
                             maxAttempts: 3,
                             useIdleFit: false,
                         });
+
+                        if (navigationRequestSerial !== this._wirdNavigationRequestSerial) {
+                            return;
+                        }
                     }
 
                     await this.ensureWirdEntryPageVisible(normalizedTargetPage);
@@ -2665,8 +2689,10 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            const clearedStaleGuards = this.clearStaleRevealGuards();
             const shouldRunRecoveryLayout =
                 forceRecover ||
+                clearedStaleGuards ||
                 this._lastFittedPageNumber !== normalizedTargetPage ||
                 !this.isCurrentPageVisiblyReady() ||
                 (this.isFittingPage && this._revealTimer === null);
@@ -2682,6 +2708,8 @@ document.addEventListener('alpine:init', () => {
                     useIdleFit: false,
                 });
             }
+
+            this.clearStaleRevealGuards();
 
             if (
                 this.pageNumber === normalizedTargetPage &&
@@ -2813,6 +2841,7 @@ document.addEventListener('alpine:init', () => {
                 clearTimeout(this._wirdSliderInputCommitTimer);
                 this._wirdSliderInputCommitTimer = null;
             }
+            this._wirdSliderPendingCommitStep = null;
 
             this.clearWirdSliderVisualTween();
 
@@ -2883,6 +2912,10 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            const navigationRequestSerial = this._wirdNavigationRequestSerial + 1;
+            this._wirdNavigationRequestSerial = navigationRequestSerial;
+            this.clearWirdEntryRecovery();
+
             const record = this.ensureWirdDailyRecord();
 
             if (!record || typeof record !== 'object') {
@@ -2947,6 +2980,24 @@ document.addEventListener('alpine:init', () => {
                     source: `wird-${source}`,
                 });
 
+                if (
+                    navigationRequestSerial !== this._wirdNavigationRequestSerial ||
+                    !this.wirdModeActive
+                ) {
+                    return;
+                }
+
+                await this.ensureWirdEntryPageVisible(targetPage);
+
+                if (
+                    navigationRequestSerial !== this._wirdNavigationRequestSerial ||
+                    !this.wirdModeActive
+                ) {
+                    return;
+                }
+
+                this.queueWirdEntryRevealRecovery(targetPage, navigationRequestSerial);
+
                 return;
             }
 
@@ -3007,6 +3058,24 @@ document.addEventListener('alpine:init', () => {
                 forceRefit: true,
                 source: `wird-${source}`,
             });
+
+            if (
+                navigationRequestSerial !== this._wirdNavigationRequestSerial ||
+                !this.wirdModeActive
+            ) {
+                return;
+            }
+
+            await this.ensureWirdEntryPageVisible(targetPage);
+
+            if (
+                navigationRequestSerial !== this._wirdNavigationRequestSerial ||
+                !this.wirdModeActive
+            ) {
+                return;
+            }
+
+            this.queueWirdEntryRevealRecovery(targetPage, navigationRequestSerial);
         },
 
         async navigateWirdToStep(step, source = 'slider') {
@@ -3016,6 +3085,7 @@ document.addEventListener('alpine:init', () => {
 
             const navigationRequestSerial = this._wirdNavigationRequestSerial + 1;
             this._wirdNavigationRequestSerial = navigationRequestSerial;
+            this.clearWirdEntryRecovery();
 
             const record = this.ensureWirdDailyRecord();
 
@@ -3078,7 +3148,7 @@ document.addEventListener('alpine:init', () => {
                     return;
                 }
 
-                this.queueWirdEntryRevealRecovery(targetPage);
+                this.queueWirdEntryRevealRecovery(targetPage, navigationRequestSerial);
 
                 return;
             }
@@ -3106,7 +3176,7 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            this.queueWirdEntryRevealRecovery(targetPage);
+            this.queueWirdEntryRevealRecovery(targetPage, navigationRequestSerial);
         },
 
         persistNavigationHistory() {
@@ -4680,6 +4750,52 @@ document.addEventListener('alpine:init', () => {
             this._lastPageInputVisualValue = normalizedInputPage;
         },
 
+        queueWirdSliderCommit(step, { source = 'slider', delayMs = 0 } = {}) {
+            if (!this.wirdModeActive) {
+                return;
+            }
+
+            const range = this.wirdRangeState();
+            const normalizedStep = this.normalizeIntegerFlag(step, this.sliderValue(), {
+                min: 0,
+                max: range.maxStep,
+            });
+            this._wirdSliderPendingCommitStep = normalizedStep;
+
+            if (this._wirdSliderInputCommitTimer !== null) {
+                clearTimeout(this._wirdSliderInputCommitTimer);
+                this._wirdSliderInputCommitTimer = null;
+            }
+
+            this._wirdSliderInputCommitTimer = window.setTimeout(
+                () => {
+                    this._wirdSliderInputCommitTimer = null;
+
+                    if (!this.wirdModeActive) {
+                        this._wirdSliderPendingCommitStep = null;
+
+                        return;
+                    }
+
+                    const currentRange = this.wirdRangeState();
+                    const commitStep = this.normalizeIntegerFlag(
+                        this._wirdSliderPendingCommitStep,
+                        this.sliderValue(),
+                        {
+                            min: 0,
+                            max: currentRange.maxStep,
+                        },
+                    );
+
+                    this._wirdSliderPendingCommitStep = null;
+                    this.clearWirdSliderVisualTween();
+                    this.wirdSliderVisualStep = commitStep;
+                    void this.navigateWirdToStep(commitStep, source);
+                },
+                Math.max(0, Math.trunc(Number(delayMs) || 0)),
+            );
+        },
+
         async onSliderInput(event = null) {
             if (!this.wirdModeActive) {
                 const targetPage = clampPage(event?.target?.value ?? this.pageInput, this.maxPage);
@@ -4714,6 +4830,10 @@ document.addEventListener('alpine:init', () => {
 
             this.clearWirdSliderVisualTween();
             this.wirdSliderVisualStep = step;
+            this.queueWirdSliderCommit(step, {
+                source: 'slider-input-idle',
+                delayMs: 140,
+            });
         },
 
         async onSliderCommit(event = null) {
@@ -4732,13 +4852,25 @@ document.addEventListener('alpine:init', () => {
             }
 
             const range = this.wirdRangeState();
-            const step = this.normalizeIntegerFlag(event?.target?.value, this.sliderValue(), {
-                min: 0,
-                max: range.maxStep,
+            const directCommitStep = this.normalizeIntegerFlag(
+                event?.target?.value,
+                this.sliderValue(),
+                {
+                    min: 0,
+                    max: range.maxStep,
+                },
+            );
+            const commitStep = Number.isFinite(Number(this._wirdSliderPendingCommitStep))
+                ? this.normalizeIntegerFlag(this._wirdSliderPendingCommitStep, directCommitStep, {
+                      min: 0,
+                      max: range.maxStep,
+                  })
+                : directCommitStep;
+
+            this.queueWirdSliderCommit(commitStep, {
+                source: 'slider',
+                delayMs: 0,
             });
-            this.clearWirdSliderVisualTween();
-            this.wirdSliderVisualStep = step;
-            await this.navigateWirdToStep(step, 'slider');
         },
 
         async onPageInputBlur() {
@@ -4998,6 +5130,9 @@ document.addEventListener('alpine:init', () => {
                 clearTimeout(this._revealTimer);
                 this._revealTimer = null;
             }
+
+            this._revealBlockedSinceAt = 0;
+            this._revealBlockedLayoutToken = 0;
         },
 
         clearFitResultCache({ persist = true } = {}) {
@@ -5061,9 +5196,52 @@ document.addEventListener('alpine:init', () => {
             ).length;
         },
 
+        clearStaleRevealGuards({ allowUnlock = true } = {}) {
+            let didClearState = false;
+
+            if (
+                (this._isModalLifecycleSettling || this._activeModalIds.size > 0) &&
+                this.openModalCount() <= 0
+            ) {
+                this._activeModalIds.clear();
+                this._isModalLifecycleSettling = false;
+                didClearState = true;
+            }
+
+            if (!this.isLoadingPage) {
+                const pendingTargetPage = clampPage(
+                    Number(this._pendingNavigationRequest?.targetPage ?? 0),
+                    this.maxPage,
+                );
+
+                if (
+                    pendingTargetPage === this.pageNumber &&
+                    this._pendingNavigationRequest !== null
+                ) {
+                    this._pendingNavigationRequest = null;
+                    didClearState = true;
+                }
+            }
+
+            if (
+                allowUnlock &&
+                this._navigationRevealLocked &&
+                !this.isLoadingPage &&
+                this._pendingNavigationRequest === null &&
+                this._navigationRevealUnlockTimer === null
+            ) {
+                this._navigationRevealLocked = false;
+                didClearState = true;
+            }
+
+            return didClearState;
+        },
+
         beginLayoutCycle() {
             this._layoutToken += 1;
             this.isFittingPage = true;
+            this._revealBlockedSinceAt = 0;
+            this._revealBlockedLayoutToken = 0;
 
             return this._layoutToken;
         },
@@ -5368,13 +5546,7 @@ document.addEventListener('alpine:init', () => {
                     return;
                 }
 
-                if (
-                    (this._isModalLifecycleSettling || this._activeModalIds.size > 0) &&
-                    this.openModalCount() <= 0
-                ) {
-                    this._activeModalIds.clear();
-                    this._isModalLifecycleSettling = false;
-                }
+                this.clearStaleRevealGuards({ allowUnlock: false });
 
                 if (this._isModalLifecycleSettling || this._activeModalIds.size > 0) {
                     this.isFittingPage = true;
@@ -5405,11 +5577,40 @@ document.addEventListener('alpine:init', () => {
                     this._pendingNavigationRequest !== null ||
                     this.isLoadingPage
                 ) {
+                    if (this._revealBlockedLayoutToken !== layoutToken) {
+                        this._revealBlockedLayoutToken = layoutToken;
+                        this._revealBlockedSinceAt = Date.now();
+                    }
+
+                    const revealBlockedForMs = Date.now() - this._revealBlockedSinceAt;
+
+                    if (
+                        revealBlockedForMs >= 1600 &&
+                        this.hasRenderablePage() &&
+                        !this.isLoadingPage
+                    ) {
+                        this.clearStaleRevealGuards();
+
+                        if (
+                            this._pendingNavigationRequest === null &&
+                            !this._navigationRevealLocked
+                        ) {
+                            this.isFittingPage = false;
+                            this._revealBlockedSinceAt = 0;
+                            this._revealBlockedLayoutToken = 0;
+
+                            return;
+                        }
+                    }
+
                     this.isFittingPage = true;
                     this.queuePageReveal(layoutToken, 90);
 
                     return;
                 }
+
+                this._revealBlockedSinceAt = 0;
+                this._revealBlockedLayoutToken = 0;
 
                 if (this._lastFittedPageNumber !== this.pageNumber) {
                     const adjusted = this.applySafetyScaleForCurrentPageOverflow();
