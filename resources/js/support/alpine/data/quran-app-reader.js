@@ -780,6 +780,21 @@ document.addEventListener('alpine:init', () => {
         _onWindowViewportChange: null,
         _onVisualViewportChange: null,
         _onSwitchView: null,
+        _onWindowKeydown: null,
+        _onPanelPointerDown: null,
+        _onPanelPointerMove: null,
+        _onPanelPointerUp: null,
+        _onPanelPointerCancel: null,
+        _onWindowPointerMove: null,
+        _onWindowPointerUp: null,
+        _onWindowPointerCancel: null,
+        _onPanelTouchStart: null,
+        _onPanelTouchMove: null,
+        _onPanelTouchEnd: null,
+        _onPanelTouchCancel: null,
+        _onWindowTouchMove: null,
+        _onWindowTouchEnd: null,
+        _onWindowTouchCancel: null,
         _surahTriggerTimer: null,
         _surahTriggerCleanupTimer: null,
         _pendingNavigationRequest: null,
@@ -965,6 +980,7 @@ document.addEventListener('alpine:init', () => {
                     }
 
                     this.$nextTick(() => {
+                        this.registerNativeInputListeners();
                         this.initializeLayoutObservers();
                         this.queueSupportLockTargetsUiSync();
                     });
@@ -973,13 +989,221 @@ document.addEventListener('alpine:init', () => {
             }
 
             this.$nextTick(() => {
+                this.registerNativeInputListeners();
                 this.initializeLayoutObservers();
                 this.queueSupportLockTargetsUiSync();
             });
             this.bootstrap();
         },
 
+        registerNativeInputListeners() {
+            this.unregisterNativeInputListeners();
+
+            const readerPanel = this.$refs.readerPanel;
+
+            this._onWindowKeydown = (event) => {
+                const key = String(event?.key ?? '');
+
+                if (key === 'ArrowLeft') {
+                    void this.onGlobalArrowNavigate('left', event);
+
+                    return;
+                }
+
+                if (key === 'ArrowRight') {
+                    void this.onGlobalArrowNavigate('right', event);
+                }
+            };
+            window.addEventListener('keydown', this._onWindowKeydown, true);
+
+            if (!(readerPanel instanceof Element)) {
+                return;
+            }
+
+            this._onPanelPointerDown = (event) => {
+                this.onSwipeStart(event);
+            };
+            this._onPanelPointerMove = (event) => {
+                void this.onSwipeMove(event);
+            };
+            this._onPanelPointerUp = (event) => {
+                void this.onSwipeEnd(event);
+            };
+            this._onPanelPointerCancel = () => {
+                this.onSwipeCancel();
+            };
+            this._onWindowPointerMove = (event) => {
+                void this.onSwipeMove(event);
+            };
+            this._onWindowPointerUp = (event) => {
+                void this.onSwipeEnd(event);
+            };
+            this._onWindowPointerCancel = () => {
+                this.onSwipeCancel();
+            };
+            this._onPanelTouchStart = (event) => {
+                this.onSwipeStart(event);
+            };
+            this._onPanelTouchMove = (event) => {
+                void this.onSwipeMove(event);
+            };
+            this._onPanelTouchEnd = (event) => {
+                void this.onSwipeEnd(event);
+            };
+            this._onPanelTouchCancel = () => {
+                this.onSwipeCancel();
+            };
+            this._onWindowTouchMove = (event) => {
+                void this.onSwipeMove(event);
+            };
+            this._onWindowTouchEnd = (event) => {
+                void this.onSwipeEnd(event);
+            };
+            this._onWindowTouchCancel = () => {
+                this.onSwipeCancel();
+            };
+
+            readerPanel.addEventListener('pointerdown', this._onPanelPointerDown, {
+                passive: true,
+                capture: true,
+            });
+            readerPanel.addEventListener('pointermove', this._onPanelPointerMove, {
+                passive: true,
+                capture: true,
+            });
+            readerPanel.addEventListener('pointerup', this._onPanelPointerUp, {
+                passive: true,
+                capture: true,
+            });
+            readerPanel.addEventListener('pointercancel', this._onPanelPointerCancel, {
+                passive: true,
+                capture: true,
+            });
+            window.addEventListener('pointermove', this._onWindowPointerMove, {
+                passive: true,
+                capture: true,
+            });
+            window.addEventListener('pointerup', this._onWindowPointerUp, {
+                passive: true,
+                capture: true,
+            });
+            window.addEventListener('pointercancel', this._onWindowPointerCancel, {
+                passive: true,
+                capture: true,
+            });
+            readerPanel.addEventListener('touchstart', this._onPanelTouchStart, {
+                passive: true,
+                capture: true,
+            });
+            readerPanel.addEventListener('touchmove', this._onPanelTouchMove, {
+                passive: true,
+                capture: true,
+            });
+            readerPanel.addEventListener('touchend', this._onPanelTouchEnd, {
+                passive: true,
+                capture: true,
+            });
+            readerPanel.addEventListener('touchcancel', this._onPanelTouchCancel, {
+                passive: true,
+                capture: true,
+            });
+            window.addEventListener('touchmove', this._onWindowTouchMove, {
+                passive: true,
+                capture: true,
+            });
+            window.addEventListener('touchend', this._onWindowTouchEnd, {
+                passive: true,
+                capture: true,
+            });
+            window.addEventListener('touchcancel', this._onWindowTouchCancel, {
+                passive: true,
+                capture: true,
+            });
+        },
+
+        unregisterNativeInputListeners() {
+            if (this._onWindowKeydown) {
+                window.removeEventListener('keydown', this._onWindowKeydown, true);
+                this._onWindowKeydown = null;
+            }
+
+            const readerPanel = this.$refs.readerPanel;
+
+            if (readerPanel instanceof Element && this._onPanelPointerDown) {
+                readerPanel.removeEventListener('pointerdown', this._onPanelPointerDown, true);
+            }
+
+            if (readerPanel instanceof Element && this._onPanelPointerMove) {
+                readerPanel.removeEventListener('pointermove', this._onPanelPointerMove, true);
+            }
+
+            if (readerPanel instanceof Element && this._onPanelPointerUp) {
+                readerPanel.removeEventListener('pointerup', this._onPanelPointerUp, true);
+            }
+
+            if (readerPanel instanceof Element && this._onPanelPointerCancel) {
+                readerPanel.removeEventListener('pointercancel', this._onPanelPointerCancel, true);
+            }
+
+            if (this._onWindowPointerMove) {
+                window.removeEventListener('pointermove', this._onWindowPointerMove, true);
+            }
+
+            if (this._onWindowPointerUp) {
+                window.removeEventListener('pointerup', this._onWindowPointerUp, true);
+            }
+
+            if (this._onWindowPointerCancel) {
+                window.removeEventListener('pointercancel', this._onWindowPointerCancel, true);
+            }
+
+            if (readerPanel instanceof Element && this._onPanelTouchStart) {
+                readerPanel.removeEventListener('touchstart', this._onPanelTouchStart, true);
+            }
+
+            if (readerPanel instanceof Element && this._onPanelTouchMove) {
+                readerPanel.removeEventListener('touchmove', this._onPanelTouchMove, true);
+            }
+
+            if (readerPanel instanceof Element && this._onPanelTouchEnd) {
+                readerPanel.removeEventListener('touchend', this._onPanelTouchEnd, true);
+            }
+
+            if (readerPanel instanceof Element && this._onPanelTouchCancel) {
+                readerPanel.removeEventListener('touchcancel', this._onPanelTouchCancel, true);
+            }
+
+            if (this._onWindowTouchMove) {
+                window.removeEventListener('touchmove', this._onWindowTouchMove, true);
+            }
+
+            if (this._onWindowTouchEnd) {
+                window.removeEventListener('touchend', this._onWindowTouchEnd, true);
+            }
+
+            if (this._onWindowTouchCancel) {
+                window.removeEventListener('touchcancel', this._onWindowTouchCancel, true);
+            }
+
+            this._onPanelPointerDown = null;
+            this._onPanelPointerMove = null;
+            this._onPanelPointerUp = null;
+            this._onPanelPointerCancel = null;
+            this._onWindowPointerMove = null;
+            this._onWindowPointerUp = null;
+            this._onWindowPointerCancel = null;
+            this._onPanelTouchStart = null;
+            this._onPanelTouchMove = null;
+            this._onPanelTouchEnd = null;
+            this._onPanelTouchCancel = null;
+            this._onWindowTouchMove = null;
+            this._onWindowTouchEnd = null;
+            this._onWindowTouchCancel = null;
+        },
+
         destroy() {
+            this.unregisterNativeInputListeners();
+
             if (this._onWindowViewportChange) {
                 window.removeEventListener('resize', this._onWindowViewportChange);
                 window.removeEventListener('orientationchange', this._onWindowViewportChange);
@@ -4937,6 +5161,14 @@ document.addEventListener('alpine:init', () => {
         },
 
         async onGlobalArrowNavigate(direction, event = null) {
+            if (event?.__quranReaderInputHandled) {
+                return;
+            }
+
+            if (event && typeof event === 'object') {
+                event.__quranReaderInputHandled = true;
+            }
+
             if (this.search.modalOpen) {
                 return;
             }
@@ -6878,7 +7110,7 @@ document.addEventListener('alpine:init', () => {
                 this._isModalLifecycleSettling ||
                 this._activeModalIds.size > 0 ||
                 this.openModalCount() > 0;
-            const shouldSuppressCachePersistence = Date.now() < this._suppressFitCacheWriteUntil;
+            const shouldSuppressPersistedCacheWrite = Date.now() < this._suppressFitCacheWriteUntil;
             const fitCacheKey = [
                 normalizedPageNumber,
                 breakpointName || 'bp-unknown',
@@ -6907,10 +7139,9 @@ document.addEventListener('alpine:init', () => {
                 normalizedPageNumber <= 2 ? 0.32 : ayahLineCount >= 12 ? 0.52 : 0.36;
             const minimumHealthyFillHeight =
                 normalizedPageNumber <= 2 ? 0.22 : ayahLineCount >= 12 ? 0.42 : 0.3;
-            const cachedFitResult =
-                isModalLayoutContext || shouldSuppressCachePersistence
-                    ? null
-                    : this._fitResultByContext.get(fitCacheKey);
+            const cachedFitResult = isModalLayoutContext
+                ? null
+                : this._fitResultByContext.get(fitCacheKey);
 
             if (
                 cachedFitResult &&
@@ -7060,7 +7291,7 @@ document.addEventListener('alpine:init', () => {
 
             rootElement.style.setProperty('--quran-page-scale', String(normalizedScale));
             this.pageScale = normalizedScale;
-            if (!isModalLayoutContext && !shouldSuppressCachePersistence) {
+            if (!isModalLayoutContext) {
                 this.rememberFitResult(
                     fitCacheKey,
                     {
@@ -7068,7 +7299,7 @@ document.addEventListener('alpine:init', () => {
                         scale: normalizedScale,
                     },
                     {
-                        persist: true,
+                        persist: !shouldSuppressPersistedCacheWrite,
                     },
                 );
             }
@@ -7518,6 +7749,14 @@ document.addEventListener('alpine:init', () => {
         },
 
         onSwipeStart(event) {
+            if (event?.__quranReaderInputHandled) {
+                return;
+            }
+
+            if (event && typeof event === 'object') {
+                event.__quranReaderInputHandled = true;
+            }
+
             if (event.target?.closest?.('[data-no-swipe]')) {
                 this.resetSwipeState();
 
@@ -7542,7 +7781,11 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            if (event.pointerType === 'mouse' && event.button !== 0) {
+            if (
+                event.pointerType === 'mouse' &&
+                Number.isFinite(Number(event.button)) &&
+                Number(event.button) > 0
+            ) {
                 return;
             }
 
@@ -7563,6 +7806,14 @@ document.addEventListener('alpine:init', () => {
         },
 
         async onSwipeMove(event) {
+            if (event?.__quranReaderInputHandled) {
+                return;
+            }
+
+            if (event && typeof event === 'object') {
+                event.__quranReaderInputHandled = true;
+            }
+
             if (!this.swipe.active) {
                 return;
             }
@@ -7616,6 +7867,14 @@ document.addEventListener('alpine:init', () => {
         },
 
         async onSwipeEnd(event) {
+            if (event?.__quranReaderInputHandled) {
+                return;
+            }
+
+            if (event && typeof event === 'object') {
+                event.__quranReaderInputHandled = true;
+            }
+
             if (!this.swipe.active) {
                 return;
             }

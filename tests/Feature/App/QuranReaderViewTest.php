@@ -142,6 +142,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderViewSource)->toContain("'quran-swipe-hint-chev-static': !wirdModeActive && isLastNavigationPage()")
         ->and($quranReaderViewSource)->toContain("\$wire.mountAction('jumpToPage')")
         ->and($quranReaderViewSource)->toContain('<x-filament-actions::modals />')
+        ->and($quranReaderViewSource)->toContain('x-ref="readerPanel"')
         ->and($quranReaderViewSource)->toContain('x-on:pointerdown.passive="onSwipeStart($event)"')
         ->and($quranReaderViewSource)->toContain('x-on:pointermove.window.passive="onSwipeMove($event)"')
         ->and($quranReaderViewSource)->toContain('x-on:touchstart.passive="onSwipeStart($event)"')
@@ -162,6 +163,13 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderViewSource)->not->toContain('x-on:click="nextPage()"')
         ->and($quranReaderViewSource)->not->toContain('x-on:click="previousPage()"')
         ->and($quranReaderViewSource)->not->toContain("x-on:click=\"\$viewNav('quran-app-gate')\"");
+
+    expect($quranReaderScriptSource)->not->toBeFalse()
+        ->and($quranReaderScriptSource)->toContain('registerNativeInputListeners()')
+        ->and($quranReaderScriptSource)->toContain('unregisterNativeInputListeners()')
+        ->and($quranReaderScriptSource)->toContain("window.addEventListener('keydown', this._onWindowKeydown, true)")
+        ->and($quranReaderScriptSource)->toContain("readerPanel.addEventListener('pointerdown', this._onPanelPointerDown, {")
+        ->and($quranReaderScriptSource)->toContain("window.addEventListener('touchmove', this._onWindowTouchMove, {");
 
     expect($quranSearchModalViewSource)->not->toBeFalse()
         ->and($quranSearchModalViewSource)->toContain('quran-search-shell')
@@ -248,6 +256,15 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderScriptSource)->toContain("fonts: 'quran-reader-fonts-v4'")
         ->and($quranReaderScriptSource)->toContain('requestSearchModalClose({ skipLayout = false } = {})')
         ->and($quranReaderScriptSource)->toContain('recordNavigationHistory({')
+        ->and($quranReaderScriptSource)->toContain(
+            'const shouldSuppressPersistedCacheWrite =',
+        )
+        ->and($quranReaderScriptSource)->toContain(
+            'const cachedFitResult = isModalLayoutContext',
+        )
+        ->and($quranReaderScriptSource)->toContain(
+            'persist: !shouldSuppressPersistedCacheWrite',
+        )
         ->and($quranReaderScriptSource)->toContain('toggleCurrentPageBookmark()')
         ->and($quranReaderScriptSource)->toContain('openBookmarksManager()')
         ->and($quranReaderScriptSource)->toContain('jumpPageModalId:')
