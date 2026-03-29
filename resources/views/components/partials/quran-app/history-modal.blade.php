@@ -22,6 +22,7 @@
                     <th>الصفحة</th>
                     <th>السورة</th>
                     <th>النوع</th>
+                    <th>ملاحظة</th>
                     <th>الوسوم</th>
                 </tr>
             </thead>
@@ -30,7 +31,7 @@
                     <tr>
                         <td
                             class="quran-manager-empty"
-                            colspan="4"
+                            colspan="5"
                         >لا توجد عناصر بعد.</td>
                     </tr>
                 </template>
@@ -54,6 +55,16 @@
                         </td>
                         <td x-text="historyEntrySurahName(entry)"></td>
                         <td x-text="historyEntrySourceLabel(entry)"></td>
+                        <td>
+                            <input
+                                class="quran-manager-input"
+                                data-quran-history-note
+                                type="text"
+                                placeholder="-"
+                                x-bind:value="entry.note ?? ''"
+                                x-on:input.debounce.350ms="updateHistoryEntryNote(entry.id, $event.target.value)"
+                            />
+                        </td>
                         <td>
                             <div class="quran-manager-tags-field">
                                 <template

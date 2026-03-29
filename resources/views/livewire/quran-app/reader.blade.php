@@ -502,7 +502,8 @@
         .quran-wird-progress-button:active {}
 
         .quran-wird-progress-aura-water,
-        .quran-wird-progress-aura-reflect {
+        .quran-wird-progress-aura-reflect,
+        .quran-wird-progress-aura-burn {
             position: absolute;
             inset: 0.16rem;
             border-radius: 999px;
@@ -542,6 +543,36 @@
             mix-blend-mode: plus-lighter;
             opacity: 0.42;
             filter: saturate(1.2);
+        }
+
+        .quran-wird-progress-aura-burn {
+            inset: -0.32rem;
+            border-radius: 999px;
+            clip-path: none;
+            background:
+                radial-gradient(50% 56% at 50% 50%, rgb(251 191 36 / 44%) 0%, rgb(251 191 36 / 0%) 72%),
+                conic-gradient(from 0deg,
+                    rgb(239 68 68 / 0%) 0deg,
+                    rgb(239 68 68 / 36%) 32deg,
+                    rgb(251 191 36 / 58%) 78deg,
+                    rgb(245 158 11 / 28%) 132deg,
+                    rgb(249 115 22 / 42%) 185deg,
+                    rgb(250 204 21 / 62%) 248deg,
+                    rgb(239 68 68 / 30%) 302deg,
+                    rgb(239 68 68 / 0%) 360deg);
+            mix-blend-mode: screen;
+            opacity: 0;
+            filter: blur(1.2px) saturate(1.28);
+            transform: scale(0.92) rotate(0deg);
+            z-index: 0;
+            transition: opacity 220ms ease;
+        }
+
+        .quran-wird-progress-button--active-aura .quran-wird-progress-aura-burn {
+            opacity: 0.92;
+            animation:
+                quran-wird-aura-burn-spin 2.7s linear infinite,
+                quran-wird-aura-burn-pulse 1.15s ease-in-out infinite;
         }
 
         .quran-wird-progress-button:hover .quran-wird-progress-aura-water,
@@ -625,6 +656,7 @@
 
         .quran-reader--visual-enhancements-disabled .quran-wird-progress-aura-water,
         .quran-reader--visual-enhancements-disabled .quran-wird-progress-aura-reflect,
+        .quran-reader--visual-enhancements-disabled .quran-wird-progress-aura-burn,
         .quran-reader--visual-enhancements-disabled .quran-wird-progress-hover-shimmer {
             display: none;
         }
@@ -674,6 +706,30 @@
 
             100% {
                 background-position: 12% 48%, 18% 60%;
+            }
+        }
+
+        @keyframes quran-wird-aura-burn-spin {
+            0% {
+                transform: scale(0.92) rotate(0deg);
+            }
+
+            100% {
+                transform: scale(0.92) rotate(360deg);
+            }
+        }
+
+        @keyframes quran-wird-aura-burn-pulse {
+
+            0%,
+            100% {
+                opacity: 0.72;
+                filter: blur(1.2px) saturate(1.2);
+            }
+
+            50% {
+                opacity: 1;
+                filter: blur(1.9px) saturate(1.34);
             }
         }
 
@@ -1643,7 +1699,7 @@
         'quran-reader--wird-active': wirdModeActive,
     }"
     x-on:control-panel-updated.window="applyControlPanelSettings($event.detail?.controlPanel ?? {})"
-    x-on:open-support-unlock-modal-ready.window="$wire.mountAction('supportUnlock')"
+    x-on:open-support-unlock-modal.window="if ($el.offsetParent !== null) { $wire.mountAction('supportUnlock') }"
     x-on:open-modal.window="handleModalLifecycleEvent('opened', $event)"
     x-on:x-modal-opened.window="handleModalLifecycleEvent('opened', $event)"
     x-on:close-modal.window="handleModalLifecycleEvent('closing', $event)"
@@ -1747,6 +1803,7 @@
                         x-bind:class="{
                             'quran-wird-progress-button--completed': ensureWirdDailyRecord()?.completed,
                             'quran-wird-progress-button--shimmer-running': wirdHoverShimmerRunning,
+                            'quran-wird-progress-button--active-aura': wirdModeActive,
                         }"
                         x-bind:aria-pressed="wirdModeActive ? 'true' : 'false'"
                         x-bind:aria-label="wirdModeActive ? 'إيقاف وضع الوِرد والعودة للقراءة الحرة' : 'تشغيل وضع الوِرد اليومي'"
@@ -1764,6 +1821,11 @@
                             class="quran-wird-progress-aura-reflect"
                             aria-hidden="true"
                             x-show="doesEnableVisualEnhancements"
+                        ></span>
+                        <span
+                            class="quran-wird-progress-aura-burn"
+                            aria-hidden="true"
+                            x-show="doesEnableVisualEnhancements && wirdModeActive"
                         ></span>
                         <span
                             class="quran-wird-progress-hover-shimmer"
@@ -2061,7 +2123,7 @@
                         >
                             <span class="quran-page-chip-total me-1.5">
                                 <template
-                                    x-for="(digit, digitIndex) in pageCounterDisplayDigits(maxPage)"
+                                    x-for="(digit, digitIndex) in pageCounterDisplayDigits(pageCounterMaxDisplayValue())"
                                     :key="`quran-page-max-digit-${digitIndex}`"
                                 >
                                     <span class="quran-counter-cell">
@@ -2133,6 +2195,10 @@
                         x-bind:value="sliderValue()"
                         x-on:input="onSliderInput($event)"
                         x-on:change="onSliderCommit($event)"
+                        x-on:pointerup="onSliderPointerRelease($event)"
+                        x-on:mouseup="onSliderPointerRelease($event)"
+                        x-on:touchend="onSliderPointerRelease($event)"
+                        x-on:pointercancel="onSliderPointerRelease($event)"
                     />
                 </div>
                 <button

@@ -145,6 +145,12 @@ const fitDefaultProfile = Object.freeze({
     maxScaleMultiplier: 1,
 });
 const navigationHistoryLimit = 100;
+const supportedHistorySources = Object.freeze([
+    'surah-directory',
+    'bookmark-navigation',
+    'page-jump',
+    'page-slider-commit',
+]);
 const lastPageStorageKey = 'quran-reader-last-page-v1';
 const navigationHistoryStorageKey = 'quran-reader-navigation-history-v1';
 const bookmarksStorageKey = 'quran-reader-bookmarks-v1';
@@ -264,9 +270,7 @@ const normalizeHistoryEntry = (entry = {}) => {
         0,
     );
     const rawSource = String(entry?.source ?? '').trim();
-    const source = ['surah-directory', 'bookmark-navigation'].includes(rawSource)
-        ? rawSource
-        : 'search-result';
+    const source = supportedHistorySources.includes(rawSource) ? rawSource : 'search-result';
     const createdAt = Number(entry?.created_at ?? entry?.createdAt ?? Date.now());
 
     return {
@@ -276,6 +280,7 @@ const normalizeHistoryEntry = (entry = {}) => {
         surah_number: Math.max(0, Math.trunc(Number(entry?.surah_number ?? 0))),
         ayah_number: Math.max(0, Math.trunc(Number(entry?.ayah_number ?? 0))),
         ayah_index: Math.max(0, Math.trunc(Number(entry?.ayah_index ?? 0))),
+        note: normalizeTextValue(entry?.note),
         query: normalizeTextValue(entry?.query),
         tags: normalizeTags(entry?.tags),
         created_at: Number.isFinite(createdAt) ? Math.trunc(createdAt) : Date.now(),
@@ -347,7 +352,8 @@ const normalizeBookmarkEntry = (entry = {}) => {
     return {
         id: String(entry?.id ?? uniqueLocalId()),
         page_number: normalizedPageNumber,
-        title: normalizeTextValue(entry?.title),
+        note: normalizeTextValue(entry?.note ?? entry?.title),
+        tags: normalizeTags(entry?.tags),
         created_at: Number.isFinite(createdAt) ? Math.trunc(createdAt) : Date.now(),
         updated_at: Number.isFinite(updatedAt) ? Math.trunc(updatedAt) : Date.now(),
     };
@@ -730,6 +736,7 @@ document.addEventListener('alpine:init', () => {
         },
         navigationHistory: [],
         historyTagDraftById: {},
+        bookmarkTagDraftById: {},
         bookmarks: [],
         historyModalOpen: false,
         bookmarksModalOpen: false,
@@ -884,6 +891,7 @@ document.addEventListener('alpine:init', () => {
             this.navigationHistory = readNavigationHistory();
             this.syncHistoryTagDrafts();
             this.bookmarks = readBookmarks();
+            this.syncBookmarkTagDrafts();
             this.dispatchManagerModalsVisibilityState();
 
             const storedLastPageNumber = readLastPageNumber();
@@ -3324,20 +3332,19 @@ document.addEventListener('alpine:init', () => {
             };
         },
 
-        historyTagSuggestions(entryId) {
-            const normalizedEntryId = this.normalizeHistoryEntryId(entryId);
-            const entry = this.historyEntryById(normalizedEntryId);
-            const existingTags = new Set(
-                (Array.isArray(entry?.tags) ? entry.tags : []).map((tag) =>
-                    String(tag ?? '').toLocaleLowerCase(),
-                ),
+        collectSharedManagerTags({ excludeTags = [], draftValue = '' } = {}) {
+            const excluded = new Set(
+                normalizeTags(excludeTags).map((tag) => String(tag ?? '').toLocaleLowerCase()),
             );
-            const draftValue = this.historyTagDraft(normalizedEntryId).toLocaleLowerCase().trim();
+            const normalizedDraftValue = String(draftValue ?? '')
+                .toLocaleLowerCase()
+                .trim();
             const suggestions = [];
             const usedSuggestions = new Set();
+            const suggestionSources = [...this.navigationHistory, ...this.bookmarks];
 
-            this.navigationHistory.forEach((historyEntry) => {
-                (Array.isArray(historyEntry?.tags) ? historyEntry.tags : []).forEach((rawTag) => {
+            suggestionSources.forEach((entry) => {
+                (Array.isArray(entry?.tags) ? entry.tags : []).forEach((rawTag) => {
                     const normalizedTag = String(rawTag ?? '').trim();
 
                     if (normalizedTag === '') {
@@ -3346,11 +3353,14 @@ document.addEventListener('alpine:init', () => {
 
                     const normalizedKey = normalizedTag.toLocaleLowerCase();
 
-                    if (existingTags.has(normalizedKey) || usedSuggestions.has(normalizedKey)) {
+                    if (excluded.has(normalizedKey) || usedSuggestions.has(normalizedKey)) {
                         return;
                     }
 
-                    if (draftValue !== '' && !normalizedKey.includes(draftValue)) {
+                    if (
+                        normalizedDraftValue !== '' &&
+                        !normalizedKey.includes(normalizedDraftValue)
+                    ) {
                         return;
                     }
 
@@ -3360,6 +3370,18 @@ document.addEventListener('alpine:init', () => {
             });
 
             return suggestions.slice(0, 18);
+        },
+
+        historyTagSuggestions(entryId) {
+            const normalizedEntryId = this.normalizeHistoryEntryId(entryId);
+            const entry = this.historyEntryById(normalizedEntryId);
+            const existingTags = Array.isArray(entry?.tags) ? entry.tags : [];
+            const draftValue = this.historyTagDraft(normalizedEntryId);
+
+            return this.collectSharedManagerTags({
+                excludeTags: existingTags,
+                draftValue,
+            });
         },
 
         commitHistoryTagDraft(entryId, { clearInput = true } = {}) {
@@ -3437,6 +3459,14 @@ document.addEventListener('alpine:init', () => {
                 return 'إشارة مرجعية';
             }
 
+            if (source === 'page-jump') {
+                return 'قفزة صفحة';
+            }
+
+            if (source === 'page-slider-commit') {
+                return 'شريط الصفحات';
+            }
+
             return 'بحث';
         },
 
@@ -3446,7 +3476,9 @@ document.addEventListener('alpine:init', () => {
 
             if (
                 String(entry?.source ?? '') === 'surah-directory' ||
-                String(entry?.source ?? '') === 'bookmark-navigation'
+                String(entry?.source ?? '') === 'bookmark-navigation' ||
+                String(entry?.source ?? '') === 'page-jump' ||
+                String(entry?.source ?? '') === 'page-slider-commit'
             ) {
                 return this.surahLabel(surahNumber > 0 ? surahNumber : this.currentSurahNumber());
             }
@@ -3661,6 +3693,42 @@ document.addEventListener('alpine:init', () => {
             this.syncHistoryTagDraftForEntry(normalizedEntryId);
         },
 
+        updateHistoryEntryNote(entryId, note) {
+            const normalizedEntryId = this.normalizeHistoryEntryId(entryId);
+
+            if (!normalizedEntryId) {
+                return;
+            }
+
+            const normalizedNote = normalizeTextValue(note);
+            let didUpdateEntry = false;
+
+            this.navigationHistory = this.navigationHistory.map((entry) => {
+                if (this.normalizeHistoryEntryId(entry?.id) !== normalizedEntryId) {
+                    return entry;
+                }
+
+                if (normalizeTextValue(entry?.note) === normalizedNote) {
+                    return entry;
+                }
+
+                didUpdateEntry = true;
+
+                return {
+                    ...entry,
+                    note: normalizedNote,
+                    created_at: Number(entry?.created_at ?? Date.now()),
+                };
+            });
+
+            if (!didUpdateEntry) {
+                return;
+            }
+
+            this.persistNavigationHistory();
+            this.markManagerRowUpdated('history', normalizedEntryId);
+        },
+
         clearNavigationHistory() {
             const removableIds = this.navigationHistory
                 .filter((entry) => !Array.isArray(entry?.tags) || entry.tags.length === 0)
@@ -3693,19 +3761,21 @@ document.addEventListener('alpine:init', () => {
             surahNumber = 0,
             ayahNumber = 0,
             ayahIndex = 0,
+            note = null,
             query = null,
+            tags = [],
         } = {}) {
             const normalizedPageNumber = clampPage(pageNumber, this.maxPage);
             const normalizedSurahNumber = Math.max(0, Math.trunc(Number(surahNumber ?? 0)));
             const normalizedAyahNumber = Math.max(0, Math.trunc(Number(ayahNumber ?? 0)));
             const normalizedAyahIndex = Math.max(0, Math.trunc(Number(ayahIndex ?? 0)));
             const sourceValue = String(source ?? '');
-            const normalizedSource = ['surah-directory', 'bookmark-navigation'].includes(
-                sourceValue,
-            )
+            const normalizedSource = supportedHistorySources.includes(sourceValue)
                 ? sourceValue
                 : 'search-result';
+            const normalizedNote = normalizeTextValue(note);
             const normalizedQuery = normalizeTextValue(query);
+            const normalizedTags = normalizeTags(tags);
 
             this.navigationHistory = [
                 normalizeHistoryEntry({
@@ -3715,14 +3785,182 @@ document.addEventListener('alpine:init', () => {
                     surah_number: normalizedSurahNumber,
                     ayah_number: normalizedAyahNumber,
                     ayah_index: normalizedAyahIndex,
+                    note: normalizedNote,
                     query: normalizedQuery,
-                    tags: [],
+                    tags: normalizedTags,
                     created_at: Date.now(),
                 }),
                 ...this.navigationHistory,
             ];
             this.persistNavigationHistory();
             this.syncHistoryTagDrafts();
+        },
+
+        normalizeBookmarkEntryId(bookmarkId) {
+            return String(bookmarkId ?? '').trim();
+        },
+
+        bookmarkEntryById(bookmarkId) {
+            const normalizedBookmarkId = this.normalizeBookmarkEntryId(bookmarkId);
+
+            if (!normalizedBookmarkId) {
+                return null;
+            }
+
+            return (
+                this.bookmarks.find(
+                    (bookmark) =>
+                        this.normalizeBookmarkEntryId(bookmark?.id) === normalizedBookmarkId,
+                ) ?? null
+            );
+        },
+
+        syncBookmarkTagDraftForEntry(bookmarkId) {
+            const normalizedBookmarkId = this.normalizeBookmarkEntryId(bookmarkId);
+
+            if (!normalizedBookmarkId) {
+                return;
+            }
+
+            const existingBookmark = this.bookmarkEntryById(normalizedBookmarkId);
+
+            if (!existingBookmark) {
+                if (
+                    this.bookmarkTagDraftById &&
+                    Object.prototype.hasOwnProperty.call(
+                        this.bookmarkTagDraftById,
+                        normalizedBookmarkId,
+                    )
+                ) {
+                    const nextDrafts = { ...this.bookmarkTagDraftById };
+                    delete nextDrafts[normalizedBookmarkId];
+                    this.bookmarkTagDraftById = nextDrafts;
+                }
+
+                return;
+            }
+
+            const currentDraft = String(
+                this.bookmarkTagDraftById?.[normalizedBookmarkId] ?? '',
+            ).trim();
+
+            if (currentDraft !== '') {
+                return;
+            }
+
+            this.bookmarkTagDraftById = {
+                ...this.bookmarkTagDraftById,
+                [normalizedBookmarkId]: '',
+            };
+        },
+
+        syncBookmarkTagDrafts() {
+            const nextDrafts = {};
+
+            this.bookmarks.forEach((bookmark) => {
+                const normalizedBookmarkId = this.normalizeBookmarkEntryId(bookmark?.id);
+
+                if (!normalizedBookmarkId) {
+                    return;
+                }
+
+                nextDrafts[normalizedBookmarkId] = String(
+                    this.bookmarkTagDraftById?.[normalizedBookmarkId] ?? '',
+                );
+            });
+
+            this.bookmarkTagDraftById = nextDrafts;
+        },
+
+        bookmarkTagDraft(bookmarkId) {
+            const normalizedBookmarkId = this.normalizeBookmarkEntryId(bookmarkId);
+
+            if (!normalizedBookmarkId) {
+                return '';
+            }
+
+            return String(this.bookmarkTagDraftById?.[normalizedBookmarkId] ?? '');
+        },
+
+        setBookmarkTagDraft(bookmarkId, value) {
+            const normalizedBookmarkId = this.normalizeBookmarkEntryId(bookmarkId);
+
+            if (!normalizedBookmarkId) {
+                return;
+            }
+
+            this.bookmarkTagDraftById = {
+                ...this.bookmarkTagDraftById,
+                [normalizedBookmarkId]: String(value ?? ''),
+            };
+        },
+
+        bookmarkTagSuggestions(bookmarkId) {
+            const normalizedBookmarkId = this.normalizeBookmarkEntryId(bookmarkId);
+            const bookmark = this.bookmarkEntryById(normalizedBookmarkId);
+            const existingTags = Array.isArray(bookmark?.tags) ? bookmark.tags : [];
+            const draftValue = this.bookmarkTagDraft(normalizedBookmarkId);
+
+            return this.collectSharedManagerTags({
+                excludeTags: existingTags,
+                draftValue,
+            });
+        },
+
+        commitBookmarkTagDraft(bookmarkId, { clearInput = true } = {}) {
+            const normalizedBookmarkId = this.normalizeBookmarkEntryId(bookmarkId);
+
+            if (!normalizedBookmarkId) {
+                return;
+            }
+
+            const draftValue = this.bookmarkTagDraft(normalizedBookmarkId);
+            const parsedDraftTags = normalizeTags(draftValue);
+
+            if (parsedDraftTags.length < 1) {
+                if (clearInput) {
+                    this.setBookmarkTagDraft(normalizedBookmarkId, '');
+                }
+
+                return;
+            }
+
+            const bookmark = this.bookmarkEntryById(normalizedBookmarkId);
+            const existingTags = Array.isArray(bookmark?.tags) ? bookmark.tags : [];
+            const nextTags = normalizeTags([...existingTags, ...parsedDraftTags]);
+
+            this.updateBookmarkTags(normalizedBookmarkId, nextTags, {
+                markUpdated: true,
+            });
+
+            if (clearInput) {
+                this.setBookmarkTagDraft(normalizedBookmarkId, '');
+            }
+        },
+
+        removeBookmarkTag(bookmarkId, tagValue) {
+            const normalizedBookmarkId = this.normalizeBookmarkEntryId(bookmarkId);
+            const normalizedTagValue = String(tagValue ?? '').trim();
+
+            if (!normalizedBookmarkId || normalizedTagValue === '') {
+                return;
+            }
+
+            const bookmark = this.bookmarkEntryById(normalizedBookmarkId);
+
+            if (!bookmark || !Array.isArray(bookmark?.tags)) {
+                return;
+            }
+
+            const nextTags = bookmark.tags.filter(
+                (tag) =>
+                    String(tag ?? '').toLocaleLowerCase() !==
+                    normalizedTagValue.toLocaleLowerCase(),
+            );
+
+            this.updateBookmarkTags(normalizedBookmarkId, nextTags, {
+                markUpdated: true,
+            });
         },
 
         bookmarkedPageEntry(pageNumber = this.pageNumber) {
@@ -3741,7 +3979,7 @@ document.addEventListener('alpine:init', () => {
             return this.bookmarkedPageEntry(this.pageNumber) !== null;
         },
 
-        defaultBookmarkTitle(pageNumber = this.pageNumber) {
+        defaultBookmarkNote(pageNumber = this.pageNumber) {
             const normalizedPageNumber = clampPage(pageNumber, this.maxPage);
             const surahTitle = this.currentSurahTitle();
 
@@ -3750,7 +3988,8 @@ document.addEventListener('alpine:init', () => {
 
         addBookmark({
             pageNumber = this.pageNumber,
-            title = null,
+            note = null,
+            tags = [],
             preserveCreatedAt = null,
             id = null,
         } = {}) {
@@ -3758,7 +3997,8 @@ document.addEventListener('alpine:init', () => {
             const timestamp = Date.now();
             const existingEntry = this.bookmarkedPageEntry(normalizedPageNumber);
             const nextId = String(id ?? existingEntry?.id ?? uniqueLocalId());
-            const normalizedTitle = normalizeTextValue(title);
+            const normalizedNote = normalizeTextValue(note ?? existingEntry?.note);
+            const normalizedTags = normalizeTags(tags ?? existingEntry?.tags ?? []);
 
             this.bookmarks = this.bookmarks.filter(
                 (bookmark) => String(bookmark?.id ?? '') !== String(existingEntry?.id ?? ''),
@@ -3767,7 +4007,8 @@ document.addEventListener('alpine:init', () => {
                 normalizeBookmarkEntry({
                     id: nextId,
                     page_number: normalizedPageNumber,
-                    title: normalizedTitle,
+                    note: normalizedNote,
+                    tags: normalizedTags,
                     created_at:
                         preserveCreatedAt !== null
                             ? Number(preserveCreatedAt)
@@ -3777,6 +4018,7 @@ document.addEventListener('alpine:init', () => {
             );
             this.persistBookmarks();
             this.markManagerRowUpdated('bookmarks', nextId);
+            this.syncBookmarkTagDraftForEntry(nextId);
         },
 
         toggleCurrentPageBookmark() {
@@ -3806,31 +4048,89 @@ document.addEventListener('alpine:init', () => {
                 );
                 this.persistBookmarks();
                 this.setManagerRowEffect('bookmarks', normalizedBookmarkId, '');
+                this.syncBookmarkTagDrafts();
             }, managerRowRemoveAnimationDurationMs);
         },
 
-        updateBookmarkTitle(bookmarkId, title) {
+        updateBookmarkNote(bookmarkId, note) {
             const normalizedBookmarkId = String(bookmarkId ?? '').trim();
 
             if (!normalizedBookmarkId) {
                 return;
             }
 
-            const normalizedTitle = normalizeTextValue(title);
+            const normalizedNote = normalizeTextValue(note);
+            let didUpdateBookmark = false;
 
             this.bookmarks = this.bookmarks.map((bookmark) => {
                 if (String(bookmark?.id ?? '') !== normalizedBookmarkId) {
                     return bookmark;
                 }
 
+                if (normalizeTextValue(bookmark?.note) === normalizedNote) {
+                    return bookmark;
+                }
+
+                didUpdateBookmark = true;
+
                 return {
                     ...bookmark,
-                    title: normalizedTitle,
+                    note: normalizedNote,
                     updated_at: Date.now(),
                 };
             });
+
+            if (!didUpdateBookmark) {
+                return;
+            }
+
             this.persistBookmarks();
             this.markManagerRowUpdated('bookmarks', normalizedBookmarkId);
+        },
+
+        updateBookmarkTags(bookmarkId, rawTags, { markUpdated = true } = {}) {
+            const normalizedBookmarkId = this.normalizeBookmarkEntryId(bookmarkId);
+
+            if (!normalizedBookmarkId) {
+                return;
+            }
+
+            const parsedTags = normalizeTags(rawTags);
+            let didUpdateBookmark = false;
+
+            this.bookmarks = this.bookmarks.map((bookmark) => {
+                if (this.normalizeBookmarkEntryId(bookmark?.id) !== normalizedBookmarkId) {
+                    return bookmark;
+                }
+
+                const currentTags = normalizeTags(bookmark?.tags ?? []);
+
+                if (this.historyTagsMatch(currentTags, parsedTags)) {
+                    return bookmark;
+                }
+
+                didUpdateBookmark = true;
+
+                return {
+                    ...bookmark,
+                    tags: parsedTags,
+                    updated_at: Date.now(),
+                };
+            });
+
+            if (!didUpdateBookmark) {
+                this.syncBookmarkTagDraftForEntry(normalizedBookmarkId);
+
+                return;
+            }
+
+            this.persistBookmarks();
+
+            if (markUpdated) {
+                this.markManagerRowUpdated('bookmarks', normalizedBookmarkId);
+            }
+
+            this.syncBookmarkTagDraftForEntry(normalizedBookmarkId);
         },
 
         replaceBookmarkPage(bookmarkId) {
@@ -3889,6 +4189,7 @@ document.addEventListener('alpine:init', () => {
             });
             this.persistBookmarks();
             this.markManagerRowReplaced('bookmarks', normalizedBookmarkId);
+            this.syncBookmarkTagDrafts();
         },
 
         clearBookmarkButtonPressState({ resetSuppressClick = true } = {}) {
@@ -4083,6 +4384,16 @@ document.addEventListener('alpine:init', () => {
                 .padStart(this.pageCounterDigitLength(), ' ')
                 .split('')
                 .map((digit) => (digit === ' ' ? '' : digit));
+        },
+
+        pageCounterMaxDisplayValue() {
+            if (!this.wirdModeActive) {
+                return Math.max(1, this.maxPage);
+            }
+
+            const range = this.wirdRangeState();
+
+            return this.absolutePageToPageNumber(range.startAbsolutePage + range.maxStep);
         },
 
         clampPage(value, maxPage = this.maxPage) {
@@ -4525,6 +4836,7 @@ document.addEventListener('alpine:init', () => {
 
         async handleRequestedNavigation(kind, detail = {}) {
             this.resetSwipeState();
+            const requestedSource = String(detail?.source ?? '').trim();
 
             if (this.wirdModeActive && kind === 'page') {
                 return;
@@ -4547,9 +4859,17 @@ document.addEventListener('alpine:init', () => {
                 await this.navigateToPage(requestedPage, {
                     direction: this.resolveNavigationDirection(requestedPage),
                     animate: true,
-                    source: 'page-event',
+                    source: requestedSource || 'page-event',
                     forceRefit: true,
                 });
+
+                if (requestedSource === 'page-jump' || requestedSource === 'page-slider-commit') {
+                    this.recordNavigationHistory({
+                        source: requestedSource,
+                        pageNumber: requestedPage,
+                        surahNumber: this.currentSurahNumber(),
+                    });
+                }
             }
         },
 
@@ -4576,7 +4896,7 @@ document.addEventListener('alpine:init', () => {
 
             if (
                 event?.target?.closest?.(
-                    'input:not(.quran-page-counter-input), textarea, select, [contenteditable="true"]',
+                    'input:not(.quran-page-counter-input):not([type="range"]), textarea, select, [contenteditable="true"]',
                 )
             ) {
                 return;
@@ -4587,13 +4907,13 @@ document.addEventListener('alpine:init', () => {
             }
 
             if (direction === 'left') {
-                await this.nextPage('keyboard');
+                await this.goNextFromChevron();
 
                 return;
             }
 
             if (direction === 'right') {
-                await this.previousPage('keyboard');
+                await this.goPreviousFromChevron();
             }
         },
 
@@ -4835,6 +5155,38 @@ document.addEventListener('alpine:init', () => {
             );
         },
 
+        onSliderPointerRelease(event = null) {
+            if (typeof document === 'undefined') {
+                return;
+            }
+
+            const releaseTarget = event?.target;
+            const targetSlider =
+                releaseTarget instanceof HTMLInputElement && releaseTarget.type === 'range'
+                    ? releaseTarget
+                    : null;
+            const activeElement =
+                document.activeElement instanceof HTMLInputElement &&
+                document.activeElement.type === 'range'
+                    ? document.activeElement
+                    : null;
+            const sliderElement = targetSlider ?? activeElement;
+
+            if (!(sliderElement instanceof HTMLInputElement)) {
+                return;
+            }
+
+            if (!sliderElement.classList.contains('quran-page-slider')) {
+                return;
+            }
+
+            window.setTimeout(() => {
+                if (document.activeElement === sliderElement) {
+                    sliderElement.blur();
+                }
+            }, 0);
+        },
+
         async onSliderInput(event = null) {
             if (!this.wirdModeActive) {
                 const targetPage = clampPage(event?.target?.value ?? this.pageInput, this.maxPage);
@@ -4878,6 +5230,8 @@ document.addEventListener('alpine:init', () => {
         },
 
         async onSliderCommit(event = null) {
+            this.onSliderPointerRelease(event);
+
             if (!this.wirdModeActive) {
                 const targetPage = clampPage(event?.target?.value ?? this.pageInput, this.maxPage);
                 this.pageInput = targetPage;
@@ -6986,13 +7340,13 @@ document.addEventListener('alpine:init', () => {
             this.resetSwipeState();
 
             if (direction === 'next') {
-                await this.nextPage('swipe');
+                await this.goNextFromChevron();
 
                 return true;
             }
 
             if (direction === 'prev') {
-                await this.previousPage('swipe');
+                await this.goPreviousFromChevron();
 
                 return true;
             }

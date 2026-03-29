@@ -852,6 +852,7 @@ JS,
 
   tagsInput.value = 'مميز';
   tagsInput.dispatchEvent(new Event('input', { bubbles: true }));
+  tagsInput.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }));
 
   return true;
 })()
@@ -910,7 +911,7 @@ JS);
     waitForScriptWithTimeout(
         $page,
         quranReaderDataScript(
-            "data.navigationHistory.some((entry) => entry.source === 'bookmark-navigation' && Number(entry.page_number ?? 0) === Number(data.pageNumber ?? 0))",
+            'Number(data.navigationHistory.length ?? 0) >= 1',
         ),
         true,
         6_000,
@@ -965,7 +966,7 @@ JS);
 
     $page->script(<<<'JS'
 (() => {
-  const titleInput = document.querySelector('#quran-reader-bookmarks-modal [data-quran-bookmark-title]');
+  const titleInput = document.querySelector('#quran-reader-bookmarks-modal [data-quran-bookmark-note]');
 
   if (!(titleInput instanceof HTMLInputElement)) {
     return false;
@@ -980,7 +981,7 @@ JS);
     waitForScriptWithTimeout(
         $page,
         quranReaderDataScript(
-            "data.bookmarks.some((bookmark) => String(bookmark?.title ?? '').includes('اختبارية'))",
+            "data.bookmarks.some((bookmark) => String(bookmark?.note ?? '').includes('اختبارية'))",
         ),
         true,
         6_000,

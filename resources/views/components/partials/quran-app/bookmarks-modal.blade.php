@@ -4,7 +4,7 @@
 >
     <div class="quran-manager-toolbar">
         <p class="quran-manager-toolbar-note">
-            انقر على الصفحة للانتقال، عدّل العنوان مباشرة، أو استبدلها بالصفحة الحالية.
+            انقر على الصفحة للانتقال، عدّل الملاحظة مباشرة، واستعمل الوسوم المشتركة مع سجل التنقّل.
         </p>
     </div>
 
@@ -14,6 +14,7 @@
                 <tr>
                     <th>الصفحة</th>
                     <th>ملاحظة</th>
+                    <th>الوسوم</th>
                     <th>إجراءات</th>
                 </tr>
             </thead>
@@ -22,7 +23,7 @@
                     <tr>
                         <td
                             class="quran-manager-empty"
-                            colspan="3"
+                            colspan="4"
                         >لا توجد علامات محفوظة.</td>
                     </tr>
                 </template>
@@ -47,12 +48,58 @@
                         <td>
                             <input
                                 class="quran-manager-input"
-                                data-quran-bookmark-title
+                                data-quran-bookmark-note
                                 type="text"
                                 placeholder="-"
-                                x-bind:value="bookmark.title ?? ''"
-                                x-on:input.debounce.350ms="updateBookmarkTitle(bookmark.id, $event.target.value)"
+                                x-bind:value="bookmark.note ?? ''"
+                                x-on:input.debounce.350ms="updateBookmarkNote(bookmark.id, $event.target.value)"
                             />
+                        </td>
+                        <td>
+                            <div class="quran-manager-tags-field">
+                                <template
+                                    x-for="tag in (Array.isArray(bookmark.tags) ? bookmark.tags : [])"
+                                    :key="`quran-bookmark-tag-${bookmark.id}-${tag}`"
+                                >
+                                    <span class="quran-manager-tag-chip">
+                                        <span x-text="tag"></span>
+                                        <button
+                                            class="quran-manager-tag-chip-remove"
+                                            type="button"
+                                            aria-label="حذف الوسم"
+                                            x-on:click.stop.prevent="removeBookmarkTag(bookmark.id, tag)"
+                                        >
+                                            ×
+                                        </button>
+                                    </span>
+                                </template>
+
+                                <input
+                                    class="quran-manager-tags-entry outline-none"
+                                    data-quran-bookmark-tags
+                                    type="text"
+                                    placeholder="أضف وسمًا..."
+                                    x-bind:list="`quran-bookmark-tags-suggestions-${bookmark.id}`"
+                                    x-bind:value="bookmarkTagDraft(bookmark.id)"
+                                    x-on:input="setBookmarkTagDraft(bookmark.id, $event.target.value)"
+                                    x-on:keydown="
+                                        if (['Enter', 'Tab', ','].includes($event.key)) {
+                                            $event.preventDefault();
+                                            commitBookmarkTagDraft(bookmark.id);
+                                        }
+                                    "
+                                    x-on:blur="commitBookmarkTagDraft(bookmark.id)"
+                                />
+
+                                <datalist x-bind:id="`quran-bookmark-tags-suggestions-${bookmark.id}`">
+                                    <template
+                                        x-for="tagSuggestion in bookmarkTagSuggestions(bookmark.id)"
+                                        :key="`quran-bookmark-tag-suggestion-${bookmark.id}-${tagSuggestion}`"
+                                    >
+                                        <option x-bind:value="tagSuggestion"></option>
+                                    </template>
+                                </datalist>
+                            </div>
                         </td>
                         <td>
                             <div class="quran-manager-actions">

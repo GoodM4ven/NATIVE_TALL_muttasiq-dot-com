@@ -82,6 +82,8 @@ This shared source code base is representing the web version primarily, the one 
   - Reader navigation source profiling is centralized in `navigationSourceProfile()`. `keyboard`/`swipe` must resolve to the same profile as `chevron` in both normal mode and wird mode so cache/fit heuristics stay aligned instead of taking a slower divergent branch.
   - `wirdNavigationSourceProfile()` should remain a thin wrapper over the shared reader navigation profile unless wird mode truly needs unique behavior.
   - Slider commits must prefer a fresh last `input` step (`_wirdSliderPendingCommitStep`/`_wirdSliderLastInputStep`) over `change` payload, but only when input is recent; otherwise use direct `change` step.
+  - Keep slider focus hygiene: release/commit must blur `.quran-page-slider` so keyboard arrows always route through `onGlobalArrowNavigate()` instead of getting trapped by range-input native handling.
+  - Keep page-event source fidelity in `handleRequestedNavigation()`: preserve incoming `detail.source` (especially `page-jump` and `page-slider-commit`) so navigation heuristics and history attribution do not diverge.
 - When touching this area, always run the focused browser regression:
   - `lands on the final wird slider page and keeps the re-entered completed page visible`
   - This path covers support unlock modal, fast slider scrub to final wird step, completion exit, and re-entry visibility.

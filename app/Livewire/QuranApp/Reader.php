@@ -195,7 +195,7 @@ class Reader extends Component implements HasActions, HasSchemas
             ->action(function (array $data): void {
                 $targetPage = max(1, min(max(1, $this->maxPage), (int) ($data['page'] ?? 1)));
 
-                $this->dispatch('quran-go-page', page: $targetPage);
+                $this->dispatch('quran-go-page', page: $targetPage, source: 'page-jump');
             });
     }
 
@@ -222,7 +222,7 @@ class Reader extends Component implements HasActions, HasSchemas
     {
         return Action::make('bookmarksManager')
             ->modalHeading('إدارة علامات الصفحات')
-            ->modalDescription('انقر للانتقال، عدّل العنوان مباشرة، أو استبدل الصفحة المحفوظة بالصفحة الحالية.')
+            ->modalDescription('انقر للانتقال، عدّل الملاحظة وأدر الوسوم مباشرة، أو استبدل الصفحة المحفوظة بالصفحة الحالية.')
             ->modalAutofocus(false)
             ->slideOver()
             ->modalWidth(Width::FiveExtraLarge)
