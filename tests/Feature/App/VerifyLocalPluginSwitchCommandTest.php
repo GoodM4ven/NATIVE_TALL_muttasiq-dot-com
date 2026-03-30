@@ -9,7 +9,7 @@ function createComposerManifestFixture(array $repositories): string
     $path = tempnam(sys_get_temp_dir(), 'composer-switch-');
 
     if ($path === false) {
-        throw new \RuntimeException('Failed to create temporary composer fixture.');
+        throw new RuntimeException('Failed to create temporary composer fixture.');
     }
 
     $composer = [

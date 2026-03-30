@@ -277,14 +277,36 @@ function resetBrowserState($page, bool $isMobile = false): void
         }
 
         try {
-            $page->script('window.__disableJsErrorReporting = true;');
-            $page->script('localStorage.clear(); sessionStorage.clear(); window.history.replaceState({}, document.title, window.location.pathname + window.location.search);');
+            $page->script(<<<'JS'
+(() => {
+  window.__disableJsErrorReporting = true;
+  localStorage.clear();
+  sessionStorage.clear();
+
+  try {
+    Storage.prototype.setItem = () => {};
+    Storage.prototype.removeItem = () => {};
+    Storage.prototype.clear = () => {};
+  } catch (e) {
+    // ignore
+  }
+
+  window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+})()
+JS);
+            $page->refresh();
         } catch (Throwable) {
             //
         }
 
         waitForAlpineReady($page);
         applyTestSpeedups($page);
+
+        try {
+            $page->script('window.__disableJsErrorReporting = true;');
+        } catch (Throwable) {
+            //
+        }
 
         if ($isMobile) {
             enableMobileContext($page);

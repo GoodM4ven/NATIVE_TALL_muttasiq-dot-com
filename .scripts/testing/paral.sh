@@ -7,6 +7,7 @@ project_name="$(basename "${root_dir}")"
 container_project_root="/var/www/html/${project_name}"
 run_clean_script="${root_dir}/.scripts/testing/support/run-clean.sh"
 plugin_cache_relative_path="vendor/pest-plugins.json"
+xdebug_mode="${XDEBUG_MODE:-off}"
 
 if [[ ! -x "${run_clean_script}" ]]; then
     echo "Missing executable script at ${run_clean_script}" >&2
@@ -119,6 +120,7 @@ resolve_parallel_processes() {
 run_local() (
     set -euo pipefail
     cd "${root_dir}"
+    export XDEBUG_MODE="${xdebug_mode}"
 
     local cpu_cores
     local parallel_processes
@@ -146,6 +148,7 @@ run_in_container() {
 
     docker exec \
         -e PEST_ENABLE_BROWSER_PLUGIN=0 \
+        -e "XDEBUG_MODE=${xdebug_mode}" \
         -e "TESTING_SCRIPT_NAME=${script_name}" \
         -e "TESTING_CONTAINER_NAME=${container_name}" \
         -e "TEST_RESERVED_CORES=${TEST_RESERVED_CORES:-1}" \

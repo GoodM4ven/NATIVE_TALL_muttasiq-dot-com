@@ -7,6 +7,7 @@ project_name="$(basename "${root_dir}")"
 container_project_root="/var/www/html/${project_name}"
 run_clean_script="${root_dir}/.scripts/testing/support/run-clean.sh"
 plugin_cache_relative_path="vendor/pest-plugins.json"
+xdebug_mode="${XDEBUG_MODE:-off}"
 
 if [[ ! -x "${run_clean_script}" ]]; then
     echo "Missing executable script at ${run_clean_script}" >&2
@@ -67,6 +68,7 @@ run_local() (
     set -euo pipefail
     cd "${root_dir}"
     print_runtime_indicator "local"
+    export XDEBUG_MODE="${xdebug_mode}"
 
     plugin_cache_file="${plugin_cache_relative_path}"
     backup_file=""
@@ -90,6 +92,7 @@ run_in_container() {
 
     docker exec \
         -e PEST_ENABLE_BROWSER_PLUGIN=0 \
+        -e "XDEBUG_MODE=${xdebug_mode}" \
         -w "${container_project_root}" \
         "${container_name}" \
         sh -lc '

@@ -1,5 +1,7 @@
 <?php
 
+use App\Providers\NativeServiceProvider;
+
 /**
  * @return array{name?: string, version?: string}
  */
@@ -20,7 +22,7 @@ function nativePatchesLockPackage(): array
 }
 
 test('native patches plugin is registered for android builds', function () {
-    $provider = new \App\Providers\NativeServiceProvider(app());
+    $provider = new NativeServiceProvider(app());
     $plugins = $provider->plugins();
 
     expect($plugins)->toContain('Goodm4ven\\NativePatches\\NativePatchesServiceProvider');

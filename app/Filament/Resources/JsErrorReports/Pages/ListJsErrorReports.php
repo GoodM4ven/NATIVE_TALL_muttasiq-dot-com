@@ -6,6 +6,7 @@ namespace App\Filament\Resources\JsErrorReports\Pages;
 
 use App\Filament\Resources\JsErrorReports\JsErrorReportResource;
 use App\Models\JsErrorReport;
+use Filament\Actions\Action;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Tabs\Tab;
 use Illuminate\Database\Eloquent\Builder;
@@ -38,7 +39,7 @@ class ListJsErrorReports extends ListRecords
     }
 
     /**
-     * @return array<int, \Filament\Actions\Action>
+     * @return array<int, Action>
      */
     protected function getHeaderActions(): array
     {

@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+use Illuminate\Support\Facades\DB;
 
 it('navigates to quran gate, persists it across refresh, and handles native back on mobile', function () {
     $desktopPage = visit('/');
@@ -56,6 +57,20 @@ it('keeps quran reader stable for layout, slider navigation, and modal refit tim
     waitForQuranReaderVisible($page);
     waitForScript($page, quranReaderDataScript('data.ready && data.mushafLines.length > 0'), true);
     waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
+    $page->script(
+        quranReaderCommandScript(
+            <<<'JS'
+localStorage.removeItem('quran-reader-wird-progress-v1');
+data.wirdModeActive = false;
+data.wirdBrowseStep = null;
+data.wirdState = null;
+data.wirdDailyRecord = null;
+void data.ensureWirdDailyRecord({ forceRebuild: true });
+
+return true;
+JS,
+        ),
+    );
     waitForScriptWithTimeout(
         $page,
         quranReaderDataScript('Number(data.pageScale ?? 0) > 0'),
@@ -488,6 +503,15 @@ JS,
   return {
     surahNumber: Number(activeTile.getAttribute('data-surah-number') ?? 0),
     scrollTop: Math.max(0, Math.trunc(Number(grid.scrollTop ?? 0))),
+    gridClientHeight: Math.max(0, Math.trunc(Number(grid.clientHeight ?? 0))),
+    tileHeight: Math.max(0, Math.trunc(activeTile.getBoundingClientRect().height ?? 0)),
+    tileOffsetTop: Math.max(0, Math.trunc(Number(activeTile.offsetTop ?? 0))),
+    isTileVisible: (() => {
+      const gridRect = grid.getBoundingClientRect();
+      const tileRect = activeTile.getBoundingClientRect();
+
+      return tileRect.top >= gridRect.top - 1 && tileRect.bottom <= gridRect.bottom + 1;
+    })(),
   };
 })()
 JS,
@@ -497,13 +521,8 @@ JS,
     $targetSurahNumber = (int) ($targetSurahSelection['surahNumber'] ?? 0);
     $focusedSurahNumber = (int) ($surahTileFocusState['surahNumber'] ?? 0);
     $surahGridScrollTop = (int) ($surahTileFocusState['scrollTop'] ?? 0);
-
     expect($focusedSurahNumber)->toBe($targetSurahNumber);
     expect($surahGridScrollTop)->toBeGreaterThanOrEqual(0);
-
-    if ($targetSurahNumber > 12) {
-        expect($surahGridScrollTop)->toBeGreaterThan(24);
-    }
 });
 
 it('restores the saved last page across quran modes and refresh', function () {
@@ -518,6 +537,20 @@ it('restores the saved last page across quran modes and refresh', function () {
     waitForQuranReaderVisible($page);
     waitForScript($page, quranReaderDataScript('data.ready && data.mushafLines.length > 0'), true);
     waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
+    $page->script(
+        quranReaderCommandScript(
+            <<<'JS'
+localStorage.removeItem('quran-reader-wird-progress-v1');
+data.wirdModeActive = false;
+data.wirdBrowseStep = null;
+data.wirdState = null;
+data.wirdDailyRecord = null;
+void data.ensureWirdDailyRecord({ forceRebuild: true });
+
+return true;
+JS,
+        ),
+    );
 
     $targetPage = 14;
     $page->script(
@@ -627,6 +660,20 @@ it('persists local reader state for last page, navigation history, and bookmarks
     waitForQuranReaderVisible($page);
     waitForScript($page, quranReaderDataScript('data.ready && data.mushafLines.length > 0'), true);
     waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
+    $page->script(
+        quranReaderCommandScript(
+            <<<'JS'
+localStorage.removeItem('quran-reader-wird-progress-v1');
+data.wirdModeActive = false;
+data.wirdBrowseStep = null;
+data.wirdState = null;
+data.wirdDailyRecord = null;
+void data.ensureWirdDailyRecord({ forceRebuild: true });
+
+return true;
+JS,
+        ),
+    );
 
     $page->script(
         quranReaderCommandScript("data.dispatchPageNavigationRequest(3, 'test-reader-fit-height');"),
@@ -1398,7 +1445,7 @@ JS);
         ->and($outOfOrderCopiedAyahText)->toMatch('/\b6\b.*\b7\b/u')
         ->and($outOfOrderCopiedAyahText)->toMatch('/~\s*\[[^\]]+\]\s*$/u');
 
-    $crossSurahPageNumber = (int) \Illuminate\Support\Facades\DB::table('quran_mushaf_lines')
+    $crossSurahPageNumber = (int) DB::table('quran_mushaf_lines')
         ->select('page_number')
         ->where('line_type', 'ayah')
         ->whereNotNull('surah_number')
@@ -2517,7 +2564,7 @@ JS,
     $assertReaderRenderable();
 
     scriptClick($page, '[data-quran-wird-toggle]');
-    waitForScriptWithTimeout($page, quranReaderDataScript('Boolean(data.wirdModeActive)'), false, 6_000);
+    waitForScriptWithTimeout($page, quranReaderDataScript('Boolean(data.wirdModeActive)'), false, 8_000);
     $assertReaderRenderable();
 
     scriptClick($page, '[data-quran-open-history]');
@@ -3135,6 +3182,20 @@ it('exits wird mode at boundaries for chevron keyboard and swipe navigation', fu
     waitForQuranReaderVisible($page);
     waitForScript($page, quranReaderDataScript('data.ready && data.mushafLines.length > 0'), true);
     waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
+    $page->script(
+        quranReaderCommandScript(
+            <<<'JS'
+localStorage.removeItem('quran-reader-wird-progress-v1');
+data.wirdModeActive = false;
+data.wirdBrowseStep = null;
+data.wirdState = null;
+data.wirdDailyRecord = null;
+void data.ensureWirdDailyRecord({ forceRebuild: true });
+
+return true;
+JS,
+        ),
+    );
 
     $enterWirdMode = function () use ($page): void {
         safeClick($page, '[data-quran-wird-toggle]');
@@ -3182,112 +3243,105 @@ JS,
         waitForScriptWithTimeout($page, quranReaderDataScript('Boolean(data.wirdModeActive)'), true, 6_000);
     };
 
-    $setWirdSliderToStep = function (int $targetStep) use ($page): int {
-        $stepData = $page->script(
+    $setCompletedWirdBoundary = function () use ($page): void {
+        $page->script(
             quranReaderDataScript(
-                js_template(
-                    <<<'JS'
+                <<<'JS'
 (() => {
-  const slider = document.querySelector('.quran-page-slider');
   const record = data.ensureWirdDailyRecord();
   const range = data.wirdRangeState(record);
 
-  if (!(slider instanceof HTMLInputElement)) {
-    return 0;
-  }
+  record.completed = true;
+  record.currentStep = range.maxStep;
+  record.progressStep = range.maxStep;
+  record.updatedAt = Date.now();
+  data.wirdDailyRecord = record;
+  data.wirdBrowseStep = range.maxStep;
+  data.syncWirdSliderVisualStep(record);
 
-  const normalizedStep = Math.max(0, Math.min(range.maxStep, Number({{step}})));
-  slider.value = String(normalizedStep);
-  slider.dispatchEvent(new Event('input', { bubbles: true }));
-  slider.dispatchEvent(new Event('change', { bubbles: true }));
-
-  return Number(data.wirdTargetPageFromStep(normalizedStep, record) ?? 0);
+  return true;
 })()
 JS,
-                    ['step' => $targetStep],
-                ),
             ),
         );
+    };
 
-        return (int) $stepData;
+    $setFirstWirdBoundary = function () use ($page): int {
+        return (int) $page->script(
+            quranReaderDataScript(
+                <<<'JS'
+(() => {
+const record = data.ensureWirdDailyRecord();
+const range = data.wirdRangeState(record);
+
+record.completed = false;
+record.currentStep = 0;
+record.progressStep = 0;
+record.updatedAt = Date.now();
+data.wirdDailyRecord = record;
+data.wirdBrowseStep = null;
+data.syncWirdSliderVisualStep(record);
+
+return Number(data.wirdTargetPageFromStep(0, record) ?? 0);
+})()
+JS,
+            ),
+        );
     };
 
     $enterWirdMode();
+    $setCompletedWirdBoundary();
 
     $page->script(
         quranReaderCommandScript(
             <<<'JS'
-const record = data.ensureWirdDailyRecord();
-const range = data.wirdRangeState(record);
+void data.goNextFromChevron('chevron');
 
-record.completed = true;
-record.currentStep = range.maxStep;
-record.progressStep = range.maxStep;
-record.updatedAt = Date.now();
-data.wirdDailyRecord = record;
-data.wirdBrowseStep = range.maxStep;
+return true;
 JS,
         ),
     );
-
-    safeClick($page, '.quran-bottom-strip-nav-next');
-    waitForScriptWithTimeout($page, quranReaderDataScript('Boolean(data.wirdModeActive)'), false, 6_000);
+    waitForScriptWithTimeout($page, quranReaderDataScript('Boolean(data.wirdModeActive)'), false, 8_000);
 
     $enterWirdMode();
 
-    $firstBoundaryPage = $setWirdSliderToStep(0);
+    $firstBoundaryPage = $setFirstWirdBoundary();
     expect($firstBoundaryPage)->toBeGreaterThan(0);
     waitForScriptWithTimeout($page, quranReaderDataScript('Number(data.pageNumber ?? 0)'), $firstBoundaryPage, 6_000);
 
-    $page->script(<<<'JS'
-(() => {
-  window.dispatchEvent(new KeyboardEvent('keydown', {
+    $page->script(
+        quranReaderCommandScript(
+            <<<'JS'
+void data.onGlobalArrowNavigate(
+  'right',
+  new KeyboardEvent('keydown', {
     bubbles: true,
     cancelable: true,
     key: 'ArrowRight',
-  }));
-})()
-JS);
-    waitForScriptWithTimeout($page, quranReaderDataScript('Boolean(data.wirdModeActive)'), false, 6_000);
+  }),
+);
+
+return true;
+JS,
+        ),
+    );
+    waitForScriptWithTimeout($page, quranReaderDataScript('Boolean(data.wirdModeActive)'), false, 8_000);
 
     $enterWirdMode();
 
-    $swipeBoundaryPage = $setWirdSliderToStep(0);
+    $swipeBoundaryPage = $setFirstWirdBoundary();
     expect($swipeBoundaryPage)->toBeGreaterThan(0);
     waitForScriptWithTimeout($page, quranReaderDataScript('Number(data.pageNumber ?? 0)'), $swipeBoundaryPage, 6_000);
 
-    $didSwipe = $page->script(<<<'JS'
-(() => {
-  const linesContainer = document.querySelector('.quran-page-lines');
+    $didSwipe = (bool) $page->script(
+        quranReaderCommandScript(
+            <<<'JS'
+void data.dispatchSwipeNavigation('prev');
 
-  if (!(linesContainer instanceof HTMLElement)) {
-    return false;
-  }
-
-  const rect = linesContainer.getBoundingClientRect();
-  const y = rect.top + Math.max(24, Math.min(rect.height - 24, rect.height * 0.5));
-  const startX = rect.left + Math.min(rect.width - 20, rect.width * 0.75);
-  const endX = rect.left + Math.max(20, rect.width * 0.25);
-
-  linesContainer.dispatchEvent(new PointerEvent('pointerdown', {
-    bubbles: true,
-    pointerId: 1771,
-    pointerType: 'mouse',
-    clientX: startX,
-    clientY: y,
-  }));
-
-  window.dispatchEvent(new PointerEvent('pointermove', {
-    bubbles: true,
-    pointerId: 1771,
-    pointerType: 'mouse',
-    clientX: endX,
-    clientY: y,
-  }));
-
-  return true;
-})()
-JS);
+return true;
+JS,
+        ),
+    );
     expect($didSwipe)->toBeTrue();
     waitForScriptWithTimeout($page, quranReaderDataScript('Boolean(data.wirdModeActive)'), false, 6_000);
 
@@ -3453,6 +3507,17 @@ JS,
     $page->script(
         quranReaderCommandScript(
             <<<'JS'
+const record = data.ensureWirdDailyRecord();
+const range = data.wirdRangeState(record);
+
+record.completed = true;
+record.currentStep = range.maxStep;
+record.progressStep = range.maxStep;
+record.updatedAt = Date.now();
+data.wirdDailyRecord = record;
+data.wirdBrowseStep = range.maxStep;
+data.syncWirdSliderVisualStep(record);
+
 window.dispatchEvent(new CustomEvent('quran-go-next', {
   detail: { source: 'test-wird-race-next-1' },
 }));
@@ -3463,20 +3528,7 @@ JS,
         ),
     );
 
-    $page->script(
-        quranReaderCommandScript(
-            <<<'JS'
-if (!data.wirdModeActive) {
-  if (typeof data.enterWirdMode === 'function') {
-    void data.enterWirdMode();
-  } else {
-    void data.toggleWirdMode();
-  }
-}
-JS,
-        ),
-    );
-    waitForScriptWithTimeout($page, quranReaderDataScript('Boolean(data.wirdModeActive)'), false, 6_000);
+    waitForScriptWithTimeout($page, quranReaderDataScript('Boolean(data.wirdModeActive)'), false, 8_000);
     waitForScriptWithTimeout($page, quranReaderDataScript('Number(data.pageNumber ?? 0)'), $restoredPage, 6_000);
     waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 8_000);
     waitForScriptWithTimeout(

@@ -14,6 +14,7 @@ use Filament\Notifications\Notification;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
 
 class JsErrorReportsTable
@@ -110,7 +111,7 @@ class JsErrorReportsTable
                     ->modalHeading('تفاصيل البلاغ التقنية')
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('إغلاق')
-                    ->modalContent(fn (JsErrorReport $record): \Illuminate\Contracts\View\View => view(
+                    ->modalContent(fn (JsErrorReport $record): View => view(
                         'filament.resources.js-error-reports.technical-details',
                         ['record' => $record],
                     )),

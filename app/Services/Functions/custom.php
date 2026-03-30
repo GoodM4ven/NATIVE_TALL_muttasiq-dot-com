@@ -4,16 +4,17 @@ declare(strict_types=1);
 
 use App\Models\Setting;
 use App\Services\Support\Enums\ViewName;
+use Illuminate\Support\Facades\Facade;
 use Illuminate\Support\Facades\Schema;
 
 if (! function_exists('app_arabic_text_runtime_ready')) {
     function app_arabic_text_runtime_ready(): bool
     {
-        if (! class_exists(\Illuminate\Support\Facades\Facade::class)) {
+        if (! class_exists(Facade::class)) {
             return false;
         }
 
-        return \Illuminate\Support\Facades\Facade::getFacadeApplication() !== null;
+        return Facade::getFacadeApplication() !== null;
     }
 } else {
     throw new Exception('The function `app_arabic_text_runtime_ready` already exists.');
@@ -87,7 +88,7 @@ if (! function_exists('app_arabic_text_settings')) {
                     $useWesternNumeralsDefault,
                 ),
             ];
-        } catch (\Throwable) {
+        } catch (Throwable) {
             $resolved = [
                 'preserveHarakat' => $preserveHarakatDefault,
                 'useWesternNumerals' => $useWesternNumeralsDefault,

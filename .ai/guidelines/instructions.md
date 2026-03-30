@@ -45,10 +45,9 @@ This shared source code base is representing the web version primarily, the one 
 - You can check out what Laravel setup requires for this application to work in [composer.json]'s `setup` script.
 
 ## Testing
-- Do not write tests unless explicitely told to. But when you're implementing a new main feature, do create a new test then.
-- When told to write tests, try to find first a related feature test and try to add to it, if it was suitable and simple enough to do.
-- Feature tests must be put inside either App or Browser folders, where Browser is for PestPHP browser testing.
-- PestPHP browser testing is buggy currently, and our setup is in a docker container, so make sure you're using [.scripts/testing] scripts that account for the setup.
+- Do not write tests unless explicitely told to, except when shipping a new main feature; when you do add tests, prefer extending an existing related test, and keep feature tests under `tests/Feature/App` or `tests/Feature/Browser`.
+- For fast checks, start with the smallest relevant non-browser run, usually `php artisan test --compact <file-or-filter>`, then scale to the project wrappers `.scripts/testing/test.sh` or `.scripts/testing/paral.sh` and their Composer entrypoints such as `composer run test:raw` or `composer run testparal:raw`.
+- Browser tests are special in this Docker setup, so do not call Pest browser tests directly; use `.scripts/testing/browser.sh` or `composer run testbrowser:raw`, and treat `composer green` as the full pre-commit flow because it runs the verification checks, linting, and the raw parallel non-browser plus browser suites.
 
 ## Debugging
 - For investigating AlpineJS transition failiures, try using [resources/js/support/debugging/alpine-transition-debugger.js].

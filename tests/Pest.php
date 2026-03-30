@@ -2,19 +2,21 @@
 
 declare(strict_types=1);
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Pest\Plugins\Parallel;
+use Tests\TestCase;
 
 require_once __DIR__.'/Support/Browser/Core.php';
 require_once __DIR__.'/Support/Browser/Helpers.php';
 
 pest()
-    ->extend(Tests\TestCase::class)
-    ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
+    ->extend(TestCase::class)
+    ->use(RefreshDatabase::class)
     ->in('Feature/App');
 
 pest()
-    ->extend(Tests\TestCase::class)
-    ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
+    ->extend(TestCase::class)
+    ->use(RefreshDatabase::class)
     ->in('Feature/Browser')
     ->group('browser')
     ->beforeAll(function () {

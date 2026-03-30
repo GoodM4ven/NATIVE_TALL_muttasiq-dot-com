@@ -9,6 +9,7 @@ use App\Services\Support\Enums\NotificationType;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
+use Filament\Forms\Components\Textarea;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Support\Enums\Width;
@@ -91,7 +92,7 @@ class JsErrorReporter extends Component implements HasActions, HasSchemas
                 'technical_snapshot' => $this->formatErrorsForDisplay(),
             ])
             ->schema([
-                \Filament\Forms\Components\Textarea::make('user_note')
+                Textarea::make('user_note')
                     ->label('ماذا كنت تفعل قبل ظهور المشكلة؟')
                     ->required()
                     ->minLength(8)
@@ -100,7 +101,7 @@ class JsErrorReporter extends Component implements HasActions, HasSchemas
                     ->trim()
                     ->helperText('الوصف يفيدنا أكثر من التفاصيل التقنية المرفقة تلقائيا'),
 
-                \Filament\Forms\Components\Textarea::make('technical_snapshot')
+                Textarea::make('technical_snapshot')
                     ->label('تفاصيل تقنية مرفقة')
                     ->rows(5)
                     ->disabled()

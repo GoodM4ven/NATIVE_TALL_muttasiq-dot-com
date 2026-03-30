@@ -15,42 +15,46 @@ return new class extends Migration
             return;
         }
 
-        Schema::create('quran_verse_explanations', function (Blueprint $table): void {
-            $table->id();
-            $table->foreignId('verse_id')->constrained('quran_verses')->cascadeOnDelete();
-            $table->unsignedTinyInteger('surah_number');
-            $table->unsignedSmallInteger('ayah_number');
-            $table->unsignedSmallInteger('ayah_index');
-            $table->string('source_key', 80);
-            $table->string('source_label', 140);
-            $table->string('content_kind', 20)->default('tafsir');
-            $table->string('group_ayah_key', 20)->nullable();
-            $table->string('from_ayah_key', 20)->nullable();
-            $table->string('to_ayah_key', 20)->nullable();
-            $table->text('ayah_keys')->nullable();
-            $table->longText('content_html')->nullable();
-            $table->longText('content_text');
-            $table->timestamps();
+        if (! Schema::hasTable('quran_verse_explanations')) {
+            Schema::create('quran_verse_explanations', function (Blueprint $table): void {
+                $table->id();
+                $table->foreignId('verse_id')->constrained('quran_verses')->cascadeOnDelete();
+                $table->unsignedTinyInteger('surah_number');
+                $table->unsignedSmallInteger('ayah_number');
+                $table->unsignedSmallInteger('ayah_index');
+                $table->string('source_key', 80);
+                $table->string('source_label', 140);
+                $table->string('content_kind', 20)->default('tafsir');
+                $table->string('group_ayah_key', 20)->nullable();
+                $table->string('from_ayah_key', 20)->nullable();
+                $table->string('to_ayah_key', 20)->nullable();
+                $table->text('ayah_keys')->nullable();
+                $table->longText('content_html')->nullable();
+                $table->longText('content_text');
+                $table->timestamps();
 
-            $table->unique(['verse_id', 'source_key']);
-            $table->index(['surah_number', 'ayah_number']);
-            $table->index(['source_key', 'content_kind']);
-        });
+                $table->unique(['verse_id', 'source_key']);
+                $table->index(['surah_number', 'ayah_number']);
+                $table->index(['source_key', 'content_kind']);
+            });
+        }
 
-        Schema::create('quran_word_annotations', function (Blueprint $table): void {
-            $table->id();
-            $table->foreignId('word_id')->constrained('quran_words')->cascadeOnDelete();
-            $table->string('annotation_type', 40);
-            $table->string('source_key', 80)->default('manual');
-            $table->string('locale', 10)->nullable();
-            $table->text('content_text');
-            $table->longText('content_html')->nullable();
-            $table->json('meta')->nullable();
-            $table->timestamps();
+        if (! Schema::hasTable('quran_word_annotations')) {
+            Schema::create('quran_word_annotations', function (Blueprint $table): void {
+                $table->id();
+                $table->foreignId('word_id')->constrained('quran_words')->cascadeOnDelete();
+                $table->string('annotation_type', 40);
+                $table->string('source_key', 80)->default('manual');
+                $table->string('locale', 10)->nullable();
+                $table->text('content_text');
+                $table->longText('content_html')->nullable();
+                $table->json('meta')->nullable();
+                $table->timestamps();
 
-            $table->index(['word_id', 'annotation_type']);
-            $table->index(['source_key', 'locale']);
-        });
+                $table->index(['word_id', 'annotation_type']);
+                $table->index(['source_key', 'locale']);
+            });
+        }
 
         $this->importQuranExplanations();
     }
@@ -63,6 +67,10 @@ return new class extends Migration
 
     private function importQuranExplanations(): void
     {
+        if (app()->environment('testing')) {
+            return;
+        }
+
         if (! Schema::hasTable('quran_verses')) {
             return;
         }

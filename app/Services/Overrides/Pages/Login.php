@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Overrides\Pages;
 
 use Filament\Auth\Pages\Login as FilamentLogin;
+use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
 use Illuminate\Contracts\Support\Htmlable;
 
@@ -12,10 +13,10 @@ class Login extends FilamentLogin
 {
     public function form(Schema $schema): Schema
     {
-        /** @var \Filament\Forms\Components\TextInput $email */
+        /** @var TextInput $email */
         $email = $this->getEmailFormComponent();
 
-        /** @var \Filament\Forms\Components\TextInput $password */
+        /** @var TextInput $password */
         $password = $this->getPasswordFormComponent();
 
         return $schema

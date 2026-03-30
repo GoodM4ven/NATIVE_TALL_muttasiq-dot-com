@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+use Illuminate\Support\Facades\File;
 
 arch('it will not use debugging functions')
     ->expect('App')
@@ -18,7 +19,7 @@ arch('it uses strict typing everywhere')
     ->toUseStrictTypes();
 
 test('it will not point to dependency development versions', function () {
-    expect(\Illuminate\Support\Facades\File::get(base_path('composer.json')))
+    expect(File::get(base_path('composer.json')))
         ->not
         ->toContain('dev-');
 });

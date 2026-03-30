@@ -9,6 +9,7 @@ run_clean_script="${root_dir}/.scripts/testing/support/run-clean.sh"
 browser_tests_path="${BROWSER_TESTS_PATH:-tests/Feature/Browser}"
 plugin_cache_relative_path="vendor/pest-plugins.json"
 browser_plugin_signature='Pest\\Browser\\Plugin'
+xdebug_mode="${XDEBUG_MODE:-off}"
 
 if [[ ! -x "${run_clean_script}" ]]; then
     echo "Missing executable script at ${run_clean_script}" >&2
@@ -75,18 +76,18 @@ print_runtime_indicator() {
 
 run_compact_command() {
     if command -v timeout >/dev/null 2>&1; then
-        "${run_clean_script}" timeout 5m php artisan test --compact "${browser_tests_path}" "$@"
+        "${run_clean_script}" timeout 5m vendor/bin/pest --compact "${browser_tests_path}" "$@"
 
         return
     fi
 
     if [[ -x /usr/bin/timeout ]]; then
-        "${run_clean_script}" /usr/bin/timeout 5m php artisan test --compact "${browser_tests_path}" "$@"
+        "${run_clean_script}" /usr/bin/timeout 5m vendor/bin/pest --compact "${browser_tests_path}" "$@"
 
         return
     fi
 
-    "${run_clean_script}" php artisan test --compact "${browser_tests_path}" "$@"
+    "${run_clean_script}" vendor/bin/pest --compact "${browser_tests_path}" "$@"
 }
 
 run_parallel_command() {
@@ -94,18 +95,18 @@ run_parallel_command() {
     shift
 
     if command -v timeout >/dev/null 2>&1; then
-        "${run_clean_script}" timeout 5m php artisan test --compact "${browser_tests_path}" "$@"
+        "${run_clean_script}" timeout 5m vendor/bin/pest --compact --parallel --processes="${parallel_processes}" "${browser_tests_path}" "$@"
 
         return
     fi
 
     if [[ -x /usr/bin/timeout ]]; then
-        "${run_clean_script}" /usr/bin/timeout 5m php artisan test --compact "${browser_tests_path}" "$@"
+        "${run_clean_script}" /usr/bin/timeout 5m vendor/bin/pest --compact --parallel --processes="${parallel_processes}" "${browser_tests_path}" "$@"
 
         return
     fi
 
-    "${run_clean_script}" php artisan test --compact "${browser_tests_path}" "$@"
+    "${run_clean_script}" vendor/bin/pest --compact --parallel --processes="${parallel_processes}" "${browser_tests_path}" "$@"
 }
 
 ensure_local_browser_plugin_cache() {
@@ -133,6 +134,7 @@ ensure_local_browser_plugin_cache() {
 run_local() (
     cd "${root_dir}"
     ensure_local_browser_plugin_cache
+    export XDEBUG_MODE="${xdebug_mode}"
 
     local use_parallel="${BROWSER_TEST_PARALLEL:-1}"
 
@@ -158,14 +160,14 @@ run_local() (
     fi
 
     local reserved_cores="${TEST_RESERVED_CORES:-1}"
-    local max_processes="${TEST_BROWSER_MAX_PROCESSES:-${TEST_MAX_PROCESSES:-8}}"
+    local max_processes="${TEST_BROWSER_MAX_PROCESSES:-${TEST_MAX_PROCESSES:-4}}"
 
     if ! printf "%s" "${reserved_cores}" | grep -Eq "^[0-9]+$"; then
         reserved_cores=1
     fi
 
     if ! printf "%s" "${max_processes}" | grep -Eq "^[0-9]+$" || [[ "${max_processes}" -lt 1 ]]; then
-        max_processes=8
+        max_processes=4
     fi
 
     parallel_processes=$(( cpu_cores - reserved_cores ))
@@ -188,6 +190,7 @@ run_in_container() {
 
     docker exec \
         -e "BROWSER_TESTS_PATH=${browser_tests_path}" \
+        -e "XDEBUG_MODE=${xdebug_mode}" \
         -e "TESTING_SCRIPT_NAME=${script_name}" \
         -e "TESTING_CONTAINER_NAME=${container_name}" \
         -e "TEST_RESERVED_CORES=${TEST_RESERVED_CORES:-1}" \
@@ -245,14 +248,14 @@ run_in_container() {
             resolve_parallel_processes() {
                 cpu_cores="$1"
                 reserved_cores="${TEST_RESERVED_CORES:-1}"
-                max_processes="${TEST_BROWSER_MAX_PROCESSES:-${TEST_MAX_PROCESSES:-8}}"
+                max_processes="${TEST_BROWSER_MAX_PROCESSES:-${TEST_MAX_PROCESSES:-4}}"
 
                 if ! printf "%s" "${reserved_cores}" | grep -Eq "^[0-9]+$"; then
                     reserved_cores=1
                 fi
 
                 if ! printf "%s" "${max_processes}" | grep -Eq "^[0-9]+$" || [ "${max_processes}" -lt 1 ]; then
-                    max_processes=8
+                    max_processes=4
                 fi
 
                 parallel_processes=$(( cpu_cores - reserved_cores ))
@@ -275,16 +278,16 @@ run_in_container() {
             echo "[testing:${TESTING_SCRIPT_NAME}] mode=docker container=${TESTING_CONTAINER_NAME} cpu=${cpu_cores} processes=${parallel_processes}" >&2
 
             if command -v timeout >/dev/null 2>&1; then
-                .scripts/testing/support/run-clean.sh timeout 5m php artisan test --compact "${BROWSER_TESTS_PATH}" "$@"
+                .scripts/testing/support/run-clean.sh timeout 5m vendor/bin/pest --compact --parallel --processes="${parallel_processes}" "${BROWSER_TESTS_PATH}" "$@"
                 exit 0
             fi
 
             if [ -x /usr/bin/timeout ]; then
-                .scripts/testing/support/run-clean.sh /usr/bin/timeout 5m php artisan test --compact "${BROWSER_TESTS_PATH}" "$@"
+                .scripts/testing/support/run-clean.sh /usr/bin/timeout 5m vendor/bin/pest --compact --parallel --processes="${parallel_processes}" "${BROWSER_TESTS_PATH}" "$@"
                 exit 0
             fi
 
-            .scripts/testing/support/run-clean.sh php artisan test --compact "${BROWSER_TESTS_PATH}" "$@"
+            .scripts/testing/support/run-clean.sh vendor/bin/pest --compact --parallel --processes="${parallel_processes}" "${BROWSER_TESTS_PATH}" "$@"
         ' sh "$@"
 }
 

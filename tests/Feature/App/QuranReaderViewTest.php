@@ -1,6 +1,12 @@
 <?php
 
 declare(strict_types=1);
+use App\Services\Quran\QuranReaderDataService;
+use GoodMaven\Arabicable\Support\Quran\QuranWordCopyText;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 it('wires quran reader entry points from main menu to hash navigation and view mount', function () {
     $menuSource = file_get_contents(resource_path('views/components/partials/main-menu.blade.php'));
@@ -20,10 +26,10 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         resource_path('js/support/alpine/data/quran-app-reader.js'),
     );
     $quranReaderClassSource = file_get_contents(app_path('Livewire/QuranApp/Reader.php'));
-    $navigationHistoryActionSource = (string) \Illuminate\Support\Str::of($quranReaderClassSource)
+    $navigationHistoryActionSource = (string) Str::of($quranReaderClassSource)
         ->after('public function navigationHistoryAction(): Action')
         ->before('public function bookmarksManagerAction(): Action');
-    $bookmarksManagerActionSource = (string) \Illuminate\Support\Str::of($quranReaderClassSource)
+    $bookmarksManagerActionSource = (string) Str::of($quranReaderClassSource)
         ->after('public function bookmarksManagerAction(): Action')
         ->before('public function render(): View');
     $quranReaderDataServiceSource = file_get_contents(app_path('Services/Quran/QuranReaderDataService.php'));
@@ -446,7 +452,7 @@ it('registers qpc page font route contract used by quran reader pages', function
 });
 
 it('returns matches for legacy orthography phrases in quran search endpoint', function () {
-    if (! \Illuminate\Support\Facades\Schema::hasTable('quran_verses')) {
+    if (! Schema::hasTable('quran_verses')) {
         $this->markTestSkipped('Quran verses table is unavailable.');
     }
 
@@ -479,7 +485,7 @@ it('returns matches for legacy orthography phrases in quran search endpoint', fu
 });
 
 it('normalizes invisible directional chars in quran search queries while preserving exact phrase ranking', function () {
-    if (! \Illuminate\Support\Facades\Schema::hasTable('quran_verses')) {
+    if (! Schema::hasTable('quran_verses')) {
         $this->markTestSkipped('Quran verses table is unavailable.');
     }
 
@@ -516,14 +522,14 @@ it('normalizes invisible directional chars in quran search queries while preserv
 });
 
 it('caches repeated quran search queries while preserving complete progress emission', function () {
-    /** @var \App\Services\Quran\QuranReaderDataService $service */
-    $service = app(\App\Services\Quran\QuranReaderDataService::class);
+    /** @var QuranReaderDataService $service */
+    $service = app(QuranReaderDataService::class);
 
     if (! $service->isReady()) {
         $this->markTestSkipped('Quran reader search dependencies are unavailable.');
     }
 
-    \Illuminate\Support\Facades\Cache::flush();
+    Cache::flush();
 
     $query = 'يا بني أقم الصلاة';
     $firstResults = $service->searchProgressively($query, 24);
@@ -549,13 +555,13 @@ it('caches repeated quran search queries while preserving complete progress emis
 });
 
 it('injects visible basmallah lines under late-page surah headers', function () {
-    if (! \Illuminate\Support\Facades\Schema::hasTable('quran_mushaf_lines')) {
+    if (! Schema::hasTable('quran_mushaf_lines')) {
         $this->markTestSkipped('Quran mushaf lines table is unavailable.');
     }
 
-    /** @var \App\Services\Quran\QuranReaderDataService $service */
-    $service = app(\App\Services\Quran\QuranReaderDataService::class);
-    \Illuminate\Support\Facades\Cache::flush();
+    /** @var QuranReaderDataService $service */
+    $service = app(QuranReaderDataService::class);
+    Cache::flush();
     config()->set('arabicable.quran_fonts.basmalah.preferred', 'quran-common-ligature');
 
     $page = $service->resolvePage(604);
@@ -585,12 +591,12 @@ it('injects visible basmallah lines under late-page surah headers', function () 
 });
 
 it('does not repeat surah preludes on continuation pages', function () {
-    if (! \Illuminate\Support\Facades\Schema::hasTable('quran_verses')) {
+    if (! Schema::hasTable('quran_verses')) {
         $this->markTestSkipped('Quran verses table is unavailable.');
     }
 
-    /** @var \App\Services\Quran\QuranReaderDataService $service */
-    $service = app(\App\Services\Quran\QuranReaderDataService::class);
+    /** @var QuranReaderDataService $service */
+    $service = app(QuranReaderDataService::class);
 
     foreach ([99, 100] as $pageNumber) {
         $page = $service->resolvePage($pageNumber);
@@ -607,23 +613,23 @@ it('does not repeat surah preludes on continuation pages', function () {
 });
 
 it('uses canonical verse text for ayah copy payload and excludes neighboring ayah tokens', function () {
-    if (! \Illuminate\Support\Facades\Schema::hasTable('quran_verses')) {
+    if (! Schema::hasTable('quran_verses')) {
         $this->markTestSkipped('Quran verses table is unavailable.');
     }
 
-    /** @var \App\Services\Quran\QuranReaderDataService $service */
-    $service = app(\App\Services\Quran\QuranReaderDataService::class);
-    \Illuminate\Support\Facades\Cache::flush();
+    /** @var QuranReaderDataService $service */
+    $service = app(QuranReaderDataService::class);
+    Cache::flush();
 
     /** @var object|null $firstAyah */
-    $firstAyah = \Illuminate\Support\Facades\DB::table('quran_verses')
+    $firstAyah = DB::table('quran_verses')
         ->select(['ayah_index', 'text_searchable_typed', 'text_uthmani'])
         ->where('surah_number', 1)
         ->where('ayah_number', 1)
         ->first();
 
     /** @var object|null $secondAyah */
-    $secondAyah = \Illuminate\Support\Facades\DB::table('quran_verses')
+    $secondAyah = DB::table('quran_verses')
         ->select(['text_searchable_typed', 'text_uthmani'])
         ->where('surah_number', 1)
         ->where('ayah_number', 2)
@@ -639,7 +645,7 @@ it('uses canonical verse text for ayah copy payload and excludes neighboring aya
         trim((string) $text),
     );
     $normalizeForClipboard = static fn (?string $uthmani, ?string $typed): string => $normalize(
-        \GoodMaven\Arabicable\Support\Quran\QuranWordCopyText::normalizeToken($uthmani, $typed) ?? '',
+        QuranWordCopyText::normalizeToken($uthmani, $typed) ?? '',
     );
 
     $page = $service->resolvePage(1, (int) $firstAyah->ayah_index);
@@ -690,19 +696,19 @@ it('uses canonical verse text for ayah copy payload and excludes neighboring aya
 });
 
 it('builds meaningful late-page copy payloads for ayahs and words', function () {
-    if (! \Illuminate\Support\Facades\Schema::hasTable('quran_verses') || ! \Illuminate\Support\Facades\Schema::hasTable('quran_words')) {
+    if (! Schema::hasTable('quran_verses') || ! Schema::hasTable('quran_words')) {
         $this->markTestSkipped('Quran verses or words table is unavailable.');
     }
 
-    /** @var \App\Services\Quran\QuranReaderDataService $service */
-    $service = app(\App\Services\Quran\QuranReaderDataService::class);
-    \Illuminate\Support\Facades\Cache::flush();
+    /** @var QuranReaderDataService $service */
+    $service = app(QuranReaderDataService::class);
+    Cache::flush();
 
     $page = $service->resolvePage(604);
     $lines = collect($page['mushafLines'] ?? []);
 
     /** @var object|null $targetAyah */
-    $targetAyah = \Illuminate\Support\Facades\DB::table('quran_verses')
+    $targetAyah = DB::table('quran_verses')
         ->select(['ayah_index', 'text_uthmani', 'text_searchable_typed'])
         ->where('surah_number', 112)
         ->where('ayah_number', 1)
@@ -719,7 +725,7 @@ it('builds meaningful late-page copy payloads for ayahs and words', function () 
     );
 
     $expectedAyahText = $normalize(
-        \GoodMaven\Arabicable\Support\Quran\QuranWordCopyText::normalizeToken(
+        QuranWordCopyText::normalizeToken(
             (string) ($targetAyah->text_uthmani ?? ''),
             (string) ($targetAyah->text_searchable_typed ?? ''),
         ) ?? '',
@@ -753,14 +759,14 @@ it('builds meaningful late-page copy payloads for ayahs and words', function () 
         ->unique()
         ->values();
 
-    $expectedWordTokens = collect(\Illuminate\Support\Facades\DB::table('quran_words')
+    $expectedWordTokens = collect(DB::table('quran_words')
         ->select(['token_uthmani', 'token_searchable_typed'])
         ->where('surah_number', 112)
         ->where('ayah_number', 1)
         ->orderBy('word_position')
         ->get())
         ->map(static fn (object $word): string => $normalize(
-            \GoodMaven\Arabicable\Support\Quran\QuranWordCopyText::normalizeToken(
+            QuranWordCopyText::normalizeToken(
                 (string) ($word->token_uthmani ?? ''),
                 (string) ($word->token_searchable_typed ?? ''),
             ) ?? '',
@@ -788,15 +794,15 @@ it('builds meaningful late-page copy payloads for ayahs and words', function () 
 });
 
 it('does not render basmallah below surah nine header', function () {
-    if (! \Illuminate\Support\Facades\Schema::hasTable('quran_mushaf_lines')) {
+    if (! Schema::hasTable('quran_mushaf_lines')) {
         $this->markTestSkipped('Quran mushaf lines table is unavailable.');
     }
 
-    /** @var \App\Services\Quran\QuranReaderDataService $service */
-    $service = app(\App\Services\Quran\QuranReaderDataService::class);
-    \Illuminate\Support\Facades\Cache::flush();
+    /** @var QuranReaderDataService $service */
+    $service = app(QuranReaderDataService::class);
+    Cache::flush();
 
-    $pageNumbers = \Illuminate\Support\Facades\DB::table('quran_mushaf_lines')
+    $pageNumbers = DB::table('quran_mushaf_lines')
         ->distinct()
         ->orderBy('page_number')
         ->pluck('page_number')
@@ -844,13 +850,13 @@ it('does not render basmallah below surah nine header', function () {
 });
 
 it('keeps qpc late-page surah metadata aligned for headers and copy payload', function () {
-    if (! \Illuminate\Support\Facades\Schema::hasTable('quran_mushaf_lines')) {
+    if (! Schema::hasTable('quran_mushaf_lines')) {
         $this->markTestSkipped('Quran mushaf lines table is unavailable.');
     }
 
-    /** @var \App\Services\Quran\QuranReaderDataService $service */
-    $service = app(\App\Services\Quran\QuranReaderDataService::class);
-    \Illuminate\Support\Facades\Cache::flush();
+    /** @var QuranReaderDataService $service */
+    $service = app(QuranReaderDataService::class);
+    Cache::flush();
 
     $page499 = $service->resolvePage(499);
     $firstAyahLineOn499 = collect($page499['mushafLines'] ?? [])->first(
@@ -898,13 +904,13 @@ it('keeps qpc late-page surah metadata aligned for headers and copy payload', fu
 });
 
 it('builds canonical copy payloads for every ayah in the quran dataset', function () {
-    if (! \Illuminate\Support\Facades\Schema::hasTable('quran_verses')) {
+    if (! Schema::hasTable('quran_verses')) {
         $this->markTestSkipped('Quran verses table is unavailable.');
     }
 
-    /** @var \App\Services\Quran\QuranReaderDataService $service */
-    $service = app(\App\Services\Quran\QuranReaderDataService::class);
-    \Illuminate\Support\Facades\Cache::flush();
+    /** @var QuranReaderDataService $service */
+    $service = app(QuranReaderDataService::class);
+    Cache::flush();
 
     $normalize = static fn (?string $text): string => (string) preg_replace(
         '/\s+/u',
@@ -914,7 +920,7 @@ it('builds canonical copy payloads for every ayah in the quran dataset', functio
 
     $expectedAyahTextByIndex = [];
 
-    foreach (\Illuminate\Support\Facades\DB::table('quran_verses')
+    foreach (DB::table('quran_verses')
         ->select(['ayah_index', 'text_uthmani', 'text_searchable_typed'])
         ->orderBy('ayah_index')
         ->get() as $verseRow) {
@@ -925,7 +931,7 @@ it('builds canonical copy payloads for every ayah in the quran dataset', functio
         }
 
         $normalizedAyahText = $normalize(
-            \GoodMaven\Arabicable\Support\Quran\QuranWordCopyText::normalizeToken(
+            QuranWordCopyText::normalizeToken(
                 (string) ($verseRow->text_uthmani ?? ''),
                 (string) ($verseRow->text_searchable_typed ?? ''),
             ) ?? '',
@@ -938,7 +944,7 @@ it('builds canonical copy payloads for every ayah in the quran dataset', functio
         $expectedAyahTextByIndex[$ayahIndex] = $normalizedAyahText;
     }
 
-    $pageNumbers = \Illuminate\Support\Facades\DB::table('quran_mushaf_lines')
+    $pageNumbers = DB::table('quran_mushaf_lines')
         ->distinct()
         ->orderBy('page_number')
         ->pluck('page_number')

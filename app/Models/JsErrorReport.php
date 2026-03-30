@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Database\Factories\JsErrorReportFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class JsErrorReport extends Model
 {
-    /** @use HasFactory<\Database\Factories\JsErrorReportFactory> */
+    /** @use HasFactory<JsErrorReportFactory> */
     use HasFactory;
 
     /**

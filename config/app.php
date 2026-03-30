@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+use Filament\Support\Colors\Color;
 
 return [
 
@@ -39,7 +40,7 @@ return [
         ],
 
         'colors' => [
-            'gray' => \Filament\Support\Colors\Color::Slate,
+            'gray' => Color::Slate,
             'primary' => [
                 50 => '#ebf0f1',
                 100 => '#d8e1e4',
@@ -53,8 +54,8 @@ return [
                 900 => '#041b22',
                 950 => '#020f14',
             ],
-            'success' => \Filament\Support\Colors\Color::Emerald,
-            'info' => \Filament\Support\Colors\Color::Purple,
+            'success' => Color::Emerald,
+            'info' => Color::Purple,
             'warning' => [
                 50 => '#fff9ef',
                 100 => '#fef4df',
@@ -68,7 +69,7 @@ return [
                 900 => '#634916',
                 950 => '#392a0d',
             ],
-            'danger' => \Filament\Support\Colors\Color::Rose,
+            'danger' => Color::Rose,
         ],
 
         'filament' => [

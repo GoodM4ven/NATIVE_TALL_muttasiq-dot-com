@@ -119,39 +119,48 @@
             "npm run format:prettier",
             "vendor/bin/pint"
         ],
-        "analyse": "vendor/bin/phpstan analyse --memory-limit=512M",
+        "analyse": "XDEBUG_MODE=off vendor/bin/phpstan analyse --memory-limit=512M",
         "lint": [
             "@format",
             "@analyse"
         ],
         "test": [
             "@optimize",
-            ".scripts/testing/test.sh"
+            "@test:raw"
         ],
+        "test:raw": ".scripts/testing/test.sh",
         "testparal": [
             "@optimize",
-            ".scripts/testing/paral.sh"
+            "@testparal:raw"
         ],
+        "testparal:raw": ".scripts/testing/paral.sh",
         "testcov": [
             "@optimize",
             ".scripts/testing/cov.sh"
         ],
         "testbrowser": [
             "@optimize",
-            "npx playwright install",
+            "@testbrowser:raw"
+        ],
+        "testbrowser:prepare": "sh -lc 'node_modules/.bin/playwright --version >/dev/null 2>&1 || npx playwright install'",
+        "testbrowser:raw": [
+            "@testbrowser:prepare",
             ".scripts/testing/browser.sh"
         ],
         "testall": [
             "@optimize",
-            "@testparal",
-            "@testbrowser"
+            "@testall:raw"
+        ],
+        "testall:raw": [
+            "@testparal:raw",
+            "@testbrowser:raw"
         ],
         "green": [
             "@optimize",
             "@php artisan app:verify-release-version",
             "@php artisan app:verify-local-plugin-switch",
             "@lint",
-            "@testall"
+            "@testall:raw"
         ]
     },
     "extra": {
@@ -170,6 +179,5 @@
     },
     "minimum-stability": "stable",
     "prefer-stable": true,
-    "repositories": {
-    }
+    "repositories": {}
 }

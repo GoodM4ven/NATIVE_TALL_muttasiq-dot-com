@@ -14,6 +14,7 @@ use Filament\Actions\Contracts\HasActions;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
+use Filament\Support\Enums\Width;
 use Illuminate\Support\HtmlString;
 use Illuminate\View\View;
 use Livewire\Component;
@@ -90,7 +91,7 @@ class ControlPanel extends Component implements HasActions, HasSchemas
         return Action::make('supportUnlock')
             ->modalHeading(app_arabic_text('دعم المشروع'))
             ->modalDescription(app_arabic_text('قبل استخدام بعض الخصائص المميّزة في التطبيق، نحتاج منك تأكيد دعم تطوير المشروع.'))
-            ->modalWidth(\Filament\Support\Enums\Width::ThreeExtraLarge)
+            ->modalWidth(Width::ThreeExtraLarge)
             ->modalSubmitActionLabel(app_arabic_text('قمت بالدعم'))
             ->modalCancelAction(false)
             ->extraModalWindowAttributes([
