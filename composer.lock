@@ -2005,7 +2005,7 @@
             "dist": {
                 "type": "path",
                 "url": "/home/goodm4ven/Code/LaravelPackages/NATIVE_PLUGIN_muttasiq-patches",
-                "reference": "f4e60ecf0f4ddff66fa46b08cb419b2d55a070cc"
+                "reference": "8227545bfda9c54b6fe0848a9baefa170ccf2ea3"
             },
             "require": {
                 "nativephp/mobile": "^3.0",

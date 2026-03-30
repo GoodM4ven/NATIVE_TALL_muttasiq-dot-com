@@ -157,6 +157,8 @@ test('native patches plugin supports ios content view patching', function () {
     expect($androidLaravelEnvironmentTraitContents)->toContain('app:native-bootstrap --no-interaction');
     expect($androidLaravelEnvironmentTraitContents)->toContain('database/native-quran-reader.sqlite');
     expect($androidLaravelEnvironmentTraitContents)->toContain('copyTo(dbFile, overwrite = true)');
+    expect($androidLaravelEnvironmentTraitContents)->toContain('Skipping dormant Quran exegesis bundle entry');
+    expect($androidLaravelEnvironmentTraitContents)->toContain('resources/raw-data/quran/exegesis/');
     expect($iosTraitContents)->toContain('verifyIosSystemUi');
     expect($iosTraitContents)->toContain('patchIosBackHandler');
     expect($iosTraitContents)->toContain('NativePHPBackEdgeGesture');
