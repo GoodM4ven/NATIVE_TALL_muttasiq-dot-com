@@ -185,10 +185,10 @@ class Setting extends Model
         ];
 
         foreach ($definitions as $name => $definition) {
-            $definitions[$name]['label'] = app_arabic_text($definition['label']);
+            $definitions[$name]['label'] = arabic_text($definition['label']);
 
             if (array_key_exists('help', $definition)) {
-                $definitions[$name]['help'] = app_arabic_text((string) $definition['help']);
+                $definitions[$name]['help'] = arabic_text((string) $definition['help']);
             }
         }
 
@@ -201,8 +201,8 @@ class Setting extends Model
     public static function quranWirdFrequencyModeOptions(): array
     {
         return [
-            self::QURAN_WIRD_FREQUENCY_MONTHLY => app_arabic_text('شهري (توزيع الختمات على أيام الشهر)'),
-            self::QURAN_WIRD_FREQUENCY_DAILY => app_arabic_text('يومي (ختمات كاملة يوميًا)'),
+            self::QURAN_WIRD_FREQUENCY_MONTHLY => arabic_text('شهري (توزيع الختمات على أيام الشهر)'),
+            self::QURAN_WIRD_FREQUENCY_DAILY => arabic_text('يومي (ختمات كاملة يوميًا)'),
         ];
     }
 
@@ -370,18 +370,18 @@ class Setting extends Model
         $normalizedCount = max(self::QURAN_WIRD_KHATMAT_MIN, $count);
 
         if ($normalizedCount === 1) {
-            return app_arabic_text('1 ختمة');
+            return arabic_text('1 ختمة');
         }
 
         if ($normalizedCount === 2) {
-            return app_arabic_text('2 ختمتان');
+            return arabic_text('2 ختمتان');
         }
 
         if ($normalizedCount <= 10) {
-            return app_arabic_text(sprintf('%d ختمات', $normalizedCount));
+            return arabic_text(sprintf('%d ختمات', $normalizedCount));
         }
 
-        return app_arabic_text(sprintf('%d ختمة', $normalizedCount));
+        return arabic_text(sprintf('%d ختمة', $normalizedCount));
     }
 
     public static function appVersion(): string

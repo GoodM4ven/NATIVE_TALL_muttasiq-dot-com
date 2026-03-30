@@ -12,45 +12,45 @@
     <x-main-menu>
         <x-main-menu.item
             :iconName="'zondicon.chat-bubble-dots'"
-            :caption="app_arabic_text('الأذكار')"
+            :caption="arabic_text('الأذكار')"
             :onClickCallback="'() => ($viewNav(`athkar-app-gate`))'"
         />
         <x-main-menu.item
             :iconName="'fontawesome.solid-hand-holding'"
             :iconClasses="'scale-[1.15]'"
-            :caption="app_arabic_text('الأدعية')"
+            :caption="arabic_text('الأدعية')"
         />
         <x-main-menu.item
             :iconName="'teeny.plant'"
-            :caption="app_arabic_text('المعروف')"
+            :caption="arabic_text('المعروف')"
         />
         <x-main-menu.item
             :iconName="'unicons.check-square'"
-            :caption="app_arabic_text('السنن')"
+            :caption="arabic_text('السنن')"
         />
         <x-main-menu.item
             :iconName="'entypo.book'"
             :iconClasses="'scale-[1.05]'"
-            :caption="app_arabic_text('الكتاب')"
+            :caption="arabic_text('الكتاب')"
             :onClickCallback="'() => ($viewNav(`quran-app-gate`))'"
         />
         <x-main-menu.item
             :iconName="'vaadin.search'"
             :iconClasses="'scale-[0.85]'"
-            :caption="app_arabic_text('الآثار')"
+            :caption="arabic_text('الآثار')"
         />
         <x-main-menu.item
             :iconName="'bootstrap.compass-fill'"
-            :caption="app_arabic_text('التعلم')"
+            :caption="arabic_text('التعلم')"
         />
         <x-main-menu.item
             :iconName="'fontawesome.solid-bottle-droplet'"
-            :caption="app_arabic_text('الدواء')"
+            :caption="arabic_text('الدواء')"
         />
         <x-main-menu.item
             :iconName="'entypo.bookmark'"
             :iconClasses="'scale-[1.15]'"
-            :caption="app_arabic_text('المحفوظات')"
+            :caption="arabic_text('المحفوظات')"
         />
     </x-main-menu>
 </div>

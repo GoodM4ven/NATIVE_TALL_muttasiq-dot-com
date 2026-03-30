@@ -40,6 +40,17 @@ test('it exposes main text size limits for frontend consumers', function () {
     ]);
 });
 
+test('it resolves translated setting definitions without recursive arabic text lookup', function () {
+    $definitions = Setting::definitions();
+    $label = $definitions[Setting::DOES_PRESERVE_HARAKAT_IN_DISPLAY]['label'] ?? null;
+
+    expect($definitions)->toBeArray()
+        ->toHaveKey(Setting::DOES_PRESERVE_HARAKAT_IN_DISPLAY);
+
+    expect($label)->toBeString();
+    expect(strlen((string) $label))->toBeGreaterThan(0);
+});
+
 test('it normalizes settings payload values by their definitions', function () {
     $normalized = Setting::normalizeSettings([
         Setting::DOES_SKIP_GUIDANCE_PANELS => '1',

@@ -8,7 +8,7 @@
 
 @php
     $locked = !$onClickCallback;
-    $resolvedCaption = app_arabic_text((string) $caption);
+    $resolvedCaption = arabic_text((string) $caption);
 @endphp
 
 @once

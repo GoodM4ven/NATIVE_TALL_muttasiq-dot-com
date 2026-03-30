@@ -4,7 +4,7 @@
 >
     <div class="quran-manager-toolbar">
         <p class="quran-manager-toolbar-note">
-            {{ app_arabic_text('انقر على الصفحة للانتقال، عدّل الملاحظة مباشرة، واستعمل الوسوم المشتركة مع سجل التنقّل.') }}
+            {{ arabic_text('انقر على الصفحة للانتقال، عدّل الملاحظة مباشرة، واستعمل الوسوم المشتركة مع سجل التنقّل.') }}
         </p>
     </div>
 
@@ -12,10 +12,10 @@
         <table class="quran-manager-table">
             <thead>
                 <tr>
-                    <th>{{ app_arabic_text('الصفحة') }}</th>
-                    <th>{{ app_arabic_text('ملاحظة') }}</th>
-                    <th>{{ app_arabic_text('الوسوم') }}</th>
-                    <th>{{ app_arabic_text('إجراءات') }}</th>
+                    <th>{{ arabic_text('الصفحة') }}</th>
+                    <th>{{ arabic_text('ملاحظة') }}</th>
+                    <th>{{ arabic_text('الوسوم') }}</th>
+                    <th>{{ arabic_text('إجراءات') }}</th>
                 </tr>
             </thead>
             <tbody x-ref="bookmarksRowsList">
@@ -24,7 +24,7 @@
                         <td
                             class="quran-manager-empty"
                             colspan="4"
-                        >{{ app_arabic_text('لا توجد علامات محفوظة.') }}</td>
+                        >{{ arabic_text('لا توجد علامات محفوظة.') }}</td>
                     </tr>
                 </template>
 
@@ -66,7 +66,7 @@
                                         <button
                                             class="quran-manager-tag-chip-remove"
                                             type="button"
-                                            aria-label="{{ app_arabic_text('حذف الوسم') }}"
+                                            aria-label="{{ arabic_text('حذف الوسم') }}"
                                             x-on:click.stop.prevent="removeBookmarkTag(bookmark.id, tag)"
                                         >
                                             ×
@@ -78,7 +78,7 @@
                                     class="quran-manager-tags-entry outline-none"
                                     data-quran-bookmark-tags
                                     type="text"
-                                    placeholder="{{ app_arabic_text('أضف وسمًا...') }}"
+                                    placeholder="{{ arabic_text('أضف وسمًا...') }}"
                                     x-bind:list="`quran-bookmark-tags-suggestions-${bookmark.id}`"
                                     x-bind:value="bookmarkTagDraft(bookmark.id)"
                                     x-on:input="setBookmarkTagDraft(bookmark.id, $event.target.value)"
@@ -109,7 +109,7 @@
                                     type="button"
                                     x-on:click="replaceBookmarkPage(bookmark.id)"
                                 >
-                                    {{ app_arabic_text('استبدال') }}
+                                    {{ arabic_text('استبدال') }}
                                 </button>
                                 <button
                                     class="quran-manager-action-button quran-manager-action-button--danger"
@@ -117,7 +117,7 @@
                                     type="button"
                                     x-on:click="removeBookmark(bookmark.id)"
                                 >
-                                    {{ app_arabic_text('حذف') }}
+                                    {{ arabic_text('حذف') }}
                                 </button>
                             </div>
                         </td>

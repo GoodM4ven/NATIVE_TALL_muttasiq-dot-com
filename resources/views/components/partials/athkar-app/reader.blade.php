@@ -956,9 +956,9 @@
                 data-athkar-open-manager
                 type="button"
                 x-on:click="$tippy.hide(); openGateAndManageAthkar()"
-                x-on:mouseenter="$tippy(@js(app_arabic_text('إدارة الأذكار')), 'bottom', 2000, { showWhenGuidancePanelsSkipped: true })"
+                x-on:mouseenter="$tippy(@js(arabic_text('إدارة الأذكار')), 'bottom', 2000, { showWhenGuidancePanelsSkipped: true })"
                 x-on:mouseleave="$tippy.hide()"
-                x-on:focus="$tippy(@js(app_arabic_text('إدارة الأذكار')), 'bottom', 2000, { showWhenGuidancePanelsSkipped: true })"
+                x-on:focus="$tippy(@js(arabic_text('إدارة الأذكار')), 'bottom', 2000, { showWhenGuidancePanelsSkipped: true })"
                 x-on:blur="$tippy.hide()"
             ><span x-text="activeLabel"></span></button>
 
@@ -1074,9 +1074,9 @@
                         x-on:click.stop="toggleOrigin(activeIndex)"
                         x-on:pointerdown.stop
                         x-on:touchstart.stop
-                        x-on:mouseenter="$tippy(@js(app_arabic_text('مأثور')), 'right')"
+                        x-on:mouseenter="$tippy(@js(arabic_text('مأثور')), 'right')"
                         x-on:mouseleave="$tippy.hide()"
-                        x-on:focus="$tippy(@js(app_arabic_text('مأثور')), 'right')"
+                        x-on:focus="$tippy(@js(arabic_text('مأثور')), 'right')"
                         x-on:blur="$tippy.hide()"
                     >
                         <x-icon
@@ -1098,7 +1098,7 @@
                             class="pointer-events-auto absolute left-1/2 top-0 z-20 flex size-[2.6rem] origin-top -translate-x-1/2 touch-manipulation transition-all duration-200"
                             data-hint-allow
                             type="button"
-                            aria-label="{{ app_arabic_text('العدد') }}"
+                            aria-label="{{ arabic_text('العدد') }}"
                             x-bind:class="isHintOpen(activeIndex) ? 'size-16! pointer-events-none' : ''"
                             x-on:click.stop="toggleHint(activeIndex)"
                             x-on:pointerdown.stop
@@ -1167,16 +1167,16 @@
                             class="bg-success-500/90 z-9999 absolute inset-x-0 -bottom-2 mx-auto flex h-7 w-7 translate-x-[15px] translate-y-[20px] items-center justify-center rounded-full text-white shadow-lg"
                             data-hint-allow
                             type="button"
-                            aria-label="{{ app_arabic_text('إتمام الذكر') }}"
+                            aria-label="{{ arabic_text('إتمام الذكر') }}"
                             x-show="isHintOpen(activeIndex) && requiredCount(activeIndex) > 1 && countAt(activeIndex) !== requiredCount(activeIndex)"
                             x-transition.opacity.duration.200ms
                             x-on:click.stop="requestSingleThikrCompletion(activeIndex)"
                             x-on:pointerdown.stop
-                            x-on:mouseenter="$tippy(@js(app_arabic_text('إتمام الذكر')), 'right')"
+                            x-on:mouseenter="$tippy(@js(arabic_text('إتمام الذكر')), 'right')"
                             x-on:mouseleave="$tippy.hide()"
-                            x-on:focus="$tippy(@js(app_arabic_text('إتمام الذكر')), 'right')"
+                            x-on:focus="$tippy(@js(arabic_text('إتمام الذكر')), 'right')"
                             x-on:blur="$tippy.hide()"
-                            x-on:touchstart.stop="$tippy(@js(app_arabic_text('إتمام الذكر')), 'right', 1200)"
+                            x-on:touchstart.stop="$tippy(@js(arabic_text('إتمام الذكر')), 'right', 1200)"
                             x-on:touchend.stop="$tippy.hide()"
                         >
                             <x-icon
@@ -1190,7 +1190,7 @@
                             x-show="isHintOpen(activeIndex)"
                             x-transition.opacity.duration.200ms
                         >
-                            {{ app_arabic_text('العدد') }}
+                            {{ arabic_text('العدد') }}
                         </div>
                     </div>
                 </div>
@@ -1265,17 +1265,17 @@
                             <button
                                 class="bg-success-500/90 z-9999 absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-full text-white shadow-lg transition-all duration-200"
                                 type="button"
-                                aria-label="{{ app_arabic_text('إتمام الذكر') }}"
+                                aria-label="{{ arabic_text('إتمام الذكر') }}"
                                 x-show="countAt(activeIndex) !== requiredCount(activeIndex)"
                                 x-bind:class="completionHack.canHover && $store.bp.is('sm+') ?
                                     'pointer-events-none scale-95 opacity-0 group-hover:pointer-events-auto group-hover:scale-100 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:scale-100 group-focus-within:opacity-100' :
                                     'pointer-events-auto scale-100 opacity-100'"
                                 x-on:click.stop="$tippy.hide(); requestSingleThikrCompletion(activeIndex)"
-                                x-on:mouseenter="$tippy(@js(app_arabic_text('إتمام الذكر')), 'right')"
+                                x-on:mouseenter="$tippy(@js(arabic_text('إتمام الذكر')), 'right')"
                                 x-on:mouseleave="$tippy.hide()"
-                                x-on:focus="$tippy(@js(app_arabic_text('إتمام الذكر')), 'right')"
+                                x-on:focus="$tippy(@js(arabic_text('إتمام الذكر')), 'right')"
                                 x-on:blur="$tippy.hide()"
-                                x-on:touchstart="$tippy(@js(app_arabic_text('إتمام الذكر')), 'right', 1200)"
+                                x-on:touchstart="$tippy(@js(arabic_text('إتمام الذكر')), 'right', 1200)"
                                 x-on:touchend="$tippy.hide()"
                             >
                                 <x-icon
@@ -1287,7 +1287,7 @@
 
                         <span
                             class="absolute -left-10 top-1/2 -translate-y-1/2 select-none text-sm text-gray-600 sm:-left-14 sm:text-base dark:text-gray-300"
-                        >{{ app_arabic_text('العدد') }}</span>
+                        >{{ arabic_text('العدد') }}</span>
                     </div>
                 </div>
 
@@ -1302,9 +1302,9 @@
                         }"
                         x-bind:aria-pressed="isOriginVisible(activeIndex)"
                         x-on:click.stop="toggleOrigin(activeIndex)"
-                        x-on:mouseenter="$tippy(@js(app_arabic_text('مأثور')), 'right')"
+                        x-on:mouseenter="$tippy(@js(arabic_text('مأثور')), 'right')"
                         x-on:mouseleave="$tippy.hide()"
-                        x-on:focus="$tippy(@js(app_arabic_text('مأثور')), 'right')"
+                        x-on:focus="$tippy(@js(arabic_text('مأثور')), 'right')"
                         x-on:blur="$tippy.hide()"
                     >
                         <x-icon
@@ -1505,7 +1505,7 @@
                                             <span
                                                 class="athkar-complete-badge px-2.5 py-1 text-[0.65rem] font-semibold opacity-0 transition-opacity duration-300 sm:px-3 sm:text-sm"
                                                 x-bind:class="isVisible && isItemComplete(index) && 'opacity-100!'"
-                                            >{{ app_arabic_text('تم بحمد الله') }}</span>
+                                            >{{ arabic_text('تم بحمد الله') }}</span>
                                             <span
                                                 class="rounded-bl-lg! rounded-sm border border-gray-300 bg-gray-100 px-2 py-1 text-[0.65rem] font-semibold text-gray-700 opacity-0 shadow-sm transition-opacity duration-300 sm:px-3 sm:text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
                                                 x-bind:class="isVisible && 'opacity-100!'"
@@ -1524,7 +1524,7 @@
             <button
                 class="athkar-nav__arrow inline-flex h-7 w-7 items-center justify-center rounded-sm transition disabled:cursor-not-allowed disabled:opacity-60"
                 type="button"
-                aria-label="{{ app_arabic_text('السابق') }}"
+                aria-label="{{ arabic_text('السابق') }}"
                 x-bind:disabled="activeIndex === 0"
                 x-on:click="prev()"
             >
@@ -1592,7 +1592,7 @@
             <button
                 class="athkar-nav__arrow inline-flex h-7 w-7 items-center justify-center rounded-sm transition disabled:cursor-not-allowed disabled:opacity-60"
                 type="button"
-                aria-label="{{ app_arabic_text('التالي') }}"
+                aria-label="{{ arabic_text('التالي') }}"
                 x-bind:disabled="!canAdvance()"
                 x-on:click="next()"
             >

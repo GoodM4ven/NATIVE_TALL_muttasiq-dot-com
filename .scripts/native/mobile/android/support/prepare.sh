@@ -6,8 +6,7 @@ source "${root_dir}/.scripts/native/mobile/support/prepare-platform.sh"
 
 native_prepare_platform_install \
     "android" \
-    "nativephp/android/app/src/main/java/com/nativephp/mobile/ui/MainActivity.kt" \
-    "--without-icu"
+    "nativephp/android/app/src/main/java/com/nativephp/mobile/ui/MainActivity.kt"
 
 (
     cd "${root_dir}"

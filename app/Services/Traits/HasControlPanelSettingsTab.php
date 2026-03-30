@@ -35,10 +35,10 @@ trait HasControlPanelSettingsTab
         $generalDefinitions = Setting::definitionsForGroup(Setting::GROUP_GENERAL);
         $quranDefinitions = Setting::definitionsForGroup(Setting::GROUP_QURAN);
 
-        return Tab::make(app_arabic_text('الإعدادات'))
+        return Tab::make(arabic_text('الإعدادات'))
             ->icon('heroicon-s-adjustments-horizontal')
             ->schema([
-                Text::make(app_arabic_text('العامة'))
+                Text::make(arabic_text('العامة'))
                     ->color('black')
                     ->weight(FontWeight::Medium),
 
@@ -49,7 +49,7 @@ trait HasControlPanelSettingsTab
                     ])
                     ->schema([
                         Components\Slider::make(self::MAIN_TEXT_SIZE_RANGE)
-                            ->label(app_arabic_text('1. نطاق حجم النصوص المحورية (الأدنى/الأقصى).'))
+                            ->label(arabic_text('1. نطاق حجم النصوص المحورية (الأدنى/الأقصى).'))
                             ->extraFieldWrapperAttributes(['class' => 'pb-6 sm:pb-8 md:pb-0'])
                             ->range(
                                 minValue: Setting::MIN_MAIN_TEXT_SIZE_MIN,
@@ -68,7 +68,7 @@ trait HasControlPanelSettingsTab
                             ->extraFieldWrapperAttributes([
                                 'class' => 'quran-support-lock-target relative z-20 mt-1 sm:mt-3 md:mt-0',
                                 'data-support-lock-target' => 'enable-visual-enhancements',
-                                'data-support-lock-caption' => app_arabic_text('هذا الخيار يحتاج تأكيد دعم المشروع'),
+                                'data-support-lock-caption' => arabic_text('هذا الخيار يحتاج تأكيد دعم المشروع'),
                                 'x-on:pointerdown.capture' => 'if (!$el.classList.contains(`quran-support-lock-target--locked`)) { return; } $event.preventDefault(); $event.stopPropagation(); window.dispatchEvent(new CustomEvent(`open-support-unlock-modal`));',
                                 'x-on:click.capture' => 'if (!$el.classList.contains(`quran-support-lock-target--locked`)) { return; } $event.preventDefault(); $event.stopPropagation(); window.dispatchEvent(new CustomEvent(`open-support-unlock-modal`));',
                                 'x-on:keydown.capture' => 'if (![`Enter`, ` `].includes($event.key) || !$el.classList.contains(`quran-support-lock-target--locked`)) { return; } $event.preventDefault(); $event.stopPropagation(); window.dispatchEvent(new CustomEvent(`open-support-unlock-modal`));',
@@ -100,7 +100,7 @@ trait HasControlPanelSettingsTab
                 Text::make(new HtmlString('<hr class="border-0 h-px bg-linear-to-r from-transparent via-gray-400 to-transparent mt-5">'))
                     ->extraAttributes(['class' => 'w-full']),
 
-                Text::make(app_arabic_text('القرآن'))
+                Text::make(arabic_text('القرآن'))
                     ->color('black')
                     ->weight(FontWeight::Medium),
 
@@ -171,7 +171,7 @@ trait HasControlPanelSettingsTab
                                 ->extraFieldWrapperAttributes([
                                     'class' => 'quran-support-lock-target quran-wird-khatmat-field',
                                     'data-support-lock-target' => 'wird-khatmat-target',
-                                    'data-support-lock-caption' => app_arabic_text('هذا الخيار يحتاج تأكيد دعم المشروع'),
+                                    'data-support-lock-caption' => arabic_text('هذا الخيار يحتاج تأكيد دعم المشروع'),
                                     'x-on:pointerdown.capture' => 'if (!$el.classList.contains(`quran-support-lock-target--locked`)) { return; } $event.preventDefault(); $event.stopPropagation(); window.dispatchEvent(new CustomEvent(`open-support-unlock-modal`));',
                                     'x-on:click.capture' => 'if (!$el.classList.contains(`quran-support-lock-target--locked`)) { return; } $event.preventDefault(); $event.stopPropagation(); window.dispatchEvent(new CustomEvent(`open-support-unlock-modal`));',
                                     'x-on:keydown.capture' => 'if (![`Enter`, ` `].includes($event.key) || !$el.classList.contains(`quran-support-lock-target--locked`)) { return; } $event.preventDefault(); $event.stopPropagation(); window.dispatchEvent(new CustomEvent(`open-support-unlock-modal`));',
@@ -186,7 +186,7 @@ trait HasControlPanelSettingsTab
                                 )
                                 ->columnSpan(1),
                         ])
-                            ->label(app_arabic_text('إعداد الوِرد'))
+                            ->label(arabic_text('إعداد الوِرد'))
                             ->columns(2)
                             ->columnSpanFull(),
                     ]),
@@ -194,7 +194,7 @@ trait HasControlPanelSettingsTab
                 Text::make(new HtmlString('<hr class="border-0 h-px bg-linear-to-r from-transparent via-gray-400 to-transparent mt-5">'))
                     ->extraAttributes(['class' => 'w-full']),
 
-                Text::make(app_arabic_text('الأذكار'))
+                Text::make(arabic_text('الأذكار'))
                     ->color('black')
                     ->weight(FontWeight::Medium),
 
@@ -230,8 +230,8 @@ trait HasControlPanelSettingsTab
     {
         $maximum = Setting::quranWirdKhatmatMaxForFrequency($frequencyMode);
         $limitSummary = $frequencyMode === Setting::QURAN_WIRD_FREQUENCY_DAILY
-            ? app_arabic_text('الحد الأقصى في الوضع اليومي: 4 ختمات.')
-            : app_arabic_text(sprintf('الحد الأقصى في الوضع الشهري: %d ختمة.', $maximum));
+            ? arabic_text('الحد الأقصى في الوضع اليومي: 4 ختمات.')
+            : arabic_text(sprintf('الحد الأقصى في الوضع الشهري: %d ختمة.', $maximum));
 
         $normalizedBaseHelp = trim($baseHelp);
 
@@ -239,6 +239,6 @@ trait HasControlPanelSettingsTab
             return $limitSummary;
         }
 
-        return app_arabic_text(sprintf('%s %s', $normalizedBaseHelp, $limitSummary));
+        return arabic_text(sprintf('%s %s', $normalizedBaseHelp, $limitSummary));
     }
 }

@@ -19,7 +19,7 @@
         >
             <div
                 class="rounded-2xl border border-amber-400/45 bg-amber-500/20 px-6 py-4 text-center text-sm font-semibold text-amber-100 shadow-lg backdrop-blur-sm sm:text-base">
-                {{ app_arabic_text('وضع الحفظ قريبًا بإذن الله') }}
+                {{ arabic_text('وضع الحفظ قريبًا بإذن الله') }}
             </div>
         </div>
 
@@ -29,11 +29,11 @@
             x-show="views['quran-app-tadabbur'].isOpen"
         >
             <aside
-                class="h-full max-h-[78svh] w-[17rem] rounded-2xl border border-sky-400/35 bg-sky-500/15 p-4 text-right text-sm text-sky-100 shadow-lg backdrop-blur-sm"
+                class="h-full max-h-[78svh] w-68 rounded-2xl border border-sky-400/35 bg-sky-500/15 p-4 text-right text-sm text-sky-100 shadow-lg backdrop-blur-sm"
             >
-                <h3 class="mb-2 text-base font-semibold">{{ app_arabic_text('لوحة التدبّر') }}</h3>
+                <h3 class="mb-2 text-base font-semibold">{{ arabic_text('لوحة التدبّر') }}</h3>
                 <p class="leading-7">
-                    {{ app_arabic_text('قريبًا: ستظهر هنا لوحة جانبية للتفسير والملاحظات أثناء القراءة.') }}
+                    {{ arabic_text('قريبًا: ستظهر هنا لوحة جانبية للتفسير والملاحظات أثناء القراءة.') }}
                 </p>
             </aside>
         </div>

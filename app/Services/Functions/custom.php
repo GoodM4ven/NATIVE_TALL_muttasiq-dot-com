@@ -7,8 +7,8 @@ use App\Services\Support\Enums\ViewName;
 use Illuminate\Support\Facades\Facade;
 use Illuminate\Support\Facades\Schema;
 
-if (! function_exists('app_arabic_text_runtime_ready')) {
-    function app_arabic_text_runtime_ready(): bool
+if (! function_exists('arabic_text_runtime_ready')) {
+    function arabic_text_runtime_ready(): bool
     {
         if (! class_exists(Facade::class)) {
             return false;
@@ -17,16 +17,17 @@ if (! function_exists('app_arabic_text_runtime_ready')) {
         return Facade::getFacadeApplication() !== null;
     }
 } else {
-    throw new Exception('The function `app_arabic_text_runtime_ready` already exists.');
+    throw new Exception('The function `arabic_text_runtime_ready` already exists.');
 }
 
-if (! function_exists('app_arabic_text_settings')) {
+if (! function_exists('arabic_text_settings')) {
     /**
      * @return array{preserveHarakat: bool, useWesternNumerals: bool}
      */
-    function app_arabic_text_settings(): array
+    function arabic_text_settings(): array
     {
         static $resolved = null;
+        static $resolving = false;
         $normalizeBoolean = static function (mixed $value, bool $fallback): bool {
             if (is_bool($value)) {
                 return $value;
@@ -51,26 +52,29 @@ if (! function_exists('app_arabic_text_settings')) {
 
         $preserveHarakatDefault = true;
         $useWesternNumeralsDefault = true;
+        $defaultSettings = [
+            'preserveHarakat' => $preserveHarakatDefault,
+            'useWesternNumerals' => $useWesternNumeralsDefault,
+        ];
 
         try {
-            if (! app_arabic_text_runtime_ready()) {
-                $resolved = [
-                    'preserveHarakat' => $preserveHarakatDefault,
-                    'useWesternNumerals' => $useWesternNumeralsDefault,
-                ];
+            if ($resolving) {
+                return $defaultSettings;
+            }
+
+            if (! arabic_text_runtime_ready()) {
+                $resolved = $defaultSettings;
 
                 return $resolved;
             }
 
             if (! Schema::hasTable((new Setting)->getTable())) {
-                $resolved = [
-                    'preserveHarakat' => $preserveHarakatDefault,
-                    'useWesternNumerals' => $useWesternNumeralsDefault,
-                ];
+                $resolved = $defaultSettings;
 
                 return $resolved;
             }
 
+            $resolving = true;
             $storedValues = Setting::query()
                 ->whereIn('name', [
                     Setting::DOES_PRESERVE_HARAKAT_IN_DISPLAY,
@@ -89,30 +93,29 @@ if (! function_exists('app_arabic_text_settings')) {
                 ),
             ];
         } catch (Throwable) {
-            $resolved = [
-                'preserveHarakat' => $preserveHarakatDefault,
-                'useWesternNumerals' => $useWesternNumeralsDefault,
-            ];
+            $resolved = $defaultSettings;
+        } finally {
+            $resolving = false;
         }
 
         return $resolved;
     }
 } else {
-    throw new Exception('The function `app_arabic_text_settings` already exists.');
+    throw new Exception('The function `arabic_text_settings` already exists.');
 }
 
-if (! function_exists('app_arabic_text')) {
-    function app_arabic_text(
+if (! function_exists('arabic_text')) {
+    function arabic_text(
         string $text,
         ?bool $preserveHarakat = null,
         ?bool $useWesternNumerals = null,
     ): string {
-        if (! app_arabic_text_runtime_ready()) {
+        if (! arabic_text_runtime_ready()) {
             return $text;
         }
 
         $processedText = $text;
-        $settings = app_arabic_text_settings();
+        $settings = arabic_text_settings();
         $shouldPreserveHarakat = $preserveHarakat ?? $settings['preserveHarakat'];
         $shouldUseWesternNumerals = $useWesternNumerals ?? $settings['useWesternNumerals'];
 
@@ -151,7 +154,7 @@ if (! function_exists('app_arabic_text')) {
         ]);
     }
 } else {
-    throw new Exception('The function `app_arabic_text` already exists.');
+    throw new Exception('The function `arabic_text` already exists.');
 }
 
 if (! function_exists('view_title')) {
@@ -169,7 +172,7 @@ if (! function_exists('view_title')) {
             ViewName::QuranAppTadabbur => 'تدبّر الكتاب',
         };
 
-        return app_arabic_text("$appName | $title");
+        return arabic_text("$appName | $title");
     }
 } else {
     throw new Exception('The function `view_title` already exists.');

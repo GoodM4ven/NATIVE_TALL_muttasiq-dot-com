@@ -2614,6 +2614,15 @@ class QuranReaderDataService
             return null;
         }
 
+        $publishedAssetUrl = $this->resolvePublishedQuranVendorAssetUrl($filename);
+        if ($publishedAssetUrl !== null) {
+            return [
+                'family' => $family,
+                'url' => $publishedAssetUrl,
+                'format' => in_array($format, ['ttf', 'truetype'], true) ? 'truetype' : 'woff2',
+            ];
+        }
+
         $paths = [
             $configuredSurahHeadersDir !== '' ? $configuredSurahHeadersDir.'/'.$filename : null,
             $configuredFontsDir !== '' ? $configuredFontsDir.'/'.$filename : null,
@@ -2716,6 +2725,16 @@ class QuranReaderDataService
             ];
         }
 
+        $publishedAssetUrl = $this->resolvePublishedQuranVendorAssetUrl($filename);
+        if ($publishedAssetUrl !== null) {
+            return [
+                'family' => $family,
+                'url' => $publishedAssetUrl,
+                'format' => in_array($format, ['ttf', 'truetype'], true) ? 'truetype' : 'woff2',
+                'text' => $text !== '' ? $text : null,
+            ];
+        }
+
         $configuredSurahHeadersDir = trim((string) config(
             'arabicable.data_sources.quran_surah_headers_fonts_dir',
             base_path('vendor/goodm4ven/arabicable/resources/raw-data/quran/fonts/surah-headers'),
@@ -2751,6 +2770,27 @@ class QuranReaderDataService
         }
 
         return null;
+    }
+
+    private function resolvePublishedQuranVendorAssetUrl(string $filename): ?string
+    {
+        $normalizedFilename = trim($filename);
+
+        if (
+            $normalizedFilename === ''
+            || str_contains($normalizedFilename, '/')
+            || str_contains($normalizedFilename, '\\')
+        ) {
+            return null;
+        }
+
+        $publicAssetPath = public_path('vendor/arabicable/'.$normalizedFilename);
+
+        if (! is_file($publicAssetPath)) {
+            return null;
+        }
+
+        return url('/vendor/arabicable/'.$normalizedFilename);
     }
 
     private function basmallahConfigFingerprint(): string

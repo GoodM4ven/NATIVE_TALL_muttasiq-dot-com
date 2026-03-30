@@ -40,7 +40,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
     $filamentComponentsCssSource = file_get_contents(resource_path('css/core/filament/components.css'));
 
     expect($menuSource)->not->toBeFalse()
-        ->and($menuSource)->toContain(":caption=\"app_arabic_text('الكتاب')\"")
+        ->and($menuSource)->toContain(":caption=\"arabic_text('الكتاب')\"")
         ->and($menuSource)->toContain(":onClickCallback=\"'() => (\$viewNav(`quran-app-gate`))'\"");
 
     expect($homeSource)->not->toBeFalse()
@@ -368,11 +368,11 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderClassSource)->toContain('QuranReaderDataService');
 
     expect($navigationHistoryActionSource)
-        ->toContain('modalHeading(app_arabic_text(\'سجل التنقّل\'))')
+        ->toContain('modalHeading(arabic_text(\'سجل التنقّل\'))')
         ->not->toContain('->slideOver()');
 
     expect($bookmarksManagerActionSource)
-        ->toContain('modalHeading(app_arabic_text(\'إدارة علامات الصفحات\'))')
+        ->toContain('modalHeading(arabic_text(\'إدارة علامات الصفحات\'))')
         ->toContain('->slideOver()');
 
     expect($quranReaderDataServiceSource)->not->toBeFalse()
@@ -576,10 +576,10 @@ it('injects visible basmallah lines under late-page surah headers', function () 
         ->and($page['basmallahFontFamily'] ?? null)->toBe('QuranCommon')
         ->and($page['basmallahFontFormat'] ?? null)->toBe('woff2')
         ->and($page['basmallahText'] ?? null)->toBe("\u{FDFD}")
-        ->and(filled($page['basmallahFontUrl'] ?? null))->toBeTrue()
+        ->and($page['basmallahFontUrl'] ?? null)->toBe(url('/vendor/arabicable/quran-common.woff2'))
         ->and($firstAyahLine)->toBeArray();
 
-    $this->get((string) $page['basmallahFontUrl'])->assertSuccessful();
+    expect(public_path('vendor/arabicable/quran-common.woff2'))->toBeFile();
 
     config()->set('arabicable.quran_fonts.basmalah.preferred', 'madina-default');
 
@@ -588,6 +588,22 @@ it('injects visible basmallah lines under late-page surah headers', function () 
     expect($madinaPage['basmallahFontFamily'] ?? null)->toBe('MadinaQuran')
         ->and($madinaPage['basmallahFontUrl'] ?? null)->toBeNull()
         ->and($madinaPage['basmallahText'] ?? null)->toContain('بِسْمِ');
+});
+
+it('prefers published static quran helper font assets over dynamic binary routes', function () {
+    if (! Schema::hasTable('quran_mushaf_lines')) {
+        $this->markTestSkipped('Quran mushaf lines table is unavailable.');
+    }
+
+    /** @var QuranReaderDataService $service */
+    $service = app(QuranReaderDataService::class);
+    Cache::flush();
+    config()->set('arabicable.quran_fonts.basmalah.preferred', 'quran-common-ligature');
+
+    $page = $service->resolvePage(604);
+
+    expect($page['surahHeaderFontUrl'] ?? null)->toBe(url('/vendor/arabicable/surah-name-v4.ttf'))
+        ->and($page['basmallahFontUrl'] ?? null)->toBe(url('/vendor/arabicable/quran-common.woff2'));
 });
 
 it('does not repeat surah preludes on continuation pages', function () {

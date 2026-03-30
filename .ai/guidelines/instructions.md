@@ -21,7 +21,7 @@ This shared source code base is representing the web version primarily, the one 
 - Use Filament as the primary UI engine for notifications, modals, slideovers, forms, tables, admin panels, etc.
 - Keep the "control panel" as a Filament tabbed action, where settings, changelogs, and about tabs are built.
 - For settings behavior, keep server/API defaults authoritative for untouched keys while persisting only explicit user overrides (see [resources/js/support/alpine/athkar-app-overrides.js]); any new setting must join this merge path.
-- Use `app_arabic_text(...)` from [app/Services/Functions/custom.php] for UI-facing Arabic strings (labels, headings, captions, button texts, notices). This helper is the single source for display-time Arabic processing:
+- Use `arabic_text(...)` from [app/Services/Functions/custom.php] for UI-facing Arabic strings (labels, headings, captions, button texts, notices). This helper is the single source for display-time Arabic processing:
   - Harakat: keeps or strips based on `does_preserve_harakat_in_display`.
   - Numerals: renders Western (`123`) or Arabic-Indic (`١٢٣`) based on `does_use_western_numerals`.
   - Prefer passing full final strings through this helper instead of ad-hoc numeral/harakat conversions in Blade, Livewire actions, or model label builders.

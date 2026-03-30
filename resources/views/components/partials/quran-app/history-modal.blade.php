@@ -11,7 +11,7 @@
             x-bind:disabled="navigationHistory.length === 0"
             x-on:click="clearNavigationHistory()"
         >
-            {{ app_arabic_text('مسح غير الموسوم') }}
+            {{ arabic_text('مسح غير الموسوم') }}
         </button>
     </div>
 
@@ -19,11 +19,11 @@
         <table class="quran-manager-table">
             <thead>
                 <tr>
-                    <th>{{ app_arabic_text('الصفحة') }}</th>
-                    <th>{{ app_arabic_text('السورة') }}</th>
-                    <th>{{ app_arabic_text('النوع') }}</th>
-                    <th>{{ app_arabic_text('ملاحظة') }}</th>
-                    <th>{{ app_arabic_text('الوسوم') }}</th>
+                    <th>{{ arabic_text('الصفحة') }}</th>
+                    <th>{{ arabic_text('السورة') }}</th>
+                    <th>{{ arabic_text('النوع') }}</th>
+                    <th>{{ arabic_text('ملاحظة') }}</th>
+                    <th>{{ arabic_text('الوسوم') }}</th>
                 </tr>
             </thead>
             <tbody x-ref="historyRowsList">
@@ -32,7 +32,7 @@
                         <td
                             class="quran-manager-empty"
                             colspan="5"
-                        >{{ app_arabic_text('لا توجد عناصر بعد.') }}</td>
+                        >{{ arabic_text('لا توجد عناصر بعد.') }}</td>
                     </tr>
                 </template>
 
@@ -76,7 +76,7 @@
                                         <button
                                             class="quran-manager-tag-chip-remove"
                                             type="button"
-                                            aria-label="{{ app_arabic_text('حذف الوسم') }}"
+                                            aria-label="{{ arabic_text('حذف الوسم') }}"
                                             x-on:click.stop.prevent="removeHistoryEntryTag(entry.id, tag)"
                                         >
                                             ×
@@ -88,7 +88,7 @@
                                     class="quran-manager-tags-entry outline-none"
                                     data-quran-history-tags
                                     type="text"
-                                    placeholder="{{ app_arabic_text('أضف وسمًا...') }}"
+                                    placeholder="{{ arabic_text('أضف وسمًا...') }}"
                                     x-bind:list="`quran-history-tags-suggestions-${entry.id}`"
                                     x-bind:value="historyTagDraft(entry.id)"
                                     x-on:input="setHistoryTagDraft(entry.id, $event.target.value)"

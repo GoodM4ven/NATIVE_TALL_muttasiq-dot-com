@@ -42,7 +42,8 @@ test('native patches hook command is registered with artisan', function () {
     exec('php artisan nativephp:muttasiq:patches-android --help', $androidOutput, $androidStatus);
     exec('php artisan nativephp:muttasiq:patches-ios --help', $iosOutput, $iosStatus);
 
-    expect($providersContents)->toContain('Goodm4ven\\NativePatches\\NativePatchesServiceProvider::class');
+    expect($providersContents)->toContain('use Goodm4ven\\NativePatches\\NativePatchesServiceProvider;');
+    expect($providersContents)->toContain('NativePatchesServiceProvider::class');
     expect($dispatcherStatus)->toBe(0);
     expect($androidStatus)->toBe(0);
     expect($iosStatus)->toBe(0);
@@ -102,26 +103,32 @@ test('native patches plugin supports ios content view patching', function () {
     $androidCommandPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/ApplyAndroidPatchesCommand.php';
     $iosCommandPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/ApplyIosPatchesCommand.php';
     $iosTraitPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/Concerns/PatchesIosContentView.php';
+    $androidPhpWebViewTraitPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/Concerns/PatchesAndroidPhpWebViewClient.php';
     $helpersTraitPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/Concerns/InteractsWithPatchFiles.php';
 
     expect(file_exists($dispatcherPath))->toBeTrue();
     expect(file_exists($androidCommandPath))->toBeTrue();
     expect(file_exists($iosCommandPath))->toBeTrue();
     expect(file_exists($iosTraitPath))->toBeTrue();
+    expect(file_exists($androidPhpWebViewTraitPath))->toBeTrue();
     expect(file_exists($helpersTraitPath))->toBeTrue();
 
     $dispatcherContents = file_get_contents($dispatcherPath);
     $androidContents = file_get_contents($androidCommandPath);
     $iosContents = file_get_contents($iosCommandPath);
     $iosTraitContents = file_get_contents($iosTraitPath);
+    $androidPhpWebViewTraitContents = file_get_contents($androidPhpWebViewTraitPath);
     $helpersTraitContents = file_get_contents($helpersTraitPath);
 
     expect($dispatcherContents)->toContain('nativephp:muttasiq:patches-android');
     expect($dispatcherContents)->toContain('nativephp:muttasiq:patches-ios');
     expect($androidContents)->toContain('use PatchesAndroidMainActivity;');
+    expect($androidContents)->toContain('use PatchesAndroidPhpWebViewClient;');
     expect($androidContents)->toContain('use PatchesAndroidWebViewManager;');
     expect($androidContents)->toContain('use PatchesAndroidLaravelEnvironment;');
     expect($iosContents)->toContain('use PatchesIosContentView;');
+    expect($androidPhpWebViewTraitContents)->toContain('resolveBundledQpcFontFile');
+    expect($androidPhpWebViewTraitContents)->toContain('Binary asset missing from filesystem; refusing PHP fallback');
     expect($iosTraitContents)->toContain('verifyIosSystemUi');
     expect($iosTraitContents)->toContain('patchIosBackHandler');
     expect($iosTraitContents)->toContain('NativePHPBackEdgeGesture');
@@ -189,8 +196,11 @@ test('composer local plugin switch script toggles the muttasiq patches package b
 
 test('android log script writes into storage logs', function () {
     $root = dirname(__DIR__, 2);
-    $script = file_get_contents($root.'/.scripts/log-android.sh');
+    $scriptPath = $root.'/.scripts/log-android.sh';
+    $script = file_get_contents($scriptPath);
 
+    expect($scriptPath)->toBeFile();
+    expect($script)->toBeString();
     expect($script)->toContain('output_dir="${project_root}/storage/logs"');
-    expect($script)->toContain('output_file="${output_dir}/log-android.txt"');
+    expect($script)->toContain('output_file="${output_dir}/native-log-android.txt"');
 });

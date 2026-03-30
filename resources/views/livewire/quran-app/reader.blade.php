@@ -1700,9 +1700,9 @@
         <section
             class="quran-reader-panel relative flex h-[clamp(28rem,82svh,50rem)] w-[min(94vw,50rem)] min-w-[18rem] flex-col items-center justify-center gap-4 rounded-[1.75rem] border px-6 py-7 text-center"
         >
-            <h2 class="font-quran text-3xl leading-[1.9]">{{ app_arabic_text('قارئ القرآن') }}</h2>
+            <h2 class="font-quran text-3xl leading-[1.9]">{{ arabic_text('قارئ القرآن') }}</h2>
             <p class="text-sm leading-7 opacity-85">
-                {{ app_arabic_text('بيانات المصحف غير متاحة بعد. تأكد من تجهيز جداول القرآن وبياناتها، ثم أعد فتح قسم الكتاب.') }}
+                {{ arabic_text('بيانات المصحف غير متاحة بعد. تأكد من تجهيز جداول القرآن وبياناتها، ثم أعد فتح قسم الكتاب.') }}
             </p>
         </section>
     @else
@@ -1745,7 +1745,7 @@
                         $wire.mountAction('searchQuran');
                         queueSurahDirectoryAutoFocus();
                     "
-                    x-bind:aria-label="@js(app_arabic_text('ابحث في ')) + currentSurahTitle()"
+                    x-bind:aria-label="@js(arabic_text('ابحث في ')) + currentSurahTitle()"
                 >
                     <x-icon
                         class="quran-soorah-trigger-icon"
@@ -1770,7 +1770,7 @@
                         id="quran-reader-history-toggle"
                         data-quran-open-history
                         type="button"
-                        aria-label="{{ app_arabic_text('سجل التنقل') }}"
+                        aria-label="{{ arabic_text('سجل التنقل') }}"
                         x-on:click="if (!wirdModeActive) { $wire.mountAction('navigationHistory') }"
                     >
                         <x-icon
@@ -1792,7 +1792,7 @@
                             'quran-wird-progress-button--active-aura': wirdModeActive && !isSupportLockActive(),
                         }"
                         x-bind:aria-pressed="wirdModeActive ? 'true' : 'false'"
-                        x-bind:aria-label="wirdModeActive ? @js(app_arabic_text('إيقاف وضع الوِرد والعودة للقراءة الحرة')) : @js(app_arabic_text('تشغيل وضع الوِرد اليومي'))"
+                        x-bind:aria-label="wirdModeActive ? @js(arabic_text('إيقاف وضع الوِرد والعودة للقراءة الحرة')) : @js(arabic_text('تشغيل وضع الوِرد اليومي'))"
                         x-on:click="toggleWirdMode()"
                         x-on:mouseenter="startWirdHoverEffects()"
                         x-on:mouseleave="endWirdHoverEffects()"
@@ -1837,7 +1837,7 @@
                                         isSupportLockActive(),
                                     'font-normal!': wirdModeActive,
                                 }"
-                            >{{ app_arabic_text('الورد اليومي') }}</span>
+                            >{{ arabic_text('الورد اليومي') }}</span>
                             <span
                                 class="quran-wird-progress-count"
                                 x-text="wirdProgressCounterLabel()"
@@ -1853,7 +1853,7 @@
                         type="button"
                         x-bind:class="{ 'quran-bookmark-toggle-button--bookmarked': isCurrentPageBookmarked() }"
                         x-bind:aria-pressed="isCurrentPageBookmarked() ? 'true' : 'false'"
-                        x-bind:aria-label="isCurrentPageBookmarked() ? @js(app_arabic_text('إزالة علامة الصفحة الحالية')) : @js(app_arabic_text('حفظ الصفحة الحالية كعلامة'))"
+                        x-bind:aria-label="isCurrentPageBookmarked() ? @js(arabic_text('إزالة علامة الصفحة الحالية')) : @js(arabic_text('حفظ الصفحة الحالية كعلامة'))"
                         x-on:pointerdown="onBookmarkButtonPointerDown($event)"
                         x-on:pointerup="onBookmarkButtonPointerUp($event)"
                         x-on:pointercancel="onBookmarkButtonPointerCancel()"
@@ -2077,7 +2077,7 @@
                 <button
                     class="quran-swipe-hint quran-swipe-hint-button quran-bottom-strip-nav-prev select-none outline-none"
                     type="button"
-                    aria-label="{{ app_arabic_text('الصفحة السابقة') }}"
+                    aria-label="{{ arabic_text('الصفحة السابقة') }}"
                     x-on:click.stop.prevent="goPreviousFromChevron()"
                 >
                     <span
@@ -2101,7 +2101,7 @@
                         <button
                             class="quran-page-slider-chip outline-none"
                             type="button"
-                            x-bind:aria-label="wirdModeActive ? @js(app_arabic_text('وضع الوِرد اليومي مفعل')) : @js(app_arabic_text('إدخال رقم صفحة'))"
+                            x-bind:aria-label="wirdModeActive ? @js(arabic_text('وضع الوِرد اليومي مفعل')) : @js(arabic_text('إدخال رقم صفحة'))"
                             x-bind:style="`--quran-counter-digit-count: ${pageCounterDigitLength()};`"
                             x-bind:disabled="wirdModeActive"
                             x-bind:class="{ 'quran-page-slider-chip--disabled': wirdModeActive }"
@@ -2174,7 +2174,7 @@
                     <input
                         class="quran-page-slider outline-none"
                         type="range"
-                        aria-label="{{ app_arabic_text('التنقل بين صفحات المصحف') }}"
+                        aria-label="{{ arabic_text('التنقل بين صفحات المصحف') }}"
                         x-bind:min="sliderMin()"
                         x-bind:max="sliderMax()"
                         x-bind:step="1"
@@ -2190,7 +2190,7 @@
                 <button
                     class="quran-swipe-hint quran-swipe-hint-button quran-bottom-strip-nav-next select-none outline-none"
                     type="button"
-                    aria-label="{{ app_arabic_text('الصفحة التالية') }}"
+                    aria-label="{{ arabic_text('الصفحة التالية') }}"
                     x-bind:disabled="!wirdModeActive && isLastNavigationPage()"
                     x-on:click.stop.prevent="goNextFromChevron()"
                 >
@@ -2227,7 +2227,7 @@
                         class="h-3.5 w-3.5"
                         :name="'heroicon-o-clipboard'"
                     />
-                    <span>{{ app_arabic_text('تم النسخ') }}</span>
+                    <span>{{ arabic_text('تم النسخ') }}</span>
                 </div>
             </template>
         </section>

@@ -123,8 +123,8 @@ class Reader extends Component implements HasActions, HasSchemas
     public function searchQuranAction(): Action
     {
         return Action::make('searchQuran')
-            ->modalHeading(app_arabic_text('البحث الشامل للقرآن الكريم'))
-            ->modalDescription(app_arabic_text('ابحث عن الآيات وانتقل مباشرة إلى السورة والموضع المقصود...'))
+            ->modalHeading(arabic_text('البحث الشامل للقرآن الكريم'))
+            ->modalDescription(arabic_text('ابحث عن الآيات وانتقل مباشرة إلى السورة والموضع المقصود...'))
             ->modalAutofocus(false)
             ->modalWidth(Width::FiveExtraLarge)
             ->modalSubmitAction(false)
@@ -136,7 +136,7 @@ class Reader extends Component implements HasActions, HasSchemas
                 TextInput::make('search')
                     ->hiddenLabel()
                     ->type('search')
-                    ->placeholder(app_arabic_text('يا بنيّ أقم الصلاة، وأمر بالمعروف، وانه عن المنكر...'))
+                    ->placeholder(arabic_text('يا بنيّ أقم الصلاة، وأمر بالمعروف، وانه عن المنكر...'))
                     ->extraFieldWrapperAttributes([
                         'class' => 'quran-search-field-wrapper',
                     ])
@@ -158,11 +158,11 @@ class Reader extends Component implements HasActions, HasSchemas
     public function jumpToPageAction(): Action
     {
         return Action::make('jumpToPage')
-            ->modalHeading(app_arabic_text('الانتقال إلى صفحة'))
-            ->modalDescription(app_arabic_text('أدخل رقم الصفحة المراد الانتقال إليها.'))
+            ->modalHeading(arabic_text('الانتقال إلى صفحة'))
+            ->modalDescription(arabic_text('أدخل رقم الصفحة المراد الانتقال إليها.'))
             ->modalAutofocus(true)
             ->modalWidth(Width::Small)
-            ->modalSubmitActionLabel(app_arabic_text('انتقال'))
+            ->modalSubmitActionLabel(arabic_text('انتقال'))
             ->extraModalWindowAttributes([
                 'id' => 'quran-reader-jump-page-modal',
             ])
@@ -172,7 +172,7 @@ class Reader extends Component implements HasActions, HasSchemas
             ->modalFooterActionsAlignment(Alignment::Center)
             ->schema([
                 TextInput::make('page')
-                    ->label(app_arabic_text('الصفحة'))
+                    ->label(arabic_text('الصفحة'))
                     ->type('number')
                     ->inputMode('numeric')
                     ->autofocus()
@@ -202,12 +202,12 @@ class Reader extends Component implements HasActions, HasSchemas
     public function navigationHistoryAction(): Action
     {
         return Action::make('navigationHistory')
-            ->modalHeading(app_arabic_text('سجل التنقّل'))
-            ->modalDescription(app_arabic_text('آخر الانتقالات بين الصفحات. يبقى الموسوم محفوظًا، زيادة على آخر 100 عنصر.'))
+            ->modalHeading(arabic_text('سجل التنقّل'))
+            ->modalDescription(arabic_text('آخر الانتقالات بين الصفحات. يبقى الموسوم محفوظًا، زيادة على آخر 100 عنصر.'))
             ->modalAutofocus(false)
             ->modalWidth(Width::FiveExtraLarge)
             ->modalSubmitAction(false)
-            ->modalCancelActionLabel(app_arabic_text('إغلاق'))
+            ->modalCancelActionLabel(arabic_text('إغلاق'))
             ->extraModalWindowAttributes([
                 'id' => self::HISTORY_MODAL_ID,
                 'dir' => 'ltr',
@@ -221,13 +221,13 @@ class Reader extends Component implements HasActions, HasSchemas
     public function bookmarksManagerAction(): Action
     {
         return Action::make('bookmarksManager')
-            ->modalHeading(app_arabic_text('إدارة علامات الصفحات'))
-            ->modalDescription(app_arabic_text('انقر للانتقال، عدّل الملاحظة وأدر الوسوم مباشرة، أو استبدل الصفحة المحفوظة بالصفحة الحالية.'))
+            ->modalHeading(arabic_text('إدارة علامات الصفحات'))
+            ->modalDescription(arabic_text('انقر للانتقال، عدّل الملاحظة وأدر الوسوم مباشرة، أو استبدل الصفحة المحفوظة بالصفحة الحالية.'))
             ->modalAutofocus(false)
             ->slideOver()
             ->modalWidth(Width::FiveExtraLarge)
             ->modalSubmitAction(false)
-            ->modalCancelActionLabel(app_arabic_text('إغلاق'))
+            ->modalCancelActionLabel(arabic_text('إغلاق'))
             ->extraModalWindowAttributes([
                 'id' => self::BOOKMARKS_MODAL_ID,
             ])
@@ -240,10 +240,10 @@ class Reader extends Component implements HasActions, HasSchemas
     public function supportUnlockAction(): Action
     {
         return Action::make('supportUnlock')
-            ->modalHeading(app_arabic_text('دعم المشروع'))
-            ->modalDescription(app_arabic_text('قبل استخدام بعض الخصائص المميّزة في التطبيق، نحتاج منك تأكيد دعم تطوير المشروع.'))
+            ->modalHeading(arabic_text('دعم المشروع'))
+            ->modalDescription(arabic_text('قبل استخدام بعض الخصائص المميّزة في التطبيق، نحتاج منك تأكيد دعم تطوير المشروع.'))
             ->modalWidth(Width::ThreeExtraLarge)
-            ->modalSubmitActionLabel(app_arabic_text('قمت بالدعم'))
+            ->modalSubmitActionLabel(arabic_text('قمت بالدعم'))
             ->modalCancelAction(false)
             ->extraModalWindowAttributes([
                 'id' => 'support-unlock-modal',
@@ -252,7 +252,7 @@ class Reader extends Component implements HasActions, HasSchemas
             ->extraModalFooterActions(fn (Action $action): array => [
                 $action
                     ->makeModalSubmitAction('supportUnlockWeeklyBypass', arguments: ['mode' => 'weekly'])
-                    ->label(app_arabic_text('أشهد الله أني لا أستطيع دعمكم الآن'))
+                    ->label(arabic_text('أشهد الله أني لا أستطيع دعمكم الآن'))
                     ->color('gray'),
             ])
             ->action(function (array $data, array $arguments): void {
@@ -267,11 +267,11 @@ class Reader extends Component implements HasActions, HasSchemas
                         ? 'heroicon-o-clock'
                         : 'heroicon-o-lock-open',
                     title: $mode === 'weekly'
-                        ? app_arabic_text('تمت إتاحة الميّزات لأسبوع واحد')
-                        : app_arabic_text('تمت إتاحة الميّزات بشكل دائم'),
+                        ? arabic_text('تمت إتاحة الميّزات لأسبوع واحد')
+                        : arabic_text('تمت إتاحة الميّزات بشكل دائم'),
                     body: $mode === 'weekly'
-                        ? app_arabic_text('رزقك الله...')
-                        : app_arabic_text('أحسن الله إليك...'),
+                        ? arabic_text('رزقك الله...')
+                        : arabic_text('أحسن الله إليك...'),
                 );
             });
     }
@@ -390,14 +390,14 @@ class Reader extends Component implements HasActions, HasSchemas
 
     private function supportUnlockModalContent(): HtmlString
     {
-        $introBeforeStrong = app_arabic_text(
+        $introBeforeStrong = arabic_text(
             'تطوير المزايا المتقدمة، وإتاحة التطبيق على المخدّمات والمنصات بأجهزتها المختلفة، كل هذا يتطلب ',
         );
-        $introStrong = app_arabic_text('وقتًا وجهدًا وتكلفة مستمرة');
-        $introAfterStrong = app_arabic_text(
+        $introStrong = arabic_text('وقتًا وجهدًا وتكلفة مستمرة');
+        $introAfterStrong = arabic_text(
             '، بارك الله فيكم... ولذلك نودّ منكم على الأقلّ محاولة التبرع لتطوير تطبيق متسق باستخدام إحدى المنصات المتاحة لذلك، وجزاكم الله خيرا.',
         );
-        $supportLinksCaption = app_arabic_text('روابط منصات الدعم:');
+        $supportLinksCaption = arabic_text('روابط منصات الدعم:');
 
         return new HtmlString(
             '<div class="space-y-4 text-right text-sm! leading-7">'

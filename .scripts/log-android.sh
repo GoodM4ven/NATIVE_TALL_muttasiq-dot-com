@@ -4,7 +4,7 @@ set -euo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 project_root="$(cd "${script_dir}/.." && pwd)"
 output_dir="${project_root}/storage/logs"
-output_file="${output_dir}/log-android.txt"
+output_file="${output_dir}/native-log-android.txt"
 
 read_env_var() {
     local key="$1"

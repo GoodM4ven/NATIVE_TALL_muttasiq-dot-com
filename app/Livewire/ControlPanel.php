@@ -42,9 +42,9 @@ class ControlPanel extends Component implements HasActions, HasSchemas
     public function controlPanelAction(): Action
     {
         return Action::make('controlPanel')
-            ->label(app_arabic_text('لوحة التحكم'))
-            ->modalDescription(app_arabic_text('بعض المعلومات والتفضيلات في كيفية عمل التطبيق'))
-            ->modalSubmitActionLabel(app_arabic_text('حفظ'))
+            ->label(arabic_text('لوحة التحكم'))
+            ->modalDescription(arabic_text('بعض المعلومات والتفضيلات في كيفية عمل التطبيق'))
+            ->modalSubmitActionLabel(arabic_text('حفظ'))
             ->extraModalWindowAttributes([
                 'id' => 'control-panel-modal',
             ])
@@ -80,7 +80,7 @@ class ControlPanel extends Component implements HasActions, HasSchemas
                 if (! $isMaintenancePulse) {
                     notify(
                         iconName: 'mdi.content-save-check',
-                        title: app_arabic_text('تم حفظ الإعدادات بنجاح'),
+                        title: arabic_text('تم حفظ الإعدادات بنجاح'),
                     );
                 }
             });
@@ -89,10 +89,10 @@ class ControlPanel extends Component implements HasActions, HasSchemas
     public function supportUnlockAction(): Action
     {
         return Action::make('supportUnlock')
-            ->modalHeading(app_arabic_text('دعم المشروع'))
-            ->modalDescription(app_arabic_text('قبل استخدام بعض الخصائص المميّزة في التطبيق، نحتاج منك تأكيد دعم تطوير المشروع.'))
+            ->modalHeading(arabic_text('دعم المشروع'))
+            ->modalDescription(arabic_text('قبل استخدام بعض الخصائص المميّزة في التطبيق، نحتاج منك تأكيد دعم تطوير المشروع.'))
             ->modalWidth(Width::ThreeExtraLarge)
-            ->modalSubmitActionLabel(app_arabic_text('قمت بالدعم'))
+            ->modalSubmitActionLabel(arabic_text('قمت بالدعم'))
             ->modalCancelAction(false)
             ->extraModalWindowAttributes([
                 'id' => 'support-unlock-modal',
@@ -101,7 +101,7 @@ class ControlPanel extends Component implements HasActions, HasSchemas
             ->extraModalFooterActions(fn (Action $action): array => [
                 $action
                     ->makeModalSubmitAction('supportUnlockWeeklyBypass', arguments: ['mode' => 'weekly'])
-                    ->label(app_arabic_text('أشهد الله أني لا أستطيع دعمكم الآن'))
+                    ->label(arabic_text('أشهد الله أني لا أستطيع دعمكم الآن'))
                     ->color('gray'),
             ])
             ->action(function (array $data, array $arguments): void {
@@ -116,11 +116,11 @@ class ControlPanel extends Component implements HasActions, HasSchemas
                         ? 'heroicon-o-clock'
                         : 'heroicon-o-lock-open',
                     title: $mode === 'weekly'
-                        ? app_arabic_text('تمت إتاحة الميّزات لأسبوع واحد')
-                        : app_arabic_text('تمت إتاحة الميّزات بشكل دائم'),
+                        ? arabic_text('تمت إتاحة الميّزات لأسبوع واحد')
+                        : arabic_text('تمت إتاحة الميّزات بشكل دائم'),
                     body: $mode === 'weekly'
-                        ? app_arabic_text('رزقك الله...')
-                        : app_arabic_text('أحسن الله إليك...'),
+                        ? arabic_text('رزقك الله...')
+                        : arabic_text('أحسن الله إليك...'),
                 );
             });
     }
@@ -178,14 +178,14 @@ class ControlPanel extends Component implements HasActions, HasSchemas
 
     private function supportUnlockModalContent(): HtmlString
     {
-        $introBeforeStrong = app_arabic_text(
+        $introBeforeStrong = arabic_text(
             'تطوير المزايا المتقدمة، وإتاحة التطبيق على المخدّمات والمنصات بأجهزتها المختلفة، كل هذا يتطلب ',
         );
-        $introStrong = app_arabic_text('وقتًا وجهدًا وتكلفة مستمرة');
-        $introAfterStrong = app_arabic_text(
+        $introStrong = arabic_text('وقتًا وجهدًا وتكلفة مستمرة');
+        $introAfterStrong = arabic_text(
             '، بارك الله فيكم... ولذلك نودّ منكم على الأقلّ محاولة التبرع لتطوير تطبيق متسق باستخدام إحدى المنصات المتاحة لذلك، وجزاكم الله خيرا.',
         );
-        $supportLinksCaption = app_arabic_text('روابط منصات الدعم:');
+        $supportLinksCaption = arabic_text('روابط منصات الدعم:');
 
         return new HtmlString(
             '<div class="space-y-4 text-right text-sm! leading-7">'

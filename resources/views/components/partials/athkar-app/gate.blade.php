@@ -503,7 +503,7 @@
                         <button
                             class="athkar-gate__pane athkar-gate__pane--night"
                             type="button"
-                            aria-label="{{ app_arabic_text('أذكار المساء') }}"
+                            aria-label="{{ arabic_text('أذكار المساء') }}"
                             x-bind:class="{ 'pointer-events-none grayscale opacity-60': isModeLocked('masaa') }"
                             x-bind:aria-disabled="isModeLocked('masaa')"
                             x-on:mouseenter="setHover('night')"
@@ -524,7 +524,7 @@
                             >
                                 <span class="inline-flex items-center gap-2">
                                     <span
-                                        x-bind:class="isModeComplete('masaa') && 'max-sm:text-[0.55rem]!'">{{ app_arabic_text('أذكار المساء') }}</span>
+                                        x-bind:class="isModeComplete('masaa') && 'max-sm:text-[0.55rem]!'">{{ arabic_text('أذكار المساء') }}</span>
                                     <span
                                         class="inline-flex items-center gap-1 rounded-full bg-emerald-500/90 px-2 py-0.5 text-[0.75rem] font-semibold text-white shadow"
                                         x-cloak
@@ -534,7 +534,7 @@
                                             aria-hidden="true"
                                             x-bind:class="isModeComplete('masaa') && 'max-sm:text-[0.55rem]!'"
                                         >✓</span>
-                                        {{ app_arabic_text('تمّت بحمد الله') }}
+                                        {{ arabic_text('تمّت بحمد الله') }}
                                     </span>
                                 </span>
                             </span>
@@ -543,7 +543,7 @@
                         <button
                             class="athkar-gate__pane athkar-gate__pane--morning"
                             type="button"
-                            aria-label="{{ app_arabic_text('أذكار الصباح') }}"
+                            aria-label="{{ arabic_text('أذكار الصباح') }}"
                             x-bind:class="{ 'pointer-events-none grayscale opacity-60': isModeLocked('sabah') }"
                             x-bind:aria-disabled="isModeLocked('sabah')"
                             x-on:mouseenter="setHover('morning')"
@@ -565,7 +565,7 @@
                             >
                                 <span class="inline-flex items-center gap-2">
                                     <span
-                                        x-bind:class="isModeComplete('sabah') && 'max-sm:text-[0.55rem]!'">{{ app_arabic_text('أذكار الصباح') }}</span>
+                                        x-bind:class="isModeComplete('sabah') && 'max-sm:text-[0.55rem]!'">{{ arabic_text('أذكار الصباح') }}</span>
                                     <span
                                         class="inline-flex items-center gap-1 rounded-full bg-emerald-500/90 px-2 py-0.5 text-[0.75rem] font-semibold text-white shadow"
                                         x-cloak
@@ -575,7 +575,7 @@
                                             aria-hidden="true"
                                             x-bind:class="isModeComplete('sabah') && 'max-sm:text-[0.55rem]!'"
                                         >✓</span>
-                                        {{ app_arabic_text('تمّت بحمد الله') }}
+                                        {{ arabic_text('تمّت بحمد الله') }}
                                     </span>
                                 </span>
                             </span>
