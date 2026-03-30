@@ -92,17 +92,14 @@ echo hash_final($context);
 }
 
 native_prepare_bundle_inputs() {
-    (
-        cd "${native_root_dir}"
-        php artisan app:build-native-quran-database --no-interaction
-    )
+    rm -f \
+        "${native_root_dir}/database/native-quran-reader.sqlite" \
+        "${native_root_dir}/database/native-quran-reader.json"
 }
 
 native_read_bundle_signature() {
     native_hash_paths_signature \
         "${native_root_dir}/nativephp.json" \
-        "${native_root_dir}/database/native-quran-reader.sqlite" \
-        "${native_root_dir}/database/native-quran-reader.json" \
         "${native_root_dir}/vendor/goodm4ven/nativephp-muttasiq-patches/src" \
         "${native_root_dir}/vendor/goodm4ven/nativephp-muttasiq-patches/composer.json"
 }

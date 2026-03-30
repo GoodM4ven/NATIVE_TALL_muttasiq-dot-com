@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+$isRunningInNativeRuntime = filter_var(env('NATIVEPHP_RUNNING', false), FILTER_VALIDATE_BOOL);
+
 return [
 
     /*
@@ -42,7 +44,7 @@ return [
             'connection' => env('DB_QUEUE_CONNECTION'),
             'table' => env('DB_QUEUE_TABLE', 'jobs'),
             'queue' => env('DB_QUEUE', 'default'),
-            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 90),
+            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', $isRunningInNativeRuntime ? 240 : 90),
             'after_commit' => false,
         ],
 

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Livewire\QuranApp;
 
 use App\Models\Setting;
-use App\Services\Native\NativeMigrationBootstrapper;
+use App\Services\Native\NativeQuranPreparationService;
 use App\Services\Quran\QuranReaderDataService;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
@@ -20,7 +20,6 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\HtmlString;
 use Livewire\Component;
-use RuntimeException;
 
 class Reader extends Component implements HasActions, HasSchemas
 {
@@ -74,6 +73,133 @@ class Reader extends Component implements HasActions, HasSchemas
      * @return array{
      *     ready: bool,
      *     prepared: bool,
+     *     state: 'idle'|'queued'|'running'|'ready'|'failed'|null,
+     *     payload: array{
+     *         ready: bool,
+     *         pageNumber: int,
+     *         maxPage: int,
+     *         activeAyahIndex: int,
+     *         mushafLines: array<int, array{
+     *             line_number: int,
+     *             line_type: string,
+     *             is_centered: bool,
+     *             surah_number: int|null,
+     *             segments: array<int, array{
+     *                 verse_id: int,
+     *                 ayah_index: int,
+     *                 surah_number: int,
+     *                 ayah_number: int,
+     *                 text: string,
+     *                 ends_ayah: bool
+     *             }>,
+     *             words: array<int, array{
+     *                 verse_id: int,
+     *                 word_index: int,
+     *                 ayah_index: int,
+     *                 surah_number: int,
+     *                 ayah_number: int,
+     *                 text: string,
+     *                 is_glyph: bool,
+     *                 ends_ayah: bool
+     *             }>,
+     *             text: string
+     *         }>,
+     *         qpcPageFontFamily: string|null,
+     *         qpcPageFontUrl: string|null,
+     *         qpcPageFontFormat: string|null,
+     *         basmallahFontFamily: string|null,
+     *         basmallahFontUrl: string|null,
+     *         basmallahFontFormat: string|null,
+     *         basmallahText: string|null,
+     *         surahHeaderFontFamily: string|null,
+     *         surahHeaderFontUrl: string|null,
+     *         surahHeaderFontFormat: string|null,
+     *         useCenteredAyahLayout: bool
+     *     }|null,
+     *     message: string|null
+     * }
+     */
+    public function prepareQuranData(
+        NativeQuranPreparationService $preparationService,
+        QuranReaderDataService $readerDataService,
+    ): array {
+        $status = $preparationService->queueIfNeeded($readerDataService);
+
+        if ($status['ready']) {
+            return $this->readyPreparationResponse($readerDataService);
+        }
+
+        return $this->pendingPreparationResponse($status);
+    }
+
+    /**
+     * @return array{
+     *     ready: bool,
+     *     prepared: bool,
+     *     state: 'idle'|'queued'|'running'|'ready'|'failed'|null,
+     *     payload: array{
+     *         ready: bool,
+     *         pageNumber: int,
+     *         maxPage: int,
+     *         activeAyahIndex: int,
+     *         mushafLines: array<int, array{
+     *             line_number: int,
+     *             line_type: string,
+     *             is_centered: bool,
+     *             surah_number: int|null,
+     *             segments: array<int, array{
+     *                 verse_id: int,
+     *                 ayah_index: int,
+     *                 surah_number: int,
+     *                 ayah_number: int,
+     *                 text: string,
+     *                 ends_ayah: bool
+     *             }>,
+     *             words: array<int, array{
+     *                 verse_id: int,
+     *                 word_index: int,
+     *                 ayah_index: int,
+     *                 surah_number: int,
+     *                 ayah_number: int,
+     *                 text: string,
+     *                 is_glyph: bool,
+     *                 ends_ayah: bool
+     *             }>,
+     *             text: string
+     *         }>,
+     *         qpcPageFontFamily: string|null,
+     *         qpcPageFontUrl: string|null,
+     *         qpcPageFontFormat: string|null,
+     *         basmallahFontFamily: string|null,
+     *         basmallahFontUrl: string|null,
+     *         basmallahFontFormat: string|null,
+     *         basmallahText: string|null,
+     *         surahHeaderFontFamily: string|null,
+     *         surahHeaderFontUrl: string|null,
+     *         surahHeaderFontFormat: string|null,
+     *         useCenteredAyahLayout: bool
+     *     }|null,
+     *     message: string|null
+     * }
+     */
+    public function quranPreparationStatus(
+        NativeQuranPreparationService $preparationService,
+        QuranReaderDataService $readerDataService,
+    ): array {
+        $status = $preparationService->currentStatus($readerDataService);
+
+        if ($status['ready']) {
+            return $this->readyPreparationResponse($readerDataService);
+        }
+
+        return $this->pendingPreparationResponse($status);
+    }
+
+    /**
+     * @return array{
+     *     ready: true,
+     *     prepared: false,
+     *     state: 'ready',
      *     payload: array{
      *         ready: bool,
      *         pageNumber: int,
@@ -116,37 +242,43 @@ class Reader extends Component implements HasActions, HasSchemas
      *         surahHeaderFontFormat: string|null,
      *         useCenteredAyahLayout: bool
      *     },
+     *     message: null
+     * }
+     */
+    private function readyPreparationResponse(QuranReaderDataService $readerDataService): array
+    {
+        return [
+            'ready' => true,
+            'prepared' => false,
+            'payload' => $readerDataService->resolvePage($this->pageNumber, $this->activeAyahIndex),
+            'state' => 'ready',
+            'message' => null,
+        ];
+    }
+
+    /**
+     * @param  array{
+     *     ready: bool,
+     *     state: 'idle'|'queued'|'running'|'ready'|'failed',
+     *     message: string|null,
+     *     updatedAt: int
+     * }  $status
+     * @return array{
+     *     ready: false,
+     *     prepared: false,
+     *     state: 'idle'|'queued'|'running'|'ready'|'failed',
+     *     payload: null,
      *     message: string|null
      * }
      */
-    public function prepareQuranData(
-        NativeMigrationBootstrapper $bootstrapper,
-        QuranReaderDataService $readerDataService,
-    ): array {
-        if ($readerDataService->isReady()) {
-            return [
-                'ready' => true,
-                'prepared' => false,
-                'payload' => $readerDataService->resolvePage($this->pageNumber, $this->activeAyahIndex),
-                'message' => null,
-            ];
-        }
-
-        $status = $bootstrapper->runDeferredQuranMigrations();
-        $readerDataService->forgetReadinessCaches();
-        $isReady = $readerDataService->isReady();
-
-        if ($status !== 0 || ! $isReady) {
-            throw new RuntimeException(
-                arabic_text('تعذر تجهيز بيانات القرآن الآن. حاول مرة أخرى بعد قليل.'),
-            );
-        }
-
+    private function pendingPreparationResponse(array $status): array
+    {
         return [
-            'ready' => true,
-            'prepared' => true,
-            'payload' => $readerDataService->resolvePage($this->pageNumber, $this->activeAyahIndex),
-            'message' => null,
+            'ready' => false,
+            'prepared' => false,
+            'payload' => null,
+            'state' => $status['state'],
+            'message' => $status['message'],
         ];
     }
 

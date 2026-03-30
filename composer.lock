@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "ebf4d0bb02857c4fd8315fc7b932c0bf",
+    "content-hash": "c6a278147dd905724a1999f4ba0467aa",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -2001,11 +2001,11 @@
         },
         {
             "name": "goodm4ven/nativephp-muttasiq-patches",
-            "version": "1.2.999999",
+            "version": "1.3.999999",
             "dist": {
                 "type": "path",
                 "url": "/home/goodm4ven/Code/LaravelPackages/NATIVE_PLUGIN_muttasiq-patches",
-                "reference": "8227545bfda9c54b6fe0848a9baefa170ccf2ea3"
+                "reference": "cdf01eec055b0dc50c0e87d0dc46b4e7293fbc8c"
             },
             "require": {
                 "nativephp/mobile": "^3.0",
@@ -14494,11 +14494,11 @@
         },
         {
             "name": "phpstan/phpstan",
-            "version": "2.1.44",
+            "version": "2.1.45",
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/4a88c083c668b2c364a425c9b3171b2d9ea5d218",
-                "reference": "4a88c083c668b2c364a425c9b3171b2d9ea5d218",
+                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/f8cdfd9421b7edb7686a2d150a234870464eac70",
+                "reference": "f8cdfd9421b7edb7686a2d150a234870464eac70",
                 "shasum": ""
             },
             "require": {
@@ -14543,7 +14543,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-03-25T17:34:21+00:00"
+            "time": "2026-03-30T13:22:02+00:00"
         },
         {
             "name": "phpunit/php-code-coverage",

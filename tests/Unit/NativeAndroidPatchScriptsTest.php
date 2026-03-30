@@ -155,8 +155,8 @@ test('native patches plugin supports ios content view patching', function () {
     expect($androidMainActivityTraitContents)->toContain('setQuranVolumeNavigationEnabled');
     expect($androidMainActivityTraitContents)->toContain('dispatchQuranVolumeButton');
     expect($androidLaravelEnvironmentTraitContents)->toContain('app:native-bootstrap --no-interaction');
-    expect($androidLaravelEnvironmentTraitContents)->toContain('database/native-quran-reader.sqlite');
-    expect($androidLaravelEnvironmentTraitContents)->toContain('copyTo(dbFile, overwrite = true)');
+    expect($androidLaravelEnvironmentTraitContents)->not()->toContain('database/native-quran-reader.sqlite');
+    expect($androidLaravelEnvironmentTraitContents)->toContain('dbFile.createNewFile()');
     expect($androidLaravelEnvironmentTraitContents)->toContain('Skipping dormant Quran exegesis bundle entry');
     expect($androidLaravelEnvironmentTraitContents)->toContain('resources/raw-data/quran/exegesis/');
     expect($iosTraitContents)->toContain('verifyIosSystemUi');
@@ -247,9 +247,10 @@ test('native install scripts respect nativephp ICU configuration for mobile buil
     $iosPrepareScript = file_get_contents($root.'/.scripts/native/mobile/ios/support/prepare.sh');
 
     expect($nativephpJson)->toContain('"icu":');
-    expect($sharedPrepareScript)->toContain('php artisan app:build-native-quran-database --no-interaction');
     expect($sharedPrepareScript)->toContain('vendor/goodm4ven/nativephp-muttasiq-patches/src');
+    expect($sharedPrepareScript)->toContain('rm -f');
     expect($sharedPrepareScript)->toContain('database/native-quran-reader.sqlite');
+    expect($sharedPrepareScript)->not()->toContain('app:build-native-quran-database');
     expect($sharedPrepareScript)->toContain('nativephp directory missing');
     expect($sharedPrepareScript)->toContain('native_read_icu_preference');
     expect($sharedPrepareScript)->toContain('install_args+=(--with-icu)');

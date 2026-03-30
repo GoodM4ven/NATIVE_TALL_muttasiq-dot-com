@@ -837,6 +837,7 @@ document.addEventListener('alpine:init', () => {
         _searchModalCloseDebounceTimer: null,
         _searchModalOpenInFlight: null,
         _quranPreparationInFlight: null,
+        _quranPreparationRequestPromise: null,
         _surahDirectoryAutoFocusToken: 0,
         _surahDirectoryAutoFocusTimer: null,
         _surahDirectoryAutoFocusRaf: null,
@@ -1292,6 +1293,91 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        async callQuranPreparationMethod(methodName) {
+            if (this.$wire && typeof this.$wire.call === 'function') {
+                return await this.$wire.call(methodName);
+            }
+
+            const fallbackMethod = this.$wire?.[methodName];
+
+            if (typeof fallbackMethod === 'function') {
+                return await fallbackMethod.call(this.$wire);
+            }
+
+            throw new Error('Unable to communicate with the Quran reader Livewire instance.');
+        },
+
+        async requestNativeQuranPreparation() {
+            if (this._quranPreparationRequestPromise) {
+                return await this._quranPreparationRequestPromise;
+            }
+
+            this._quranPreparationRequestPromise = (async () => {
+                return await this.callQuranPreparationMethod('prepareQuranData');
+            })();
+
+            try {
+                return await this._quranPreparationRequestPromise;
+            } finally {
+                this._quranPreparationRequestPromise = null;
+            }
+        },
+
+        async readNativeQuranPreparationStatus() {
+            return await this.callQuranPreparationMethod('quranPreparationStatus');
+        },
+
+        async syncPreparedQuranPayload(payload) {
+            await this.clearDeferredPreparationCaches();
+            this.initialPayload = normalizePayload(payload);
+            this.applyPayload(payload, {
+                setPageNumber: true,
+                persistPageNumber: true,
+            });
+            this.refreshSurahTriggerCaption(false);
+            this.syncSearchActiveSurahNumber();
+            this.$nextTick(() => {
+                this.registerNativeInputListeners();
+                this.initializeLayoutObservers();
+                this.queueSupportLockTargetsUiSync();
+                this.syncNativeVolumeNavigation();
+            });
+        },
+
+        async queueNativeQuranPreparationInBackground() {
+            if (!this.nativeRuntime || this.ready) {
+                return;
+            }
+
+            try {
+                await this.requestNativeQuranPreparation();
+            } catch (_) {
+                //
+            }
+        },
+
+        async waitForNativeQuranPreparation() {
+            const maxAttempts = 120;
+
+            for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+                await wait(1500);
+
+                const result = await this.readNativeQuranPreparationStatus();
+
+                if (result?.ready && result?.payload) {
+                    return result;
+                }
+
+                if (String(result?.state ?? '') === 'failed') {
+                    throw new Error(
+                        result?.message ?? 'تعذر تجهيز بيانات القرآن الآن. حاول مرة أخرى بعد قليل.',
+                    );
+                }
+            }
+
+            throw new Error('تعذر تجهيز بيانات القرآن الآن. حاول مرة أخرى بعد قليل.');
+        },
+
         async prepareQuranFromMainMenu(detail = {}) {
             const openGateOnSuccess = detail?.openGateOnSuccess !== false;
 
@@ -1323,37 +1409,20 @@ document.addEventListener('alpine:init', () => {
 
             this._quranPreparationInFlight = (async () => {
                 try {
-                    let result = null;
-
-                    if (this.$wire && typeof this.$wire.call === 'function') {
-                        result = await this.$wire.call('prepareQuranData');
-                    } else if (this.$wire && typeof this.$wire.prepareQuranData === 'function') {
-                        result = await this.$wire.prepareQuranData();
-                    } else {
-                        throw new Error('Unable to prepare Quran data from this reader instance.');
-                    }
+                    let result = await this.requestNativeQuranPreparation();
 
                     if (!result?.ready || !result?.payload) {
-                        throw new Error(
-                            result?.message ??
-                                'Quran data is still not ready after the preparation step.',
-                        );
+                        if (String(result?.state ?? '') === 'failed') {
+                            throw new Error(
+                                result?.message ??
+                                    'تعذر تجهيز بيانات القرآن الآن. حاول مرة أخرى بعد قليل.',
+                            );
+                        }
+
+                        result = await this.waitForNativeQuranPreparation();
                     }
 
-                    await this.clearDeferredPreparationCaches();
-                    this.initialPayload = normalizePayload(result.payload);
-                    this.applyPayload(result.payload, {
-                        setPageNumber: true,
-                        persistPageNumber: true,
-                    });
-                    this.refreshSurahTriggerCaption(false);
-                    this.syncSearchActiveSurahNumber();
-                    this.$nextTick(() => {
-                        this.registerNativeInputListeners();
-                        this.initializeLayoutObservers();
-                        this.queueSupportLockTargetsUiSync();
-                        this.syncNativeVolumeNavigation();
-                    });
+                    await this.syncPreparedQuranPayload(result.payload);
 
                     window.dispatchEvent(
                         new CustomEvent('quran-bootstrap-finished', {
@@ -1875,6 +1944,9 @@ document.addEventListener('alpine:init', () => {
             this.hydratePersistedFitCache();
             await this.ensureCurrentPageLoaded();
             await this.layoutPageGuaranteed({ revealDelayMs: 240 });
+            if (this.nativeRuntime && !this.ready) {
+                void this.queueNativeQuranPreparationInBackground();
+            }
             this.queueStartupPreload();
             this.scheduleIdleWarmup();
             this.warmSearchIndex();
