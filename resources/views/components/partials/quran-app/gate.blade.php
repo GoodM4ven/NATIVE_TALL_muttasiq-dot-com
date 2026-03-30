@@ -93,6 +93,22 @@
             animation-delay: 200ms;
         }
 
+        .quran-app-sector__media--morning {
+            display: block;
+        }
+
+        .quran-app-sector__media--night {
+            display: none;
+        }
+
+        .dark .quran-app-sector__media--morning {
+            display: none;
+        }
+
+        .dark .quran-app-sector__media--night {
+            display: block;
+        }
+
         .quran-app-sector__veil {
             position: absolute;
             inset: 0;
@@ -296,6 +312,11 @@
             pointer-events: none;
             z-index: 50;
             mix-blend-mode: multiply;
+            opacity: 0;
+        }
+
+        .dark .quran-app-gate-focal-dim {
+            opacity: 1;
         }
 
         .quran-app-gate-geometry path {
@@ -476,9 +497,13 @@
             .quran-app-gate-shell {
                 --gate-cy: 58%;
                 --gate-top-overshoot: 20%;
-                background-image: url('{{ asset('images/background/quran/tilawa.webp') }}');
+                background-image: url('{{ asset('images/background/quran/morning/tilawa.webp') }}');
                 background-size: cover;
                 background-position: center top;
+            }
+
+            .dark .quran-app-gate-shell {
+                background-image: url('{{ asset('images/background/quran/night/tilawa.webp') }}');
             }
 
             .quran-app-gate-caption {
@@ -642,12 +667,26 @@
             x-on:blur="unpinMode('tilawa')"
             x-on:click="openMode('tilawa')"
         >
-            <span class="quran-app-sector__media quran-app-sector__media--tilawa">
+            <span class="quran-app-sector__media quran-app-sector__media--tilawa quran-app-sector__media--morning">
                 <x-goodmaven::blurred-image
                     class="absolute inset-0"
                     alt="{{ app_arabic_text('وضع التلاوة') }}"
-                    :imagePath="asset('images/background/quran/tilawa.webp')"
-                    :thumbnailImagePath="asset('images/background/quran/tilawa-blur-thumbnail.webp')"
+                    :imagePath="asset('images/background/quran/morning/tilawa.webp')"
+                    :thumbnailImagePath="asset('images/background/quran/morning/tilawa-blur-thumbnail.webp')"
+                    :isEagerLoaded="true"
+                    :isDisplayEnforced="true"
+                    :isObjectCentered="false"
+                    containerClasses="absolute inset-0 overflow-hidden bg-black/25"
+                    imageClasses="quran-app-sector__image-img quran-app-sector__image-img--tilawa select-none"
+                />
+            </span>
+
+            <span class="quran-app-sector__media quran-app-sector__media--tilawa quran-app-sector__media--night">
+                <x-goodmaven::blurred-image
+                    class="absolute inset-0"
+                    alt="{{ app_arabic_text('وضع التلاوة') }}"
+                    :imagePath="asset('images/background/quran/night/tilawa.webp')"
+                    :thumbnailImagePath="asset('images/background/quran/night/tilawa-blur-thumbnail.webp')"
                     :isEagerLoaded="true"
                     :isDisplayEnforced="true"
                     :isObjectCentered="false"
@@ -678,12 +717,26 @@
             x-on:blur="unpinMode('tadabbur')"
             x-on:click="openMode('tadabbur')"
         >
-            <span class="quran-app-sector__media quran-app-sector__media--tadabbur">
+            <span class="quran-app-sector__media quran-app-sector__media--tadabbur quran-app-sector__media--morning">
                 <x-goodmaven::blurred-image
                     class="absolute inset-0"
                     alt="{{ app_arabic_text('وضع التدبّر') }}"
-                    :imagePath="asset('images/background/quran/tadabbur.webp')"
-                    :thumbnailImagePath="asset('images/background/quran/tadabbur-blur-thumbnail.webp')"
+                    :imagePath="asset('images/background/quran/morning/tadabbur.webp')"
+                    :thumbnailImagePath="asset('images/background/quran/morning/tadabbur-blur-thumbnail.webp')"
+                    :isEagerLoaded="true"
+                    :isDisplayEnforced="true"
+                    :isObjectCentered="false"
+                    containerClasses="absolute inset-0 overflow-hidden bg-black/25"
+                    imageClasses="quran-app-sector__image-img quran-app-sector__image-img--tadabbur select-none"
+                />
+            </span>
+
+            <span class="quran-app-sector__media quran-app-sector__media--tadabbur quran-app-sector__media--night">
+                <x-goodmaven::blurred-image
+                    class="absolute inset-0"
+                    alt="{{ app_arabic_text('وضع التدبّر') }}"
+                    :imagePath="asset('images/background/quran/night/tadabbur.webp')"
+                    :thumbnailImagePath="asset('images/background/quran/night/tadabbur-blur-thumbnail.webp')"
                     :isEagerLoaded="true"
                     :isDisplayEnforced="true"
                     :isObjectCentered="false"
@@ -721,12 +774,26 @@
             x-on:blur="unpinMode('hifth')"
             x-on:click="openMode('hifth')"
         >
-            <span class="quran-app-sector__media quran-app-sector__media--hifth">
+            <span class="quran-app-sector__media quran-app-sector__media--hifth quran-app-sector__media--morning">
                 <x-goodmaven::blurred-image
                     class="absolute inset-0"
                     alt="{{ app_arabic_text('وضع الحفظ') }}"
-                    :imagePath="asset('images/background/quran/hifth.webp')"
-                    :thumbnailImagePath="asset('images/background/quran/hifth-blur-thumbnail.webp')"
+                    :imagePath="asset('images/background/quran/morning/hifth.webp')"
+                    :thumbnailImagePath="asset('images/background/quran/morning/hifth-blur-thumbnail.webp')"
+                    :isEagerLoaded="true"
+                    :isDisplayEnforced="true"
+                    :isObjectCentered="false"
+                    containerClasses="absolute inset-0 overflow-hidden bg-black/25"
+                    imageClasses="quran-app-sector__image-img quran-app-sector__image-img--hifth select-none"
+                />
+            </span>
+
+            <span class="quran-app-sector__media quran-app-sector__media--hifth quran-app-sector__media--night">
+                <x-goodmaven::blurred-image
+                    class="absolute inset-0"
+                    alt="{{ app_arabic_text('وضع الحفظ') }}"
+                    :imagePath="asset('images/background/quran/night/hifth.webp')"
+                    :thumbnailImagePath="asset('images/background/quran/night/hifth-blur-thumbnail.webp')"
                     :isEagerLoaded="true"
                     :isDisplayEnforced="true"
                     :isObjectCentered="false"

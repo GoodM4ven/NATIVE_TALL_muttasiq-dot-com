@@ -52,11 +52,22 @@
             x-bind:class="views[`quran-app-tilawa`].isOpen && 'opacity-100!'"
         >
             <x-goodmaven::blurred-image
-                class="h-full w-full scale-110 object-cover"
+                class="duration-400 absolute inset-0 h-full w-full scale-110 object-cover transition-opacity"
                 alt="Tilawa background"
-                :imagePath="asset('images/background/quran/tilawa-blurred.webp')"
-                :thumbnailImagePath="asset('images/background/quran/tilawa-blurred-blur-thumbnail.webp')"
+                :imagePath="asset('images/background/quran/morning/tilawa-blurred.webp')"
+                :thumbnailImagePath="asset('images/background/quran/morning/tilawa-blurred-blur-thumbnail.webp')"
                 :isDisplayEnforced="true"
+                imageClasses="object-[50%_62.5%]"
+                x-bind:class="!$store.colorScheme.isDarkModeOn ? 'opacity-100!' : 'opacity-0'"
+            />
+            <x-goodmaven::blurred-image
+                class="duration-400 absolute inset-0 h-full w-full scale-110 object-cover transition-opacity"
+                alt="Tilawa background"
+                :imagePath="asset('images/background/quran/night/tilawa-blurred.webp')"
+                :thumbnailImagePath="asset('images/background/quran/night/tilawa-blurred-blur-thumbnail.webp')"
+                :isDisplayEnforced="true"
+                imageClasses="object-[50%_62.5%]"
+                x-bind:class="$store.colorScheme.isDarkModeOn ? 'opacity-100!' : 'opacity-0'"
             />
         </div>
 
@@ -66,11 +77,22 @@
             x-bind:class="views[`quran-app-hifth`].isOpen && 'opacity-100!'"
         >
             <x-goodmaven::blurred-image
-                class="h-full w-full scale-110 object-cover"
+                class="duration-400 absolute inset-0 h-full w-full scale-110 object-cover transition-opacity"
                 alt="Hifth background"
-                :imagePath="asset('images/background/quran/hifth-blurred.webp')"
-                :thumbnailImagePath="asset('images/background/quran/hifth-blurred-blur-thumbnail.webp')"
+                :imagePath="asset('images/background/quran/morning/hifth-blurred.webp')"
+                :thumbnailImagePath="asset('images/background/quran/morning/hifth-blurred-blur-thumbnail.webp')"
                 :isDisplayEnforced="true"
+                imageClasses="object-[0%_50%]"
+                x-bind:class="!$store.colorScheme.isDarkModeOn ? 'opacity-100!' : 'opacity-0'"
+            />
+            <x-goodmaven::blurred-image
+                class="duration-400 absolute inset-0 h-full w-full scale-110 object-cover transition-opacity"
+                alt="Hifth background"
+                :imagePath="asset('images/background/quran/night/hifth-blurred.webp')"
+                :thumbnailImagePath="asset('images/background/quran/night/hifth-blurred-blur-thumbnail.webp')"
+                :isDisplayEnforced="true"
+                imageClasses="object-[0%_50%]"
+                x-bind:class="$store.colorScheme.isDarkModeOn ? 'opacity-100!' : 'opacity-0'"
             />
         </div>
 
@@ -80,11 +102,22 @@
             x-bind:class="views[`quran-app-tadabbur`].isOpen && 'opacity-100!'"
         >
             <x-goodmaven::blurred-image
-                class="h-full w-full scale-110 object-cover"
+                class="duration-400 absolute inset-0 h-full w-full scale-110 object-cover transition-opacity"
                 alt="Tadabbur background"
-                :imagePath="asset('images/background/quran/tadabbur-blurred.webp')"
-                :thumbnailImagePath="asset('images/background/quran/tadabbur-blurred-blur-thumbnail.webp')"
+                :imagePath="asset('images/background/quran/morning/tadabbur-blurred.webp')"
+                :thumbnailImagePath="asset('images/background/quran/morning/tadabbur-blurred-blur-thumbnail.webp')"
                 :isDisplayEnforced="true"
+                imageClasses="object-[100%_50%]"
+                x-bind:class="!$store.colorScheme.isDarkModeOn ? 'opacity-100!' : 'opacity-0'"
+            />
+            <x-goodmaven::blurred-image
+                class="duration-400 absolute inset-0 h-full w-full scale-110 object-cover transition-opacity"
+                alt="Tadabbur background"
+                :imagePath="asset('images/background/quran/night/tadabbur-blurred.webp')"
+                :thumbnailImagePath="asset('images/background/quran/night/tadabbur-blurred-blur-thumbnail.webp')"
+                :isDisplayEnforced="true"
+                imageClasses="object-[100%_50%]"
+                x-bind:class="$store.colorScheme.isDarkModeOn ? 'opacity-100!' : 'opacity-0'"
             />
         </div>
 
