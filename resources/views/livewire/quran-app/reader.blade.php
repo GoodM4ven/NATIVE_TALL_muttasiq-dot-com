@@ -1679,13 +1679,15 @@
         jumpPageModalId: @js('quran-reader-jump-page-modal'),
         historyModalId: @js('quran-reader-history-modal'),
         bookmarksModalId: @js('quran-reader-bookmarks-modal'),
-        settings: @js($quranReaderSettings ?? ['enableVisualEnhancements' => true, 'targetWordsByDefault' => false, 'preserveHarakatOnCopy' => true, 'appendSurahAffixOnMultiCopy' => true, 'appendSurahAffixAlwaysOnCopy' => false, 'useWesternNumerals' => true, 'wirdFrequencyMode' => 0, 'wirdKhatmatTarget' => 1]),
+        settings: @js($quranReaderSettings ?? ['enableVisualEnhancements' => true, 'targetWordsByDefault' => false, 'preserveHarakatOnCopy' => true, 'appendSurahAffixOnMultiCopy' => true, 'appendSurahAffixAlwaysOnCopy' => false, 'useVolumeButtonsNavigation' => true, 'useWesternNumerals' => true, 'wirdFrequencyMode' => 0, 'wirdKhatmatTarget' => 1]),
     })"
     x-bind:class="{
         'quran-reader--visual-enhancements-disabled': !doesEnableVisualEnhancements,
         'quran-reader--wird-active': wirdModeActive,
     }"
     x-on:control-panel-updated.window="applyControlPanelSettings($event.detail?.controlPanel ?? {})"
+    x-on:switch-view.window="$nextTick(() => syncNativeVolumeNavigation())"
+    x-on:quran-bootstrap-request.window="prepareQuranFromMainMenu($event.detail ?? {})"
     x-on:open-modal.window="handleModalLifecycleEvent('opened', $event)"
     x-on:x-modal-opened.window="handleModalLifecycleEvent('opened', $event)"
     x-on:close-modal.window="handleModalLifecycleEvent('closing', $event)"

@@ -104,7 +104,10 @@ test('native patches plugin supports ios content view patching', function () {
     $iosCommandPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/ApplyIosPatchesCommand.php';
     $iosTraitPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/Concerns/PatchesIosContentView.php';
     $iosNativePhpAppTraitPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/Concerns/PatchesIosNativePhpApp.php';
+    $iosAppUpdateManagerTraitPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/Concerns/PatchesIosAppUpdateManager.php';
     $androidPhpWebViewTraitPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/Concerns/PatchesAndroidPhpWebViewClient.php';
+    $androidMainActivityTraitPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/Concerns/PatchesAndroidMainActivity.php';
+    $androidLaravelEnvironmentTraitPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/Concerns/PatchesAndroidLaravelEnvironment.php';
     $helpersTraitPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/Concerns/InteractsWithPatchFiles.php';
 
     expect(file_exists($dispatcherPath))->toBeTrue();
@@ -112,7 +115,10 @@ test('native patches plugin supports ios content view patching', function () {
     expect(file_exists($iosCommandPath))->toBeTrue();
     expect(file_exists($iosTraitPath))->toBeTrue();
     expect(file_exists($iosNativePhpAppTraitPath))->toBeTrue();
+    expect(file_exists($iosAppUpdateManagerTraitPath))->toBeTrue();
     expect(file_exists($androidPhpWebViewTraitPath))->toBeTrue();
+    expect(file_exists($androidMainActivityTraitPath))->toBeTrue();
+    expect(file_exists($androidLaravelEnvironmentTraitPath))->toBeTrue();
     expect(file_exists($helpersTraitPath))->toBeTrue();
 
     $dispatcherContents = file_get_contents($dispatcherPath);
@@ -120,7 +126,10 @@ test('native patches plugin supports ios content view patching', function () {
     $iosContents = file_get_contents($iosCommandPath);
     $iosTraitContents = file_get_contents($iosTraitPath);
     $iosNativePhpAppTraitContents = file_get_contents($iosNativePhpAppTraitPath);
+    $iosAppUpdateManagerTraitContents = file_get_contents($iosAppUpdateManagerTraitPath);
     $androidPhpWebViewTraitContents = file_get_contents($androidPhpWebViewTraitPath);
+    $androidMainActivityTraitContents = file_get_contents($androidMainActivityTraitPath);
+    $androidLaravelEnvironmentTraitContents = file_get_contents($androidLaravelEnvironmentTraitPath);
     $helpersTraitContents = file_get_contents($helpersTraitPath);
 
     expect($dispatcherContents)->toContain('nativephp:muttasiq:patches-android');
@@ -131,15 +140,22 @@ test('native patches plugin supports ios content view patching', function () {
     expect($androidContents)->toContain('use PatchesAndroidLaravelEnvironment;');
     expect($iosContents)->toContain('use PatchesIosContentView;');
     expect($iosContents)->toContain('use PatchesIosNativePhpApp;');
+    expect($iosContents)->toContain('use PatchesIosAppUpdateManager;');
     expect($androidPhpWebViewTraitContents)->toContain('resolveBundledQpcFontFile');
     expect($androidPhpWebViewTraitContents)->toContain('Binary asset missing from filesystem; refusing PHP fallback');
+    expect($androidPhpWebViewTraitContents)->not()->toContain('getLaravelPublicPath');
+    expect($androidMainActivityTraitContents)->toContain('setQuranVolumeNavigationEnabled');
+    expect($androidMainActivityTraitContents)->toContain('dispatchQuranVolumeButton');
+    expect($androidLaravelEnvironmentTraitContents)->toContain('app:native-bootstrap --no-interaction');
     expect($iosTraitContents)->toContain('verifyIosSystemUi');
     expect($iosTraitContents)->toContain('patchIosBackHandler');
     expect($iosTraitContents)->toContain('NativePHPBackEdgeGesture');
     expect($iosTraitContents)->toContain('WKWebsiteDataStore.default()');
     expect($iosNativePhpAppTraitContents)->toContain('setenv("DB_CONNECTION", "sqlite", 1)');
+    expect($iosNativePhpAppTraitContents)->toContain('app:native-bootstrap --no-interaction');
     expect($iosNativePhpAppTraitContents)->toContain('artisan migrate START (classic mode)');
     expect($iosNativePhpAppTraitContents)->toContain('artisan migrate START (persistent fallback)');
+    expect($iosAppUpdateManagerTraitContents)->toContain('app:native-bootstrap');
     expect($helpersTraitContents)->toContain('setSwiftFunctionBody');
     expect($helpersTraitContents)->toContain('locateSwiftFunction');
 });
@@ -210,4 +226,20 @@ test('android log script writes into storage logs', function () {
     expect($script)->toBeString();
     expect($script)->toContain('output_dir="${project_root}/storage/logs"');
     expect($script)->toContain('output_file="${output_dir}/native-log-android.txt"');
+});
+
+test('native install scripts keep ICU enabled for filament-compatible mobile builds', function () {
+    $root = dirname(__DIR__, 2);
+    $nativephpJson = file_get_contents($root.'/nativephp.json');
+    $sharedPrepareScript = file_get_contents($root.'/.scripts/native/mobile/support/prepare-platform.sh');
+    $iosPrepareScript = file_get_contents($root.'/.scripts/native/mobile/ios/support/prepare.sh');
+
+    expect($nativephpJson)->toContain('"icu": true');
+    expect($sharedPrepareScript)->toContain('native_read_icu_preference');
+    expect($sharedPrepareScript)->toContain('install_args+=(--with-icu)');
+    expect($sharedPrepareScript)->toContain('ICU-enabled PHP binaries are required by nativephp.json');
+    expect($sharedPrepareScript)->toContain('install signature changed');
+    expect($iosPrepareScript)->toContain('native_read_icu_preference');
+    expect($iosPrepareScript)->toContain('install_args+=(--with-icu)');
+    expect($iosPrepareScript)->toContain('ICU-enabled PHP binaries are required by nativephp.json');
 });

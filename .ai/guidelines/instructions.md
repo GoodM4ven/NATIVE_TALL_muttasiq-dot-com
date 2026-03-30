@@ -41,6 +41,7 @@ This shared source code base is representing the web version primarily, the one 
 - The native apps need some modifications on the NativePHP engine. These are done via `muttasiq-patches` NativePHP plugin. It's supposedly located in [~/Code/LaravelPackages/NATIVE_PLUGIN_muttasiq-patches] directory. Update its own README if you touch it.
   - The patching is build-time only and externalized to `goodm4ven/nativephp-muttasiq-patches`, enabled by [app/Providers/NativeServiceProvider.php], and ran as Android pre-complile hook.
   - Toggle local development of that plugin using [.scripts/composer-local-plugins-switch.sh], which targets [~/Code/LaravelPackages/NATIVE_PLUGIN_muttasiq-patches] by default.
+  - For NativePHP user-generated or user-imported files that must be publicly renderable and survive app updates, use `Storage::disk('mobile_public')` instead of plain `public`/`local` paths. Do not set `FILESYSTEM_DISK=mobile_public` as a global app default for web/admin; only use that env override in native-build-specific environments when the whole file flow is intended to target the native persistent public storage.
 - Preferred container workflow is [`lara-stacker`](https://github.com/GoodM4ven/CLI_LARAVEL_lara-stacker), expected to be located at [~/Code/Scripts/CLI_LARAVEL_lara-stacker/], and including scripts to import this project and to setup the local development environment.
 - You can check out what Laravel setup requires for this application to work in [composer.json]'s `setup` script.
 

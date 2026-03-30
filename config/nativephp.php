@@ -157,11 +157,46 @@ return [
         'phpstan.neon.dist',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Runtime Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Controls the persistent PHP runtime behavior. In 'persistent' mode,
+    | Laravel boots once and the kernel is reused across requests (~5-30ms
+    | per dispatch instead of ~200-300ms). Falls back to 'classic' mode
+    | (full init/shutdown per request) if persistent boot fails.
+    |
+    */
+
+    'runtime' => [
+        'mode' => 'persistent', // 'classic' or 'persistent'
+        'reset_instances' => true,
+        'gc_between_dispatches' => false,
+    ],
+
     'android' => [
         'gradle_jdk_path' => env('NATIVEPHP_GRADLE_PATH'),
         'android_sdk_path' => env('NATIVEPHP_ANDROID_SDK_LOCATION'),
         'emulator_path' => env('ANDROID_EMULATOR'),
         '7zip-location' => env('NATIVEPHP_7ZIP_LOCATION', 'C:\\Program Files\\7-Zip\\7z.exe'),
+
+        /*
+        |--------------------------------------------------------------------------
+        | Android SDK Versions
+        |--------------------------------------------------------------------------
+        |
+        | Configure the Android SDK versions for your app build. These control
+        | which Android versions your app can run on and which APIs are available.
+        |
+        | compile_sdk: The SDK version used to compile your app (latest features)
+        | min_sdk:     The minimum Android version your app supports
+        | target_sdk:  The SDK version your app is designed and tested for
+        |
+        */
+        'compile_sdk' => env('NATIVEPHP_ANDROID_COMPILE_SDK', 36),
+        'min_sdk' => env('NATIVEPHP_ANDROID_MIN_SDK', 33),
+        'target_sdk' => env('NATIVEPHP_ANDROID_TARGET_SDK', 36),
 
         /*
         |--------------------------------------------------------------------------
@@ -206,6 +241,33 @@ return [
             'parallel_builds' => env('NATIVEPHP_ANDROID_PARALLEL_BUILDS', true),
             'incremental_builds' => env('NATIVEPHP_ANDROID_INCREMENTAL_BUILDS', true),
         ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Development Server Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for the NativePHP development server that allows hot
+    | reloading of mobile applications during development.
+    |
+    */
+
+    'server' => [
+        'http_port' => env('NATIVEPHP_HTTP_PORT', 3000),
+        'ws_port' => env('NATIVEPHP_WS_PORT', 8081),
+        'service_name' => env('NATIVEPHP_SERVICE_NAME', 'NativePHP Server'),
+        'service_type' => '_http._tcp',
+        'public_path' => env('NATIVEPHP_PUBLIC_PATH', 'public'),
+        'build_path' => env('NATIVEPHP_BUILD_PATH', 'storage/app/native-build'),
+        'open_browser' => env('NATIVEPHP_OPEN_BROWSER', true),
+        'watch_paths' => [
+            'app',
+            'resources',
+            'routes',
+            'public/build',
+        ],
+        'watch_extensions' => ['php', 'blade.php', 'js', 'css', 'ts', 'vue', 'json'],
     ],
 
     /*

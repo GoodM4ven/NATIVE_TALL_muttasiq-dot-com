@@ -41,13 +41,16 @@ it('wires quran reader entry points from main menu to hash navigation and view m
 
     expect($menuSource)->not->toBeFalse()
         ->and($menuSource)->toContain(":caption=\"arabic_text('الكتاب')\"")
-        ->and($menuSource)->toContain(":onClickCallback=\"'() => (\$viewNav(`quran-app-gate`))'\"");
+        ->and($menuSource)->toContain(":onClickCallback=\"'() => openQuranEntry()'\"");
 
     expect($homeSource)->not->toBeFalse()
         ->and($homeSource)->toContain("'quran-app-gate': {")
         ->and($homeSource)->toContain("'quran-app-tilawa': {")
         ->and($homeSource)->toContain("'quran-app-hifth': {")
         ->and($homeSource)->toContain("'quran-app-tadabbur': {")
+        ->and($homeSource)->toContain('openQuranEntry()')
+        ->and($homeSource)->toContain('quran-bootstrap-request')
+        ->and($homeSource)->toContain('quranBootstrap')
         ->and($homeSource)->toContain("'#quran-app-gate': () => runHashAction(() => {")
         ->and($homeSource)->toContain("'#quran-app-tilawa': () => runHashAction(() => {")
         ->and($homeSource)->toContain("'#quran-app-hifth': () => runHashAction(() => {")
@@ -120,6 +123,8 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderViewSource)->toContain("jumpPageModalId: @js('quran-reader-jump-page-modal')")
         ->and($quranReaderViewSource)->toContain("historyModalId: @js('quran-reader-history-modal')")
         ->and($quranReaderViewSource)->toContain("bookmarksModalId: @js('quran-reader-bookmarks-modal')")
+        ->and($quranReaderViewSource)->toContain('x-on:quran-bootstrap-request.window="prepareQuranFromMainMenu($event.detail ?? {})"')
+        ->and($quranReaderViewSource)->toContain('x-on:switch-view.window="$nextTick(() => syncNativeVolumeNavigation())"')
         ->and($quranReaderViewSource)->toContain("x-on:x-modal-opened.window=\"handleModalLifecycleEvent('opened', \$event)\"")
         ->and($quranReaderViewSource)->toContain("x-on:close-modal.window=\"handleModalLifecycleEvent('closing', \$event)\"")
         ->and($quranReaderViewSource)->toContain("x-on:x-modal-closed.window=\"handleModalLifecycleEvent('closed', \$event)\"")
@@ -179,6 +184,10 @@ it('wires quran reader entry points from main menu to hash navigation and view m
     expect($quranReaderScriptSource)->not->toBeFalse()
         ->and($quranReaderScriptSource)->toContain('registerNativeInputListeners()')
         ->and($quranReaderScriptSource)->toContain('unregisterNativeInputListeners()')
+        ->and($quranReaderScriptSource)->toContain('prepareQuranFromMainMenu(detail = {})')
+        ->and($quranReaderScriptSource)->toContain('setAndroidVolumeNavigationEnabled(enabled)')
+        ->and($quranReaderScriptSource)->toContain("'quran-native-volume-button'")
+        ->and($quranReaderScriptSource)->toContain("useVolumeButtonsNavigation: 'does_quran_use_volume_buttons_navigation'")
         ->and($quranReaderScriptSource)->toContain("window.addEventListener('keydown', this._onWindowKeydown, true)")
         ->and($quranReaderScriptSource)->toContain("readerPanel.addEventListener('pointerdown', this._onPanelPointerDown, {")
         ->and($quranReaderScriptSource)->toContain("window.addEventListener('touchmove', this._onWindowTouchMove, {");
@@ -230,6 +239,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderScriptSource)->toContain("const wirdProgressStorageKey = 'quran-reader-wird-progress-v1';")
         ->and($quranReaderScriptSource)->toContain("wirdFrequencyMode: 'quran_wird_frequency_mode'")
         ->and($quranReaderScriptSource)->toContain("wirdKhatmatTarget: 'quran_wird_khatmat_target'")
+        ->and($quranReaderScriptSource)->toContain('doesUseVolumeButtonsNavigation: true')
         ->and($quranReaderScriptSource)->toContain('ensureWirdDailyRecord({ forceRebuild = false } = {})')
         ->and($quranReaderScriptSource)->toContain('async enterWirdMode()')
         ->and($quranReaderScriptSource)->toContain('async exitWirdMode({ restoreNormalPage = true, reason = \'manual\' } = {})')

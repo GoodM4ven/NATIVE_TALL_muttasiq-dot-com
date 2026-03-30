@@ -29,7 +29,7 @@
             x-show="views['quran-app-tadabbur'].isOpen"
         >
             <aside
-                class="h-full max-h-[78svh] w-68 rounded-2xl border border-sky-400/35 bg-sky-500/15 p-4 text-right text-sm text-sky-100 shadow-lg backdrop-blur-sm"
+                class="w-68 h-full max-h-[78svh] rounded-2xl border border-sky-400/35 bg-sky-500/15 p-4 text-right text-sm text-sky-100 shadow-lg backdrop-blur-sm"
             >
                 <h3 class="mb-2 text-base font-semibold">{{ arabic_text('لوحة التدبّر') }}</h3>
                 <p class="leading-7">

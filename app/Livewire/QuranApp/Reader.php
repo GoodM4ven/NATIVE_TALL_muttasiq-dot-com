@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Livewire\QuranApp;
 
 use App\Models\Setting;
+use App\Services\Native\NativeMigrationBootstrapper;
 use App\Services\Quran\QuranReaderDataService;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
@@ -19,6 +20,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\HtmlString;
 use Livewire\Component;
+use RuntimeException;
 
 class Reader extends Component implements HasActions, HasSchemas
 {
@@ -66,6 +68,86 @@ class Reader extends Component implements HasActions, HasSchemas
         }
 
         $this->activeAyahIndex = $ayahIndex;
+    }
+
+    /**
+     * @return array{
+     *     ready: bool,
+     *     prepared: bool,
+     *     payload: array{
+     *         ready: bool,
+     *         pageNumber: int,
+     *         maxPage: int,
+     *         activeAyahIndex: int,
+     *         mushafLines: array<int, array{
+     *             line_number: int,
+     *             line_type: string,
+     *             is_centered: bool,
+     *             surah_number: int|null,
+     *             segments: array<int, array{
+     *                 verse_id: int,
+     *                 ayah_index: int,
+     *                 surah_number: int,
+     *                 ayah_number: int,
+     *                 text: string,
+     *                 ends_ayah: bool
+     *             }>,
+     *             words: array<int, array{
+     *                 verse_id: int,
+     *                 word_index: int,
+     *                 ayah_index: int,
+     *                 surah_number: int,
+     *                 ayah_number: int,
+     *                 text: string,
+     *                 is_glyph: bool,
+     *                 ends_ayah: bool
+     *             }>,
+     *             text: string
+     *         }>,
+     *         qpcPageFontFamily: string|null,
+     *         qpcPageFontUrl: string|null,
+     *         qpcPageFontFormat: string|null,
+     *         basmallahFontFamily: string|null,
+     *         basmallahFontUrl: string|null,
+     *         basmallahFontFormat: string|null,
+     *         basmallahText: string|null,
+     *         surahHeaderFontFamily: string|null,
+     *         surahHeaderFontUrl: string|null,
+     *         surahHeaderFontFormat: string|null,
+     *         useCenteredAyahLayout: bool
+     *     },
+     *     message: string|null
+     * }
+     */
+    public function prepareQuranData(
+        NativeMigrationBootstrapper $bootstrapper,
+        QuranReaderDataService $readerDataService,
+    ): array {
+        if ($readerDataService->isReady()) {
+            return [
+                'ready' => true,
+                'prepared' => false,
+                'payload' => $readerDataService->resolvePage($this->pageNumber, $this->activeAyahIndex),
+                'message' => null,
+            ];
+        }
+
+        $status = $bootstrapper->runDeferredQuranMigrations();
+        $readerDataService->forgetReadinessCaches();
+        $isReady = $readerDataService->isReady();
+
+        if ($status !== 0 || ! $isReady) {
+            throw new RuntimeException(
+                arabic_text('تعذر تجهيز بيانات القرآن الآن. حاول مرة أخرى بعد قليل.'),
+            );
+        }
+
+        return [
+            'ready' => true,
+            'prepared' => true,
+            'payload' => $readerDataService->resolvePage($this->pageNumber, $this->activeAyahIndex),
+            'message' => null,
+        ];
     }
 
     /**
@@ -308,6 +390,7 @@ class Reader extends Component implements HasActions, HasSchemas
             'preserveHarakatOnCopy' => (bool) ($normalizedSettings[Setting::DOES_QURAN_PRESERVE_HARAKAT_ON_COPY] ?? true),
             'appendSurahAffixOnMultiCopy' => (bool) ($normalizedSettings[Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ON_MULTI_COPY] ?? true),
             'appendSurahAffixAlwaysOnCopy' => (bool) ($normalizedSettings[Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ALWAYS_ON_COPY] ?? false),
+            'useVolumeButtonsNavigation' => (bool) ($normalizedSettings[Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION] ?? true),
             'useWesternNumerals' => (bool) ($normalizedSettings[Setting::DOES_USE_WESTERN_NUMERALS] ?? true),
             'wirdFrequencyMode' => (int) ($normalizedSettings[Setting::QURAN_WIRD_FREQUENCY_MODE] ?? Setting::QURAN_WIRD_FREQUENCY_MONTHLY),
             'wirdKhatmatTarget' => (int) ($normalizedSettings[Setting::QURAN_WIRD_KHATMAT_TARGET] ?? 1),

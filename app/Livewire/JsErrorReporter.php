@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Livewire;
 
 use App\Services\JsErrorReports\JsErrorReportRecorder;
+use App\Services\JsErrorReports\NativeJsErrorReportRelay;
 use App\Services\Support\Enums\NotificationType;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
@@ -111,13 +112,23 @@ class JsErrorReporter extends Component implements HasActions, HasSchemas
                         'class' => 'font-mono text-xs leading-6',
                     ]),
             ])
-            ->action(function (array $data, JsErrorReportRecorder $recorder): void {
+            ->action(function (
+                array $data,
+                JsErrorReportRecorder $recorder,
+                NativeJsErrorReportRelay $relay,
+            ): void {
                 try {
-                    $report = $recorder->store([
+                    $payload = [
                         'user_note' => (string) ($data['user_note'] ?? ''),
                         'errors' => $this->capturedErrors,
                         'context' => $this->clientContext,
-                    ], request());
+                    ];
+
+                    $report = $recorder->store($payload, request());
+
+                    if (is_platform('mobile')) {
+                        $relay->relay($payload);
+                    }
 
                     $this->dispatch('js-error-report-submitted', reportId: $report->id);
                     $this->resetCapturedData();

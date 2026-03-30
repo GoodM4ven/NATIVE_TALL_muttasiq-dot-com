@@ -138,6 +138,13 @@ trait HasControlPanelSettingsTab
                                 Text::make((string) ($quranDefinitions[Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ALWAYS_ON_COPY]['help'] ?? ''))->size(TextSize::ExtraSmall),
                             ]),
 
+                        Components\Checkbox::make(Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION)
+                            ->default((bool) ($quranDefinitions[Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION]['default'] ?? true))
+                            ->label($quranDefinitions[Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION]['label'])
+                            ->belowContent([
+                                Text::make((string) ($quranDefinitions[Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION]['help'] ?? ''))->size(TextSize::ExtraSmall),
+                            ]),
+
                         FusedGroup::make([
                             Components\Radio::make(Setting::QURAN_WIRD_FREQUENCY_MODE)
                                 ->default((int) ($quranDefinitions[Setting::QURAN_WIRD_FREQUENCY_MODE]['default'] ?? Setting::QURAN_WIRD_FREQUENCY_MONTHLY))

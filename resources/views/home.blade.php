@@ -9,8 +9,13 @@
             lock: null,
             isControlPanelOpen: false,
             isAthkarManagerOpen: false,
+            isNativeRuntime: @js(is_platform('native')),
             activeView: $persist('main-menu').as('app-active-view'),
             actionStatePulseToken: 0,
+            quranBootstrap: {
+                isPreparing: false,
+                errorMessage: null,
+            },
             viewTree: {
                 'main-menu': {
                     children: {
@@ -67,6 +72,45 @@
             },
             init() {
                 this.applyViewState('main-menu', { persist: false });
+            },
+            openQuranEntry() {
+                if (!this.isNativeRuntime) {
+                    this.$viewNav('quran-app-gate');
+                    return;
+                }
+        
+                if (this.quranBootstrap.isPreparing) {
+                    return;
+                }
+        
+                window.dispatchEvent(new CustomEvent('quran-bootstrap-request', {
+                    detail: {
+                        openGateOnSuccess: true,
+                    },
+                }));
+            },
+            handleQuranBootstrapStarted() {
+                this.quranBootstrap.isPreparing = true;
+                this.quranBootstrap.errorMessage = null;
+            },
+            handleQuranBootstrapFinished(detail = {}) {
+                this.quranBootstrap.isPreparing = false;
+                this.quranBootstrap.errorMessage = null;
+        
+                if (detail?.openGateOnSuccess === false) {
+                    return;
+                }
+        
+                this.$viewNav('quran-app-gate');
+            },
+            handleQuranBootstrapFailed(detail = {}) {
+                this.quranBootstrap.isPreparing = false;
+                this.quranBootstrap.errorMessage =
+                    String(detail?.message ?? @js(arabic_text('تعذر تجهيز بيانات القرآن الآن. حاول مرة أخرى بعد قليل.')));
+            },
+            dismissQuranBootstrapState() {
+                this.quranBootstrap.isPreparing = false;
+                this.quranBootstrap.errorMessage = null;
             },
             runHashAction(callback) {
                 if (window.__hashActionBypassLock) {
@@ -167,6 +211,9 @@
         }"
         x-on:switch-view.window="applyViewState($event.detail?.to)"
         x-on:athkar-action-state-pulse.window="pulseActionState($event.detail ?? {})"
+        x-on:quran-bootstrap-started.window="handleQuranBootstrapStarted()"
+        x-on:quran-bootstrap-finished.window="handleQuranBootstrapFinished($event.detail ?? {})"
+        x-on:quran-bootstrap-failed.window="handleQuranBootstrapFailed($event.detail ?? {})"
     >
         <x-buttons-stack
             x-bind:data-respecting-stack="$store.bp.current === 'base'"
@@ -199,6 +246,62 @@
             />
             <x-partials.quran-app.index />
         </main>
+
+        <div
+            class="z-60 fixed inset-0 grid place-items-center px-5"
+            x-cloak
+            x-show="quranBootstrap.isPreparing || quranBootstrap.errorMessage"
+            x-transition.opacity
+        >
+            <div
+                class="absolute inset-0 bg-slate-950/35 backdrop-blur-[2px]"
+                x-on:click="if (!quranBootstrap.isPreparing) { dismissQuranBootstrapState() }"
+            ></div>
+
+            <section
+                class="border-primary-300/35 bg-white/92 shadow-slate-950/18 dark:bg-slate-950/88 relative w-[min(92vw,24rem)] rounded-[1.8rem] border px-6 py-5 text-center shadow-2xl"
+            >
+                <template x-if="quranBootstrap.isPreparing">
+                    <div class="space-y-4">
+                        <div
+                            class="border-3 border-primary-200 border-t-primary-600 mx-auto h-10 w-10 animate-spin rounded-full">
+                        </div>
+                        <h2 class="text-primary-950 dark:text-primary-50 text-base font-semibold">
+                            {{ arabic_text('جار تجهيز بيانات القرآن') }}</h2>
+                        <p class="text-primary-900/78 dark:text-primary-100/82 text-sm leading-7">
+                            {{ arabic_text('يتم الآن تجهيز جداول المصحف وبياناته لأول مرة على هذا الجهاز...') }}
+                        </p>
+                    </div>
+                </template>
+
+                <template x-if="!quranBootstrap.isPreparing && quranBootstrap.errorMessage">
+                    <div class="space-y-4">
+                        <h2 class="text-danger-700 dark:text-danger-300 text-base font-semibold">
+                            {{ arabic_text('تعذر تجهيز بيانات القرآن') }}</h2>
+                        <p
+                            class="text-sm leading-7 text-slate-700 dark:text-slate-200"
+                            x-text="quranBootstrap.errorMessage"
+                        ></p>
+                        <div class="flex items-center justify-center gap-3">
+                            <button
+                                class="bg-primary-600 hover:bg-primary-700 rounded-xl px-4 py-2 text-sm font-semibold text-white transition"
+                                type="button"
+                                x-on:click="dismissQuranBootstrapState(); openQuranEntry();"
+                            >
+                                {{ arabic_text('إعادة المحاولة') }}
+                            </button>
+                            <button
+                                class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                                type="button"
+                                x-on:click="dismissQuranBootstrapState()"
+                            >
+                                {{ arabic_text('إغلاق') }}
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </section>
+        </div>
 
         <x-partials.copyright-and-version />
 

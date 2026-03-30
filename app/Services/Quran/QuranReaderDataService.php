@@ -26,12 +26,8 @@ class QuranReaderDataService
     private const DISPLAYED_PAGE_CACHE_PREFIX = 'quran-reader-display-page-v1';
 
     /**
-     * @var array<int, int>
+     * @phpstan-impure
      */
-    private const TARGETED_SURAH_HEADER_CARRYOVER_NUMBERS = [
-        4, 10, 22, 23, 24, 26, 27, 32, 33, 37, 38, 45, 47, 53, 60, 64, 65, 80,
-    ];
-
     public function isReady(): bool
     {
         return (bool) Cache::memo()->remember(self::READY_CACHE_KEY, now()->addMinutes(5), static function (): bool {
@@ -44,6 +40,13 @@ class QuranReaderDataService
         });
     }
 
+    /**
+     * @var array<int, int>
+     */
+    private const TARGETED_SURAH_HEADER_CARRYOVER_NUMBERS = [
+        4, 10, 22, 23, 24, 26, 27, 32, 33, 37, 38, 45, 47, 53, 60, 64, 65, 80,
+    ];
+
     public function maxPage(): int
     {
         return (int) Cache::memo()->remember(self::MAX_PAGE_CACHE_KEY, now()->addMinutes(30), function (): int {
@@ -53,6 +56,14 @@ class QuranReaderDataService
 
             return (int) DB::table('quran_mushaf_lines')->max('page_number');
         });
+    }
+
+    public function forgetReadinessCaches(): void
+    {
+        Cache::forget(self::READY_CACHE_KEY);
+        Cache::forget(self::MAX_PAGE_CACHE_KEY);
+        Cache::memo()->forget(self::READY_CACHE_KEY);
+        Cache::memo()->forget(self::MAX_PAGE_CACHE_KEY);
     }
 
     /**

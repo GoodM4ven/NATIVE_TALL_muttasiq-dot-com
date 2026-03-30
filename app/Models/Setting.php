@@ -39,6 +39,8 @@ class Setting extends Model
 
     public const DOES_QURAN_APPEND_SURAH_AFFIX_ALWAYS_ON_COPY = 'does_quran_append_surah_affix_always_on_copy';
 
+    public const DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION = 'does_quran_use_volume_buttons_navigation';
+
     public const QURAN_WIRD_FREQUENCY_MODE = 'quran_wird_frequency_mode';
 
     public const QURAN_WIRD_KHATMAT_TARGET = 'quran_wird_khatmat_target';
@@ -164,9 +166,16 @@ class Setting extends Model
                 'group' => self::GROUP_QURAN,
                 'type' => 'boolean',
             ],
+            self::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION => [
+                'default' => true,
+                'label' => '5. استخدام أزرار رفع وخفض الصوت للتنقل بين صفحات قارئ القرآن في التطبيق الأصلي.',
+                'help' => 'زر رفع الصوت يعود للصفحة السابقة، وزر خفض الصوت ينتقل للصفحة التالية. يعمل هذا حاليًا داخل التطبيق الأصلي فقط.',
+                'group' => self::GROUP_QURAN,
+                'type' => 'boolean',
+            ],
             self::QURAN_WIRD_FREQUENCY_MODE => [
                 'default' => self::QURAN_WIRD_FREQUENCY_MONTHLY,
-                'label' => '5. وتيرة الوِرد: ختمات موزعة على الشهر أو هدف يومي مباشر.',
+                'label' => '6. وتيرة الوِرد: ختمات موزعة على الشهر أو هدف يومي مباشر.',
                 'help' => 'شهري: يوزَّع الهدف على أيام الشهر الحالي. يومي: يُحتسب عدد الختمات كاملًا لكل يوم.',
                 'group' => self::GROUP_QURAN,
                 'type' => 'integer',
@@ -175,7 +184,7 @@ class Setting extends Model
             ],
             self::QURAN_WIRD_KHATMAT_TARGET => [
                 'default' => 1,
-                'label' => '6. عدد الختمات المستهدفة للوِرد.',
+                'label' => '7. عدد الختمات المستهدفة للوِرد.',
                 'help' => 'في الوضع اليومي: الحد الأقصى 4 ختمات/يوم. في الوضع الشهري: الحد الأقصى 20 ختمة.',
                 'group' => self::GROUP_QURAN,
                 'type' => 'integer',

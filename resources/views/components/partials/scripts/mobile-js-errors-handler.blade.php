@@ -154,10 +154,6 @@
         };
 
         const shouldIgnoreEntry = (entry) => {
-            if (isMobileRuntime) {
-                return false;
-            }
-
             const sameOriginSource = isSameOriginSource(entry.source);
             const hasAppOwnedStack = isLikelyAppOwnedStack(entry.stack);
             const hasAppSignal = sameOriginSource || hasAppOwnedStack;

@@ -25,6 +25,7 @@ const controlPanelSettingKeys = Object.freeze({
     preserveHarakatOnCopy: 'does_quran_preserve_harakat_on_copy',
     appendSurahAffixOnMultiCopy: 'does_quran_append_surah_affix_on_multi_copy',
     appendSurahAffixAlwaysOnCopy: 'does_quran_append_surah_affix_always_on_copy',
+    useVolumeButtonsNavigation: 'does_quran_use_volume_buttons_navigation',
     useWesternNumerals: 'does_use_western_numerals',
     wirdFrequencyMode: 'quran_wird_frequency_mode',
     wirdKhatmatTarget: 'quran_wird_khatmat_target',
@@ -673,6 +674,7 @@ document.addEventListener('alpine:init', () => {
         doesPreserveHarakatOnCopy: true,
         doesAppendSurahAffixOnMultiCopy: true,
         doesAppendSurahAffixAlwaysOnCopy: false,
+        doesUseVolumeButtonsNavigation: true,
         doesUseWesternNumerals: true,
         wirdFrequencyMode: wirdFrequencyModeMonthly,
         wirdKhatmatTarget: 1,
@@ -795,6 +797,7 @@ document.addEventListener('alpine:init', () => {
         _onWindowTouchMove: null,
         _onWindowTouchEnd: null,
         _onWindowTouchCancel: null,
+        _onWindowNativeVolumeButton: null,
         _surahTriggerTimer: null,
         _surahTriggerCleanupTimer: null,
         _pendingNavigationRequest: null,
@@ -833,6 +836,7 @@ document.addEventListener('alpine:init', () => {
         _bookmarksRowsAutoAnimateStop: null,
         _searchModalCloseDebounceTimer: null,
         _searchModalOpenInFlight: null,
+        _quranPreparationInFlight: null,
         _surahDirectoryAutoFocusToken: 0,
         _surahDirectoryAutoFocusTimer: null,
         _surahDirectoryAutoFocusRaf: null,
@@ -1015,8 +1019,18 @@ document.addEventListener('alpine:init', () => {
                 }
             };
             window.addEventListener('keydown', this._onWindowKeydown, true);
+            this._onWindowNativeVolumeButton = (event) => {
+                void this.handleNativeVolumeButton(event?.detail?.direction ?? null, event);
+            };
+            window.addEventListener(
+                'quran-native-volume-button',
+                this._onWindowNativeVolumeButton,
+                true,
+            );
 
             if (!(readerPanel instanceof Element)) {
+                this.syncNativeVolumeNavigation();
+
                 return;
             }
 
@@ -1119,6 +1133,7 @@ document.addEventListener('alpine:init', () => {
                 passive: true,
                 capture: true,
             });
+            this.syncNativeVolumeNavigation();
         },
 
         unregisterNativeInputListeners() {
@@ -1185,6 +1200,15 @@ document.addEventListener('alpine:init', () => {
                 window.removeEventListener('touchcancel', this._onWindowTouchCancel, true);
             }
 
+            if (this._onWindowNativeVolumeButton) {
+                window.removeEventListener(
+                    'quran-native-volume-button',
+                    this._onWindowNativeVolumeButton,
+                    true,
+                );
+                this._onWindowNativeVolumeButton = null;
+            }
+
             this._onPanelPointerDown = null;
             this._onPanelPointerMove = null;
             this._onPanelPointerUp = null;
@@ -1199,6 +1223,161 @@ document.addEventListener('alpine:init', () => {
             this._onWindowTouchMove = null;
             this._onWindowTouchEnd = null;
             this._onWindowTouchCancel = null;
+            this.setAndroidVolumeNavigationEnabled(false);
+        },
+
+        isReaderPanelVisible() {
+            const readerPanel = this.$refs?.readerPanel;
+
+            return readerPanel instanceof Element && readerPanel.offsetParent !== null;
+        },
+
+        canUseNativeVolumeButtonNavigation() {
+            return (
+                this.nativeRuntime &&
+                this.ready &&
+                this.doesUseVolumeButtonsNavigation &&
+                this.isReaderPanelVisible()
+            );
+        },
+
+        syncNativeVolumeNavigation() {
+            this.$nextTick(() => {
+                this.setAndroidVolumeNavigationEnabled(this.canUseNativeVolumeButtonNavigation());
+            });
+        },
+
+        setAndroidVolumeNavigationEnabled(enabled) {
+            if (!this.nativeRuntime || !window.AndroidBridge) {
+                return;
+            }
+
+            const normalizedEnabled = Boolean(enabled);
+
+            if (typeof window.AndroidBridge.setQuranVolumeNavigationEnabled === 'function') {
+                window.AndroidBridge.setQuranVolumeNavigationEnabled(normalizedEnabled);
+            }
+        },
+
+        async handleNativeVolumeButton(direction, event = null) {
+            if (!this.canUseNativeVolumeButtonNavigation()) {
+                return;
+            }
+
+            const normalizedDirection = String(direction ?? '')
+                .trim()
+                .toLowerCase();
+
+            if (normalizedDirection === 'next') {
+                await this.goNextFromChevron('hardware-volume');
+
+                return;
+            }
+
+            if (normalizedDirection === 'previous' || normalizedDirection === 'prev') {
+                await this.goPreviousFromChevron('hardware-volume');
+            }
+        },
+
+        async clearDeferredPreparationCaches() {
+            this._pagePayloadByPage.clear();
+            this._searchIndexPromise = null;
+            this._searchRequestSerial += 1;
+
+            if (typeof window !== 'undefined' && typeof window.caches !== 'undefined') {
+                await Promise.allSettled([
+                    window.caches.delete(this.cacheNames.pages),
+                    window.caches.delete(this.cacheNames.search),
+                ]);
+            }
+        },
+
+        async prepareQuranFromMainMenu(detail = {}) {
+            const openGateOnSuccess = detail?.openGateOnSuccess !== false;
+
+            if (!this.nativeRuntime || this.ready) {
+                window.dispatchEvent(
+                    new CustomEvent('quran-bootstrap-finished', {
+                        detail: {
+                            openGateOnSuccess,
+                        },
+                    }),
+                );
+
+                return;
+            }
+
+            if (this._quranPreparationInFlight) {
+                await this._quranPreparationInFlight;
+
+                return;
+            }
+
+            window.dispatchEvent(
+                new CustomEvent('quran-bootstrap-started', {
+                    detail: {
+                        openGateOnSuccess,
+                    },
+                }),
+            );
+
+            this._quranPreparationInFlight = (async () => {
+                try {
+                    let result = null;
+
+                    if (this.$wire && typeof this.$wire.call === 'function') {
+                        result = await this.$wire.call('prepareQuranData');
+                    } else if (this.$wire && typeof this.$wire.prepareQuranData === 'function') {
+                        result = await this.$wire.prepareQuranData();
+                    } else {
+                        throw new Error('Unable to prepare Quran data from this reader instance.');
+                    }
+
+                    if (!result?.ready || !result?.payload) {
+                        throw new Error(
+                            result?.message ??
+                                'Quran data is still not ready after the preparation step.',
+                        );
+                    }
+
+                    await this.clearDeferredPreparationCaches();
+                    this.initialPayload = normalizePayload(result.payload);
+                    this.applyPayload(result.payload, {
+                        setPageNumber: true,
+                        persistPageNumber: true,
+                    });
+                    this.refreshSurahTriggerCaption(false);
+                    this.syncSearchActiveSurahNumber();
+                    this.$nextTick(() => {
+                        this.registerNativeInputListeners();
+                        this.initializeLayoutObservers();
+                        this.queueSupportLockTargetsUiSync();
+                        this.syncNativeVolumeNavigation();
+                    });
+
+                    window.dispatchEvent(
+                        new CustomEvent('quran-bootstrap-finished', {
+                            detail: {
+                                openGateOnSuccess,
+                            },
+                        }),
+                    );
+                } catch (error) {
+                    window.dispatchEvent(
+                        new CustomEvent('quran-bootstrap-failed', {
+                            detail: {
+                                message:
+                                    String(error?.message ?? '').trim() ||
+                                    'تعذر تجهيز بيانات القرآن الآن. حاول مرة أخرى بعد قليل.',
+                            },
+                        }),
+                    );
+                } finally {
+                    this._quranPreparationInFlight = null;
+                }
+            })();
+
+            await this._quranPreparationInFlight;
         },
 
         destroy() {
@@ -8086,6 +8265,10 @@ document.addEventListener('alpine:init', () => {
                 input,
                 controlPanelSettingKeys.appendSurahAffixAlwaysOnCopy,
             );
+            const hasUseVolumeButtonsNavigation = Object.prototype.hasOwnProperty.call(
+                input,
+                controlPanelSettingKeys.useVolumeButtonsNavigation,
+            );
             const hasUseWesternNumerals = Object.prototype.hasOwnProperty.call(
                 input,
                 controlPanelSettingKeys.useWesternNumerals,
@@ -8117,6 +8300,10 @@ document.addEventListener('alpine:init', () => {
             const defaultAppendSurahAffixAlwaysOnCopy = this.normalizeBooleanFlag(
                 this.initialSettings?.appendSurahAffixAlwaysOnCopy,
                 false,
+            );
+            const defaultUseVolumeButtonsNavigation = this.normalizeBooleanFlag(
+                this.initialSettings?.useVolumeButtonsNavigation,
+                true,
             );
             const defaultUseWesternNumerals = this.normalizeBooleanFlag(
                 this.initialSettings?.useWesternNumerals,
@@ -8173,6 +8360,12 @@ document.addEventListener('alpine:init', () => {
                     : defaultAppendSurahAffixAlwaysOnCopy,
                 false,
             );
+            this.doesUseVolumeButtonsNavigation = this.normalizeBooleanFlag(
+                hasUseVolumeButtonsNavigation
+                    ? input[controlPanelSettingKeys.useVolumeButtonsNavigation]
+                    : defaultUseVolumeButtonsNavigation,
+                true,
+            );
             this.doesUseWesternNumerals = this.normalizeBooleanFlag(
                 hasUseWesternNumerals
                     ? input[controlPanelSettingKeys.useWesternNumerals]
@@ -8212,6 +8405,7 @@ document.addEventListener('alpine:init', () => {
 
             this.$nextTick(() => {
                 this.syncSupportLockTargetsUi();
+                this.syncNativeVolumeNavigation();
             });
         },
 

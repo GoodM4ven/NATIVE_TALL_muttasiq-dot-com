@@ -32,7 +32,7 @@
             :iconName="'entypo.book'"
             :iconClasses="'scale-[1.05]'"
             :caption="arabic_text('الكتاب')"
-            :onClickCallback="'() => ($viewNav(`quran-app-gate`))'"
+            :onClickCallback="'() => openQuranEntry()'"
         />
         <x-main-menu.item
             :iconName="'vaadin.search'"

@@ -6,6 +6,46 @@ it('keeps native packaging defaults compatible with bundled web assets and nativ
     expect(config('nativephp.cleanup_exclude_files'))
         ->not->toContain('build');
 
+    expect(config('nativephp.runtime'))->toMatchArray([
+        'mode' => 'persistent',
+        'reset_instances' => true,
+        'gc_between_dispatches' => false,
+    ]);
+
+    expect(config('nativephp.server'))->toMatchArray([
+        'http_port' => 3000,
+        'ws_port' => 8081,
+        'service_name' => 'NativePHP Server',
+        'service_type' => '_http._tcp',
+        'public_path' => 'public',
+        'build_path' => 'storage/app/native-build',
+        'open_browser' => true,
+    ]);
+
+    expect(config('nativephp.server.watch_paths'))->toBe([
+        'app',
+        'resources',
+        'routes',
+        'public/build',
+    ]);
+
+    expect(config('nativephp.server.watch_extensions'))->toBe([
+        'php',
+        'blade.php',
+        'js',
+        'css',
+        'ts',
+        'vue',
+        'json',
+    ]);
+
+    expect(config('nativephp.android'))->toMatchArray([
+        'compile_sdk' => 36,
+        'min_sdk' => 33,
+        'target_sdk' => 36,
+        'status_bar_style' => 'auto',
+    ]);
+
     $previousNativeRunning = getenv('NATIVEPHP_RUNNING');
     $previousDbConnection = getenv('DB_CONNECTION');
 
