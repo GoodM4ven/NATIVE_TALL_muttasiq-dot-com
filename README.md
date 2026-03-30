@@ -167,7 +167,7 @@ https://muttasiq.com
 [![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/goodm4ven/NATIVE_TALL_muttasiq-dot-com/pest.yml?branch=main&label=tests&style=for-the-badge&color=forestgreen)](https://github.com/goodm4ven/NATIVE_TALL_muttasiq-dot-com/actions?query=workflow%3Apest+branch%3Amain)
 [![Coverage Status](https://img.shields.io/codecov/c/github/goodm4ven/NATIVE_TALL_muttasiq-dot-com/main?style=for-the-badge&color=purple)](https://codecov.io/gh/goodm4ven/NATIVE_TALL_muttasiq-dot-com)
 
-**The web app** is built using one of the most standard and well-documented web technology stacks, known as the [TALL stack](https://tallstack.dev). Get a grip over the general concepts in the docs as soon as possible - after considering the tip below:
+**The web app** is built using one of the most standard and well-documented web technology stacks, known as the TALL stack (TailwindCSS, AlpineJS, Livewire and Laravel). Get a grip over the general concepts in the docs as soon as possible - after considering the tip below:
 - [https://tailwindcss.com/docs](https://tailwindcss.com/docs)
 - [https://alpinejs.dev/docs](https://alpinejs.dev/docs)
 - [https://livewire.laravel.com/docs](https://livewire.laravel.com/docs)
@@ -296,11 +296,9 @@ Copyright (C) 2026 Muttasiq Contributors.
 - [ChatGPT](https://chatgpt.com) and [Codex CLI](https://developers.openai.com/codex/cli/)
 - [Anthropic Claude](https://code.claude.com/)
 - [Laravel](https://laravel.com) entire ecosystem
-- [TALL-Stack](https://tallstack.dev)
 - [FilamentPHP](https://filamentphp.com)
 - [NativePHP](https://nativephp.com)
-- [Bifrost](bifrost.nativephp.com)
-- [VSCodium](https://vscodium.com) (the project was removed and then recovered, file by file, using tons of versions for each file from **the no-telemetry cache**)
+- [VSCodium](https://vscodium.com) (the project was accidentally deleted during development, and then got recovered, file by file, using tons of versions for each file, from **the no-telemetry cache** of this awesome piece of software)
 
 
 </div>

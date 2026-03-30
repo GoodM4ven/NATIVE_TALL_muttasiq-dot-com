@@ -125,7 +125,8 @@ it('uses local athkar payload and runtime-specific shell/layout classes without 
     $shellClasses = copyrightVersionShellClasses($response->getContent());
 
     expect($shellClasses)
-        ->toContain('bottom-3')
+        ->toContain('bottom-4')
+        ->not->toContain('bottom-3')
         ->not->toContain('bottom-7');
 
     Http::assertNothingSent();

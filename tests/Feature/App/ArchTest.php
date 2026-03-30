@@ -3,15 +3,15 @@
 declare(strict_types=1);
 
 arch('it will not use debugging functions')
-    ->expect([
+    ->expect('App')
+    ->not->toUse([
         'dd',
         'dump',
         'var_dump',
         'echo',
         // 'Illuminate\Support\Facades\Log',
         // 'logger',
-    ])
-    ->each->not->toBeUsed();
+    ]);
 
 arch('it uses strict typing everywhere')
     ->expect('App')
