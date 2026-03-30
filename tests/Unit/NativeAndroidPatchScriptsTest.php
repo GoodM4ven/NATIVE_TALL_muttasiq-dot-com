@@ -103,6 +103,7 @@ test('native patches plugin supports ios content view patching', function () {
     $androidCommandPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/ApplyAndroidPatchesCommand.php';
     $iosCommandPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/ApplyIosPatchesCommand.php';
     $iosTraitPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/Concerns/PatchesIosContentView.php';
+    $iosNativePhpAppTraitPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/Concerns/PatchesIosNativePhpApp.php';
     $androidPhpWebViewTraitPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/Concerns/PatchesAndroidPhpWebViewClient.php';
     $helpersTraitPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/Concerns/InteractsWithPatchFiles.php';
 
@@ -110,6 +111,7 @@ test('native patches plugin supports ios content view patching', function () {
     expect(file_exists($androidCommandPath))->toBeTrue();
     expect(file_exists($iosCommandPath))->toBeTrue();
     expect(file_exists($iosTraitPath))->toBeTrue();
+    expect(file_exists($iosNativePhpAppTraitPath))->toBeTrue();
     expect(file_exists($androidPhpWebViewTraitPath))->toBeTrue();
     expect(file_exists($helpersTraitPath))->toBeTrue();
 
@@ -117,6 +119,7 @@ test('native patches plugin supports ios content view patching', function () {
     $androidContents = file_get_contents($androidCommandPath);
     $iosContents = file_get_contents($iosCommandPath);
     $iosTraitContents = file_get_contents($iosTraitPath);
+    $iosNativePhpAppTraitContents = file_get_contents($iosNativePhpAppTraitPath);
     $androidPhpWebViewTraitContents = file_get_contents($androidPhpWebViewTraitPath);
     $helpersTraitContents = file_get_contents($helpersTraitPath);
 
@@ -127,12 +130,16 @@ test('native patches plugin supports ios content view patching', function () {
     expect($androidContents)->toContain('use PatchesAndroidWebViewManager;');
     expect($androidContents)->toContain('use PatchesAndroidLaravelEnvironment;');
     expect($iosContents)->toContain('use PatchesIosContentView;');
+    expect($iosContents)->toContain('use PatchesIosNativePhpApp;');
     expect($androidPhpWebViewTraitContents)->toContain('resolveBundledQpcFontFile');
     expect($androidPhpWebViewTraitContents)->toContain('Binary asset missing from filesystem; refusing PHP fallback');
     expect($iosTraitContents)->toContain('verifyIosSystemUi');
     expect($iosTraitContents)->toContain('patchIosBackHandler');
     expect($iosTraitContents)->toContain('NativePHPBackEdgeGesture');
     expect($iosTraitContents)->toContain('WKWebsiteDataStore.default()');
+    expect($iosNativePhpAppTraitContents)->toContain('setenv("DB_CONNECTION", "sqlite", 1)');
+    expect($iosNativePhpAppTraitContents)->toContain('artisan migrate START (classic mode)');
+    expect($iosNativePhpAppTraitContents)->toContain('artisan migrate START (persistent fallback)');
     expect($helpersTraitContents)->toContain('setSwiftFunctionBody');
     expect($helpersTraitContents)->toContain('locateSwiftFunction');
 });
