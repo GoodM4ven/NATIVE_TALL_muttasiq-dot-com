@@ -13,7 +13,7 @@ class PrepareQuranDataCommand extends Command
 {
     protected $signature = 'app:prepare-quran-data';
 
-    protected $description = 'Run the deferred Quran and Arabic data migrations for the native reader.';
+    protected $description = 'Run the deferred Quran reader data migrations for the native reader.';
 
     /**
      * Execute the console command.

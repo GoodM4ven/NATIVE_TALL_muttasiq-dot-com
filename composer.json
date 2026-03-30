@@ -180,5 +180,15 @@
     "minimum-stability": "stable",
     "prefer-stable": true,
     "repositories": {
+        "nativephp-muttasiq-patches": {
+            "type": "path",
+            "url": "/home/goodm4ven/Code/LaravelPackages/NATIVE_PLUGIN_muttasiq-patches",
+            "options": {
+                "symlink": true,
+                "versions": {
+                    "goodm4ven/nativephp-muttasiq-patches": "1.2.999999"
+                }
+            }
+        }
     }
 }

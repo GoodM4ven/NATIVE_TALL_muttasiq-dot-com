@@ -198,6 +198,7 @@ https://muttasiq.com
    - The process runs [PestPHP browser tests](https://pestphp.com/docs/browser-testing) in `--compact` mode only (not `--parallel`) due to current bugs in the [Playwright](https://playwright.dev) and PestPHP integration, including direct mobile emulation support—this **may make tests slower locally**, though they work reliably (this limitation does not apply to CI, I think, since it’s ephemeral).
 4. We have [`muttasiq-patches` NativePHP plugin](https://github.com/GoodM4ven/NATIVE_PLUGIN_muttasiq-patches) that overrides the original NativePHP engine a bit. Make sure you account for what it does in mind, where (the PR you're going to do there) its modifications **do not conflict with one another when patching the same file and correctly patch the files they're targetting from the NativePHP version specified in [`composer.json`](./composer.json)** over here.
     - Keep in mind that there is a Bash switching script for when you have the package locally and test its changes locally before the PR. [Check it out](./.scripts/composer-local-plugins-switch.sh).
+    - The native platform wrappers now rebuild a bundled Quran sqlite snapshot before install/run, and they refresh `nativephp/<platform>` automatically when the plugin patch sources or bundled snapshot inputs change.
 5. **Ensure that your PR can be modified by the maintainers please.**
 
 ### Setup

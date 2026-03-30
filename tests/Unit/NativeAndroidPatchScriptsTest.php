@@ -37,19 +37,24 @@ test('native patches hook command is registered with artisan', function () {
     $androidStatus = null;
     $iosOutput = [];
     $iosStatus = null;
+    $snapshotOutput = [];
+    $snapshotStatus = null;
 
     exec('php artisan nativephp:muttasiq:patches --help', $dispatcherOutput, $dispatcherStatus);
     exec('php artisan nativephp:muttasiq:patches-android --help', $androidOutput, $androidStatus);
     exec('php artisan nativephp:muttasiq:patches-ios --help', $iosOutput, $iosStatus);
+    exec('php artisan app:build-native-quran-database --help', $snapshotOutput, $snapshotStatus);
 
     expect($providersContents)->toContain('use Goodm4ven\\NativePatches\\NativePatchesServiceProvider;');
     expect($providersContents)->toContain('NativePatchesServiceProvider::class');
     expect($dispatcherStatus)->toBe(0);
     expect($androidStatus)->toBe(0);
     expect($iosStatus)->toBe(0);
+    expect($snapshotStatus)->toBe(0);
     expect(implode("\n", $dispatcherOutput))->toContain('nativephp:muttasiq:patches');
     expect(implode("\n", $androidOutput))->toContain('nativephp:muttasiq:patches-android');
     expect(implode("\n", $iosOutput))->toContain('nativephp:muttasiq:patches-ios');
+    expect(implode("\n", $snapshotOutput))->toContain('app:build-native-quran-database');
 });
 
 test('native run script relies on plugin patches', function () {
@@ -142,11 +147,16 @@ test('native patches plugin supports ios content view patching', function () {
     expect($iosContents)->toContain('use PatchesIosNativePhpApp;');
     expect($iosContents)->toContain('use PatchesIosAppUpdateManager;');
     expect($androidPhpWebViewTraitContents)->toContain('resolveBundledQpcFontFile');
+    expect($androidPhpWebViewTraitContents)->toContain('resolveBundledQuranRouteAsset');
     expect($androidPhpWebViewTraitContents)->toContain('Binary asset missing from filesystem; refusing PHP fallback');
+    expect($androidPhpWebViewTraitContents)->toContain('quran-surah-header-font');
+    expect($androidPhpWebViewTraitContents)->toContain('quran-basmallah-font/quran-common-ligature');
     expect($androidPhpWebViewTraitContents)->not()->toContain('getLaravelPublicPath');
     expect($androidMainActivityTraitContents)->toContain('setQuranVolumeNavigationEnabled');
     expect($androidMainActivityTraitContents)->toContain('dispatchQuranVolumeButton');
     expect($androidLaravelEnvironmentTraitContents)->toContain('app:native-bootstrap --no-interaction');
+    expect($androidLaravelEnvironmentTraitContents)->toContain('database/native-quran-reader.sqlite');
+    expect($androidLaravelEnvironmentTraitContents)->toContain('copyTo(dbFile, overwrite = true)');
     expect($iosTraitContents)->toContain('verifyIosSystemUi');
     expect($iosTraitContents)->toContain('patchIosBackHandler');
     expect($iosTraitContents)->toContain('NativePHPBackEdgeGesture');
@@ -228,13 +238,17 @@ test('android log script writes into storage logs', function () {
     expect($script)->toContain('output_file="${output_dir}/native-log-android.txt"');
 });
 
-test('native install scripts keep ICU enabled for filament-compatible mobile builds', function () {
+test('native install scripts respect nativephp ICU configuration for mobile builds', function () {
     $root = dirname(__DIR__, 2);
     $nativephpJson = file_get_contents($root.'/nativephp.json');
     $sharedPrepareScript = file_get_contents($root.'/.scripts/native/mobile/support/prepare-platform.sh');
     $iosPrepareScript = file_get_contents($root.'/.scripts/native/mobile/ios/support/prepare.sh');
 
-    expect($nativephpJson)->toContain('"icu": true');
+    expect($nativephpJson)->toContain('"icu":');
+    expect($sharedPrepareScript)->toContain('php artisan app:build-native-quran-database --no-interaction');
+    expect($sharedPrepareScript)->toContain('vendor/goodm4ven/nativephp-muttasiq-patches/src');
+    expect($sharedPrepareScript)->toContain('database/native-quran-reader.sqlite');
+    expect($sharedPrepareScript)->toContain('nativephp directory missing');
     expect($sharedPrepareScript)->toContain('native_read_icu_preference');
     expect($sharedPrepareScript)->toContain('install_args+=(--with-icu)');
     expect($sharedPrepareScript)->toContain('ICU-enabled PHP binaries are required by nativephp.json');

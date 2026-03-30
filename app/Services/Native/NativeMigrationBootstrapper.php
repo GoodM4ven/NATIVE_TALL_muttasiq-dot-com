@@ -13,10 +13,16 @@ class NativeMigrationBootstrapper
     /**
      * @var list<string>
      */
-    private const DEFERRED_QURAN_MIGRATIONS = [
+    private const DEFERRED_QURAN_READER_MIGRATIONS = [
         '2026_03_20_180143_create_common_arabic_texts_table.php',
         '2026_03_20_180144_create_arabic_stop_words_table.php',
         '2026_03_20_180145_create_quran_index_tables.php',
+    ];
+
+    /**
+     * @var list<string>
+     */
+    private const DEFERRED_QURAN_EXPLANATION_MIGRATIONS = [
         '2026_03_20_180146_create_quran_explanations_tables.php',
     ];
 
@@ -30,29 +36,25 @@ class NativeMigrationBootstrapper
         'quran-reader-surah-directory-v2',
     ];
 
-    public function runBootstrapMigrations(): int
+    public function runBootstrapMigrations(?string $database = null): int
     {
         return $this->runWithoutDeferredQuranMigrations(
-            fn (): int => Artisan::call('migrate', [
-                '--force' => true,
-                '--no-interaction' => true,
-            ]),
+            fn (): int => Artisan::call('migrate', $this->migrationCommandArguments($database)),
         );
     }
 
-    public function runDeferredQuranMigrations(): int
+    public function runDeferredQuranMigrations(?string $database = null): int
     {
-        $bootstrapStatus = $this->runBootstrapMigrations();
+        $bootstrapStatus = $this->runBootstrapMigrations($database);
 
         if ($bootstrapStatus !== 0) {
             return $bootstrapStatus;
         }
 
         $status = Artisan::call('migrate', [
-            '--path' => $this->deferredQuranMigrationPaths(),
+            ...$this->migrationCommandArguments($database),
+            '--path' => $this->readerPreparationMigrationPaths(),
             '--realpath' => true,
-            '--force' => true,
-            '--no-interaction' => true,
         ]);
 
         $this->flushQuranReaderCaches();
@@ -67,7 +69,21 @@ class NativeMigrationBootstrapper
     {
         return array_map(
             static fn (string $migration): string => database_path('migrations/'.$migration),
-            self::DEFERRED_QURAN_MIGRATIONS,
+            [
+                ...self::DEFERRED_QURAN_READER_MIGRATIONS,
+                ...self::DEFERRED_QURAN_EXPLANATION_MIGRATIONS,
+            ],
+        );
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function readerPreparationMigrationPaths(): array
+    {
+        return array_map(
+            static fn (string $migration): string => database_path('migrations/'.$migration),
+            self::DEFERRED_QURAN_READER_MIGRATIONS,
         );
     }
 
@@ -92,5 +108,22 @@ class NativeMigrationBootstrapper
             Migrator::withoutMigrations([]);
             $this->flushQuranReaderCaches();
         }
+    }
+
+    /**
+     * @return array<string, string|true>
+     */
+    private function migrationCommandArguments(?string $database = null): array
+    {
+        $arguments = [
+            '--force' => true,
+            '--no-interaction' => true,
+        ];
+
+        if ($database !== null && $database !== '') {
+            $arguments['--database'] = $database;
+        }
+
+        return $arguments;
     }
 }
