@@ -1,13 +1,38 @@
+@assets
+    <style>
+        .quran-app-reader-stage {
+            transform-origin: 50% 86%;
+            will-change: transform, opacity;
+        }
+
+        [data-quran-app-shell].quran-app-shell--reader-entering .quran-app-reader-stage {
+            animation: quran-reader-stage-enter 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        @keyframes quran-reader-stage-enter {
+            from {
+                opacity: 0;
+                transform: translate3d(0, 1.4rem, 0) scale(1.09);
+            }
+
+            to {
+                opacity: 1;
+                transform: translate3d(0, 0, 0) scale(1);
+            }
+        }
+    </style>
+@endassets
+
 <div
-    class="absolute inset-0 z-10 grid place-items-center px-4 py-5 sm:px-6 sm:py-8"
+    class="quran-app-reader-stage absolute inset-0 z-10 grid place-items-center px-4 py-5 sm:px-6 sm:py-8"
     x-cloak
     x-show="views['quran-app-tilawa'].isOpen || views['quran-app-hifth'].isOpen || views['quran-app-tadabbur'].isOpen"
-    x-transition:enter="transition-all ease-out duration-750 delay-400"
-    x-transition:enter-start="opacity-0! translate-y-5 blur-[2px]"
-    x-transition:enter-end="opacity-100 translate-y-0 blur-0"
-    x-transition:leave="transition-all ease-in duration-350!"
-    x-transition:leave-start="opacity-100 translate-y-0 blur-0"
-    x-transition:leave-end="opacity-0! blur-[2px]"
+    x-transition:enter="transition-[opacity,transform] ease-out duration-220"
+    x-transition:enter-start="opacity-0! translate-y-4 scale-[1.03]"
+    x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+    x-transition:leave="transition-[opacity,transform] ease-in duration-160!"
+    x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+    x-transition:leave-end="opacity-0! translate-y-1 scale-[0.995]"
 >
     <div class="relative grid h-full w-full place-items-center">
         <livewire:quran-app.reader />

@@ -15,6 +15,9 @@
             -webkit-user-drag: none;
             -webkit-touch-callout: none;
             touch-action: none;
+            transform-origin:
+                var(--quran-gate-launch-origin-x, var(--gate-cx)) var(--quran-gate-launch-origin-y, var(--gate-cy));
+            will-change: transform, opacity;
         }
 
         .quran-app-gate-caption {
@@ -53,6 +56,10 @@
             background: transparent;
             cursor: pointer;
             z-index: 15;
+            transition:
+                opacity 180ms ease,
+                transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+            will-change: transform, opacity;
         }
 
         .quran-app-sector.is-locked {
@@ -447,6 +454,23 @@
             opacity: 0.84;
         }
 
+        [data-quran-app-shell].quran-app-shell--reader-launching .quran-app-gate-shell {
+            animation: quran-gate-reader-launch 320ms cubic-bezier(0.18, 0.92, 0.28, 1) both;
+        }
+
+        [data-quran-app-shell].quran-app-shell--reader-launching .quran-app-sector:not(.is-launch-target) {
+            opacity: 0.44;
+        }
+
+        [data-quran-app-shell].quran-app-shell--reader-launching .quran-app-sector.is-launch-target {
+            transform: scale(1.05);
+        }
+
+        [data-quran-app-shell].quran-app-shell--reader-launching .quran-app-sector.is-launch-target img.quran-app-sector__image-img {
+            transform: scale(1.16);
+            filter: blur(0.6px) brightness(0.98) saturate(1.08);
+        }
+
         @keyframes quran-app-gate-spin {
             from {
                 transform: rotate(0deg);
@@ -464,6 +488,18 @@
 
             to {
                 opacity: 1;
+            }
+        }
+
+        @keyframes quran-gate-reader-launch {
+            from {
+                opacity: 1;
+                transform: translate3d(0, 0, 0) scale(1);
+            }
+
+            to {
+                opacity: 0.08;
+                transform: translate3d(0, 0, 0) scale(1.24);
             }
         }
 
@@ -641,12 +677,12 @@
     ])
     x-cloak
     x-show="views['quran-app-gate'].isOpen"
-    x-transition:enter="transition-all ease-out duration-750 delay-300"
-    x-transition:enter-start="opacity-0! blur-[2px]"
-    x-transition:enter-end="opacity-100 blur-0"
-    x-transition:leave="transition-all ease-in duration-350!"
-    x-transition:leave-start="opacity-100 blur-0"
-    x-transition:leave-end="opacity-0! blur-[2px]"
+    x-transition:enter="transition-[opacity,transform] ease-out duration-380"
+    x-transition:enter-start="opacity-0! scale-[0.985]"
+    x-transition:enter-end="opacity-100 scale-100"
+    x-transition:leave="transition-[opacity] ease-in duration-180!"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0!"
 >
     <section
         class="quran-app-gate-shell relative h-full w-full"
@@ -672,11 +708,12 @@
             x-bind:class="{
                 'is-active': isModeActive('tilawa'),
                 'is-muted': currentMode() && !isModeActive('tilawa'),
-                'is-locked': isModeLocked('tilawa')
+                'is-locked': isModeLocked('tilawa'),
+                'is-launch-target': isLaunchTransitioning && launchMode === 'tilawa'
             }"
             x-on:focus="pinMode('tilawa')"
             x-on:blur="unpinMode('tilawa')"
-            x-on:click="openMode('tilawa')"
+            x-on:click="openMode('tilawa', $event)"
         >
             <span class="quran-app-sector__media quran-app-sector__media--tilawa quran-app-sector__media--morning">
                 <x-goodmaven::blurred-image
@@ -720,11 +757,12 @@
             x-bind:class="{
                 'is-active': isModeActive('tadabbur'),
                 'is-muted': currentMode() && !isModeActive('tadabbur'),
-                'is-locked': isModeLocked('tadabbur')
+                'is-locked': isModeLocked('tadabbur'),
+                'is-launch-target': isLaunchTransitioning && launchMode === 'tadabbur'
             }"
             x-on:focus="pinMode('tadabbur')"
             x-on:blur="unpinMode('tadabbur')"
-            x-on:click="openMode('tadabbur')"
+            x-on:click="openMode('tadabbur', $event)"
         >
             <span class="quran-app-sector__media quran-app-sector__media--tadabbur quran-app-sector__media--morning">
                 <x-goodmaven::blurred-image
@@ -775,11 +813,12 @@
             x-bind:class="{
                 'is-active': isModeActive('hifth'),
                 'is-muted': currentMode() && !isModeActive('hifth'),
-                'is-locked': isModeLocked('hifth')
+                'is-locked': isModeLocked('hifth'),
+                'is-launch-target': isLaunchTransitioning && launchMode === 'hifth'
             }"
             x-on:focus="pinMode('hifth')"
             x-on:blur="unpinMode('hifth')"
-            x-on:click="openMode('hifth')"
+            x-on:click="openMode('hifth', $event)"
         >
             <span class="quran-app-sector__media quran-app-sector__media--hifth quran-app-sector__media--morning">
                 <x-goodmaven::blurred-image

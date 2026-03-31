@@ -1,4 +1,12 @@
 document.addEventListener('alpine:init', () => {
+    const launchNavigateDelayMs = 120;
+    const launchCleanupDelayMs = 720;
+    const defaultLaunchOrigins = Object.freeze({
+        tilawa: { x: 50, y: 31 },
+        hifth: { x: 74, y: 73 },
+        tadabbur: { x: 26, y: 73 },
+    });
+
     window.Alpine.data('quranAppGate', () => ({
         modeAvailability: Object.freeze({
             tilawa: true,
@@ -17,10 +25,116 @@ document.addEventListener('alpine:init', () => {
         isTouchPointerActive: false,
         orbitAnimationFrameId: null,
         orbitLastFrameAt: 0,
+        isLaunchTransitioning: false,
+        launchMode: null,
+        launchNavigateTimeoutId: null,
+        launchCleanupTimeoutId: null,
+        _onSwitchView: null,
         init() {
+            this._onSwitchView = (event) => {
+                const nextView = String(event?.detail?.to ?? '');
+
+                if (
+                    nextView === 'quran-app-gate' ||
+                    nextView === 'main-menu' ||
+                    nextView.startsWith('athkar-app-')
+                ) {
+                    this.clearLaunchTransitionState();
+                }
+            };
+            window.addEventListener('switch-view', this._onSwitchView);
+
             this.$nextTick(() => {
                 this.positionPuckAtDefault();
             });
+        },
+        destroy() {
+            this.clearLaunchTransitionState();
+
+            if (typeof window !== 'undefined' && this._onSwitchView) {
+                window.removeEventListener('switch-view', this._onSwitchView);
+                this._onSwitchView = null;
+            }
+        },
+        isFastUiMode() {
+            return window.__APP_BROWSER_TEST_FAST_UI === true;
+        },
+        quranShellElement() {
+            return this.$root?.closest?.('[data-quran-app-shell]') ?? null;
+        },
+        clearLaunchTransitionTimers() {
+            if (this.launchNavigateTimeoutId !== null) {
+                clearTimeout(this.launchNavigateTimeoutId);
+                this.launchNavigateTimeoutId = null;
+            }
+
+            if (this.launchCleanupTimeoutId !== null) {
+                clearTimeout(this.launchCleanupTimeoutId);
+                this.launchCleanupTimeoutId = null;
+            }
+        },
+        resolveLaunchOrigin(mode, event = null) {
+            const shellElement = this.quranShellElement();
+            const fallbackOrigin = defaultLaunchOrigins[mode] ?? defaultLaunchOrigins.tilawa;
+
+            if (!shellElement) {
+                return fallbackOrigin;
+            }
+
+            const shellRect = shellElement.getBoundingClientRect();
+            const pointerX = Number(event?.clientX ?? NaN);
+            const pointerY = Number(event?.clientY ?? NaN);
+            const hasValidPointer =
+                Number.isFinite(pointerX) &&
+                Number.isFinite(pointerY) &&
+                pointerX >= shellRect.left &&
+                pointerX <= shellRect.right &&
+                pointerY >= shellRect.top &&
+                pointerY <= shellRect.bottom;
+
+            if (!hasValidPointer || shellRect.width <= 0 || shellRect.height <= 0) {
+                return fallbackOrigin;
+            }
+
+            return {
+                x: ((pointerX - shellRect.left) / shellRect.width) * 100,
+                y: ((pointerY - shellRect.top) / shellRect.height) * 100,
+            };
+        },
+        applyLaunchTransitionState(mode, event = null) {
+            const shellElement = this.quranShellElement();
+
+            if (!shellElement) {
+                return false;
+            }
+
+            const origin = this.resolveLaunchOrigin(mode, event);
+            shellElement.style.setProperty('--quran-gate-launch-origin-x', `${origin.x}%`);
+            shellElement.style.setProperty('--quran-gate-launch-origin-y', `${origin.y}%`);
+            shellElement.setAttribute('data-quran-launch-mode', mode);
+            shellElement.classList.remove('quran-app-shell--reader-launching');
+            shellElement.classList.remove('quran-app-shell--reader-entering');
+            void shellElement.offsetWidth;
+            shellElement.classList.add('quran-app-shell--reader-launching');
+
+            return true;
+        },
+        clearLaunchTransitionState() {
+            this.clearLaunchTransitionTimers();
+            this.isLaunchTransitioning = false;
+            this.launchMode = null;
+
+            const shellElement = this.quranShellElement();
+
+            if (!shellElement) {
+                return;
+            }
+
+            shellElement.classList.remove('quran-app-shell--reader-launching');
+            shellElement.classList.remove('quran-app-shell--reader-entering');
+            shellElement.removeAttribute('data-quran-launch-mode');
+            shellElement.style.removeProperty('--quran-gate-launch-origin-x');
+            shellElement.style.removeProperty('--quran-gate-launch-origin-y');
         },
         hasTouchInput() {
             return Boolean(this.$store?.bp?.hasTouch);
@@ -363,8 +477,12 @@ document.addEventListener('alpine:init', () => {
 
             this.setOrbitAngle((projectedAngle * 180) / Math.PI + 90);
         },
-        openMode(mode) {
+        openMode(mode, event = null) {
             if (!this.isModeAvailable(mode)) {
+                return;
+            }
+
+            if (this.isLaunchTransitioning) {
                 return;
             }
 
@@ -375,7 +493,32 @@ document.addEventListener('alpine:init', () => {
             };
             const targetView = modeViewMap[mode] ?? 'quran-app-gate';
 
-            this.$viewNav(targetView);
+            if (this.isFastUiMode()) {
+                this.$viewNav(targetView);
+                return;
+            }
+
+            this.isLaunchTransitioning = true;
+            this.launchMode = mode;
+            const didApplyLaunchState = this.applyLaunchTransitionState(mode, event);
+
+            this.launchNavigateTimeoutId = window.setTimeout(
+                () => {
+                    this.launchNavigateTimeoutId = null;
+                    this.$viewNav(targetView);
+
+                    const shellElement = this.quranShellElement();
+
+                    if (shellElement) {
+                        shellElement.classList.add('quran-app-shell--reader-entering');
+                    }
+                },
+                didApplyLaunchState ? launchNavigateDelayMs : 0,
+            );
+
+            this.launchCleanupTimeoutId = window.setTimeout(() => {
+                this.clearLaunchTransitionState();
+            }, launchCleanupDelayMs);
         },
     }));
 });

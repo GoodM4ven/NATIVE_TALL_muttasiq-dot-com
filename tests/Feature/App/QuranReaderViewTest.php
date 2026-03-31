@@ -82,6 +82,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($colorfulBackgroundSource)->toContain('quran-bg-tadabbur-layer');
 
     expect($quranIndexSource)->not->toBeFalse()
+        ->and($quranIndexSource)->toContain('data-quran-app-shell')
         ->and($quranIndexSource)->toContain('<x-partials.quran-app.gate />')
         ->and($quranIndexSource)->toContain('<x-partials.quran-app.reader />');
 
@@ -102,9 +103,9 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranGateSource)->toContain('quran-app-gate-orbit')
         ->and($quranGateSource)->toContain('x-on:pointermove="handlePointerMove($event)"')
         ->and($quranGateSource)->toContain('x-on:touchmove.prevent="handleTouchMove($event)"')
-        ->and($quranGateSource)->toContain('x-on:click="openMode(\'tilawa\')"')
-        ->and($quranGateSource)->toContain('x-on:click="openMode(\'hifth\')"')
-        ->and($quranGateSource)->toContain('x-on:click="openMode(\'tadabbur\')"')
+        ->and($quranGateSource)->toContain('x-on:click="openMode(\'tilawa\', $event)"')
+        ->and($quranGateSource)->toContain('x-on:click="openMode(\'hifth\', $event)"')
+        ->and($quranGateSource)->toContain('x-on:click="openMode(\'tadabbur\', $event)"')
         ->and($quranGateSource)->not->toContain('M0 0 L50 53')
         ->and($quranGateSource)->not->toContain('M100 0 L50 53')
         ->and($quranGateSource)->not->toContain('quran-app-gate-needle');
