@@ -13,6 +13,7 @@ document.addEventListener('alpine:init', () => {
         orbitRenderAngleDeg: 0,
         orbitTargetAngleDeg: 0,
         touchPointerId: null,
+        activeTouchIdentifier: null,
         isTouchPointerActive: false,
         orbitAnimationFrameId: null,
         orbitLastFrameAt: 0,
@@ -20,6 +21,9 @@ document.addEventListener('alpine:init', () => {
             this.$nextTick(() => {
                 this.positionPuckAtDefault();
             });
+        },
+        hasTouchInput() {
+            return Boolean(this.$store?.bp?.hasTouch);
         },
         normalizeAngle(angle) {
             const fullTurn = Math.PI * 2;
@@ -70,6 +74,37 @@ document.addEventListener('alpine:init', () => {
         currentMode() {
             return this.pinnedMode ?? this.projectedMode;
         },
+        resolveModeFromOrbitAngleDeg(orbitAngleDeg) {
+            const shellElement = this.$refs?.shell;
+            const anchorCircle = this.$refs?.anchorCircle;
+
+            if (!shellElement || !anchorCircle) {
+                return 'tilawa';
+            }
+
+            const shellRect = shellElement.getBoundingClientRect();
+            const anchorRect = anchorCircle.getBoundingClientRect();
+
+            if (!shellRect.width || !shellRect.height || !anchorRect.width || !anchorRect.height) {
+                return 'tilawa';
+            }
+
+            const anchorCenterX = anchorRect.left + anchorRect.width / 2;
+            const anchorCenterY = anchorRect.top + anchorRect.height / 2;
+            const projectedAngle = ((orbitAngleDeg - 90) * Math.PI) / 180;
+
+            return (
+                this.resolveModeFromAngle(
+                    projectedAngle,
+                    anchorCenterX,
+                    anchorCenterY,
+                    shellRect,
+                ) ?? 'tilawa'
+            );
+        },
+        syncProjectedModeWithOrbitAngle(orbitAngleDeg = this.orbitRenderAngleDeg) {
+            this.projectedMode = this.resolveModeFromOrbitAngleDeg(orbitAngleDeg);
+        },
         setOrbitAngle(targetAngleDeg) {
             if (!Number.isFinite(targetAngleDeg)) {
                 return;
@@ -104,10 +139,12 @@ document.addEventListener('alpine:init', () => {
 
             this.orbitRenderAngleDeg += delta * easingFactor;
             this.orbitAngleDeg = this.orbitRenderAngleDeg;
+            this.syncProjectedModeWithOrbitAngle(this.orbitRenderAngleDeg);
 
             if (Math.abs(delta) <= 0.08) {
                 this.orbitRenderAngleDeg = this.orbitTargetAngleDeg;
                 this.orbitAngleDeg = this.orbitTargetAngleDeg;
+                this.syncProjectedModeWithOrbitAngle(this.orbitRenderAngleDeg);
                 this.orbitAnimationFrameId = null;
                 this.orbitLastFrameAt = 0;
 
@@ -145,13 +182,16 @@ document.addEventListener('alpine:init', () => {
         },
         handlePointerLeave() {
             this.isPointerInside = false;
-            this.projectedMode = null;
 
             if (!this.isModePinned) {
                 this.positionPuckAtDefault();
             }
         },
         handlePointerDown(event) {
+            if (event.pointerType === 'touch' && this.hasTouchInput()) {
+                return;
+            }
+
             if (event.pointerType !== 'touch') {
                 return;
             }
@@ -159,9 +199,26 @@ document.addEventListener('alpine:init', () => {
             this.touchPointerId = event.pointerId;
             this.isTouchPointerActive = true;
             this.isPointerInside = true;
+
+            if (event.cancelable) {
+                event.preventDefault();
+            }
+
+            if (this.$refs?.shell?.setPointerCapture) {
+                try {
+                    this.$refs.shell.setPointerCapture(event.pointerId);
+                } catch {
+                    // No-op: pointer capture can fail if pointer is no longer active.
+                }
+            }
+
             this.handlePointerMove(event);
         },
         handlePointerUp(event) {
+            if (event.pointerType === 'touch' && this.hasTouchInput()) {
+                return;
+            }
+
             if (event.pointerType !== 'touch') {
                 return;
             }
@@ -173,7 +230,14 @@ document.addEventListener('alpine:init', () => {
             this.touchPointerId = null;
             this.isTouchPointerActive = false;
             this.isPointerInside = false;
-            this.projectedMode = null;
+
+            if (this.$refs?.shell?.releasePointerCapture) {
+                try {
+                    this.$refs.shell.releasePointerCapture(event.pointerId);
+                } catch {
+                    // No-op: pointer capture can already be released.
+                }
+            }
 
             if (!this.isModePinned) {
                 this.positionPuckAtDefault();
@@ -182,7 +246,80 @@ document.addEventListener('alpine:init', () => {
         positionPuckAtDefault() {
             this.setOrbitAngle(0);
         },
+        resolveActiveTouch(touchList) {
+            if (!touchList?.length) {
+                return null;
+            }
+
+            if (this.activeTouchIdentifier === null) {
+                return touchList[0];
+            }
+
+            for (const touch of touchList) {
+                if (touch.identifier === this.activeTouchIdentifier) {
+                    return touch;
+                }
+            }
+
+            return null;
+        },
+        handleTouchStart(event) {
+            if (!this.hasTouchInput()) {
+                return;
+            }
+
+            const touch =
+                this.resolveActiveTouch(event.changedTouches) ??
+                this.resolveActiveTouch(event.touches);
+
+            if (!touch) {
+                return;
+            }
+
+            this.activeTouchIdentifier = touch.identifier;
+            this.isTouchPointerActive = true;
+            this.isPointerInside = true;
+            this.updateOrbitFromClientPoint(touch.clientX, touch.clientY);
+        },
+        handleTouchMove(event) {
+            if (!this.hasTouchInput() || !this.isTouchPointerActive) {
+                return;
+            }
+
+            const touch =
+                this.resolveActiveTouch(event.touches) ??
+                this.resolveActiveTouch(event.changedTouches);
+
+            if (!touch) {
+                return;
+            }
+
+            this.updateOrbitFromClientPoint(touch.clientX, touch.clientY);
+        },
+        handleTouchEnd(event) {
+            if (!this.hasTouchInput()) {
+                return;
+            }
+
+            const touch = this.resolveActiveTouch(event.changedTouches);
+
+            if (!touch && this.isTouchPointerActive) {
+                return;
+            }
+
+            this.activeTouchIdentifier = null;
+            this.isTouchPointerActive = false;
+            this.isPointerInside = false;
+
+            if (!this.isModePinned) {
+                this.positionPuckAtDefault();
+            }
+        },
         handlePointerMove(event) {
+            if (event.pointerType === 'touch' && this.hasTouchInput()) {
+                return;
+            }
+
             if (
                 event.pointerType === 'touch' &&
                 (!this.isTouchPointerActive ||
@@ -191,6 +328,9 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            this.updateOrbitFromClientPoint(event.clientX, event.clientY);
+        },
+        updateOrbitFromClientPoint(clientX, clientY) {
             const shellElement = this.$refs?.shell;
             const anchorCircle = this.$refs?.anchorCircle;
 
@@ -205,14 +345,12 @@ document.addEventListener('alpine:init', () => {
             const anchorCenterX = anchorRect.left + anchorRect.width / 2;
             const anchorCenterY = anchorRect.top + anchorRect.height / 2;
             const radius = anchorRect.width / 2;
-            const deltaX = event.clientX - anchorCenterX;
-            const deltaY = event.clientY - anchorCenterY;
+            const deltaX = clientX - anchorCenterX;
+            const deltaY = clientY - anchorCenterY;
             const distance = Math.hypot(deltaX, deltaY);
 
             if (distance <= 0.001) {
                 this.positionPuckAtDefault();
-                this.projectedMode = 'tilawa';
-
                 return;
             }
 
@@ -224,12 +362,6 @@ document.addEventListener('alpine:init', () => {
             );
 
             this.setOrbitAngle((projectedAngle * 180) / Math.PI + 90);
-            this.projectedMode = this.resolveModeFromAngle(
-                projectedAngle,
-                anchorCenterX,
-                anchorCenterY,
-                shellRect,
-            );
         },
         openMode(mode) {
             if (!this.isModeAvailable(mode)) {

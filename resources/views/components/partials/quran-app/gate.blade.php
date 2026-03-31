@@ -14,6 +14,7 @@
             user-select: none;
             -webkit-user-drag: none;
             -webkit-touch-callout: none;
+            touch-action: none;
         }
 
         .quran-app-gate-caption {
@@ -156,6 +157,10 @@
         }
 
         .quran-app-sector.is-muted img.quran-app-sector__image-img {
+            filter: blur(1.2px) brightness(0.68) saturate(0.9);
+        }
+
+        .dark .quran-app-sector.is-muted img.quran-app-sector__image-img {
             filter: blur(1.55px) brightness(0.56) saturate(0.82);
         }
 
@@ -537,6 +542,10 @@
             }
 
             .quran-app-sector.is-muted img.quran-app-sector__image-img {
+                filter: blur(0.86px) brightness(0.74) saturate(0.9);
+            }
+
+            .dark .quran-app-sector.is-muted img.quran-app-sector__image-img {
                 filter: blur(1.2px) brightness(0.62) saturate(0.82);
             }
 
@@ -648,7 +657,11 @@
         x-on:pointercancel="handlePointerUp($event)"
         x-on:pointerenter="handlePointerEnter()"
         x-on:pointerleave="handlePointerLeave()"
-        x-on:pointermove.passive="handlePointerMove($event)"
+        x-on:pointermove="handlePointerMove($event)"
+        x-on:touchstart.prevent="handleTouchStart($event)"
+        x-on:touchmove.prevent="handleTouchMove($event)"
+        x-on:touchend="handleTouchEnd($event)"
+        x-on:touchcancel="handleTouchEnd($event)"
     >
         <p class="quran-app-gate-caption">{{ arabic_text('اختر نمط القراءة الذي يناسب مقصدك') }}</p>
 
@@ -661,8 +674,6 @@
                 'is-muted': currentMode() && !isModeActive('tilawa'),
                 'is-locked': isModeLocked('tilawa')
             }"
-            x-on:mouseenter="pinMode('tilawa')"
-            x-on:mouseleave="unpinMode('tilawa')"
             x-on:focus="pinMode('tilawa')"
             x-on:blur="unpinMode('tilawa')"
             x-on:click="openMode('tilawa')"
@@ -711,8 +722,6 @@
                 'is-muted': currentMode() && !isModeActive('tadabbur'),
                 'is-locked': isModeLocked('tadabbur')
             }"
-            x-on:mouseenter="pinMode('tadabbur')"
-            x-on:mouseleave="unpinMode('tadabbur')"
             x-on:focus="pinMode('tadabbur')"
             x-on:blur="unpinMode('tadabbur')"
             x-on:click="openMode('tadabbur')"
@@ -768,8 +777,6 @@
                 'is-muted': currentMode() && !isModeActive('hifth'),
                 'is-locked': isModeLocked('hifth')
             }"
-            x-on:mouseenter="pinMode('hifth')"
-            x-on:mouseleave="unpinMode('hifth')"
             x-on:focus="pinMode('hifth')"
             x-on:blur="unpinMode('hifth')"
             x-on:click="openMode('hifth')"
