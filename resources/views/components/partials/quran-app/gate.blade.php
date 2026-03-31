@@ -458,17 +458,34 @@
             animation: quran-gate-reader-launch 320ms cubic-bezier(0.18, 0.92, 0.28, 1) both;
         }
 
+        [data-quran-app-shell].quran-app-shell--gate-returning .quran-app-gate-shell {
+            animation: quran-gate-reader-return 340ms cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
         [data-quran-app-shell].quran-app-shell--reader-launching .quran-app-sector:not(.is-launch-target) {
             opacity: 0.44;
+        }
+
+        [data-quran-app-shell].quran-app-shell--gate-returning .quran-app-sector:not(.is-launch-target) {
+            opacity: 0.64;
         }
 
         [data-quran-app-shell].quran-app-shell--reader-launching .quran-app-sector.is-launch-target {
             transform: scale(1.05);
         }
 
+        [data-quran-app-shell].quran-app-shell--gate-returning .quran-app-sector.is-launch-target {
+            transform: scale(1.02);
+        }
+
         [data-quran-app-shell].quran-app-shell--reader-launching .quran-app-sector.is-launch-target img.quran-app-sector__image-img {
             transform: scale(1.16);
             filter: blur(0.6px) brightness(0.98) saturate(1.08);
+        }
+
+        [data-quran-app-shell].quran-app-shell--gate-returning .quran-app-sector.is-launch-target img.quran-app-sector__image-img {
+            transform: scale(1.08);
+            filter: blur(0.25px) brightness(0.94) saturate(1.04);
         }
 
         @keyframes quran-app-gate-spin {
@@ -500,6 +517,18 @@
             to {
                 opacity: 0.08;
                 transform: translate3d(0, 0, 0) scale(1.24);
+            }
+        }
+
+        @keyframes quran-gate-reader-return {
+            from {
+                opacity: 0.06;
+                transform: translate3d(0, 0, 0) scale(1.24);
+            }
+
+            to {
+                opacity: 1;
+                transform: translate3d(0, 0, 0) scale(1);
             }
         }
 

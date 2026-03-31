@@ -9,6 +9,10 @@
             animation: quran-reader-stage-enter 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
         }
 
+        [data-quran-app-shell].quran-app-shell--reader-leaving .quran-app-reader-stage {
+            animation: quran-reader-stage-leave 220ms cubic-bezier(0.4, 0, 1, 1) both;
+        }
+
         @keyframes quran-reader-stage-enter {
             from {
                 opacity: 0;
@@ -18,6 +22,18 @@
             to {
                 opacity: 1;
                 transform: translate3d(0, 0, 0) scale(1);
+            }
+        }
+
+        @keyframes quran-reader-stage-leave {
+            from {
+                opacity: 1;
+                transform: translate3d(0, 0, 0) scale(1);
+            }
+
+            to {
+                opacity: 0;
+                transform: translate3d(0, 1.1rem, 0) scale(0.93);
             }
         }
     </style>

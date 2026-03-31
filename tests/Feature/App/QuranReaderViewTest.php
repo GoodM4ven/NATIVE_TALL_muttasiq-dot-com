@@ -58,7 +58,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($homeSource)->toContain('views[`quran-app-tilawa`].isOpen')
         ->and($homeSource)->toContain('views[`quran-app-hifth`].isOpen')
         ->and($homeSource)->toContain('views[`quran-app-tadabbur`].isOpen')
-        ->and($homeSource)->toContain('$viewNav(`quran-app-gate`)')
+        ->and($homeSource)->toContain('quran-reader-go-gate')
         ->and($homeSource)->toContain('<x-partials.quran-app.index />');
 
     expect($buttonsStackSource)->not->toBeFalse()

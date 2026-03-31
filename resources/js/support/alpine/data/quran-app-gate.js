@@ -1,6 +1,8 @@
 document.addEventListener('alpine:init', () => {
     const launchNavigateDelayMs = 120;
     const launchCleanupDelayMs = 720;
+    const returnNavigateDelayMs = 110;
+    const returnCleanupDelayMs = 700;
     const defaultLaunchOrigins = Object.freeze({
         tilawa: { x: 50, y: 31 },
         hifth: { x: 74, y: 73 },
@@ -29,10 +31,19 @@ document.addEventListener('alpine:init', () => {
         launchMode: null,
         launchNavigateTimeoutId: null,
         launchCleanupTimeoutId: null,
+        activeTransitionDirection: null,
         _onSwitchView: null,
+        _onReaderGoGate: null,
         init() {
             this._onSwitchView = (event) => {
                 const nextView = String(event?.detail?.to ?? '');
+
+                if (
+                    nextView === 'quran-app-gate' &&
+                    this.activeTransitionDirection === 'backward'
+                ) {
+                    return;
+                }
 
                 if (
                     nextView === 'quran-app-gate' ||
@@ -42,7 +53,11 @@ document.addEventListener('alpine:init', () => {
                     this.clearLaunchTransitionState();
                 }
             };
+            this._onReaderGoGate = () => {
+                this.returnToGate();
+            };
             window.addEventListener('switch-view', this._onSwitchView);
+            window.addEventListener('quran-reader-go-gate', this._onReaderGoGate);
 
             this.$nextTick(() => {
                 this.positionPuckAtDefault();
@@ -54,6 +69,11 @@ document.addEventListener('alpine:init', () => {
             if (typeof window !== 'undefined' && this._onSwitchView) {
                 window.removeEventListener('switch-view', this._onSwitchView);
                 this._onSwitchView = null;
+            }
+
+            if (typeof window !== 'undefined' && this._onReaderGoGate) {
+                window.removeEventListener('quran-reader-go-gate', this._onReaderGoGate);
+                this._onReaderGoGate = null;
             }
         },
         isFastUiMode() {
@@ -101,7 +121,7 @@ document.addEventListener('alpine:init', () => {
                 y: ((pointerY - shellRect.top) / shellRect.height) * 100,
             };
         },
-        applyLaunchTransitionState(mode, event = null) {
+        applyTransitionState(mode, event = null) {
             const shellElement = this.quranShellElement();
 
             if (!shellElement) {
@@ -114,15 +134,76 @@ document.addEventListener('alpine:init', () => {
             shellElement.setAttribute('data-quran-launch-mode', mode);
             shellElement.classList.remove('quran-app-shell--reader-launching');
             shellElement.classList.remove('quran-app-shell--reader-entering');
+            shellElement.classList.remove('quran-app-shell--reader-leaving');
+            shellElement.classList.remove('quran-app-shell--gate-returning');
             void shellElement.offsetWidth;
-            shellElement.classList.add('quran-app-shell--reader-launching');
 
             return true;
+        },
+        activeReaderMode() {
+            if (this.views?.['quran-app-tilawa']?.isOpen) {
+                return 'tilawa';
+            }
+
+            if (this.views?.['quran-app-hifth']?.isOpen) {
+                return 'hifth';
+            }
+
+            if (this.views?.['quran-app-tadabbur']?.isOpen) {
+                return 'tadabbur';
+            }
+
+            return this.launchMode ?? 'tilawa';
+        },
+        returnToGate(mode = null) {
+            if (this.activeTransitionDirection !== null) {
+                return;
+            }
+
+            if (this.isFastUiMode()) {
+                this.$viewNav('quran-app-gate');
+                return;
+            }
+
+            const resolvedMode =
+                typeof mode === 'string' && mode.length > 0 ? mode : this.activeReaderMode();
+            const didApplyTransitionState = this.applyTransitionState(resolvedMode);
+
+            this.isLaunchTransitioning = true;
+            this.launchMode = resolvedMode;
+            this.activeTransitionDirection = 'backward';
+
+            if (didApplyTransitionState) {
+                const shellElement = this.quranShellElement();
+
+                if (shellElement) {
+                    shellElement.classList.add('quran-app-shell--reader-leaving');
+                }
+            }
+
+            this.launchNavigateTimeoutId = window.setTimeout(
+                () => {
+                    this.launchNavigateTimeoutId = null;
+                    this.$viewNav('quran-app-gate');
+
+                    const shellElement = this.quranShellElement();
+
+                    if (shellElement) {
+                        shellElement.classList.add('quran-app-shell--gate-returning');
+                    }
+                },
+                didApplyTransitionState ? returnNavigateDelayMs : 0,
+            );
+
+            this.launchCleanupTimeoutId = window.setTimeout(() => {
+                this.clearLaunchTransitionState();
+            }, returnCleanupDelayMs);
         },
         clearLaunchTransitionState() {
             this.clearLaunchTransitionTimers();
             this.isLaunchTransitioning = false;
             this.launchMode = null;
+            this.activeTransitionDirection = null;
 
             const shellElement = this.quranShellElement();
 
@@ -132,6 +213,8 @@ document.addEventListener('alpine:init', () => {
 
             shellElement.classList.remove('quran-app-shell--reader-launching');
             shellElement.classList.remove('quran-app-shell--reader-entering');
+            shellElement.classList.remove('quran-app-shell--reader-leaving');
+            shellElement.classList.remove('quran-app-shell--gate-returning');
             shellElement.removeAttribute('data-quran-launch-mode');
             shellElement.style.removeProperty('--quran-gate-launch-origin-x');
             shellElement.style.removeProperty('--quran-gate-launch-origin-y');
@@ -482,7 +565,7 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            if (this.isLaunchTransitioning) {
+            if (this.activeTransitionDirection !== null) {
                 return;
             }
 
@@ -499,8 +582,17 @@ document.addEventListener('alpine:init', () => {
             }
 
             this.isLaunchTransitioning = true;
+            this.activeTransitionDirection = 'forward';
             this.launchMode = mode;
-            const didApplyLaunchState = this.applyLaunchTransitionState(mode, event);
+            const didApplyLaunchState = this.applyTransitionState(mode, event);
+
+            if (didApplyLaunchState) {
+                const shellElement = this.quranShellElement();
+
+                if (shellElement) {
+                    shellElement.classList.add('quran-app-shell--reader-launching');
+                }
+            }
 
             this.launchNavigateTimeoutId = window.setTimeout(
                 () => {
