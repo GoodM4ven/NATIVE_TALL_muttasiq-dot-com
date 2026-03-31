@@ -117,7 +117,7 @@
             background: linear-gradient(170deg,
                     color-mix(in srgb, var(--gray-950) 24%, transparent),
                     color-mix(in srgb, var(--gray-950) 70%, transparent));
-            opacity: 0.28;
+            opacity: 0.1;
             transition: opacity 260ms ease;
             pointer-events: none;
         }
@@ -165,7 +165,7 @@
         }
 
         .quran-app-sector.is-active .quran-app-sector__veil {
-            opacity: 0.08;
+            opacity: 0.04;
         }
 
         .quran-app-sector__chip {
@@ -524,12 +524,12 @@
             }
 
             .quran-app-sector__veil {
-                opacity: 0.34;
+                opacity: 0.2;
                 transition: opacity 200ms ease;
             }
 
             .quran-app-sector.is-active .quran-app-sector__veil {
-                opacity: 0.16;
+                opacity: 0.1;
             }
 
             img.quran-app-sector__image-img {
@@ -687,7 +687,7 @@
                     :isEagerLoaded="true"
                     :isDisplayEnforced="true"
                     :isObjectCentered="false"
-                    containerClasses="absolute inset-0 overflow-hidden bg-black/25"
+                    containerClasses="absolute inset-0 overflow-hidden bg-black/10 dark:bg-black/25"
                     imageClasses="quran-app-sector__image-img quran-app-sector__image-img--tilawa select-none"
                 />
             </span>
@@ -701,7 +701,7 @@
                     :isEagerLoaded="true"
                     :isDisplayEnforced="true"
                     :isObjectCentered="false"
-                    containerClasses="absolute inset-0 overflow-hidden bg-black/25"
+                    containerClasses="absolute inset-0 overflow-hidden bg-black/10 dark:bg-black/25"
                     imageClasses="quran-app-sector__image-img quran-app-sector__image-img--tilawa select-none"
                 />
             </span>
@@ -735,7 +735,7 @@
                     :isEagerLoaded="true"
                     :isDisplayEnforced="true"
                     :isObjectCentered="false"
-                    containerClasses="absolute inset-0 overflow-hidden bg-black/25"
+                    containerClasses="absolute inset-0 overflow-hidden bg-black/10 dark:bg-black/25"
                     imageClasses="quran-app-sector__image-img quran-app-sector__image-img--tadabbur select-none"
                 />
             </span>
@@ -749,7 +749,7 @@
                     :isEagerLoaded="true"
                     :isDisplayEnforced="true"
                     :isObjectCentered="false"
-                    containerClasses="absolute inset-0 overflow-hidden bg-black/25"
+                    containerClasses="absolute inset-0 overflow-hidden bg-black/10 dark:bg-black/25"
                     imageClasses="quran-app-sector__image-img quran-app-sector__image-img--tadabbur select-none"
                 />
             </span>
@@ -790,7 +790,7 @@
                     :isEagerLoaded="true"
                     :isDisplayEnforced="true"
                     :isObjectCentered="false"
-                    containerClasses="absolute inset-0 overflow-hidden bg-black/25"
+                    containerClasses="absolute inset-0 overflow-hidden bg-black/10 dark:bg-black/25"
                     imageClasses="quran-app-sector__image-img quran-app-sector__image-img--hifth select-none"
                 />
             </span>
@@ -804,7 +804,7 @@
                     :isEagerLoaded="true"
                     :isDisplayEnforced="true"
                     :isObjectCentered="false"
-                    containerClasses="absolute inset-0 overflow-hidden bg-black/25"
+                    containerClasses="absolute inset-0 overflow-hidden bg-black/10 dark:bg-black/25"
                     imageClasses="quran-app-sector__image-img quran-app-sector__image-img--hifth select-none"
                 />
             </span>
