@@ -1327,6 +1327,31 @@ document.addEventListener('alpine:init', () => {
             return await this.callQuranPreparationMethod('quranPreparationStatus');
         },
 
+        emitNativeQuranPreparationProgress(result = {}) {
+            const rawProgressPercent = Number(result?.progressPercent ?? NaN);
+            const progressPercent = Number.isFinite(rawProgressPercent)
+                ? Math.max(0, Math.min(100, Math.trunc(rawProgressPercent)))
+                : null;
+            const downloadedBytes = Number(result?.downloadedBytes ?? NaN);
+            const totalBytes = Number(result?.totalBytes ?? NaN);
+
+            window.dispatchEvent(
+                new CustomEvent('quran-bootstrap-progress', {
+                    detail: {
+                        state: String(result?.state ?? ''),
+                        message: String(result?.message ?? '').trim() || null,
+                        progressPercent,
+                        downloadedBytes: Number.isFinite(downloadedBytes)
+                            ? Math.max(0, Math.trunc(downloadedBytes))
+                            : null,
+                        totalBytes: Number.isFinite(totalBytes)
+                            ? Math.max(0, Math.trunc(totalBytes))
+                            : null,
+                    },
+                }),
+            );
+        },
+
         async syncPreparedQuranPayload(payload) {
             await this.clearDeferredPreparationCaches();
             this.initialPayload = normalizePayload(payload);
@@ -1363,6 +1388,8 @@ document.addEventListener('alpine:init', () => {
                 await wait(1500);
 
                 const result = await this.readNativeQuranPreparationStatus();
+
+                this.emitNativeQuranPreparationProgress(result);
 
                 if (result?.ready && result?.payload) {
                     return result;
@@ -1412,6 +1439,8 @@ document.addEventListener('alpine:init', () => {
                     let result = await this.requestNativeQuranPreparation();
 
                     if (!result?.ready || !result?.payload) {
+                        this.emitNativeQuranPreparationProgress(result);
+
                         if (String(result?.state ?? '') === 'failed') {
                             throw new Error(
                                 result?.message ??
@@ -1944,9 +1973,6 @@ document.addEventListener('alpine:init', () => {
             this.hydratePersistedFitCache();
             await this.ensureCurrentPageLoaded();
             await this.layoutPageGuaranteed({ revealDelayMs: 240 });
-            if (this.nativeRuntime && !this.ready) {
-                void this.queueNativeQuranPreparationInBackground();
-            }
             this.queueStartupPreload();
             this.scheduleIdleWarmup();
             this.warmSearchIndex();

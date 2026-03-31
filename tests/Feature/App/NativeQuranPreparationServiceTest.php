@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Jobs\PrepareNativeQuranData;
+use App\Jobs\DownloadNativeQuranSnapshot;
 use App\Livewire\QuranApp\Reader;
 use App\Services\Native\NativeQuranPreparationService;
 use App\Services\Quran\QuranReaderDataService;
@@ -92,7 +92,7 @@ it('queues native quran preparation when reader data is not ready', function () 
         'state' => 'queued',
     ]);
 
-    Queue::assertPushed(PrepareNativeQuranData::class);
+    Queue::assertPushed(DownloadNativeQuranSnapshot::class);
 });
 
 it('does not enqueue native quran preparation again while it is already running', function () {
@@ -134,6 +134,9 @@ it('reader returns queued native quran preparation status without blocking', fun
             'ready' => false,
             'state' => 'queued',
             'message' => 'queued',
+            'progressPercent' => 37,
+            'downloadedBytes' => 370,
+            'totalBytes' => 1000,
             'updatedAt' => now()->getTimestamp(),
         ]),
         fakeQuranReaderDataService(false),
@@ -145,6 +148,9 @@ it('reader returns queued native quran preparation status without blocking', fun
         'state' => 'queued',
         'payload' => null,
         'message' => 'queued',
+        'progressPercent' => 37,
+        'downloadedBytes' => 370,
+        'totalBytes' => 1000,
     ]);
 });
 
@@ -178,6 +184,9 @@ it('reader returns quran payload once native preparation status is ready', funct
                 'ready' => true,
                 'state' => 'ready',
                 'message' => null,
+                'progressPercent' => 100,
+                'downloadedBytes' => null,
+                'totalBytes' => null,
                 'updatedAt' => now()->getTimestamp(),
             ],
         ),
@@ -190,5 +199,21 @@ it('reader returns quran payload once native preparation status is ready', funct
         'state' => 'ready',
         'payload' => $payload,
         'message' => null,
+        'progressPercent' => 100,
+        'downloadedBytes' => null,
+        'totalBytes' => null,
     ]);
+});
+
+it('shows native quran bootstrap progress through home and reader events', function () {
+    $homeView = file_get_contents(resource_path('views/home.blade.php'));
+    $readerView = file_get_contents(resource_path('views/livewire/quran-app/reader.blade.php'));
+    $readerScript = file_get_contents(resource_path('js/support/alpine/data/quran-app-reader.js'));
+
+    expect($homeView)->toContain('quran-bootstrap-progress');
+    expect($homeView)->toContain('quranBootstrap.progressPercent');
+    expect($homeView)->toContain('quranBootstrap.statusMessage');
+    expect($readerView)->not()->toContain('quran-background-prepare-request');
+    expect($readerScript)->toContain('emitNativeQuranPreparationProgress');
+    expect($readerScript)->toContain('quran-bootstrap-progress');
 });

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Services\Native\NativeMigrationBootstrapper;
+use App\Services\Quran\QuranReaderDataService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -67,6 +68,48 @@ it('can prepare quran reader tables on a dedicated sqlite connection', function 
             ->and(DB::connection($connectionName)->table('quran_words')->count())->toBeGreaterThan(77000)
             ->and(DB::connection($connectionName)->table('quran_mushaf_lines')->count())->toBeGreaterThan(9000);
     } finally {
+        DB::purge($connectionName);
+        File::delete($databasePath);
+    }
+});
+
+it('does not treat placeholder quran tables as a ready reader dataset', function () {
+    $connectionName = 'native_quran_readiness_test';
+    $databasePath = storage_path('framework/testing/native-quran-readiness-test.sqlite');
+    $originalDefaultConnection = config('database.default');
+
+    File::ensureDirectoryExists(dirname($databasePath));
+    File::delete($databasePath);
+    File::put($databasePath, '');
+
+    config()->set('database.connections.'.$connectionName, [
+        ...config('database.connections.sqlite'),
+        'database' => $databasePath,
+        'foreign_key_constraints' => true,
+    ]);
+    config()->set('database.default', $connectionName);
+    DB::purge($connectionName);
+
+    try {
+        Schema::connection($connectionName)->create('quran_verses', function ($table): void {
+            $table->id();
+            $table->text('text_searchable_typed')->nullable();
+        });
+        Schema::connection($connectionName)->create('quran_words', function ($table): void {
+            $table->id();
+        });
+        Schema::connection($connectionName)->create('quran_mushaf_lines', function ($table): void {
+            $table->id();
+            $table->unsignedInteger('page_number')->default(1);
+        });
+
+        /** @var QuranReaderDataService $readerDataService */
+        $readerDataService = app(QuranReaderDataService::class);
+        $readerDataService->forgetReadinessCaches();
+
+        expect($readerDataService->isReady())->toBeFalse();
+    } finally {
+        config()->set('database.default', $originalDefaultConnection);
         DB::purge($connectionName);
         File::delete($databasePath);
     }

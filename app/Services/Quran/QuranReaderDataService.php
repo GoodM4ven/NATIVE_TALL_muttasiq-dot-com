@@ -36,7 +36,15 @@ class QuranReaderDataService
             $hasMushafLinesTable = Schema::hasTable('quran_mushaf_lines');
             $hasTypedSearchColumn = $hasVersesTable && Schema::hasColumn('quran_verses', 'text_searchable_typed');
 
-            return $hasVersesTable && $hasWordsTable && $hasMushafLinesTable && $hasTypedSearchColumn;
+            if (! $hasVersesTable || ! $hasWordsTable || ! $hasMushafLinesTable || ! $hasTypedSearchColumn) {
+                return false;
+            }
+
+            $verseCount = (int) DB::table('quran_verses')->count();
+            $wordCount = (int) DB::table('quran_words')->count();
+            $maxPage = (int) DB::table('quran_mushaf_lines')->max('page_number');
+
+            return $verseCount >= 6200 && $wordCount >= 77000 && $maxPage >= 604;
         });
     }
 

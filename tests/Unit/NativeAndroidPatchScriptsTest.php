@@ -103,6 +103,21 @@ test('native ios scripts rely on plugin patches', function () {
     expect($nativeShareContents)->toContain('.scripts/native/mobile/support/patches/jump-status-texts.sh');
 });
 
+test('native local quran runner uses temporary endpoint overrides without mutating env files', function () {
+    $root = dirname(__DIR__, 2);
+    $scriptPath = $root.'/.scripts/run-native-local-source-broadcast.sh';
+    $scriptContents = file_get_contents($scriptPath);
+
+    expect($scriptPath)->toBeFile();
+    expect($scriptContents)->toContain('NATIVE_QURAN_SNAPSHOT_META_ENDPOINT');
+    expect($scriptContents)->toContain('NATIVE_QURAN_SNAPSHOT_DOWNLOAD_ENDPOINT');
+    expect($scriptContents)->toContain('php artisan serve');
+    expect($scriptContents)->toContain('adb reverse');
+    expect($scriptContents)->toContain('/api/quran-snapshot/meta');
+    expect($scriptContents)->toContain('/api/quran-snapshot/download');
+    expect($scriptContents)->not()->toContain('.env');
+});
+
 test('native patches plugin supports ios content view patching', function () {
     $dispatcherPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/RunNativePatchesCommand.php';
     $androidCommandPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/ApplyAndroidPatchesCommand.php';
@@ -111,6 +126,7 @@ test('native patches plugin supports ios content view patching', function () {
     $iosNativePhpAppTraitPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/Concerns/PatchesIosNativePhpApp.php';
     $iosAppUpdateManagerTraitPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/Concerns/PatchesIosAppUpdateManager.php';
     $androidPhpWebViewTraitPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/Concerns/PatchesAndroidPhpWebViewClient.php';
+    $androidPhpBridgeTraitPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/Concerns/PatchesAndroidPhpBridge.php';
     $androidMainActivityTraitPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/Concerns/PatchesAndroidMainActivity.php';
     $androidLaravelEnvironmentTraitPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/Concerns/PatchesAndroidLaravelEnvironment.php';
     $helpersTraitPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/Concerns/InteractsWithPatchFiles.php';
@@ -122,6 +138,7 @@ test('native patches plugin supports ios content view patching', function () {
     expect(file_exists($iosNativePhpAppTraitPath))->toBeTrue();
     expect(file_exists($iosAppUpdateManagerTraitPath))->toBeTrue();
     expect(file_exists($androidPhpWebViewTraitPath))->toBeTrue();
+    expect(file_exists($androidPhpBridgeTraitPath))->toBeTrue();
     expect(file_exists($androidMainActivityTraitPath))->toBeTrue();
     expect(file_exists($androidLaravelEnvironmentTraitPath))->toBeTrue();
     expect(file_exists($helpersTraitPath))->toBeTrue();
@@ -133,6 +150,7 @@ test('native patches plugin supports ios content view patching', function () {
     $iosNativePhpAppTraitContents = file_get_contents($iosNativePhpAppTraitPath);
     $iosAppUpdateManagerTraitContents = file_get_contents($iosAppUpdateManagerTraitPath);
     $androidPhpWebViewTraitContents = file_get_contents($androidPhpWebViewTraitPath);
+    $androidPhpBridgeTraitContents = file_get_contents($androidPhpBridgeTraitPath);
     $androidMainActivityTraitContents = file_get_contents($androidMainActivityTraitPath);
     $androidLaravelEnvironmentTraitContents = file_get_contents($androidLaravelEnvironmentTraitPath);
     $helpersTraitContents = file_get_contents($helpersTraitPath);
@@ -141,14 +159,30 @@ test('native patches plugin supports ios content view patching', function () {
     expect($dispatcherContents)->toContain('nativephp:muttasiq:patches-ios');
     expect($androidContents)->toContain('use PatchesAndroidMainActivity;');
     expect($androidContents)->toContain('use PatchesAndroidPhpWebViewClient;');
+    expect($androidContents)->toContain('use PatchesAndroidPhpBridge;');
     expect($androidContents)->toContain('use PatchesAndroidWebViewManager;');
     expect($androidContents)->toContain('use PatchesAndroidLaravelEnvironment;');
+    expect($androidContents)->toContain('ZipArchive');
+    expect($androidContents)->toContain('pruneBundledLaravelArchive');
+    expect($androidContents)->toContain('laravel_bundle.zip');
+    expect($androidContents)->toContain('vendor/goodm4ven/arabicable/resources/raw-data/quran/exegesis/');
+    expect($androidContents)->toContain('public/build/manifest.json');
+    expect($androidContents)->toContain('stale-build-assets=');
+    expect($androidContents)->toContain('retainedBundledBuildAssetEntries');
+    expect($androidContents)->not()->toContain('vendor/phpstan/');
+    expect($androidContents)->not()->toContain('vendor/phpunit/');
+    expect($androidContents)->not()->toContain('vendor/pestphp/');
+    expect($androidContents)->not()->toContain('vendor/fakerphp/');
     expect($iosContents)->toContain('use PatchesIosContentView;');
     expect($iosContents)->toContain('use PatchesIosNativePhpApp;');
     expect($iosContents)->toContain('use PatchesIosAppUpdateManager;');
     expect($androidPhpWebViewTraitContents)->toContain('resolveBundledQpcFontFile');
     expect($androidPhpWebViewTraitContents)->toContain('resolveBundledQuranRouteAsset');
     expect($androidPhpWebViewTraitContents)->toContain('Binary asset missing from filesystem; refusing PHP fallback');
+    expect($androidPhpBridgeTraitContents)->toContain('nativePersistentArtisan("about --version")');
+    expect($androidPhpBridgeTraitContents)->toContain('Persistent runtime probe failed');
+    expect($androidPhpBridgeTraitContents)->toContain('Persistent dispatch lost boot state');
+    expect($androidPhpBridgeTraitContents)->toContain('nativePersistentShutdown()');
     expect($androidPhpWebViewTraitContents)->toContain('quran-surah-header-font');
     expect($androidPhpWebViewTraitContents)->toContain('quran-basmallah-font/quran-common-ligature');
     expect($androidPhpWebViewTraitContents)->not()->toContain('getLaravelPublicPath');
@@ -156,6 +190,7 @@ test('native patches plugin supports ios content view patching', function () {
     expect($androidMainActivityTraitContents)->toContain('dispatchQuranVolumeButton');
     expect($androidLaravelEnvironmentTraitContents)->toContain('app:native-bootstrap --no-interaction');
     expect($androidLaravelEnvironmentTraitContents)->not()->toContain('database/native-quran-reader.sqlite');
+    expect($androidLaravelEnvironmentTraitContents)->not()->toContain('bundledQuranSnapshotFile.copyTo');
     expect($androidLaravelEnvironmentTraitContents)->toContain('dbFile.createNewFile()');
     expect($androidLaravelEnvironmentTraitContents)->toContain('Skipping dormant Quran exegesis bundle entry');
     expect($androidLaravelEnvironmentTraitContents)->toContain('resources/raw-data/quran/exegesis/');
@@ -248,9 +283,13 @@ test('native install scripts respect nativephp ICU configuration for mobile buil
 
     expect($nativephpJson)->toContain('"icu":');
     expect($sharedPrepareScript)->toContain('vendor/goodm4ven/nativephp-muttasiq-patches/src');
+    expect($sharedPrepareScript)->toContain('native_prune_stale_build_assets');
     expect($sharedPrepareScript)->toContain('rm -f');
     expect($sharedPrepareScript)->toContain('database/native-quran-reader.sqlite');
-    expect($sharedPrepareScript)->not()->toContain('app:build-native-quran-database');
+    expect($sharedPrepareScript)->toContain('database/native-quran-reader.json');
+    expect($sharedPrepareScript)->toContain('database/native-quran-reader.sqlite.gz');
+    expect($sharedPrepareScript)->not()->toContain('app:build-native-quran-database --no-interaction');
+    expect($sharedPrepareScript)->toContain('public/build/manifest.json');
     expect($sharedPrepareScript)->toContain('nativephp directory missing');
     expect($sharedPrepareScript)->toContain('native_read_icu_preference');
     expect($sharedPrepareScript)->toContain('install_args+=(--with-icu)');
@@ -259,4 +298,18 @@ test('native install scripts respect nativephp ICU configuration for mobile buil
     expect($iosPrepareScript)->toContain('native_read_icu_preference');
     expect($iosPrepareScript)->toContain('install_args+=(--with-icu)');
     expect($iosPrepareScript)->toContain('ICU-enabled PHP binaries are required by nativephp.json');
+});
+
+test('android bundle pruning only targets dormant quran exegesis payload', function () {
+    $androidCommandPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/ApplyAndroidPatchesCommand.php';
+
+    $androidCommandContents = file_get_contents($androidCommandPath);
+
+    expect($androidCommandContents)->toContain('vendor/goodm4ven/arabicable/resources/raw-data/quran/exegesis/');
+    expect($androidCommandContents)->toContain('public/build/manifest.json');
+    expect($androidCommandContents)->toContain('stale-build-assets=');
+    expect($androidCommandContents)->not()->toContain('vendor/phpunit/');
+    expect($androidCommandContents)->not()->toContain('vendor/phpstan/');
+    expect($androidCommandContents)->not()->toContain('vendor/fakerphp/');
+    expect($androidCommandContents)->not()->toContain('vendor/pestphp/');
 });

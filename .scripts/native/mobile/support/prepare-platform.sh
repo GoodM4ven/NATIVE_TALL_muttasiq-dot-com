@@ -91,10 +91,108 @@ echo hash_final($context);
 ' "$@"
 }
 
+native_prune_stale_build_assets() {
+    php -r '
+$manifestPath = $argv[1] ?? null;
+$assetsPath = $argv[2] ?? null;
+
+if (! $manifestPath || ! is_file($manifestPath) || ! $assetsPath || ! is_dir($assetsPath)) {
+    exit(0);
+}
+
+try {
+    $manifest = json_decode(file_get_contents($manifestPath), true, flags: JSON_THROW_ON_ERROR);
+} catch (Throwable) {
+    exit(0);
+}
+
+if (! is_array($manifest)) {
+    exit(0);
+}
+
+$retainedAssets = [];
+
+foreach ($manifest as $entry) {
+    if (! is_array($entry)) {
+        continue;
+    }
+
+    $candidates = [];
+
+    if (is_string($entry["file"] ?? null)) {
+        $candidates[] = $entry["file"];
+    }
+
+    foreach (($entry["css"] ?? []) as $assetPath) {
+        if (is_string($assetPath)) {
+            $candidates[] = $assetPath;
+        }
+    }
+
+    foreach (($entry["assets"] ?? []) as $assetPath) {
+        if (is_string($assetPath)) {
+            $candidates[] = $assetPath;
+        }
+    }
+
+    foreach ($candidates as $assetPath) {
+        $normalizedAssetPath = ltrim($assetPath, "/");
+
+        if ($normalizedAssetPath !== "" && str_starts_with($normalizedAssetPath, "assets/")) {
+            $normalizedAssetPath = substr($normalizedAssetPath, strlen("assets/"));
+            $retainedAssets[$normalizedAssetPath] = true;
+        }
+    }
+}
+
+$removedFilesCount = 0;
+$removedBytes = 0;
+$assetsRoot = rtrim($assetsPath, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR;
+$iterator = new RecursiveIteratorIterator(
+    new RecursiveDirectoryIterator($assetsPath, FilesystemIterator::SKIP_DOTS),
+    RecursiveIteratorIterator::CHILD_FIRST,
+);
+
+foreach ($iterator as $item) {
+    if ($item->isDir()) {
+        @rmdir($item->getPathname());
+
+        continue;
+    }
+
+    $pathName = $item->getPathname();
+    $relativePath = substr($pathName, strlen($assetsRoot));
+
+    if (isset($retainedAssets[$relativePath])) {
+        continue;
+    }
+
+    $removedBytes += $item->getSize();
+
+    if (@unlink($pathName)) {
+        $removedFilesCount++;
+    }
+}
+
+if ($removedFilesCount > 0) {
+    fwrite(
+        STDOUT,
+        sprintf(
+            "[native-prepare:build-assets] pruned %d stale Vite asset(s) (%.2f MB)\n",
+            $removedFilesCount,
+            $removedBytes / 1024 / 1024,
+        ),
+    );
+}
+' "${native_root_dir}/public/build/manifest.json" "${native_root_dir}/public/build/assets"
+}
+
 native_prepare_bundle_inputs() {
+    native_prune_stale_build_assets
     rm -f \
         "${native_root_dir}/database/native-quran-reader.sqlite" \
-        "${native_root_dir}/database/native-quran-reader.json"
+        "${native_root_dir}/database/native-quran-reader.json" \
+        "${native_root_dir}/database/native-quran-reader.sqlite.gz"
 }
 
 native_read_bundle_signature() {

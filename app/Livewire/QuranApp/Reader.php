@@ -253,6 +253,9 @@ class Reader extends Component implements HasActions, HasSchemas
             'payload' => $readerDataService->resolvePage($this->pageNumber, $this->activeAyahIndex),
             'state' => 'ready',
             'message' => null,
+            'progressPercent' => 100,
+            'downloadedBytes' => null,
+            'totalBytes' => null,
         ];
     }
 
@@ -261,6 +264,9 @@ class Reader extends Component implements HasActions, HasSchemas
      *     ready: bool,
      *     state: 'idle'|'queued'|'running'|'ready'|'failed',
      *     message: string|null,
+     *     progressPercent: int|null,
+     *     downloadedBytes: int|null,
+     *     totalBytes: int|null,
      *     updatedAt: int
      * }  $status
      * @return array{
@@ -268,7 +274,10 @@ class Reader extends Component implements HasActions, HasSchemas
      *     prepared: false,
      *     state: 'idle'|'queued'|'running'|'ready'|'failed',
      *     payload: null,
-     *     message: string|null
+     *     message: string|null,
+     *     progressPercent: int|null,
+     *     downloadedBytes: int|null,
+     *     totalBytes: int|null
      * }
      */
     private function pendingPreparationResponse(array $status): array
@@ -279,6 +288,9 @@ class Reader extends Component implements HasActions, HasSchemas
             'payload' => null,
             'state' => $status['state'],
             'message' => $status['message'],
+            'progressPercent' => $status['progressPercent'] ?? null,
+            'downloadedBytes' => $status['downloadedBytes'] ?? null,
+            'totalBytes' => $status['totalBytes'] ?? null,
         ];
     }
 

@@ -26,6 +26,7 @@ class RateLimitServiceProvider extends ServiceProvider
     {
         $this->rateLimitAthkar();
         $this->rateLimitSettings();
+        $this->rateLimitQuranSnapshot();
         $this->rateLimitJsErrorReports();
     }
 
@@ -40,6 +41,13 @@ class RateLimitServiceProvider extends ServiceProvider
     {
         RateLimiter::for('settings', function (Request $request): Limit {
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+        });
+    }
+
+    private function rateLimitQuranSnapshot(): void
+    {
+        RateLimiter::for('quran-snapshot', function (Request $request): Limit {
+            return Limit::perMinute(12)->by($request->user()?->id ?: $request->ip());
         });
     }
 

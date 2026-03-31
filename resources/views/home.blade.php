@@ -15,6 +15,8 @@
             quranBootstrap: {
                 isPreparing: false,
                 errorMessage: null,
+                progressPercent: null,
+                statusMessage: null,
             },
             viewTree: {
                 'main-menu': {
@@ -92,10 +94,33 @@
             handleQuranBootstrapStarted() {
                 this.quranBootstrap.isPreparing = true;
                 this.quranBootstrap.errorMessage = null;
+                this.quranBootstrap.progressPercent = 0;
+                this.quranBootstrap.statusMessage = String(
+                    @js(arabic_text('يجري تنزيل بيانات القرآن لأول مرة...')),
+                );
+            },
+            handleQuranBootstrapProgress(detail = {}) {
+                if (!this.quranBootstrap.isPreparing) {
+                    return;
+                }
+        
+                const rawProgressPercent = Number(detail?.progressPercent ?? NaN);
+        
+                if (Number.isFinite(rawProgressPercent)) {
+                    this.quranBootstrap.progressPercent = Math.max(0, Math.min(100, Math.trunc(rawProgressPercent)));
+                }
+        
+                const statusMessage = String(detail?.message ?? '').trim();
+        
+                if (statusMessage !== '') {
+                    this.quranBootstrap.statusMessage = statusMessage;
+                }
             },
             handleQuranBootstrapFinished(detail = {}) {
                 this.quranBootstrap.isPreparing = false;
                 this.quranBootstrap.errorMessage = null;
+                this.quranBootstrap.progressPercent = null;
+                this.quranBootstrap.statusMessage = null;
         
                 if (detail?.openGateOnSuccess === false) {
                     return;
@@ -107,10 +132,14 @@
                 this.quranBootstrap.isPreparing = false;
                 this.quranBootstrap.errorMessage =
                     String(detail?.message ?? @js(arabic_text('تعذر تجهيز بيانات القرآن الآن. حاول مرة أخرى بعد قليل.')));
+                this.quranBootstrap.progressPercent = null;
+                this.quranBootstrap.statusMessage = null;
             },
             dismissQuranBootstrapState() {
                 this.quranBootstrap.isPreparing = false;
                 this.quranBootstrap.errorMessage = null;
+                this.quranBootstrap.progressPercent = null;
+                this.quranBootstrap.statusMessage = null;
             },
             runHashAction(callback) {
                 if (window.__hashActionBypassLock) {
@@ -172,6 +201,7 @@
                 if (this.views[view]) {
                     document.title = this.views[view].title;
                 }
+        
             },
         }"
         x-bind:data-view-tree="JSON.stringify(viewTree)"
@@ -212,6 +242,7 @@
         x-on:switch-view.window="applyViewState($event.detail?.to)"
         x-on:athkar-action-state-pulse.window="pulseActionState($event.detail ?? {})"
         x-on:quran-bootstrap-started.window="handleQuranBootstrapStarted()"
+        x-on:quran-bootstrap-progress.window="handleQuranBootstrapProgress($event.detail ?? {})"
         x-on:quran-bootstrap-finished.window="handleQuranBootstrapFinished($event.detail ?? {})"
         x-on:quran-bootstrap-failed.window="handleQuranBootstrapFailed($event.detail ?? {})"
     >
@@ -268,9 +299,23 @@
                         </div>
                         <h2 class="text-primary-950 dark:text-primary-50 text-base font-semibold">
                             {{ arabic_text('جار تجهيز بيانات القرآن') }}</h2>
-                        <p class="text-primary-900/78 dark:text-primary-100/82 text-sm leading-7">
-                            {{ arabic_text('يتم الآن تجهيز جداول المصحف وبياناته لأول مرة على هذا الجهاز...') }}
-                        </p>
+                        <p
+                            class="text-primary-900/78 dark:text-primary-100/82 text-sm leading-7"
+                            x-text="quranBootstrap.statusMessage ?? @js(arabic_text('يتم الآن تنزيل بيانات المصحف لأول مرة على هذا الجهاز...'))"
+                        ></p>
+                        <div class="space-y-2">
+                            <div class="h-2.5 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-700/60">
+                                <div
+                                    class="from-primary-500 to-primary-700 h-full rounded-full bg-gradient-to-r transition-all duration-300"
+                                    x-bind:style="`width: ${Math.max(0, Math.min(100, Number(quranBootstrap.progressPercent ?? 0)))}%`"
+                                ></div>
+                            </div>
+                            <p class="text-primary-900/70 dark:text-primary-100/70 text-xs font-semibold">
+                                <span
+                                    x-text="`${Math.max(0, Math.min(100, Number(quranBootstrap.progressPercent ?? 0)))}%`"
+                                ></span>
+                            </p>
+                        </div>
                     </div>
                 </template>
 
