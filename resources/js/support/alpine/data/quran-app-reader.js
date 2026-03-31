@@ -6485,6 +6485,15 @@ document.addEventListener('alpine:init', () => {
                     this.openModalCount() <= 0;
 
                 if (canFitNow) {
+                    if (
+                        this._lastFittedPageNumber === normalizedPageNumber &&
+                        this.isCurrentPageVisiblyReady()
+                    ) {
+                        this.clearPendingPostModalTargetFit();
+
+                        return;
+                    }
+
                     void this.fitSpecificPageAfterModalClose(normalizedPageNumber, {
                         revealDelayMs,
                         maxAttempts,
