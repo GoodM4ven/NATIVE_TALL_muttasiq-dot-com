@@ -17,5 +17,5 @@ fi
 
 (
     cd "${project_root}"
-    php artisan native:run android --watch
+    COMPOSER_NO_DEV=1 php artisan native:run android --watch
 )

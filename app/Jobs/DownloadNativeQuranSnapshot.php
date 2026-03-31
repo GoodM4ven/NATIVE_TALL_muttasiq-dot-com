@@ -49,14 +49,15 @@ class DownloadNativeQuranSnapshot implements ShouldQueue
         $temporarySnapshotPath = null;
 
         try {
-            $metadata = $this->fetchRemoteSnapshotMetadata();
+            $metadataUrl = $this->metadataEndpointUrl();
+            $metadata = $this->fetchRemoteSnapshotMetadata($metadataUrl);
             $snapshotInfo = $metadata['snapshot'] ?? null;
 
             if (! is_array($snapshotInfo)) {
                 throw new RuntimeException('Remote Quran snapshot metadata is malformed.');
             }
 
-            $downloadUrl = $this->resolveDownloadUrl($snapshotInfo);
+            $downloadUrl = $this->resolveDownloadUrl($snapshotInfo, $metadataUrl);
             $expectedChecksum = trim((string) ($snapshotInfo['checksumSha256'] ?? ''));
             $expectedSizeBytes = (int) ($snapshotInfo['sizeBytes'] ?? 0);
 
@@ -120,14 +121,8 @@ class DownloadNativeQuranSnapshot implements ShouldQueue
     /**
      * @return array<string, mixed>
      */
-    private function fetchRemoteSnapshotMetadata(): array
+    private function fetchRemoteSnapshotMetadata(string $metadataUrl): array
     {
-        $metadataUrl = trim((string) config('app.custom.native_end_points.quran_snapshot_meta', ''));
-
-        if ($metadataUrl === '' || ! preg_match('/^https?:\/\//i', $metadataUrl)) {
-            throw new RuntimeException("Native Quran snapshot metadata endpoint is missing or invalid [{$metadataUrl}].");
-        }
-
         try {
             /** @var Response $response */
             $response = Http::acceptJson()
@@ -150,6 +145,17 @@ class DownloadNativeQuranSnapshot implements ShouldQueue
         $payload = $response->json();
 
         return $payload;
+    }
+
+    private function metadataEndpointUrl(): string
+    {
+        $metadataUrl = trim((string) config('app.custom.native_end_points.quran_snapshot_meta', ''));
+
+        if ($metadataUrl === '' || ! preg_match('/^https?:\/\//i', $metadataUrl)) {
+            throw new RuntimeException("Native Quran snapshot metadata endpoint is missing or invalid [{$metadataUrl}].");
+        }
+
+        return $metadataUrl;
     }
 
     private function downloadSnapshotArchive(
@@ -206,8 +212,14 @@ class DownloadNativeQuranSnapshot implements ShouldQueue
     /**
      * @param  array<string, mixed>  $snapshotInfo
      */
-    private function resolveDownloadUrl(array $snapshotInfo): string
+    private function resolveDownloadUrl(array $snapshotInfo, string $metadataUrl): string
     {
+        $localMetadataDownloadUrl = $this->downloadUrlFromLocalMetadataEndpoint($metadataUrl);
+
+        if ($localMetadataDownloadUrl !== null) {
+            return $localMetadataDownloadUrl;
+        }
+
         $downloadUrl = trim((string) ($snapshotInfo['downloadUrl'] ?? ''));
 
         if ($this->isValidHttpUrl($downloadUrl)) {
@@ -226,6 +238,49 @@ class DownloadNativeQuranSnapshot implements ShouldQueue
     private function isValidHttpUrl(string $url): bool
     {
         return $url !== '' && preg_match('/^https?:\/\//i', $url) === 1;
+    }
+
+    private function downloadUrlFromLocalMetadataEndpoint(string $metadataUrl): ?string
+    {
+        $parts = parse_url($metadataUrl);
+
+        if (! is_array($parts)) {
+            return null;
+        }
+
+        $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+        $host = strtolower((string) ($parts['host'] ?? ''));
+
+        if (! in_array($scheme, ['http', 'https'], true) || $host === '' || ! $this->isLocalNetworkHost($host)) {
+            return null;
+        }
+
+        $port = isset($parts['port']) ? ':'.(int) $parts['port'] : '';
+
+        return "{$scheme}://{$host}{$port}/api/quran-snapshot/download";
+    }
+
+    private function isLocalNetworkHost(string $host): bool
+    {
+        if (in_array($host, ['localhost', '10.0.2.2'], true) || str_starts_with($host, '127.')) {
+            return true;
+        }
+
+        if (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) === false) {
+            return false;
+        }
+
+        if (str_starts_with($host, '10.') || str_starts_with($host, '192.168.') || str_starts_with($host, '169.254.')) {
+            return true;
+        }
+
+        if (! preg_match('/^172\.(\d{1,2})\./', $host, $matches)) {
+            return false;
+        }
+
+        $secondOctet = (int) $matches[1];
+
+        return $secondOctet >= 16 && $secondOctet <= 31;
     }
 
     private function assertSnapshotChecksum(string $path, string $expectedChecksum): void

@@ -74,6 +74,8 @@ test('native run script relies on plugin patches', function () {
         expect($contents)->not()->toContain('.scripts/native/mobile/support/patches/edge-components.sh');
     }
 
+    expect(file_get_contents($root.'/.scripts/run-android.sh'))->toContain('COMPOSER_NO_DEV=1');
+
     $nativeShareContents = file_get_contents($root.'/.scripts/share-android.sh');
     expect($nativeShareContents)->toContain('.scripts/native/mobile/support/patches/jump-status-texts.sh');
 });
@@ -101,6 +103,7 @@ test('native ios scripts rely on plugin patches', function () {
 
     $nativeShareContents = file_get_contents($root.'/.scripts/share-ios.sh');
     expect($nativeShareContents)->toContain('.scripts/native/mobile/support/patches/jump-status-texts.sh');
+    expect(file_get_contents($root.'/.scripts/run-ios.sh'))->toContain('COMPOSER_NO_DEV=1');
 });
 
 test('native watch scripts include local quran broadcast via shared support runner with endpoint overrides', function () {
@@ -143,9 +146,11 @@ test('native watch scripts include local quran broadcast via shared support runn
     expect($androidNativeWatchScriptContents)->toContain('.scripts/support/bin');
     expect($androidNativeWatchScriptContents)->toContain('watchman-wait is unavailable');
     expect($androidNativeWatchScriptContents)->toContain('watchman shutdown-server');
+    expect($androidNativeWatchScriptContents)->toContain('COMPOSER_NO_DEV=1');
     expect($iosNativeWatchScriptContents)->toContain('.scripts/support/bin');
     expect($iosNativeWatchScriptContents)->toContain('watchman-wait is unavailable');
     expect($iosNativeWatchScriptContents)->toContain('watchman shutdown-server');
+    expect($iosNativeWatchScriptContents)->toContain('COMPOSER_NO_DEV=1');
     expect($watchmanWaitShimContents)->toContain('watchman-wait-shim');
     expect($watchmanWaitShimContents)->toContain('watch-project');
     expect($watchmanWaitShimContents)->toContain("['query', \$watchRoot, \$queryPayload]");
@@ -227,6 +232,8 @@ test('native patches plugin supports ios content view patching', function () {
     expect($androidLaravelEnvironmentTraitContents)->toContain('app:native-bootstrap --no-interaction');
     expect($androidLaravelEnvironmentTraitContents)->not()->toContain('optimize:clear');
     expect($androidLaravelEnvironmentTraitContents)->toContain('storagePublicDir');
+    expect($androidLaravelEnvironmentTraitContents)->toContain('QUEUE_CONNECTION');
+    expect($androidLaravelEnvironmentTraitContents)->toContain('sync');
     expect($androidLaravelEnvironmentTraitContents)->toContain('NATIVE_SETTINGS_ENDPOINT');
     expect($androidLaravelEnvironmentTraitContents)->toContain('NATIVE_QURAN_SNAPSHOT_META_ENDPOINT');
     expect($androidLaravelEnvironmentTraitContents)->toContain('NATIVE_QURAN_SNAPSHOT_DOWNLOAD_ENDPOINT');

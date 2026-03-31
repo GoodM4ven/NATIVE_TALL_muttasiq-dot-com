@@ -21,5 +21,5 @@ xcrun simctl shutdown "${simulator_udid}" >/dev/null 2>&1 || true
 
 (
     cd "${project_root}"
-    php artisan native:run ios "${simulator_udid}" --build=debug --watch
+    COMPOSER_NO_DEV=1 php artisan native:run ios "${simulator_udid}" --build=debug --watch
 )

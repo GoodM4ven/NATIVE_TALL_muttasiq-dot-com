@@ -8,4 +8,4 @@ simulator_udid="$("./.scripts/native/mobile/ios/support/select-simulator.sh")"
 echo "[native-run:ios] using simulator ${simulator_udid}"
 # xcrun simctl shutdown "${simulator_udid}" >/dev/null 2>&1 || true
 
-php artisan native:run ios "${simulator_udid}" --build=debug
+COMPOSER_NO_DEV=1 php artisan native:run ios "${simulator_udid}" --build=debug
