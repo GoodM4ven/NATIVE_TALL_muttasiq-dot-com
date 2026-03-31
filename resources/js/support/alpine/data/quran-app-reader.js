@@ -106,6 +106,7 @@ const navigationSettleDelayMs = 28;
 const navigationBurstInputThresholdMs = 140;
 const navigationBurstSettleDelayMs = 72;
 const navigationRevealLockDurationMs = 420;
+const postModalFitRevealSettleDelayMs = 240;
 const defaultBasmallahBottomGapScale = -0.18;
 const openingSpreadFinalScaleMultiplier = 0.72;
 const fitRobustWidthQuantile = 0.88;
@@ -773,6 +774,7 @@ document.addEventListener('alpine:init', () => {
         _layoutToken: 0,
         _layoutRaf: null,
         _revealTimer: null,
+        _lastPageRevealAt: 0,
         _revealBlockedSinceAt: 0,
         _revealBlockedLayoutToken: 0,
         _layoutActivePromise: null,
@@ -1604,6 +1606,7 @@ document.addEventListener('alpine:init', () => {
             this._isModalLifecycleSettling = false;
             this._postModalTargetFitPage = 0;
             this._postModalTargetFitRetries = 0;
+            this._lastPageRevealAt = 0;
             this._wirdEntryLayoutSuppressedUntil = 0;
 
             if (this._wordPressHoldTimer !== null) {
@@ -6491,7 +6494,14 @@ document.addEventListener('alpine:init', () => {
                     !this._navigationRevealLocked &&
                     !this._isModalLifecycleSettling &&
                     this._activeModalIds.size === 0 &&
-                    this.openModalCount() <= 0;
+                    this.openModalCount() <= 0 &&
+                    !(
+                        this._layoutActivePromise !== null ||
+                        this._revealTimer !== null ||
+                        this.isFittingPage ||
+                        (this._lastPageRevealAt > 0 &&
+                            Date.now() - this._lastPageRevealAt < postModalFitRevealSettleDelayMs)
+                    );
 
                 if (canFitNow) {
                     if (
@@ -6726,6 +6736,7 @@ document.addEventListener('alpine:init', () => {
                             !this._navigationRevealLocked
                         ) {
                             this.isFittingPage = false;
+                            this._lastPageRevealAt = Date.now();
                             this._revealBlockedSinceAt = 0;
                             this._revealBlockedLayoutToken = 0;
 
@@ -6755,6 +6766,7 @@ document.addEventListener('alpine:init', () => {
 
                 this.syncPageInputToCurrentPage();
                 this.isFittingPage = false;
+                this._lastPageRevealAt = Date.now();
             }, delayMs);
         },
 
