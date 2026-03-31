@@ -353,6 +353,10 @@ document.addEventListener('alpine:init', () => {
             });
         },
         pinMode(mode) {
+            if (!this.isModeAvailable(mode)) {
+                return;
+            }
+
             this.pinnedMode = mode;
             this.isModePinned = true;
 

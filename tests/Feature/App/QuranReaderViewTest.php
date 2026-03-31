@@ -14,6 +14,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
     $buttonsStackSource = file_get_contents(resource_path('views/components/buttons-stack.blade.php'));
     $colorfulBackgroundSource = file_get_contents(resource_path('views/components/partials/colorful-background.blade.php'));
     $quranGateSource = file_get_contents(resource_path('views/components/partials/quran-app/gate.blade.php'));
+    $quranGateScriptSource = file_get_contents(resource_path('js/support/alpine/data/quran-app-gate.js'));
     $quranIndexSource = file_get_contents(resource_path('views/components/partials/quran-app/index.blade.php'));
     $quranReaderPartialSource = file_get_contents(
         resource_path('views/components/partials/quran-app/reader.blade.php'),
@@ -109,6 +110,10 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranGateSource)->not->toContain('M0 0 L50 53')
         ->and($quranGateSource)->not->toContain('M100 0 L50 53')
         ->and($quranGateSource)->not->toContain('quran-app-gate-needle');
+
+    expect($quranGateScriptSource)->not->toBeFalse()
+        ->and($quranGateScriptSource)->toContain('pinMode(mode)')
+        ->and($quranGateScriptSource)->toContain('if (!this.isModeAvailable(mode))');
 
     expect($quranReaderPartialSource)->not->toBeFalse()
         ->and($quranReaderPartialSource)->toContain('<livewire:quran-app.reader />')
