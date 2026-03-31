@@ -783,6 +783,7 @@ document.addEventListener('alpine:init', () => {
         _onWindowViewportChange: null,
         _onVisualViewportChange: null,
         _onSwitchView: null,
+        _lastQuranReaderView: 'quran-app-tilawa',
         _onWindowKeydown: null,
         _onPanelPointerDown: null,
         _onPanelPointerMove: null,
@@ -964,6 +965,12 @@ document.addEventListener('alpine:init', () => {
 
                 if (!['quran-app-tilawa', 'quran-app-hifth', 'quran-app-tadabbur'].includes(to)) {
                     return;
+                }
+
+                this._lastQuranReaderView = to;
+
+                if (to !== 'quran-app-tadabbur') {
+                    this.clearActivationIndexes();
                 }
 
                 this.scheduleLayout({ revealDelayMs: 200 });
@@ -5658,7 +5665,9 @@ document.addEventListener('alpine:init', () => {
                 this.refreshSurahTriggerCaption(animate);
                 this.syncSearchActiveSurahNumber();
                 this.activeAyahIndex =
-                    Number.isFinite(Number(activeAyahIndex)) && Number(activeAyahIndex) > 0
+                    this.shouldPersistActivationIndexes() &&
+                    Number.isFinite(Number(activeAyahIndex)) &&
+                    Number(activeAyahIndex) > 0
                         ? Math.trunc(Number(activeAyahIndex))
                         : 0;
                 this.activeWordIndex = 0;
@@ -8614,6 +8623,41 @@ document.addEventListener('alpine:init', () => {
             return Boolean(this.doesTargetWordsByDefault);
         },
 
+        activeQuranReaderView() {
+            if (this.views?.['quran-app-tadabbur']?.isOpen) {
+                return 'quran-app-tadabbur';
+            }
+
+            if (this.views?.['quran-app-hifth']?.isOpen) {
+                return 'quran-app-hifth';
+            }
+
+            if (this.views?.['quran-app-tilawa']?.isOpen) {
+                return 'quran-app-tilawa';
+            }
+
+            const fallbackView = String(this._lastQuranReaderView ?? '').trim();
+
+            if (
+                ['quran-app-tilawa', 'quran-app-hifth', 'quran-app-tadabbur'].includes(fallbackView)
+            ) {
+                return fallbackView;
+            }
+
+            return 'quran-app-tilawa';
+        },
+
+        shouldPersistActivationIndexes() {
+            return this.activeQuranReaderView() === 'quran-app-tadabbur';
+        },
+
+        clearActivationIndexes() {
+            this.activeAyahIndex = 0;
+            this.hoveredAyahIndex = 0;
+            this.activeWordIndex = 0;
+            this.hoveredWordIndex = 0;
+        },
+
         isSelectableWord(word) {
             const ayahIndex = Number(word?.ayah_index ?? 0);
             const wordIndex = Number(word?.word_index ?? 0);
@@ -8632,6 +8676,12 @@ document.addEventListener('alpine:init', () => {
                 return false;
             }
             const normalized = Math.trunc(normalizedAyahIndex);
+
+            if (!this.shouldPersistActivationIndexes()) {
+                this.clearActivationIndexes();
+
+                return true;
+            }
 
             if (this.activeAyahIndex === normalized) {
                 this.activeAyahIndex = 0;
@@ -8658,6 +8708,12 @@ document.addEventListener('alpine:init', () => {
             }
 
             const normalized = Math.trunc(normalizedWordIndex);
+
+            if (!this.shouldPersistActivationIndexes()) {
+                this.clearActivationIndexes();
+
+                return true;
+            }
 
             if (this.activeWordIndex === normalized) {
                 this.activeWordIndex = 0;
@@ -10313,6 +10369,10 @@ document.addEventListener('alpine:init', () => {
         isAyahClusterActive(cluster) {
             const ayahIndex = Math.max(0, Math.trunc(Number(cluster?.ayahIndex ?? 0)));
 
+            if (!this.shouldPersistActivationIndexes()) {
+                return false;
+            }
+
             return this.activeAyahIndex > 0 && ayahIndex > 0 && this.activeAyahIndex === ayahIndex;
         },
 
@@ -10374,6 +10434,10 @@ document.addEventListener('alpine:init', () => {
 
         isWordActive(word) {
             const wordIndex = Number(word?.word_index ?? 0);
+
+            if (!this.shouldPersistActivationIndexes()) {
+                return false;
+            }
 
             if (this.activeWordIndex > 0) {
                 return wordIndex > 0 && wordIndex === this.activeWordIndex;

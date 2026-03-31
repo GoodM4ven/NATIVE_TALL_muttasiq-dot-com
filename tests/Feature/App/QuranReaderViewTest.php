@@ -193,6 +193,13 @@ it('wires quran reader entry points from main menu to hash navigation and view m
     expect($quranReaderScriptSource)->not->toBeFalse()
         ->and($quranReaderScriptSource)->toContain('registerNativeInputListeners()')
         ->and($quranReaderScriptSource)->toContain('unregisterNativeInputListeners()')
+        ->and($quranReaderScriptSource)->toContain('activeQuranReaderView()')
+        ->and($quranReaderScriptSource)->toContain('shouldPersistActivationIndexes()')
+        ->and($quranReaderScriptSource)->toContain('clearActivationIndexes()')
+        ->and($quranReaderScriptSource)->toContain("if (to !== 'quran-app-tadabbur') {")
+        ->and($quranReaderScriptSource)->toContain(
+            "return this.activeQuranReaderView() === 'quran-app-tadabbur';",
+        )
         ->and($quranReaderScriptSource)->toContain('prepareQuranFromMainMenu(detail = {})')
         ->and($quranReaderScriptSource)->toContain('setAndroidVolumeNavigationEnabled(enabled)')
         ->and($quranReaderScriptSource)->toContain("'quran-native-volume-button'")
