@@ -5382,6 +5382,42 @@ document.addEventListener('alpine:init', () => {
             await this.previousPage(this.consumePendingChevronSource(source));
         },
 
+        async goToPageFromChevron(
+            targetPage,
+            {
+                source = 'chevron-page',
+                activeAyahIndex = null,
+                forceRefit = true,
+                animate = true,
+                commitNow = null,
+                settleDelayMs = null,
+            } = {},
+        ) {
+            const sourceProfile = this.navigationSourceProfile(source);
+            const normalizedTargetPage = clampPage(targetPage ?? this.pageInput, this.maxPage);
+            const shouldCommitImmediately =
+                typeof commitNow === 'boolean'
+                    ? commitNow
+                    : this.isImmediateNavigationSource(sourceProfile);
+            const resolvedSettleDelayMs = Number.isFinite(Number(settleDelayMs))
+                ? Math.max(0, Math.trunc(Number(settleDelayMs)))
+                : shouldCommitImmediately
+                  ? 0
+                  : navigationSettleDelayMs;
+
+            await this.navigateToPage(normalizedTargetPage, {
+                direction: this.resolveNavigationDirection(normalizedTargetPage),
+                animate: Boolean(animate),
+                activeAyahIndex,
+                source: sourceProfile,
+                forceRefit: Boolean(forceRefit),
+                commitNow: shouldCommitImmediately,
+                settleDelayMs: resolvedSettleDelayMs,
+            });
+
+            return normalizedTargetPage;
+        },
+
         consumePendingChevronSource(fallbackSource = 'chevron') {
             const pendingSource = String(this.pendingChevronSource ?? '').trim();
 
@@ -5448,13 +5484,9 @@ document.addEventListener('alpine:init', () => {
             if (kind === 'page') {
                 const requestedPage = clampPage(detail?.page ?? this.pageInput, this.maxPage);
                 const shouldCommitImmediately = requestedSource === 'page-jump';
-                await this.navigateToPage(requestedPage, {
-                    direction: this.resolveNavigationDirection(requestedPage),
-                    animate: true,
+                await this.goToPageFromChevron(requestedPage, {
                     source: requestedSource || 'page-event',
-                    forceRefit: true,
-                    commitNow: shouldCommitImmediately,
-                    settleDelayMs: shouldCommitImmediately ? 0 : navigationSettleDelayMs,
+                    commitNow: shouldCommitImmediately || undefined,
                 });
 
                 if (requestedSource === 'page-jump' || requestedSource === 'page-slider-commit') {
@@ -12035,17 +12067,13 @@ document.addEventListener('alpine:init', () => {
         async goToHistoryEntry(entry) {
             const targetPage = clampPage(Number(entry?.page_number ?? 1), this.maxPage);
             const ayahIndex = Math.max(0, Math.trunc(Number(entry?.ayah_index ?? 0)));
-            const direction = this.resolveNavigationDirection(targetPage);
 
             this.resetNavigationQueueForPriorityJump();
             await this.requestHistoryModalClose();
             await this.waitForModalLifecycleToSettle();
             this._bypassNextFitCache = true;
-            await this.navigateToPage(targetPage, {
-                direction,
-                animate: true,
+            await this.goToPageFromChevron(targetPage, {
                 activeAyahIndex: ayahIndex,
-                forceRefit: true,
                 source: 'history-entry',
                 commitNow: true,
                 settleDelayMs: 0,
@@ -12069,17 +12097,13 @@ document.addEventListener('alpine:init', () => {
 
         async goToBookmark(bookmark) {
             const targetPage = clampPage(Number(bookmark?.page_number ?? 1), this.maxPage);
-            const direction = this.resolveNavigationDirection(targetPage);
 
             this.resetNavigationQueueForPriorityJump();
             await this.requestBookmarksModalClose();
             await this.waitForModalLifecycleToSettle();
             this._bypassNextFitCache = true;
-            await this.navigateToPage(targetPage, {
-                direction,
-                animate: true,
+            await this.goToPageFromChevron(targetPage, {
                 activeAyahIndex: 0,
-                forceRefit: true,
                 source: 'bookmark',
                 commitNow: true,
                 settleDelayMs: 0,
@@ -12117,7 +12141,6 @@ document.addEventListener('alpine:init', () => {
 
         async goToSurahFromDirectory(entry) {
             const pageNumber = clampPage(Number(entry?.page_number ?? 1), this.maxPage);
-            const direction = this.resolveNavigationDirection(pageNumber);
             const surahNumber = Math.max(1, Math.trunc(Number(entry?.surah_number ?? 1)));
 
             this.search.activeSurahNumber = surahNumber;
@@ -12129,11 +12152,8 @@ document.addEventListener('alpine:init', () => {
             this.activeAyahIndex = 0;
             this.activeWordIndex = 0;
             this._bypassNextFitCache = true;
-            await this.navigateToPage(pageNumber, {
-                direction,
-                animate: true,
+            await this.goToPageFromChevron(pageNumber, {
                 activeAyahIndex: 0,
-                forceRefit: true,
                 source: 'surah-directory',
                 commitNow: true,
                 settleDelayMs: 0,
@@ -12315,7 +12335,6 @@ document.addEventListener('alpine:init', () => {
         async goToSearchResult(result) {
             const targetPage = clampPage(Number(result?.page_number ?? 1), this.maxPage);
             const ayahIndex = Math.max(0, Math.trunc(Number(result?.ayah_index ?? 0)));
-            const direction = this.resolveNavigationDirection(targetPage);
             const activeQuery = this.search.query;
             const surahNumber = Math.max(1, Math.trunc(Number(result?.surah_number ?? 1)));
             const ayahNumber = Math.max(0, Math.trunc(Number(result?.ayah_number ?? 0)));
@@ -12324,11 +12343,8 @@ document.addEventListener('alpine:init', () => {
             await this.requestSearchModalClose();
             await this.waitForModalLifecycleToSettle();
             this._bypassNextFitCache = true;
-            await this.navigateToPage(targetPage, {
-                direction,
-                animate: true,
+            await this.goToPageFromChevron(targetPage, {
                 activeAyahIndex: ayahIndex,
-                forceRefit: true,
                 source: 'search-result',
                 commitNow: true,
                 settleDelayMs: 0,

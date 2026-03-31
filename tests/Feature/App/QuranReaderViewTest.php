@@ -184,6 +184,8 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderViewSource)->toContain('x-for="line in mushafLines"')
         ->and($quranReaderViewSource)->toContain('x-bind:data-quran-line-number="Number(line?.line_number ?? 0)"')
         ->and($quranReaderViewSource)->toContain('x-bind:data-quran-line-type="String(line?.line_type ?? \'\')"')
+        ->and($quranReaderViewSource)->toContain('x-ref="prevChevronButton"')
+        ->and($quranReaderViewSource)->toContain('x-ref="nextChevronButton"')
         ->and($quranReaderViewSource)->not->toContain('x-on:click="nextPage()"')
         ->and($quranReaderViewSource)->not->toContain('x-on:click="previousPage()"')
         ->and($quranReaderViewSource)->not->toContain("x-on:click=\"\$viewNav('quran-app-gate')\"");
@@ -195,6 +197,10 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderScriptSource)->toContain('setAndroidVolumeNavigationEnabled(enabled)')
         ->and($quranReaderScriptSource)->toContain("'quran-native-volume-button'")
         ->and($quranReaderScriptSource)->toContain("useVolumeButtonsNavigation: 'does_quran_use_volume_buttons_navigation'")
+        ->and($quranReaderScriptSource)->toContain('async goToPageFromChevron(')
+        ->and($quranReaderScriptSource)->toContain('await this.goToPageFromChevron(requestedPage, {')
+        ->and($quranReaderScriptSource)->toContain("await this.goToPageFromChevron(targetPage, {\n                activeAyahIndex: ayahIndex,")
+        ->and($quranReaderScriptSource)->toContain("await this.goToPageFromChevron(pageNumber, {\n                activeAyahIndex: 0,")
         ->and($quranReaderScriptSource)->toContain("window.addEventListener('keydown', this._onWindowKeydown, true)")
         ->and($quranReaderScriptSource)->toContain("readerPanel.addEventListener('pointerdown', this._onPanelPointerDown, {")
         ->and($quranReaderScriptSource)->toContain("window.addEventListener('touchmove', this._onWindowTouchMove, {");
