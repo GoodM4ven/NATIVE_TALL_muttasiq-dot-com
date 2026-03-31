@@ -712,6 +712,7 @@ document.addEventListener('alpine:init', () => {
             pointerType: null,
             source: null,
         },
+        pendingChevronSource: null,
         storage: {
             isPersisted: false,
             persistRequested: false,
@@ -5368,15 +5369,60 @@ document.addEventListener('alpine:init', () => {
         },
 
         async goNextFromChevron(source = 'chevron') {
+            const resolvedSource = this.consumePendingChevronSource(source);
+
             if (!this.wirdModeActive && this.isLastNavigationPage()) {
                 return;
             }
 
-            await this.nextPage(source);
+            await this.nextPage(resolvedSource);
         },
 
         async goPreviousFromChevron(source = 'chevron') {
-            await this.previousPage(source);
+            await this.previousPage(this.consumePendingChevronSource(source));
+        },
+
+        consumePendingChevronSource(fallbackSource = 'chevron') {
+            const pendingSource = String(this.pendingChevronSource ?? '').trim();
+
+            this.pendingChevronSource = null;
+
+            if (pendingSource !== '') {
+                return pendingSource;
+            }
+
+            return String(fallbackSource ?? '').trim() || 'chevron';
+        },
+
+        resolveChevronButton(direction) {
+            if (direction === 'next') {
+                const nextButton = this.$refs?.nextChevronButton;
+
+                return nextButton instanceof HTMLButtonElement ? nextButton : null;
+            }
+
+            if (direction === 'prev') {
+                const previousButton = this.$refs?.prevChevronButton;
+
+                return previousButton instanceof HTMLButtonElement ? previousButton : null;
+            }
+
+            return null;
+        },
+
+        triggerChevronButtonClick(direction, source = 'chevron') {
+            const chevronButton = this.resolveChevronButton(direction);
+
+            if (!(chevronButton instanceof HTMLButtonElement) || chevronButton.disabled) {
+                this.pendingChevronSource = null;
+
+                return false;
+            }
+
+            this.pendingChevronSource = String(source ?? '').trim() || 'chevron';
+            chevronButton.click();
+
+            return true;
         },
 
         async handleRequestedNavigation(kind, detail = {}) {
@@ -5463,12 +5509,20 @@ document.addEventListener('alpine:init', () => {
             }
 
             if (direction === 'left') {
+                if (this.triggerChevronButtonClick('next', 'keyboard')) {
+                    return;
+                }
+
                 await this.goNextFromChevron('keyboard');
 
                 return;
             }
 
             if (direction === 'right') {
+                if (this.triggerChevronButtonClick('prev', 'keyboard')) {
+                    return;
+                }
+
                 await this.goPreviousFromChevron('keyboard');
             }
         },
@@ -7985,12 +8039,20 @@ document.addEventListener('alpine:init', () => {
             this.resetSwipeState();
 
             if (direction === 'next') {
+                if (this.triggerChevronButtonClick('next', 'swipe')) {
+                    return true;
+                }
+
                 await this.goNextFromChevron('swipe');
 
                 return true;
             }
 
             if (direction === 'prev') {
+                if (this.triggerChevronButtonClick('prev', 'swipe')) {
+                    return true;
+                }
+
                 await this.goPreviousFromChevron('swipe');
 
                 return true;

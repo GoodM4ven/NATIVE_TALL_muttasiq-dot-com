@@ -2080,6 +2080,7 @@
                     class="quran-swipe-hint quran-swipe-hint-button quran-bottom-strip-nav-prev select-none outline-none"
                     type="button"
                     aria-label="{{ arabic_text('الصفحة السابقة') }}"
+                    x-ref="prevChevronButton"
                     x-on:click.stop.prevent="goPreviousFromChevron()"
                 >
                     <span
@@ -2193,6 +2194,7 @@
                     class="quran-swipe-hint quran-swipe-hint-button quran-bottom-strip-nav-next select-none outline-none"
                     type="button"
                     aria-label="{{ arabic_text('الصفحة التالية') }}"
+                    x-ref="nextChevronButton"
                     x-bind:disabled="!wirdModeActive && isLastNavigationPage()"
                     x-on:click.stop.prevent="goNextFromChevron()"
                 >
