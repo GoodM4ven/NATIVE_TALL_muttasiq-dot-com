@@ -106,7 +106,7 @@ const navigationSettleDelayMs = 28;
 const navigationBurstInputThresholdMs = 140;
 const navigationBurstSettleDelayMs = 72;
 const navigationRevealLockDurationMs = 420;
-const postModalFitRevealSettleDelayMs = 240;
+const postModalFitRevealSettleDelayMs = 280;
 const defaultBasmallahBottomGapScale = -0.18;
 const openingSpreadFinalScaleMultiplier = 0.72;
 const fitRobustWidthQuantile = 0.88;
@@ -6432,6 +6432,10 @@ document.addEventListener('alpine:init', () => {
                 return false;
             }
 
+            if (this.isCurrentPageVisiblyReady()) {
+                return true;
+            }
+
             this.pauseIdleWarmup(960);
             this._bypassNextFitCache = true;
             this.isFittingPage = true;
@@ -6504,10 +6508,7 @@ document.addEventListener('alpine:init', () => {
                     );
 
                 if (canFitNow) {
-                    if (
-                        this._lastFittedPageNumber === normalizedPageNumber &&
-                        this.isCurrentPageVisiblyReady()
-                    ) {
+                    if (this.isCurrentPageVisiblyReady()) {
                         this.clearPendingPostModalTargetFit();
 
                         return;
@@ -6596,6 +6597,26 @@ document.addEventListener('alpine:init', () => {
             const hasTrackedModalId = modalId !== '' && this._activeModalIds.has(modalId);
             const hasTrackedModalState =
                 this._activeModalIds.size > 0 || this._isModalLifecycleSettling;
+            const isLateCloseLikeEvent = kind === 'closing' || kind === 'closed';
+
+            if (
+                isLateCloseLikeEvent &&
+                openModalCount <= 0 &&
+                this.hasRenderablePage() &&
+                this.isCurrentPageVisiblyReady()
+            ) {
+                if (modalId !== '') {
+                    this._activeModalIds.delete(modalId);
+                }
+
+                this._isModalLifecycleSettling = false;
+
+                if (this._postModalTargetFitPage === this.pageNumber) {
+                    this.clearPendingPostModalTargetFit();
+                }
+
+                return;
+            }
 
             if (
                 (kind === 'closing' || kind === 'closed') &&
@@ -12152,6 +12173,8 @@ document.addEventListener('alpine:init', () => {
         async goToHistoryEntry(entry) {
             const targetPage = clampPage(Number(entry?.page_number ?? 1), this.maxPage);
             const ayahIndex = Math.max(0, Math.trunc(Number(entry?.ayah_index ?? 0)));
+            const isBookmarkHistoryEntry =
+                String(entry?.source ?? '').trim() === 'bookmark-navigation';
 
             this.resetNavigationQueueForPriorityJump();
             await this.requestHistoryModalClose();
@@ -12163,7 +12186,11 @@ document.addEventListener('alpine:init', () => {
                 commitNow: true,
                 settleDelayMs: 0,
             });
-            if (this._lastFittedPageNumber !== this.pageNumber) {
+
+            const shouldQueuePostModalFit =
+                !this.isCurrentPageVisiblyReady() || this._lastFittedPageNumber !== this.pageNumber;
+
+            if (shouldQueuePostModalFit) {
                 this._bypassNextFitCache = true;
                 await this.layoutPageGuaranteed({
                     revealDelayMs: 160,
@@ -12171,12 +12198,16 @@ document.addEventListener('alpine:init', () => {
                     useIdleFit: false,
                 });
             }
-            this.schedulePendingModalCloseFit(targetPage, {
-                retries: 20,
-                delayMs: 72,
-                revealDelayMs: 180,
-                maxAttempts: 5,
-            });
+
+            if (!isBookmarkHistoryEntry && shouldQueuePostModalFit) {
+                this.schedulePendingModalCloseFit(targetPage, {
+                    retries: 20,
+                    delayMs: 72,
+                    revealDelayMs: 180,
+                    maxAttempts: 5,
+                });
+            }
+
             this.activeWordIndex = 0;
         },
 
