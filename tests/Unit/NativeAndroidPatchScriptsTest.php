@@ -103,19 +103,52 @@ test('native ios scripts rely on plugin patches', function () {
     expect($nativeShareContents)->toContain('.scripts/native/mobile/support/patches/jump-status-texts.sh');
 });
 
-test('native local quran runner uses temporary endpoint overrides without mutating env files', function () {
+test('native watch scripts include local quran broadcast via shared support runner with endpoint overrides', function () {
     $root = dirname(__DIR__, 2);
-    $scriptPath = $root.'/.scripts/run-native-local-source-broadcast.sh';
-    $scriptContents = file_get_contents($scriptPath);
+    $supportScriptPath = $root.'/.scripts/support/run-native-local-source-broadcast.sh';
+    $androidWatchScriptPath = $root.'/.scripts/watch-android.sh';
+    $iosWatchScriptPath = $root.'/.scripts/watch-ios.sh';
+    $androidNativeWatchScriptPath = $root.'/.scripts/support/watch-android-native.sh';
+    $iosNativeWatchScriptPath = $root.'/.scripts/support/watch-ios-native.sh';
+    $watchmanWaitShimPath = $root.'/.scripts/support/bin/watchman-wait';
+    $supportScriptContents = file_get_contents($supportScriptPath);
+    $androidWatchScriptContents = file_get_contents($androidWatchScriptPath);
+    $iosWatchScriptContents = file_get_contents($iosWatchScriptPath);
+    $androidNativeWatchScriptContents = file_get_contents($androidNativeWatchScriptPath);
+    $iosNativeWatchScriptContents = file_get_contents($iosNativeWatchScriptPath);
+    $watchmanWaitShimContents = file_get_contents($watchmanWaitShimPath);
 
-    expect($scriptPath)->toBeFile();
-    expect($scriptContents)->toContain('NATIVE_QURAN_SNAPSHOT_META_ENDPOINT');
-    expect($scriptContents)->toContain('NATIVE_QURAN_SNAPSHOT_DOWNLOAD_ENDPOINT');
-    expect($scriptContents)->toContain('php artisan serve');
-    expect($scriptContents)->toContain('adb reverse');
-    expect($scriptContents)->toContain('/api/quran-snapshot/meta');
-    expect($scriptContents)->toContain('/api/quran-snapshot/download');
-    expect($scriptContents)->not()->toContain('.env');
+    expect($supportScriptPath)->toBeFile();
+    expect($androidWatchScriptPath)->toBeFile();
+    expect($iosWatchScriptPath)->toBeFile();
+    expect($androidNativeWatchScriptPath)->toBeFile();
+    expect($iosNativeWatchScriptPath)->toBeFile();
+    expect($watchmanWaitShimPath)->toBeFile();
+    expect($supportScriptContents)->toContain('NATIVE_QURAN_SNAPSHOT_META_ENDPOINT');
+    expect($supportScriptContents)->toContain('NATIVE_QURAN_SNAPSHOT_DOWNLOAD_ENDPOINT');
+    expect($supportScriptContents)->toContain('NATIVE_SETTINGS_ENDPOINT');
+    expect($supportScriptContents)->toContain('php artisan serve');
+    expect($supportScriptContents)->toContain('adb reverse');
+    expect($supportScriptContents)->toContain('/api/quran-snapshot/meta');
+    expect($supportScriptContents)->toContain('/api/quran-snapshot/download');
+    expect($supportScriptContents)->toContain('/api/settings');
+    expect($supportScriptContents)->toContain('port ${port} is already in use');
+    expect($supportScriptContents)->toContain('bind_host="0.0.0.0"');
+    expect($supportScriptContents)->toContain('watch-${platform}-native.sh');
+    expect($supportScriptContents)->not()->toContain('.env');
+    expect($androidWatchScriptContents)->toContain('.scripts/support/run-native-local-source-broadcast.sh');
+    expect($androidWatchScriptContents)->toContain('android watch');
+    expect($iosWatchScriptContents)->toContain('.scripts/support/run-native-local-source-broadcast.sh');
+    expect($iosWatchScriptContents)->toContain('ios watch');
+    expect($androidNativeWatchScriptContents)->toContain('.scripts/support/bin');
+    expect($androidNativeWatchScriptContents)->toContain('watchman-wait is unavailable');
+    expect($androidNativeWatchScriptContents)->toContain('watchman shutdown-server');
+    expect($iosNativeWatchScriptContents)->toContain('.scripts/support/bin');
+    expect($iosNativeWatchScriptContents)->toContain('watchman-wait is unavailable');
+    expect($iosNativeWatchScriptContents)->toContain('watchman shutdown-server');
+    expect($watchmanWaitShimContents)->toContain('watchman-wait-shim');
+    expect($watchmanWaitShimContents)->toContain('watch-project');
+    expect($watchmanWaitShimContents)->toContain("['query', \$watchRoot, \$queryPayload]");
 });
 
 test('native patches plugin supports ios content view patching', function () {
@@ -166,6 +199,9 @@ test('native patches plugin supports ios content view patching', function () {
     expect($androidContents)->toContain('pruneBundledLaravelArchive');
     expect($androidContents)->toContain('laravel_bundle.zip');
     expect($androidContents)->toContain('vendor/goodm4ven/arabicable/resources/raw-data/quran/exegesis/');
+    expect($androidContents)->toContain('database/native-quran-reader.sqlite');
+    expect($androidContents)->toContain('database/native-quran-reader.sqlite.gz');
+    expect($androidContents)->toContain('database/native-quran-reader.json');
     expect($androidContents)->toContain('public/build/manifest.json');
     expect($androidContents)->toContain('stale-build-assets=');
     expect($androidContents)->toContain('retainedBundledBuildAssetEntries');
@@ -189,6 +225,11 @@ test('native patches plugin supports ios content view patching', function () {
     expect($androidMainActivityTraitContents)->toContain('setQuranVolumeNavigationEnabled');
     expect($androidMainActivityTraitContents)->toContain('dispatchQuranVolumeButton');
     expect($androidLaravelEnvironmentTraitContents)->toContain('app:native-bootstrap --no-interaction');
+    expect($androidLaravelEnvironmentTraitContents)->not()->toContain('optimize:clear');
+    expect($androidLaravelEnvironmentTraitContents)->toContain('storagePublicDir');
+    expect($androidLaravelEnvironmentTraitContents)->toContain('NATIVE_SETTINGS_ENDPOINT');
+    expect($androidLaravelEnvironmentTraitContents)->toContain('NATIVE_QURAN_SNAPSHOT_META_ENDPOINT');
+    expect($androidLaravelEnvironmentTraitContents)->toContain('NATIVE_QURAN_SNAPSHOT_DOWNLOAD_ENDPOINT');
     expect($androidLaravelEnvironmentTraitContents)->not()->toContain('database/native-quran-reader.sqlite');
     expect($androidLaravelEnvironmentTraitContents)->not()->toContain('bundledQuranSnapshotFile.copyTo');
     expect($androidLaravelEnvironmentTraitContents)->toContain('dbFile.createNewFile()');
@@ -284,7 +325,8 @@ test('native install scripts respect nativephp ICU configuration for mobile buil
     expect($nativephpJson)->toContain('"icu":');
     expect($sharedPrepareScript)->toContain('vendor/goodm4ven/nativephp-muttasiq-patches/src');
     expect($sharedPrepareScript)->toContain('native_prune_stale_build_assets');
-    expect($sharedPrepareScript)->toContain('rm -f');
+    expect($sharedPrepareScript)->toContain('NATIVE_QURAN_SNAPSHOT_CLEAR_BEFORE_BUILD');
+    expect($sharedPrepareScript)->toContain('[native-prepare:bundle] cleared local Quran snapshot files');
     expect($sharedPrepareScript)->toContain('database/native-quran-reader.sqlite');
     expect($sharedPrepareScript)->toContain('database/native-quran-reader.json');
     expect($sharedPrepareScript)->toContain('database/native-quran-reader.sqlite.gz');
@@ -300,12 +342,15 @@ test('native install scripts respect nativephp ICU configuration for mobile buil
     expect($iosPrepareScript)->toContain('ICU-enabled PHP binaries are required by nativephp.json');
 });
 
-test('android bundle pruning only targets dormant quran exegesis payload', function () {
+test('android bundle pruning targets dormant quran exegesis and generated quran snapshots', function () {
     $androidCommandPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/ApplyAndroidPatchesCommand.php';
 
     $androidCommandContents = file_get_contents($androidCommandPath);
 
     expect($androidCommandContents)->toContain('vendor/goodm4ven/arabicable/resources/raw-data/quran/exegesis/');
+    expect($androidCommandContents)->toContain('database/native-quran-reader.sqlite');
+    expect($androidCommandContents)->toContain('database/native-quran-reader.sqlite.gz');
+    expect($androidCommandContents)->toContain('database/native-quran-reader.json');
     expect($androidCommandContents)->toContain('public/build/manifest.json');
     expect($androidCommandContents)->toContain('stale-build-assets=');
     expect($androidCommandContents)->not()->toContain('vendor/phpunit/');

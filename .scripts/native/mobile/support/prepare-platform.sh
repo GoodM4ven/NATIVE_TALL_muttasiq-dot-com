@@ -189,10 +189,15 @@ if ($removedFilesCount > 0) {
 
 native_prepare_bundle_inputs() {
     native_prune_stale_build_assets
-    rm -f \
-        "${native_root_dir}/database/native-quran-reader.sqlite" \
-        "${native_root_dir}/database/native-quran-reader.json" \
-        "${native_root_dir}/database/native-quran-reader.sqlite.gz"
+
+    if [[ "${NATIVE_QURAN_SNAPSHOT_CLEAR_BEFORE_BUILD:-0}" == "1" ]]; then
+        rm -f \
+            "${native_root_dir}/database/native-quran-reader.sqlite" \
+            "${native_root_dir}/database/native-quran-reader.json" \
+            "${native_root_dir}/database/native-quran-reader.sqlite.gz"
+
+        echo "[native-prepare:bundle] cleared local Quran snapshot files (NATIVE_QURAN_SNAPSHOT_CLEAR_BEFORE_BUILD=1)"
+    fi
 }
 
 native_read_bundle_signature() {

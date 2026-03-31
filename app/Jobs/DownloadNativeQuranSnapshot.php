@@ -56,13 +56,9 @@ class DownloadNativeQuranSnapshot implements ShouldQueue
                 throw new RuntimeException('Remote Quran snapshot metadata is malformed.');
             }
 
-            $downloadUrl = trim((string) ($snapshotInfo['downloadUrl'] ?? ''));
+            $downloadUrl = $this->resolveDownloadUrl($snapshotInfo);
             $expectedChecksum = trim((string) ($snapshotInfo['checksumSha256'] ?? ''));
             $expectedSizeBytes = (int) ($snapshotInfo['sizeBytes'] ?? 0);
-
-            if ($downloadUrl === '' || ! preg_match('/^https?:\/\//i', $downloadUrl)) {
-                throw new RuntimeException('Remote Quran snapshot download URL is invalid.');
-            }
 
             $temporaryDirectory = storage_path('app/private/native/quran-snapshot');
             File::ensureDirectoryExists($temporaryDirectory);
@@ -129,18 +125,25 @@ class DownloadNativeQuranSnapshot implements ShouldQueue
         $metadataUrl = trim((string) config('app.custom.native_end_points.quran_snapshot_meta', ''));
 
         if ($metadataUrl === '' || ! preg_match('/^https?:\/\//i', $metadataUrl)) {
-            throw new RuntimeException('Native Quran snapshot metadata endpoint is missing or invalid.');
+            throw new RuntimeException("Native Quran snapshot metadata endpoint is missing or invalid [{$metadataUrl}].");
         }
 
-        /** @var Response $response */
-        $response = Http::acceptJson()
-            ->connectTimeout(6)
-            ->timeout(20)
-            ->retry(2, 800)
-            ->get($metadataUrl);
+        try {
+            /** @var Response $response */
+            $response = Http::acceptJson()
+                ->connectTimeout(3)
+                ->timeout(120)
+                ->retry(2, 1000)
+                ->get($metadataUrl);
+        } catch (Throwable $throwable) {
+            throw new RuntimeException(
+                "Native Quran snapshot metadata request failed for [{$metadataUrl}]: ".$throwable->getMessage(),
+                previous: $throwable,
+            );
+        }
 
         if (! $response->successful()) {
-            throw new RuntimeException('Native Quran snapshot metadata request failed with status '.$response->status().'.');
+            throw new RuntimeException("Native Quran snapshot metadata request failed with status {$response->status()} for [{$metadataUrl}].");
         }
 
         /** @var array<string, mixed> $payload */
@@ -155,42 +158,74 @@ class DownloadNativeQuranSnapshot implements ShouldQueue
         int $expectedSizeBytes,
         NativeQuranPreparationService $preparationService,
     ): void {
-        /** @var Response $response */
-        $response = Http::withOptions([
-            'sink' => $destinationPath,
-            'progress' => function (
-                int|float $downloadTotal,
-                int|float $downloadedBytes,
-            ) use ($expectedSizeBytes, $preparationService): void {
-                $knownTotalBytes = $downloadTotal > 0
-                    ? (int) round($downloadTotal)
-                    : ($expectedSizeBytes > 0 ? $expectedSizeBytes : null);
+        try {
+            /** @var Response $response */
+            $response = Http::withOptions([
+                'sink' => $destinationPath,
+                'progress' => function (
+                    int|float $downloadTotal,
+                    int|float $downloadedBytes,
+                ) use ($expectedSizeBytes, $preparationService): void {
+                    $knownTotalBytes = $downloadTotal > 0
+                        ? (int) round($downloadTotal)
+                        : ($expectedSizeBytes > 0 ? $expectedSizeBytes : null);
 
-                $progressPercent = null;
+                    $progressPercent = null;
 
-                if (is_int($knownTotalBytes) && $knownTotalBytes > 0) {
-                    $progressPercent = (int) floor(((int) round($downloadedBytes) / $knownTotalBytes) * 92);
-                }
+                    if (is_int($knownTotalBytes) && $knownTotalBytes > 0) {
+                        $progressPercent = (int) floor(((int) round($downloadedBytes) / $knownTotalBytes) * 92);
+                    }
 
-                $preparationService->markDownloadProgress(
-                    downloadedBytes: max(0, (int) round($downloadedBytes)),
-                    totalBytes: $knownTotalBytes,
-                    progressPercent: $progressPercent,
-                );
-            },
-        ])
-            ->connectTimeout(8)
-            ->timeout(900)
-            ->retry(2, 1000)
-            ->get($downloadUrl);
+                    $preparationService->markDownloadProgress(
+                        downloadedBytes: max(0, (int) round($downloadedBytes)),
+                        totalBytes: $knownTotalBytes,
+                        progressPercent: $progressPercent,
+                    );
+                },
+            ])
+                ->connectTimeout(6)
+                ->timeout(900)
+                ->retry(2, 1000)
+                ->get($downloadUrl);
+        } catch (Throwable $throwable) {
+            throw new RuntimeException(
+                "Native Quran snapshot download request failed for [{$downloadUrl}]: ".$throwable->getMessage(),
+                previous: $throwable,
+            );
+        }
 
         if (! $response->successful()) {
-            throw new RuntimeException('Native Quran snapshot download failed with status '.$response->status().'.');
+            throw new RuntimeException("Native Quran snapshot download failed with status {$response->status()} for [{$downloadUrl}].");
         }
 
         if (! is_file($destinationPath) || filesize($destinationPath) === 0) {
             throw new RuntimeException('Downloaded Quran snapshot archive is empty.');
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $snapshotInfo
+     */
+    private function resolveDownloadUrl(array $snapshotInfo): string
+    {
+        $downloadUrl = trim((string) ($snapshotInfo['downloadUrl'] ?? ''));
+
+        if ($this->isValidHttpUrl($downloadUrl)) {
+            return $downloadUrl;
+        }
+
+        $fallbackDownloadUrl = trim((string) config('app.custom.native_end_points.quran_snapshot_download', ''));
+
+        if ($this->isValidHttpUrl($fallbackDownloadUrl)) {
+            return $fallbackDownloadUrl;
+        }
+
+        throw new RuntimeException('Remote Quran snapshot download URL is invalid.');
+    }
+
+    private function isValidHttpUrl(string $url): bool
+    {
+        return $url !== '' && preg_match('/^https?:\/\//i', $url) === 1;
     }
 
     private function assertSnapshotChecksum(string $path, string $expectedChecksum): void

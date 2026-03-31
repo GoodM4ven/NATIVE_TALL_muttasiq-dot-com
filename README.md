@@ -199,6 +199,9 @@ https://muttasiq.com
 4. We have [`muttasiq-patches` NativePHP plugin](https://github.com/GoodM4ven/NATIVE_PLUGIN_muttasiq-patches) that overrides the original NativePHP engine a bit. Make sure you account for what it does in mind, where (the PR you're going to do there) its modifications **do not conflict with one another when patching the same file and correctly patch the files they're targetting from the NativePHP version specified in [`composer.json`](./composer.json)** over here.
     - Keep in mind that there is a Bash switching script for when you have the package locally and test its changes locally before the PR. [Check it out](./.scripts/composer-local-plugins-switch.sh).
     - The native platform wrappers now prune stale bundled front-end assets before install/run and refresh `nativephp/<platform>` automatically when plugin patch sources change. Quran reader data for native is delivered by the web API snapshot download flow (`/api/quran-snapshot/meta` + `/api/quran-snapshot/download`) with in-app progress reporting.
+    - Native watch scripts now include local-source Quran snapshot broadcasting by default: use [`./.scripts/watch-android.sh`](./.scripts/watch-android.sh) or [`./.scripts/watch-ios.sh`](./.scripts/watch-ios.sh). Shared logic remains in [`./.scripts/support/run-native-local-source-broadcast.sh`](./.scripts/support/run-native-local-source-broadcast.sh).
+    - Shared native prepare now skips expensive `composer dump-autoload` and `optimize:clear` by default during watch loops; enable them only when needed with `NATIVE_PREPARE_DUMP_AUTOLOAD=1` and `NATIVE_PREPARE_CLEAR_CACHE=1`.
+    - Local watch/build flows no longer clear `database/native-quran-reader.*` by default; set `NATIVE_QURAN_SNAPSHOT_CLEAR_BEFORE_BUILD=1` only when you explicitly need to regenerate those files from scratch before a build.
 5. **Ensure that your PR can be modified by the maintainers please.**
 
 ### Setup

@@ -12,17 +12,20 @@ class QuranSnapshotDownloadController extends Controller
 {
     public function __invoke(NativeQuranSnapshotApiService $snapshotApiService): BinaryFileResponse
     {
-        $metadata = $snapshotApiService->metadata();
         $filePath = $snapshotApiService->compressedSnapshotPath();
+        $fileSize = is_file($filePath) ? filesize($filePath) : false;
+
+        if (! is_int($fileSize) || $fileSize < 1) {
+            $metadata = $snapshotApiService->metadata();
+            $fileSize = (int) $metadata['sizeBytes'];
+        }
 
         return response()->download(
             $filePath,
             'quran-reader-snapshot.sqlite.gz',
             [
                 'Content-Type' => 'application/gzip',
-                'Content-Length' => (string) $metadata['sizeBytes'],
-                'X-Quran-Snapshot-Signature' => (string) $metadata['signature'],
-                'X-Quran-Snapshot-Checksum' => (string) $metadata['checksumSha256'],
+                'Content-Length' => (string) max(0, $fileSize),
                 'Cache-Control' => 'public, max-age=300',
             ],
         );

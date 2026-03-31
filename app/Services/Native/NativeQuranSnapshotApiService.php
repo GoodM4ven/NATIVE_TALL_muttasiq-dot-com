@@ -54,7 +54,7 @@ class NativeQuranSnapshotApiService
             'sizeBytes' => $sizeBytes,
             'checksumSha256' => $checksum,
             'generatedAt' => $generatedAt,
-            'downloadUrl' => route('api.quran-snapshot.download'),
+            'downloadUrl' => $this->resolveDownloadUrl(),
         ];
     }
 
@@ -125,5 +125,21 @@ class NativeQuranSnapshotApiService
 
         File::delete($compressedPath);
         File::move($temporaryCompressedPath, $compressedPath);
+    }
+
+    private function resolveDownloadUrl(): string
+    {
+        $configuredDownloadUrl = trim((string) config('app.custom.native_end_points.quran_snapshot_download', ''));
+
+        if ($this->isValidHttpUrl($configuredDownloadUrl)) {
+            return $configuredDownloadUrl;
+        }
+
+        return route('api.quran-snapshot.download');
+    }
+
+    private function isValidHttpUrl(string $url): bool
+    {
+        return $url !== '' && preg_match('/^https?:\/\//i', $url) === 1;
     }
 }

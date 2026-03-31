@@ -11,7 +11,12 @@ if [[ ! -d "${root_dir}/vendor" ]]; then
     (cd "$root_dir" && composer install)
 fi
 
-(cd "$root_dir" && composer dump-autoload)
+if [[ "${NATIVE_PREPARE_DUMP_AUTOLOAD:-0}" == "1" ]]; then
+    (cd "$root_dir" && composer dump-autoload)
+fi
 
-(cd "$root_dir" && php artisan optimize:clear)
-(cd "$root_dir" && php artisan migrate)
+if [[ "${NATIVE_PREPARE_CLEAR_CACHE:-0}" == "1" ]]; then
+    (cd "$root_dir" && php artisan optimize:clear)
+fi
+
+(cd "$root_dir" && php artisan migrate --force --no-interaction)
