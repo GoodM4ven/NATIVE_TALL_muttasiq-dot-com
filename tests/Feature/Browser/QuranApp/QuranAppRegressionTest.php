@@ -1762,6 +1762,160 @@ JS);
     $page->assertNoJavaScriptErrors();
 });
 
+it('keeps quran text visible after rapid double swipe navigation', function () {
+    $page = visit('/');
+
+    $assertReaderRenderable = function (int $timeoutMs = 8_000) use ($page): void {
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript('data.ready && data.mushafLines.length > 0'),
+            true,
+            $timeoutMs,
+        );
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript('data.isFittingPage'),
+            false,
+            $timeoutMs,
+        );
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript("typeof data.pageFitState === 'function' ? data.pageFitState() : 'ready'"),
+            'ready',
+            $timeoutMs,
+        );
+        waitForScriptWithTimeout(
+            $page,
+            <<<'JS'
+(() => {
+  const lines = document.querySelector('.quran-page-lines');
+  if (!(lines instanceof HTMLElement)) {
+    return false;
+  }
+
+  const styles = window.getComputedStyle(lines);
+  const opacity = Number.parseFloat(styles.opacity || '0');
+  const lineTexts = Array.from(lines.querySelectorAll('[data-quran-line-text]'))
+    .map((line) => String(line.textContent ?? '').replace(/\s+/g, '').trim())
+    .filter((text) => text.length > 0);
+
+  return String(lines.getAttribute('data-fit-state') ?? '') === 'ready'
+    && styles.visibility !== 'hidden'
+    && opacity > 0.35
+    && lineTexts.length > 0;
+})()
+JS,
+            true,
+            $timeoutMs,
+        );
+    };
+
+    resetBrowserState($page);
+    waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
+    hashAction($page, '#quran-app-tilawa', true);
+
+    waitForScript($page, homeDataScript('data.activeView'), 'quran-app-tilawa');
+    waitForScript($page, 'window.location.hash', '#quran-app-tilawa');
+    waitForQuranReaderVisible($page);
+    $assertReaderRenderable();
+
+    $startingPageNumber = (int) $page->script(quranReaderDataScript('Number(data.pageNumber ?? 0)'));
+    $targetPageNumber = (int) $page->script(
+        quranReaderDataScript(
+            'Math.min(Math.max(1, Number(data.maxPage ?? 1)), Number(data.pageNumber ?? 1) + 2)',
+        ),
+    );
+
+    expect($startingPageNumber)->toBeGreaterThan(0);
+    expect($targetPageNumber)->toBeGreaterThanOrEqual($startingPageNumber);
+
+    $didDoubleSwipeFromLineGap = $page->script(<<<'JS'
+(() => {
+  const linesContainer = document.querySelector('.quran-page-lines');
+  const lineEntries = Array.from(document.querySelectorAll('.quran-page-lines [data-quran-line]'))
+    .filter((entry) => entry instanceof HTMLElement);
+
+  if (!(linesContainer instanceof HTMLElement) || lineEntries.length < 2) {
+    return false;
+  }
+
+  let gapPoint = null;
+
+  for (let index = 0; index < lineEntries.length - 1; index += 1) {
+    const currentRect = lineEntries[index].getBoundingClientRect();
+    const nextRect = lineEntries[index + 1].getBoundingClientRect();
+    const gapHeight = nextRect.top - currentRect.bottom;
+
+    if (gapHeight > 4) {
+      gapPoint = {
+        x: currentRect.left + (currentRect.width / 2),
+        y: currentRect.bottom + (gapHeight / 2),
+      };
+
+      break;
+    }
+  }
+
+  if (!gapPoint) {
+    const containerRect = linesContainer.getBoundingClientRect();
+    gapPoint = {
+      x: containerRect.left + (containerRect.width / 2),
+      y: containerRect.top + 4,
+    };
+  }
+
+  const dispatchSwipe = (pointerId, startPoint) => {
+    const endPoint = {
+      x: startPoint.x + 170,
+      y: startPoint.y,
+    };
+
+    linesContainer.dispatchEvent(
+      new PointerEvent('pointerdown', {
+        bubbles: true,
+        pointerId,
+        pointerType: 'mouse',
+        clientX: startPoint.x,
+        clientY: startPoint.y,
+      }),
+    );
+
+    window.dispatchEvent(
+      new PointerEvent('pointerup', {
+        bubbles: true,
+        pointerId,
+        pointerType: 'mouse',
+        clientX: endPoint.x,
+        clientY: endPoint.y,
+      }),
+    );
+  };
+
+  dispatchSwipe(1021, gapPoint);
+  dispatchSwipe(1022, gapPoint);
+
+  return true;
+})()
+JS);
+
+    expect($didDoubleSwipeFromLineGap)->toBeTrue();
+
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('Number(data.pageNumber ?? 0)'),
+        $targetPageNumber,
+        8_000,
+    );
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('data._pendingNavigationRequest === null && !data._navigationRevealLocked'),
+        true,
+        8_000,
+    );
+    $assertReaderRenderable(10_000);
+    $page->assertNoJavaScriptErrors();
+});
+
 it('applies surah-affix rules correctly in word-target drag mode', function () {
     $page = visit('/');
 

@@ -107,6 +107,11 @@ const navigationBurstInputThresholdMs = 140;
 const navigationBurstSettleDelayMs = 72;
 const navigationRevealLockDurationMs = 420;
 const postModalFitRevealSettleDelayMs = 280;
+const modalLifecycleSuppressionDurationMs = 980;
+const historyNavigationModalLifecycleSuppressionDurationMs = 2600;
+const revealBlockedFailOpenDelayMs = 1100;
+const swipeRevealWatchdogDelayMs = 760;
+const readerRevealDebugStorageKey = 'quran-reader-debug-reveal';
 const defaultBasmallahBottomGapScale = -0.18;
 const openingSpreadFinalScaleMultiplier = 0.72;
 const fitRobustWidthQuantile = 0.88;
@@ -808,6 +813,7 @@ document.addEventListener('alpine:init', () => {
         _navigationDebounceTimer: null,
         _navigationRevealUnlockTimer: null,
         _navigationRevealLocked: false,
+        _swipeRevealWatchdogTimer: null,
         _navigationBurstLastInputAt: 0,
         _navigationBurstCount: 0,
         _navigationBurstFreezeUntil: 0,
@@ -855,6 +861,8 @@ document.addEventListener('alpine:init', () => {
         _activeModalIds: new Set(),
         _isModalLifecycleSettling: false,
         _lastModalLifecycleEventAt: 0,
+        _suppressModalLifecycleEffectsUntil: 0,
+        _suppressModalLifecycleModalIds: new Set(),
         _wordPressHoldTimer: null,
         _wordBySelectionKey: new Map(),
         _ayahNumberByIndex: new Map(),
@@ -1554,6 +1562,11 @@ document.addEventListener('alpine:init', () => {
                 this._navigationRevealUnlockTimer = null;
             }
 
+            if (this._swipeRevealWatchdogTimer !== null) {
+                clearTimeout(this._swipeRevealWatchdogTimer);
+                this._swipeRevealWatchdogTimer = null;
+            }
+
             if (this._pageInputCommitTimer !== null) {
                 clearTimeout(this._pageInputCommitTimer);
                 this._pageInputCommitTimer = null;
@@ -1607,6 +1620,8 @@ document.addEventListener('alpine:init', () => {
             this._postModalTargetFitPage = 0;
             this._postModalTargetFitRetries = 0;
             this._lastPageRevealAt = 0;
+            this._suppressModalLifecycleEffectsUntil = 0;
+            this._suppressModalLifecycleModalIds.clear();
             this._wirdEntryLayoutSuppressedUntil = 0;
 
             if (this._wordPressHoldTimer !== null) {
@@ -5152,17 +5167,29 @@ document.addEventListener('alpine:init', () => {
                 this._navigationDebounceTimer = null;
             }
 
-            this._navigationDebounceTimer = window.setTimeout(
-                () => {
-                    this._navigationDebounceTimer = null;
-                    void this.commitPendingNavigation();
-                },
-                Math.max(0, Math.trunc(Number(delayMs) || navigationSettleDelayMs)),
+            const normalizedDelayMs = Math.max(
+                0,
+                Math.trunc(Number(delayMs) || navigationSettleDelayMs),
             );
+
+            this.traceReaderReveal('schedule-pending-navigation-commit', {
+                delayMs: normalizedDelayMs,
+            });
+
+            this._navigationDebounceTimer = window.setTimeout(() => {
+                this._navigationDebounceTimer = null;
+                void this.commitPendingNavigation();
+            }, normalizedDelayMs);
         },
 
         setNavigationRevealLock(durationMs = navigationRevealLockDurationMs) {
             this._navigationRevealLocked = true;
+            this.traceReaderReveal('set-navigation-reveal-lock', {
+                durationMs: Math.max(
+                    120,
+                    Math.trunc(Number(durationMs) || navigationRevealLockDurationMs),
+                ),
+            });
 
             if (this._navigationRevealUnlockTimer !== null) {
                 clearTimeout(this._navigationRevealUnlockTimer);
@@ -5173,6 +5200,7 @@ document.addEventListener('alpine:init', () => {
                 () => {
                     this._navigationRevealUnlockTimer = null;
                     this._navigationRevealLocked = false;
+                    this.traceReaderReveal('clear-navigation-reveal-lock');
 
                     if (this._pendingNavigationRequest !== null) {
                         this.schedulePendingNavigationCommit(
@@ -5193,6 +5221,16 @@ document.addEventListener('alpine:init', () => {
             }
 
             if (this._navigationRevealLocked || this.isLoadingPage) {
+                this.traceReaderReveal('skip-commit-pending-navigation', {
+                    reason: this._navigationRevealLocked ? 'reveal-locked' : 'loading-page',
+                });
+                this.schedulePendingNavigationCommit(
+                    this.resolveNavigationCommitDelay(
+                        this._pendingNavigationRequest?.source ?? 'generic',
+                        navigationSettleDelayMs,
+                    ),
+                );
+
                 return;
             }
 
@@ -5262,6 +5300,15 @@ document.addEventListener('alpine:init', () => {
             };
 
             if (this._navigationRevealLocked || this.isLoadingPage) {
+                this.traceReaderReveal('defer-navigate-to-page', {
+                    source,
+                    targetPage: normalizedTargetPage,
+                    reason: this._navigationRevealLocked ? 'reveal-locked' : 'loading-page',
+                });
+                this.schedulePendingNavigationCommit(
+                    this.resolveNavigationCommitDelay(source, settleDelayMs),
+                );
+
                 return;
             }
 
@@ -5522,6 +5569,7 @@ document.addEventListener('alpine:init', () => {
 
             this._pendingNavigationRequest = null;
             this._navigationRevealLocked = false;
+            this.clearSwipeRevealWatchdog();
             this.clearNavigationBurstState();
         },
 
@@ -6314,6 +6362,134 @@ document.addEventListener('alpine:init', () => {
             return didClearState;
         },
 
+        readerRevealDebugEnabled() {
+            try {
+                return this.normalizeBooleanFlag(
+                    window.localStorage?.getItem?.(readerRevealDebugStorageKey),
+                    false,
+                );
+            } catch (_) {
+                return false;
+            }
+        },
+
+        traceReaderReveal(eventName, details = {}) {
+            if (!this.readerRevealDebugEnabled()) {
+                return;
+            }
+
+            const normalizedEventName = String(eventName ?? '').trim() || 'event';
+            const payload =
+                details && typeof details === 'object' && !Array.isArray(details) ? details : {};
+
+            console.debug('[quran-reader][reveal]', normalizedEventName, {
+                pageNumber: this.pageNumber,
+                isFittingPage: this.isFittingPage,
+                isLoadingPage: this.isLoadingPage,
+                pendingTargetPage: clampPage(
+                    Number(this._pendingNavigationRequest?.targetPage ?? 0),
+                    this.maxPage,
+                ),
+                navigationRevealLocked: this._navigationRevealLocked,
+                modalLifecycleSettling: this._isModalLifecycleSettling,
+                activeModalCount: this._activeModalIds.size,
+                openModalCount: this.openModalCount(),
+                ...payload,
+            });
+        },
+
+        clearSwipeRevealWatchdog() {
+            if (this._swipeRevealWatchdogTimer === null) {
+                return;
+            }
+
+            clearTimeout(this._swipeRevealWatchdogTimer);
+            this._swipeRevealWatchdogTimer = null;
+        },
+
+        forceRevealCurrentPage(reason = 'generic') {
+            if (!this.hasRenderablePage()) {
+                return false;
+            }
+
+            this.clearSwipeRevealWatchdog();
+            this.syncPageInputToCurrentPage();
+            this.isFittingPage = false;
+            this._lastPageRevealAt = Date.now();
+            this._revealBlockedSinceAt = 0;
+            this._revealBlockedLayoutToken = 0;
+            this.traceReaderReveal('force-reveal-current-page', { reason });
+
+            return true;
+        },
+
+        scheduleSwipeRevealWatchdog(
+            source = 'swipe',
+            { delayMs = swipeRevealWatchdogDelayMs } = {},
+        ) {
+            if (String(source ?? '').trim() !== 'swipe') {
+                return;
+            }
+
+            this.clearSwipeRevealWatchdog();
+            this.traceReaderReveal('schedule-swipe-reveal-watchdog', {
+                delayMs: Math.max(200, Math.trunc(Number(delayMs) || swipeRevealWatchdogDelayMs)),
+            });
+
+            this._swipeRevealWatchdogTimer = window.setTimeout(
+                () => {
+                    this._swipeRevealWatchdogTimer = null;
+
+                    if (
+                        !this.hasRenderablePage() ||
+                        this.isLoadingPage ||
+                        this._layoutActivePromise !== null ||
+                        this._pendingNavigationRequest !== null ||
+                        this._navigationRevealLocked
+                    ) {
+                        return;
+                    }
+
+                    if (this.openModalCount() > 0 || this._isModalLifecycleSettling) {
+                        return;
+                    }
+
+                    if (this.isCurrentPageVisiblyReady()) {
+                        this.clearStaleRevealGuards();
+                        this.forceRevealCurrentPage('swipe-watchdog-already-visible');
+
+                        return;
+                    }
+
+                    if (!this.isFittingPage) {
+                        return;
+                    }
+
+                    this.traceReaderReveal('swipe-watchdog-layout-recovery');
+                    this.clearStaleRevealGuards();
+                    this.clearLayoutTimers();
+                    this.isFittingPage = true;
+                    this._bypassNextFitCache = true;
+                    void this.layoutPageGuaranteed({
+                        revealDelayMs: 120,
+                        maxAttempts: 4,
+                        useIdleFit: false,
+                    }).finally(() => {
+                        if (
+                            !this.isLoadingPage &&
+                            this._pendingNavigationRequest === null &&
+                            !this._navigationRevealLocked &&
+                            this.openModalCount() <= 0 &&
+                            !this._isModalLifecycleSettling
+                        ) {
+                            this.forceRevealCurrentPage('swipe-watchdog-fail-open');
+                        }
+                    });
+                },
+                Math.max(200, Math.trunc(Number(delayMs) || swipeRevealWatchdogDelayMs)),
+            );
+        },
+
         beginLayoutCycle() {
             this._layoutToken += 1;
             this.isFittingPage = true;
@@ -6598,6 +6774,39 @@ document.addEventListener('alpine:init', () => {
             const hasTrackedModalState =
                 this._activeModalIds.size > 0 || this._isModalLifecycleSettling;
             const isLateCloseLikeEvent = kind === 'closing' || kind === 'closed';
+            const now = Date.now();
+
+            this.pruneModalLifecycleSuppression(now);
+
+            const isSuppressedCloseEvent =
+                isLateCloseLikeEvent &&
+                now < this._suppressModalLifecycleEffectsUntil &&
+                (modalId !== ''
+                    ? this._suppressModalLifecycleModalIds.has(modalId)
+                    : this._suppressModalLifecycleModalIds.size > 0);
+
+            if (isSuppressedCloseEvent) {
+                if (modalId !== '') {
+                    this._activeModalIds.delete(modalId);
+
+                    if (kind === 'closed') {
+                        this._suppressModalLifecycleModalIds.delete(modalId);
+                    }
+                }
+
+                if (openModalCount <= 0) {
+                    this._isModalLifecycleSettling = false;
+                }
+
+                if (
+                    this._postModalTargetFitPage === this.pageNumber &&
+                    this.isCurrentPageVisiblyReady()
+                ) {
+                    this.clearPendingPostModalTargetFit();
+                }
+
+                return;
+            }
 
             if (
                 isLateCloseLikeEvent &&
@@ -6702,14 +6911,21 @@ document.addEventListener('alpine:init', () => {
                 }
 
                 this.clearStaleRevealGuards({ allowUnlock: false });
+                this.traceReaderReveal('queue-page-reveal-tick', {
+                    layoutToken,
+                });
 
                 if (this._isModalLifecycleSettling || this._activeModalIds.size > 0) {
                     if (this.recoverStaleModalLifecycleState()) {
+                        this.traceReaderReveal('queue-page-reveal-recover-modal-state');
                         this.queuePageReveal(layoutToken, 90);
 
                         return;
                     }
 
+                    this.traceReaderReveal('queue-page-reveal-blocked', {
+                        reason: 'modal-lifecycle',
+                    });
                     this.isFittingPage = true;
                     this.queuePageReveal(layoutToken, 120);
 
@@ -6729,6 +6945,9 @@ document.addEventListener('alpine:init', () => {
                     if (stalePendingTargetPage === this.pageNumber) {
                         this._pendingNavigationRequest = null;
                     } else {
+                        this.traceReaderReveal('queue-page-reveal-commit-pending-navigation', {
+                            stalePendingTargetPage,
+                        });
                         void this.commitPendingNavigation();
                     }
                 }
@@ -6744,27 +6963,48 @@ document.addEventListener('alpine:init', () => {
                     }
 
                     const revealBlockedForMs = Date.now() - this._revealBlockedSinceAt;
+                    const pendingTargetPage = clampPage(
+                        Number(this._pendingNavigationRequest?.targetPage ?? 0),
+                        this.maxPage,
+                    );
+                    const hasOpenModal = this.openModalCount() > 0;
+                    const mayFailOpenReveal =
+                        this.hasRenderablePage() &&
+                        !this.isLoadingPage &&
+                        !hasOpenModal &&
+                        !this._isModalLifecycleSettling &&
+                        this._activeModalIds.size === 0 &&
+                        (pendingTargetPage <= 0 || pendingTargetPage === this.pageNumber);
 
                     if (
-                        revealBlockedForMs >= 1600 &&
-                        this.hasRenderablePage() &&
-                        !this.isLoadingPage
+                        revealBlockedForMs >= revealBlockedFailOpenDelayMs &&
+                        this.hasRenderablePage()
                     ) {
-                        this.clearStaleRevealGuards();
+                        const clearedStaleGuards = this.clearStaleRevealGuards();
+                        this.traceReaderReveal('queue-page-reveal-stale-guards', {
+                            revealBlockedForMs,
+                            clearedStaleGuards,
+                            pendingTargetPage,
+                            mayFailOpenReveal,
+                        });
 
                         if (
-                            this._pendingNavigationRequest === null &&
-                            !this._navigationRevealLocked
+                            mayFailOpenReveal &&
+                            this.forceRevealCurrentPage('queue-page-reveal-stale-guards')
                         ) {
-                            this.isFittingPage = false;
-                            this._lastPageRevealAt = Date.now();
-                            this._revealBlockedSinceAt = 0;
-                            this._revealBlockedLayoutToken = 0;
-
+                            this.clearSwipeRevealWatchdog();
                             return;
                         }
                     }
 
+                    this.traceReaderReveal('queue-page-reveal-blocked', {
+                        reason: this._navigationRevealLocked
+                            ? 'navigation-lock'
+                            : this._pendingNavigationRequest !== null
+                              ? 'pending-navigation'
+                              : 'loading-page',
+                        revealBlockedForMs,
+                    });
                     this.isFittingPage = true;
                     this.queuePageReveal(layoutToken, 90);
 
@@ -6788,6 +7028,8 @@ document.addEventListener('alpine:init', () => {
                 this.syncPageInputToCurrentPage();
                 this.isFittingPage = false;
                 this._lastPageRevealAt = Date.now();
+                this.clearSwipeRevealWatchdog();
+                this.traceReaderReveal('queue-page-reveal-ready');
             }, delayMs);
         },
 
@@ -7372,6 +7614,15 @@ document.addEventListener('alpine:init', () => {
 
                 if (normalizedCacheKey !== '') {
                     this.forgetFitResult(normalizedCacheKey);
+                }
+
+                if (this.isCurrentPageVisiblyReady()) {
+                    this._bypassNextFitCache = true;
+                    this.fitPageToViewport();
+                    this.applySafetyScaleForCurrentPageOverflow();
+                    this._lastPageRevealAt = Date.now();
+
+                    return;
                 }
 
                 this.scheduleLayout({
@@ -8122,6 +8373,9 @@ document.addEventListener('alpine:init', () => {
             this.resetSwipeState();
 
             if (direction === 'next') {
+                this.traceReaderReveal('dispatch-swipe-navigation', { direction: 'next' });
+                this.scheduleSwipeRevealWatchdog('swipe');
+
                 if (this.triggerChevronButtonClick('next', 'swipe')) {
                     return true;
                 }
@@ -8132,6 +8386,9 @@ document.addEventListener('alpine:init', () => {
             }
 
             if (direction === 'prev') {
+                this.traceReaderReveal('dispatch-swipe-navigation', { direction: 'prev' });
+                this.scheduleSwipeRevealWatchdog('swipe');
+
                 if (this.triggerChevronButtonClick('prev', 'swipe')) {
                     return true;
                 }
@@ -11787,6 +12044,39 @@ document.addEventListener('alpine:init', () => {
             }, normalizedDelayMs);
         },
 
+        suppressModalLifecycleEffects(
+            modalIds = [],
+            { durationMs = modalLifecycleSuppressionDurationMs } = {},
+        ) {
+            const normalizedModalIds = (Array.isArray(modalIds) ? modalIds : [modalIds])
+                .map((value) => String(value ?? '').trim())
+                .filter((value) => value !== '');
+
+            if (normalizedModalIds.length < 1) {
+                return;
+            }
+
+            const suppressionDurationMs = Math.max(120, Math.trunc(Number(durationMs) || 0));
+
+            this._suppressModalLifecycleEffectsUntil = Math.max(
+                this._suppressModalLifecycleEffectsUntil,
+                Date.now() + suppressionDurationMs,
+            );
+
+            normalizedModalIds.forEach((modalId) => {
+                this._suppressModalLifecycleModalIds.add(modalId);
+            });
+        },
+
+        pruneModalLifecycleSuppression(now = Date.now()) {
+            if (now < this._suppressModalLifecycleEffectsUntil) {
+                return;
+            }
+
+            this._suppressModalLifecycleEffectsUntil = 0;
+            this._suppressModalLifecycleModalIds.clear();
+        },
+
         handleModalLifecycleEvent(kind, event) {
             this.trackModalLifecycle(kind, event);
             const isSearchModalEvent = this.isSearchModalEvent(kind, event);
@@ -12173,12 +12463,17 @@ document.addEventListener('alpine:init', () => {
         async goToHistoryEntry(entry) {
             const targetPage = clampPage(Number(entry?.page_number ?? 1), this.maxPage);
             const ayahIndex = Math.max(0, Math.trunc(Number(entry?.ayah_index ?? 0)));
-            const isBookmarkHistoryEntry =
-                String(entry?.source ?? '').trim() === 'bookmark-navigation';
 
             this.resetNavigationQueueForPriorityJump();
+            this.clearPendingPostModalTargetFit();
+            this.suppressModalLifecycleEffects([this.historyModalId], {
+                durationMs: historyNavigationModalLifecycleSuppressionDurationMs,
+            });
             await this.requestHistoryModalClose();
             await this.waitForModalLifecycleToSettle();
+            this.suppressModalLifecycleEffects([this.historyModalId], {
+                durationMs: historyNavigationModalLifecycleSuppressionDurationMs,
+            });
             this._bypassNextFitCache = true;
             await this.goToPageFromChevron(targetPage, {
                 activeAyahIndex: ayahIndex,
@@ -12197,15 +12492,11 @@ document.addEventListener('alpine:init', () => {
                     maxAttempts: 3,
                     useIdleFit: false,
                 });
-            }
-
-            if (!isBookmarkHistoryEntry && shouldQueuePostModalFit) {
-                this.schedulePendingModalCloseFit(targetPage, {
-                    retries: 20,
-                    delayMs: 72,
-                    revealDelayMs: 180,
-                    maxAttempts: 5,
-                });
+            } else if (this.hasRenderablePage()) {
+                this._bypassNextFitCache = true;
+                this.fitPageToViewport();
+                this.applySafetyScaleForCurrentPageOverflow();
+                this._lastPageRevealAt = Date.now();
             }
 
             this.activeWordIndex = 0;
@@ -12215,6 +12506,8 @@ document.addEventListener('alpine:init', () => {
             const targetPage = clampPage(Number(bookmark?.page_number ?? 1), this.maxPage);
 
             this.resetNavigationQueueForPriorityJump();
+            this.clearPendingPostModalTargetFit();
+            this.suppressModalLifecycleEffects([this.bookmarksModalId]);
             await this.requestBookmarksModalClose();
             await this.waitForModalLifecycleToSettle();
             this._bypassNextFitCache = true;
@@ -12224,20 +12517,23 @@ document.addEventListener('alpine:init', () => {
                 commitNow: true,
                 settleDelayMs: 0,
             });
-            if (this._lastFittedPageNumber !== this.pageNumber) {
+
+            const shouldQueuePostModalFit =
+                !this.isCurrentPageVisiblyReady() || this._lastFittedPageNumber !== this.pageNumber;
+
+            if (shouldQueuePostModalFit) {
                 this._bypassNextFitCache = true;
                 await this.layoutPageGuaranteed({
                     revealDelayMs: 160,
                     maxAttempts: 3,
                     useIdleFit: false,
                 });
+            } else if (this.hasRenderablePage()) {
+                this._bypassNextFitCache = true;
+                this.fitPageToViewport();
+                this.applySafetyScaleForCurrentPageOverflow();
+                this._lastPageRevealAt = Date.now();
             }
-            this.schedulePendingModalCloseFit(targetPage, {
-                retries: 20,
-                delayMs: 72,
-                revealDelayMs: 180,
-                maxAttempts: 5,
-            });
             this.activeAyahIndex = 0;
             this.activeWordIndex = 0;
             this.recordNavigationHistory({
