@@ -11,6 +11,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Http\Client\Response;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use PDO;
@@ -336,10 +337,13 @@ class DownloadNativeQuranSnapshot implements ShouldQueue
 
     private function replaceQuranTablesFromSnapshot(string $snapshotPath): void
     {
-        $runtimeDatabasePath = (string) config('database.connections.sqlite.database', '');
+        $runtimeConnectionName = $this->resolveRuntimeSqliteConnectionName();
+        $runtimeDatabasePath = $this->resolveRuntimeDatabasePath($runtimeConnectionName);
 
-        if ($runtimeDatabasePath === '') {
-            throw new RuntimeException('Native sqlite database path is missing.');
+        if ($runtimeConnectionName !== null) {
+            // Release the framework-managed sqlite handle before raw PDO schema replacement.
+            DB::disconnect($runtimeConnectionName);
+            DB::purge($runtimeConnectionName);
         }
 
         File::ensureDirectoryExists(dirname($runtimeDatabasePath));
@@ -373,7 +377,55 @@ class DownloadNativeQuranSnapshot implements ShouldQueue
             }
 
             $runtimePdo->exec('PRAGMA foreign_keys = ON');
+
+            if ($runtimeConnectionName !== null) {
+                DB::purge($runtimeConnectionName);
+                DB::reconnect($runtimeConnectionName);
+            }
         }
+    }
+
+    private function resolveRuntimeSqliteConnectionName(): ?string
+    {
+        $defaultConnection = (string) config('database.default', '');
+
+        if ($this->isSqliteConnection($defaultConnection)) {
+            return $defaultConnection;
+        }
+
+        if ($this->isSqliteConnection('sqlite')) {
+            return 'sqlite';
+        }
+
+        return null;
+    }
+
+    private function isSqliteConnection(string $connectionName): bool
+    {
+        if ($connectionName === '') {
+            return false;
+        }
+
+        return (string) config("database.connections.{$connectionName}.driver", '') === 'sqlite';
+    }
+
+    private function resolveRuntimeDatabasePath(?string $connectionName): string
+    {
+        $runtimeDatabasePath = '';
+
+        if ($connectionName !== null) {
+            $runtimeDatabasePath = (string) config("database.connections.{$connectionName}.database", '');
+        }
+
+        if ($runtimeDatabasePath === '') {
+            $runtimeDatabasePath = (string) config('database.connections.sqlite.database', '');
+        }
+
+        if ($runtimeDatabasePath === '' || $runtimeDatabasePath === ':memory:') {
+            throw new RuntimeException('Native sqlite database path is missing or invalid.');
+        }
+
+        return $runtimeDatabasePath;
     }
 
     private function replaceQuranTables(PDO $runtimePdo): void
@@ -400,9 +452,12 @@ class DownloadNativeQuranSnapshot implements ShouldQueue
                 throw new RuntimeException("Downloaded Quran snapshot is missing table definition for [{$tableName}].");
             }
 
-            $runtimePdo->exec('DROP TABLE IF EXISTS "'.$tableName.'"');
+            $statement->closeCursor();
+            $statement = null;
+
+            $runtimePdo->exec('DROP TABLE IF EXISTS main."'.$tableName.'"');
             $runtimePdo->exec($createSql);
-            $runtimePdo->exec('INSERT INTO "'.$tableName.'" SELECT * FROM quran_source."'.$tableName.'"');
+            $runtimePdo->exec('INSERT INTO main."'.$tableName.'" SELECT * FROM quran_source."'.$tableName.'"');
         }
     }
 
@@ -424,6 +479,10 @@ SQL);
 
         $indexRows = $statement !== false ? $statement->fetchAll(PDO::FETCH_ASSOC) : [];
 
+        if ($statement !== false) {
+            $statement->closeCursor();
+        }
+
         foreach ($indexRows as $indexRow) {
             $indexName = trim((string) ($indexRow['name'] ?? ''));
             $createSql = trim((string) ($indexRow['sql'] ?? ''));
@@ -432,7 +491,7 @@ SQL);
                 continue;
             }
 
-            $runtimePdo->exec('DROP INDEX IF EXISTS "'.$indexName.'"');
+            $runtimePdo->exec('DROP INDEX IF EXISTS main."'.$indexName.'"');
             $runtimePdo->exec($createSql);
         }
     }

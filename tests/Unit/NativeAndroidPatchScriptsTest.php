@@ -130,6 +130,7 @@ test('native watch scripts include local quran broadcast via shared support runn
     expect($supportScriptContents)->toContain('NATIVE_QURAN_SNAPSHOT_META_ENDPOINT');
     expect($supportScriptContents)->toContain('NATIVE_QURAN_SNAPSHOT_DOWNLOAD_ENDPOINT');
     expect($supportScriptContents)->toContain('NATIVE_SETTINGS_ENDPOINT');
+    expect($supportScriptContents)->toContain('NATIVE_ANDROID_KEEP_LOOPBACK_ENDPOINTS');
     expect($supportScriptContents)->toContain('php artisan serve');
     expect($supportScriptContents)->toContain('adb reverse');
     expect($supportScriptContents)->toContain('/api/quran-snapshot/meta');
@@ -165,6 +166,7 @@ test('native patches plugin supports ios content view patching', function () {
     $iosAppUpdateManagerTraitPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/Concerns/PatchesIosAppUpdateManager.php';
     $androidPhpWebViewTraitPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/Concerns/PatchesAndroidPhpWebViewClient.php';
     $androidPhpBridgeTraitPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/Concerns/PatchesAndroidPhpBridge.php';
+    $androidPhpQueueWorkerTraitPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/Concerns/PatchesAndroidPhpQueueWorker.php';
     $androidMainActivityTraitPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/Concerns/PatchesAndroidMainActivity.php';
     $androidLaravelEnvironmentTraitPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/Concerns/PatchesAndroidLaravelEnvironment.php';
     $helpersTraitPath = dirname(__DIR__, 2).'/vendor/goodm4ven/nativephp-muttasiq-patches/src/Commands/Concerns/InteractsWithPatchFiles.php';
@@ -177,6 +179,7 @@ test('native patches plugin supports ios content view patching', function () {
     expect(file_exists($iosAppUpdateManagerTraitPath))->toBeTrue();
     expect(file_exists($androidPhpWebViewTraitPath))->toBeTrue();
     expect(file_exists($androidPhpBridgeTraitPath))->toBeTrue();
+    expect(file_exists($androidPhpQueueWorkerTraitPath))->toBeTrue();
     expect(file_exists($androidMainActivityTraitPath))->toBeTrue();
     expect(file_exists($androidLaravelEnvironmentTraitPath))->toBeTrue();
     expect(file_exists($helpersTraitPath))->toBeTrue();
@@ -189,6 +192,7 @@ test('native patches plugin supports ios content view patching', function () {
     $iosAppUpdateManagerTraitContents = file_get_contents($iosAppUpdateManagerTraitPath);
     $androidPhpWebViewTraitContents = file_get_contents($androidPhpWebViewTraitPath);
     $androidPhpBridgeTraitContents = file_get_contents($androidPhpBridgeTraitPath);
+    $androidPhpQueueWorkerTraitContents = file_get_contents($androidPhpQueueWorkerTraitPath);
     $androidMainActivityTraitContents = file_get_contents($androidMainActivityTraitPath);
     $androidLaravelEnvironmentTraitContents = file_get_contents($androidLaravelEnvironmentTraitPath);
     $helpersTraitContents = file_get_contents($helpersTraitPath);
@@ -198,8 +202,10 @@ test('native patches plugin supports ios content view patching', function () {
     expect($androidContents)->toContain('use PatchesAndroidMainActivity;');
     expect($androidContents)->toContain('use PatchesAndroidPhpWebViewClient;');
     expect($androidContents)->toContain('use PatchesAndroidPhpBridge;');
+    expect($androidContents)->toContain('use PatchesAndroidPhpQueueWorker;');
     expect($androidContents)->toContain('use PatchesAndroidWebViewManager;');
     expect($androidContents)->toContain('use PatchesAndroidLaravelEnvironment;');
+    expect($androidContents)->toContain('$this->patchPhpQueueWorker($phpQueueWorkerPath);');
     expect($androidContents)->toContain('ZipArchive');
     expect($androidContents)->toContain('pruneBundledLaravelArchive');
     expect($androidContents)->toContain('laravel_bundle.zip');
@@ -224,6 +230,9 @@ test('native patches plugin supports ios content view patching', function () {
     expect($androidPhpBridgeTraitContents)->toContain('Persistent runtime probe failed');
     expect($androidPhpBridgeTraitContents)->toContain('Persistent dispatch lost boot state');
     expect($androidPhpBridgeTraitContents)->toContain('nativePersistentShutdown()');
+    expect($androidPhpQueueWorkerTraitContents)->toContain('queue:work --once -v --no-interaction');
+    expect($androidPhpQueueWorkerTraitContents)->toContain('Queue worker output: ${output.take(500)}');
+    expect($androidPhpQueueWorkerTraitContents)->toContain('val handledQueueWork =');
     expect($androidPhpWebViewTraitContents)->toContain('quran-surah-header-font');
     expect($androidPhpWebViewTraitContents)->toContain('quran-basmallah-font/quran-common-ligature');
     expect($androidPhpWebViewTraitContents)->not()->toContain('getLaravelPublicPath');
@@ -237,6 +246,11 @@ test('native patches plugin supports ios content view patching', function () {
     expect($androidLaravelEnvironmentTraitContents)->toContain('NATIVE_SETTINGS_ENDPOINT');
     expect($androidLaravelEnvironmentTraitContents)->toContain('NATIVE_QURAN_SNAPSHOT_META_ENDPOINT');
     expect($androidLaravelEnvironmentTraitContents)->toContain('NATIVE_QURAN_SNAPSHOT_DOWNLOAD_ENDPOINT');
+    expect($androidLaravelEnvironmentTraitContents)->toContain('NATIVE_ANDROID_KEEP_LOOPBACK_ENDPOINTS');
+    expect($androidLaravelEnvironmentTraitContents)->toContain('NATIVE_QURAN_LOCAL_LAN_IP');
+    expect($androidLaravelEnvironmentTraitContents)->toContain('normalizeAndroidEndpointOverride');
+    expect($androidLaravelEnvironmentTraitContents)->toContain('resolveLocalLanIpv4');
+    expect($androidLaravelEnvironmentTraitContents)->toContain('logMuttasiqNativeEnvironmentSummary');
     expect($androidLaravelEnvironmentTraitContents)->not()->toContain('database/native-quran-reader.sqlite');
     expect($androidLaravelEnvironmentTraitContents)->not()->toContain('bundledQuranSnapshotFile.copyTo');
     expect($androidLaravelEnvironmentTraitContents)->toContain('dbFile.createNewFile()');

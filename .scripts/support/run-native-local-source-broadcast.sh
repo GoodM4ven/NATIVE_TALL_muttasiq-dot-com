@@ -27,6 +27,7 @@ adb_reverse_active=0
 server_pid=""
 server_ready=0
 port_was_explicit=0
+native_android_keep_loopback_endpoints=0
 
 if [[ -n "${NATIVE_QURAN_LOCAL_API_PORT:-}" ]]; then
     port_was_explicit=1
@@ -124,6 +125,7 @@ fi
 if [[ "${adb_reverse_enabled}" -eq 1 ]] && adb get-state >/dev/null 2>&1; then
     if adb reverse "tcp:${port}" "tcp:${port}" >/dev/null 2>&1; then
         adb_reverse_active=1
+        native_android_keep_loopback_endpoints=1
 
         if [[ -z "${public_base_url}" ]]; then
             public_base_url="http://127.0.0.1:${port}"
@@ -233,5 +235,6 @@ echo "[native-local-source-broadcast] running ${native_script}"
     NATIVE_SETTINGS_ENDPOINT="${settings_endpoint}" \
         NATIVE_QURAN_SNAPSHOT_META_ENDPOINT="${meta_endpoint}" \
         NATIVE_QURAN_SNAPSHOT_DOWNLOAD_ENDPOINT="${download_endpoint}" \
+        NATIVE_ANDROID_KEEP_LOOPBACK_ENDPOINTS="${native_android_keep_loopback_endpoints}" \
         "${native_script}"
 )
