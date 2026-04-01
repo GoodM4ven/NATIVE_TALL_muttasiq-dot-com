@@ -427,14 +427,14 @@
                         class="border-3 border-primary-200 border-t-primary-600 mx-auto h-10 w-10 animate-spin rounded-full">
                     </div>
                     <h2 class="text-primary-950 dark:text-primary-50 text-base font-semibold">
-                        {{ arabic_text('جار تجهيز بيانات القرآن') }}</h2>
+                        {{ arabic_text('تحميل بيانات المصحف') }}</h2>
                     <p class="text-primary-900/78 dark:text-primary-100/82 text-sm leading-7">
-                        {{ arabic_text('يتم الآن تنزيل بيانات المصحف لأول مرة على هذا الجهاز...') }}
+                        {{ arabic_text('يتم تجهيز المصحف بشكل أنيق ومحرك اللغة العربية لبحث متقدم...') }}
                     </p>
                     <div class="space-y-2">
                         <div class="h-2.5 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-700/60">
                             <div
-                                class="from-primary-500 to-primary-700 h-full rounded-full bg-gradient-to-r transition-[width] duration-150"
+                                class="from-primary-500 to-primary-700 h-full rounded-full bg-linear-to-r transition-[width] duration-150"
                                 x-bind:style="`width: ${Math.max(0, Math.min(100, Number(quranBootstrap.displayProgressPercent ?? 0)))}%`"
                             ></div>
                         </div>

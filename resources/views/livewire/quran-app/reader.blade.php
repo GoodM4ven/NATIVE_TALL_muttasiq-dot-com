@@ -1662,7 +1662,7 @@
 @endphp
 
 <div
-    class="quran-reader relative grid h-full w-full place-items-center"
+    class="quran-reader relative grid h-full w-full place-items-center items-center"
     dir="rtl"
     x-data="quranAppReader({
         api: {
@@ -1709,7 +1709,7 @@
         </section>
     @else
         <section
-            class="quran-reader-panel min-w-75 relative flex h-[min(73.5svh,62rem)] w-[min(84vw,40rem)] flex-col overflow-hidden rounded-[1.75rem] border"
+            class="quran-reader-panel min-w-75 relative flex h-[min(82svh,38rem)] w-[min(92vw,22rem)] xl:h-[min(73.5svh,47rem)] 2xl:h-[min(73.5svh,62rem)] sm:w-[min(84vw,37rem)] 2xl:w-[min(84vw,40rem)] flex-col overflow-hidden rounded-[1.75rem] border 2xl:top-6"
             x-bind:style="readerPanelStyle()"
             x-on:pointerdown.passive="onSwipeStart($event)"
             x-on:pointermove.window.passive="onSwipeMove($event)"
@@ -1885,11 +1885,11 @@
             </header>
 
             <div
-                class="my-2 min-h-0 flex-1 overflow-hidden px-3 sm:my-3 sm:px-4"
+                class="my-2 min-h-0 flex-1 overflow-hidden px-3 sm:my-3 xl:my-1.5 2xl:my-3 sm:px-4 xl:px-12 2xl:px-4"
                 x-ref="pageViewport"
             >
                 <div
-                    class="quran-page-surface h-full rounded-2xl transition-opacity duration-200"
+                    class="quran-page-surface h-full rounded-2xl transition-opacity duration-200 pt-2.5"
                     x-bind:class="pageMotionClass"
                     x-on:click="clearAyahSelectionOnBackground($event)"
                     x-ref="pageSurface"
