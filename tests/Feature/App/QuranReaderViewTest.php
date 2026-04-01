@@ -182,8 +182,12 @@ it('wires quran reader entry points from main menu to hash navigation and view m
             'x-bind:data-fit-state="typeof pageFitState === \'function\' ? pageFitState() : (isFittingPage ? \'fitting\' : \'ready\')"',
         )
         ->and($quranReaderViewSource)->toContain('x-for="line in mushafLines"')
-        ->and($quranReaderViewSource)->toContain('x-bind:data-quran-line-number="Number(line?.line_number ?? 0)"')
-        ->and($quranReaderViewSource)->toContain('x-bind:data-quran-line-type="String(line?.line_type ?? \'\')"')
+        ->and($quranReaderViewSource)->toContain(
+            'x-bind:data-quran-line-number="Number(lineEntry?.line_number ?? 0)"',
+        )
+        ->and($quranReaderViewSource)->toContain(
+            'x-bind:data-quran-line-type="String(lineEntry?.line_type ?? \'\')"',
+        )
         ->and($quranReaderViewSource)->toContain('x-ref="prevChevronButton"')
         ->and($quranReaderViewSource)->toContain('x-ref="nextChevronButton"')
         ->and($quranReaderViewSource)->not->toContain('x-on:click="nextPage()"')

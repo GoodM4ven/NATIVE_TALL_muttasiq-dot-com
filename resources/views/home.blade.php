@@ -205,20 +205,24 @@
                 this.quranBootstrap.errorMessage = null;
                 const shouldOpenGate = detail?.openGateOnSuccess !== false;
         
+                const holdAtHundredMs = 100;
+                const closeAnimationDurationMs = 220;
+        
                 this.quranBootstrap.closeTimeoutId = window.setTimeout(() => {
+                    this.stopQuranBootstrapProgressAnimation();
                     this.quranBootstrap.isVisible = false;
                     this.quranBootstrap.closeTimeoutId = null;
         
                     window.setTimeout(() => {
                         this.dismissQuranBootstrapState();
-                    }, 260);
         
-                    if (!shouldOpenGate) {
-                        return;
-                    }
+                        if (!shouldOpenGate) {
+                            return;
+                        }
         
-                    this.$viewNav('quran-app-gate');
-                }, 420);
+                        this.$viewNav('quran-app-gate');
+                    }, closeAnimationDurationMs);
+                }, holdAtHundredMs);
             },
             handleQuranBootstrapFailed(detail = {}) {
                 this.clearQuranBootstrapCloseTimeout();
@@ -398,23 +402,22 @@
             class="z-60 fixed inset-0 grid place-items-center px-5"
             x-cloak
             x-show="quranBootstrap.isVisible"
-            x-transition.opacity.duration.260ms
+            x-transition.opacity.duration.220ms
         >
             <div
                 class="absolute inset-0 bg-slate-950/35 backdrop-blur-[2px]"
-                x-transition.opacity.duration.260ms
+                x-transition.opacity.duration.220ms
                 x-on:click="if (!quranBootstrap.isPreparing && !quranBootstrap.isFinishing) { dismissQuranBootstrapState() }"
             ></div>
 
             <section
-                class="border-primary-300/35 bg-white/92 shadow-slate-950/18 dark:bg-slate-950/88 duration-280 relative w-[min(92vw,24rem)] rounded-[1.8rem] border px-6 py-5 text-center shadow-2xl transition-[transform,opacity]"
-                x-transition:enter="transition-[opacity,transform] duration-280 ease-out"
+                class="border-primary-300/35 bg-white/92 shadow-slate-950/18 dark:bg-slate-950/88 relative w-[min(92vw,24rem)] rounded-[1.8rem] border px-6 py-5 text-center shadow-2xl transition-[transform,opacity]"
+                x-transition:enter="transition-[opacity,transform] duration-220 ease-out"
                 x-transition:enter-start="opacity-0 scale-[0.97]"
                 x-transition:enter-end="opacity-100 scale-100"
-                x-transition:leave="transition-[opacity,transform] duration-240 ease-in"
+                x-transition:leave="transition-[opacity,transform] duration-220 ease-in"
                 x-transition:leave-start="opacity-100 scale-100"
                 x-transition:leave-end="opacity-0 scale-[0.97]"
-                x-bind:class="{ 'opacity-88 scale-[0.985]': quranBootstrap.isFinishing }"
             >
                 <div
                     class="space-y-4"
