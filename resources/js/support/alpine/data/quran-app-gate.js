@@ -3,6 +3,7 @@ document.addEventListener('alpine:init', () => {
     const launchCleanupDelayMs = 720;
     const returnNavigateDelayMs = 110;
     const returnCleanupDelayMs = 700;
+    const defaultOrbitAngleDeg = 180;
     const defaultLaunchOrigins = Object.freeze({
         tilawa: { x: 50, y: 31 },
         hifth: { x: 74, y: 73 },
@@ -383,17 +384,9 @@ document.addEventListener('alpine:init', () => {
         },
         handlePointerLeave() {
             this.isPointerInside = false;
-
-            if (!this.isModePinned) {
-                this.positionPuckAtDefault();
-            }
         },
         handlePointerDown(event) {
-            if (event.pointerType === 'touch' && this.hasTouchInput()) {
-                return;
-            }
-
-            if (event.pointerType !== 'touch') {
+            if (event.pointerType !== 'touch' || this.hasTouchInput()) {
                 return;
             }
 
@@ -416,11 +409,7 @@ document.addEventListener('alpine:init', () => {
             this.handlePointerMove(event);
         },
         handlePointerUp(event) {
-            if (event.pointerType === 'touch' && this.hasTouchInput()) {
-                return;
-            }
-
-            if (event.pointerType !== 'touch') {
+            if (event.pointerType !== 'touch' || this.hasTouchInput()) {
                 return;
             }
 
@@ -439,13 +428,9 @@ document.addEventListener('alpine:init', () => {
                     // No-op: pointer capture can already be released.
                 }
             }
-
-            if (!this.isModePinned) {
-                this.positionPuckAtDefault();
-            }
         },
         positionPuckAtDefault() {
-            this.setOrbitAngle(0);
+            this.setOrbitAngle(defaultOrbitAngleDeg);
         },
         resolveActiveTouch(touchList) {
             if (!touchList?.length) {
@@ -511,10 +496,6 @@ document.addEventListener('alpine:init', () => {
             this.activeTouchIdentifier = null;
             this.isTouchPointerActive = false;
             this.isPointerInside = false;
-
-            if (!this.isModePinned) {
-                this.positionPuckAtDefault();
-            }
         },
         handlePointerMove(event) {
             if (event.pointerType === 'touch' && this.hasTouchInput()) {

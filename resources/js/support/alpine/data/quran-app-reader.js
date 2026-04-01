@@ -1346,12 +1346,19 @@ document.addEventListener('alpine:init', () => {
         },
 
         emitNativeQuranPreparationProgress(result = {}) {
-            const rawProgressPercent = Number(result?.progressPercent ?? NaN);
-            const progressPercent = Number.isFinite(rawProgressPercent)
-                ? Math.max(0, Math.min(100, Math.trunc(rawProgressPercent)))
-                : null;
             const downloadedBytes = Number(result?.downloadedBytes ?? NaN);
             const totalBytes = Number(result?.totalBytes ?? NaN);
+            const rawProgressPercent = Number(result?.progressPercent ?? NaN);
+            const fallbackProgressPercent =
+                Number.isFinite(downloadedBytes) && Number.isFinite(totalBytes) && totalBytes > 0
+                    ? (downloadedBytes / totalBytes) * 100
+                    : NaN;
+            const resolvedProgressPercent = Number.isFinite(rawProgressPercent)
+                ? rawProgressPercent
+                : fallbackProgressPercent;
+            const progressPercent = Number.isFinite(resolvedProgressPercent)
+                ? Math.max(0, Math.min(100, Math.trunc(resolvedProgressPercent)))
+                : null;
 
             window.dispatchEvent(
                 new CustomEvent('quran-bootstrap-progress', {
@@ -1400,10 +1407,11 @@ document.addEventListener('alpine:init', () => {
         },
 
         async waitForNativeQuranPreparation() {
-            const maxAttempts = 120;
+            const pollingIntervalMs = 350;
+            const maxAttempts = Math.max(120, Math.ceil(180000 / pollingIntervalMs));
 
             for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-                await wait(1500);
+                await wait(pollingIntervalMs);
 
                 const result = await this.readNativeQuranPreparationStatus();
 
