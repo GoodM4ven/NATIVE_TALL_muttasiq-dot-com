@@ -434,7 +434,7 @@
                     <div class="space-y-2">
                         <div class="h-2.5 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-700/60">
                             <div
-                                class="from-primary-500 to-primary-700 h-full rounded-full bg-linear-to-r transition-[width] duration-150"
+                                class="from-primary-500 to-primary-700 bg-linear-to-r h-full rounded-full transition-[width] duration-150"
                                 x-bind:style="`width: ${Math.max(0, Math.min(100, Number(quranBootstrap.displayProgressPercent ?? 0)))}%`"
                             ></div>
                         </div>

@@ -4,6 +4,11 @@ document.addEventListener('alpine:init', () => {
     const returnNavigateDelayMs = 110;
     const returnCleanupDelayMs = 700;
     const defaultOrbitAngleDeg = 180;
+    const modeOrbitAngles = Object.freeze({
+        tilawa: 0,
+        hifth: 120,
+        tadabbur: 240,
+    });
     const defaultLaunchOrigins = Object.freeze({
         tilawa: { x: 50, y: 31 },
         hifth: { x: 74, y: 73 },
@@ -18,6 +23,7 @@ document.addEventListener('alpine:init', () => {
         }),
         projectedMode: null,
         pinnedMode: null,
+        armedMode: null,
         isPointerInside: false,
         isModePinned: false,
         orbitAngleDeg: 0,
@@ -205,6 +211,7 @@ document.addEventListener('alpine:init', () => {
             this.isLaunchTransitioning = false;
             this.launchMode = null;
             this.activeTransitionDirection = null;
+            this.armedMode = null;
 
             const shellElement = this.quranShellElement();
 
@@ -261,7 +268,7 @@ document.addEventListener('alpine:init', () => {
             return 'tadabbur';
         },
         isModeActive(mode) {
-            return (this.pinnedMode ?? this.projectedMode) === mode;
+            return (this.armedMode ?? this.pinnedMode ?? this.projectedMode) === mode;
         },
         isModeAvailable(mode) {
             return Boolean(this.modeAvailability?.[mode] ?? false);
@@ -270,7 +277,17 @@ document.addEventListener('alpine:init', () => {
             return !this.isModeAvailable(mode);
         },
         currentMode() {
-            return this.pinnedMode ?? this.projectedMode;
+            return this.armedMode ?? this.pinnedMode ?? this.projectedMode;
+        },
+        requiresArmedActivation() {
+            return this.hasTouchInput();
+        },
+        armMode(mode) {
+            this.armedMode = mode;
+            this.setOrbitAngle(modeOrbitAngles[mode] ?? defaultOrbitAngleDeg);
+        },
+        clearArmedMode() {
+            this.armedMode = null;
         },
         resolveModeFromOrbitAngleDeg(orbitAngleDeg) {
             const shellElement = this.$refs?.shell;
@@ -546,13 +563,24 @@ document.addEventListener('alpine:init', () => {
             this.setOrbitAngle((projectedAngle * 180) / Math.PI + 90);
         },
         openMode(mode, event = null) {
-            if (!this.isModeAvailable(mode)) {
-                return;
-            }
-
             if (this.activeTransitionDirection !== null) {
                 return;
             }
+
+            const isAvailable = this.isModeAvailable(mode);
+
+            if (this.requiresArmedActivation()) {
+                if (this.armedMode !== mode) {
+                    this.armMode(mode);
+                    return;
+                }
+            }
+
+            if (!isAvailable) {
+                return;
+            }
+
+            this.clearArmedMode();
 
             const modeViewMap = {
                 tilawa: 'quran-app-tilawa',

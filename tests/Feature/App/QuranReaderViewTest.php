@@ -113,7 +113,9 @@ it('wires quran reader entry points from main menu to hash navigation and view m
 
     expect($quranGateScriptSource)->not->toBeFalse()
         ->and($quranGateScriptSource)->toContain('pinMode(mode)')
-        ->and($quranGateScriptSource)->toContain('if (!this.isModeAvailable(mode))');
+        ->and($quranGateScriptSource)->toContain('requiresArmedActivation()')
+        ->and($quranGateScriptSource)->toContain('if (this.armedMode !== mode)')
+        ->and($quranGateScriptSource)->toContain('this.armMode(mode);');
 
     expect($quranReaderPartialSource)->not->toBeFalse()
         ->and($quranReaderPartialSource)->toContain('<livewire:quran-app.reader />')
@@ -181,7 +183,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderViewSource)->toContain(
             'x-bind:data-fit-state="typeof pageFitState === \'function\' ? pageFitState() : (isFittingPage ? \'fitting\' : \'ready\')"',
         )
-        ->and($quranReaderViewSource)->toContain('x-for="line in mushafLines"')
+        ->and($quranReaderViewSource)->toContain('x-for="lineEntry in mushafLines"')
         ->and($quranReaderViewSource)->toContain(
             'x-bind:data-quran-line-number="Number(lineEntry?.line_number ?? 0)"',
         )

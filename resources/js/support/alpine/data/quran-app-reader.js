@@ -662,6 +662,8 @@ document.addEventListener('alpine:init', () => {
         activeAyahIndex: 0,
         activeWordIndex: 0,
         mushafLines: [],
+        lineEntry: null,
+        line: null,
         qpcPageFontFamily: null,
         qpcPageFontUrl: null,
         qpcPageFontFormat: null,

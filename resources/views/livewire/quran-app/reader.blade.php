@@ -861,7 +861,6 @@
             cursor: pointer;
             background-color: color-mix(in srgb, var(--warning-600) 90%, var(--warning-700));
             width: 2.35rem;
-            height: 2.35rem;
             border-radius: 0.625rem;
             display: inline-flex;
             align-items: center;
@@ -1022,7 +1021,6 @@
             align-items: center;
             justify-content: center;
             gap: 0.25rem;
-            min-height: 2.2rem;
             padding: 0.42rem 2.35rem;
             background: transparent;
             border: 0.14rem solid transparent;
@@ -1037,9 +1035,7 @@
                 transform 0.22s ease;
             box-shadow: 0 0 0 1.6px color-mix(in srgb, var(--primary-500) 72%, transparent);
             font-family: 'Readex Pro', 'IBM Plex Sans Arabic', 'Noto Naskh Arabic', ui-sans-serif, system-ui, sans-serif;
-            font-size: 0.95rem;
             font-weight: 700;
-            line-height: 1;
             user-select: none;
             -webkit-user-select: none;
         }
@@ -1709,7 +1705,7 @@
         </section>
     @else
         <section
-            class="quran-reader-panel min-w-75 relative flex h-[min(82svh,38rem)] w-[min(92vw,22rem)] xl:h-[min(73.5svh,47rem)] 2xl:h-[min(73.5svh,62rem)] sm:w-[min(84vw,37rem)] 2xl:w-[min(84vw,40rem)] flex-col overflow-hidden rounded-[1.75rem] border 2xl:top-6"
+            class="quran-reader-panel min-w-75 relative flex aspect-8/11 h-[min(82svh,38rem)] flex-col overflow-hidden rounded-[1.75rem] border xl:h-[min(73.5svh,46rem)] 2xl:top-[0.3rem] 2xl:h-[min(73.5svh,62rem)]"
             x-bind:style="readerPanelStyle()"
             x-on:pointerdown.passive="onSwipeStart($event)"
             x-on:pointermove.window.passive="onSwipeMove($event)"
@@ -1728,13 +1724,13 @@
             x-ref="readerPanel"
         >
             <header
-                class="quran-top-strip"
+                class="quran-top-strip min-h-[2.2rem] xl:min-h-[1.95rem] 2xl:min-h-[2rem]"
                 data-no-swipe
                 x-bind:class="{ 'quran-top-strip--wird-active': wirdModeActive }"
             >
                 <!-- Credits: uiverse.io/gharsh11032000/loud-chicken-53 -->
                 <button
-                    class="quran-soorah-trigger w-[13.4rem] shrink-0 outline-none"
+                    class="quran-soorah-trigger w-[13.4rem] xl:w-48 2xl:w-[13.4rem] shrink-0 outline-none xl:text-[0.8rem] 2xl:text-[0.95rem]"
                     type="button"
                     dir="rtl"
                     x-bind:disabled="wirdModeActive"
@@ -1763,7 +1759,7 @@
                     <span class="quran-soorah-trigger-circle"></span>
                 </button>
                 <div
-                    class="quran-top-actions"
+                    class="quran-top-actions h-full"
                     x-bind:class="{ 'quran-top-actions--wird-active': wirdModeActive }"
                 >
                     <!-- Credits: https://uiverse.io/vinodjangid07/tricky-bullfrog-41 -->
@@ -1885,11 +1881,11 @@
             </header>
 
             <div
-                class="my-2 min-h-0 flex-1 overflow-hidden px-3 sm:my-3 xl:my-1.5 2xl:my-3 sm:px-4 xl:px-12 2xl:px-4"
+                class="my-2 min-h-0 flex-1 overflow-hidden px-3 sm:my-3 sm:px-4 xl:my-1.5 xl:px-8 2xl:my-3 2xl:px-4"
                 x-ref="pageViewport"
             >
                 <div
-                    class="quran-page-surface h-full rounded-2xl transition-opacity duration-200 pt-2.5"
+                    class="quran-page-surface h-full rounded-2xl pt-2.5 transition-opacity duration-200"
                     x-bind:class="pageMotionClass"
                     x-on:click="clearAyahSelectionOnBackground($event)"
                     x-ref="pageSurface"
@@ -1939,12 +1935,11 @@
                             x-ref="pageContent"
                         >
                             <template
-                                x-for="line in mushafLines"
-                                :key="`quran-line-${pageNumber}-${line.line_number}-${line.line_type}`"
+                                x-for="lineEntry in mushafLines"
+                                :key="`quran-line-${pageNumber}-${lineEntry.line_number}-${lineEntry.line_type}`"
                             >
                                 <div
                                     data-quran-line
-                                    x-data="{ lineEntry: line }"
                                     x-show="shouldRenderLine(lineEntry)"
                                     x-bind:class="lineAlignmentClass(lineEntry)"
                                     x-bind:data-quran-line-number="Number(lineEntry?.line_number ?? 0)"
