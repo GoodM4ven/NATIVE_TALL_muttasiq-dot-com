@@ -1942,7 +1942,7 @@
                                 x-for="line in mushafLines"
                                 :key="`quran-line-${pageNumber}-${line.line_number}-${line.line_type}`"
                             >
-                                <template x-if="shouldRenderLine(line)">
+                                <template x-if="typeof line === 'undefined' ? false : shouldRenderLine(line)">
                                     <div
                                         data-quran-line
                                         x-bind:class="lineAlignmentClass(line)"
