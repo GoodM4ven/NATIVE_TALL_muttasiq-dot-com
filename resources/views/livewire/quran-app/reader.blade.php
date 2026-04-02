@@ -1729,7 +1729,7 @@
             </section>
         @else
             <section
-                class="quran-reader-panel min-w-75 3xl:h-[min(73.5svh,60.5rem)] 3xl:w-[min(80vw,44rem)] 4xl:h-[60rem] 4xl:w-[44rem] relative flex h-[min(82svh,38rem)] w-[min(92vw,22rem)] flex-col overflow-hidden rounded-[1.75rem] border sm:w-[min(84vw,37rem)] xl:h-[min(73.5svh,46.75rem)] xl:w-[min(84vw,34rem)] 2xl:h-[min(73.5svh,55rem)] 2xl:w-[min(84vw,40rem)]"
+                class="quran-reader-panel min-w-75 3xl:h-[min(73.5svh,60.5rem)] 3xl:w-[min(80vw,44rem)] 4xl:h-240 4xl:w-176 relative flex h-[min(82svh,38rem)] w-[min(92vw,22rem)] flex-col overflow-hidden rounded-[1.75rem] border sm:w-[min(84vw,37rem)] xl:h-[min(73.5svh,46.75rem)] xl:w-[min(84vw,34rem)] 2xl:h-[min(73.5svh,55rem)] 2xl:w-[min(84vw,40rem)]"
                 x-bind:style="readerPanelStyle()"
                 x-on:pointerdown.passive="onSwipeStart($event)"
                 x-on:pointermove.window.passive="onSwipeMove($event)"
