@@ -42,6 +42,8 @@
 }
 
 @theme {
+    --breakpoint-3xl: 120rem;
+    --breakpoint-4xl: 160rem;
     --background: #fef7ff;
     --background-dark: #201f25;
     --foreground: #201f25;
