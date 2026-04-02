@@ -97,10 +97,10 @@
 
         @media (min-width: 1920px) and (max-width: 2559px) {
             .quran-reader {
-                --quran-type-scale: 2.1;
-                --quran-leading-scale: 1;
-                --quran-gap-scale: 1.225;
-                --quran-fit-height-ratio: 0.95;
+                --quran-type-scale: 1.3;
+                --quran-leading-scale: 0.8;
+                --quran-gap-scale: 1.15;
+                --quran-fit-height-ratio: 0.8;
             }
         }
 
@@ -1729,7 +1729,7 @@
             </section>
         @else
             <section
-                class="quran-reader-panel min-w-75 3xl:h-196 3xl:w-148 4xl:h-240 4xl:w-176 relative flex h-[min(82svh,38rem)] w-[min(92vw,22rem)] flex-col overflow-hidden rounded-[1.75rem] border sm:w-[min(84vw,37rem)] xl:h-[min(73.5svh,46.75rem)] xl:w-[min(84vw,34rem)] 2xl:h-[min(73.5svh,55rem)] 2xl:w-[min(84vw,40rem)]"
+                class="quran-reader-panel min-w-75 3xl:h-196 3xl:w-140 4xl:h-240 4xl:w-176 relative flex h-[min(82svh,38rem)] w-[min(92vw,22rem)] flex-col overflow-hidden rounded-[1.75rem] border sm:w-[min(84vw,37rem)] xl:h-[min(73.5svh,46.75rem)] xl:w-[min(84vw,34rem)] 2xl:h-[min(73.5svh,55rem)] 2xl:w-[min(84vw,40rem)]"
                 x-bind:style="readerPanelStyle()"
                 x-on:pointerdown.passive="onSwipeStart($event)"
                 x-on:pointermove.window.passive="onSwipeMove($event)"
@@ -1905,7 +1905,7 @@
                 </header>
 
                 <div
-                    class="my-2 min-h-0 flex-1 overflow-hidden px-3 sm:my-3 sm:px-4 xl:my-1.5 xl:px-12 2xl:my-3 2xl:px-4 3xl:px-0 4xl:px-4"
+                    class="my-2 min-h-0 flex-1 overflow-hidden px-3 sm:my-3 sm:px-4 xl:my-1.5 xl:px-12 2xl:my-3 3xl:my-1 4xl:my-3 2xl:px-4 3xl:px-0 4xl:px-4"
                     x-ref="pageViewport"
                 >
                     <div
