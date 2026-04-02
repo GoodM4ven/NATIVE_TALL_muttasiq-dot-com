@@ -86,11 +86,29 @@
             }
         }
 
-        @media (min-width: 1536px) {
+        @media (min-width: 1536px) and (max-width: 1919px) {
             .quran-reader {
-                --quran-type-scale: 2.2;
+                --quran-type-scale: 1.78;
+                --quran-leading-scale: 0.98;
+                --quran-gap-scale: 1.14;
+                --quran-fit-height-ratio: 0.955;
+            }
+        }
+
+        @media (min-width: 1920px) and (max-width: 2559px) {
+            .quran-reader {
+                --quran-type-scale: 2.0;
+                --quran-leading-scale: 0.99;
+                --quran-gap-scale: 1.24;
+                --quran-fit-height-ratio: 0.965;
+            }
+        }
+
+        @media (min-width: 2560px) {
+            .quran-reader {
+                --quran-type-scale: 2.15;
                 --quran-leading-scale: 1;
-                --quran-gap-scale: 1.35;
+                --quran-gap-scale: 1.85;
                 --quran-fit-height-ratio: 0.97;
             }
         }
@@ -1662,8 +1680,6 @@
 @endphp
 
 <div
-    class="quran-reader relative grid h-full w-full place-items-center items-center"
-    dir="rtl"
     x-data="quranAppReader({
         api: {
             pageDataTemplate: @js(url('/quran-reader/pages/__PAGE__.json')),
@@ -1681,454 +1697,447 @@
         bookmarksModalId: @js('quran-reader-bookmarks-modal'),
         settings: @js($quranReaderSettings ?? ['enableVisualEnhancements' => true, 'targetWordsByDefault' => false, 'preserveHarakatOnCopy' => true, 'appendSurahAffixOnMultiCopy' => true, 'appendSurahAffixAlwaysOnCopy' => false, 'useVolumeButtonsNavigation' => true, 'useWesternNumerals' => true, 'wirdFrequencyMode' => 0, 'wirdKhatmatTarget' => 1]),
     })"
-    x-bind:class="{
-        'quran-reader--visual-enhancements-disabled': !doesEnableVisualEnhancements,
-        'quran-reader--wird-active': wirdModeActive,
-    }"
-    x-on:control-panel-updated.window="applyControlPanelSettings($event.detail?.controlPanel ?? {})"
-    x-on:switch-view.window="$nextTick(() => syncNativeVolumeNavigation())"
-    x-on:quran-bootstrap-request.window="prepareQuranFromMainMenu($event.detail ?? {})"
-    x-on:open-modal.window="handleModalLifecycleEvent('opened', $event)"
-    x-on:x-modal-opened.window="handleModalLifecycleEvent('opened', $event)"
-    x-on:close-modal.window="handleModalLifecycleEvent('closing', $event)"
-    x-on:close-modal-quietly.window="handleModalLifecycleEvent('closing', $event)"
-    x-on:x-modal-closed.window="handleModalLifecycleEvent('closed', $event)"
-    x-on:opened-form-component-action-modal.window="handleModalLifecycleEvent('opened', $event)"
-    x-on:closing-form-component-action-modal.window="handleModalLifecycleEvent('closing', $event)"
-    x-on:closed-form-component-action-modal.window="handleModalLifecycleEvent('closed', $event)"
-    x-on:support-unlock-updated.window="applySupportUnlockDecision($event.detail?.mode ?? null)"
 >
-    @if (!$ready)
-        <section
-            class="quran-reader-panel relative flex h-[clamp(28rem,82svh,50rem)] w-[min(94vw,50rem)] min-w-[18rem] flex-col items-center justify-center gap-4 rounded-[1.75rem] border px-6 py-7 text-center"
-        >
-            <h2 class="font-quran text-3xl leading-[1.9]">{{ arabic_text('قارئ القرآن') }}</h2>
-            <p class="text-sm leading-7 opacity-85">
-                {{ arabic_text('بيانات المصحف غير متاحة بعد. تأكد من تجهيز جداول القرآن وبياناتها، ثم أعد فتح قسم الكتاب.') }}
-            </p>
-        </section>
-    @else
-        <section
-            class="quran-reader-panel min-w-75 relative flex h-[min(82svh,38rem)] w-[min(92vw,22rem)] xl:h-[min(73.5svh,47rem)] 2xl:h-[min(73.5svh,62rem)] sm:w-[min(84vw,37rem)] 2xl:w-[min(84vw,40rem)] flex-col overflow-hidden rounded-[1.75rem] border 2xl:top-6"
-            x-bind:style="readerPanelStyle()"
-            x-on:pointerdown.passive="onSwipeStart($event)"
-            x-on:pointermove.window.passive="onSwipeMove($event)"
-            x-on:pointerup.window.passive="onSwipeEnd($event)"
-            x-on:pointercancel.window.passive="onSwipeCancel()"
-            x-on:touchstart.passive="onSwipeStart($event)"
-            x-on:touchmove.window.passive="onSwipeMove($event)"
-            x-on:touchend.window.passive="onSwipeEnd($event)"
-            x-on:touchcancel.window.passive="onSwipeCancel()"
-            x-on:keydown.left.window.prevent="onGlobalArrowNavigate('left', $event)"
-            x-on:keydown.right.window.prevent="onGlobalArrowNavigate('right', $event)"
-            x-on:quran-go-prev.window="handleRequestedNavigation('prev', $event.detail)"
-            x-on:quran-go-next.window="handleRequestedNavigation('next', $event.detail)"
-            x-on:quran-go-page.window="handleRequestedNavigation('page', $event.detail)"
-            x-on:quran-go-gate.window="window.dispatchEvent(new CustomEvent('quran-reader-go-gate'))"
-            x-ref="readerPanel"
-        >
-            <header
-                class="quran-top-strip"
-                data-no-swipe
-                x-bind:class="{ 'quran-top-strip--wird-active': wirdModeActive }"
+    <div
+        class="quran-reader relative grid h-full w-full place-items-center items-center"
+        dir="rtl"
+        x-bind:class="{
+            'quran-reader--visual-enhancements-disabled': !doesEnableVisualEnhancements,
+            'quran-reader--wird-active': wirdModeActive,
+        }"
+        x-on:control-panel-updated.window="applyControlPanelSettings($event.detail?.controlPanel ?? {})"
+        x-on:switch-view.window="$nextTick(() => syncNativeVolumeNavigation())"
+        x-on:quran-bootstrap-request.window="prepareQuranFromMainMenu($event.detail ?? {})"
+        x-on:open-modal.window="handleModalLifecycleEvent('opened', $event)"
+        x-on:x-modal-opened.window="handleModalLifecycleEvent('opened', $event)"
+        x-on:close-modal.window="handleModalLifecycleEvent('closing', $event)"
+        x-on:close-modal-quietly.window="handleModalLifecycleEvent('closing', $event)"
+        x-on:x-modal-closed.window="handleModalLifecycleEvent('closed', $event)"
+        x-on:opened-form-component-action-modal.window="handleModalLifecycleEvent('opened', $event)"
+        x-on:closing-form-component-action-modal.window="handleModalLifecycleEvent('closing', $event)"
+        x-on:closed-form-component-action-modal.window="handleModalLifecycleEvent('closed', $event)"
+        x-on:support-unlock-updated.window="applySupportUnlockDecision($event.detail?.mode ?? null)"
+    >
+        @if (!$ready)
+            <section
+                class="quran-reader-panel relative flex h-[clamp(28rem,82svh,50rem)] w-[min(94vw,50rem)] min-w-[18rem] flex-col items-center justify-center gap-4 rounded-[1.75rem] border px-6 py-7 text-center"
             >
-                <!-- Credits: uiverse.io/gharsh11032000/loud-chicken-53 -->
-                <button
-                    class="quran-soorah-trigger w-[13.4rem] shrink-0 outline-none"
-                    type="button"
-                    dir="rtl"
-                    x-bind:disabled="wirdModeActive"
-                    x-bind:class="{ 'quran-soorah-trigger--disabled': wirdModeActive }"
-                    x-on:click="
-                        if (wirdModeActive) {
-                            return;
-                        }
-                        warmSearchIndex();
-                        $wire.mountAction('searchQuran');
-                        queueSurahDirectoryAutoFocus();
-                    "
-                    x-bind:aria-label="@js(arabic_text('ابحث في ')) + currentSurahTitle()"
+                <h2 class="font-quran text-3xl leading-[1.9]">{{ arabic_text('قارئ القرآن') }}</h2>
+                <p class="text-sm leading-7 opacity-85">
+                    {{ arabic_text('بيانات المصحف غير متاحة بعد. تأكد من تجهيز جداول القرآن وبياناتها، ثم أعد فتح قسم الكتاب.') }}
+                </p>
+            </section>
+        @else
+            <section
+                class="quran-reader-panel min-w-75 3xl:h-[min(73.5svh,60.5rem)] 3xl:w-[min(80vw,44rem)] 4xl:h-[60rem] 4xl:w-[44rem] relative flex h-[min(82svh,38rem)] w-[min(92vw,22rem)] flex-col overflow-hidden rounded-[1.75rem] border sm:w-[min(84vw,37rem)] xl:h-[min(73.5svh,46.75rem)] xl:w-[min(84vw,34rem)] 2xl:h-[min(73.5svh,55rem)] 2xl:w-[min(84vw,40rem)]"
+                x-bind:style="readerPanelStyle()"
+                x-on:pointerdown.passive="onSwipeStart($event)"
+                x-on:pointermove.window.passive="onSwipeMove($event)"
+                x-on:pointerup.window.passive="onSwipeEnd($event)"
+                x-on:pointercancel.window.passive="onSwipeCancel()"
+                x-on:touchstart.passive="onSwipeStart($event)"
+                x-on:touchmove.window.passive="onSwipeMove($event)"
+                x-on:touchend.window.passive="onSwipeEnd($event)"
+                x-on:touchcancel.window.passive="onSwipeCancel()"
+                x-on:keydown.left.window.prevent="onGlobalArrowNavigate('left', $event)"
+                x-on:keydown.right.window.prevent="onGlobalArrowNavigate('right', $event)"
+                x-on:quran-go-prev.window="handleRequestedNavigation('prev', $event.detail)"
+                x-on:quran-go-next.window="handleRequestedNavigation('next', $event.detail)"
+                x-on:quran-go-page.window="handleRequestedNavigation('page', $event.detail)"
+                x-on:quran-go-gate.window="window.dispatchEvent(new CustomEvent('quran-reader-go-gate'))"
+                x-ref="readerPanel"
+            >
+                <header
+                    class="quran-top-strip"
+                    data-no-swipe
+                    x-bind:class="{ 'quran-top-strip--wird-active': wirdModeActive }"
                 >
-                    <x-icon
-                        class="quran-soorah-trigger-icon"
-                        :name="'heroicon-o-magnifying-glass'"
-                    />
-                    <span class="quran-soorah-trigger-text">
-                        <span
-                            class="quran-soorah-trigger-text-inner"
-                            x-bind:class="surahTriggerCaptionAnimClass"
-                            x-text="currentSurahTriggerLabel()"
-                        ></span>
-                    </span>
-                    <span class="quran-soorah-trigger-circle"></span>
-                </button>
-                <div
-                    class="quran-top-actions"
-                    x-bind:class="{ 'quran-top-actions--wird-active': wirdModeActive }"
-                >
-                    <!-- Credits: https://uiverse.io/vinodjangid07/tricky-bullfrog-41 -->
+                    <!-- Credits: uiverse.io/gharsh11032000/loud-chicken-53 -->
                     <button
-                        class="quran-history-toggle-button quran-top-actions-secondary outline-none"
-                        id="quran-reader-history-toggle"
-                        data-quran-open-history
+                        class="quran-soorah-trigger w-[13.4rem] shrink-0 outline-none"
                         type="button"
-                        aria-label="{{ arabic_text('سجل التنقل') }}"
-                        x-on:click="if (!wirdModeActive) { $wire.mountAction('navigationHistory') }"
+                        dir="rtl"
+                        x-bind:disabled="wirdModeActive"
+                        x-bind:class="{ 'quran-soorah-trigger--disabled': wirdModeActive }"
+                        x-on:click="
+                            if (wirdModeActive) {
+                                return;
+                            }
+                            warmSearchIndex();
+                            $wire.mountAction('searchQuran');
+                            queueSurahDirectoryAutoFocus();
+                        "
+                        x-bind:aria-label="@js(arabic_text('ابحث في ')) + currentSurahTitle()"
                     >
                         <x-icon
-                            class="quran-history-toggle-icon"
-                            :name="'heroicon-o-clock'"
+                            class="quran-soorah-trigger-icon"
+                            :name="'heroicon-o-magnifying-glass'"
                         />
-                    </button>
-
-                    <button
-                        class="quran-support-lock-target quran-wird-progress-button outline-none"
-                        data-quran-wird-toggle
-                        data-support-lock-target="wird-progress"
-                        type="button"
-                        x-data="{ hovered: $useHover($el) }"
-                        x-bind:style="wirdProgressBarStyle()"
-                        x-bind:class="{
-                            'quran-wird-progress-button--completed': ensureWirdDailyRecord()?.completed,
-                            'quran-wird-progress-button--shimmer-running': wirdHoverShimmerRunning,
-                            'quran-wird-progress-button--active-aura': wirdModeActive && !isSupportLockActive(),
-                        }"
-                        x-bind:aria-pressed="wirdModeActive ? 'true' : 'false'"
-                        x-bind:aria-label="wirdModeActive ? @js(arabic_text('إيقاف وضع الوِرد والعودة للقراءة الحرة')) : @js(arabic_text('تشغيل وضع الوِرد اليومي'))"
-                        x-on:click="toggleWirdMode()"
-                        x-on:mouseenter="startWirdHoverEffects()"
-                        x-on:mouseleave="endWirdHoverEffects()"
-                        x-on:focusin="startWirdHoverEffects()"
-                        x-on:focusout="endWirdHoverEffects()"
-                    >
-                        <span
-                            class="quran-wird-progress-aura-water"
-                            aria-hidden="true"
-                        ></span>
-                        <span
-                            class="quran-wird-progress-aura-reflect"
-                            aria-hidden="true"
-                            x-show="doesEnableVisualEnhancements"
-                        ></span>
-                        <span
-                            class="quran-wird-progress-aura-rainbow"
-                            aria-hidden="true"
-                            x-show="doesEnableVisualEnhancements && wirdModeActive && !isSupportLockActive()"
-                        ></span>
-                        <span
-                            class="quran-wird-progress-hover-shimmer"
-                            aria-hidden="true"
-                        ></span>
-                        <span
-                            class="quran-wird-progress-fill quran-wird-progress-fill--committed"
-                            aria-hidden="true"
-                        ></span>
-                        <span
-                            class="quran-wird-progress-fill quran-wird-progress-fill--browse"
-                            aria-hidden="true"
-                        ></span>
-                        <span class="quran-wird-progress-content">
+                        <span class="quran-soorah-trigger-text">
                             <span
-                                class="quran-wird-progress-percent"
-                                x-text="wirdProgressPercentLabel()"
-                            ></span>
-                            <span
-                                class="text-primary-700 translate-y-1.5 text-xs font-bold opacity-0 transition-all duration-500"
-                                x-bind:class="{
-                                    'opacity-100! -translate-y-0.25!': (hovered || wirdModeActive) && !
-                                        isSupportLockActive(),
-                                    'font-normal!': wirdModeActive,
-                                }"
-                            >{{ arabic_text('الورد اليومي') }}</span>
-                            <span
-                                class="quran-wird-progress-count"
-                                x-text="wirdProgressCounterLabel()"
+                                class="quran-soorah-trigger-text-inner"
+                                x-bind:class="surahTriggerCaptionAnimClass"
+                                x-text="currentSurahTriggerLabel()"
                             ></span>
                         </span>
+                        <span class="quran-soorah-trigger-circle"></span>
                     </button>
-
-                    <!-- Credits: https://uiverse.io/vinodjangid07/breezy-goose-71 -->
-                    <button
-                        class="quran-bookmark-toggle-button quran-top-actions-secondary outline-none"
-                        id="quran-reader-bookmark-toggle"
-                        data-quran-bookmark-toggle
-                        type="button"
-                        x-bind:class="{ 'quran-bookmark-toggle-button--bookmarked': isCurrentPageBookmarked() }"
-                        x-bind:aria-pressed="isCurrentPageBookmarked() ? 'true' : 'false'"
-                        x-bind:aria-label="isCurrentPageBookmarked() ? @js(arabic_text('إزالة علامة الصفحة الحالية')) : @js(arabic_text('حفظ الصفحة الحالية كعلامة'))"
-                        x-on:pointerdown="onBookmarkButtonPointerDown($event)"
-                        x-on:pointerup="onBookmarkButtonPointerUp($event)"
-                        x-on:pointercancel="onBookmarkButtonPointerCancel()"
-                        x-on:pointerleave="onBookmarkButtonPointerCancel()"
-                        x-on:click.prevent="if (!wirdModeActive) { onBookmarkButtonClick() }"
-                    >
-                        <span
-                            class="quran-bookmark-toggle-fill"
-                            aria-hidden="true"
-                        ></span>
-                        <svg
-                            class="quran-bookmark-toggle-icon"
-                            aria-hidden="true"
-                            width="15"
-                            viewBox="0 0 50 70"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                        >
-                            <path
-                                d="M46 62.0085L46 3.88139L3.99609 3.88139L3.99609 62.0085L24.5 45.5L46 62.0085Z"
-                                stroke="#fff"
-                                stroke-width="7"
-                            ></path>
-                        </svg>
-                    </button>
-                </div>
-            </header>
-
-            <div
-                class="my-2 min-h-0 flex-1 overflow-hidden px-3 sm:my-3 xl:my-1.5 2xl:my-3 sm:px-4 xl:px-12 2xl:px-4"
-                x-ref="pageViewport"
-            >
-                <div
-                    class="quran-page-surface h-full rounded-2xl transition-opacity duration-200 pt-2.5"
-                    x-bind:class="pageMotionClass"
-                    x-on:click="clearAyahSelectionOnBackground($event)"
-                    x-ref="pageSurface"
-                >
-                    @if ($qpcPageFontFamily !== null && $qpcPageFontUrl !== null && $qpcPageFontFormat !== null)
-                        <style>
-                            @font-face {
-                                font-family: '{{ $qpcPageFontFamily }}';
-                                src: url('{{ $qpcPageFontUrl }}') format('{{ $qpcPageFontFormat }}');
-                                font-display: block;
-                            }
-                        </style>
-                    @endif
-
-                    @if ($surahHeaderFontFamily !== null && $surahHeaderFontUrl !== null && $surahHeaderFontFormat !== null)
-                        <style>
-                            @font-face {
-                                font-family: '{{ $surahHeaderFontFamily }}';
-                                src: url('{{ $surahHeaderFontUrl }}') format('{{ $surahHeaderFontFormat }}');
-                                font-display: swap;
-                            }
-                        </style>
-                    @endif
-
-                    @if ($basmallahFontFamily !== null && $basmallahFontUrl !== null && $basmallahFontFormat !== null)
-                        <style>
-                            @font-face {
-                                font-family: '{{ $basmallahFontFamily }}';
-                                src: url('{{ $basmallahFontUrl }}') format('{{ $basmallahFontFormat }}');
-                                font-display: swap;
-                            }
-                        </style>
-                    @endif
-
                     <div
-                        class="mx-auto grid h-full w-fit max-w-full place-items-center overflow-hidden"
-                        x-ref="pageFrame"
+                        class="quran-top-actions"
+                        x-bind:class="{ 'quran-top-actions--wird-active': wirdModeActive }"
                     >
-                        <div
-                            class="quran-page-lines mx-auto"
-                            x-bind:data-fit-state="typeof pageFitState === 'function' ? pageFitState() : (isFittingPage ? 'fitting' : 'ready')"
-                            x-bind:style="pageContentStyle()"
-                            x-on:click="clearAyahSelectionOnBackground($event)"
-                            x-on:pointerup.window.passive="onWordPointerUp($event)"
-                            x-on:pointercancel.window.passive="onWordPointerCancel()"
-                            x-on:mouseleave="clearHoveredSegment()"
-                            x-ref="pageContent"
+                        <!-- Credits: https://uiverse.io/vinodjangid07/tricky-bullfrog-41 -->
+                        <button
+                            class="quran-history-toggle-button quran-top-actions-secondary outline-none"
+                            id="quran-reader-history-toggle"
+                            data-quran-open-history
+                            type="button"
+                            aria-label="{{ arabic_text('سجل التنقل') }}"
+                            x-on:click="if (!wirdModeActive) { $wire.mountAction('navigationHistory') }"
                         >
-                            <template
-                                x-for="line in mushafLines"
-                                :key="`quran-line-${pageNumber}-${line.line_number}-${line.line_type}`"
+                            <x-icon
+                                class="quran-history-toggle-icon"
+                                :name="'heroicon-o-clock'"
+                            />
+                        </button>
+
+                        <button
+                            class="quran-support-lock-target quran-wird-progress-button outline-none"
+                            data-quran-wird-toggle
+                            data-support-lock-target="wird-progress"
+                            type="button"
+                            x-data="{ hovered: $useHover($el) }"
+                            x-bind:style="wirdProgressBarStyle()"
+                            x-bind:class="{
+                                'quran-wird-progress-button--completed': ensureWirdDailyRecord()?.completed,
+                                'quran-wird-progress-button--shimmer-running': wirdHoverShimmerRunning,
+                                'quran-wird-progress-button--active-aura': wirdModeActive && !isSupportLockActive(),
+                            }"
+                            x-bind:aria-pressed="wirdModeActive ? 'true' : 'false'"
+                            x-bind:aria-label="wirdModeActive ? @js(arabic_text('إيقاف وضع الوِرد والعودة للقراءة الحرة')) : @js(arabic_text('تشغيل وضع الوِرد اليومي'))"
+                            x-on:click="toggleWirdMode()"
+                            x-on:mouseenter="startWirdHoverEffects()"
+                            x-on:mouseleave="endWirdHoverEffects()"
+                            x-on:focusin="startWirdHoverEffects()"
+                            x-on:focusout="endWirdHoverEffects()"
+                        >
+                            <span
+                                class="quran-wird-progress-aura-water"
+                                aria-hidden="true"
+                            ></span>
+                            <span
+                                class="quran-wird-progress-aura-reflect"
+                                aria-hidden="true"
+                                x-show="doesEnableVisualEnhancements"
+                            ></span>
+                            <span
+                                class="quran-wird-progress-aura-rainbow"
+                                aria-hidden="true"
+                                x-show="doesEnableVisualEnhancements && wirdModeActive && !isSupportLockActive()"
+                            ></span>
+                            <span
+                                class="quran-wird-progress-hover-shimmer"
+                                aria-hidden="true"
+                            ></span>
+                            <span
+                                class="quran-wird-progress-fill quran-wird-progress-fill--committed"
+                                aria-hidden="true"
+                            ></span>
+                            <span
+                                class="quran-wird-progress-fill quran-wird-progress-fill--browse"
+                                aria-hidden="true"
+                            ></span>
+                            <span class="quran-wird-progress-content">
+                                <span
+                                    class="quran-wird-progress-percent"
+                                    x-text="wirdProgressPercentLabel()"
+                                ></span>
+                                <span
+                                    class="text-primary-700 translate-y-1.5 text-xs font-bold opacity-0 transition-all duration-500"
+                                    x-bind:class="{
+                                        'opacity-100! -translate-y-0.25!': (hovered || wirdModeActive) && !
+                                            isSupportLockActive(),
+                                        'font-normal!': wirdModeActive,
+                                    }"
+                                >{{ arabic_text('الورد اليومي') }}</span>
+                                <span
+                                    class="quran-wird-progress-count"
+                                    x-text="wirdProgressCounterLabel()"
+                                ></span>
+                            </span>
+                        </button>
+
+                        <!-- Credits: https://uiverse.io/vinodjangid07/breezy-goose-71 -->
+                        <button
+                            class="quran-bookmark-toggle-button quran-top-actions-secondary outline-none"
+                            id="quran-reader-bookmark-toggle"
+                            data-quran-bookmark-toggle
+                            type="button"
+                            x-bind:class="{ 'quran-bookmark-toggle-button--bookmarked': isCurrentPageBookmarked() }"
+                            x-bind:aria-pressed="isCurrentPageBookmarked() ? 'true' : 'false'"
+                            x-bind:aria-label="isCurrentPageBookmarked() ? @js(arabic_text('إزالة علامة الصفحة الحالية')) : @js(arabic_text('حفظ الصفحة الحالية كعلامة'))"
+                            x-on:pointerdown="onBookmarkButtonPointerDown($event)"
+                            x-on:pointerup="onBookmarkButtonPointerUp($event)"
+                            x-on:pointercancel="onBookmarkButtonPointerCancel()"
+                            x-on:pointerleave="onBookmarkButtonPointerCancel()"
+                            x-on:click.prevent="if (!wirdModeActive) { onBookmarkButtonClick() }"
+                        >
+                            <span
+                                class="quran-bookmark-toggle-fill"
+                                aria-hidden="true"
+                            ></span>
+                            <svg
+                                class="quran-bookmark-toggle-icon"
+                                aria-hidden="true"
+                                width="15"
+                                viewBox="0 0 50 70"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
                             >
-                                <div
-                                    data-quran-line
-                                    x-data="{ lineEntry: line }"
-                                    x-show="shouldRenderLine(lineEntry)"
-                                    x-bind:class="lineAlignmentClass(lineEntry)"
-                                    x-bind:data-quran-line-number="Number(lineEntry?.line_number ?? 0)"
-                                    x-bind:data-quran-line-type="String(lineEntry?.line_type ?? '')"
-                                    x-bind:style="lineEntryStyle(lineEntry)"
+                                <path
+                                    d="M46 62.0085L46 3.88139L3.99609 3.88139L3.99609 62.0085L24.5 45.5L46 62.0085Z"
+                                    stroke="#fff"
+                                    stroke-width="7"
+                                ></path>
+                            </svg>
+                        </button>
+                    </div>
+                </header>
+
+                <div
+                    class="my-2 min-h-0 flex-1 overflow-hidden px-3 sm:my-3 sm:px-4 xl:my-1.5 xl:px-12 2xl:my-3 2xl:px-4"
+                    x-ref="pageViewport"
+                >
+                    <div
+                        class="quran-page-surface h-full rounded-2xl pt-2.5 transition-opacity duration-200"
+                        x-bind:class="pageMotionClass"
+                        x-on:click="clearAyahSelectionOnBackground($event)"
+                        x-ref="pageSurface"
+                    >
+                        @if ($qpcPageFontFamily !== null && $qpcPageFontUrl !== null && $qpcPageFontFormat !== null)
+                            <style>
+                                @font-face {
+                                    font-family: '{{ $qpcPageFontFamily }}';
+                                    src: url('{{ $qpcPageFontUrl }}') format('{{ $qpcPageFontFormat }}');
+                                    font-display: block;
+                                }
+                            </style>
+                        @endif
+
+                        @if ($surahHeaderFontFamily !== null && $surahHeaderFontUrl !== null && $surahHeaderFontFormat !== null)
+                            <style>
+                                @font-face {
+                                    font-family: '{{ $surahHeaderFontFamily }}';
+                                    src: url('{{ $surahHeaderFontUrl }}') format('{{ $surahHeaderFontFormat }}');
+                                    font-display: swap;
+                                }
+                            </style>
+                        @endif
+
+                        @if ($basmallahFontFamily !== null && $basmallahFontUrl !== null && $basmallahFontFormat !== null)
+                            <style>
+                                @font-face {
+                                    font-family: '{{ $basmallahFontFamily }}';
+                                    src: url('{{ $basmallahFontUrl }}') format('{{ $basmallahFontFormat }}');
+                                    font-display: swap;
+                                }
+                            </style>
+                        @endif
+
+                        <div
+                            class="mx-auto grid h-full w-fit max-w-full place-items-center overflow-hidden"
+                            x-ref="pageFrame"
+                        >
+                            <div
+                                class="quran-page-lines mx-auto"
+                                x-bind:data-fit-state="typeof pageFitState === 'function' ? pageFitState() : (isFittingPage ? 'fitting' :
+                                    'ready')"
+                                x-bind:style="pageContentStyle()"
+                                x-on:click="clearAyahSelectionOnBackground($event)"
+                                x-on:pointerup.window.passive="onWordPointerUp($event)"
+                                x-on:pointercancel.window.passive="onWordPointerCancel()"
+                                x-on:mouseleave="clearHoveredSegment()"
+                                x-ref="pageContent"
+                            >
+                                <template
+                                    x-for="line in mushafLines"
+                                    :key="`quran-line-${pageNumber}-${line.line_number}-${line.line_type}`"
                                 >
-                                    <template x-if="isBasmallahLine(lineEntry)">
-                                        <div
-                                            class="font-quran quran-basmallah-line"
-                                            data-quran-line-text
-                                            x-bind:style="basmallahLineStyle(lineEntry)"
-                                        >
-                                            <template x-if="isBasmallahLineWithWords(lineEntry)">
-                                                <template
-                                                    x-for="(word, wordIndex) in lineEntry.words"
-                                                    :key="`quran-basmallah-word-${pageNumber}-${lineEntry.line_number}-${word.word_index ?? wordIndex}`"
-                                                >
-                                                    <span
-                                                        class="quran-basmallah-word"
-                                                        x-text="word.text"
-                                                    ></span>
-                                                </template>
-                                            </template>
-                                            <template x-if="!isBasmallahLineWithWords(lineEntry)">
-                                                <span x-text="basmallahDisplayText(lineEntry)"></span>
-                                            </template>
-                                        </div>
-                                    </template>
-                                    <template x-if="!isBasmallahLine(lineEntry) && isAyahLineWithWords(lineEntry)">
-                                        <div
-                                            data-quran-line-text
-                                            x-bind:class="ayahLineClass(lineEntry)"
-                                            x-bind:style="lineFontStyle()"
-                                        >
-                                            <template
-                                                x-for="(cluster, clusterIndex) in lineWordClusters(lineEntry)"
-                                                :key="`quran-cluster-${pageNumber}-${lineEntry.line_number}-${cluster.key ?? clusterIndex}`"
-                                            >
-                                                <span
-                                                    class="quran-segment-cluster"
-                                                    x-bind:class="{
-                                                        'quran-segment-cluster-active': isAyahClusterActive(
-                                                            cluster),
-                                                        'quran-segment-cluster-hovered': isAyahClusterHovered(
-                                                            cluster),
-                                                        'quran-segment-cluster-copied': isAyahClusterCopied(
-                                                            cluster),
-                                                    }"
-                                                >
-                                                    <template
-                                                        x-for="(word, wordIndex) in cluster.words"
-                                                        :key="`quran-word-${pageNumber}-${lineEntry.line_number}-${word.word_index ?? wordIndex}`"
-                                                    >
-                                                        <span class="quran-word-slot inline-flex items-baseline">
-                                                            <button
-                                                                class="quran-word-button px-0 outline-none transition"
-                                                                data-quran-word-button
-                                                                type="button"
-                                                                tabindex="-1"
-                                                                x-bind:data-quran-ayah-index="Number(word?.ayah_index ?? 0)"
-                                                                x-bind:data-quran-word-index="Number(word?.word_index ?? 0)"
-                                                                x-bind:data-quran-ayah-number="Number(word?.ayah_number ?? 0)"
-                                                                x-bind:data-quran-surah-number="Number(word?.surah_number ?? lineEntry?.surah_number ??
-                                                                    0)"
-                                                                x-bind:class="{
-                                                                    'quran-segment-active': isWordActive(word),
-                                                                    'quran-segment-hovered': isWordHovered(word),
-                                                                    'quran-segment-copied': isWordCopied(word),
-                                                                }"
-                                                                x-bind:disabled="!isSelectableWord(word)"
-                                                                x-on:pointerdown="onWordPointerDown($event, word)"
-                                                                x-on:pointermove="onWordPointerMove($event)"
-                                                                x-on:pointerup="onWordPointerUp($event)"
-                                                                x-on:pointercancel="onWordPointerCancel()"
-                                                                x-on:mouseleave="onWordPointerLeave(word)"
-                                                                x-on:click.stop="onWordClick($event, word)"
-                                                                x-on:mouseenter="setHoveredSegment(word)"
-                                                                x-on:focus="setHoveredSegment(word)"
-                                                                x-on:blur="clearHoveredSegment(word)"
-                                                                x-text="word.text"
-                                                            ></button>
-                                                            <template x-if="showAyahMarker(word)">
-                                                                <span
-                                                                    class="quran-ayah-marker mr-0.5 text-[0.92rem]"
-                                                                    style="color: var(--quran-subtle);"
-                                                                    x-text="'۝' + word.ayah_number"
-                                                                ></span>
-                                                            </template>
-                                                        </span>
-                                                    </template>
-                                                </span>
-                                            </template>
-                                        </div>
-                                    </template>
-                                    <template x-if="!isBasmallahLine(lineEntry) && !isAyahLineWithWords(lineEntry)">
-                                        <template x-if="isSurahHeaderLine(lineEntry)">
+                                    <div
+                                        data-quran-line
+                                        x-data="{ lineEntry: line }"
+                                        x-show="shouldRenderLine(lineEntry)"
+                                        x-bind:class="lineAlignmentClass(lineEntry)"
+                                        x-bind:data-quran-line-number="Number(lineEntry?.line_number ?? 0)"
+                                        x-bind:data-quran-line-type="String(lineEntry?.line_type ?? '')"
+                                        x-bind:style="lineEntryStyle(lineEntry)"
+                                    >
+                                        <template x-if="isBasmallahLine(lineEntry)">
                                             <div
-                                                class="quran-surah-header-line"
+                                                class="font-quran quran-basmallah-line"
                                                 data-quran-line-text
-                                                x-bind:class="{
-                                                    'quran-surah-header-line--fatiha': Number(lineEntry?.surah_number ??
-                                                        0) === 1
-                                                }"
-                                                x-bind:style="surahHeaderLineStyle(lineEntry)"
+                                                x-bind:style="basmallahLineStyle(lineEntry)"
                                             >
-                                                <span
-                                                    class="quran-surah-header-glyph"
-                                                    x-text="surahHeaderLineText(lineEntry)"
-                                                ></span>
+                                                <template x-if="isBasmallahLineWithWords(lineEntry)">
+                                                    <template
+                                                        x-for="(word, wordIndex) in lineEntry.words"
+                                                        :key="`quran-basmallah-word-${pageNumber}-${lineEntry.line_number}-${word.word_index ?? wordIndex}`"
+                                                    >
+                                                        <span
+                                                            class="quran-basmallah-word"
+                                                            x-text="word.text"
+                                                        ></span>
+                                                    </template>
+                                                </template>
+                                                <template x-if="!isBasmallahLineWithWords(lineEntry)">
+                                                    <span x-text="basmallahDisplayText(lineEntry)"></span>
+                                                </template>
                                             </div>
                                         </template>
-                                        <template x-if="!isSurahHeaderLine(lineEntry)">
+                                        <template x-if="!isBasmallahLine(lineEntry) && isAyahLineWithWords(lineEntry)">
                                             <div
-                                                class="font-quran quran-meta-line"
                                                 data-quran-line-text
-                                                x-bind:style="metaLineStyle(lineEntry)"
-                                                x-text="lineText(lineEntry)"
-                                            ></div>
+                                                x-bind:class="ayahLineClass(lineEntry)"
+                                                x-bind:style="lineFontStyle()"
+                                            >
+                                                <template
+                                                    x-for="(cluster, clusterIndex) in lineWordClusters(lineEntry)"
+                                                    :key="`quran-cluster-${pageNumber}-${lineEntry.line_number}-${cluster.key ?? clusterIndex}`"
+                                                >
+                                                    <span
+                                                        class="quran-segment-cluster"
+                                                        x-bind:class="{
+                                                            'quran-segment-cluster-active': isAyahClusterActive(
+                                                                cluster),
+                                                            'quran-segment-cluster-hovered': isAyahClusterHovered(
+                                                                cluster),
+                                                            'quran-segment-cluster-copied': isAyahClusterCopied(
+                                                                cluster),
+                                                        }"
+                                                    >
+                                                        <template
+                                                            x-for="(word, wordIndex) in cluster.words"
+                                                            :key="`quran-word-${pageNumber}-${lineEntry.line_number}-${word.word_index ?? wordIndex}`"
+                                                        >
+                                                            <span class="quran-word-slot inline-flex items-baseline">
+                                                                <button
+                                                                    class="quran-word-button px-0 outline-none transition"
+                                                                    data-quran-word-button
+                                                                    type="button"
+                                                                    tabindex="-1"
+                                                                    x-bind:data-quran-ayah-index="Number(word?.ayah_index ?? 0)"
+                                                                    x-bind:data-quran-word-index="Number(word?.word_index ?? 0)"
+                                                                    x-bind:data-quran-ayah-number="Number(word?.ayah_number ?? 0)"
+                                                                    x-bind:data-quran-surah-number="Number(word?.surah_number ?? lineEntry
+                                                                        ?.surah_number ??
+                                                                        0)"
+                                                                    x-bind:class="{
+                                                                        'quran-segment-active': isWordActive(word),
+                                                                        'quran-segment-hovered': isWordHovered(word),
+                                                                        'quran-segment-copied': isWordCopied(word),
+                                                                    }"
+                                                                    x-bind:disabled="!isSelectableWord(word)"
+                                                                    x-on:pointerdown="onWordPointerDown($event, word)"
+                                                                    x-on:pointermove="onWordPointerMove($event)"
+                                                                    x-on:pointerup="onWordPointerUp($event)"
+                                                                    x-on:pointercancel="onWordPointerCancel()"
+                                                                    x-on:mouseleave="onWordPointerLeave(word)"
+                                                                    x-on:click.stop="onWordClick($event, word)"
+                                                                    x-on:mouseenter="setHoveredSegment(word)"
+                                                                    x-on:focus="setHoveredSegment(word)"
+                                                                    x-on:blur="clearHoveredSegment(word)"
+                                                                    x-text="word.text"
+                                                                ></button>
+                                                                <template x-if="showAyahMarker(word)">
+                                                                    <span
+                                                                        class="quran-ayah-marker mr-0.5 text-[0.92rem]"
+                                                                        style="color: var(--quran-subtle);"
+                                                                        x-text="'۝' + word.ayah_number"
+                                                                    ></span>
+                                                                </template>
+                                                            </span>
+                                                        </template>
+                                                    </span>
+                                                </template>
+                                            </div>
                                         </template>
-                                    </template>
-                                </div>
-                            </template>
+                                        <template
+                                            x-if="!isBasmallahLine(lineEntry) && !isAyahLineWithWords(lineEntry)">
+                                            <template x-if="isSurahHeaderLine(lineEntry)">
+                                                <div
+                                                    class="quran-surah-header-line"
+                                                    data-quran-line-text
+                                                    x-bind:class="{
+                                                        'quran-surah-header-line--fatiha': Number(lineEntry
+                                                            ?.surah_number ??
+                                                            0) === 1
+                                                    }"
+                                                    x-bind:style="surahHeaderLineStyle(lineEntry)"
+                                                >
+                                                    <span
+                                                        class="quran-surah-header-glyph"
+                                                        x-text="surahHeaderLineText(lineEntry)"
+                                                    ></span>
+                                                </div>
+                                            </template>
+                                            <template x-if="!isSurahHeaderLine(lineEntry)">
+                                                <div
+                                                    class="font-quran quran-meta-line"
+                                                    data-quran-line-text
+                                                    x-bind:style="metaLineStyle(lineEntry)"
+                                                    x-text="lineText(lineEntry)"
+                                                ></div>
+                                            </template>
+                                        </template>
+                                    </div>
+                                </template>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <footer
-                class="quran-bottom-strip"
-                data-no-swipe
-            >
-                <button
-                    class="quran-swipe-hint quran-swipe-hint-button quran-bottom-strip-nav-prev select-none outline-none"
-                    type="button"
-                    aria-label="{{ arabic_text('الصفحة السابقة') }}"
-                    x-ref="prevChevronButton"
-                    x-on:click.stop.prevent="goPreviousFromChevron()"
+                <footer
+                    class="quran-bottom-strip"
+                    data-no-swipe
                 >
-                    <span
-                        class="quran-swipe-hint-chev"
-                        x-bind:class="{ 'quran-swipe-hint-chev-static': isFirstNavigationPage() }"
-                    >‹</span>
-                    <span
-                        class="quran-swipe-hint-chev"
-                        x-bind:class="{ 'quran-swipe-hint-chev-static': isFirstNavigationPage() }"
-                    >‹</span>
-                    <span
-                        class="quran-swipe-hint-chev"
-                        x-bind:class="{ 'quran-swipe-hint-chev-static': isFirstNavigationPage() }"
-                    >‹</span>
-                </button>
-                <div class="quran-bottom-strip-center">
-                    <div
-                        class="quran-page-counter"
-                        x-bind:class="{ 'quran-page-counter--morphing': pageCounterPulse.isActive && pageCounterPulse.hasChanges }"
+                    <button
+                        class="quran-swipe-hint quran-swipe-hint-button quran-bottom-strip-nav-prev select-none outline-none"
+                        type="button"
+                        aria-label="{{ arabic_text('الصفحة السابقة') }}"
+                        x-ref="prevChevronButton"
+                        x-on:click.stop.prevent="goPreviousFromChevron()"
                     >
-                        <button
-                            class="quran-page-slider-chip outline-none"
-                            type="button"
-                            x-bind:aria-label="wirdModeActive ? @js(arabic_text('وضع الوِرد اليومي مفعل')) : @js(arabic_text('إدخال رقم صفحة'))"
-                            x-bind:style="`--quran-counter-digit-count: ${pageCounterDigitLength()};`"
-                            x-bind:disabled="wirdModeActive"
-                            x-bind:class="{ 'quran-page-slider-chip--disabled': wirdModeActive }"
-                            x-on:click="if (!wirdModeActive) { $wire.mountAction('jumpToPage') }"
+                        <span
+                            class="quran-swipe-hint-chev"
+                            x-bind:class="{ 'quran-swipe-hint-chev-static': isFirstNavigationPage() }"
+                        >‹</span>
+                        <span
+                            class="quran-swipe-hint-chev"
+                            x-bind:class="{ 'quran-swipe-hint-chev-static': isFirstNavigationPage() }"
+                        >‹</span>
+                        <span
+                            class="quran-swipe-hint-chev"
+                            x-bind:class="{ 'quran-swipe-hint-chev-static': isFirstNavigationPage() }"
+                        >‹</span>
+                    </button>
+                    <div class="quran-bottom-strip-center">
+                        <div
+                            class="quran-page-counter"
+                            x-bind:class="{ 'quran-page-counter--morphing': pageCounterPulse.isActive && pageCounterPulse.hasChanges }"
                         >
-                            <span class="quran-page-chip-total me-1.5">
-                                <template
-                                    x-for="(digit, digitIndex) in pageCounterDisplayDigits(pageCounterMaxDisplayValue())"
-                                    :key="`quran-page-max-digit-${digitIndex}`"
-                                >
-                                    <span class="quran-counter-cell">
-                                        <span
-                                            class="quran-counter-static"
-                                            x-text="digit"
-                                        ></span>
-                                    </span>
-                                </template>
-                            </span>
-                            <span class="quran-page-chip-separator me-1.5">/</span>
-                            <span class="quran-page-chip-current-wrap">
-                                <span class="quran-page-chip-current">
+                            <button
+                                class="quran-page-slider-chip outline-none"
+                                type="button"
+                                x-bind:aria-label="wirdModeActive ? @js(arabic_text('وضع الوِرد اليومي مفعل')) : @js(arabic_text('إدخال رقم صفحة'))"
+                                x-bind:style="`--quran-counter-digit-count: ${pageCounterDigitLength()};`"
+                                x-bind:disabled="wirdModeActive"
+                                x-bind:class="{ 'quran-page-slider-chip--disabled': wirdModeActive }"
+                                x-on:click="if (!wirdModeActive) { $wire.mountAction('jumpToPage') }"
+                            >
+                                <span class="quran-page-chip-total me-1.5">
                                     <template
-                                        x-for="(digit, digitIndex) in pageCounterDisplayDigits(pageInput)"
-                                        :key="`quran-page-current-digit-${digitIndex}`"
+                                        x-for="(digit, digitIndex) in pageCounterDisplayDigits(pageCounterMaxDisplayValue())"
+                                        :key="`quran-page-max-digit-${digitIndex}`"
                                     >
                                         <span class="quran-counter-cell">
                                             <span
@@ -2138,104 +2147,120 @@
                                         </span>
                                     </template>
                                 </span>
-                                <span
-                                    class="quran-page-counter-morph"
-                                    aria-hidden="true"
-                                    x-cloak
-                                    x-show="pageCounterPulse.isActive && pageCounterPulse.hasChanges"
-                                >
-                                    <template
-                                        x-for="segment in pageCounterPulse.segments"
-                                        :key="segment.key"
-                                    >
-                                        <span class="quran-counter-cell">
-                                            <span
-                                                x-show="!segment.changed"
-                                                x-text="segment.next"
-                                            ></span>
-                                            <span
-                                                class="quran-counter-roll"
-                                                x-show="segment.changed"
-                                            >
+                                <span class="quran-page-chip-separator me-1.5">/</span>
+                                <span class="quran-page-chip-current-wrap">
+                                    <span class="quran-page-chip-current">
+                                        <template
+                                            x-for="(digit, digitIndex) in pageCounterDisplayDigits(pageInput)"
+                                            :key="`quran-page-current-digit-${digitIndex}`"
+                                        >
+                                            <span class="quran-counter-cell">
                                                 <span
-                                                    class="quran-counter-roll__prev"
-                                                    x-text="segment.prev"
-                                                ></span>
-                                                <span
-                                                    class="quran-counter-roll__next"
-                                                    x-text="segment.next"
+                                                    class="quran-counter-static"
+                                                    x-text="digit"
                                                 ></span>
                                             </span>
-                                        </span>
-                                    </template>
+                                        </template>
+                                    </span>
+                                    <span
+                                        class="quran-page-counter-morph"
+                                        aria-hidden="true"
+                                        x-cloak
+                                        x-show="pageCounterPulse.isActive && pageCounterPulse.hasChanges"
+                                    >
+                                        <template
+                                            x-for="segment in pageCounterPulse.segments"
+                                            :key="segment.key"
+                                        >
+                                            <span class="quran-counter-cell">
+                                                <span
+                                                    x-show="!segment.changed"
+                                                    x-text="segment.next"
+                                                ></span>
+                                                <span
+                                                    class="quran-counter-roll"
+                                                    x-show="segment.changed"
+                                                >
+                                                    <span
+                                                        class="quran-counter-roll__prev"
+                                                        x-text="segment.prev"
+                                                    ></span>
+                                                    <span
+                                                        class="quran-counter-roll__next"
+                                                        x-text="segment.next"
+                                                    ></span>
+                                                </span>
+                                            </span>
+                                        </template>
+                                    </span>
                                 </span>
-                            </span>
-                        </button>
+                            </button>
+                        </div>
                     </div>
-                </div>
-                <div class="quran-bottom-strip-slider">
-                    <input
-                        class="quran-page-slider outline-none"
-                        type="range"
-                        aria-label="{{ arabic_text('التنقل بين صفحات المصحف') }}"
-                        x-bind:min="sliderMin()"
-                        x-bind:max="sliderMax()"
-                        x-bind:step="1"
-                        x-bind:value="sliderValue()"
-                        x-on:input="onSliderInput($event)"
-                        x-on:change="onSliderCommit($event)"
-                        x-on:pointerup="onSliderPointerRelease($event)"
-                        x-on:mouseup="onSliderPointerRelease($event)"
-                        x-on:touchend="onSliderPointerRelease($event)"
-                        x-on:pointercancel="onSliderPointerRelease($event)"
-                    />
-                </div>
-                <button
-                    class="quran-swipe-hint quran-swipe-hint-button quran-bottom-strip-nav-next select-none outline-none"
-                    type="button"
-                    aria-label="{{ arabic_text('الصفحة التالية') }}"
-                    x-ref="nextChevronButton"
-                    x-bind:disabled="!wirdModeActive && isLastNavigationPage()"
-                    x-on:click.stop.prevent="goNextFromChevron()"
-                >
-                    <span
-                        class="quran-swipe-hint-chev quran-swipe-hint-chev-opposite"
-                        x-bind:class="{ 'quran-swipe-hint-chev-static': !wirdModeActive && isLastNavigationPage() }"
-                    >›</span>
-                    <span
-                        class="quran-swipe-hint-chev quran-swipe-hint-chev-opposite"
-                        x-bind:class="{ 'quran-swipe-hint-chev-static': !wirdModeActive && isLastNavigationPage() }"
-                    >›</span>
-                    <span
-                        class="quran-swipe-hint-chev quran-swipe-hint-chev-opposite"
-                        x-bind:class="{ 'quran-swipe-hint-chev-static': !wirdModeActive && isLastNavigationPage() }"
-                    >›</span>
-                </button>
-            </footer>
+                    <div class="quran-bottom-strip-slider">
+                        <input
+                            class="quran-page-slider outline-none"
+                            type="range"
+                            aria-label="{{ arabic_text('التنقل بين صفحات المصحف') }}"
+                            x-bind:min="sliderMin()"
+                            x-bind:max="sliderMax()"
+                            x-bind:step="1"
+                            x-bind:value="sliderValue()"
+                            x-on:input="onSliderInput($event)"
+                            x-on:change="onSliderCommit($event)"
+                            x-on:pointerup="onSliderPointerRelease($event)"
+                            x-on:mouseup="onSliderPointerRelease($event)"
+                            x-on:touchend="onSliderPointerRelease($event)"
+                            x-on:pointercancel="onSliderPointerRelease($event)"
+                        />
+                    </div>
+                    <button
+                        class="quran-swipe-hint quran-swipe-hint-button quran-bottom-strip-nav-next select-none outline-none"
+                        type="button"
+                        aria-label="{{ arabic_text('الصفحة التالية') }}"
+                        x-ref="nextChevronButton"
+                        x-bind:disabled="!wirdModeActive && isLastNavigationPage()"
+                        x-on:click.stop.prevent="goNextFromChevron()"
+                    >
+                        <span
+                            class="quran-swipe-hint-chev quran-swipe-hint-chev-opposite"
+                            x-bind:class="{ 'quran-swipe-hint-chev-static': !wirdModeActive && isLastNavigationPage() }"
+                        >›</span>
+                        <span
+                            class="quran-swipe-hint-chev quran-swipe-hint-chev-opposite"
+                            x-bind:class="{ 'quran-swipe-hint-chev-static': !wirdModeActive && isLastNavigationPage() }"
+                        >›</span>
+                        <span
+                            class="quran-swipe-hint-chev quran-swipe-hint-chev-opposite"
+                            x-bind:class="{ 'quran-swipe-hint-chev-static': !wirdModeActive && isLastNavigationPage() }"
+                        >›</span>
+                    </button>
+                </footer>
 
-            <template x-teleport="body">
-                <div
-                    class="quran-copy-popover"
-                    data-quran-copy-popover
-                    x-cloak
-                    x-show="copyFeedback.visible"
-                    x-bind:style="copyFeedbackStyle()"
-                    x-transition:enter="quran-copy-popover-enter"
-                    x-transition:enter-start="quran-copy-popover-enter-start"
-                    x-transition:enter-end="quran-copy-popover-enter-end"
-                    x-transition:leave="quran-copy-popover-leave"
-                    x-transition:leave-start="quran-copy-popover-leave-start"
-                    x-transition:leave-end="quran-copy-popover-leave-end"
-                >
-                    <x-icon
-                        class="h-3.5 w-3.5"
-                        :name="'heroicon-o-clipboard'"
-                    />
-                    <span>{{ arabic_text('تم النسخ') }}</span>
-                </div>
-            </template>
-        </section>
+                <template x-teleport="body">
+                    <div
+                        class="quran-copy-popover"
+                        data-quran-copy-popover
+                        x-cloak
+                        x-show="copyFeedback.visible"
+                        x-bind:style="copyFeedbackStyle()"
+                        x-transition:enter="quran-copy-popover-enter"
+                        x-transition:enter-start="quran-copy-popover-enter-start"
+                        x-transition:enter-end="quran-copy-popover-enter-end"
+                        x-transition:leave="quran-copy-popover-leave"
+                        x-transition:leave-start="quran-copy-popover-leave-start"
+                        x-transition:leave-end="quran-copy-popover-leave-end"
+                    >
+                        <x-icon
+                            class="h-3.5 w-3.5"
+                            :name="'heroicon-o-clipboard'"
+                        />
+                        <span>{{ arabic_text('تم النسخ') }}</span>
+                    </div>
+                </template>
+            </section>
+        @endif
+    </div>
 
-        <x-filament-actions::modals />
-    @endif
+    <x-filament-actions::modals />
 </div>

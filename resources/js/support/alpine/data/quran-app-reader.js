@@ -7329,7 +7329,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         resetCurrentPageFitStyles() {
-            const rootElement = this.$el;
+            const rootElement = this.$el.firstElementChild;
 
             if (!(rootElement instanceof HTMLElement)) {
                 this.pageScale = 1;
@@ -7643,7 +7643,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         applySafetyScaleForCurrentPageOverflow() {
-            const rootElement = this.$el;
+            const rootElement = this.$el.firstElementChild;
             const frameElement = this.$refs.pageFrame;
             const contentElement = this.$refs.pageContent;
 
@@ -7725,7 +7725,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         fitPageToViewport() {
-            const rootElement = this.$el;
+            const rootElement = this.$el.firstElementChild;
             const frameElement = this.$refs.pageFrame;
             const contentElement = this.$refs.pageContent;
 
