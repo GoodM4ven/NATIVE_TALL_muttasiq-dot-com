@@ -2925,6 +2925,187 @@ JS,
     $page->assertNoJavaScriptErrors();
 });
 
+it('keeps the reader visible on 4xl when jumping from opening spread to dense pages', function () {
+    $page = visit('/');
+
+    $assertReaderRenderable = function (int $timeoutMs = 10_000) use ($page): void {
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript('data.ready && data.mushafLines.length > 0'),
+            true,
+            $timeoutMs,
+        );
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript('data._pendingNavigationRequest === null && !data._navigationRevealLocked && !data.isLoadingPage'),
+            true,
+            $timeoutMs,
+        );
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript('data.isFittingPage'),
+            false,
+            $timeoutMs,
+        );
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript("typeof data.pageFitState === 'function' ? data.pageFitState() : 'ready'"),
+            'ready',
+            $timeoutMs,
+        );
+        waitForScriptWithTimeout(
+            $page,
+            <<<'JS'
+(() => {
+  const lines = document.querySelector('.quran-page-lines');
+  if (!(lines instanceof HTMLElement)) {
+    return false;
+  }
+
+  const styles = window.getComputedStyle(lines);
+  const opacity = Number.parseFloat(styles.opacity || '0');
+  const lineTexts = Array.from(lines.querySelectorAll('[data-quran-line-text]'))
+    .map((line) => String(line.textContent ?? '').replace(/\s+/g, '').trim())
+    .filter((text) => text.length > 0);
+
+  return String(lines.getAttribute('data-fit-state') ?? '') === 'ready'
+    && styles.visibility !== 'hidden'
+    && opacity > 0.35
+    && lineTexts.length > 0;
+})()
+JS,
+            true,
+            $timeoutMs,
+        );
+    };
+
+    resetBrowserState($page);
+    safeBrowserResize($page, 2560, 1440);
+    waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
+    waitForScriptWithTimeout($page, 'window.innerWidth >= 2550', true, 5_000);
+    waitForScriptWithTimeout($page, 'window.innerHeight >= 1430', true, 5_000);
+    hashAction($page, '#quran-app-tilawa', true);
+    waitForScript($page, homeDataScript('data.activeView'), 'quran-app-tilawa');
+    waitForScript($page, 'window.location.hash', '#quran-app-tilawa');
+    waitForQuranReaderVisible($page);
+    $assertReaderRenderable();
+
+    waitForScriptWithTimeout($page, quranReaderDataScript('Number(data.pageNumber ?? 0)'), 1, 8_000);
+
+    $page->script(
+        quranReaderCommandScript("data.dispatchPageNavigationRequest(2, 'page-jump');"),
+    );
+    waitForScriptWithTimeout($page, quranReaderDataScript('Number(data.pageNumber ?? 0)'), 2, 8_000);
+    $assertReaderRenderable();
+
+    $page->script(
+        quranReaderCommandScript("data.dispatchPageNavigationRequest(3, 'page-jump');"),
+    );
+    waitForScriptWithTimeout($page, quranReaderDataScript('Number(data.pageNumber ?? 0)'), 3, 12_000);
+    $assertReaderRenderable(12_000);
+
+    $page->script(
+        quranReaderCommandScript("data.dispatchPageNavigationRequest(604, 'page-jump');"),
+    );
+    waitForScriptWithTimeout($page, quranReaderDataScript('Number(data.pageNumber ?? 0)'), 604, 14_000);
+    $assertReaderRenderable(14_000);
+
+    $page->assertNoJavaScriptErrors();
+});
+
+it('keeps the reader visible on 4xl after rapid swipe-next then slider jump to page 604', function () {
+    $page = visit('/');
+
+    $assertReaderRenderable = function (int $timeoutMs = 12_000) use ($page): void {
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript('data.ready && data.mushafLines.length > 0'),
+            true,
+            $timeoutMs,
+        );
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript('data.isFittingPage'),
+            false,
+            $timeoutMs,
+        );
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript("typeof data.pageFitState === 'function' ? data.pageFitState() : 'ready'"),
+            'ready',
+            $timeoutMs,
+        );
+        waitForScriptWithTimeout(
+            $page,
+            <<<'JS'
+(() => {
+  const lines = document.querySelector('.quran-page-lines');
+  if (!(lines instanceof HTMLElement)) {
+    return false;
+  }
+
+  const styles = window.getComputedStyle(lines);
+  const opacity = Number.parseFloat(styles.opacity || '0');
+  const lineTexts = Array.from(lines.querySelectorAll('[data-quran-line-text]'))
+    .map((line) => String(line.textContent ?? '').replace(/\s+/g, '').trim())
+    .filter((text) => text.length > 0);
+
+  return String(lines.getAttribute('data-fit-state') ?? '') === 'ready'
+    && styles.visibility !== 'hidden'
+    && opacity > 0.35
+    && lineTexts.length > 0;
+})()
+JS,
+            true,
+            $timeoutMs,
+        );
+    };
+
+    resetBrowserState($page);
+    safeBrowserResize($page, 2560, 1440);
+    waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
+    hashAction($page, '#quran-app-tilawa', true);
+    waitForScript($page, homeDataScript('data.activeView'), 'quran-app-tilawa');
+    waitForQuranReaderVisible($page);
+    $assertReaderRenderable();
+
+    waitForScriptWithTimeout($page, quranReaderDataScript('Number(data.pageNumber ?? 0)'), 1, 8_000);
+
+    $page->script(
+        quranReaderCommandScript(
+            <<<'JS'
+void data.dispatchSwipeNavigation('next');
+void data.dispatchSwipeNavigation('next');
+JS,
+        ),
+    );
+
+    waitForScriptWithTimeout($page, quranReaderDataScript('Number(data.pageNumber ?? 0)'), 3, 14_000);
+    $assertReaderRenderable(14_000);
+
+    $page->script(
+        quranReaderCommandScript(
+            <<<'JS'
+const slider = document.querySelector('.quran-page-slider');
+
+if (!(slider instanceof HTMLInputElement)) {
+  return false;
+}
+
+slider.value = '604';
+slider.dispatchEvent(new Event('input', { bubbles: true }));
+slider.dispatchEvent(new Event('change', { bubbles: true }));
+
+return true;
+JS,
+        ),
+    );
+    waitForScriptWithTimeout($page, quranReaderDataScript('Number(data.pageNumber ?? 0)'), 604, 16_000);
+    $assertReaderRenderable(16_000);
+
+    $page->assertNoJavaScriptErrors();
+});
+
 it('keeps quran pages renderable after rapid bookmark modal closes and chevron burst navigation', function () {
     $page = visit('/');
 

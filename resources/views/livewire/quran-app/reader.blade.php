@@ -106,10 +106,10 @@
 
         @media (min-width: 2560px) {
             .quran-reader {
-                --quran-type-scale: 2.1;
-                --quran-leading-scale: 1;
-                --quran-gap-scale: 1.8;
-                --quran-fit-height-ratio: 0.97;
+                --quran-type-scale: 1.72;
+                --quran-leading-scale: 0.9;
+                --quran-gap-scale: 1.55;
+                --quran-fit-height-ratio: 0.81;
             }
         }
 
