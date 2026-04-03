@@ -6514,6 +6514,14 @@ document.addEventListener('alpine:init', () => {
                                 return;
                             }
 
+                            // Do not alter fit after reveal begins.
+                            if (
+                                this.isCurrentPageVisiblyReady() &&
+                                this.pageFitState() === 'ready'
+                            ) {
+                                return;
+                            }
+
                             this._bypassNextFitCache = true;
                             this.scheduleLayout({
                                 revealDelayMs: 130,
@@ -8448,6 +8456,11 @@ document.addEventListener('alpine:init', () => {
                     return;
                 }
 
+                // Do not run post-reveal fit adjustments.
+                if (this.isCurrentPageVisiblyReady() && this.pageFitState() === 'ready') {
+                    return;
+                }
+
                 const contentElement = this.$refs.pageContent;
 
                 if (!(contentElement instanceof Element)) {
@@ -8652,6 +8665,14 @@ document.addEventListener('alpine:init', () => {
             if (!rootElement || !frameElement || !contentElement) {
                 return;
             }
+
+            // Always start from CSS-declared defaults to avoid cross-page drift from
+            // previously applied inline fit values.
+            rootElement.style.removeProperty('--quran-page-type-scale');
+            rootElement.style.removeProperty('--quran-page-leading-multiplier');
+            rootElement.style.removeProperty('--quran-page-gap-multiplier');
+            rootElement.style.removeProperty('--quran-page-surah-header-scale');
+            rootElement.style.removeProperty('--quran-basmallah-bottom-gap-scale');
 
             const frameRect = frameElement.getBoundingClientRect();
             const frameParentRect = frameElement.parentElement?.getBoundingClientRect?.() ?? null;
