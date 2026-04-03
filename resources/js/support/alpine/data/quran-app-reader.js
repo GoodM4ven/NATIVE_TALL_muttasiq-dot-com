@@ -870,6 +870,7 @@ document.addEventListener('alpine:init', () => {
         _searchModalOpenInFlight: null,
         _quranPreparationInFlight: null,
         _quranPreparationRequestPromise: null,
+        _startupRestoreInFlight: null,
         _surahDirectoryAutoFocusToken: 0,
         _surahDirectoryAutoFocusTimer: null,
         _surahDirectoryAutoFocusRaf: null,
@@ -965,10 +966,17 @@ document.addEventListener('alpine:init', () => {
                 this.pageNumber = restoredPage;
             } else {
                 this.isFittingPage = true;
-                this.goToPage(restoredPage, {
+                const startupRestorePromise = this.goToPage(restoredPage, {
                     direction: restoredPage > this.initialPayload.pageNumber ? 'next' : 'prev',
                     animate: false,
                     forceRefit: true,
+                    source: 'startup-restore',
+                });
+                this._startupRestoreInFlight = startupRestorePromise;
+                void startupRestorePromise.finally(() => {
+                    if (this._startupRestoreInFlight === startupRestorePromise) {
+                        this._startupRestoreInFlight = null;
+                    }
                 });
             }
 
@@ -2103,6 +2111,15 @@ document.addEventListener('alpine:init', () => {
             this.syncSupportLockTargetsUi();
             this.syncFitCacheBreakpoint({ persist: false });
             this.hydratePersistedFitCache();
+
+            if (this._startupRestoreInFlight instanceof Promise) {
+                try {
+                    await this._startupRestoreInFlight;
+                } catch (_) {
+                    // Ignore startup restore aborts; ensureCurrentPageLoaded() will recover.
+                }
+            }
+
             await this.ensureCurrentPageLoaded();
             await this.layoutPageGuaranteed({ revealDelayMs: 240 });
             this.queueStartupPreload();
@@ -4964,12 +4981,21 @@ document.addEventListener('alpine:init', () => {
 
         async ensureCurrentPageLoaded() {
             const normalizedPage = clampPage(this.pageNumber, this.maxPage);
+            const targetPage = clampPage(Number(this.pageInput ?? this.pageNumber), this.maxPage);
 
-            if (normalizedPage === this.initialPayload.pageNumber && this.ready) {
+            if (
+                normalizedPage === targetPage &&
+                normalizedPage === this.initialPayload.pageNumber &&
+                this.ready
+            ) {
                 return;
             }
 
-            await this.goToPage(normalizedPage, { animate: false });
+            await this.goToPage(targetPage, {
+                animate: false,
+                forceRefit: true,
+                source: 'startup-ensure-current-page',
+            });
         },
 
         buildDigitMorphSegments(previousValue, nextValue) {
@@ -7915,7 +7941,14 @@ document.addEventListener('alpine:init', () => {
                 (line) => String(line?.line_type ?? '') === 'basmallah',
             ).length;
             const centeredAyahRatio = ayahLineCount > 0 ? centeredAyahLineCount / ayahLineCount : 0;
-            const isOpeningSpread = pageNumber <= 2;
+            const hasOpeningSpreadSignature =
+                ayahLineCount > 0 &&
+                ayahLineCount <= 9 &&
+                lines.length <= 12 &&
+                surahHeaderCount <= 1 &&
+                basmallahCount <= 1 &&
+                centeredAyahRatio >= 0.45;
+            const isOpeningSpread = pageNumber <= 2 && hasOpeningSpreadSignature;
             const isLineHeavyCenteredPage =
                 !isOpeningSpread &&
                 surahHeaderCount === 0 &&
