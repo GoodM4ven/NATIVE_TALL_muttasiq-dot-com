@@ -415,10 +415,6 @@
         }
 
         .quran-top-actions-secondary {
-            flex: 0 0 2.35rem;
-            inline-size: 2.35rem;
-            block-size: 2.35rem;
-            max-width: 2.35rem;
             opacity: 1;
             transform: translateX(0) scale(1);
             overflow: hidden;
@@ -458,8 +454,6 @@
             flex: 1 1 auto;
             align-items: center;
             justify-content: stretch;
-            min-width: min(13rem, 50vw);
-            min-height: 2.5rem;
             padding: 0.16rem;
             border-radius: 999px;
             border: 0;
@@ -776,21 +770,16 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            min-width: 2.54rem;
-            min-height: 1.56rem;
-            padding-inline: 0.52rem;
             border-radius: 999px;
             border: 1px solid color-mix(in srgb, var(--success-800) 42%, transparent);
             background: color-mix(in srgb, var(--success-100) 56%, transparent);
             color: color-mix(in srgb, var(--success-900) 84%, var(--quran-panel-text));
-            font-size: 0.68rem;
             font-weight: 800;
             letter-spacing: 0.02em;
             white-space: nowrap;
         }
 
         .quran-wird-progress-count {
-            font-size: 0.78rem;
             font-weight: 900;
             letter-spacing: 0.01em;
             font-variant-numeric: tabular-nums;
@@ -834,8 +823,6 @@
         }
 
         #quran-reader-history-toggle.quran-history-toggle-button {
-            width: 2.35rem;
-            height: 2.35rem;
             position: relative;
             display: inline-flex;
             align-items: center;
@@ -850,8 +837,6 @@
         }
 
         #quran-reader-history-toggle .quran-history-toggle-icon {
-            width: 1.5rem;
-            height: 1.5rem;
             transform: rotate(0deg);
             transition: transform 460ms cubic-bezier(0.22, 1, 0.36, 1);
         }
@@ -878,8 +863,6 @@
             overflow: hidden;
             cursor: pointer;
             background-color: color-mix(in srgb, var(--warning-600) 90%, var(--warning-700));
-            width: 2.35rem;
-            height: 2.35rem;
             border-radius: 0.625rem;
             display: inline-flex;
             align-items: center;
@@ -924,7 +907,6 @@
         #quran-reader-bookmark-toggle .quran-bookmark-toggle-icon {
             position: relative;
             z-index: 2;
-            width: 0.9375rem;
             height: auto;
         }
 
@@ -1040,8 +1022,6 @@
             align-items: center;
             justify-content: center;
             gap: 0.25rem;
-            min-height: 2.2rem;
-            padding: 0.42rem 2.35rem;
             background: transparent;
             border: 0.14rem solid transparent;
             border-radius: 999px;
@@ -1055,7 +1035,6 @@
                 transform 0.22s ease;
             box-shadow: 0 0 0 1.6px color-mix(in srgb, var(--primary-500) 72%, transparent);
             font-family: 'Readex Pro', 'IBM Plex Sans Arabic', 'Noto Naskh Arabic', ui-sans-serif, system-ui, sans-serif;
-            font-size: 0.95rem;
             font-weight: 700;
             line-height: 1;
             user-select: none;
@@ -1081,9 +1060,6 @@
 
         .quran-soorah-trigger-icon {
             position: absolute;
-            inset-inline-start: 0.82rem;
-            width: 1rem;
-            height: 1rem;
             z-index: 3;
             stroke: currentColor;
             stroke-width: 3;
@@ -1101,8 +1077,6 @@
             inset-block-start: 50%;
             inset-inline-start: 50%;
             transform: translate(-50%, -50%) scale(0);
-            width: 1rem;
-            height: 1rem;
             border-radius: 999px;
             opacity: 0.25;
             z-index: 1;
@@ -1270,7 +1244,6 @@
             align-items: center;
             justify-content: center;
             gap: 0;
-            min-height: 2.4rem;
         }
 
         .quran-page-slider {
@@ -1335,16 +1308,13 @@
             align-items: center;
             justify-content: center;
             gap: 0.12rem;
-            min-width: 5.8rem;
             border-radius: 999px;
             border: 1px solid color-mix(in srgb, var(--gray-500) 52%, transparent);
             background: linear-gradient(176deg,
                     color-mix(in srgb, var(--gray-200) 70%, transparent),
                     color-mix(in srgb, var(--gray-300) 58%, transparent));
-            padding: 0.28rem 0.56rem;
             cursor: pointer;
             font-family: 'IBM Plex Sans Arabic', 'Manrope', ui-sans-serif, system-ui, sans-serif;
-            font-size: 0.84rem;
             font-weight: 600;
             color: var(--quran-panel-text);
             line-height: 1;
@@ -1482,7 +1452,6 @@
             align-items: center;
             justify-content: center;
             gap: 0.2rem;
-            min-height: 2.2rem;
             align-self: center;
             color: color-mix(in srgb, var(--quran-subtle) 86%, transparent);
             opacity: 0.88;
@@ -1494,9 +1463,6 @@
             justify-content: center;
             border: 0;
             background: transparent;
-            padding: 0.1rem 0.25rem;
-            min-height: 2.2rem;
-            min-width: 4.2rem;
             cursor: pointer;
             transition:
                 opacity 160ms ease,
@@ -1525,7 +1491,6 @@
             color: color-mix(in srgb, var(--warning-400) 70%, var(--warning-600) 80%);
             display: inline-block;
             animation: quran-swipe-shimmer 1400ms ease-in-out infinite;
-            font-size: 2rem;
             line-height: 1;
             vertical-align: middle;
             position: relative;
@@ -1679,25 +1644,23 @@
     ];
 @endphp
 
-<div
-    x-data="quranAppReader({
-        api: {
-            pageDataTemplate: @js(url('/quran-reader/pages/__PAGE__.json')),
-            searchIndexUrl: @js(url('/quran-reader/search-index.json')),
-        },
-        initialPayload: @js($initialReaderPayload),
-        nativeRuntime: @js(is_platform('native')),
-        prewarmPages: @js(is_platform('native') ? 12 : 6),
-        prefetchRadius: @js(is_platform('native') ? 3 : 2),
-        searchModalId: @js('quran-reader-search-modal'),
-        searchModalDomId: @js('quran-reader-search-modal'),
-        searchActionModalId: @js(''),
-        jumpPageModalId: @js('quran-reader-jump-page-modal'),
-        historyModalId: @js('quran-reader-history-modal'),
-        bookmarksModalId: @js('quran-reader-bookmarks-modal'),
-        settings: @js($quranReaderSettings ?? ['enableVisualEnhancements' => true, 'targetWordsByDefault' => false, 'preserveHarakatOnCopy' => true, 'appendSurahAffixOnMultiCopy' => true, 'appendSurahAffixAlwaysOnCopy' => false, 'useVolumeButtonsNavigation' => true, 'useWesternNumerals' => true, 'wirdFrequencyMode' => 0, 'wirdKhatmatTarget' => 1]),
-    })"
->
+<div x-data="quranAppReader({
+    api: {
+        pageDataTemplate: @js(url('/quran-reader/pages/__PAGE__.json')),
+        searchIndexUrl: @js(url('/quran-reader/search-index.json')),
+    },
+    initialPayload: @js($initialReaderPayload),
+    nativeRuntime: @js(is_platform('native')),
+    prewarmPages: @js(is_platform('native') ? 12 : 6),
+    prefetchRadius: @js(is_platform('native') ? 3 : 2),
+    searchModalId: @js('quran-reader-search-modal'),
+    searchModalDomId: @js('quran-reader-search-modal'),
+    searchActionModalId: @js(''),
+    jumpPageModalId: @js('quran-reader-jump-page-modal'),
+    historyModalId: @js('quran-reader-history-modal'),
+    bookmarksModalId: @js('quran-reader-bookmarks-modal'),
+    settings: @js($quranReaderSettings ?? ['enableVisualEnhancements' => true, 'targetWordsByDefault' => false, 'preserveHarakatOnCopy' => true, 'appendSurahAffixOnMultiCopy' => true, 'appendSurahAffixAlwaysOnCopy' => false, 'useVolumeButtonsNavigation' => true, 'useWesternNumerals' => true, 'wirdFrequencyMode' => 0, 'wirdKhatmatTarget' => 1]),
+})">
     <div
         class="quran-reader relative grid h-full w-full place-items-center items-center"
         dir="rtl"
@@ -1754,7 +1717,7 @@
                 >
                     <!-- Credits: uiverse.io/gharsh11032000/loud-chicken-53 -->
                     <button
-                        class="quran-soorah-trigger w-[13.4rem] shrink-0 outline-none"
+                        class="quran-soorah-trigger 3xl:w-[13.2rem] 4xl:w-[13.4rem] 4xl:px-[2.35rem] 4xl:py-[0.42rem] 4xl:text-[0.95rem] 4xl:min-h-[2.2rem] min-h-[1.95rem] w-[10.25rem] shrink-0 px-[1.7rem] py-[0.34rem] text-[0.8rem] outline-none sm:min-h-[2rem] sm:w-[11rem] sm:px-[1.95rem] sm:py-[0.36rem] sm:text-[0.84rem] md:min-h-[2.05rem] md:w-[11.75rem] md:px-[2.1rem] md:py-[0.38rem] md:text-[0.88rem] lg:min-h-[2.1rem] lg:w-[12.35rem] lg:px-[2.2rem] lg:py-[0.4rem] lg:text-[0.9rem] xl:min-h-[2.15rem] xl:w-[12.7rem] xl:px-[2.28rem] xl:text-[0.92rem] 2xl:w-[13rem] 2xl:text-[0.93rem]"
                         type="button"
                         dir="rtl"
                         x-bind:disabled="wirdModeActive"
@@ -1770,7 +1733,7 @@
                         x-bind:aria-label="@js(arabic_text('ابحث في ')) + currentSurahTitle()"
                     >
                         <x-icon
-                            class="quran-soorah-trigger-icon"
+                            class="quran-soorah-trigger-icon 4xl:size-[1rem] 4xl:[inset-inline-start:0.82rem] size-[0.8rem] [inset-inline-start:0.62rem] sm:size-[0.84rem] sm:[inset-inline-start:0.68rem] md:size-[0.88rem] md:[inset-inline-start:0.72rem] lg:size-[0.92rem] lg:[inset-inline-start:0.76rem] xl:size-[0.96rem] xl:[inset-inline-start:0.8rem]"
                             :name="'heroicon-o-magnifying-glass'"
                         />
                         <span class="quran-soorah-trigger-text">
@@ -1780,7 +1743,9 @@
                                 x-text="currentSurahTriggerLabel()"
                             ></span>
                         </span>
-                        <span class="quran-soorah-trigger-circle"></span>
+                        <span
+                            class="quran-soorah-trigger-circle 4xl:size-[1rem] size-[0.8rem] sm:size-[0.84rem] md:size-[0.88rem] lg:size-[0.92rem] xl:size-[0.96rem]"
+                        ></span>
                     </button>
                     <div
                         class="quran-top-actions"
@@ -1788,7 +1753,7 @@
                     >
                         <!-- Credits: https://uiverse.io/vinodjangid07/tricky-bullfrog-41 -->
                         <button
-                            class="quran-history-toggle-button quran-top-actions-secondary outline-none"
+                            class="quran-history-toggle-button quran-top-actions-secondary 4xl:[flex-basis:2.35rem] 4xl:[inline-size:2.35rem] 4xl:[block-size:2.35rem] 4xl:max-w-[2.35rem] max-w-[1.95rem] outline-none [block-size:1.95rem] [flex-basis:1.95rem] [inline-size:1.95rem] sm:max-w-[2.05rem] sm:[block-size:2.05rem] sm:[flex-basis:2.05rem] sm:[inline-size:2.05rem] md:max-w-[2.12rem] md:[block-size:2.12rem] md:[flex-basis:2.12rem] md:[inline-size:2.12rem] lg:max-w-[2.2rem] lg:[block-size:2.2rem] lg:[flex-basis:2.2rem] lg:[inline-size:2.2rem] xl:max-w-[2.27rem] xl:[block-size:2.27rem] xl:[flex-basis:2.27rem] xl:[inline-size:2.27rem] 2xl:max-w-[2.3rem] 2xl:[block-size:2.3rem] 2xl:[flex-basis:2.3rem] 2xl:[inline-size:2.3rem]"
                             id="quran-reader-history-toggle"
                             data-quran-open-history
                             type="button"
@@ -1796,13 +1761,13 @@
                             x-on:click="if (!wirdModeActive) { $wire.mountAction('navigationHistory') }"
                         >
                             <x-icon
-                                class="quran-history-toggle-icon"
+                                class="quran-history-toggle-icon 4xl:size-[1.5rem] size-[1.18rem] sm:size-[1.26rem] md:size-[1.34rem] lg:size-[1.4rem] xl:size-[1.45rem]"
                                 :name="'heroicon-o-clock'"
                             />
                         </button>
 
                         <button
-                            class="quran-support-lock-target quran-wird-progress-button outline-none"
+                            class="quran-support-lock-target quran-wird-progress-button 4xl:min-h-[2.5rem] 4xl:min-w-[min(13rem,_50vw)] min-h-[2.1rem] min-w-[min(10.8rem,_50vw)] outline-none sm:min-h-[2.2rem] sm:min-w-[min(11.4rem,_50vw)] md:min-h-[2.3rem] md:min-w-[min(11.9rem,_50vw)] lg:min-h-[2.38rem] lg:min-w-[min(12.3rem,_50vw)] xl:min-h-[2.44rem] xl:min-w-[min(12.6rem,_50vw)] 2xl:min-w-[min(12.8rem,_50vw)]"
                             data-quran-wird-toggle
                             data-support-lock-target="wird-progress"
                             type="button"
@@ -1849,11 +1814,11 @@
                             ></span>
                             <span class="quran-wird-progress-content">
                                 <span
-                                    class="quran-wird-progress-percent"
+                                    class="quran-wird-progress-percent 4xl:min-h-[1.56rem] 4xl:min-w-[2.54rem] 4xl:px-[0.52rem] 4xl:text-[0.68rem] min-h-[1.32rem] min-w-[2.1rem] px-[0.42rem] text-[0.58rem] sm:min-h-[1.4rem] sm:min-w-[2.22rem] sm:px-[0.46rem] sm:text-[0.61rem] md:min-h-[1.46rem] md:min-w-[2.32rem] md:px-[0.48rem] md:text-[0.64rem] lg:min-h-[1.5rem] lg:min-w-[2.42rem] lg:px-[0.5rem] lg:text-[0.66rem]"
                                     x-text="wirdProgressPercentLabel()"
                                 ></span>
                                 <span
-                                    class="text-primary-700 translate-y-1.5 text-xs font-bold opacity-0 transition-all duration-500"
+                                    class="text-primary-700 4xl:text-xs translate-y-1.5 text-[0.64rem] font-bold opacity-0 transition-all duration-500 sm:text-[0.68rem] md:text-[0.7rem] lg:text-[0.72rem] xl:text-[0.74rem]"
                                     x-bind:class="{
                                         'opacity-100! -translate-y-0.25!': (hovered || wirdModeActive) && !
                                             isSupportLockActive(),
@@ -1861,7 +1826,7 @@
                                     }"
                                 >{{ arabic_text('الورد اليومي') }}</span>
                                 <span
-                                    class="quran-wird-progress-count"
+                                    class="quran-wird-progress-count 4xl:text-[0.78rem] text-[0.68rem] sm:text-[0.7rem] md:text-[0.73rem] lg:text-[0.75rem]"
                                     x-text="wirdProgressCounterLabel()"
                                 ></span>
                             </span>
@@ -1869,7 +1834,7 @@
 
                         <!-- Credits: https://uiverse.io/vinodjangid07/breezy-goose-71 -->
                         <button
-                            class="quran-bookmark-toggle-button quran-top-actions-secondary outline-none"
+                            class="quran-bookmark-toggle-button quran-top-actions-secondary 4xl:[flex-basis:2.35rem] 4xl:[inline-size:2.35rem] 4xl:[block-size:2.35rem] 4xl:max-w-[2.35rem] max-w-[1.95rem] outline-none [block-size:1.95rem] [flex-basis:1.95rem] [inline-size:1.95rem] sm:max-w-[2.05rem] sm:[block-size:2.05rem] sm:[flex-basis:2.05rem] sm:[inline-size:2.05rem] md:max-w-[2.12rem] md:[block-size:2.12rem] md:[flex-basis:2.12rem] md:[inline-size:2.12rem] lg:max-w-[2.2rem] lg:[block-size:2.2rem] lg:[flex-basis:2.2rem] lg:[inline-size:2.2rem] xl:max-w-[2.27rem] xl:[block-size:2.27rem] xl:[flex-basis:2.27rem] xl:[inline-size:2.27rem] 2xl:max-w-[2.3rem] 2xl:[block-size:2.3rem] 2xl:[flex-basis:2.3rem] 2xl:[inline-size:2.3rem]"
                             id="quran-reader-bookmark-toggle"
                             data-quran-bookmark-toggle
                             type="button"
@@ -1887,7 +1852,7 @@
                                 aria-hidden="true"
                             ></span>
                             <svg
-                                class="quran-bookmark-toggle-icon"
+                                class="quran-bookmark-toggle-icon 4xl:w-[0.9375rem] w-[0.78rem] sm:w-[0.82rem] md:w-[0.86rem] lg:w-[0.89rem] xl:w-[0.92rem]"
                                 aria-hidden="true"
                                 width="15"
                                 viewBox="0 0 50 70"
@@ -1905,7 +1870,7 @@
                 </header>
 
                 <div
-                    class="my-2 min-h-0 flex-1 overflow-hidden px-3 sm:my-3 sm:px-4 xl:my-1.5 xl:px-12 2xl:my-3 3xl:my-1 4xl:my-3 2xl:px-4 3xl:px-0 4xl:px-4"
+                    class="3xl:my-1 4xl:my-3 3xl:px-0 4xl:px-4 my-2 min-h-0 flex-1 overflow-hidden px-3 sm:my-3 sm:px-4 xl:my-1.5 xl:px-12 2xl:my-3 2xl:px-4"
                     x-ref="pageViewport"
                 >
                     <div
@@ -2101,32 +2066,32 @@
                     data-no-swipe
                 >
                     <button
-                        class="quran-swipe-hint quran-swipe-hint-button quran-bottom-strip-nav-prev select-none outline-none"
+                        class="quran-swipe-hint quran-swipe-hint-button quran-bottom-strip-nav-prev 4xl:min-h-[2.2rem] 4xl:min-w-[4.2rem] 4xl:px-[0.25rem] 4xl:py-[0.1rem] min-h-[1.95rem] min-w-[3.45rem] select-none px-[0.18rem] py-[0.06rem] outline-none sm:min-h-[2rem] sm:min-w-[3.65rem] sm:px-[0.2rem] sm:py-[0.08rem] md:min-h-[2.05rem] md:min-w-[3.8rem] md:px-[0.22rem] md:py-[0.08rem] lg:min-h-[2.1rem] lg:min-w-[3.95rem] lg:px-[0.24rem] xl:min-w-[4.05rem]"
                         type="button"
                         aria-label="{{ arabic_text('الصفحة السابقة') }}"
                         x-ref="prevChevronButton"
                         x-on:click.stop.prevent="goPreviousFromChevron()"
                     >
                         <span
-                            class="quran-swipe-hint-chev"
+                            class="quran-swipe-hint-chev 4xl:text-[2rem] text-[1.5rem] sm:text-[1.62rem] md:text-[1.74rem] lg:text-[1.84rem] xl:text-[1.92rem]"
                             x-bind:class="{ 'quran-swipe-hint-chev-static': isFirstNavigationPage() }"
                         >‹</span>
                         <span
-                            class="quran-swipe-hint-chev"
+                            class="quran-swipe-hint-chev 4xl:text-[2rem] text-[1.5rem] sm:text-[1.62rem] md:text-[1.74rem] lg:text-[1.84rem] xl:text-[1.92rem]"
                             x-bind:class="{ 'quran-swipe-hint-chev-static': isFirstNavigationPage() }"
                         >‹</span>
                         <span
-                            class="quran-swipe-hint-chev"
+                            class="quran-swipe-hint-chev 4xl:text-[2rem] text-[1.5rem] sm:text-[1.62rem] md:text-[1.74rem] lg:text-[1.84rem] xl:text-[1.92rem]"
                             x-bind:class="{ 'quran-swipe-hint-chev-static': isFirstNavigationPage() }"
                         >‹</span>
                     </button>
                     <div class="quran-bottom-strip-center">
                         <div
-                            class="quran-page-counter"
+                            class="quran-page-counter 4xl:min-h-[2.4rem] min-h-[2rem] sm:min-h-[2.1rem] md:min-h-[2.2rem] lg:min-h-[2.28rem]"
                             x-bind:class="{ 'quran-page-counter--morphing': pageCounterPulse.isActive && pageCounterPulse.hasChanges }"
                         >
                             <button
-                                class="quran-page-slider-chip outline-none"
+                                class="quran-page-slider-chip 4xl:min-w-[5.8rem] 4xl:px-[0.56rem] 4xl:py-[0.28rem] 4xl:text-[0.84rem] min-w-[4.8rem] px-[0.42rem] py-[0.22rem] text-[0.72rem] outline-none sm:min-w-[5rem] sm:px-[0.46rem] sm:py-[0.24rem] sm:text-[0.76rem] md:min-w-[5.2rem] md:px-[0.5rem] md:py-[0.25rem] md:text-[0.79rem] lg:min-w-[5.4rem] lg:px-[0.52rem] lg:py-[0.26rem] lg:text-[0.81rem] xl:min-w-[5.6rem] xl:text-[0.82rem]"
                                 type="button"
                                 x-bind:aria-label="wirdModeActive ? @js(arabic_text('وضع الوِرد اليومي مفعل')) : @js(arabic_text('إدخال رقم صفحة'))"
                                 x-bind:style="`--quran-counter-digit-count: ${pageCounterDigitLength()};`"
@@ -2215,7 +2180,7 @@
                         />
                     </div>
                     <button
-                        class="quran-swipe-hint quran-swipe-hint-button quran-bottom-strip-nav-next select-none outline-none"
+                        class="quran-swipe-hint quran-swipe-hint-button quran-bottom-strip-nav-next 4xl:min-h-[2.2rem] 4xl:min-w-[4.2rem] 4xl:px-[0.25rem] 4xl:py-[0.1rem] min-h-[1.95rem] min-w-[3.45rem] select-none px-[0.18rem] py-[0.06rem] outline-none sm:min-h-[2rem] sm:min-w-[3.65rem] sm:px-[0.2rem] sm:py-[0.08rem] md:min-h-[2.05rem] md:min-w-[3.8rem] md:px-[0.22rem] md:py-[0.08rem] lg:min-h-[2.1rem] lg:min-w-[3.95rem] lg:px-[0.24rem] xl:min-w-[4.05rem]"
                         type="button"
                         aria-label="{{ arabic_text('الصفحة التالية') }}"
                         x-ref="nextChevronButton"
@@ -2223,15 +2188,15 @@
                         x-on:click.stop.prevent="goNextFromChevron()"
                     >
                         <span
-                            class="quran-swipe-hint-chev quran-swipe-hint-chev-opposite"
+                            class="quran-swipe-hint-chev quran-swipe-hint-chev-opposite 4xl:text-[2rem] text-[1.5rem] sm:text-[1.62rem] md:text-[1.74rem] lg:text-[1.84rem] xl:text-[1.92rem]"
                             x-bind:class="{ 'quran-swipe-hint-chev-static': !wirdModeActive && isLastNavigationPage() }"
                         >›</span>
                         <span
-                            class="quran-swipe-hint-chev quran-swipe-hint-chev-opposite"
+                            class="quran-swipe-hint-chev quran-swipe-hint-chev-opposite 4xl:text-[2rem] text-[1.5rem] sm:text-[1.62rem] md:text-[1.74rem] lg:text-[1.84rem] xl:text-[1.92rem]"
                             x-bind:class="{ 'quran-swipe-hint-chev-static': !wirdModeActive && isLastNavigationPage() }"
                         >›</span>
                         <span
-                            class="quran-swipe-hint-chev quran-swipe-hint-chev-opposite"
+                            class="quran-swipe-hint-chev quran-swipe-hint-chev-opposite 4xl:text-[2rem] text-[1.5rem] sm:text-[1.62rem] md:text-[1.74rem] lg:text-[1.84rem] xl:text-[1.92rem]"
                             x-bind:class="{ 'quran-swipe-hint-chev-static': !wirdModeActive && isLastNavigationPage() }"
                         >›</span>
                     </button>
