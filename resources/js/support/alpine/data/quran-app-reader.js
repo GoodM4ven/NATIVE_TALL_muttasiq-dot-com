@@ -120,9 +120,10 @@ const openingSpreadFinalScaleMultiplier = 0.72;
 const fitRobustWidthQuantile = 0.88;
 const fitRobustWidthOutlierThreshold = 1.2;
 const fitResultCacheLimit = 180;
-const fitCacheStorageVersion = 3;
-const fitCacheStorageKey = 'quran-reader-fit-cache-v3';
+const fitCacheStorageVersion = 10;
+const fitCacheStorageKey = 'quran-reader-fit-cache-v10';
 const fitCacheViewportBucketSizePx = 24;
+const shouldPersistFitCacheAcrossReloads = false;
 const idleWarmupPauseOnHighFrequencyNavigationMs = 520;
 const idleWarmupPauseOnStandardNavigationMs = 160;
 const idleWarmupResumeDelayMs = 220;
@@ -871,6 +872,7 @@ document.addEventListener('alpine:init', () => {
         _quranPreparationInFlight: null,
         _quranPreparationRequestPromise: null,
         _startupRestoreInFlight: null,
+        _loadedPayloadPageNumber: 0,
         _surahDirectoryAutoFocusToken: 0,
         _surahDirectoryAutoFocusTimer: null,
         _surahDirectoryAutoFocusRaf: null,
@@ -1985,7 +1987,7 @@ document.addEventListener('alpine:init', () => {
             this.storage.fitCacheBreakpoint = currentBreakpoint;
             this.clearFitResultCache({ persist: false });
 
-            if (persist) {
+            if (persist && shouldPersistFitCacheAcrossReloads) {
                 writeLocalStorage(fitCacheStorageKey, {
                     version: fitCacheStorageVersion,
                     breakpoint: currentBreakpoint,
@@ -1997,6 +1999,14 @@ document.addEventListener('alpine:init', () => {
         },
 
         hydratePersistedFitCache() {
+            if (!shouldPersistFitCacheAcrossReloads) {
+                this._fitResultByContext.clear();
+                this._fitCacheBreakpoint = this.resolveCurrentBreakpointName();
+                this.storage.fitCacheBreakpoint = this._fitCacheBreakpoint;
+
+                return;
+            }
+
             const persistedCache = readLocalStorage(fitCacheStorageKey, null);
 
             if (!persistedCache || typeof persistedCache !== 'object') {
@@ -2057,6 +2067,10 @@ document.addEventListener('alpine:init', () => {
 
         queuePersistedFitCacheWrite(delayMs = 140) {
             if (typeof window === 'undefined') {
+                return;
+            }
+
+            if (!shouldPersistFitCacheAcrossReloads) {
                 return;
             }
 
@@ -2121,7 +2135,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             await this.ensureCurrentPageLoaded();
-            await this.layoutPageGuaranteed({ revealDelayMs: 240 });
+            await this.runStartupFinalFitPass();
             this.queueStartupPreload();
             this.scheduleIdleWarmup();
             this.warmSearchIndex();
@@ -4982,11 +4996,15 @@ document.addEventListener('alpine:init', () => {
         async ensureCurrentPageLoaded() {
             const normalizedPage = clampPage(this.pageNumber, this.maxPage);
             const targetPage = clampPage(Number(this.pageInput ?? this.pageNumber), this.maxPage);
+            const loadedPayloadPageNumber = Math.max(
+                0,
+                Math.trunc(Number(this._loadedPayloadPageNumber ?? 0)),
+            );
 
             if (
                 normalizedPage === targetPage &&
-                normalizedPage === this.initialPayload.pageNumber &&
-                this.ready
+                this.hasRenderablePage() &&
+                loadedPayloadPageNumber === targetPage
             ) {
                 return;
             }
@@ -5893,9 +5911,6 @@ document.addEventListener('alpine:init', () => {
             this.clearWordPressState();
             this.hoveredAyahIndex = 0;
             this.hoveredWordIndex = 0;
-            this._suppressFitCacheWriteUntil = this.isHighFrequencyNavigationSource(source)
-                ? Math.max(this._suppressFitCacheWriteUntil, Date.now() + 1600)
-                : this._suppressFitCacheWriteUntil;
 
             if (normalizedPage === this.pageNumber && this.mushafLines.length > 0) {
                 if (this.pageInput !== normalizedPage) {
@@ -6307,6 +6322,10 @@ document.addEventListener('alpine:init', () => {
         applyPayload(payload, { setPageNumber = false, persistPageNumber = true } = {}) {
             const normalizedPayload = normalizePayload(payload);
             const previousPageNumber = Math.max(1, Math.trunc(Number(this.pageNumber ?? 1)));
+            const payloadPageNumber = clampPage(
+                normalizedPayload.pageNumber,
+                normalizedPayload.maxPage,
+            );
 
             this.ready = normalizedPayload.ready;
             this.maxPage = normalizedPayload.maxPage;
@@ -6345,12 +6364,10 @@ document.addEventListener('alpine:init', () => {
                     ? normalizedPayload.surahDirectory
                     : this.search.surahDirectory,
             );
+            this._loadedPayloadPageNumber = payloadPageNumber;
 
             if (setPageNumber) {
-                this.pageNumber = clampPage(
-                    normalizedPayload.pageNumber,
-                    normalizedPayload.maxPage,
-                );
+                this.pageNumber = payloadPageNumber;
 
                 if (persistPageNumber) {
                     this.persistLastPageNumber(this.pageNumber);
@@ -6515,8 +6532,17 @@ document.addEventListener('alpine:init', () => {
             const family = String(this.qpcPageFontFamily ?? '').trim();
             const basmallahFamily = String(this.basmallahFontFamily ?? '').trim();
             const surahHeaderFamily = String(this.surahHeaderFontFamily ?? '').trim();
+            const fallbackMushafFamily = 'MadinaQuran';
+            const trackedFamilies = [
+                family,
+                basmallahFamily,
+                surahHeaderFamily,
+                fallbackMushafFamily,
+            ]
+                .map((entry) => String(entry ?? '').trim())
+                .filter(Boolean);
 
-            if ((!family && !basmallahFamily && !surahHeaderFamily) || !document.fonts?.load) {
+            if (trackedFamilies.length === 0 || !document.fonts?.load) {
                 return;
             }
 
@@ -6553,16 +6579,39 @@ document.addEventListener('alpine:init', () => {
                     );
                 }
 
+                fontLoadTasks.push(
+                    this.resolveWithTimeout(
+                        document.fonts.load(
+                            `32px '${fallbackMushafFamily}'`,
+                            this.preferredPageProbeText(),
+                        ),
+                        pageFontLoadTimeoutMs,
+                    ),
+                );
+
                 const loadOutcomes = await Promise.all(fontLoadTasks);
                 const readyOutcome = await this.resolveWithTimeout(
                     document.fonts.ready,
                     pageFontReadyTimeoutMs,
                 );
+                const hasMissingTrackedFamily =
+                    typeof document.fonts?.check === 'function' &&
+                    trackedFamilies.some(
+                        (fontFamily) =>
+                            !document.fonts.check(
+                                `32px '${fontFamily}'`,
+                                fontFamily === fallbackMushafFamily
+                                    ? this.preferredPageProbeText()
+                                    : 'الحمد لله',
+                            ),
+                    );
                 const didTimeout =
                     readyOutcome === 'timeout' ||
-                    loadOutcomes.some((outcome) => outcome === 'timeout');
+                    loadOutcomes.some((outcome) => outcome === 'timeout') ||
+                    hasMissingTrackedFamily;
 
                 if (didTimeout) {
+                    this._bypassNextFitCache = true;
                     this.scheduleFontReadyRecoveryRefit(this.pageNumber);
                 } else if (this._fontReadyRecoveryAttemptPage === this.pageNumber) {
                     const hadPendingTimerForCurrentPage =
@@ -6580,6 +6629,63 @@ document.addEventListener('alpine:init', () => {
             } catch (_) {
                 // Ignore font loading failures and continue with fallback glyphs.
             }
+        },
+
+        normalizeFontFamilyToken(value) {
+            return String(value ?? '')
+                .trim()
+                .replace(/^['"]+|['"]+$/g, '')
+                .toLowerCase();
+        },
+
+        trackedPageFontFamilies() {
+            const families = [
+                this.qpcPageFontFamily,
+                this.basmallahFontFamily,
+                this.surahHeaderFontFamily,
+                'MadinaQuran',
+            ]
+                .map((entry) => String(entry ?? '').trim())
+                .filter(Boolean);
+
+            return Array.from(new Set(families));
+        },
+
+        areTrackedPageFontsLoaded() {
+            if (!document.fonts || typeof document.fonts !== 'object') {
+                return true;
+            }
+
+            const trackedFamilies = this.trackedPageFontFamilies();
+
+            if (trackedFamilies.length === 0) {
+                return true;
+            }
+
+            const fontFaces = Array.from(document.fonts);
+
+            return trackedFamilies.every((family) => {
+                const normalizedFamily = this.normalizeFontFamilyToken(family);
+                const matchingFaces = fontFaces.filter(
+                    (fontFace) =>
+                        this.normalizeFontFamilyToken(fontFace?.family ?? '') === normalizedFamily,
+                );
+
+                if (matchingFaces.length > 0) {
+                    return matchingFaces.every(
+                        (fontFace) => String(fontFace?.status ?? '') === 'loaded',
+                    );
+                }
+
+                if (typeof document.fonts.check === 'function') {
+                    return document.fonts.check(
+                        `32px '${family}'`,
+                        family === 'MadinaQuran' ? this.preferredPageProbeText() : 'الحمد لله',
+                    );
+                }
+
+                return false;
+            });
         },
 
         preferredPageProbeText() {
@@ -7032,6 +7138,115 @@ document.addEventListener('alpine:init', () => {
                 opacity > 0.35 &&
                 visibleLineCount > 0
             );
+        },
+
+        async waitForStablePageFrame({
+            maxFrames = 18,
+            requiredStableFrames = 3,
+            tolerancePx = 0.75,
+        } = {}) {
+            const frameElement = this.$refs.pageFrame;
+
+            if (!(frameElement instanceof Element)) {
+                await nextAnimationFrame();
+
+                return;
+            }
+
+            let previousWidth = 0;
+            let previousHeight = 0;
+            let stableFrameCount = 0;
+            const normalizedMaxFrames = Math.max(4, Math.trunc(Number(maxFrames) || 18));
+            const normalizedRequiredStableFrames = Math.max(
+                2,
+                Math.trunc(Number(requiredStableFrames) || 3),
+            );
+            const normalizedTolerancePx = Math.max(0.25, Number(tolerancePx) || 0.75);
+
+            for (let frame = 0; frame < normalizedMaxFrames; frame += 1) {
+                await nextAnimationFrame();
+
+                const frameRect = frameElement.getBoundingClientRect();
+                const frameParentRect =
+                    frameElement.parentElement?.getBoundingClientRect?.() ?? null;
+                const width = Math.max(
+                    0,
+                    Number(
+                        frameParentRect?.width ??
+                            frameRect?.width ??
+                            frameElement.parentElement?.clientWidth ??
+                            frameElement.clientWidth ??
+                            0,
+                    ),
+                );
+                const height = Math.max(
+                    0,
+                    Number(frameRect?.height ?? frameElement.clientHeight ?? 0),
+                );
+
+                if (width <= 1 || height <= 1) {
+                    stableFrameCount = 0;
+                    previousWidth = width;
+                    previousHeight = height;
+
+                    continue;
+                }
+
+                const widthDelta = Math.abs(width - previousWidth);
+                const heightDelta = Math.abs(height - previousHeight);
+
+                if (widthDelta <= normalizedTolerancePx && heightDelta <= normalizedTolerancePx) {
+                    stableFrameCount += 1;
+                } else {
+                    stableFrameCount = 0;
+                }
+
+                previousWidth = width;
+                previousHeight = height;
+
+                if (stableFrameCount >= normalizedRequiredStableFrames) {
+                    return;
+                }
+            }
+        },
+
+        async runStartupFinalFitPass() {
+            if (!this.hasRenderablePage()) {
+                return;
+            }
+
+            await this.nextTickAsync();
+            await this.waitForPageFontReady();
+            await this.waitForStablePageFrame({
+                maxFrames: 22,
+                requiredStableFrames: 3,
+                tolerancePx: 0.8,
+            });
+
+            this._bypassNextFitCache = true;
+            await this.layoutPageGuaranteed({
+                revealDelayMs: 220,
+                maxAttempts: 6,
+                useIdleFit: false,
+            });
+
+            await this.waitForStablePageFrame({
+                maxFrames: 12,
+                requiredStableFrames: 2,
+                tolerancePx: 0.6,
+            });
+
+            if (
+                !this.isCurrentPageVisiblyReady() ||
+                this._lastFittedPageNumber !== this.pageNumber
+            ) {
+                this._bypassNextFitCache = true;
+                await this.layoutPageGuaranteed({
+                    revealDelayMs: 180,
+                    maxAttempts: 5,
+                    useIdleFit: false,
+                });
+            }
         },
 
         holdPageHiddenForModalLifecycle() {
@@ -7745,7 +7960,18 @@ document.addEventListener('alpine:init', () => {
             const lineTargets = Array.from(
                 contentElement.querySelectorAll('[data-quran-line-text]'),
             );
-            const targets = lineTargets.length > 0 ? lineTargets : [contentElement];
+            const ayahLineTargets = Array.from(
+                contentElement.querySelectorAll(
+                    "[data-quran-line][data-quran-line-type='ayah'] [data-quran-line-text]",
+                ),
+            );
+            const boundsTargets = lineTargets.length > 0 ? lineTargets : [contentElement];
+            const widthTargets =
+                ayahLineTargets.length >= 3
+                    ? ayahLineTargets
+                    : lineTargets.length > 0
+                      ? lineTargets
+                      : [contentElement];
             const widths = [];
 
             let minLeft = Number.POSITIVE_INFINITY;
@@ -7753,7 +7979,20 @@ document.addEventListener('alpine:init', () => {
             let maxRight = Number.NEGATIVE_INFINITY;
             let maxBottom = Number.NEGATIVE_INFINITY;
 
-            targets.forEach((target) => {
+            boundsTargets.forEach((target) => {
+                const rect = target.getBoundingClientRect();
+
+                if (rect.width <= 0 || rect.height <= 0) {
+                    return;
+                }
+
+                minLeft = Math.min(minLeft, rect.left);
+                minTop = Math.min(minTop, rect.top);
+                maxRight = Math.max(maxRight, rect.right);
+                maxBottom = Math.max(maxBottom, rect.bottom);
+            });
+
+            widthTargets.forEach((target) => {
                 const rect = target.getBoundingClientRect();
 
                 if (rect.width <= 0 || rect.height <= 0) {
@@ -7761,10 +8000,6 @@ document.addEventListener('alpine:init', () => {
                 }
 
                 widths.push(rect.width);
-                minLeft = Math.min(minLeft, rect.left);
-                minTop = Math.min(minTop, rect.top);
-                maxRight = Math.max(maxRight, rect.right);
-                maxBottom = Math.max(maxBottom, rect.bottom);
             });
 
             if (!Number.isFinite(minLeft) || !Number.isFinite(maxRight)) {
@@ -7780,10 +8015,7 @@ document.addEventListener('alpine:init', () => {
 
             const strictWidth = Math.max(1, maxRight - minLeft);
             let robustWidth = strictWidth;
-            const shouldUseRobustWidth =
-                Boolean(useRobustWidth) &&
-                Boolean(this.useCenteredAyahLayout) &&
-                widths.length >= 7;
+            const shouldUseRobustWidth = Boolean(useRobustWidth) && widths.length >= 7;
 
             if (shouldUseRobustWidth) {
                 const sortedWidths = widths.slice().sort((first, second) => first - second);
@@ -8295,10 +8527,6 @@ document.addEventListener('alpine:init', () => {
                 });
 
                 if (fitRecoveryDecision.shouldSuppressRecovery) {
-                    if (hasOverflow) {
-                        this.applySafetyScaleForCurrentPageOverflow();
-                    }
-
                     if (this.hasRenderablePage() && !this.isLoadingPage) {
                         this.forceRevealCurrentPage('fit-sanity-churn-circuit-breaker');
                     }
@@ -8322,7 +8550,6 @@ document.addEventListener('alpine:init', () => {
                 if (this.isCurrentPageVisiblyReady()) {
                     this._bypassNextFitCache = true;
                     this.fitPageToViewport();
-                    this.applySafetyScaleForCurrentPageOverflow();
                     this._lastPageRevealAt = Date.now();
 
                     return;
@@ -8426,12 +8653,36 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            this.resetFitLayoutVariables(rootElement);
-            rootElement.style.setProperty('--quran-page-scale', '1');
-
             const frameRect = frameElement.getBoundingClientRect();
             const frameParentRect = frameElement.parentElement?.getBoundingClientRect?.() ?? null;
-            const availableWidth = Math.max(
+            const computedRootStyles = window.getComputedStyle(rootElement);
+            const readCssNumber = (propertyName, fallback) => {
+                const rawValue = Number.parseFloat(
+                    computedRootStyles.getPropertyValue(propertyName),
+                );
+
+                return Number.isFinite(rawValue) ? rawValue : fallback;
+            };
+            const baselineLayout = {
+                pageTypeScale: Math.max(0.2, readCssNumber('--quran-page-type-scale', 1)),
+                pageLeadingMultiplier: Math.max(
+                    0.25,
+                    readCssNumber('--quran-page-leading-multiplier', 1),
+                ),
+                pageGapMultiplier: Math.max(0, readCssNumber('--quran-page-gap-multiplier', 1)),
+                pageSurahHeaderScale: Math.max(
+                    0.5,
+                    readCssNumber('--quran-page-surah-header-scale', 1),
+                ),
+                basmallahBottomGapScale: readCssNumber(
+                    '--quran-basmallah-bottom-gap-scale',
+                    defaultBasmallahBottomGapScale,
+                ),
+            };
+
+            this.applyFitLayoutVariables(rootElement, baselineLayout);
+            rootElement.style.setProperty('--quran-page-scale', '1');
+            const rawAvailableWidth = Math.max(
                 1,
                 Number(
                     frameParentRect?.width ??
@@ -8441,35 +8692,95 @@ document.addEventListener('alpine:init', () => {
                         1,
                 ),
             );
-            const computedRootStyles = window.getComputedStyle(rootElement);
+            const fitTargetWidthRatio = Math.min(
+                0.95,
+                Math.max(
+                    0.55,
+                    Number.parseFloat(
+                        computedRootStyles.getPropertyValue('--quran-fit-target-width-ratio'),
+                    ) || 0.8,
+                ),
+            );
+            const fitAreaPaddingX = Math.max(
+                0,
+                Number.parseFloat(computedRootStyles.getPropertyValue('--quran-fit-area-pad-x')) ||
+                    0,
+            );
+            const fitAreaPaddingY = Math.max(
+                0,
+                Number.parseFloat(computedRootStyles.getPropertyValue('--quran-fit-area-pad-y')) ||
+                    0,
+            );
+            const availableWidth = Math.max(1, rawAvailableWidth - fitAreaPaddingX * 2);
             const fitHeightRatio = Math.min(
                 1,
                 Math.max(
-                    0.5,
+                    0.7,
                     Number.parseFloat(
                         computedRootStyles.getPropertyValue('--quran-fit-height-ratio'),
                     ) || 1,
                 ),
             );
-            const availableHeight = Math.max(
+            const rawAvailableHeight = Math.max(
                 1,
-                Number(frameRect?.height ?? frameElement.clientHeight ?? 1) * fitHeightRatio,
+                Number(frameRect?.height ?? frameElement.clientHeight ?? 1) - fitAreaPaddingY * 2,
             );
+            const availableHeight = Math.max(1, rawAvailableHeight * fitHeightRatio);
+            const targetWidth = Math.max(1, availableWidth * fitTargetWidthRatio);
+            const targetHeight = Math.max(1, availableHeight);
+            const targetAreaLeft =
+                Number(frameRect?.left ?? 0) +
+                fitAreaPaddingX +
+                (availableWidth - targetWidth) * 0.5;
+            const targetAreaRight = targetAreaLeft + targetWidth;
+            const targetAreaTop = Number(frameRect?.top ?? 0) + fitAreaPaddingY;
+            const targetAreaBottom = targetAreaTop + targetHeight;
             const minScale = Math.max(
                 0.05,
                 Number.parseFloat(computedRootStyles.getPropertyValue('--quran-min-page-scale')) ||
                     0.1,
             );
-            const profile = this.resolveFitProfile();
             const maxScale = Math.max(
                 minScale,
-                (Number.parseFloat(computedRootStyles.getPropertyValue('--quran-max-page-scale')) ||
-                    1) * Math.max(0.2, Number(profile.maxScaleMultiplier ?? 1)),
+                Number.parseFloat(computedRootStyles.getPropertyValue('--quran-max-page-scale')) ||
+                    1,
             );
-            const candidateSteps = Math.max(10, Math.trunc(Number(profile.candidateSteps) || 28));
-            const minimumCompressionLevel = Math.max(
+            const minimumLeadingMultiplier = Math.max(
+                0.35,
+                Math.min(
+                    baselineLayout.pageLeadingMultiplier,
+                    readCssNumber(
+                        '--quran-min-page-leading-multiplier',
+                        baselineLayout.pageLeadingMultiplier,
+                    ),
+                ),
+            );
+            const minimumGapMultiplier = Math.max(
                 0,
-                Math.min(1, Number(profile.minimumCompressionLevel ?? 0)),
+                Math.min(
+                    baselineLayout.pageGapMultiplier,
+                    readCssNumber(
+                        '--quran-min-page-gap-multiplier',
+                        baselineLayout.pageGapMultiplier,
+                    ),
+                ),
+            );
+            const minimumSurahHeaderScale = Math.max(
+                0.5,
+                Math.min(
+                    baselineLayout.pageSurahHeaderScale,
+                    readCssNumber(
+                        '--quran-min-page-surah-header-scale',
+                        baselineLayout.pageSurahHeaderScale,
+                    ),
+                ),
+            );
+            const minimumBasmallahBottomGapScale = Math.min(
+                baselineLayout.basmallahBottomGapScale,
+                readCssNumber(
+                    '--quran-min-basmallah-bottom-gap-scale',
+                    baselineLayout.basmallahBottomGapScale - 0.12,
+                ),
             );
             const normalizedPageNumber = Math.max(1, Math.trunc(Number(this.pageNumber ?? 1)));
             const breakpointName = this.resolveCurrentBreakpointName();
@@ -8478,79 +8789,153 @@ document.addEventListener('alpine:init', () => {
                 this._isModalLifecycleSettling ||
                 this._activeModalIds.size > 0 ||
                 this.openModalCount() > 0;
-            const shouldSuppressPersistedCacheWrite = Date.now() < this._suppressFitCacheWriteUntil;
+            const isFontLayoutPending = !this.areTrackedPageFontsLoaded();
+            const shouldBypassFitCache = isModalLayoutContext || isFontLayoutPending;
+            const shouldSuppressPersistedCacheWrite = shouldBypassFitCache;
+            const ayahLineCount = Array.isArray(this.mushafLines)
+                ? this.mushafLines.filter((line) => String(line?.line_type ?? '') === 'ayah').length
+                : 0;
+            const targetMinimumFillWidth =
+                ayahLineCount >= 10 ? 0.9 : ayahLineCount >= 6 ? 0.86 : 0.8;
             const fitCacheKey = [
                 normalizedPageNumber,
                 breakpointName || 'bp-unknown',
                 this.viewportBucketValue(availableWidth),
                 this.viewportBucketValue(availableHeight),
                 isModalLayoutContext ? 'modal-open' : 'modal-closed',
+                isFontLayoutPending ? 'fonts-pending' : 'fonts-loaded',
                 this.useCenteredAyahLayout ? 'centered' : 'rect',
-                this.mushafLines.length,
+                'scale-only-v1',
+                Number(fitTargetWidthRatio).toFixed(3),
+                Number(fitAreaPaddingX).toFixed(2),
+                Number(fitAreaPaddingY).toFixed(2),
+                Number(minimumLeadingMultiplier).toFixed(3),
+                Number(minimumGapMultiplier).toFixed(3),
+                Number(minimumSurahHeaderScale).toFixed(3),
+                Number(minimumBasmallahBottomGapScale).toFixed(3),
                 String(this.qpcPageFontFamily ?? ''),
                 String(this.basmallahFontFamily ?? ''),
                 String(this.surahHeaderFontFamily ?? ''),
                 Number(minScale).toFixed(3),
                 Number(maxScale).toFixed(3),
-                Number(profile.minimumCompressionLevel ?? 0).toFixed(3),
-                Number(profile.targetWidthRatio ?? 0).toFixed(3),
-                Number(profile.targetHeightRatio ?? 0).toFixed(3),
             ].join('|');
-            const strictWidthOverflowThreshold =
-                availableWidth * Number(profile.strictWidthOverflowTolerance ?? 1.06);
-            const strictHeightOverflowThreshold =
-                availableHeight * Number(profile.strictHeightOverflowTolerance ?? 1.01);
-            const ayahLineCount = Array.isArray(this.mushafLines)
-                ? this.mushafLines.filter((line) => String(line?.line_type ?? '') === 'ayah').length
-                : 0;
-            const minimumHealthyFillWidth =
-                normalizedPageNumber <= 2 ? 0.32 : ayahLineCount >= 12 ? 0.52 : 0.36;
-            const minimumHealthyFillHeight =
-                normalizedPageNumber <= 2 ? 0.22 : ayahLineCount >= 12 ? 0.42 : 0.3;
+
+            const strictWidthOverflowTolerance = 1.0025;
+            const strictHeightOverflowTolerance = 1.0025;
+            const strictWidthOverflowThreshold = targetWidth * strictWidthOverflowTolerance;
+            const strictHeightOverflowThreshold = targetHeight * strictHeightOverflowTolerance;
+            const minimumHealthyFillWidth = Math.max(0.5, targetMinimumFillWidth - 0.1);
+            const minimumHealthyFillHeight = 0.58;
+
+            const measureVisualBounds = () => {
+                const measured = this.measureRenderedBounds(contentElement, {
+                    useRobustWidth: false,
+                });
+                const lineTargets = Array.from(
+                    contentElement.querySelectorAll('[data-quran-line-text]'),
+                );
+                let minLeft = Number.POSITIVE_INFINITY;
+                let minTop = Number.POSITIVE_INFINITY;
+                let maxRight = Number.NEGATIVE_INFINITY;
+                let maxBottom = Number.NEGATIVE_INFINITY;
+
+                lineTargets.forEach((target) => {
+                    const rect = target.getBoundingClientRect();
+
+                    if (rect.width <= 0 || rect.height <= 0) {
+                        return;
+                    }
+
+                    minLeft = Math.min(minLeft, rect.left);
+                    minTop = Math.min(minTop, rect.top);
+                    maxRight = Math.max(maxRight, rect.right);
+                    maxBottom = Math.max(maxBottom, rect.bottom);
+                });
+
+                if (!Number.isFinite(minLeft) || !Number.isFinite(maxRight)) {
+                    const fallbackRect = contentElement.getBoundingClientRect();
+
+                    return {
+                        width: Math.max(1, measured.width, Number(fallbackRect.width ?? 0)),
+                        height: Math.max(1, measured.height, Number(fallbackRect.height ?? 0)),
+                        minLeft: Number(fallbackRect.left ?? 0),
+                        minTop: Number(fallbackRect.top ?? 0),
+                        maxRight: Number(fallbackRect.right ?? 0),
+                        maxBottom: Number(fallbackRect.bottom ?? 0),
+                    };
+                }
+
+                return {
+                    width: Math.max(1, measured.width, maxRight - minLeft),
+                    height: Math.max(1, measured.height, maxBottom - minTop),
+                    minLeft,
+                    minTop,
+                    maxRight,
+                    maxBottom,
+                };
+            };
+
+            const isWithinTargetArea = (bounds, tolerancePx = 0.5) => {
+                const overflowLeft = bounds.minLeft < targetAreaLeft - tolerancePx;
+                const overflowRight = bounds.maxRight > targetAreaRight + tolerancePx;
+                const overflowTop = bounds.minTop < targetAreaTop - tolerancePx;
+                const overflowBottom = bounds.maxBottom > targetAreaBottom + tolerancePx;
+
+                return !(overflowLeft || overflowRight || overflowTop || overflowBottom);
+            };
+
+            const evaluateScale = (scale) => {
+                const normalizedScale = Math.max(
+                    minScale,
+                    Math.min(maxScale, Number(scale) || minScale),
+                );
+                rootElement.style.setProperty('--quran-page-scale', String(normalizedScale));
+                const bounds = measureVisualBounds();
+                const fillWidth = bounds.width / targetWidth;
+                const fillHeight = bounds.height / targetHeight;
+                const fitsBox =
+                    bounds.width <= strictWidthOverflowThreshold &&
+                    bounds.height <= strictHeightOverflowThreshold;
+                const isInsideTargetArea = isWithinTargetArea(bounds, 1.5);
+
+                return {
+                    scale: normalizedScale,
+                    bounds,
+                    fillWidth,
+                    fillHeight,
+                    isInsideTargetArea,
+                    fits: fitsBox,
+                };
+            };
+
             const cachedFitResult = isModalLayoutContext
                 ? null
-                : this._fitResultByContext.get(fitCacheKey);
+                : isFontLayoutPending
+                  ? null
+                  : this._fitResultByContext.get(fitCacheKey);
 
             if (
                 cachedFitResult &&
                 cachedFitResult.layout &&
                 Number.isFinite(Number(cachedFitResult.scale))
             ) {
-                const cachedScale = Math.max(
-                    minScale,
-                    Math.min(maxScale, Number(cachedFitResult.scale)),
-                );
-
                 this.applyFitLayoutVariables(rootElement, cachedFitResult.layout);
-                rootElement.style.setProperty('--quran-page-scale', String(cachedScale));
-
-                const cachedMeasured = this.measureRenderedBounds(contentElement, {
-                    useRobustWidth: false,
-                });
-                const cachedFillWidth = cachedMeasured.width / availableWidth;
-                const cachedFillHeight = cachedMeasured.height / availableHeight;
+                const cached = evaluateScale(Number(cachedFitResult.scale));
                 const cacheHasHealthyFill =
-                    cachedFillWidth >= minimumHealthyFillWidth &&
-                    cachedFillHeight >= minimumHealthyFillHeight;
-                const cacheStillFits =
-                    cachedMeasured.width <= strictWidthOverflowThreshold &&
-                    cachedMeasured.height <= strictHeightOverflowThreshold;
+                    cached.fillWidth >= minimumHealthyFillWidth &&
+                    cached.fillHeight >= minimumHealthyFillHeight;
 
-                if (cacheStillFits && cacheHasHealthyFill) {
-                    this.pageScale = cachedScale;
+                if (cached.fits && cacheHasHealthyFill) {
+                    this.pageScale = cached.scale;
                     this._fitRunCounter += 1;
                     this._lastFittedPageNumber = this.pageNumber;
                     this.scheduleFitSanityCheck({
                         cacheKey: fitCacheKey,
                         pageNumber: normalizedPageNumber,
-                        availableWidth,
-                        availableHeight,
-                        strictWidthOverflowTolerance: Number(
-                            profile.strictWidthOverflowTolerance ?? 1.06,
-                        ),
-                        strictHeightOverflowTolerance: Number(
-                            profile.strictHeightOverflowTolerance ?? 1.01,
-                        ),
+                        availableWidth: targetWidth,
+                        availableHeight: targetHeight,
+                        strictWidthOverflowTolerance,
+                        strictHeightOverflowTolerance,
                         minimumFillWidth: minimumHealthyFillWidth,
                         minimumFillHeight: minimumHealthyFillHeight,
                     });
@@ -8561,130 +8946,154 @@ document.addEventListener('alpine:init', () => {
                 this.forgetFitResult(fitCacheKey);
             }
 
-            let bestLayout = this.fitLayoutFromCompressionLevel(0);
-            let bestScale = minScale;
+            const midpointLayout = {
+                ...baselineLayout,
+                pageLeadingMultiplier:
+                    baselineLayout.pageLeadingMultiplier -
+                    (baselineLayout.pageLeadingMultiplier - minimumLeadingMultiplier) * 0.5,
+                pageGapMultiplier:
+                    baselineLayout.pageGapMultiplier -
+                    (baselineLayout.pageGapMultiplier - minimumGapMultiplier) * 0.5,
+                pageSurahHeaderScale:
+                    baselineLayout.pageSurahHeaderScale -
+                    (baselineLayout.pageSurahHeaderScale - minimumSurahHeaderScale) * 0.5,
+                basmallahBottomGapScale:
+                    baselineLayout.basmallahBottomGapScale -
+                    (baselineLayout.basmallahBottomGapScale - minimumBasmallahBottomGapScale) * 0.5,
+            };
+            const tightLayout = {
+                ...baselineLayout,
+                pageLeadingMultiplier: minimumLeadingMultiplier,
+                pageGapMultiplier: minimumGapMultiplier,
+                pageSurahHeaderScale: minimumSurahHeaderScale,
+                basmallahBottomGapScale: minimumBasmallahBottomGapScale,
+            };
+            const layoutCandidates = [baselineLayout, midpointLayout, tightLayout];
+            const solveBestScaleForCurrentLayout = () => {
+                let lower = minScale;
+                let upper = maxScale;
+                let best = evaluateScale(minScale);
+
+                if (!best.fits) {
+                    return best;
+                }
+
+                for (let step = 0; step < 22; step += 1) {
+                    const mid = (lower + upper) * 0.5;
+                    const evaluation = evaluateScale(mid);
+
+                    if (evaluation.fits) {
+                        best = evaluation;
+                        lower = mid;
+                    } else {
+                        upper = mid;
+                    }
+                }
+
+                return best;
+            };
+
+            let bestLayout = baselineLayout;
+            let finalEvaluation = evaluateScale(minScale);
             let bestScore = Number.NEGATIVE_INFINITY;
 
-            for (let step = 0; step <= candidateSteps; step += 1) {
-                const compressionLevel =
-                    minimumCompressionLevel +
-                    (step / candidateSteps) * (1 - minimumCompressionLevel);
-                const layout = this.fitLayoutFromCompressionLevel(compressionLevel);
-
-                this.applyFitLayoutVariables(rootElement, layout);
+            layoutCandidates.forEach((candidateLayout, index) => {
+                this.applyFitLayoutVariables(rootElement, candidateLayout);
                 rootElement.style.setProperty('--quran-page-scale', '1');
+                const evaluation = solveBestScaleForCurrentLayout();
 
-                const naturalSize = this.measureRenderedBounds(contentElement);
-                const widthRatio = availableWidth / Math.max(1, naturalSize.width);
-                const heightRatio = availableHeight / Math.max(1, naturalSize.height);
-                const candidateScale = Math.max(
-                    minScale,
-                    Math.min(maxScale, widthRatio, heightRatio),
+                if (!evaluation.fits) {
+                    return;
+                }
+
+                const compressionPenalty = index * 0.045;
+                const widthDeficitPenalty = Math.max(
+                    0,
+                    targetMinimumFillWidth - evaluation.fillWidth,
                 );
-                const fillWidth =
-                    (Math.max(1, naturalSize.width) * Math.max(minScale, candidateScale)) /
-                    availableWidth;
-                const fillHeight =
-                    (Math.max(1, naturalSize.height) * Math.max(minScale, candidateScale)) /
-                    availableHeight;
-                const score = this.fitScore({
-                    fillWidth,
-                    fillHeight,
-                    compressionLevel,
-                });
+                const areaOverflowPenalty = evaluation.isInsideTargetArea ? 0 : 0.08;
+                const score =
+                    Math.min(1.04, evaluation.fillWidth) * 1.32 +
+                    Math.min(1.04, evaluation.fillHeight) * 0.56 -
+                    widthDeficitPenalty * 1.8 -
+                    compressionPenalty -
+                    areaOverflowPenalty;
 
                 if (score > bestScore) {
                     bestScore = score;
-                    bestLayout = layout;
-                    bestScale = Math.max(minScale, candidateScale);
+                    bestLayout = { ...candidateLayout };
+                    finalEvaluation = evaluation;
                 }
+            });
+
+            if (bestScore === Number.NEGATIVE_INFINITY) {
+                let relaxedBestLayout = { ...baselineLayout };
+                let relaxedBestEvaluation = evaluateScale(minScale);
+                let relaxedBestScore = Number.NEGATIVE_INFINITY;
+
+                layoutCandidates.forEach((candidateLayout) => {
+                    this.applyFitLayoutVariables(rootElement, candidateLayout);
+                    rootElement.style.setProperty('--quran-page-scale', '1');
+                    const natural = measureVisualBounds();
+
+                    if (natural.width <= 1 || natural.height <= 1) {
+                        return;
+                    }
+
+                    const geometricScale = Math.max(
+                        minScale,
+                        Math.min(
+                            maxScale,
+                            Math.min(targetWidth / natural.width, targetHeight / natural.height),
+                        ),
+                    );
+                    const evaluation = evaluateScale(geometricScale);
+                    const relaxedScore =
+                        Math.min(1.08, evaluation.fillWidth) * 1.2 +
+                        Math.min(1.08, evaluation.fillHeight) * 0.8;
+
+                    if (relaxedScore > relaxedBestScore) {
+                        relaxedBestScore = relaxedScore;
+                        relaxedBestLayout = { ...candidateLayout };
+                        relaxedBestEvaluation = evaluation;
+                    }
+                });
+
+                bestLayout = relaxedBestLayout;
+                finalEvaluation = relaxedBestEvaluation;
             }
 
             this.applyFitLayoutVariables(rootElement, bestLayout);
-            let normalizedScale = Math.max(minScale, Math.min(maxScale, bestScale));
-
-            for (let attempt = 0; attempt < 6; attempt += 1) {
-                rootElement.style.setProperty('--quran-page-scale', String(normalizedScale));
-
-                const measured = this.measureRenderedBounds(contentElement);
-                const adjustScale = Math.min(
-                    availableWidth / Math.max(1, measured.width),
-                    availableHeight / Math.max(1, measured.height),
-                );
-
-                if (!Number.isFinite(adjustScale) || Math.abs(adjustScale - 1) < 0.01) {
-                    break;
-                }
-
-                normalizedScale = Math.max(
-                    minScale,
-                    Math.min(maxScale, Number((normalizedScale * adjustScale).toFixed(4))),
-                );
-            }
-
-            rootElement.style.setProperty('--quran-page-scale', String(normalizedScale));
-            const strictMeasured = this.measureRenderedBounds(contentElement, {
-                useRobustWidth: false,
-            });
-            const widthOverflowAdjust =
-                strictMeasured.width > strictWidthOverflowThreshold &&
-                strictMeasured.width > 0 &&
-                strictWidthOverflowThreshold > 0
-                    ? strictWidthOverflowThreshold / strictMeasured.width
-                    : 1;
-            const heightOverflowAdjust =
-                strictMeasured.height > strictHeightOverflowThreshold &&
-                strictMeasured.height > 0 &&
-                strictHeightOverflowThreshold > 0
-                    ? strictHeightOverflowThreshold / strictMeasured.height
-                    : 1;
-            const overflowAdjust = Math.min(widthOverflowAdjust, heightOverflowAdjust);
-
-            if (overflowAdjust < 1) {
-                normalizedScale = Math.max(
-                    minScale,
-                    Math.min(maxScale, Number((normalizedScale * overflowAdjust).toFixed(4))),
-                );
-            }
-
-            if (normalizedPageNumber <= 2) {
-                normalizedScale = Math.max(
-                    minScale,
-                    Math.min(
-                        maxScale,
-                        Number((normalizedScale * openingSpreadFinalScaleMultiplier).toFixed(4)),
-                    ),
-                );
-            }
-
-            rootElement.style.setProperty('--quran-page-scale', String(normalizedScale));
-            this.pageScale = normalizedScale;
-            if (!isModalLayoutContext) {
-                this.rememberFitResult(
-                    fitCacheKey,
-                    {
-                        layout: { ...bestLayout },
-                        scale: normalizedScale,
-                    },
-                    {
-                        persist: !shouldSuppressPersistedCacheWrite,
-                    },
-                );
-            }
+            rootElement.style.setProperty('--quran-page-scale', String(finalEvaluation.scale));
+            this.pageScale = finalEvaluation.scale;
+            this.rememberFitResult(
+                fitCacheKey,
+                {
+                    layout: { ...bestLayout },
+                    scale: finalEvaluation.scale,
+                },
+                {
+                    persist: !shouldSuppressPersistedCacheWrite,
+                },
+            );
             this.scheduleFitSanityCheck({
                 cacheKey: fitCacheKey,
                 pageNumber: normalizedPageNumber,
-                availableWidth,
-                availableHeight,
-                strictWidthOverflowTolerance: Number(profile.strictWidthOverflowTolerance ?? 1.06),
-                strictHeightOverflowTolerance: Number(
-                    profile.strictHeightOverflowTolerance ?? 1.01,
-                ),
+                availableWidth: targetWidth,
+                availableHeight: targetHeight,
+                strictWidthOverflowTolerance,
+                strictHeightOverflowTolerance,
                 minimumFillWidth: minimumHealthyFillWidth,
                 minimumFillHeight: minimumHealthyFillHeight,
             });
-            this._bypassNextFitCache = false;
 
+            if (isFontLayoutPending) {
+                this.scheduleFontReadyRecoveryRefit(normalizedPageNumber, {
+                    delayMs: 110,
+                });
+            }
+
+            this._bypassNextFitCache = false;
             this._fitRunCounter += 1;
             this._lastFittedPageNumber = this.pageNumber;
         },

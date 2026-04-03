@@ -31,7 +31,14 @@
             --quran-page-gap-multiplier: 1;
             --quran-page-surah-header-scale: 1;
             --quran-fit-height-ratio: 0.95;
-            --quran-line-gap: 2.3rem;
+            --quran-fit-target-width-ratio: 0.8;
+            --quran-fit-area-pad-x: 0rem;
+            --quran-fit-area-pad-y: 0rem;
+            --quran-min-page-leading-multiplier: 0.9;
+            --quran-min-page-gap-multiplier: 0.4;
+            --quran-min-page-surah-header-scale: 0.9;
+            --quran-min-basmallah-bottom-gap-scale: -0.32;
+            --quran-line-gap: 1.65rem;
             --quran-basmallah-bottom-gap-scale: -0.18;
             --quran-font-size-rect: 2.08rem;
             --quran-font-size-center: 2.02rem;
@@ -43,73 +50,57 @@
 
         @media (max-width: 639px) {
             .quran-reader {
-                --quran-type-scale: 0.94;
-                --quran-leading-scale: 1.02;
-                --quran-gap-scale: 0.92;
-                --quran-fit-height-ratio: 0.92;
+                --quran-fit-target-width-ratio: 0.85;
+                --quran-fit-area-pad-x: 0.2rem;
+                --quran-fit-area-pad-y: 0.2rem;
             }
         }
 
-        @media (min-width: 640px) and (max-width: 767px) {
+        @media (min-width: 640px) and (max-width: 1023px) {
             .quran-reader {
-                --quran-type-scale: 0.965;
-                --quran-leading-scale: 1.01;
-                --quran-gap-scale: 0.96;
-                --quran-fit-height-ratio: 0.93;
+                --quran-fit-target-width-ratio: 0.8;
+                --quran-fit-area-pad-x: 0.35rem;
+                --quran-fit-area-pad-y: 0.25rem;
             }
         }
 
-        @media (min-width: 768px) and (max-width: 1023px) {
+        @media (min-width: 1024px) and (max-width: 1535px) {
             .quran-reader {
-                --quran-type-scale: 0.985;
-                --quran-leading-scale: 1;
-                --quran-gap-scale: 0.99;
-                --quran-fit-height-ratio: 0.94;
+                --quran-fit-target-width-ratio: 0.8;
+                --quran-fit-area-pad-x: 0.5rem;
+                --quran-fit-area-pad-y: 0.35rem;
             }
         }
 
-        @media (min-width: 1024px) and (max-width: 1279px) {
+        @media (min-width: 1536px) and (max-width: 1979px) {
             .quran-reader {
-                --quran-type-scale: 1;
-                --quran-leading-scale: 1;
-                --quran-gap-scale: 1;
-                --quran-fit-height-ratio: 0.95;
+                --quran-fit-target-width-ratio: 0.85;
+                --quran-fit-area-pad-x: 2rem;
+                --quran-fit-area-pad-y: 0.45rem;
             }
         }
 
-        @media (min-width: 1280px) and (max-width: 1535px) {
+        @media (min-width: 1980px) and (max-width: 2559px) {
             .quran-reader {
-                --quran-type-scale: 1.03;
-                --quran-leading-scale: 1.02;
-                --quran-gap-scale: 1.08;
-                --quran-fit-height-ratio: 0.96;
-            }
-        }
-
-        @media (min-width: 1536px) and (max-width: 1919px) {
-            .quran-reader {
-                --quran-type-scale: 1.78;
-                --quran-leading-scale: 0.98;
-                --quran-gap-scale: 1.14;
-                --quran-fit-height-ratio: 0.955;
-            }
-        }
-
-        @media (min-width: 1920px) and (max-width: 2559px) {
-            .quran-reader {
-                --quran-type-scale: 1.3;
-                --quran-leading-scale: 0.8;
-                --quran-gap-scale: 1.15;
-                --quran-fit-height-ratio: 0.8;
+                --quran-fit-target-width-ratio: 0.85;
+                --quran-fit-area-pad-x: 2rem;
+                --quran-fit-area-pad-y: 0.45rem;
             }
         }
 
         @media (min-width: 2560px) {
             .quran-reader {
-                --quran-type-scale: 1.72;
-                --quran-leading-scale: 0.9;
-                --quran-gap-scale: 1.55;
-                --quran-fit-height-ratio: 0.81;
+                --quran-min-page-scale: 0.1;
+                --quran-max-page-scale: 1.25;
+                --quran-fit-area-pad-x: 1rem;
+                --quran-fit-area-pad-y: 0.3rem;
+                --quran-fit-target-width-ratio: 0.85;
+                --quran-fit-height-ratio: 0.9;
+                --quran-min-page-leading-multiplier: 0.8;
+                --quran-min-page-gap-multiplier: 0.82;
+                --quran-min-page-surah-header-scale: 0.86;
+                --quran-basmallah-bottom-gap-scale: -0.3;
+                --quran-min-basmallah-bottom-gap-scale: -0.36;
             }
         }
 
@@ -1910,7 +1901,7 @@
                         @endif
 
                         <div
-                            class="mx-auto grid h-full w-fit max-w-full place-items-center overflow-hidden"
+                            class="mx-auto grid h-full w-fit max-w-full place-items-center items-center overflow-hidden"
                             x-ref="pageFrame"
                         >
                             <div
