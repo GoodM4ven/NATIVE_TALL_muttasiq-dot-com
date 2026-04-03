@@ -124,7 +124,6 @@ const fitCacheStorageVersion = 10;
 const fitCacheStorageKey = 'quran-reader-fit-cache-v10';
 const fitCacheViewportBucketSizePx = 24;
 const shouldPersistFitCacheAcrossReloads = false;
-const fitCalibrationReferencePage = 3;
 const idleWarmupPauseOnHighFrequencyNavigationMs = 520;
 const idleWarmupPauseOnStandardNavigationMs = 160;
 const idleWarmupResumeDelayMs = 220;
@@ -873,11 +872,6 @@ document.addEventListener('alpine:init', () => {
         _quranPreparationInFlight: null,
         _quranPreparationRequestPromise: null,
         _startupRestoreInFlight: null,
-        _startupCalibrationPending: true,
-        _startupTargetPageNumber: 1,
-        _globalFitCalibrationLayout: null,
-        _globalFitCalibrationScale: 0,
-        _globalFitCalibrationPageNumber: 0,
         _loadedPayloadPageNumber: 0,
         _surahDirectoryAutoFocusToken: 0,
         _surahDirectoryAutoFocusTimer: null,
@@ -968,7 +962,6 @@ document.addEventListener('alpine:init', () => {
 
             this.pageInput = restoredPage;
             this._lastPageInputVisualValue = restoredPage;
-            this._startupTargetPageNumber = restoredPage;
             writeLastPageNumber(restoredPage);
 
             if (!shouldRestoreSavedPage) {
@@ -2132,241 +2125,20 @@ document.addEventListener('alpine:init', () => {
             this.syncSupportLockTargetsUi();
             this.syncFitCacheBreakpoint({ persist: false });
             this.hydratePersistedFitCache();
-            this._startupCalibrationPending = true;
 
-            try {
-                if (this._startupRestoreInFlight instanceof Promise) {
-                    try {
-                        await this._startupRestoreInFlight;
-                    } catch (_) {
-                        // Ignore startup restore aborts; ensureCurrentPageLoaded() will recover.
-                    }
+            if (this._startupRestoreInFlight instanceof Promise) {
+                try {
+                    await this._startupRestoreInFlight;
+                } catch (_) {
+                    // Ignore startup restore aborts; ensureCurrentPageLoaded() will recover.
                 }
-
-                await this.calibrateGlobalFitLayoutFromReferencePage();
-                await this.ensureCurrentPageLoaded();
-                await this.runStartupFinalFitPass();
-                this.queueStartupPreload();
-                this.scheduleIdleWarmup();
-                this.warmSearchIndex();
-            } finally {
-                this._startupCalibrationPending = false;
-            }
-        },
-
-        captureCurrentFitLayoutFromRoot() {
-            const rootElement = this.$el.firstElementChild;
-
-            if (!(rootElement instanceof HTMLElement)) {
-                return null;
             }
 
-            const styles = window.getComputedStyle(rootElement);
-            const readLayoutNumber = (propertyName, fallback) => {
-                const inlineValue = Number.parseFloat(
-                    rootElement.style.getPropertyValue(propertyName),
-                );
-
-                if (Number.isFinite(inlineValue)) {
-                    return inlineValue;
-                }
-
-                const computedValue = Number.parseFloat(styles.getPropertyValue(propertyName));
-
-                return Number.isFinite(computedValue) ? computedValue : fallback;
-            };
-
-            return {
-                pageTypeScale: Math.max(0.2, readLayoutNumber('--quran-page-type-scale', 1)),
-                pageLeadingMultiplier: Math.max(
-                    0.25,
-                    readLayoutNumber('--quran-page-leading-multiplier', 1),
-                ),
-                pageGapMultiplier: Math.max(0, readLayoutNumber('--quran-page-gap-multiplier', 1)),
-                pageSurahHeaderScale: Math.max(
-                    0.5,
-                    readLayoutNumber('--quran-page-surah-header-scale', 1),
-                ),
-                basmallahBottomGapScale: readLayoutNumber(
-                    '--quran-basmallah-bottom-gap-scale',
-                    defaultBasmallahBottomGapScale,
-                ),
-                pageScale: Math.max(0.05, readLayoutNumber('--quran-page-scale', 1)),
-            };
-        },
-
-        async calibrateGlobalFitLayoutFromReferencePage(
-            referencePage = fitCalibrationReferencePage,
-        ) {
-            const normalizedReferencePage = clampPage(referencePage, this.maxPage);
-
-            if (normalizedReferencePage <= 0) {
-                return;
-            }
-
-            const startupTargetPage = clampPage(
-                Number(this._startupTargetPageNumber ?? this.pageInput ?? this.pageNumber),
-                this.maxPage,
-            );
-
-            try {
-                const referencePayload = await this.getPagePayload(normalizedReferencePage, {
-                    preferCache: true,
-                });
-
-                if (!referencePayload) {
-                    return;
-                }
-
-                this.applyPayload(referencePayload, {
-                    setPageNumber: true,
-                    persistPageNumber: false,
-                });
-                await this.nextTickAsync();
-                await this.waitForPageFontReady();
-                await this.resolveWithTimeout(document.fonts?.ready, 3200, {
-                    timeoutValue: 'timeout',
-                });
-                await this.waitForStablePageFrame({
-                    maxFrames: 22,
-                    requiredStableFrames: 3,
-                    tolerancePx: 0.8,
-                });
-                this._bypassNextFitCache = true;
-                await this.layoutPageGuaranteed({
-                    revealDelayMs: 110,
-                    maxAttempts: 5,
-                    useIdleFit: false,
-                });
-                await this.waitForStableRenderedText(12);
-                this._bypassNextFitCache = true;
-                this.fitPageToViewport();
-                const rootElement = this.$el.firstElementChild;
-                const frameElement = this.$refs.pageFrame;
-                const contentElement = this.$refs.pageContent;
-
-                if (
-                    rootElement instanceof HTMLElement &&
-                    frameElement instanceof HTMLElement &&
-                    contentElement instanceof HTMLElement
-                ) {
-                    const frameRect = frameElement.getBoundingClientRect();
-                    const frameParentRect =
-                        frameElement.parentElement?.getBoundingClientRect?.() ?? null;
-                    const styles = window.getComputedStyle(rootElement);
-                    const fitTargetWidthRatio = Math.min(
-                        0.95,
-                        Math.max(
-                            0.55,
-                            Number.parseFloat(
-                                styles.getPropertyValue('--quran-fit-target-width-ratio'),
-                            ) || 0.8,
-                        ),
-                    );
-                    const fitAreaPaddingX = Math.max(
-                        0,
-                        Number.parseFloat(styles.getPropertyValue('--quran-fit-area-pad-x')) || 0,
-                    );
-                    const fitAreaPaddingY = Math.max(
-                        0,
-                        Number.parseFloat(styles.getPropertyValue('--quran-fit-area-pad-y')) || 0,
-                    );
-                    const fitHeightRatio = Math.min(
-                        1,
-                        Math.max(
-                            0.7,
-                            Number.parseFloat(
-                                styles.getPropertyValue('--quran-fit-height-ratio'),
-                            ) || 1,
-                        ),
-                    );
-                    const availableWidth = Math.max(
-                        1,
-                        Number(
-                            frameParentRect?.width ??
-                                frameRect?.width ??
-                                frameElement.parentElement?.clientWidth ??
-                                frameElement.clientWidth ??
-                                1,
-                        ) -
-                            fitAreaPaddingX * 2,
-                    );
-                    const availableHeight = Math.max(
-                        1,
-                        (Number(frameRect?.height ?? frameElement.clientHeight ?? 1) -
-                            fitAreaPaddingY * 2) *
-                            fitHeightRatio,
-                    );
-                    const targetWidth = Math.max(1, availableWidth * fitTargetWidthRatio);
-                    const targetHeight = Math.max(1, availableHeight);
-                    const measured = this.measureRenderedBounds(contentElement, {
-                        useRobustWidth: false,
-                    });
-                    const downscaleCorrection = Math.min(
-                        1,
-                        targetWidth / Math.max(1, measured.width),
-                        targetHeight / Math.max(1, measured.height),
-                    );
-
-                    if (Number.isFinite(downscaleCorrection) && downscaleCorrection < 0.999) {
-                        const minScale = Math.max(
-                            0.05,
-                            Number.parseFloat(styles.getPropertyValue('--quran-min-page-scale')) ||
-                                0.1,
-                        );
-                        const maxScale = Math.max(
-                            minScale,
-                            Number.parseFloat(styles.getPropertyValue('--quran-max-page-scale')) ||
-                                1,
-                        );
-                        const currentScale = Math.max(
-                            minScale,
-                            Math.min(
-                                maxScale,
-                                Number.parseFloat(
-                                    rootElement.style.getPropertyValue('--quran-page-scale'),
-                                ) ||
-                                    Number(this.pageScale) ||
-                                    1,
-                            ),
-                        );
-                        const correctedScale = Math.max(
-                            minScale,
-                            Math.min(
-                                maxScale,
-                                Number((currentScale * downscaleCorrection).toFixed(4)),
-                            ),
-                        );
-
-                        rootElement.style.setProperty('--quran-page-scale', String(correctedScale));
-                        this.pageScale = correctedScale;
-                    }
-                }
-
-                const capturedLayout = this.captureCurrentFitLayoutFromRoot();
-
-                if (capturedLayout) {
-                    this._globalFitCalibrationLayout = capturedLayout;
-                    this._globalFitCalibrationScale = Math.max(
-                        0.05,
-                        Number(capturedLayout.pageScale ?? 1),
-                    );
-                    this._globalFitCalibrationPageNumber = normalizedReferencePage;
-                }
-            } catch (error) {
-                this._globalFitCalibrationLayout = null;
-                this._globalFitCalibrationScale = 0;
-                this._globalFitCalibrationPageNumber = 0;
-                this.traceReaderReveal('startup-global-fit-calibration-failed', {
-                    page: normalizedReferencePage,
-                    name: String(error?.name ?? 'Error'),
-                    message: String(error?.message ?? ''),
-                });
-            } finally {
-                this.pageInput = startupTargetPage;
-                this._lastPageInputVisualValue = startupTargetPage;
-                this._bypassNextFitCache = true;
-            }
+            await this.ensureCurrentPageLoaded();
+            await this.runStartupFinalFitPass();
+            this.queueStartupPreload();
+            this.scheduleIdleWarmup();
+            this.warmSearchIndex();
         },
 
         async ensurePersistentStorage() {
@@ -7867,13 +7639,6 @@ document.addEventListener('alpine:init', () => {
                     layoutToken,
                 });
 
-                if (this._startupCalibrationPending) {
-                    this.isFittingPage = true;
-                    this.queuePageReveal(layoutToken, 90);
-
-                    return;
-                }
-
                 if (this._isModalLifecycleSettling || this._activeModalIds.size > 0) {
                     if (this.recoverStaleModalLifecycleState()) {
                         this.traceReaderReveal('queue-page-reveal-recover-modal-state');
@@ -7971,6 +7736,17 @@ document.addEventListener('alpine:init', () => {
 
                 this._revealBlockedSinceAt = 0;
                 this._revealBlockedLayoutToken = 0;
+
+                if (this._lastFittedPageNumber !== this.pageNumber) {
+                    const adjusted = this.applySafetyScaleForCurrentPageOverflow();
+
+                    if (adjusted) {
+                        this.scheduleLayout({
+                            revealDelayMs: 120,
+                            maxAttempts: 5,
+                        });
+                    }
+                }
 
                 this.syncPageInputToCurrentPage();
                 this.isFittingPage = false;
@@ -8908,7 +8684,7 @@ document.addEventListener('alpine:init', () => {
 
                 return Number.isFinite(rawValue) ? rawValue : fallback;
             };
-            const cssBaselineLayout = {
+            const baselineLayout = {
                 pageTypeScale: Math.max(0.2, readCssNumber('--quran-page-type-scale', 1)),
                 pageLeadingMultiplier: Math.max(
                     0.25,
@@ -8924,46 +8700,6 @@ document.addEventListener('alpine:init', () => {
                     defaultBasmallahBottomGapScale,
                 ),
             };
-            const calibrationLayout =
-                this._globalFitCalibrationLayout &&
-                typeof this._globalFitCalibrationLayout === 'object'
-                    ? this._globalFitCalibrationLayout
-                    : null;
-            const baselineLayout = calibrationLayout
-                ? {
-                      pageTypeScale: Math.max(
-                          0.2,
-                          Number(
-                              calibrationLayout.pageTypeScale ?? cssBaselineLayout.pageTypeScale,
-                          ),
-                      ),
-                      pageLeadingMultiplier: Math.max(
-                          0.25,
-                          Number(
-                              calibrationLayout.pageLeadingMultiplier ??
-                                  cssBaselineLayout.pageLeadingMultiplier,
-                          ),
-                      ),
-                      pageGapMultiplier: Math.max(
-                          0,
-                          Number(
-                              calibrationLayout.pageGapMultiplier ??
-                                  cssBaselineLayout.pageGapMultiplier,
-                          ),
-                      ),
-                      pageSurahHeaderScale: Math.max(
-                          0.5,
-                          Number(
-                              calibrationLayout.pageSurahHeaderScale ??
-                                  cssBaselineLayout.pageSurahHeaderScale,
-                          ),
-                      ),
-                      basmallahBottomGapScale: Number(
-                          calibrationLayout.basmallahBottomGapScale ??
-                              cssBaselineLayout.basmallahBottomGapScale,
-                      ),
-                  }
-                : { ...cssBaselineLayout };
 
             this.applyFitLayoutVariables(rootElement, baselineLayout);
             rootElement.style.setProperty('--quran-page-scale', '1');
@@ -9030,49 +8766,6 @@ document.addEventListener('alpine:init', () => {
                 Number.parseFloat(computedRootStyles.getPropertyValue('--quran-max-page-scale')) ||
                     1,
             );
-            const hasGlobalCalibrationProfile =
-                this._globalFitCalibrationLayout &&
-                typeof this._globalFitCalibrationLayout === 'object' &&
-                Number.isFinite(Number(this._globalFitCalibrationScale)) &&
-                Number(this._globalFitCalibrationScale) > 0;
-
-            if (hasGlobalCalibrationProfile) {
-                const globalLayout = {
-                    pageTypeScale: Math.max(
-                        0.2,
-                        Number(this._globalFitCalibrationLayout.pageTypeScale ?? 1),
-                    ),
-                    pageLeadingMultiplier: Math.max(
-                        0.25,
-                        Number(this._globalFitCalibrationLayout.pageLeadingMultiplier ?? 1),
-                    ),
-                    pageGapMultiplier: Math.max(
-                        0,
-                        Number(this._globalFitCalibrationLayout.pageGapMultiplier ?? 1),
-                    ),
-                    pageSurahHeaderScale: Math.max(
-                        0.5,
-                        Number(this._globalFitCalibrationLayout.pageSurahHeaderScale ?? 1),
-                    ),
-                    basmallahBottomGapScale: Number(
-                        this._globalFitCalibrationLayout.basmallahBottomGapScale ??
-                            defaultBasmallahBottomGapScale,
-                    ),
-                };
-                const globalScale = Math.max(
-                    minScale,
-                    Math.min(maxScale, Number(this._globalFitCalibrationScale)),
-                );
-
-                this.applyFitLayoutVariables(rootElement, globalLayout);
-                rootElement.style.setProperty('--quran-page-scale', String(globalScale));
-                this.pageScale = globalScale;
-                this._bypassNextFitCache = false;
-                this._fitRunCounter += 1;
-                this._lastFittedPageNumber = this.pageNumber;
-
-                return;
-            }
             const minimumLeadingMultiplier = Math.max(
                 0.35,
                 Math.min(
@@ -9141,9 +8834,6 @@ document.addEventListener('alpine:init', () => {
                 Number(minimumGapMultiplier).toFixed(3),
                 Number(minimumSurahHeaderScale).toFixed(3),
                 Number(minimumBasmallahBottomGapScale).toFixed(3),
-                this._globalFitCalibrationPageNumber > 0
-                    ? `cal-${this._globalFitCalibrationPageNumber}`
-                    : 'cal-none',
                 String(this.qpcPageFontFamily ?? ''),
                 String(this.basmallahFontFamily ?? ''),
                 String(this.surahHeaderFontFamily ?? ''),
