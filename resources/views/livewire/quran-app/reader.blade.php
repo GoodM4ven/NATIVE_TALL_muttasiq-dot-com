@@ -310,7 +310,47 @@
         }
 
         .quran-calibration-overlay {
-            background: var(--quran-panel-bg, color-mix(in srgb, var(--background) 92%, transparent));
+            color: color-mix(in srgb, var(--quran-panel-text) 88%, var(--gray-900));
+            background:
+                linear-gradient(145deg,
+                    color-mix(in srgb, var(--background) 30%, transparent) 0%,
+                    color-mix(in srgb, var(--quran-panel-bg) 55%, transparent) 100%);
+            border: 1px solid color-mix(in srgb, var(--quran-panel-border) 64%, transparent);
+            box-shadow:
+                inset 0 1px 0 color-mix(in srgb, var(--gray-50) 28%, transparent),
+                0 12px 28px color-mix(in srgb, var(--gray-900) 18%, transparent);
+            backdrop-filter: blur(11px) saturate(1.12);
+            -webkit-backdrop-filter: blur(11px) saturate(1.12);
+            contain: paint;
+            transform: translateZ(0);
+            will-change: opacity;
+        }
+
+        .quran-calibration-overlay.quran-calibration-overlay--visible {
+            opacity: 1;
+            visibility: visible;
+            transition:
+                opacity 180ms ease-out,
+                visibility 0ms linear 0ms;
+        }
+
+        .quran-calibration-overlay.quran-calibration-overlay--hidden {
+            opacity: 0;
+            visibility: hidden;
+            transition:
+                opacity 220ms ease-in,
+                visibility 0ms linear 220ms;
+        }
+
+        .quran-calibration-loader {
+            transform: translateZ(0);
+            will-change: transform, opacity;
+            backface-visibility: hidden;
+        }
+
+        .quran-calibration-loader l-squircle {
+            display: block;
+            transform: translateZ(0);
         }
 
         .quran-page-lines[data-fit-state='fading-out'] {
@@ -1706,19 +1746,17 @@
                 x-ref="readerPanel"
             >
                 <div
-                    class="quran-calibration-overlay pointer-events-none absolute inset-0 z-30 grid place-items-center rounded-[1.75rem] transition-opacity duration-300"
-                    wire:ignore.self
+                    class="quran-calibration-overlay pointer-events-none absolute inset-0 z-30 grid place-items-center rounded-[1.75rem]"
+                    wire:ignore
                     x-cloak
-                    x-show="isCalibrating"
-                    x-transition:enter="transition-opacity ease-out duration-200"
-                    x-transition:enter-start="opacity-0"
-                    x-transition:enter-end="opacity-100"
-                    x-transition:leave="transition-opacity ease-in duration-250"
-                    x-transition:leave-start="opacity-100"
-                    x-transition:leave-end="opacity-0"
+                    x-bind:class="{
+                        'quran-calibration-overlay--visible': isCalibrating,
+                        'quran-calibration-overlay--hidden': !isCalibrating,
+                    }"
+                    x-bind:aria-hidden="isCalibrating ? 'false' : 'true'"
                 >
                     <div
-                        class="flex flex-col items-center gap-3"
+                        class="quran-calibration-loader flex flex-col items-center gap-3"
                         wire:ignore
                         x-ignore
                     >

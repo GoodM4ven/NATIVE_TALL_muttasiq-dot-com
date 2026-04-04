@@ -412,6 +412,8 @@ class Reader extends Component implements HasActions, HasSchemas
                         'max' => (string) max(1, $this->maxPage),
                         'step' => '1',
                         'x-init' => '$nextTick(() => { $el.focus(); $el.select(); });',
+                        'x-on:pointerdown.prevent' => '$event.target.focus(); $event.target.select();',
+                        'x-on:click.prevent' => '$event.target.select();',
                         'x-on:focus' => '$event.target.select();',
                         'x-on:input' => '$event.target.value = String(Math.min(Math.max(1, Math.trunc(Number($event.target.value || 1) || 1)), Math.max(1, Number($event.target.max) || 1)));',
                         'x-on:blur' => '$event.target.value = String(Math.min(Math.max(1, Math.trunc(Number($event.target.value || 1) || 1)), Math.max(1, Number($event.target.max) || 1))); window.setTimeout(() => { if (!document.body.contains($event.target) || $event.target.offsetParent === null) { return; } $event.target.focus(); $event.target.select(); }, 0);',
