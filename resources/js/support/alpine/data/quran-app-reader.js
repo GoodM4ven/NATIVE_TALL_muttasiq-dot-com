@@ -107,6 +107,7 @@ const navigationBurstInputThresholdMs = 140;
 const navigationBurstSettleDelayMs = 72;
 const navigationRevealLockDurationMs = 420;
 const postModalFitRevealSettleDelayMs = 280;
+const modalCloseTransitionDelayMs = 160;
 const modalLifecycleSuppressionDurationMs = 980;
 const historyNavigationModalLifecycleSuppressionDurationMs = 2600;
 const revealBlockedFailOpenDelayMs = 1100;
@@ -5985,6 +5986,7 @@ document.addEventListener('alpine:init', () => {
                         ),
                     });
                     await this.waitForModalLifecycleToSettle(28, 28);
+                    await wait(modalCloseTransitionDelayMs);
                     this._bypassNextFitCache = true;
                 }
 
@@ -6198,26 +6200,30 @@ document.addEventListener('alpine:init', () => {
                 this.persistLastPageNumber(normalizedPage);
                 this.searchHighlightedAyahIndex = nextSearchHighlightedAyahIndex;
 
-                if (this.openModalCount() <= 0) {
+                const hasOpenModals =
+                    this.openModalCount() > 0 ||
+                    this._isModalLifecycleSettling ||
+                    this._activeModalIds.size > 0;
+
+                if (!hasOpenModals) {
                     this.recoverStaleModalLifecycleState();
-                }
 
-                if (forceRefit) {
-                    await this.layoutPageGuaranteed({ revealDelayMs: 200 });
-                } else if (this.isFittingPage || this._lastFittedPageNumber !== normalizedPage) {
-                    await this.layoutPageGuaranteed({
-                        revealDelayMs: 140,
-                        maxAttempts: 3,
-                        useIdleFit: false,
-                    });
-                }
+                    if (forceRefit) {
+                        await this.layoutPageGuaranteed({ revealDelayMs: 200 });
+                    } else if (
+                        this.isFittingPage ||
+                        this._lastFittedPageNumber !== normalizedPage
+                    ) {
+                        await this.layoutPageGuaranteed({
+                            revealDelayMs: 140,
+                            maxAttempts: 3,
+                            useIdleFit: false,
+                        });
+                    }
 
-                if (this.hasRenderablePage()) {
-                    this.isFittingPage = false;
-                }
-
-                if (this.openModalCount() <= 0) {
-                    this.recoverStaleModalLifecycleState();
+                    if (this.hasRenderablePage()) {
+                        this.isFittingPage = false;
+                    }
                 }
 
                 return;
@@ -14005,6 +14011,7 @@ document.addEventListener('alpine:init', () => {
             });
             await this.requestHistoryModalClose();
             await this.waitForModalLifecycleToSettle();
+            await wait(modalCloseTransitionDelayMs);
             this.suppressModalLifecycleEffects([this.historyModalId], {
                 durationMs: historyNavigationModalLifecycleSuppressionDurationMs,
             });
@@ -14044,6 +14051,7 @@ document.addEventListener('alpine:init', () => {
             this.suppressModalLifecycleEffects([this.bookmarksModalId]);
             await this.requestBookmarksModalClose();
             await this.waitForModalLifecycleToSettle();
+            await wait(modalCloseTransitionDelayMs);
             this._bypassNextFitCache = true;
             await this.goToPageFromChevron(targetPage, {
                 activeAyahIndex: 0,
@@ -14095,6 +14103,7 @@ document.addEventListener('alpine:init', () => {
             this.resetNavigationQueueForPriorityJump();
             await this.requestSearchModalClose();
             await this.waitForModalLifecycleToSettle();
+            await wait(modalCloseTransitionDelayMs);
             this.activeAyahIndex = 0;
             this.activeWordIndex = 0;
             this._bypassNextFitCache = true;
@@ -14288,6 +14297,7 @@ document.addEventListener('alpine:init', () => {
             this.resetNavigationQueueForPriorityJump();
             await this.requestSearchModalClose();
             await this.waitForModalLifecycleToSettle();
+            await wait(modalCloseTransitionDelayMs);
             this._bypassNextFitCache = true;
             await this.goToPageFromChevron(targetPage, {
                 activeAyahIndex: ayahIndex,

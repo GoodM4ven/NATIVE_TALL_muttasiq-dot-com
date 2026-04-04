@@ -365,10 +365,23 @@
             backface-visibility: hidden;
         }
 
-        .quran-calibration-loader l-squircle {
+        .quran-calibration-spinner {
             display: block;
+            color: color-mix(in srgb, var(--quran-panel-text) 72%, transparent);
             transform: translateZ(0);
+            will-change: transform;
+            /* animation: quran-calibration-spin 1.1s linear infinite; */
         }
+
+        .quran-calibration-spinner-arc {
+            transform-origin: center;
+        }
+
+        /* @keyframes quran-calibration-spin {
+            to {
+                transform: translateZ(0) rotate(360deg);
+            }
+        } */
 
         .quran-page-lines[data-fit-state='fading-out'] {
             opacity: 0;
@@ -1772,19 +1785,42 @@
                     }"
                     x-bind:aria-hidden="isCalibrating ? 'false' : 'true'"
                 >
-                    <div
-                        class="quran-calibration-loader flex flex-col items-center gap-3"
-                        wire:ignore
-                        x-ignore
-                    >
-                        <l-squircle
-                            size="37"
-                            stroke="5"
-                            stroke-length="0.15"
-                            bg-opacity="0.1"
-                            speed="0.9"
-                            color="black"
-                        ></l-squircle>
+                    <div class="quran-calibration-loader flex flex-col items-center gap-3">
+                        <svg
+                            class="quran-calibration-spinner"
+                            width="37"
+                            height="37"
+                            viewBox="0 0 37 37"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                        >
+                            <rect
+                                x="2.5"
+                                y="2.5"
+                                width="32"
+                                height="32"
+                                rx="8"
+                                stroke="currentColor"
+                                stroke-width="5"
+                                stroke-opacity="0.1"
+                                fill="none"
+                            />
+                            <rect
+                                class="quran-calibration-spinner-arc"
+                                x="2.5"
+                                y="2.5"
+                                width="32"
+                                height="32"
+                                rx="8"
+                                stroke="currentColor"
+                                stroke-width="5"
+                                stroke-linecap="round"
+                                fill="none"
+                                pathLength="100"
+                                stroke-dasharray="15 85"
+                                stroke-dashoffset="0"
+                            />
+                        </svg>
                         <span
                             class="font-arabic-sans text-sm tracking-wide opacity-60"
                             dir="rtl"
