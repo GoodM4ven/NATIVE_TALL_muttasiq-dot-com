@@ -245,7 +245,7 @@
             justify-content: center;
             width: 100%;
             max-width: 100%;
-            padding: 0.42rem 0;
+            padding: calc(0.42rem * var(--quran-page-scale)) 0;
             font-size: calc(var(--quran-font-size-meta) * 1.5 * var(--quran-type-scale) * var(--quran-page-type-scale) * var(--quran-page-surah-header-scale) * var(--quran-page-scale));
             line-height: 1;
             color: color-mix(in srgb, var(--primary-600) 86%, var(--quran-ink));
@@ -300,7 +300,7 @@
             direction: rtl;
             display: flex;
             flex-direction: column;
-            gap: calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier));
+            gap: calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier) * var(--quran-page-scale));
         }
 
         .quran-page-lines * {
@@ -1708,7 +1708,7 @@
                 >
                     <!-- Credits: uiverse.io/gharsh11032000/loud-chicken-53 -->
                     <button
-                        class="quran-soorah-trigger 3xl:w-[13.2rem] 4xl:w-[13.4rem] 4xl:px-[2.35rem] 4xl:py-[0.42rem] 4xl:text-[0.95rem] 4xl:min-h-[2.2rem] min-h-[1.95rem] w-41 shrink-0 px-[1.7rem] py-[0.34rem] text-[0.8rem] outline-none sm:min-h-8 sm:w-44 sm:px-[1.95rem] sm:py-[0.36rem] sm:text-[0.84rem] md:min-h-[2.05rem] md:w-47 md:px-[2.1rem] md:py-[0.38rem] md:text-[0.88rem] lg:min-h-[2.1rem] lg:w-[12.35rem] lg:px-[2.2rem] lg:py-[0.4rem] lg:text-[0.9rem] xl:min-h-[2.15rem] xl:w-[12.7rem] xl:px-[2.28rem] xl:text-[0.92rem] 2xl:w-52 2xl:text-[0.93rem]"
+                        class="quran-soorah-trigger 3xl:w-[13.2rem] 4xl:w-[13.4rem] 4xl:px-[2.35rem] 4xl:py-[0.42rem] 4xl:text-[0.95rem] 4xl:min-h-[2.2rem] w-41 md:w-47 min-h-[1.95rem] shrink-0 px-[1.7rem] py-[0.34rem] text-[0.8rem] outline-none sm:min-h-8 sm:w-44 sm:px-[1.95rem] sm:py-[0.36rem] sm:text-[0.84rem] md:min-h-[2.05rem] md:px-[2.1rem] md:py-[0.38rem] md:text-[0.88rem] lg:min-h-[2.1rem] lg:w-[12.35rem] lg:px-[2.2rem] lg:py-[0.4rem] lg:text-[0.9rem] xl:min-h-[2.15rem] xl:w-[12.7rem] xl:px-[2.28rem] xl:text-[0.92rem] 2xl:w-52 2xl:text-[0.93rem]"
                         type="button"
                         dir="rtl"
                         x-bind:disabled="wirdModeActive"
@@ -1724,7 +1724,7 @@
                         x-bind:aria-label="@js(arabic_text('ابحث في ')) + currentSurahTitle()"
                     >
                         <x-icon
-                            class="quran-soorah-trigger-icon 4xl:size-4 4xl:inset-s-[0.82rem] size-[0.8rem] inset-s-[0.62rem] sm:size-[0.84rem] sm:inset-s-[0.68rem] md:size-[0.88rem] md:inset-s-[0.72rem] lg:size-[0.92rem] lg:inset-s-[0.76rem] xl:size-[0.96rem] xl:inset-s-[0.8rem]"
+                            class="quran-soorah-trigger-icon 4xl:size-4 4xl:inset-s-[0.82rem] inset-s-[0.62rem] sm:inset-s-[0.68rem] md:inset-s-[0.72rem] lg:inset-s-[0.76rem] xl:inset-s-[0.8rem] size-[0.8rem] sm:size-[0.84rem] md:size-[0.88rem] lg:size-[0.92rem] xl:size-[0.96rem]"
                             :name="'heroicon-o-magnifying-glass'"
                         />
                         <span class="quran-soorah-trigger-text">
@@ -1744,7 +1744,7 @@
                     >
                         <!-- Credits: https://uiverse.io/vinodjangid07/tricky-bullfrog-41 -->
                         <button
-                            class="quran-history-toggle-button quran-top-actions-secondary 4xl:basis-[2.35rem] 4xl:inline-[2.35rem] 4xl:block-[2.35rem] 4xl:max-w-[2.35rem] max-w-[1.95rem] outline-none block-[1.95rem] basis-[1.95rem] inline-[1.95rem] sm:max-w-[2.05rem] sm:block-[2.05rem] sm:basis-[2.05rem] sm:inline-[2.05rem] md:max-w-[2.12rem] md:block-[2.12rem] md:basis-[2.12rem] md:inline-[2.12rem] lg:max-w-[2.2rem] lg:block-[2.2rem] lg:basis-[2.2rem] lg:inline-[2.2rem] xl:max-w-[2.27rem] xl:block-[2.27rem] xl:basis-[2.27rem] xl:inline-[2.27rem] 2xl:max-w-[2.3rem] 2xl:block-[2.3rem] 2xl:basis-[2.3rem] 2xl:inline-[2.3rem]"
+                            class="quran-history-toggle-button quran-top-actions-secondary 4xl:basis-[2.35rem] 4xl:inline-[2.35rem] 4xl:block-[2.35rem] 4xl:max-w-[2.35rem] block-[1.95rem] inline-[1.95rem] sm:block-[2.05rem] sm:inline-[2.05rem] md:block-[2.12rem] md:inline-[2.12rem] lg:block-[2.2rem] lg:inline-[2.2rem] xl:block-[2.27rem] xl:inline-[2.27rem] 2xl:block-[2.3rem] 2xl:inline-[2.3rem] max-w-[1.95rem] basis-[1.95rem] outline-none sm:max-w-[2.05rem] sm:basis-[2.05rem] md:max-w-[2.12rem] md:basis-[2.12rem] lg:max-w-[2.2rem] lg:basis-[2.2rem] xl:max-w-[2.27rem] xl:basis-[2.27rem] 2xl:max-w-[2.3rem] 2xl:basis-[2.3rem]"
                             id="quran-reader-history-toggle"
                             data-quran-open-history
                             type="button"
@@ -1825,7 +1825,7 @@
 
                         <!-- Credits: https://uiverse.io/vinodjangid07/breezy-goose-71 -->
                         <button
-                            class="quran-bookmark-toggle-button quran-top-actions-secondary 4xl:basis-[2.35rem] 4xl:inline-[2.35rem] 4xl:block-[2.35rem] 4xl:max-w-[2.35rem] max-w-[1.95rem] outline-none block-[1.95rem] basis-[1.95rem] inline-[1.95rem] sm:max-w-[2.05rem] sm:block-[2.05rem] sm:basis-[2.05rem] sm:inline-[2.05rem] md:max-w-[2.12rem] md:block-[2.12rem] md:basis-[2.12rem] md:inline-[2.12rem] lg:max-w-[2.2rem] lg:block-[2.2rem] lg:basis-[2.2rem] lg:inline-[2.2rem] xl:max-w-[2.27rem] xl:block-[2.27rem] xl:basis-[2.27rem] xl:inline-[2.27rem] 2xl:max-w-[2.3rem] 2xl:block-[2.3rem] 2xl:basis-[2.3rem] 2xl:inline-[2.3rem]"
+                            class="quran-bookmark-toggle-button quran-top-actions-secondary 4xl:basis-[2.35rem] 4xl:inline-[2.35rem] 4xl:block-[2.35rem] 4xl:max-w-[2.35rem] block-[1.95rem] inline-[1.95rem] sm:block-[2.05rem] sm:inline-[2.05rem] md:block-[2.12rem] md:inline-[2.12rem] lg:block-[2.2rem] lg:inline-[2.2rem] xl:block-[2.27rem] xl:inline-[2.27rem] 2xl:block-[2.3rem] 2xl:inline-[2.3rem] max-w-[1.95rem] basis-[1.95rem] outline-none sm:max-w-[2.05rem] sm:basis-[2.05rem] md:max-w-[2.12rem] md:basis-[2.12rem] lg:max-w-[2.2rem] lg:basis-[2.2rem] xl:max-w-[2.27rem] xl:basis-[2.27rem] 2xl:max-w-[2.3rem] 2xl:basis-[2.3rem]"
                             id="quran-reader-bookmark-toggle"
                             data-quran-bookmark-toggle
                             type="button"

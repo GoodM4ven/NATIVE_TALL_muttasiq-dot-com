@@ -115,16 +115,23 @@ const pageFontLoadTimeoutMs = 960;
 const pageFontReadyTimeoutMs = 1400;
 const pageFontReadyRecoveryDelayMs = 200;
 const readerRevealDebugStorageKey = 'quran-reader-debug-reveal';
+const readerFitDebugStorageKey = 'quran-reader-debug-fit';
 const defaultBasmallahBottomGapScale = -0.18;
 const openingSpreadFinalScaleMultiplier = 0.72;
 const fitRobustWidthQuantile = 0.88;
 const fitRobustWidthOutlierThreshold = 1.2;
 const fitResultCacheLimit = 180;
-const fitCacheStorageVersion = 10;
-const fitCacheStorageKey = 'quran-reader-fit-cache-v10';
+const fitCacheStorageVersion = 19;
+const fitCacheStorageKey = 'quran-reader-fit-cache-v19';
+const enablePageSpecificFitCache = false;
 const fitCacheViewportBucketSizePx = 24;
 const shouldPersistFitCacheAcrossReloads = false;
-const fitCalibrationReferencePage = 3;
+const sharedFitSeedReferencePageNumber = 3;
+const sharedFitSeedCachePageToken = `seed-page-${sharedFitSeedReferencePageNumber}`;
+const enableSharedFitSeed = false;
+const enableFitSanityRecovery = false;
+const enableFadeOutPageFitState = false;
+const enableDeterministicFitSolver = true;
 const idleWarmupPauseOnHighFrequencyNavigationMs = 520;
 const idleWarmupPauseOnStandardNavigationMs = 160;
 const idleWarmupResumeDelayMs = 220;
@@ -828,6 +835,7 @@ document.addEventListener('alpine:init', () => {
         _navigationBurstFreezeUntil: 0,
         _fitRunCounter: 0,
         _lastFittedPageNumber: 0,
+        _fittingFailSafeTimer: null,
         _fitResultByContext: new Map(),
         _fitSanityCheckTimer: null,
         _fitSanityContextKey: '',
@@ -873,11 +881,7 @@ document.addEventListener('alpine:init', () => {
         _quranPreparationInFlight: null,
         _quranPreparationRequestPromise: null,
         _startupRestoreInFlight: null,
-        _startupCalibrationPending: true,
-        _startupTargetPageNumber: 1,
-        _globalFitCalibrationLayout: null,
-        _globalFitCalibrationScale: 0,
-        _globalFitCalibrationPageNumber: 0,
+        _isPrimingSharedFitSeed: false,
         _loadedPayloadPageNumber: 0,
         _surahDirectoryAutoFocusToken: 0,
         _surahDirectoryAutoFocusTimer: null,
@@ -968,13 +972,13 @@ document.addEventListener('alpine:init', () => {
 
             this.pageInput = restoredPage;
             this._lastPageInputVisualValue = restoredPage;
-            this._startupTargetPageNumber = restoredPage;
             writeLastPageNumber(restoredPage);
 
             if (!shouldRestoreSavedPage) {
                 this.pageNumber = restoredPage;
             } else {
                 this.isFittingPage = true;
+                this.scheduleFittingFailSafe();
                 const startupRestorePromise = this.goToPage(restoredPage, {
                     direction: restoredPage > this.initialPayload.pageNumber ? 'next' : 'prev',
                     animate: false,
@@ -1614,6 +1618,11 @@ document.addEventListener('alpine:init', () => {
                 this._swipeRevealWatchdogTimer = null;
             }
 
+            if (this._fittingFailSafeTimer !== null) {
+                clearTimeout(this._fittingFailSafeTimer);
+                this._fittingFailSafeTimer = null;
+            }
+
             if (this._pageInputCommitTimer !== null) {
                 clearTimeout(this._pageInputCommitTimer);
                 this._pageInputCommitTimer = null;
@@ -1692,6 +1701,10 @@ document.addEventListener('alpine:init', () => {
             if (this._fitSanityCheckTimer !== null) {
                 clearTimeout(this._fitSanityCheckTimer);
                 this._fitSanityCheckTimer = null;
+            }
+            if (this._fittingFailSafeTimer !== null) {
+                clearTimeout(this._fittingFailSafeTimer);
+                this._fittingFailSafeTimer = null;
             }
             this._fitSanityContextKey = '';
             this._fitSanityContextAttemptCount = 0;
@@ -1912,6 +1925,147 @@ document.addEventListener('alpine:init', () => {
             return Math.max(bucket, Math.round(normalizedValue / bucket) * bucket);
         },
 
+        fitCacheSignatureParts({
+            breakpointName = '',
+            availableWidth = 0,
+            availableHeight = 0,
+            isModalLayoutContext = false,
+            isFontLayoutPending = false,
+            fitTargetWidthRatio = 0.8,
+            fitAreaPaddingX = 0,
+            fitAreaPaddingY = 0,
+            minimumLeadingMultiplier = 1,
+            minimumGapMultiplier = 1,
+            minimumSurahHeaderScale = 1,
+            minimumPageTypeScale = 1,
+            minimumBasmallahBottomGapScale = defaultBasmallahBottomGapScale,
+            minScale = 0.1,
+            maxScale = 1,
+            includeFontFamilies = true,
+            includeModalState = true,
+            includeFontLoadState = true,
+        } = {}) {
+            const signatureParts = [
+                String(breakpointName ?? '').trim() || 'bp-unknown',
+                this.viewportBucketValue(availableWidth),
+                this.viewportBucketValue(availableHeight),
+                includeModalState
+                    ? isModalLayoutContext
+                        ? 'modal-open'
+                        : 'modal-closed'
+                    : 'modal-shared',
+                includeFontLoadState
+                    ? isFontLayoutPending
+                        ? 'fonts-pending'
+                        : 'fonts-loaded'
+                    : 'fonts-shared',
+                this.useCenteredAyahLayout ? 'centered' : 'rect',
+                'scale-only-v1',
+                Number(fitTargetWidthRatio).toFixed(3),
+                Number(fitAreaPaddingX).toFixed(2),
+                Number(fitAreaPaddingY).toFixed(2),
+                Number(minimumLeadingMultiplier).toFixed(3),
+                Number(minimumGapMultiplier).toFixed(3),
+                Number(minimumSurahHeaderScale).toFixed(3),
+                Number(minimumPageTypeScale).toFixed(3),
+                Number(minimumBasmallahBottomGapScale).toFixed(3),
+                Number(minScale).toFixed(3),
+                Number(maxScale).toFixed(3),
+            ];
+
+            if (includeFontFamilies) {
+                signatureParts.push(String(this.qpcPageFontFamily ?? ''));
+                signatureParts.push(String(this.basmallahFontFamily ?? ''));
+                signatureParts.push(String(this.surahHeaderFontFamily ?? ''));
+            } else {
+                signatureParts.push('font-family:shared-seed');
+            }
+
+            return signatureParts;
+        },
+
+        fitCacheKeyForPage(pageIdentifier, signatureParts = []) {
+            const pageToken = String(pageIdentifier ?? '').trim() || 'page-unknown';
+
+            return [pageToken, ...(Array.isArray(signatureParts) ? signatureParts : [])].join('|');
+        },
+
+        sharedFitSeedCacheKey(signatureParts = []) {
+            return this.fitCacheKeyForPage(sharedFitSeedCachePageToken, signatureParts);
+        },
+
+        clearSharedFitSeedEntries() {
+            let removedCount = 0;
+
+            for (const cacheKey of this._fitResultByContext.keys()) {
+                if (String(cacheKey ?? '').startsWith(`${sharedFitSeedCachePageToken}|`)) {
+                    this._fitResultByContext.delete(cacheKey);
+                    removedCount += 1;
+                }
+            }
+
+            if (removedCount > 0) {
+                this.traceReaderFit('cache-clear-shared-seed', {
+                    removedCount,
+                });
+            }
+        },
+
+        clearPageFitEntries(pageNumber = this.pageNumber) {
+            const normalizedPageNumber = Math.max(1, Math.trunc(Number(pageNumber ?? 1)));
+            const pageCachePrefix = `${normalizedPageNumber}|`;
+            let removedCount = 0;
+
+            for (const cacheKey of this._fitResultByContext.keys()) {
+                if (String(cacheKey ?? '').startsWith(pageCachePrefix)) {
+                    this._fitResultByContext.delete(cacheKey);
+                    removedCount += 1;
+                }
+            }
+
+            if (removedCount > 0) {
+                this.traceReaderFit('cache-clear-page', {
+                    targetPageNumber: normalizedPageNumber,
+                    removedCount,
+                });
+            }
+        },
+
+        syncSharedFitSeedFromPageCache(pageNumber = sharedFitSeedReferencePageNumber) {
+            const normalizedPageNumber = Math.max(1, Math.trunc(Number(pageNumber ?? 1)));
+            const pageCachePrefix = `${normalizedPageNumber}|`;
+            const matchingPageEntries = Array.from(this._fitResultByContext.entries()).filter(
+                ([cacheKey]) => String(cacheKey ?? '').startsWith(pageCachePrefix),
+            );
+
+            this.clearSharedFitSeedEntries();
+
+            matchingPageEntries.forEach(([cacheKey, entry]) => {
+                const signature = String(cacheKey ?? '').slice(pageCachePrefix.length);
+
+                if (signature === '') {
+                    return;
+                }
+
+                this.rememberFitResult(
+                    `${sharedFitSeedCachePageToken}|${signature}`,
+                    {
+                        ...entry,
+                        sourcePageNumber: normalizedPageNumber,
+                    },
+                    {
+                        persist: false,
+                    },
+                );
+            });
+
+            this.queuePersistedFitCacheWrite();
+            this.traceReaderFit('cache-sync-shared-seed-from-page', {
+                sourcePageNumber: normalizedPageNumber,
+                copiedEntryCount: matchingPageEntries.length,
+            });
+        },
+
         normalizeFitCacheEntry(entry) {
             if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
                 return null;
@@ -1927,9 +2081,15 @@ document.addEventListener('alpine:init', () => {
                 return null;
             }
 
+            const sourcePageNumber = Math.max(
+                0,
+                Math.trunc(Number(entry.sourcePageNumber ?? entry.pageNumber ?? 0)),
+            );
+
             return {
                 layout: { ...entry.layout },
                 scale: Number(scale.toFixed(4)),
+                sourcePageNumber,
             };
         },
 
@@ -1958,6 +2118,12 @@ document.addEventListener('alpine:init', () => {
 
             this._fitResultByContext.set(cacheKey, normalizedEntry);
             this.trimFitResultCache();
+            this.traceReaderFit('cache-remember-fit-result', {
+                cacheKey,
+                persist,
+                sourcePageNumber: normalizedEntry.sourcePageNumber,
+                scale: normalizedEntry.scale,
+            });
 
             if (persist) {
                 this.queuePersistedFitCacheWrite();
@@ -1969,7 +2135,12 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            this._fitResultByContext.delete(cacheKey);
+            const didDelete = this._fitResultByContext.delete(cacheKey);
+            this.traceReaderFit('cache-forget-fit-result', {
+                cacheKey,
+                persist,
+                deleted: didDelete,
+            });
 
             if (persist) {
                 this.queuePersistedFitCacheWrite();
@@ -1982,6 +2153,9 @@ document.addEventListener('alpine:init', () => {
             if (this._fitCacheBreakpoint === '') {
                 this._fitCacheBreakpoint = currentBreakpoint;
                 this.storage.fitCacheBreakpoint = currentBreakpoint;
+                this.traceReaderFit('cache-sync-breakpoint-init', {
+                    breakpoint: currentBreakpoint,
+                });
 
                 return;
             }
@@ -1993,6 +2167,9 @@ document.addEventListener('alpine:init', () => {
             this._fitCacheBreakpoint = currentBreakpoint;
             this.storage.fitCacheBreakpoint = currentBreakpoint;
             this.clearFitResultCache({ persist: false });
+            this.traceReaderFit('cache-sync-breakpoint-changed', {
+                breakpoint: currentBreakpoint,
+            });
 
             if (persist && shouldPersistFitCacheAcrossReloads) {
                 writeLocalStorage(fitCacheStorageKey, {
@@ -2010,6 +2187,7 @@ document.addEventListener('alpine:init', () => {
                 this._fitResultByContext.clear();
                 this._fitCacheBreakpoint = this.resolveCurrentBreakpointName();
                 this.storage.fitCacheBreakpoint = this._fitCacheBreakpoint;
+                this.traceReaderFit('cache-hydrate-skip-persistence-disabled');
 
                 return;
             }
@@ -2017,12 +2195,17 @@ document.addEventListener('alpine:init', () => {
             const persistedCache = readLocalStorage(fitCacheStorageKey, null);
 
             if (!persistedCache || typeof persistedCache !== 'object') {
+                this.traceReaderFit('cache-hydrate-miss');
                 return;
             }
 
             const persistedVersion = Math.trunc(Number(persistedCache?.version ?? 0));
 
             if (persistedVersion !== fitCacheStorageVersion) {
+                this.traceReaderFit('cache-hydrate-version-mismatch', {
+                    persistedVersion,
+                    expectedVersion: fitCacheStorageVersion,
+                });
                 return;
             }
 
@@ -2040,6 +2223,10 @@ document.addEventListener('alpine:init', () => {
                     updated_at: Date.now(),
                     entries: {},
                     order: [],
+                });
+                this.traceReaderFit('cache-hydrate-breakpoint-mismatch-reset', {
+                    persistedBreakpoint,
+                    currentBreakpoint,
                 });
 
                 return;
@@ -2070,6 +2257,10 @@ document.addEventListener('alpine:init', () => {
             this.trimFitResultCache();
             this._fitCacheBreakpoint = currentBreakpoint;
             this.storage.fitCacheBreakpoint = currentBreakpoint;
+            this.traceReaderFit('cache-hydrate-success', {
+                loadedEntries: this._fitResultByContext.size,
+                breakpoint: currentBreakpoint,
+            });
         },
 
         queuePersistedFitCacheWrite(delayMs = 140) {
@@ -2078,6 +2269,9 @@ document.addEventListener('alpine:init', () => {
             }
 
             if (!shouldPersistFitCacheAcrossReloads) {
+                this.traceReaderFit('cache-persist-queue-skipped', {
+                    reason: 'persistence-disabled',
+                });
                 return;
             }
 
@@ -2093,6 +2287,9 @@ document.addEventListener('alpine:init', () => {
                 },
                 Math.max(24, Math.trunc(Number(delayMs) || 140)),
             );
+            this.traceReaderFit('cache-persist-queue', {
+                delayMs: Math.max(24, Math.trunc(Number(delayMs) || 140)),
+            });
         },
 
         flushPersistedFitCacheWrite() {
@@ -2125,6 +2322,130 @@ document.addEventListener('alpine:init', () => {
                 entries,
                 order,
             });
+            this.traceReaderFit('cache-persist-flush', {
+                breakpoint: currentBreakpoint,
+                entriesCount: order.length,
+            });
+        },
+
+        currentPayloadSnapshot() {
+            return normalizePayload({
+                ready: this.ready,
+                pageNumber: this.pageNumber,
+                maxPage: this.maxPage,
+                activeAyahIndex: this.activeAyahIndex,
+                mushafLines: Array.isArray(this.mushafLines) ? this.mushafLines : [],
+                qpcPageFontFamily: this.qpcPageFontFamily,
+                qpcPageFontUrl: this.qpcPageFontUrl,
+                qpcPageFontFormat: this.qpcPageFontFormat,
+                basmallahFontFamily: this.basmallahFontFamily,
+                basmallahFontUrl: this.basmallahFontUrl,
+                basmallahFontFormat: this.basmallahFontFormat,
+                basmallahText: this.basmallahText,
+                surahHeaderFontFamily: this.surahHeaderFontFamily,
+                surahHeaderFontUrl: this.surahHeaderFontUrl,
+                surahHeaderFontFormat: this.surahHeaderFontFormat,
+                surahNames: this.search?.surahNames ?? {},
+                surahDirectory: this.search?.surahDirectory ?? [],
+                useCenteredAyahLayout: this.useCenteredAyahLayout,
+            });
+        },
+
+        async primeSharedFitSeedFromReferencePage(
+            referencePage = sharedFitSeedReferencePageNumber,
+        ) {
+            const normalizedReferencePage = Math.max(
+                1,
+                Math.trunc(Number(referencePage ?? sharedFitSeedReferencePageNumber)),
+            );
+            this.traceReaderFit('prime-shared-seed-start', {
+                referencePage,
+                normalizedReferencePage,
+            });
+            let didPrimeSeedSuccessfully = false;
+
+            if (!this.hasRenderablePage() || normalizedReferencePage <= 0) {
+                this.traceReaderFit('prime-shared-seed-skip', {
+                    reason: 'no-renderable-page',
+                    normalizedReferencePage,
+                });
+                return false;
+            }
+
+            const currentPayload = this.currentPayloadSnapshot();
+            const currentPageInput = this.pageInput;
+            const currentLastPageInputVisualValue = this._lastPageInputVisualValue;
+            const currentLoadedPayloadPageNumber = this._loadedPayloadPageNumber;
+            this._isPrimingSharedFitSeed = true;
+
+            try {
+                const referencePayload = await this.getPagePayloadByAbsolutePage(
+                    normalizedReferencePage,
+                    {
+                        preferCache: true,
+                    },
+                );
+
+                if (
+                    !referencePayload?.ready ||
+                    !Array.isArray(referencePayload?.mushafLines) ||
+                    referencePayload.mushafLines.length === 0
+                ) {
+                    this.traceReaderFit('prime-shared-seed-skip', {
+                        reason: 'reference-payload-not-ready',
+                        normalizedReferencePage,
+                    });
+                    return false;
+                }
+
+                this.applyPayload(referencePayload, {
+                    setPageNumber: false,
+                    persistPageNumber: false,
+                    syncVisualPageState: false,
+                });
+                this.pageInput = currentPageInput;
+                this._lastPageInputVisualValue = currentLastPageInputVisualValue;
+                await this.nextTickAsync();
+                await this.waitForPageFontReady();
+                await this.waitForStablePageFrame({
+                    maxFrames: 16,
+                    requiredStableFrames: 2,
+                    tolerancePx: 0.8,
+                });
+                this.clearPageFitEntries(normalizedReferencePage);
+                this._bypassNextFitCache = true;
+                this.fitPageToViewport({
+                    pageNumberOverride: normalizedReferencePage,
+                });
+                this.queuePersistedFitCacheWrite();
+                didPrimeSeedSuccessfully = true;
+                this.traceReaderFit('prime-shared-seed-success', {
+                    normalizedReferencePage,
+                });
+            } catch (_) {
+                this.traceReaderFit('prime-shared-seed-error', {
+                    normalizedReferencePage,
+                });
+            } finally {
+                this.applyPayload(currentPayload, {
+                    setPageNumber: false,
+                    persistPageNumber: false,
+                    syncVisualPageState: false,
+                });
+                this.pageInput = currentPageInput;
+                this._lastPageInputVisualValue = currentLastPageInputVisualValue;
+                this._loadedPayloadPageNumber =
+                    currentLoadedPayloadPageNumber > 0
+                        ? currentLoadedPayloadPageNumber
+                        : currentPayload.pageNumber;
+                this.resetCurrentPageFitStyles();
+                this._lastFittedPageNumber = 0;
+                await this.nextTickAsync();
+                this.traceReaderFit('prime-shared-seed-restore');
+                this._isPrimingSharedFitSeed = false;
+            }
+
+            return didPrimeSeedSuccessfully;
         },
 
         async bootstrap() {
@@ -2132,241 +2453,53 @@ document.addEventListener('alpine:init', () => {
             this.syncSupportLockTargetsUi();
             this.syncFitCacheBreakpoint({ persist: false });
             this.hydratePersistedFitCache();
-            this._startupCalibrationPending = true;
+            const startupDestinationPage = this.startupDestinationPage();
+            this.traceReaderFit('bootstrap-start', {
+                startupDestinationPage,
+            });
 
-            try {
-                if (this._startupRestoreInFlight instanceof Promise) {
-                    try {
-                        await this._startupRestoreInFlight;
-                    } catch (_) {
-                        // Ignore startup restore aborts; ensureCurrentPageLoaded() will recover.
-                    }
+            if (this._startupRestoreInFlight instanceof Promise) {
+                try {
+                    await this._startupRestoreInFlight;
+                } catch (_) {
+                    // Ignore startup restore aborts; ensureCurrentPageLoaded() will recover.
                 }
-
-                await this.calibrateGlobalFitLayoutFromReferencePage();
-                await this.ensureCurrentPageLoaded();
-                await this.runStartupFinalFitPass();
-                this.queueStartupPreload();
-                this.scheduleIdleWarmup();
-                this.warmSearchIndex();
-            } finally {
-                this._startupCalibrationPending = false;
-            }
-        },
-
-        captureCurrentFitLayoutFromRoot() {
-            const rootElement = this.$el.firstElementChild;
-
-            if (!(rootElement instanceof HTMLElement)) {
-                return null;
             }
 
-            const styles = window.getComputedStyle(rootElement);
-            const readLayoutNumber = (propertyName, fallback) => {
-                const inlineValue = Number.parseFloat(
-                    rootElement.style.getPropertyValue(propertyName),
-                );
-
-                if (Number.isFinite(inlineValue)) {
-                    return inlineValue;
-                }
-
-                const computedValue = Number.parseFloat(styles.getPropertyValue(propertyName));
-
-                return Number.isFinite(computedValue) ? computedValue : fallback;
-            };
-
-            return {
-                pageTypeScale: Math.max(0.2, readLayoutNumber('--quran-page-type-scale', 1)),
-                pageLeadingMultiplier: Math.max(
-                    0.25,
-                    readLayoutNumber('--quran-page-leading-multiplier', 1),
-                ),
-                pageGapMultiplier: Math.max(0, readLayoutNumber('--quran-page-gap-multiplier', 1)),
-                pageSurahHeaderScale: Math.max(
-                    0.5,
-                    readLayoutNumber('--quran-page-surah-header-scale', 1),
-                ),
-                basmallahBottomGapScale: readLayoutNumber(
-                    '--quran-basmallah-bottom-gap-scale',
-                    defaultBasmallahBottomGapScale,
-                ),
-                pageScale: Math.max(0.05, readLayoutNumber('--quran-page-scale', 1)),
-            };
-        },
-
-        async calibrateGlobalFitLayoutFromReferencePage(
-            referencePage = fitCalibrationReferencePage,
-        ) {
-            const normalizedReferencePage = clampPage(referencePage, this.maxPage);
-
-            if (normalizedReferencePage <= 0) {
-                return;
+            await this.ensureCurrentPageLoaded(startupDestinationPage);
+            if (enableSharedFitSeed) {
+                await this.primeSharedFitSeedFromReferencePage();
             }
-
-            const startupTargetPage = clampPage(
-                Number(this._startupTargetPageNumber ?? this.pageInput ?? this.pageNumber),
-                this.maxPage,
-            );
-
-            try {
-                const referencePayload = await this.getPagePayload(normalizedReferencePage, {
-                    preferCache: true,
-                });
-
-                if (!referencePayload) {
-                    return;
-                }
-
-                this.applyPayload(referencePayload, {
-                    setPageNumber: true,
-                    persistPageNumber: false,
-                });
-                await this.nextTickAsync();
-                await this.waitForPageFontReady();
-                await this.resolveWithTimeout(document.fonts?.ready, 3200, {
-                    timeoutValue: 'timeout',
-                });
-                await this.waitForStablePageFrame({
-                    maxFrames: 22,
-                    requiredStableFrames: 3,
-                    tolerancePx: 0.8,
-                });
-                this._bypassNextFitCache = true;
-                await this.layoutPageGuaranteed({
-                    revealDelayMs: 110,
-                    maxAttempts: 5,
-                    useIdleFit: false,
-                });
-                await this.waitForStableRenderedText(12);
-                this._bypassNextFitCache = true;
-                this.fitPageToViewport();
-                const rootElement = this.$el.firstElementChild;
-                const frameElement = this.$refs.pageFrame;
-                const contentElement = this.$refs.pageContent;
-
-                if (
-                    rootElement instanceof HTMLElement &&
-                    frameElement instanceof HTMLElement &&
-                    contentElement instanceof HTMLElement
-                ) {
-                    const frameRect = frameElement.getBoundingClientRect();
-                    const frameParentRect =
-                        frameElement.parentElement?.getBoundingClientRect?.() ?? null;
-                    const styles = window.getComputedStyle(rootElement);
-                    const fitTargetWidthRatio = Math.min(
-                        0.95,
-                        Math.max(
-                            0.55,
-                            Number.parseFloat(
-                                styles.getPropertyValue('--quran-fit-target-width-ratio'),
-                            ) || 0.8,
-                        ),
-                    );
-                    const fitAreaPaddingX = Math.max(
-                        0,
-                        Number.parseFloat(styles.getPropertyValue('--quran-fit-area-pad-x')) || 0,
-                    );
-                    const fitAreaPaddingY = Math.max(
-                        0,
-                        Number.parseFloat(styles.getPropertyValue('--quran-fit-area-pad-y')) || 0,
-                    );
-                    const fitHeightRatio = Math.min(
-                        1,
-                        Math.max(
-                            0.7,
-                            Number.parseFloat(
-                                styles.getPropertyValue('--quran-fit-height-ratio'),
-                            ) || 1,
-                        ),
-                    );
-                    const availableWidth = Math.max(
-                        1,
-                        Number(
-                            frameParentRect?.width ??
-                                frameRect?.width ??
-                                frameElement.parentElement?.clientWidth ??
-                                frameElement.clientWidth ??
-                                1,
-                        ) -
-                            fitAreaPaddingX * 2,
-                    );
-                    const availableHeight = Math.max(
-                        1,
-                        (Number(frameRect?.height ?? frameElement.clientHeight ?? 1) -
-                            fitAreaPaddingY * 2) *
-                            fitHeightRatio,
-                    );
-                    const targetWidth = Math.max(1, availableWidth * fitTargetWidthRatio);
-                    const targetHeight = Math.max(1, availableHeight);
-                    const measured = this.measureRenderedBounds(contentElement, {
-                        useRobustWidth: false,
-                    });
-                    const downscaleCorrection = Math.min(
-                        1,
-                        targetWidth / Math.max(1, measured.width),
-                        targetHeight / Math.max(1, measured.height),
-                    );
-
-                    if (Number.isFinite(downscaleCorrection) && downscaleCorrection < 0.999) {
-                        const minScale = Math.max(
-                            0.05,
-                            Number.parseFloat(styles.getPropertyValue('--quran-min-page-scale')) ||
-                                0.1,
-                        );
-                        const maxScale = Math.max(
-                            minScale,
-                            Number.parseFloat(styles.getPropertyValue('--quran-max-page-scale')) ||
-                                1,
-                        );
-                        const currentScale = Math.max(
-                            minScale,
-                            Math.min(
-                                maxScale,
-                                Number.parseFloat(
-                                    rootElement.style.getPropertyValue('--quran-page-scale'),
-                                ) ||
-                                    Number(this.pageScale) ||
-                                    1,
-                            ),
-                        );
-                        const correctedScale = Math.max(
-                            minScale,
-                            Math.min(
-                                maxScale,
-                                Number((currentScale * downscaleCorrection).toFixed(4)),
-                            ),
-                        );
-
-                        rootElement.style.setProperty('--quran-page-scale', String(correctedScale));
-                        this.pageScale = correctedScale;
-                    }
-                }
-
-                const capturedLayout = this.captureCurrentFitLayoutFromRoot();
-
-                if (capturedLayout) {
-                    this._globalFitCalibrationLayout = capturedLayout;
-                    this._globalFitCalibrationScale = Math.max(
-                        0.05,
-                        Number(capturedLayout.pageScale ?? 1),
-                    );
-                    this._globalFitCalibrationPageNumber = normalizedReferencePage;
-                }
-            } catch (error) {
-                this._globalFitCalibrationLayout = null;
-                this._globalFitCalibrationScale = 0;
-                this._globalFitCalibrationPageNumber = 0;
-                this.traceReaderReveal('startup-global-fit-calibration-failed', {
-                    page: normalizedReferencePage,
-                    name: String(error?.name ?? 'Error'),
-                    message: String(error?.message ?? ''),
-                });
-            } finally {
-                this.pageInput = startupTargetPage;
-                this._lastPageInputVisualValue = startupTargetPage;
-                this._bypassNextFitCache = true;
+            this.traceReaderFit('prime-shared-seed-disabled', {
+                startupDestinationPage,
+                enabled: enableSharedFitSeed,
+            });
+            this.pageNumber = startupDestinationPage;
+            this.pageInput = startupDestinationPage;
+            this._lastPageInputVisualValue = startupDestinationPage;
+            await this.ensureCurrentPageLoaded(startupDestinationPage);
+            this.clearPageFitEntries(startupDestinationPage);
+            this._bypassNextFitCache = true;
+            this.traceReaderFit('bootstrap-force-fresh-startup-fit', {
+                startupDestinationPage,
+            });
+            this.refreshSurahTriggerCaption(false);
+            this.syncSearchActiveSurahNumber();
+            await this.runStartupFinalFitPass();
+            this.queueStartupPreload();
+            this.scheduleIdleWarmup();
+            this.warmSearchIndex();
+            if (
+                this.hasRenderablePage() &&
+                this._pendingNavigationRequest === null &&
+                !this._navigationRevealLocked
+            ) {
+                this.isFittingPage = false;
+                this.clearFittingFailSafe();
             }
+            this.traceReaderFit('bootstrap-finished', {
+                startupDestinationPage,
+            });
         },
 
         async ensurePersistentStorage() {
@@ -3683,7 +3816,21 @@ document.addEventListener('alpine:init', () => {
         },
 
         async enterWirdMode() {
-            if (this.isLoadingPage || !this.ready) {
+            if (!this.ready) {
+                return;
+            }
+
+            if (
+                this.isLoadingPage &&
+                this.hasRenderablePage() &&
+                this._pendingNavigationRequest === null
+            ) {
+                this.abortActivePageLoad();
+                this._activePageAbortController = null;
+                this.isLoadingPage = false;
+            }
+
+            if (this.isLoadingPage || this._pendingNavigationRequest !== null) {
                 return;
             }
 
@@ -5170,23 +5317,34 @@ document.addEventListener('alpine:init', () => {
             return this._activePageAbortController;
         },
 
-        async getPagePayload(
+        async getPagePayloadByAbsolutePage(
             pageNumber,
             { preferCache = true, forceNetwork = false, signal = null } = {},
         ) {
-            const normalizedPage = clampPage(pageNumber, this.maxPage);
+            const absolutePageNumber = Math.max(1, Math.trunc(Number(pageNumber ?? 1)));
 
-            if (this._pagePayloadByPage.has(normalizedPage) && !forceNetwork) {
-                return this._pagePayloadByPage.get(normalizedPage);
+            if (this._pagePayloadByPage.has(absolutePageNumber) && !forceNetwork) {
+                this.traceReaderFit('payload-hit-memory-cache', {
+                    absolutePageNumber,
+                });
+                return this._pagePayloadByPage.get(absolutePageNumber);
             }
 
-            const pendingLoad = this._pendingPageLoads.get(normalizedPage);
+            const pendingLoad = this._pendingPageLoads.get(absolutePageNumber);
 
             if (pendingLoad) {
+                this.traceReaderFit('payload-hit-pending-load', {
+                    absolutePageNumber,
+                });
                 return await pendingLoad;
             }
 
-            const url = this.pageDataUrl(normalizedPage);
+            const url = this.pageDataUrl(absolutePageNumber);
+            this.traceReaderFit('payload-fetch-start', {
+                absolutePageNumber,
+                preferCache,
+                forceNetwork,
+            });
             const loadPromise = (async () => {
                 try {
                     const payload = normalizePayload(
@@ -5199,31 +5357,73 @@ document.addEventListener('alpine:init', () => {
                         }),
                     );
 
-                    this._pagePayloadByPage.set(normalizedPage, payload);
+                    this._pagePayloadByPage.set(absolutePageNumber, payload);
                     await this.prefetchFontAsset(payload);
+                    this.traceReaderFit('payload-fetch-success', {
+                        absolutePageNumber,
+                        ready: payload.ready,
+                        lineCount: Array.isArray(payload.mushafLines)
+                            ? payload.mushafLines.length
+                            : 0,
+                    });
 
                     return payload;
                 } catch (error) {
                     if (error?.name === 'AbortError') {
+                        this.traceReaderFit('payload-fetch-aborted', {
+                            absolutePageNumber,
+                        });
                         return null;
                     }
 
+                    this.traceReaderFit('payload-fetch-error', {
+                        absolutePageNumber,
+                        message: String(error?.message ?? ''),
+                    });
                     throw error;
                 }
             })();
 
-            this._pendingPageLoads.set(normalizedPage, loadPromise);
+            this._pendingPageLoads.set(absolutePageNumber, loadPromise);
 
             try {
                 return await loadPromise;
             } finally {
-                this._pendingPageLoads.delete(normalizedPage);
+                this._pendingPageLoads.delete(absolutePageNumber);
             }
         },
 
-        async ensureCurrentPageLoaded() {
+        async getPagePayload(
+            pageNumber,
+            { preferCache = true, forceNetwork = false, signal = null } = {},
+        ) {
+            const normalizedPage = clampPage(pageNumber, this.maxPage);
+
+            return await this.getPagePayloadByAbsolutePage(normalizedPage, {
+                preferCache,
+                forceNetwork,
+                signal,
+            });
+        },
+
+        startupDestinationPage() {
+            const maxPage = this.maxPage || this.initialPayload.maxPage;
+            const storedLastPageNumber = readLastPageNumber();
+            const candidatePage =
+                storedLastPageNumber ??
+                this.pageInput ??
+                this.pageNumber ??
+                this.initialPayload.pageNumber;
+
+            return clampPage(candidatePage, maxPage);
+        },
+
+        async ensureCurrentPageLoaded(targetPageOverride = null) {
             const normalizedPage = clampPage(this.pageNumber, this.maxPage);
-            const targetPage = clampPage(Number(this.pageInput ?? this.pageNumber), this.maxPage);
+            const targetPage = clampPage(
+                Number(targetPageOverride ?? this.pageInput ?? this.pageNumber),
+                this.maxPage,
+            );
             const loadedPayloadPageNumber = Math.max(
                 0,
                 Math.trunc(Number(this._loadedPayloadPageNumber ?? 0)),
@@ -6163,6 +6363,7 @@ document.addEventListener('alpine:init', () => {
 
                 if (this.hasRenderablePage()) {
                     this.isFittingPage = false;
+                    this.clearFittingFailSafe();
                 }
 
                 return;
@@ -6186,6 +6387,7 @@ document.addEventListener('alpine:init', () => {
                     await wait(transitionDelayMs);
                     this.isTransitioningOutPage = false;
                     this.isFittingPage = true;
+                    this.scheduleFittingFailSafe();
                 }
 
                 const payload = await payloadPromise;
@@ -6547,7 +6749,10 @@ document.addEventListener('alpine:init', () => {
             });
         },
 
-        applyPayload(payload, { setPageNumber = false, persistPageNumber = true } = {}) {
+        applyPayload(
+            payload,
+            { setPageNumber = false, persistPageNumber = true, syncVisualPageState = true } = {},
+        ) {
             const normalizedPayload = normalizePayload(payload);
             const previousPageNumber = Math.max(1, Math.trunc(Number(this.pageNumber ?? 1)));
             const payloadPageNumber = clampPage(
@@ -6602,14 +6807,16 @@ document.addEventListener('alpine:init', () => {
                 }
             }
 
-            if (this.pageInput !== this.pageNumber) {
-                this.triggerPageCounterPulse(this.pageInput, this.pageNumber, {
-                    source: 'payload-sync',
-                });
-            }
+            if (syncVisualPageState) {
+                if (this.pageInput !== this.pageNumber) {
+                    this.triggerPageCounterPulse(this.pageInput, this.pageNumber, {
+                        source: 'payload-sync',
+                    });
+                }
 
-            this.pageInput = this.pageNumber;
-            this._lastPageInputVisualValue = this.pageNumber;
+                this.pageInput = this.pageNumber;
+                this._lastPageInputVisualValue = this.pageNumber;
+            }
             this.syncPageFontFace();
             this.syncBasmallahFontFace();
             this.syncSurahHeaderFontFace();
@@ -7039,7 +7246,12 @@ document.addEventListener('alpine:init', () => {
         },
 
         clearFitResultCache({ persist = true } = {}) {
+            const previousSize = this._fitResultByContext.size;
             this._fitResultByContext.clear();
+            this.traceReaderFit('cache-clear-all', {
+                previousSize,
+                persist,
+            });
 
             if (persist) {
                 this.queuePersistedFitCacheWrite();
@@ -7168,6 +7380,68 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        readerFitDebugEnabled() {
+            try {
+                return this.normalizeBooleanFlag(
+                    window.localStorage?.getItem?.(readerFitDebugStorageKey),
+                    false,
+                );
+            } catch (_) {
+                return false;
+            }
+        },
+
+        traceReaderFit(eventName, details = {}) {
+            if (!this.readerFitDebugEnabled()) {
+                return;
+            }
+
+            const normalizedEventName = String(eventName ?? '').trim() || 'event';
+            const payload =
+                details && typeof details === 'object' && !Array.isArray(details) ? details : {};
+
+            const tracePayload = {
+                pageNumber: this.pageNumber,
+                pageInput: this.pageInput,
+                loadedPayloadPageNumber: Math.max(
+                    0,
+                    Math.trunc(Number(this._loadedPayloadPageNumber ?? 0)),
+                ),
+                isFittingPage: this.isFittingPage,
+                isLoadingPage: this.isLoadingPage,
+                fitRunCounter: this._fitRunCounter,
+                lastFittedPageNumber: this._lastFittedPageNumber,
+                bypassNextFitCache: this._bypassNextFitCache,
+                fitCacheSize: this._fitResultByContext.size,
+                fitCacheBreakpoint: this._fitCacheBreakpoint,
+                modalLifecycleSettling: this._isModalLifecycleSettling,
+                activeModalCount: this._activeModalIds.size,
+                openModalCount: this.openModalCount(),
+                ...payload,
+            };
+
+            try {
+                const existingTrace = Array.isArray(window.__quranReaderFitTrace)
+                    ? window.__quranReaderFitTrace
+                    : [];
+                existingTrace.push({
+                    at: Date.now(),
+                    event: normalizedEventName,
+                    ...tracePayload,
+                });
+
+                if (existingTrace.length > 400) {
+                    existingTrace.splice(0, existingTrace.length - 400);
+                }
+
+                window.__quranReaderFitTrace = existingTrace;
+            } catch (_) {
+                //
+            }
+
+            console.log('[quran-reader][fit]', normalizedEventName, tracePayload);
+        },
+
         traceReaderReveal(eventName, details = {}) {
             if (!this.readerRevealDebugEnabled()) {
                 return;
@@ -7202,11 +7476,47 @@ document.addEventListener('alpine:init', () => {
             this._swipeRevealWatchdogTimer = null;
         },
 
+        clearFittingFailSafe() {
+            if (this._fittingFailSafeTimer === null) {
+                return;
+            }
+
+            clearTimeout(this._fittingFailSafeTimer);
+            this._fittingFailSafeTimer = null;
+        },
+
+        scheduleFittingFailSafe(timeoutMs = 1400) {
+            this.clearFittingFailSafe();
+
+            this._fittingFailSafeTimer = window.setTimeout(
+                () => {
+                    this._fittingFailSafeTimer = null;
+
+                    const canFailOpen =
+                        this.isFittingPage &&
+                        this.hasRenderablePage() &&
+                        this._pendingNavigationRequest === null &&
+                        !this._navigationRevealLocked &&
+                        !this._isModalLifecycleSettling &&
+                        this._activeModalIds.size === 0 &&
+                        this.openModalCount() === 0;
+
+                    if (!canFailOpen) {
+                        return;
+                    }
+
+                    this.forceRevealCurrentPage('fitting-failsafe-timeout');
+                },
+                Math.max(260, Math.trunc(Number(timeoutMs) || 1400)),
+            );
+        },
+
         forceRevealCurrentPage(reason = 'generic') {
             if (!this.hasRenderablePage()) {
                 return false;
             }
 
+            this.clearFittingFailSafe();
             this.clearSwipeRevealWatchdog();
             this.syncPageInputToCurrentPage();
             this.isFittingPage = false;
@@ -7314,6 +7624,7 @@ document.addEventListener('alpine:init', () => {
                 this.clearStaleRevealGuards();
                 this.clearLayoutTimers();
                 this.isFittingPage = true;
+                this.scheduleFittingFailSafe();
                 this._bypassNextFitCache = true;
                 void this.layoutPageGuaranteed({
                     revealDelayMs: 120,
@@ -7336,6 +7647,7 @@ document.addEventListener('alpine:init', () => {
         beginLayoutCycle() {
             this._layoutToken += 1;
             this.isFittingPage = true;
+            this.scheduleFittingFailSafe();
             this._revealBlockedSinceAt = 0;
             this._revealBlockedLayoutToken = 0;
 
@@ -7483,6 +7795,19 @@ document.addEventListener('alpine:init', () => {
                     useIdleFit: false,
                 });
             }
+
+            if (
+                this.hasRenderablePage() &&
+                this._pendingNavigationRequest === null &&
+                !this._navigationRevealLocked
+            ) {
+                if (!this.isCurrentPageVisiblyReady()) {
+                    this.forceRevealCurrentPage('startup-final-fit-fail-open');
+                } else {
+                    this.isFittingPage = false;
+                    this.clearFittingFailSafe();
+                }
+            }
         },
 
         holdPageHiddenForModalLifecycle() {
@@ -7510,6 +7835,7 @@ document.addEventListener('alpine:init', () => {
                     this._modalLayoutResumeTimer = null;
                     this.clearLayoutTimers();
                     this.isFittingPage = true;
+                    this.scheduleFittingFailSafe();
                     this._isModalLifecycleSettling = false;
                     this._bypassNextFitCache = true;
                     void this.layoutPageGuaranteed({ revealDelayMs: 240, maxAttempts: 5 });
@@ -7567,6 +7893,7 @@ document.addEventListener('alpine:init', () => {
             this.pauseIdleWarmup(960);
             this._bypassNextFitCache = true;
             this.isFittingPage = true;
+            this.scheduleFittingFailSafe();
             this.clearLayoutTimers();
 
             await this.nextTickAsync();
@@ -7867,13 +8194,6 @@ document.addEventListener('alpine:init', () => {
                     layoutToken,
                 });
 
-                if (this._startupCalibrationPending) {
-                    this.isFittingPage = true;
-                    this.queuePageReveal(layoutToken, 90);
-
-                    return;
-                }
-
                 if (this._isModalLifecycleSettling || this._activeModalIds.size > 0) {
                     if (this.recoverStaleModalLifecycleState()) {
                         this.traceReaderReveal('queue-page-reveal-recover-modal-state');
@@ -7886,7 +8206,28 @@ document.addEventListener('alpine:init', () => {
                         reason: 'modal-lifecycle',
                     });
                     this.isFittingPage = true;
+                    this.scheduleFittingFailSafe();
                     this.queuePageReveal(layoutToken, 120);
+
+                    return;
+                }
+
+                const canSettleRevealImmediately =
+                    this.hasRenderablePage() &&
+                    this._pendingNavigationRequest === null &&
+                    !this._navigationRevealLocked &&
+                    !this._isModalLifecycleSettling &&
+                    this._activeModalIds.size === 0;
+
+                if (canSettleRevealImmediately) {
+                    this._revealBlockedSinceAt = 0;
+                    this._revealBlockedLayoutToken = 0;
+                    this.syncPageInputToCurrentPage();
+                    this.isFittingPage = false;
+                    this.clearFittingFailSafe();
+                    this._lastPageRevealAt = Date.now();
+                    this.clearSwipeRevealWatchdog();
+                    this.traceReaderReveal('queue-page-reveal-ready-fast-path');
 
                     return;
                 }
@@ -7964,6 +8305,7 @@ document.addEventListener('alpine:init', () => {
                         revealBlockedForMs,
                     });
                     this.isFittingPage = true;
+                    this.scheduleFittingFailSafe();
                     this.queuePageReveal(layoutToken, 90);
 
                     return;
@@ -7972,8 +8314,20 @@ document.addEventListener('alpine:init', () => {
                 this._revealBlockedSinceAt = 0;
                 this._revealBlockedLayoutToken = 0;
 
+                if (this._lastFittedPageNumber !== this.pageNumber) {
+                    const adjusted = this.applySafetyScaleForCurrentPageOverflow();
+
+                    if (adjusted) {
+                        this.scheduleLayout({
+                            revealDelayMs: 120,
+                            maxAttempts: 5,
+                        });
+                    }
+                }
+
                 this.syncPageInputToCurrentPage();
                 this.isFittingPage = false;
+                this.clearFittingFailSafe();
                 this._lastPageRevealAt = Date.now();
                 this.clearSwipeRevealWatchdog();
                 this.traceReaderReveal('queue-page-reveal-ready');
@@ -8323,6 +8677,44 @@ document.addEventListener('alpine:init', () => {
             );
         },
 
+        currentFitLayoutVariables(rootElement = this.$el.firstElementChild) {
+            if (!(rootElement instanceof HTMLElement)) {
+                return {
+                    pageTypeScale: 1,
+                    pageLeadingMultiplier: 1,
+                    pageGapMultiplier: 1,
+                    pageSurahHeaderScale: 1,
+                    basmallahBottomGapScale: defaultBasmallahBottomGapScale,
+                };
+            }
+
+            const computedRootStyles = window.getComputedStyle(rootElement);
+            const readCssNumber = (propertyName, fallback) => {
+                const rawValue = Number.parseFloat(
+                    computedRootStyles.getPropertyValue(propertyName),
+                );
+
+                return Number.isFinite(rawValue) ? rawValue : fallback;
+            };
+
+            return {
+                pageTypeScale: Math.max(0.2, readCssNumber('--quran-page-type-scale', 1)),
+                pageLeadingMultiplier: Math.max(
+                    0.2,
+                    readCssNumber('--quran-page-leading-multiplier', 1),
+                ),
+                pageGapMultiplier: Math.max(0, readCssNumber('--quran-page-gap-multiplier', 1)),
+                pageSurahHeaderScale: Math.max(
+                    0.5,
+                    readCssNumber('--quran-page-surah-header-scale', 1),
+                ),
+                basmallahBottomGapScale: readCssNumber(
+                    '--quran-basmallah-bottom-gap-scale',
+                    defaultBasmallahBottomGapScale,
+                ),
+            };
+        },
+
         fitLayoutFromCompressionLevel(level) {
             const normalizedLevel = Math.max(0, Math.min(1, Number(level) || 0));
             const profile = this.resolveFitProfile();
@@ -8637,6 +9029,10 @@ document.addEventListener('alpine:init', () => {
             minimumFillWidth = 0.32,
             minimumFillHeight = 0.22,
         } = {}) {
+            if (!enableFitSanityRecovery) {
+                return;
+            }
+
             const normalizedCacheKey = String(cacheKey ?? '').trim();
             const normalizedPageNumber = Math.max(
                 1,
@@ -8711,9 +9107,23 @@ document.addEventListener('alpine:init', () => {
                     this._fitSanityContextOutcome = '';
                     this._fitSanitySuppressedUntil = 0;
                     this._fitSanityDisabledContextKey = '';
+                    this.traceReaderFit('fit-sanity-ok', {
+                        pageNumber: normalizedPageNumber,
+                        fillWidth,
+                        fillHeight,
+                    });
 
                     return;
                 }
+
+                this.traceReaderFit('fit-sanity-anomaly', {
+                    pageNumber: normalizedPageNumber,
+                    fillWidth,
+                    fillHeight,
+                    hasOverflow,
+                    hasSuspiciousUnderfill,
+                    cacheKey: normalizedCacheKey,
+                });
 
                 if (
                     this._fitSanityContextKey === fitSanityContextKey &&
@@ -8734,6 +9144,23 @@ document.addEventListener('alpine:init', () => {
                     this.openModalCount() > 0;
 
                 if (isLayoutPipelineBusy) {
+                    const appearsStuckInFittingState =
+                        this.isFittingPage &&
+                        !this.isLoadingPage &&
+                        this._layoutActivePromise === null &&
+                        this._revealTimer === null &&
+                        this._pendingNavigationRequest === null &&
+                        !this._navigationRevealLocked &&
+                        !this._isModalLifecycleSettling &&
+                        this._activeModalIds.size === 0 &&
+                        this.openModalCount() === 0;
+
+                    if (appearsStuckInFittingState) {
+                        this.forceRevealCurrentPage('fit-sanity-unstick-fitting-state');
+
+                        return;
+                    }
+
                     this._fitSanityCheckTimer = window.setTimeout(() => {
                         this._fitSanityCheckTimer = null;
                         this.scheduleFitSanityCheck({
@@ -8755,6 +9182,58 @@ document.addEventListener('alpine:init', () => {
                     return;
                 }
 
+                const safetyScaleAdjusted = this.applySafetyScaleForCurrentPageOverflow();
+
+                if (safetyScaleAdjusted) {
+                    const adjustedMeasured = this.measureRenderedBounds(contentElement, {
+                        useRobustWidth: false,
+                    });
+                    const adjustedFillWidth = adjustedMeasured.width / normalizedAvailableWidth;
+                    const adjustedFillHeight = adjustedMeasured.height / normalizedAvailableHeight;
+                    const adjustedHasOverflow =
+                        adjustedMeasured.width > widthOverflowThreshold ||
+                        adjustedMeasured.height > heightOverflowThreshold;
+                    const adjustedHasSuspiciousUnderfill =
+                        adjustedFillWidth < normalizedMinimumFillWidth ||
+                        adjustedFillHeight < normalizedMinimumFillHeight;
+
+                    this.traceReaderFit('fit-sanity-safety-scale-applied', {
+                        pageNumber: normalizedPageNumber,
+                        cacheKey: normalizedCacheKey,
+                        scale: Number(this.pageScale) || 1,
+                        fillWidth: adjustedFillWidth,
+                        fillHeight: adjustedFillHeight,
+                        hasOverflow: adjustedHasOverflow,
+                        hasSuspiciousUnderfill: adjustedHasSuspiciousUnderfill,
+                    });
+
+                    if (!adjustedHasOverflow && !adjustedHasSuspiciousUnderfill) {
+                        if (enablePageSpecificFitCache && normalizedCacheKey !== '') {
+                            this.rememberFitResult(
+                                normalizedCacheKey,
+                                {
+                                    layout: this.currentFitLayoutVariables(),
+                                    scale: Number(this.pageScale) || 1,
+                                    sourcePageNumber: normalizedPageNumber,
+                                },
+                                {
+                                    persist: true,
+                                },
+                            );
+                        }
+
+                        this.traceReaderFit('fit-sanity-recovery-by-safety-scale', {
+                            pageNumber: normalizedPageNumber,
+                            cacheKey: normalizedCacheKey,
+                            scale: Number(this.pageScale) || 1,
+                            fillWidth: adjustedFillWidth,
+                            fillHeight: adjustedFillHeight,
+                        });
+
+                        return;
+                    }
+                }
+
                 const fitRecoveryDecision = this.recordFitSanityRecoveryAttempt({
                     contextKey: fitSanityContextKey,
                     measuredWidth: measured.width,
@@ -8764,7 +9243,7 @@ document.addEventListener('alpine:init', () => {
                 });
 
                 if (fitRecoveryDecision.shouldSuppressRecovery) {
-                    if (this.hasRenderablePage() && !this.isLoadingPage) {
+                    if (this.hasRenderablePage()) {
                         this.forceRevealCurrentPage('fit-sanity-churn-circuit-breaker');
                     }
 
@@ -8776,6 +9255,11 @@ document.addEventListener('alpine:init', () => {
                         hasOverflow,
                         hasSuspiciousUnderfill,
                     });
+                    this.traceReaderFit('fit-sanity-recovery-suppressed', {
+                        pageNumber: normalizedPageNumber,
+                        reason: fitRecoveryDecision.reason,
+                        attemptCount: fitRecoveryDecision.attemptCount,
+                    });
 
                     return;
                 }
@@ -8783,6 +9267,11 @@ document.addEventListener('alpine:init', () => {
                 if (normalizedCacheKey !== '') {
                     this.forgetFitResult(normalizedCacheKey);
                 }
+                this.traceReaderFit('fit-sanity-recovery-triggered', {
+                    pageNumber: normalizedPageNumber,
+                    cacheKey: normalizedCacheKey,
+                    visibleReady: this.isCurrentPageVisiblyReady(),
+                });
 
                 if (this.isCurrentPageVisiblyReady()) {
                     this._bypassNextFitCache = true;
@@ -8792,10 +9281,9 @@ document.addEventListener('alpine:init', () => {
                     return;
                 }
 
-                this.scheduleLayout({
-                    revealDelayMs: 120,
-                    maxAttempts: 5,
-                });
+                // Fail-open instead of looping full layout retries when visibility guards
+                // are already unstable after a fit pass.
+                this.forceRevealCurrentPage('fit-sanity-recovery-fail-open');
             }, 160);
         },
 
@@ -8810,7 +9298,7 @@ document.addEventListener('alpine:init', () => {
 
             const frameRect = frameElement.getBoundingClientRect();
             const frameParentRect = frameElement.parentElement?.getBoundingClientRect?.() ?? null;
-            const availableWidth = Math.max(
+            const rawAvailableWidth = Math.max(
                 1,
                 Number(
                     frameParentRect?.width ??
@@ -8820,7 +9308,30 @@ document.addEventListener('alpine:init', () => {
                         1,
                 ),
             );
+            const availableWidth = Math.max(
+                1,
+                rawAvailableWidth -
+                    Math.max(
+                        0,
+                        Number.parseFloat(
+                            window
+                                .getComputedStyle(rootElement)
+                                .getPropertyValue('--quran-fit-area-pad-x'),
+                        ) || 0,
+                    ) *
+                        2,
+            );
             const computedRootStyles = window.getComputedStyle(rootElement);
+            const fitTargetWidthRatio = Math.min(
+                0.95,
+                Math.max(
+                    0.55,
+                    Number.parseFloat(
+                        computedRootStyles.getPropertyValue('--quran-fit-target-width-ratio'),
+                    ) || 0.8,
+                ),
+            );
+            const targetWidth = Math.max(1, availableWidth * fitTargetWidthRatio);
             const fitHeightRatio = Math.min(
                 1,
                 Math.max(
@@ -8830,9 +9341,18 @@ document.addEventListener('alpine:init', () => {
                     ) || 1,
                 ),
             );
+            const fitAreaPaddingY = Math.max(
+                0,
+                Number.parseFloat(computedRootStyles.getPropertyValue('--quran-fit-area-pad-y')) ||
+                    0,
+            );
             const availableHeight = Math.max(
                 1,
-                Number(frameRect?.height ?? frameElement.clientHeight ?? 1) * fitHeightRatio,
+                Math.max(
+                    1,
+                    Number(frameRect?.height ?? frameElement.clientHeight ?? 1) -
+                        fitAreaPaddingY * 2,
+                ) * fitHeightRatio,
             );
             const minScale = Math.max(
                 0.05,
@@ -8852,8 +9372,18 @@ document.addEventListener('alpine:init', () => {
                 return false;
             }
 
+            const widthOverflowTolerance = 1.0025;
+            const heightOverflowTolerance = 1.0025;
+            const hasOverflow =
+                measured.width > targetWidth * widthOverflowTolerance ||
+                measured.height > availableHeight * heightOverflowTolerance;
+
+            if (!hasOverflow) {
+                return false;
+            }
+
             const adjustScale = Math.min(
-                availableWidth / Math.max(1, measured.width),
+                targetWidth / Math.max(1, measured.width),
                 availableHeight / Math.max(1, measured.height),
             );
 
@@ -8881,7 +9411,7 @@ document.addEventListener('alpine:init', () => {
             return true;
         },
 
-        fitPageToViewport() {
+        fitPageToViewport({ pageNumberOverride = null } = {}) {
             const rootElement = this.$el.firstElementChild;
             const frameElement = this.$refs.pageFrame;
             const contentElement = this.$refs.pageContent;
@@ -8908,7 +9438,7 @@ document.addEventListener('alpine:init', () => {
 
                 return Number.isFinite(rawValue) ? rawValue : fallback;
             };
-            const cssBaselineLayout = {
+            const baselineLayout = {
                 pageTypeScale: Math.max(0.2, readCssNumber('--quran-page-type-scale', 1)),
                 pageLeadingMultiplier: Math.max(
                     0.25,
@@ -8924,46 +9454,6 @@ document.addEventListener('alpine:init', () => {
                     defaultBasmallahBottomGapScale,
                 ),
             };
-            const calibrationLayout =
-                this._globalFitCalibrationLayout &&
-                typeof this._globalFitCalibrationLayout === 'object'
-                    ? this._globalFitCalibrationLayout
-                    : null;
-            const baselineLayout = calibrationLayout
-                ? {
-                      pageTypeScale: Math.max(
-                          0.2,
-                          Number(
-                              calibrationLayout.pageTypeScale ?? cssBaselineLayout.pageTypeScale,
-                          ),
-                      ),
-                      pageLeadingMultiplier: Math.max(
-                          0.25,
-                          Number(
-                              calibrationLayout.pageLeadingMultiplier ??
-                                  cssBaselineLayout.pageLeadingMultiplier,
-                          ),
-                      ),
-                      pageGapMultiplier: Math.max(
-                          0,
-                          Number(
-                              calibrationLayout.pageGapMultiplier ??
-                                  cssBaselineLayout.pageGapMultiplier,
-                          ),
-                      ),
-                      pageSurahHeaderScale: Math.max(
-                          0.5,
-                          Number(
-                              calibrationLayout.pageSurahHeaderScale ??
-                                  cssBaselineLayout.pageSurahHeaderScale,
-                          ),
-                      ),
-                      basmallahBottomGapScale: Number(
-                          calibrationLayout.basmallahBottomGapScale ??
-                              cssBaselineLayout.basmallahBottomGapScale,
-                      ),
-                  }
-                : { ...cssBaselineLayout };
 
             this.applyFitLayoutVariables(rootElement, baselineLayout);
             rootElement.style.setProperty('--quran-page-scale', '1');
@@ -9030,49 +9520,6 @@ document.addEventListener('alpine:init', () => {
                 Number.parseFloat(computedRootStyles.getPropertyValue('--quran-max-page-scale')) ||
                     1,
             );
-            const hasGlobalCalibrationProfile =
-                this._globalFitCalibrationLayout &&
-                typeof this._globalFitCalibrationLayout === 'object' &&
-                Number.isFinite(Number(this._globalFitCalibrationScale)) &&
-                Number(this._globalFitCalibrationScale) > 0;
-
-            if (hasGlobalCalibrationProfile) {
-                const globalLayout = {
-                    pageTypeScale: Math.max(
-                        0.2,
-                        Number(this._globalFitCalibrationLayout.pageTypeScale ?? 1),
-                    ),
-                    pageLeadingMultiplier: Math.max(
-                        0.25,
-                        Number(this._globalFitCalibrationLayout.pageLeadingMultiplier ?? 1),
-                    ),
-                    pageGapMultiplier: Math.max(
-                        0,
-                        Number(this._globalFitCalibrationLayout.pageGapMultiplier ?? 1),
-                    ),
-                    pageSurahHeaderScale: Math.max(
-                        0.5,
-                        Number(this._globalFitCalibrationLayout.pageSurahHeaderScale ?? 1),
-                    ),
-                    basmallahBottomGapScale: Number(
-                        this._globalFitCalibrationLayout.basmallahBottomGapScale ??
-                            defaultBasmallahBottomGapScale,
-                    ),
-                };
-                const globalScale = Math.max(
-                    minScale,
-                    Math.min(maxScale, Number(this._globalFitCalibrationScale)),
-                );
-
-                this.applyFitLayoutVariables(rootElement, globalLayout);
-                rootElement.style.setProperty('--quran-page-scale', String(globalScale));
-                this.pageScale = globalScale;
-                this._bypassNextFitCache = false;
-                this._fitRunCounter += 1;
-                this._lastFittedPageNumber = this.pageNumber;
-
-                return;
-            }
             const minimumLeadingMultiplier = Math.max(
                 0.35,
                 Math.min(
@@ -9103,6 +9550,13 @@ document.addEventListener('alpine:init', () => {
                     ),
                 ),
             );
+            const minimumPageTypeScale = Math.max(
+                0.42,
+                Math.min(
+                    baselineLayout.pageTypeScale,
+                    readCssNumber('--quran-min-page-type-scale', 0.72),
+                ),
+            );
             const minimumBasmallahBottomGapScale = Math.min(
                 baselineLayout.basmallahBottomGapScale,
                 readCssNumber(
@@ -9110,53 +9564,114 @@ document.addEventListener('alpine:init', () => {
                     baselineLayout.basmallahBottomGapScale - 0.12,
                 ),
             );
-            const normalizedPageNumber = Math.max(1, Math.trunc(Number(this.pageNumber ?? 1)));
+            const normalizedPageNumber = Math.max(
+                1,
+                Math.trunc(Number(pageNumberOverride ?? this.pageNumber ?? 1)),
+            );
+            const normalizedLoadedPayloadPageNumber = Math.max(
+                0,
+                Math.trunc(Number(this._loadedPayloadPageNumber ?? 0)),
+            );
+            const expectedPayloadPageNumber = Math.max(
+                1,
+                Math.trunc(Number(pageNumberOverride ?? normalizedPageNumber)),
+            );
+
+            if (
+                normalizedLoadedPayloadPageNumber > 0 &&
+                normalizedLoadedPayloadPageNumber !== expectedPayloadPageNumber
+            ) {
+                this.traceReaderFit('fit-skip-payload-page-mismatch', {
+                    normalizedPageNumber,
+                    pageNumberOverride,
+                    normalizedLoadedPayloadPageNumber,
+                    expectedPayloadPageNumber,
+                    isPrimingSharedFitSeed: this._isPrimingSharedFitSeed,
+                });
+
+                return;
+            }
+
             const breakpointName = this.resolveCurrentBreakpointName();
+            const hasForcedFitCacheBypass = this._bypassNextFitCache;
             const isModalLayoutContext =
-                this._bypassNextFitCache ||
                 this._isModalLifecycleSettling ||
                 this._activeModalIds.size > 0 ||
                 this.openModalCount() > 0;
             const isFontLayoutPending = !this.areTrackedPageFontsLoaded();
-            const shouldBypassFitCache = isModalLayoutContext || isFontLayoutPending;
-            const shouldSuppressPersistedCacheWrite = shouldBypassFitCache;
+            const shouldBypassPageSpecificFitCache =
+                !enablePageSpecificFitCache ||
+                hasForcedFitCacheBypass ||
+                isModalLayoutContext ||
+                isFontLayoutPending;
+            const shouldBypassSharedFitSeed = !enableSharedFitSeed || isModalLayoutContext;
+            const shouldSuppressPersistedCacheWrite = shouldBypassPageSpecificFitCache;
             const ayahLineCount = Array.isArray(this.mushafLines)
                 ? this.mushafLines.filter((line) => String(line?.line_type ?? '') === 'ayah').length
                 : 0;
-            const targetMinimumFillWidth =
-                ayahLineCount >= 10 ? 0.9 : ayahLineCount >= 6 ? 0.86 : 0.8;
-            const fitCacheKey = [
+            const targetMinimumFillWidth = 0.62;
+            const fitCacheSignatureParts = this.fitCacheSignatureParts({
+                breakpointName,
+                availableWidth,
+                availableHeight,
+                isModalLayoutContext,
+                isFontLayoutPending,
+                fitTargetWidthRatio,
+                fitAreaPaddingX,
+                fitAreaPaddingY,
+                minimumLeadingMultiplier,
+                minimumGapMultiplier,
+                minimumSurahHeaderScale,
+                minimumPageTypeScale,
+                minimumBasmallahBottomGapScale,
+                minScale,
+                maxScale,
+            });
+            const sharedFitSeedSignatureParts = this.fitCacheSignatureParts({
+                breakpointName,
+                availableWidth,
+                availableHeight,
+                isModalLayoutContext,
+                isFontLayoutPending,
+                fitTargetWidthRatio,
+                fitAreaPaddingX,
+                fitAreaPaddingY,
+                minimumLeadingMultiplier,
+                minimumGapMultiplier,
+                minimumSurahHeaderScale,
+                minimumPageTypeScale,
+                minimumBasmallahBottomGapScale,
+                minScale,
+                maxScale,
+                includeFontFamilies: false,
+                includeModalState: false,
+                includeFontLoadState: false,
+            });
+            const fitCacheKey = this.fitCacheKeyForPage(
                 normalizedPageNumber,
-                breakpointName || 'bp-unknown',
-                this.viewportBucketValue(availableWidth),
-                this.viewportBucketValue(availableHeight),
-                isModalLayoutContext ? 'modal-open' : 'modal-closed',
-                isFontLayoutPending ? 'fonts-pending' : 'fonts-loaded',
-                this.useCenteredAyahLayout ? 'centered' : 'rect',
-                'scale-only-v1',
-                Number(fitTargetWidthRatio).toFixed(3),
-                Number(fitAreaPaddingX).toFixed(2),
-                Number(fitAreaPaddingY).toFixed(2),
-                Number(minimumLeadingMultiplier).toFixed(3),
-                Number(minimumGapMultiplier).toFixed(3),
-                Number(minimumSurahHeaderScale).toFixed(3),
-                Number(minimumBasmallahBottomGapScale).toFixed(3),
-                this._globalFitCalibrationPageNumber > 0
-                    ? `cal-${this._globalFitCalibrationPageNumber}`
-                    : 'cal-none',
-                String(this.qpcPageFontFamily ?? ''),
-                String(this.basmallahFontFamily ?? ''),
-                String(this.surahHeaderFontFamily ?? ''),
-                Number(minScale).toFixed(3),
-                Number(maxScale).toFixed(3),
-            ].join('|');
+                fitCacheSignatureParts,
+            );
+            const sharedFitSeedCacheKey = this.sharedFitSeedCacheKey(sharedFitSeedSignatureParts);
+            this.traceReaderFit('fit-start', {
+                normalizedPageNumber,
+                pageNumberOverride,
+                shouldBypassPageSpecificFitCache,
+                shouldBypassSharedFitSeed,
+                shouldSuppressPersistedCacheWrite,
+                isFontLayoutPending,
+                isModalLayoutContext,
+                fitCacheKey,
+                sharedFitSeedCacheKey,
+                sharedFitSeedSignatureParts,
+            });
 
-            const strictWidthOverflowTolerance = 1.0025;
-            const strictHeightOverflowTolerance = 1.0025;
+            const strictWidthOverflowTolerance = 1.01;
+            const strictHeightOverflowTolerance = 1.01;
             const strictWidthOverflowThreshold = targetWidth * strictWidthOverflowTolerance;
             const strictHeightOverflowThreshold = targetHeight * strictHeightOverflowTolerance;
-            const minimumHealthyFillWidth = Math.max(0.5, targetMinimumFillWidth - 0.1);
-            const minimumHealthyFillHeight = 0.58;
+            const minimumHealthyFillWidth = 0.62;
+            const minimumHealthyFillHeight = 0.56;
+            const maximumHealthyOverflowRatio = 1.01;
 
             const measureVisualBounds = () => {
                 const measured = this.measureRenderedBounds(contentElement, {
@@ -9238,47 +9753,454 @@ document.addEventListener('alpine:init', () => {
                     fits: fitsBox,
                 };
             };
+            const measureStrictFitHealth = () => {
+                const measured = this.measureRenderedBounds(contentElement, {
+                    useRobustWidth: false,
+                });
+                const fillWidth = measured.width / targetWidth;
+                const fillHeight = measured.height / targetHeight;
+                const fitsStrict =
+                    measured.width <= strictWidthOverflowThreshold &&
+                    measured.height <= strictHeightOverflowThreshold;
 
-            const cachedFitResult = isModalLayoutContext
-                ? null
-                : isFontLayoutPending
-                  ? null
-                  : this._fitResultByContext.get(fitCacheKey);
+                return {
+                    fillWidth,
+                    fillHeight,
+                    fitsStrict,
+                };
+            };
+            const enforceGuaranteedFit = (
+                initialEvaluation,
+                initialLayout,
+                { maxAttempts = 6 } = {},
+            ) => {
+                let evaluation = initialEvaluation;
+                let layout = { ...initialLayout };
 
-            if (
-                cachedFitResult &&
-                cachedFitResult.layout &&
-                Number.isFinite(Number(cachedFitResult.scale))
-            ) {
-                this.applyFitLayoutVariables(rootElement, cachedFitResult.layout);
-                const cached = evaluateScale(Number(cachedFitResult.scale));
-                const cacheHasHealthyFill =
-                    cached.fillWidth >= minimumHealthyFillWidth &&
-                    cached.fillHeight >= minimumHealthyFillHeight;
+                for (let attempt = 0; attempt < Math.max(1, maxAttempts); attempt += 1) {
+                    const strictHealth = measureStrictFitHealth();
 
-                if (cached.fits && cacheHasHealthyFill) {
-                    this.pageScale = cached.scale;
-                    this._fitRunCounter += 1;
-                    this._lastFittedPageNumber = this.pageNumber;
-                    this.scheduleFitSanityCheck({
-                        cacheKey: fitCacheKey,
-                        pageNumber: normalizedPageNumber,
-                        availableWidth: targetWidth,
-                        availableHeight: targetHeight,
-                        strictWidthOverflowTolerance,
-                        strictHeightOverflowTolerance,
-                        minimumFillWidth: minimumHealthyFillWidth,
-                        minimumFillHeight: minimumHealthyFillHeight,
-                    });
+                    if (
+                        strictHealth.fillWidth <= maximumHealthyOverflowRatio &&
+                        strictHealth.fillHeight <= maximumHealthyOverflowRatio
+                    ) {
+                        return {
+                            evaluation,
+                            layout,
+                            strictHealth,
+                        };
+                    }
 
-                    return;
+                    const widthRatio = targetWidth / Math.max(1, evaluation.bounds.width);
+                    const heightRatio = targetHeight / Math.max(1, evaluation.bounds.height);
+                    const shrinkingRatio = Math.min(widthRatio, heightRatio);
+
+                    if (!Number.isFinite(shrinkingRatio) || shrinkingRatio >= 0.999) {
+                        break;
+                    }
+
+                    if (heightRatio < widthRatio * 0.96) {
+                        const heightCompressionRatio = Math.max(0.82, heightRatio * 0.995);
+                        layout = {
+                            ...layout,
+                            pageLeadingMultiplier: Math.max(
+                                0.32,
+                                layout.pageLeadingMultiplier * heightCompressionRatio,
+                            ),
+                            pageGapMultiplier: Math.max(
+                                0,
+                                layout.pageGapMultiplier * Math.max(0.84, heightCompressionRatio),
+                            ),
+                            pageSurahHeaderScale: Math.max(
+                                0.52,
+                                layout.pageSurahHeaderScale * Math.max(0.9, heightCompressionRatio),
+                            ),
+                        };
+                        this.applyFitLayoutVariables(rootElement, layout);
+                    }
+
+                    const nextScale = Math.max(
+                        minScale,
+                        Math.min(maxScale, evaluation.scale * shrinkingRatio * 0.9975),
+                    );
+
+                    if (Math.abs(nextScale - evaluation.scale) < 0.0004) {
+                        break;
+                    }
+
+                    evaluation = evaluateScale(nextScale);
                 }
 
-                this.forgetFitResult(fitCacheKey);
+                return {
+                    evaluation,
+                    layout,
+                    strictHealth: measureStrictFitHealth(),
+                };
+            };
+
+            if (enableDeterministicFitSolver) {
+                const solveScaleForActiveLayout = (initialScale = maxScale) => {
+                    let evaluation = evaluateScale(initialScale);
+
+                    for (let attempt = 0; attempt < 20; attempt += 1) {
+                        const widthRatio = targetWidth / Math.max(1, evaluation.bounds.width);
+                        const heightRatio = targetHeight / Math.max(1, evaluation.bounds.height);
+                        const shrinkingRatio = Math.min(widthRatio, heightRatio);
+                        const hasHealthyOverflow =
+                            evaluation.fillWidth <= maximumHealthyOverflowRatio &&
+                            evaluation.fillHeight <= maximumHealthyOverflowRatio;
+
+                        if (hasHealthyOverflow) {
+                            break;
+                        }
+
+                        if (!Number.isFinite(shrinkingRatio) || shrinkingRatio >= 0.9995) {
+                            break;
+                        }
+
+                        const nextScale = Math.max(
+                            minScale,
+                            Math.min(maxScale, evaluation.scale * shrinkingRatio * 0.996),
+                        );
+
+                        if (Math.abs(nextScale - evaluation.scale) < 0.0004) {
+                            break;
+                        }
+
+                        evaluation = evaluateScale(nextScale);
+                    }
+
+                    return evaluation;
+                };
+                const layoutCandidates = [];
+                const layoutCandidateLevels = [0, 0.28, 0.5, 0.72, 0.88, 1];
+
+                layoutCandidates.push({
+                    layout: { ...baselineLayout },
+                    compressionLevel: 0,
+                });
+                layoutCandidateLevels.forEach((level) => {
+                    layoutCandidates.push({
+                        layout: this.fitLayoutFromCompressionLevel(level),
+                        compressionLevel: level,
+                    });
+                });
+
+                let bestSafeCandidate = null;
+                let bestFallbackCandidate = null;
+
+                layoutCandidates.forEach(({ layout: candidateLayout, compressionLevel }) => {
+                    this.applyFitLayoutVariables(rootElement, candidateLayout);
+                    rootElement.style.setProperty('--quran-page-scale', '1');
+
+                    const evaluation = solveScaleForActiveLayout(maxScale);
+                    const strictHealth = measureStrictFitHealth();
+                    const overflowRatio = Math.max(strictHealth.fillWidth, strictHealth.fillHeight);
+                    const fillScore =
+                        Math.min(1, strictHealth.fillWidth) * 0.62 +
+                        Math.min(1, strictHealth.fillHeight) * 0.52;
+                    const score =
+                        fillScore -
+                        Math.max(0, overflowRatio - 1) * 7 -
+                        Math.max(0, Number(compressionLevel) || 0) * 0.06;
+                    const candidate = {
+                        layout: { ...candidateLayout },
+                        compressionLevel,
+                        evaluation,
+                        strictHealth,
+                        overflowRatio,
+                        score,
+                    };
+                    const isSafeCandidate = overflowRatio <= maximumHealthyOverflowRatio;
+
+                    if (isSafeCandidate) {
+                        if (!bestSafeCandidate || candidate.score > bestSafeCandidate.score) {
+                            bestSafeCandidate = candidate;
+                        }
+
+                        return;
+                    }
+
+                    if (!bestFallbackCandidate || candidate.score > bestFallbackCandidate.score) {
+                        bestFallbackCandidate = candidate;
+                    }
+                });
+
+                const selectedCandidate = bestSafeCandidate ?? bestFallbackCandidate;
+                const deterministicLayout = selectedCandidate?.layout ?? { ...baselineLayout };
+                const deterministicEvaluation =
+                    selectedCandidate?.evaluation ?? evaluateScale(minScale);
+                const deterministicHealth =
+                    selectedCandidate?.strictHealth ?? measureStrictFitHealth();
+                const hasHealthyFill =
+                    deterministicHealth.fillWidth >= minimumHealthyFillWidth &&
+                    deterministicHealth.fillHeight >= minimumHealthyFillHeight &&
+                    deterministicHealth.fillWidth <= maximumHealthyOverflowRatio &&
+                    deterministicHealth.fillHeight <= maximumHealthyOverflowRatio;
+
+                this.applyFitLayoutVariables(rootElement, deterministicLayout);
+                rootElement.style.setProperty(
+                    '--quran-page-scale',
+                    String(deterministicEvaluation.scale),
+                );
+                this.pageScale = deterministicEvaluation.scale;
+
+                this.traceReaderFit('fit-deterministic-selected', {
+                    normalizedPageNumber,
+                    finalScale: deterministicEvaluation.scale,
+                    fillWidth: deterministicHealth.fillWidth,
+                    fillHeight: deterministicHealth.fillHeight,
+                    score: Number(selectedCandidate?.score ?? 0),
+                    hasHealthyFill,
+                });
+
+                if (!hasHealthyFill) {
+                    this.traceReaderFit('fit-solve-unsatisfied', {
+                        normalizedPageNumber,
+                        finalScale: deterministicEvaluation.scale,
+                        fillWidth: deterministicHealth.fillWidth,
+                        fillHeight: deterministicHealth.fillHeight,
+                    });
+                    this.forgetFitResult(fitCacheKey, {
+                        persist: !shouldSuppressPersistedCacheWrite,
+                    });
+                    this._bypassNextFitCache = true;
+
+                    if (this.hasRenderablePage()) {
+                        this.forceRevealCurrentPage('fit-deterministic-unsatisfied-fail-open');
+                    }
+
+                    this.clearLayoutTimers();
+                    this.syncPageInputToCurrentPage();
+                    this.isFittingPage = false;
+                    this.clearFittingFailSafe();
+                } else if (enablePageSpecificFitCache) {
+                    this.rememberFitResult(
+                        fitCacheKey,
+                        {
+                            layout: { ...deterministicLayout },
+                            scale: deterministicEvaluation.scale,
+                            sourcePageNumber: normalizedPageNumber,
+                        },
+                        {
+                            persist: !shouldSuppressPersistedCacheWrite,
+                        },
+                    );
+                }
+
+                if (
+                    enableSharedFitSeed &&
+                    normalizedPageNumber === sharedFitSeedReferencePageNumber &&
+                    !isModalLayoutContext &&
+                    hasHealthyFill
+                ) {
+                    this.rememberFitResult(
+                        sharedFitSeedCacheKey,
+                        {
+                            layout: { ...deterministicLayout },
+                            scale: deterministicEvaluation.scale,
+                            sourcePageNumber: normalizedPageNumber,
+                        },
+                        {
+                            persist: !shouldSuppressPersistedCacheWrite,
+                        },
+                    );
+                }
+
+                if (isFontLayoutPending) {
+                    this.scheduleFontReadyRecoveryRefit(normalizedPageNumber, {
+                        delayMs: 110,
+                    });
+                    this.traceReaderFit('fit-schedule-font-recovery-refit', {
+                        normalizedPageNumber,
+                    });
+                }
+
+                this._bypassNextFitCache = false;
+                this._fitRunCounter += 1;
+                this._lastFittedPageNumber = this.pageNumber;
+                this.traceReaderFit('fit-complete', {
+                    normalizedPageNumber,
+                    finalScale: deterministicEvaluation.scale,
+                    persisted: hasHealthyFill && !shouldSuppressPersistedCacheWrite,
+                    fitCacheKey,
+                });
+
+                if (
+                    this.hasRenderablePage() &&
+                    this._pendingNavigationRequest === null &&
+                    !this._navigationRevealLocked
+                ) {
+                    this.isFittingPage = false;
+                    this.clearFittingFailSafe();
+                }
+
+                return;
             }
+
+            const pageFitCacheResult = shouldBypassPageSpecificFitCache
+                ? null
+                : this._fitResultByContext.get(fitCacheKey);
+            const sharedFitSeedResult = shouldBypassSharedFitSeed
+                ? null
+                : this._fitResultByContext.get(sharedFitSeedCacheKey);
+            const shouldPreferSharedFitSeed =
+                normalizedPageNumber !== sharedFitSeedReferencePageNumber;
+            this.traceReaderFit('fit-cache-candidates', {
+                normalizedPageNumber,
+                shouldPreferSharedFitSeed,
+                hasPageCache: pageFitCacheResult !== null,
+                hasSharedCache: sharedFitSeedResult !== null,
+                pageCacheSourcePage: Number(pageFitCacheResult?.sourcePageNumber ?? 0),
+                sharedCacheSourcePage: Number(sharedFitSeedResult?.sourcePageNumber ?? 0),
+            });
+            const tryCachedFitResult = (
+                cachedFitResult,
+                { cacheKey = '', cacheLabel = 'page' } = {},
+            ) => {
+                if (
+                    !cachedFitResult ||
+                    !cachedFitResult.layout ||
+                    !Number.isFinite(Number(cachedFitResult.scale))
+                ) {
+                    this.traceReaderFit('fit-cache-reject-invalid', {
+                        cacheLabel,
+                        cacheKey,
+                    });
+                    return false;
+                }
+
+                const normalizedSourcePageNumber = Math.max(
+                    0,
+                    Math.trunc(Number(cachedFitResult.sourcePageNumber ?? 0)),
+                );
+
+                if (
+                    cacheLabel === 'shared' &&
+                    normalizedSourcePageNumber > 0 &&
+                    normalizedSourcePageNumber !== sharedFitSeedReferencePageNumber
+                ) {
+                    this.traceReaderFit('fit-cache-reject-shared-source-mismatch', {
+                        cacheLabel,
+                        cacheKey,
+                        normalizedSourcePageNumber,
+                        expectedSourcePageNumber: sharedFitSeedReferencePageNumber,
+                    });
+                    if (cacheKey !== '') {
+                        this.forgetFitResult(cacheKey);
+                    }
+
+                    return false;
+                }
+
+                if (
+                    cacheLabel === 'page' &&
+                    normalizedSourcePageNumber > 0 &&
+                    normalizedSourcePageNumber !== normalizedPageNumber
+                ) {
+                    this.traceReaderFit('fit-cache-reject-page-source-mismatch', {
+                        cacheLabel,
+                        cacheKey,
+                        normalizedSourcePageNumber,
+                        expectedSourcePageNumber: normalizedPageNumber,
+                    });
+                    if (cacheKey !== '') {
+                        this.forgetFitResult(cacheKey);
+                    }
+
+                    return false;
+                }
+
+                this.applyFitLayoutVariables(rootElement, cachedFitResult.layout);
+                const cached = evaluateScale(Number(cachedFitResult.scale));
+                const strictCacheHealth = measureStrictFitHealth();
+                const cacheHasHealthyFill =
+                    strictCacheHealth.fillWidth >= minimumHealthyFillWidth &&
+                    strictCacheHealth.fillHeight >= minimumHealthyFillHeight &&
+                    strictCacheHealth.fillWidth <= maximumHealthyOverflowRatio &&
+                    strictCacheHealth.fillHeight <= maximumHealthyOverflowRatio;
+
+                if (!cacheHasHealthyFill) {
+                    this.traceReaderFit('fit-cache-reject-unhealthy', {
+                        cacheLabel,
+                        cacheKey,
+                        fillWidth: strictCacheHealth.fillWidth,
+                        fillHeight: strictCacheHealth.fillHeight,
+                        fits: strictCacheHealth.fitsStrict,
+                        minimumHealthyFillWidth,
+                        minimumHealthyFillHeight,
+                    });
+                    if (cacheKey !== '' && cacheLabel !== 'shared') {
+                        this.forgetFitResult(cacheKey);
+                    }
+
+                    return false;
+                }
+
+                this.pageScale = cached.scale;
+                this._bypassNextFitCache = false;
+
+                this._fitRunCounter += 1;
+                this._lastFittedPageNumber = this.pageNumber;
+                this.traceReaderFit('fit-cache-accept', {
+                    cacheLabel,
+                    cacheKey,
+                    normalizedSourcePageNumber,
+                    scale: cached.scale,
+                    fillWidth: strictCacheHealth.fillWidth,
+                    fillHeight: strictCacheHealth.fillHeight,
+                });
+                this.scheduleFitSanityCheck({
+                    cacheKey: cacheLabel === 'shared' ? '' : fitCacheKey,
+                    pageNumber: normalizedPageNumber,
+                    availableWidth: targetWidth,
+                    availableHeight: targetHeight,
+                    strictWidthOverflowTolerance,
+                    strictHeightOverflowTolerance,
+                    minimumFillWidth: minimumHealthyFillWidth,
+                    minimumFillHeight: minimumHealthyFillHeight,
+                });
+
+                return true;
+            };
+
+            if (
+                shouldPreferSharedFitSeed &&
+                tryCachedFitResult(sharedFitSeedResult, {
+                    cacheKey: sharedFitSeedCacheKey,
+                    cacheLabel: 'shared',
+                })
+            ) {
+                return;
+            }
+
+            if (
+                tryCachedFitResult(pageFitCacheResult, {
+                    cacheKey: fitCacheKey,
+                    cacheLabel: 'page',
+                })
+            ) {
+                return;
+            }
+
+            if (
+                !shouldPreferSharedFitSeed &&
+                tryCachedFitResult(sharedFitSeedResult, {
+                    cacheKey: sharedFitSeedCacheKey,
+                    cacheLabel: 'shared',
+                })
+            ) {
+                return;
+            }
+            this.traceReaderFit('fit-cache-miss-solving', {
+                normalizedPageNumber,
+            });
 
             const midpointLayout = {
                 ...baselineLayout,
+                pageTypeScale:
+                    baselineLayout.pageTypeScale -
+                    (baselineLayout.pageTypeScale - minimumPageTypeScale) * 0.5,
                 pageLeadingMultiplier:
                     baselineLayout.pageLeadingMultiplier -
                     (baselineLayout.pageLeadingMultiplier - minimumLeadingMultiplier) * 0.5,
@@ -9294,12 +10216,23 @@ document.addEventListener('alpine:init', () => {
             };
             const tightLayout = {
                 ...baselineLayout,
+                pageTypeScale: minimumPageTypeScale,
                 pageLeadingMultiplier: minimumLeadingMultiplier,
                 pageGapMultiplier: minimumGapMultiplier,
                 pageSurahHeaderScale: minimumSurahHeaderScale,
                 basmallahBottomGapScale: minimumBasmallahBottomGapScale,
             };
-            const layoutCandidates = [baselineLayout, midpointLayout, tightLayout];
+            const compressedLayout = {
+                ...tightLayout,
+                pageTypeScale: Math.max(0.42, minimumPageTypeScale * 0.88),
+                pageLeadingMultiplier: Math.max(0.46, minimumLeadingMultiplier * 0.94),
+                pageGapMultiplier: Math.max(0, minimumGapMultiplier * 0.9),
+                pageSurahHeaderScale: Math.max(0.56, minimumSurahHeaderScale * 0.96),
+                basmallahBottomGapScale: Math.min(
+                    minimumBasmallahBottomGapScale - 0.04,
+                    baselineLayout.basmallahBottomGapScale,
+                ),
+            };
             const solveBestScaleForCurrentLayout = () => {
                 let lower = minScale;
                 let upper = maxScale;
@@ -9323,32 +10256,177 @@ document.addEventListener('alpine:init', () => {
 
                 return best;
             };
+            const enforceOverflowSafeScale = (initialEvaluation, maxAttempts = 4) => {
+                let evaluation = initialEvaluation;
+
+                for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+                    const overflowWidth = Math.max(0, evaluation.fillWidth - 1);
+                    const overflowHeight = Math.max(0, evaluation.fillHeight - 1);
+
+                    if (overflowWidth <= 0.0025 && overflowHeight <= 0.0025 && evaluation.fits) {
+                        break;
+                    }
+
+                    const shrinkFactor =
+                        Math.min(
+                            1 / Math.max(1, evaluation.fillWidth),
+                            1 / Math.max(1, evaluation.fillHeight),
+                        ) * 0.9975;
+
+                    if (!Number.isFinite(shrinkFactor) || shrinkFactor >= 0.9995) {
+                        break;
+                    }
+
+                    const nextScale = Math.max(
+                        minScale,
+                        Math.min(maxScale, evaluation.scale * shrinkFactor),
+                    );
+
+                    if (Math.abs(nextScale - evaluation.scale) < 0.0004) {
+                        break;
+                    }
+
+                    evaluation = evaluateScale(nextScale);
+                }
+
+                return evaluation;
+            };
+            const profile = this.resolveFitProfile();
+            const candidateSteps = Math.max(12, Math.trunc(Number(profile.candidateSteps) || 24));
+            const minCompressionLevel = Math.max(
+                0,
+                Math.min(1, Number(profile.minimumCompressionLevel ?? 0)),
+            );
+            const candidateCompressions = [0, 0.25, 0.5, 0.75, 1];
+
+            for (let step = 0; step <= candidateSteps; step += 1) {
+                const progress = candidateSteps > 0 ? step / candidateSteps : 0;
+                const compressionLevel = minCompressionLevel + (1 - minCompressionLevel) * progress;
+                candidateCompressions.push(compressionLevel);
+            }
+
+            const pushLayoutCandidate = (target, seen, layout, compressionLevel) => {
+                const normalizedLayout = {
+                    pageTypeScale: Math.max(0.2, Number(layout?.pageTypeScale ?? 1)),
+                    pageLeadingMultiplier: Math.max(
+                        0.2,
+                        Number(layout?.pageLeadingMultiplier ?? 1),
+                    ),
+                    pageGapMultiplier: Math.max(0, Number(layout?.pageGapMultiplier ?? 1)),
+                    pageSurahHeaderScale: Math.max(0.5, Number(layout?.pageSurahHeaderScale ?? 1)),
+                    basmallahBottomGapScale: Number(
+                        layout?.basmallahBottomGapScale ?? defaultBasmallahBottomGapScale,
+                    ),
+                };
+                const normalizedCompression = Math.max(
+                    0,
+                    Math.min(1, Number(compressionLevel) || 0),
+                );
+                const candidateKey = [
+                    normalizedLayout.pageTypeScale.toFixed(4),
+                    normalizedLayout.pageLeadingMultiplier.toFixed(4),
+                    normalizedLayout.pageGapMultiplier.toFixed(4),
+                    normalizedLayout.pageSurahHeaderScale.toFixed(4),
+                    normalizedLayout.basmallahBottomGapScale.toFixed(4),
+                    normalizedCompression.toFixed(4),
+                ].join('|');
+
+                if (seen.has(candidateKey)) {
+                    return;
+                }
+
+                seen.add(candidateKey);
+                target.push({
+                    layout: normalizedLayout,
+                    compressionLevel: normalizedCompression,
+                });
+            };
+            const fitLayoutCandidates = [];
+            const fitLayoutCandidateKeys = new Set();
+
+            pushLayoutCandidate(
+                fitLayoutCandidates,
+                fitLayoutCandidateKeys,
+                baselineLayout,
+                minCompressionLevel,
+            );
+            pushLayoutCandidate(
+                fitLayoutCandidates,
+                fitLayoutCandidateKeys,
+                midpointLayout,
+                Math.min(1, minCompressionLevel + 0.35),
+            );
+            pushLayoutCandidate(
+                fitLayoutCandidates,
+                fitLayoutCandidateKeys,
+                tightLayout,
+                Math.min(1, minCompressionLevel + 0.65),
+            );
+            pushLayoutCandidate(fitLayoutCandidates, fitLayoutCandidateKeys, compressedLayout, 1);
+            candidateCompressions.forEach((compressionLevel) => {
+                pushLayoutCandidate(
+                    fitLayoutCandidates,
+                    fitLayoutCandidateKeys,
+                    this.fitLayoutFromCompressionLevel(compressionLevel),
+                    compressionLevel,
+                );
+            });
 
             let bestLayout = baselineLayout;
             let finalEvaluation = evaluateScale(minScale);
             let bestScore = Number.NEGATIVE_INFINITY;
 
-            layoutCandidates.forEach((candidateLayout, index) => {
+            fitLayoutCandidates.forEach(({ layout: candidateLayout, compressionLevel }) => {
                 this.applyFitLayoutVariables(rootElement, candidateLayout);
                 rootElement.style.setProperty('--quran-page-scale', '1');
-                const evaluation = solveBestScaleForCurrentLayout();
+                let evaluation = solveBestScaleForCurrentLayout();
 
                 if (!evaluation.fits) {
+                    const natural = measureVisualBounds();
+
+                    if (natural.width > 1 && natural.height > 1) {
+                        const geometricScale = Math.max(
+                            minScale,
+                            Math.min(
+                                maxScale,
+                                Math.min(
+                                    targetWidth / Math.max(1, natural.width),
+                                    targetHeight / Math.max(1, natural.height),
+                                ),
+                            ),
+                        );
+                        evaluation = evaluateScale(geometricScale);
+                    }
+                }
+
+                evaluation = enforceOverflowSafeScale(evaluation, 6);
+
+                const isSoftFit =
+                    evaluation.fillWidth <= maximumHealthyOverflowRatio &&
+                    evaluation.fillHeight <= maximumHealthyOverflowRatio;
+
+                if (!(evaluation.fits || isSoftFit)) {
                     return;
                 }
 
-                const compressionPenalty = index * 0.045;
-                const widthDeficitPenalty = Math.max(
-                    0,
-                    targetMinimumFillWidth - evaluation.fillWidth,
-                );
-                const areaOverflowPenalty = evaluation.isInsideTargetArea ? 0 : 0.08;
+                const widthDeficit = Math.max(0, targetMinimumFillWidth - evaluation.fillWidth);
+                const heightDeficit = Math.max(0, 0.74 - evaluation.fillHeight);
+                const fitScore = this.fitScore({
+                    fillWidth: evaluation.fillWidth,
+                    fillHeight: evaluation.fillHeight,
+                    compressionLevel,
+                });
                 const score =
-                    Math.min(1.04, evaluation.fillWidth) * 1.32 +
-                    Math.min(1.04, evaluation.fillHeight) * 0.56 -
-                    widthDeficitPenalty * 1.8 -
-                    compressionPenalty -
-                    areaOverflowPenalty;
+                    fitScore +
+                    Math.min(1, evaluation.fillWidth) * 0.64 +
+                    Math.min(1, evaluation.fillHeight) * 0.38 -
+                    widthDeficit * 1.62 -
+                    heightDeficit * 0.34 -
+                    (evaluation.isInsideTargetArea ? 0 : 0.09);
+
+                if (!Number.isFinite(score)) {
+                    return;
+                }
 
                 if (score > bestScore) {
                     bestScore = score;
@@ -9357,76 +10435,165 @@ document.addEventListener('alpine:init', () => {
                 }
             });
 
-            if (bestScore === Number.NEGATIVE_INFINITY) {
-                let relaxedBestLayout = { ...baselineLayout };
-                let relaxedBestEvaluation = evaluateScale(minScale);
-                let relaxedBestScore = Number.NEGATIVE_INFINITY;
+            if (!Number.isFinite(bestScore)) {
+                const emergencyLayout = this.fitLayoutFromCompressionLevel(1);
 
-                layoutCandidates.forEach((candidateLayout) => {
-                    this.applyFitLayoutVariables(rootElement, candidateLayout);
-                    rootElement.style.setProperty('--quran-page-scale', '1');
-                    const natural = measureVisualBounds();
-
-                    if (natural.width <= 1 || natural.height <= 1) {
-                        return;
-                    }
-
-                    const geometricScale = Math.max(
-                        minScale,
-                        Math.min(
-                            maxScale,
-                            Math.min(targetWidth / natural.width, targetHeight / natural.height),
-                        ),
-                    );
-                    const evaluation = evaluateScale(geometricScale);
-                    const relaxedScore =
-                        Math.min(1.08, evaluation.fillWidth) * 1.2 +
-                        Math.min(1.08, evaluation.fillHeight) * 0.8;
-
-                    if (relaxedScore > relaxedBestScore) {
-                        relaxedBestScore = relaxedScore;
-                        relaxedBestLayout = { ...candidateLayout };
-                        relaxedBestEvaluation = evaluation;
-                    }
+                this.applyFitLayoutVariables(rootElement, emergencyLayout);
+                finalEvaluation = enforceOverflowSafeScale(solveBestScaleForCurrentLayout(), 8);
+                bestLayout = { ...emergencyLayout };
+                bestScore = 0;
+                this.traceReaderFit('fit-solve-emergency-layout', {
+                    normalizedPageNumber,
+                    finalScale: finalEvaluation.scale,
+                    fillWidth: finalEvaluation.fillWidth,
+                    fillHeight: finalEvaluation.fillHeight,
+                    fits: finalEvaluation.fits,
                 });
-
-                bestLayout = relaxedBestLayout;
-                finalEvaluation = relaxedBestEvaluation;
             }
+
+            const preOverflowSafeEvaluation = finalEvaluation;
+            finalEvaluation = enforceOverflowSafeScale(finalEvaluation);
+
+            if (
+                Math.abs(finalEvaluation.scale - preOverflowSafeEvaluation.scale) > 0.0004 ||
+                finalEvaluation.fits !== preOverflowSafeEvaluation.fits
+            ) {
+                this.traceReaderFit('fit-solve-overflow-safe-adjusted', {
+                    normalizedPageNumber,
+                    previousScale: preOverflowSafeEvaluation.scale,
+                    previousFillWidth: preOverflowSafeEvaluation.fillWidth,
+                    previousFillHeight: preOverflowSafeEvaluation.fillHeight,
+                    nextScale: finalEvaluation.scale,
+                    nextFillWidth: finalEvaluation.fillWidth,
+                    nextFillHeight: finalEvaluation.fillHeight,
+                    fits: finalEvaluation.fits,
+                });
+            }
+            this.traceReaderFit('fit-solve-selected', {
+                normalizedPageNumber,
+                bestScore,
+                finalScale: finalEvaluation.scale,
+                fillWidth: finalEvaluation.fillWidth,
+                fillHeight: finalEvaluation.fillHeight,
+                fits: finalEvaluation.fits,
+                candidateCount: fitLayoutCandidates.length,
+                bestLayout,
+            });
+
+            const guaranteedFitResult = enforceGuaranteedFit(finalEvaluation, bestLayout, {
+                maxAttempts: 7,
+            });
+            finalEvaluation = guaranteedFitResult.evaluation;
+            bestLayout = guaranteedFitResult.layout;
 
             this.applyFitLayoutVariables(rootElement, bestLayout);
             rootElement.style.setProperty('--quran-page-scale', String(finalEvaluation.scale));
             this.pageScale = finalEvaluation.scale;
-            this.rememberFitResult(
-                fitCacheKey,
-                {
-                    layout: { ...bestLayout },
-                    scale: finalEvaluation.scale,
-                },
-                {
+            const strictFinalHealth = guaranteedFitResult.strictHealth;
+            const hasHealthyFill =
+                strictFinalHealth.fillWidth >= minimumHealthyFillWidth &&
+                strictFinalHealth.fillHeight >= minimumHealthyFillHeight &&
+                strictFinalHealth.fillWidth <= maximumHealthyOverflowRatio &&
+                strictFinalHealth.fillHeight <= maximumHealthyOverflowRatio;
+
+            if (!hasHealthyFill) {
+                this.traceReaderFit('fit-solve-unsatisfied', {
+                    normalizedPageNumber,
+                    finalScale: finalEvaluation.scale,
+                    fillWidth: strictFinalHealth.fillWidth,
+                    fillHeight: strictFinalHealth.fillHeight,
+                });
+                this.forgetFitResult(fitCacheKey, {
                     persist: !shouldSuppressPersistedCacheWrite,
-                },
-            );
-            this.scheduleFitSanityCheck({
-                cacheKey: fitCacheKey,
-                pageNumber: normalizedPageNumber,
-                availableWidth: targetWidth,
-                availableHeight: targetHeight,
-                strictWidthOverflowTolerance,
-                strictHeightOverflowTolerance,
-                minimumFillWidth: minimumHealthyFillWidth,
-                minimumFillHeight: minimumHealthyFillHeight,
-            });
+                });
+                this._bypassNextFitCache = true;
+
+                if (this.hasRenderablePage()) {
+                    this.forceRevealCurrentPage('fit-unsatisfied-fail-open');
+                }
+
+                this.clearLayoutTimers();
+                this.syncPageInputToCurrentPage();
+                this.isFittingPage = false;
+                this.clearFittingFailSafe();
+            } else if (enablePageSpecificFitCache) {
+                this.rememberFitResult(
+                    fitCacheKey,
+                    {
+                        layout: { ...bestLayout },
+                        scale: finalEvaluation.scale,
+                        sourcePageNumber: normalizedPageNumber,
+                    },
+                    {
+                        persist: !shouldSuppressPersistedCacheWrite,
+                    },
+                );
+            }
+            if (
+                enableSharedFitSeed &&
+                normalizedPageNumber === sharedFitSeedReferencePageNumber &&
+                !isModalLayoutContext &&
+                hasHealthyFill
+            ) {
+                this.rememberFitResult(
+                    sharedFitSeedCacheKey,
+                    {
+                        layout: { ...bestLayout },
+                        scale: finalEvaluation.scale,
+                        sourcePageNumber: normalizedPageNumber,
+                    },
+                    {
+                        persist: !shouldSuppressPersistedCacheWrite,
+                    },
+                );
+            }
+
+            if (hasHealthyFill) {
+                this.scheduleFitSanityCheck({
+                    cacheKey: fitCacheKey,
+                    pageNumber: normalizedPageNumber,
+                    availableWidth: targetWidth,
+                    availableHeight: targetHeight,
+                    strictWidthOverflowTolerance,
+                    strictHeightOverflowTolerance,
+                    minimumFillWidth: minimumHealthyFillWidth,
+                    minimumFillHeight: minimumHealthyFillHeight,
+                });
+            } else {
+                this.traceReaderFit('fit-sanity-check-skipped-unsatisfied', {
+                    normalizedPageNumber,
+                    fillWidth: strictFinalHealth.fillWidth,
+                    fillHeight: strictFinalHealth.fillHeight,
+                });
+            }
 
             if (isFontLayoutPending) {
                 this.scheduleFontReadyRecoveryRefit(normalizedPageNumber, {
                     delayMs: 110,
+                });
+                this.traceReaderFit('fit-schedule-font-recovery-refit', {
+                    normalizedPageNumber,
                 });
             }
 
             this._bypassNextFitCache = false;
             this._fitRunCounter += 1;
             this._lastFittedPageNumber = this.pageNumber;
+            this.traceReaderFit('fit-complete', {
+                normalizedPageNumber,
+                finalScale: finalEvaluation.scale,
+                persisted: hasHealthyFill && !shouldSuppressPersistedCacheWrite,
+                fitCacheKey,
+            });
+
+            if (
+                this.hasRenderablePage() &&
+                this._pendingNavigationRequest === null &&
+                !this._navigationRevealLocked
+            ) {
+                this.isFittingPage = false;
+                this.clearFittingFailSafe();
+            }
         },
 
         async prefetchFontAsset(payload) {
@@ -10063,8 +11230,12 @@ document.addEventListener('alpine:init', () => {
         },
 
         pageFitState() {
-            if (this.isTransitioningOutPage) {
+            if (enableFadeOutPageFitState && this.isTransitioningOutPage && this.isLoadingPage) {
                 return 'fading-out';
+            }
+
+            if (this.isTransitioningOutPage && !this.isLoadingPage) {
+                this.isTransitioningOutPage = false;
             }
 
             if (this.isFittingPage) {
@@ -12011,11 +13182,11 @@ document.addEventListener('alpine:init', () => {
 
         lineMarginBlockStart(line) {
             if (this.isSurahHeaderLine(line)) {
-                return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * 0.28)';
+                return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * var(--quran-page-scale, 1) * 0.28)';
             }
 
             if (this.isBasmallahLine(line)) {
-                return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * 0.12)';
+                return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * var(--quran-page-scale, 1) * 0.12)';
             }
 
             return '0px';
@@ -12024,14 +13195,14 @@ document.addEventListener('alpine:init', () => {
         lineMarginBlockEnd(line) {
             if (this.isSurahHeaderLine(line)) {
                 if (this.nextLineType(line) === 'basmallah') {
-                    return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * -0.44)';
+                    return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * var(--quran-page-scale, 1) * -0.44)';
                 }
 
-                return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * -0.1)';
+                return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * var(--quran-page-scale, 1) * -0.1)';
             }
 
             if (this.isBasmallahLine(line)) {
-                return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * var(--quran-basmallah-bottom-gap-scale, 0.04))';
+                return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * var(--quran-page-scale, 1) * var(--quran-basmallah-bottom-gap-scale, 0.04))';
             }
 
             return '0px';
