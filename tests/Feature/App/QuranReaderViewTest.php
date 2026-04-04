@@ -314,10 +314,10 @@ it('wires quran reader entry points from main menu to hash navigation and view m
             'const shouldSuppressPersistedCacheWrite =',
         )
         ->and($quranReaderScriptSource)->toContain(
-            'const fitCacheStorageVersion = 14;',
+            'const fitCacheStorageVersion = 17;',
         )
         ->and($quranReaderScriptSource)->toContain(
-            "const fitCacheStorageKey = 'quran-reader-fit-cache-v14';",
+            "const fitCacheStorageKey = 'quran-reader-fit-cache-v17';",
         )
         ->and($quranReaderScriptSource)->toContain(
             'const sharedFitSeedReferencePageNumber = 3;',

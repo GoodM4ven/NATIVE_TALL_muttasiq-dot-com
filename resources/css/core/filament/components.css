@@ -45,7 +45,7 @@
 
     #support-unlock-modal > .fi-modal-header {
         border-bottom: 1px solid color-mix(in srgb, var(--warning-500) 20%, transparent);
-        background: transparent;
+        /* background: transparent; */
         padding-bottom: 1rem;
     }
 
@@ -74,12 +74,12 @@
 
     #quran-reader-search-modal > .fi-modal-header {
         border-bottom: 1px solid color-mix(in srgb, var(--quran-chip-border) 32%, transparent);
-        background: transparent;
+        /* background: transparent; */
     }
 
     #quran-reader-search-modal .fi-modal-content {
         padding: 1rem 1.2rem 1.25rem;
-        background: transparent;
+        /* background: transparent; */
         display: flex;
         flex-direction: column;
         gap: 0 !important;
@@ -90,7 +90,7 @@
     }
 
     #quran-reader-search-modal > .fi-modal-header {
-        background-color: transparent !important;
+        /* background-color: transparent !important; */
         padding-bottom: 1rem;
     }
 
@@ -441,7 +441,7 @@
 
     #quran-reader-jump-page-modal > .fi-modal-header {
         padding: 0.55rem 0.72rem 1rem;
-        background: transparent;
+        /* background: transparent; */
         border-bottom: 1px solid color-mix(in srgb, var(--quran-chip-border) 26%, transparent);
     }
 
@@ -526,7 +526,7 @@
     #quran-reader-page-counter-input {
         width: 4.5rem;
         border: 0;
-        background: transparent;
+        /* background: transparent; */
         text-align: center;
         font-family: 'IBM Plex Sans Arabic', 'Manrope', ui-sans-serif, system-ui, sans-serif;
         font-size: 0.9rem;
@@ -560,7 +560,7 @@
     }
 
     #quran-reader-history-modal .fi-modal-header {
-        background: transparent !important;
+        /* background: transparent !important; */
         padding-bottom: 1rem;
     }
 
@@ -583,7 +583,7 @@
     #quran-reader-history-modal .fi-modal-content,
     #quran-reader-bookmarks-modal .fi-modal-content {
         padding: 0.9rem 1rem 1rem;
-        background: transparent;
+        /* background: transparent; */
     }
 
     .quran-manager-shell {
@@ -634,7 +634,7 @@
         border-radius: 0.92rem;
         overflow: auto;
         max-height: min(68dvh, 46rem);
-        background: transparent;
+        /* background: transparent; */
     }
 
     .quran-manager-table {
@@ -786,7 +786,7 @@
         flex: 1 1 7rem;
         min-width: 6.5rem;
         border: 0;
-        background: transparent;
+        /* background: transparent; */
         appearance: none;
         color: color-mix(in srgb, var(--quran-panel-text) 95%, var(--primary-900));
         font-size: 0.74rem;

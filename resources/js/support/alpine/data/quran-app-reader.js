@@ -121,12 +121,13 @@ const openingSpreadFinalScaleMultiplier = 0.72;
 const fitRobustWidthQuantile = 0.88;
 const fitRobustWidthOutlierThreshold = 1.2;
 const fitResultCacheLimit = 180;
-const fitCacheStorageVersion = 14;
-const fitCacheStorageKey = 'quran-reader-fit-cache-v14';
+const fitCacheStorageVersion = 17;
+const fitCacheStorageKey = 'quran-reader-fit-cache-v17';
 const fitCacheViewportBucketSizePx = 24;
 const shouldPersistFitCacheAcrossReloads = true;
 const sharedFitSeedReferencePageNumber = 3;
 const sharedFitSeedCachePageToken = `seed-page-${sharedFitSeedReferencePageNumber}`;
+const enableSharedFitSeed = false;
 const idleWarmupPauseOnHighFrequencyNavigationMs = 520;
 const idleWarmupPauseOnStandardNavigationMs = 160;
 const idleWarmupResumeDelayMs = 220;
@@ -875,6 +876,7 @@ document.addEventListener('alpine:init', () => {
         _quranPreparationInFlight: null,
         _quranPreparationRequestPromise: null,
         _startupRestoreInFlight: null,
+        _isPrimingSharedFitSeed: false,
         _loadedPayloadPageNumber: 0,
         _surahDirectoryAutoFocusToken: 0,
         _surahDirectoryAutoFocusTimer: null,
@@ -2357,6 +2359,7 @@ document.addEventListener('alpine:init', () => {
             const currentPageInput = this.pageInput;
             const currentLastPageInputVisualValue = this._lastPageInputVisualValue;
             const currentLoadedPayloadPageNumber = this._loadedPayloadPageNumber;
+            this._isPrimingSharedFitSeed = true;
 
             try {
                 const referencePayload = await this.getPagePayloadByAbsolutePage(
@@ -2422,6 +2425,7 @@ document.addEventListener('alpine:init', () => {
                 this._lastFittedPageNumber = 0;
                 await this.nextTickAsync();
                 this.traceReaderFit('prime-shared-seed-restore');
+                this._isPrimingSharedFitSeed = false;
             }
 
             return didPrimeSeedSuccessfully;
@@ -2446,30 +2450,22 @@ document.addEventListener('alpine:init', () => {
             }
 
             await this.ensureCurrentPageLoaded(startupDestinationPage);
-            let didPrimeSharedSeed = await this.primeSharedFitSeedFromReferencePage();
-
-            if (!didPrimeSharedSeed) {
-                this.traceReaderFit('prime-shared-seed-retry', {
-                    startupDestinationPage,
-                });
-                await this.nextTickAsync();
-                await this.waitForPageFontReady();
-                await this.waitForStablePageFrame({
-                    maxFrames: 14,
-                    requiredStableFrames: 2,
-                    tolerancePx: 0.8,
-                });
-                didPrimeSharedSeed = await this.primeSharedFitSeedFromReferencePage();
+            if (enableSharedFitSeed) {
+                await this.primeSharedFitSeedFromReferencePage();
             }
-
-            this.traceReaderFit('prime-shared-seed-result', {
+            this.traceReaderFit('prime-shared-seed-disabled', {
                 startupDestinationPage,
-                didPrimeSharedSeed,
+                enabled: enableSharedFitSeed,
             });
             this.pageNumber = startupDestinationPage;
             this.pageInput = startupDestinationPage;
             this._lastPageInputVisualValue = startupDestinationPage;
             await this.ensureCurrentPageLoaded(startupDestinationPage);
+            this.clearPageFitEntries(startupDestinationPage);
+            this._bypassNextFitCache = true;
+            this.traceReaderFit('bootstrap-force-fresh-startup-fit', {
+                startupDestinationPage,
+            });
             this.refreshSurahTriggerCaption(false);
             this.syncSearchActiveSurahNumber();
             await this.runStartupFinalFitPass();
@@ -9296,6 +9292,30 @@ document.addEventListener('alpine:init', () => {
                 1,
                 Math.trunc(Number(pageNumberOverride ?? this.pageNumber ?? 1)),
             );
+            const normalizedLoadedPayloadPageNumber = Math.max(
+                0,
+                Math.trunc(Number(this._loadedPayloadPageNumber ?? 0)),
+            );
+            const expectedPayloadPageNumber = Math.max(
+                1,
+                Math.trunc(Number(pageNumberOverride ?? normalizedPageNumber)),
+            );
+
+            if (
+                normalizedLoadedPayloadPageNumber > 0 &&
+                normalizedLoadedPayloadPageNumber !== expectedPayloadPageNumber
+            ) {
+                this.traceReaderFit('fit-skip-payload-page-mismatch', {
+                    normalizedPageNumber,
+                    pageNumberOverride,
+                    normalizedLoadedPayloadPageNumber,
+                    expectedPayloadPageNumber,
+                    isPrimingSharedFitSeed: this._isPrimingSharedFitSeed,
+                });
+
+                return;
+            }
+
             const breakpointName = this.resolveCurrentBreakpointName();
             const hasForcedFitCacheBypass = this._bypassNextFitCache;
             const isModalLayoutContext =
@@ -9305,7 +9325,7 @@ document.addEventListener('alpine:init', () => {
             const isFontLayoutPending = !this.areTrackedPageFontsLoaded();
             const shouldBypassPageSpecificFitCache =
                 hasForcedFitCacheBypass || isModalLayoutContext || isFontLayoutPending;
-            const shouldBypassSharedFitSeed = isModalLayoutContext;
+            const shouldBypassSharedFitSeed = !enableSharedFitSeed || isModalLayoutContext;
             const shouldSuppressPersistedCacheWrite = shouldBypassPageSpecificFitCache;
             const ayahLineCount = Array.isArray(this.mushafLines)
                 ? this.mushafLines.filter((line) => String(line?.line_type ?? '') === 'ayah').length
@@ -9748,6 +9768,7 @@ document.addEventListener('alpine:init', () => {
                 },
             );
             if (
+                enableSharedFitSeed &&
                 normalizedPageNumber === sharedFitSeedReferencePageNumber &&
                 !isModalLayoutContext
             ) {
