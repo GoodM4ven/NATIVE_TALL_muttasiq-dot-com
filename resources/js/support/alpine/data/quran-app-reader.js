@@ -800,6 +800,7 @@ document.addEventListener('alpine:init', () => {
         _viewportChangeDebounceTimer: null,
         _onWindowViewportChange: null,
         _onVisualViewportChange: null,
+        _onWindowScroll: null,
         _onSwitchView: null,
         _lastQuranReaderView: 'quran-app-tilawa',
         _onWindowKeydown: null,
@@ -872,15 +873,16 @@ document.addEventListener('alpine:init', () => {
         _bookmarksRowsAutoAnimateStop: null,
         _searchModalCloseDebounceTimer: null,
         _searchModalOpenInFlight: null,
+        _stopIsCalibratingWatcher: null,
         _quranPreparationInFlight: null,
         _quranPreparationRequestPromise: null,
         _startupRestoreInFlight: null,
         _startupCalibrationPending: true,
         _startupTargetPageNumber: 1,
         _bootstrapDeferred: false,
+        calibrationHudTop: 0,
+        calibrationHudLeft: 0,
         isCalibrating: false,
-        _calibrationSpinnerElement: null,
-        _calibrationSpinnerAnimation: null,
         _globalFitCalibrationLayout: null,
         _globalFitCalibrationScale: 0,
         _globalFitCalibrationPageNumber: 0,
@@ -1015,6 +1017,15 @@ document.addEventListener('alpine:init', () => {
                 });
             }
 
+            this._onWindowScroll = () => {
+                if (!this.isCalibrating) {
+                    return;
+                }
+
+                this.syncCalibrationHudPosition();
+            };
+            window.addEventListener('scroll', this._onWindowScroll, { passive: true });
+
             this._onSwitchView = (event) => {
                 const to = String(event?.detail?.to ?? '');
 
@@ -1060,7 +1071,6 @@ document.addEventListener('alpine:init', () => {
                         this.registerNativeInputListeners();
                         this.initializeLayoutObservers();
                         this.queueSupportLockTargetsUiSync();
-                        this.ensureCalibrationSpinnerAnimation();
                     });
                     this.scheduleLayout({ revealDelayMs: 170 });
                 });
@@ -1070,7 +1080,14 @@ document.addEventListener('alpine:init', () => {
                 this.registerNativeInputListeners();
                 this.initializeLayoutObservers();
                 this.queueSupportLockTargetsUiSync();
-                this.ensureCalibrationSpinnerAnimation();
+                this.syncCalibrationHudPosition();
+            });
+            this._stopIsCalibratingWatcher = this.$watch('isCalibrating', (isCalibrating) => {
+                if (isCalibrating) {
+                    this.$nextTick(() => {
+                        this.syncCalibrationHudPosition();
+                    });
+                }
             });
             this.$nextTick(() => {
                 if (this.isReaderElementVisible()) {
@@ -1081,74 +1098,33 @@ document.addEventListener('alpine:init', () => {
             });
         },
 
-        ensureCalibrationSpinnerAnimation({ retries = 8 } = {}) {
-            const spinnerElement = this.$refs.calibrationSpinner;
+        syncCalibrationHudPosition() {
+            const readerPanelElement = this.$refs.readerPanel;
 
-            if (!(spinnerElement instanceof HTMLElement)) {
+            if (!(readerPanelElement instanceof HTMLElement)) {
                 return;
             }
 
-            if (this._calibrationSpinnerElement !== spinnerElement) {
-                this.stopCalibrationSpinnerAnimation();
-                this._calibrationSpinnerElement = spinnerElement;
-            }
-
-            const shadowRoot = spinnerElement.shadowRoot;
-
-            if (!(shadowRoot instanceof ShadowRoot)) {
-                if (retries > 0) {
-                    window.setTimeout(() => {
-                        this.ensureCalibrationSpinnerAnimation({ retries: retries - 1 });
-                    }, 16);
-                }
-
-                return;
-            }
-
-            if (!shadowRoot.querySelector('[data-quran-calibration-spinner-patch="true"]')) {
-                const patchStyle = document.createElement('style');
-                patchStyle.setAttribute('data-quran-calibration-spinner-patch', 'true');
-                patchStyle.textContent =
-                    '.car{animation:none !important;stroke-dashoffset:0 !important;}';
-                shadowRoot.appendChild(patchStyle);
-            }
-
-            if (this._calibrationSpinnerAnimation !== null) {
-                return;
-            }
-
-            if (typeof spinnerElement.animate === 'function') {
-                this._calibrationSpinnerAnimation = spinnerElement.animate(
-                    [
-                        { transform: 'translate3d(0, 0, 0) rotate(0deg)' },
-                        { transform: 'translate3d(0, 0, 0) rotate(-360deg)' },
-                    ],
-                    {
-                        duration: 900,
-                        easing: 'linear',
-                        iterations: Number.POSITIVE_INFINITY,
-                    },
-                );
-
-                return;
-            }
-
-            spinnerElement.classList.add('quran-calibration-squircle-fallback-spin');
+            const panelRect = readerPanelElement.getBoundingClientRect();
+            this.calibrationHudLeft = Math.round(panelRect.left + panelRect.width * 0.5);
+            this.calibrationHudTop = Math.round(panelRect.top + panelRect.height * 0.5);
         },
 
-        stopCalibrationSpinnerAnimation() {
-            if (this._calibrationSpinnerAnimation !== null) {
-                this._calibrationSpinnerAnimation.cancel();
-                this._calibrationSpinnerAnimation = null;
-            }
+        calibrationHudStyle() {
+            const fallbackLeft =
+                typeof window !== 'undefined' ? Math.round(window.innerWidth * 0.5) : 0;
+            const fallbackTop =
+                typeof window !== 'undefined' ? Math.round(window.innerHeight * 0.5) : 0;
+            const left = Math.max(
+                0,
+                Number.isFinite(this.calibrationHudLeft) ? this.calibrationHudLeft : fallbackLeft,
+            );
+            const top = Math.max(
+                0,
+                Number.isFinite(this.calibrationHudTop) ? this.calibrationHudTop : fallbackTop,
+            );
 
-            if (this._calibrationSpinnerElement instanceof HTMLElement) {
-                this._calibrationSpinnerElement.classList.remove(
-                    'quran-calibration-squircle-fallback-spin',
-                );
-            }
-
-            this._calibrationSpinnerElement = null;
+            return `left:${left}px;top:${top}px;`;
         },
 
         isReaderElementVisible() {
@@ -1648,7 +1624,6 @@ document.addEventListener('alpine:init', () => {
 
         destroy() {
             this.unregisterNativeInputListeners();
-            this.stopCalibrationSpinnerAnimation();
 
             if (this._onWindowViewportChange) {
                 window.removeEventListener('resize', this._onWindowViewportChange);
@@ -1659,8 +1634,17 @@ document.addEventListener('alpine:init', () => {
                 window.visualViewport.removeEventListener('resize', this._onVisualViewportChange);
             }
 
+            if (this._onWindowScroll) {
+                window.removeEventListener('scroll', this._onWindowScroll);
+            }
+
             if (this._onSwitchView) {
                 window.removeEventListener('switch-view', this._onSwitchView);
+            }
+
+            if (typeof this._stopIsCalibratingWatcher === 'function') {
+                this._stopIsCalibratingWatcher();
+                this._stopIsCalibratingWatcher = null;
             }
 
             if (this._onSupportLockLivewireMorphed) {
@@ -8128,6 +8112,7 @@ document.addEventListener('alpine:init', () => {
 
         handleViewportChange() {
             this.syncFitCacheBreakpoint();
+            this.syncCalibrationHudPosition();
 
             if (this._viewportChangeDebounceTimer !== null) {
                 clearTimeout(this._viewportChangeDebounceTimer);

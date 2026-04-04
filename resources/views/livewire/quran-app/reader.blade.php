@@ -328,6 +328,18 @@
 
         .quran-calibration-overlay {
             color: color-mix(in srgb, var(--quran-panel-text) 88%, var(--gray-900));
+            contain: paint;
+            transform: translateZ(0);
+            will-change: opacity;
+            isolation: isolate;
+            overflow: hidden;
+        }
+
+        .quran-calibration-overlay::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
             background:
                 linear-gradient(145deg,
                     color-mix(in srgb, var(--background) 30%, transparent) 0%,
@@ -338,9 +350,8 @@
                 0 12px 28px color-mix(in srgb, var(--gray-900) 18%, transparent);
             backdrop-filter: blur(11px) saturate(1.12);
             -webkit-backdrop-filter: blur(11px) saturate(1.12);
-            contain: paint;
-            transform: translateZ(0);
-            will-change: opacity;
+            z-index: 0;
+            pointer-events: none;
         }
 
         .quran-calibration-overlay.quran-calibration-overlay--visible {
@@ -368,29 +379,69 @@
             pointer-events: none;
         }
 
-        .quran-calibration-loader l-squircle {
-            display: block;
-            inline-size: 37px;
-            block-size: 37px;
+        .quran-calibration-hud {
+            position: fixed;
+            inset-inline-start: 0;
+            inset-block-start: 0;
+            transform: translate3d(-50%, -50%, 0);
+            z-index: 120;
+            pointer-events: none;
+            will-change: transform;
+            contain: layout style paint;
+            isolation: isolate;
+            backface-visibility: hidden;
+        }
+
+        .quran-calibration-spinner {
+            --uib-size: 43px;
+            --uib-stroke: 5px;
+            --uib-arc: 54deg;
+            --uib-car-color: var(--primary-400);
+            --uib-track-color: color-mix(in srgb, #0a6571 35%, transparent);
+            --uib-speed: 0.9s;
+            position: relative;
+            inline-size: var(--uib-size);
+            block-size: var(--uib-size);
             transform: translate3d(0, 0, 0);
-            transform-origin: center;
             backface-visibility: hidden;
             contain: strict;
             pointer-events: none;
+            filter: drop-shadow(0 0 0.35rem color-mix(in srgb, var(--primary-400) 34%, transparent));
         }
 
-        .quran-calibration-loader l-squircle.quran-calibration-squircle-fallback-spin {
-            animation: quran-calibration-squircle-spin 900ms linear infinite;
+        .quran-calibration-spinner-track,
+        .quran-calibration-spinner-car {
+            position: absolute;
+            inset: 0;
+            border-radius: 38%;
+            -webkit-mask: radial-gradient(farthest-side,
+                    transparent calc(100% - var(--uib-stroke) - 0.2px),
+                    #000 calc(100% - var(--uib-stroke)));
+            mask: radial-gradient(farthest-side,
+                    transparent calc(100% - var(--uib-stroke) - 0.2px),
+                    #000 calc(100% - var(--uib-stroke)));
+        }
+
+        .quran-calibration-spinner-track {
+            background: var(--uib-track-color);
+            opacity: 0.38;
+        }
+
+        .quran-calibration-spinner-car {
+            background: conic-gradient(from 0deg,
+                    var(--uib-car-color) 0deg var(--uib-arc),
+                    transparent var(--uib-arc) 360deg);
+            animation: quran-calibration-car-orbit var(--uib-speed) linear infinite;
             will-change: transform;
         }
 
-        @keyframes quran-calibration-squircle-spin {
+        @keyframes quran-calibration-car-orbit {
             0% {
-                transform: translate3d(0, 0, 0) rotate(0deg);
+                transform: rotate(0deg);
             }
 
             100% {
-                transform: translate3d(0, 0, 0) rotate(-360deg);
+                transform: rotate(360deg);
             }
         }
 
@@ -1796,22 +1847,28 @@
                     }"
                     x-bind:aria-hidden="isCalibrating ? 'false' : 'true'"
                 >
-                    <div class="quran-calibration-loader flex flex-col items-center gap-3">
-                        <l-squircle
-                            x-ref="calibrationSpinner"
-                            size="37"
-                            stroke="5"
-                            stroke-length="0.15"
-                            bg-opacity="0.1"
-                            speed="0.9"
-                            color="black"
-                        ></l-squircle>
-                        <span
-                            class="font-arabic-sans text-sm tracking-wide opacity-60"
-                            dir="rtl"
-                        >{{ arabic_text('جارٍ تجهيز العرض...') }}</span>
-                    </div>
                 </div>
+                <template x-teleport="body">
+                    <div
+                        class="quran-calibration-hud"
+                        wire:ignore
+                        x-cloak
+                        x-show="isCalibrating"
+                        x-bind:style="calibrationHudStyle()"
+                        x-bind:aria-hidden="isCalibrating ? 'false' : 'true'"
+                    >
+                        <div class="quran-calibration-loader flex flex-col items-center gap-3">
+                            <div class="quran-calibration-spinner">
+                                <span class="quran-calibration-spinner-track"></span>
+                                <span class="quran-calibration-spinner-car"></span>
+                            </div>
+                            <span
+                                class="font-arabic-sans text-sm tracking-wide opacity-60"
+                                dir="rtl"
+                            >{{ arabic_text('تجهيز المصحف...') }}</span>
+                        </div>
+                    </div>
+                </template>
                 <header
                     class="quran-top-strip"
                     data-no-swipe
