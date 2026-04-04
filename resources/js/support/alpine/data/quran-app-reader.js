@@ -1924,13 +1924,23 @@ document.addEventListener('alpine:init', () => {
             minScale = 0.1,
             maxScale = 1,
             includeFontFamilies = true,
+            includeModalState = true,
+            includeFontLoadState = true,
         } = {}) {
             const signatureParts = [
                 String(breakpointName ?? '').trim() || 'bp-unknown',
                 this.viewportBucketValue(availableWidth),
                 this.viewportBucketValue(availableHeight),
-                isModalLayoutContext ? 'modal-open' : 'modal-closed',
-                isFontLayoutPending ? 'fonts-pending' : 'fonts-loaded',
+                includeModalState
+                    ? isModalLayoutContext
+                        ? 'modal-open'
+                        : 'modal-closed'
+                    : 'modal-shared',
+                includeFontLoadState
+                    ? isFontLayoutPending
+                        ? 'fonts-pending'
+                        : 'fonts-loaded'
+                    : 'fonts-shared',
                 this.useCenteredAyahLayout ? 'centered' : 'rect',
                 'scale-only-v1',
                 Number(fitTargetWidthRatio).toFixed(3),
@@ -9295,7 +9305,7 @@ document.addEventListener('alpine:init', () => {
             const isFontLayoutPending = !this.areTrackedPageFontsLoaded();
             const shouldBypassPageSpecificFitCache =
                 hasForcedFitCacheBypass || isModalLayoutContext || isFontLayoutPending;
-            const shouldBypassSharedFitSeed = isModalLayoutContext || isFontLayoutPending;
+            const shouldBypassSharedFitSeed = isModalLayoutContext;
             const shouldSuppressPersistedCacheWrite = shouldBypassPageSpecificFitCache;
             const ayahLineCount = Array.isArray(this.mushafLines)
                 ? this.mushafLines.filter((line) => String(line?.line_type ?? '') === 'ayah').length
@@ -9334,6 +9344,8 @@ document.addEventListener('alpine:init', () => {
                 minScale,
                 maxScale,
                 includeFontFamilies: false,
+                includeModalState: false,
+                includeFontLoadState: false,
             });
             const fitCacheKey = this.fitCacheKeyForPage(
                 normalizedPageNumber,
@@ -9735,7 +9747,10 @@ document.addEventListener('alpine:init', () => {
                     persist: !shouldSuppressPersistedCacheWrite,
                 },
             );
-            if (normalizedPageNumber === sharedFitSeedReferencePageNumber) {
+            if (
+                normalizedPageNumber === sharedFitSeedReferencePageNumber &&
+                !isModalLayoutContext
+            ) {
                 this.rememberFitResult(
                     sharedFitSeedCacheKey,
                     {
