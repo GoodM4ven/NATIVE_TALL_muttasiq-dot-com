@@ -314,10 +314,10 @@ it('wires quran reader entry points from main menu to hash navigation and view m
             'const shouldSuppressPersistedCacheWrite =',
         )
         ->and($quranReaderScriptSource)->toContain(
-            'const fitCacheStorageVersion = 13;',
+            'const fitCacheStorageVersion = 14;',
         )
         ->and($quranReaderScriptSource)->toContain(
-            "const fitCacheStorageKey = 'quran-reader-fit-cache-v13';",
+            "const fitCacheStorageKey = 'quran-reader-fit-cache-v14';",
         )
         ->and($quranReaderScriptSource)->toContain(
             'const sharedFitSeedReferencePageNumber = 3;',
@@ -327,6 +327,9 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         )
         ->and($quranReaderScriptSource)->toContain(
             'sharedFitSeedCacheKey(signatureParts = [])',
+        )
+        ->and($quranReaderScriptSource)->toContain(
+            'async getPagePayloadByAbsolutePage(',
         )
         ->and($quranReaderScriptSource)->toContain(
             'clearPageFitEntries(pageNumber = this.pageNumber)',

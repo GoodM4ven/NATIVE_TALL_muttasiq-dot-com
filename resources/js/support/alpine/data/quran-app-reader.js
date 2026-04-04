@@ -115,13 +115,14 @@ const pageFontLoadTimeoutMs = 960;
 const pageFontReadyTimeoutMs = 1400;
 const pageFontReadyRecoveryDelayMs = 200;
 const readerRevealDebugStorageKey = 'quran-reader-debug-reveal';
+const readerFitDebugStorageKey = 'quran-reader-debug-fit';
 const defaultBasmallahBottomGapScale = -0.18;
 const openingSpreadFinalScaleMultiplier = 0.72;
 const fitRobustWidthQuantile = 0.88;
 const fitRobustWidthOutlierThreshold = 1.2;
 const fitResultCacheLimit = 180;
-const fitCacheStorageVersion = 13;
-const fitCacheStorageKey = 'quran-reader-fit-cache-v13';
+const fitCacheStorageVersion = 14;
+const fitCacheStorageKey = 'quran-reader-fit-cache-v14';
 const fitCacheViewportBucketSizePx = 24;
 const shouldPersistFitCacheAcrossReloads = true;
 const sharedFitSeedReferencePageNumber = 3;
@@ -1922,8 +1923,9 @@ document.addEventListener('alpine:init', () => {
             minimumBasmallahBottomGapScale = defaultBasmallahBottomGapScale,
             minScale = 0.1,
             maxScale = 1,
+            includeFontFamilies = true,
         } = {}) {
-            return [
+            const signatureParts = [
                 String(breakpointName ?? '').trim() || 'bp-unknown',
                 this.viewportBucketValue(availableWidth),
                 this.viewportBucketValue(availableHeight),
@@ -1938,12 +1940,19 @@ document.addEventListener('alpine:init', () => {
                 Number(minimumGapMultiplier).toFixed(3),
                 Number(minimumSurahHeaderScale).toFixed(3),
                 Number(minimumBasmallahBottomGapScale).toFixed(3),
-                String(this.qpcPageFontFamily ?? ''),
-                String(this.basmallahFontFamily ?? ''),
-                String(this.surahHeaderFontFamily ?? ''),
                 Number(minScale).toFixed(3),
                 Number(maxScale).toFixed(3),
             ];
+
+            if (includeFontFamilies) {
+                signatureParts.push(String(this.qpcPageFontFamily ?? ''));
+                signatureParts.push(String(this.basmallahFontFamily ?? ''));
+                signatureParts.push(String(this.surahHeaderFontFamily ?? ''));
+            } else {
+                signatureParts.push('font-family:shared-seed');
+            }
+
+            return signatureParts;
         },
 
         fitCacheKeyForPage(pageIdentifier, signatureParts = []) {
@@ -1957,21 +1966,39 @@ document.addEventListener('alpine:init', () => {
         },
 
         clearSharedFitSeedEntries() {
+            let removedCount = 0;
+
             for (const cacheKey of this._fitResultByContext.keys()) {
                 if (String(cacheKey ?? '').startsWith(`${sharedFitSeedCachePageToken}|`)) {
                     this._fitResultByContext.delete(cacheKey);
+                    removedCount += 1;
                 }
+            }
+
+            if (removedCount > 0) {
+                this.traceReaderFit('cache-clear-shared-seed', {
+                    removedCount,
+                });
             }
         },
 
         clearPageFitEntries(pageNumber = this.pageNumber) {
             const normalizedPageNumber = Math.max(1, Math.trunc(Number(pageNumber ?? 1)));
             const pageCachePrefix = `${normalizedPageNumber}|`;
+            let removedCount = 0;
 
             for (const cacheKey of this._fitResultByContext.keys()) {
                 if (String(cacheKey ?? '').startsWith(pageCachePrefix)) {
                     this._fitResultByContext.delete(cacheKey);
+                    removedCount += 1;
                 }
+            }
+
+            if (removedCount > 0) {
+                this.traceReaderFit('cache-clear-page', {
+                    targetPageNumber: normalizedPageNumber,
+                    removedCount,
+                });
             }
         },
 
@@ -1991,12 +2018,23 @@ document.addEventListener('alpine:init', () => {
                     return;
                 }
 
-                this.rememberFitResult(`${sharedFitSeedCachePageToken}|${signature}`, entry, {
-                    persist: false,
-                });
+                this.rememberFitResult(
+                    `${sharedFitSeedCachePageToken}|${signature}`,
+                    {
+                        ...entry,
+                        sourcePageNumber: normalizedPageNumber,
+                    },
+                    {
+                        persist: false,
+                    },
+                );
             });
 
             this.queuePersistedFitCacheWrite();
+            this.traceReaderFit('cache-sync-shared-seed-from-page', {
+                sourcePageNumber: normalizedPageNumber,
+                copiedEntryCount: matchingPageEntries.length,
+            });
         },
 
         normalizeFitCacheEntry(entry) {
@@ -2014,9 +2052,15 @@ document.addEventListener('alpine:init', () => {
                 return null;
             }
 
+            const sourcePageNumber = Math.max(
+                0,
+                Math.trunc(Number(entry.sourcePageNumber ?? entry.pageNumber ?? 0)),
+            );
+
             return {
                 layout: { ...entry.layout },
                 scale: Number(scale.toFixed(4)),
+                sourcePageNumber,
             };
         },
 
@@ -2045,6 +2089,12 @@ document.addEventListener('alpine:init', () => {
 
             this._fitResultByContext.set(cacheKey, normalizedEntry);
             this.trimFitResultCache();
+            this.traceReaderFit('cache-remember-fit-result', {
+                cacheKey,
+                persist,
+                sourcePageNumber: normalizedEntry.sourcePageNumber,
+                scale: normalizedEntry.scale,
+            });
 
             if (persist) {
                 this.queuePersistedFitCacheWrite();
@@ -2056,7 +2106,12 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            this._fitResultByContext.delete(cacheKey);
+            const didDelete = this._fitResultByContext.delete(cacheKey);
+            this.traceReaderFit('cache-forget-fit-result', {
+                cacheKey,
+                persist,
+                deleted: didDelete,
+            });
 
             if (persist) {
                 this.queuePersistedFitCacheWrite();
@@ -2069,6 +2124,9 @@ document.addEventListener('alpine:init', () => {
             if (this._fitCacheBreakpoint === '') {
                 this._fitCacheBreakpoint = currentBreakpoint;
                 this.storage.fitCacheBreakpoint = currentBreakpoint;
+                this.traceReaderFit('cache-sync-breakpoint-init', {
+                    breakpoint: currentBreakpoint,
+                });
 
                 return;
             }
@@ -2080,6 +2138,9 @@ document.addEventListener('alpine:init', () => {
             this._fitCacheBreakpoint = currentBreakpoint;
             this.storage.fitCacheBreakpoint = currentBreakpoint;
             this.clearFitResultCache({ persist: false });
+            this.traceReaderFit('cache-sync-breakpoint-changed', {
+                breakpoint: currentBreakpoint,
+            });
 
             if (persist && shouldPersistFitCacheAcrossReloads) {
                 writeLocalStorage(fitCacheStorageKey, {
@@ -2097,6 +2158,7 @@ document.addEventListener('alpine:init', () => {
                 this._fitResultByContext.clear();
                 this._fitCacheBreakpoint = this.resolveCurrentBreakpointName();
                 this.storage.fitCacheBreakpoint = this._fitCacheBreakpoint;
+                this.traceReaderFit('cache-hydrate-skip-persistence-disabled');
 
                 return;
             }
@@ -2104,12 +2166,17 @@ document.addEventListener('alpine:init', () => {
             const persistedCache = readLocalStorage(fitCacheStorageKey, null);
 
             if (!persistedCache || typeof persistedCache !== 'object') {
+                this.traceReaderFit('cache-hydrate-miss');
                 return;
             }
 
             const persistedVersion = Math.trunc(Number(persistedCache?.version ?? 0));
 
             if (persistedVersion !== fitCacheStorageVersion) {
+                this.traceReaderFit('cache-hydrate-version-mismatch', {
+                    persistedVersion,
+                    expectedVersion: fitCacheStorageVersion,
+                });
                 return;
             }
 
@@ -2127,6 +2194,10 @@ document.addEventListener('alpine:init', () => {
                     updated_at: Date.now(),
                     entries: {},
                     order: [],
+                });
+                this.traceReaderFit('cache-hydrate-breakpoint-mismatch-reset', {
+                    persistedBreakpoint,
+                    currentBreakpoint,
                 });
 
                 return;
@@ -2157,6 +2228,10 @@ document.addEventListener('alpine:init', () => {
             this.trimFitResultCache();
             this._fitCacheBreakpoint = currentBreakpoint;
             this.storage.fitCacheBreakpoint = currentBreakpoint;
+            this.traceReaderFit('cache-hydrate-success', {
+                loadedEntries: this._fitResultByContext.size,
+                breakpoint: currentBreakpoint,
+            });
         },
 
         queuePersistedFitCacheWrite(delayMs = 140) {
@@ -2165,6 +2240,9 @@ document.addEventListener('alpine:init', () => {
             }
 
             if (!shouldPersistFitCacheAcrossReloads) {
+                this.traceReaderFit('cache-persist-queue-skipped', {
+                    reason: 'persistence-disabled',
+                });
                 return;
             }
 
@@ -2180,6 +2258,9 @@ document.addEventListener('alpine:init', () => {
                 },
                 Math.max(24, Math.trunc(Number(delayMs) || 140)),
             );
+            this.traceReaderFit('cache-persist-queue', {
+                delayMs: Math.max(24, Math.trunc(Number(delayMs) || 140)),
+            });
         },
 
         flushPersistedFitCacheWrite() {
@@ -2212,6 +2293,10 @@ document.addEventListener('alpine:init', () => {
                 entries,
                 order,
             });
+            this.traceReaderFit('cache-persist-flush', {
+                breakpoint: currentBreakpoint,
+                entriesCount: order.length,
+            });
         },
 
         currentPayloadSnapshot() {
@@ -2240,14 +2325,22 @@ document.addEventListener('alpine:init', () => {
         async primeSharedFitSeedFromReferencePage(
             referencePage = sharedFitSeedReferencePageNumber,
         ) {
-            const normalizedReferencePage = clampPage(referencePage, this.maxPage);
+            const normalizedReferencePage = Math.max(
+                1,
+                Math.trunc(Number(referencePage ?? sharedFitSeedReferencePageNumber)),
+            );
+            this.traceReaderFit('prime-shared-seed-start', {
+                referencePage,
+                normalizedReferencePage,
+            });
+            let didPrimeSeedSuccessfully = false;
 
-            if (
-                !this.hasRenderablePage() ||
-                normalizedReferencePage <= 0 ||
-                this.maxPage < normalizedReferencePage
-            ) {
-                return;
+            if (!this.hasRenderablePage() || normalizedReferencePage <= 0) {
+                this.traceReaderFit('prime-shared-seed-skip', {
+                    reason: 'no-renderable-page',
+                    normalizedReferencePage,
+                });
+                return false;
             }
 
             const currentPayload = this.currentPayloadSnapshot();
@@ -2256,16 +2349,23 @@ document.addEventListener('alpine:init', () => {
             const currentLoadedPayloadPageNumber = this._loadedPayloadPageNumber;
 
             try {
-                const referencePayload = await this.getPagePayload(normalizedReferencePage, {
-                    preferCache: true,
-                });
+                const referencePayload = await this.getPagePayloadByAbsolutePage(
+                    normalizedReferencePage,
+                    {
+                        preferCache: true,
+                    },
+                );
 
                 if (
                     !referencePayload?.ready ||
                     !Array.isArray(referencePayload?.mushafLines) ||
                     referencePayload.mushafLines.length === 0
                 ) {
-                    return;
+                    this.traceReaderFit('prime-shared-seed-skip', {
+                        reason: 'reference-payload-not-ready',
+                        normalizedReferencePage,
+                    });
+                    return false;
                 }
 
                 this.applyPayload(referencePayload, {
@@ -2282,15 +2382,20 @@ document.addEventListener('alpine:init', () => {
                     requiredStableFrames: 2,
                     tolerancePx: 0.8,
                 });
-                this.clearSharedFitSeedEntries();
                 this.clearPageFitEntries(normalizedReferencePage);
                 this._bypassNextFitCache = true;
                 this.fitPageToViewport({
                     pageNumberOverride: normalizedReferencePage,
                 });
-                this.syncSharedFitSeedFromPageCache(normalizedReferencePage);
+                this.queuePersistedFitCacheWrite();
+                didPrimeSeedSuccessfully = true;
+                this.traceReaderFit('prime-shared-seed-success', {
+                    normalizedReferencePage,
+                });
             } catch (_) {
-                //
+                this.traceReaderFit('prime-shared-seed-error', {
+                    normalizedReferencePage,
+                });
             } finally {
                 this.applyPayload(currentPayload, {
                     setPageNumber: false,
@@ -2306,7 +2411,10 @@ document.addEventListener('alpine:init', () => {
                 this.resetCurrentPageFitStyles();
                 this._lastFittedPageNumber = 0;
                 await this.nextTickAsync();
+                this.traceReaderFit('prime-shared-seed-restore');
             }
+
+            return didPrimeSeedSuccessfully;
         },
 
         async bootstrap() {
@@ -2315,6 +2423,9 @@ document.addEventListener('alpine:init', () => {
             this.syncFitCacheBreakpoint({ persist: false });
             this.hydratePersistedFitCache();
             const startupDestinationPage = this.startupDestinationPage();
+            this.traceReaderFit('bootstrap-start', {
+                startupDestinationPage,
+            });
 
             if (this._startupRestoreInFlight instanceof Promise) {
                 try {
@@ -2325,7 +2436,26 @@ document.addEventListener('alpine:init', () => {
             }
 
             await this.ensureCurrentPageLoaded(startupDestinationPage);
-            await this.primeSharedFitSeedFromReferencePage();
+            let didPrimeSharedSeed = await this.primeSharedFitSeedFromReferencePage();
+
+            if (!didPrimeSharedSeed) {
+                this.traceReaderFit('prime-shared-seed-retry', {
+                    startupDestinationPage,
+                });
+                await this.nextTickAsync();
+                await this.waitForPageFontReady();
+                await this.waitForStablePageFrame({
+                    maxFrames: 14,
+                    requiredStableFrames: 2,
+                    tolerancePx: 0.8,
+                });
+                didPrimeSharedSeed = await this.primeSharedFitSeedFromReferencePage();
+            }
+
+            this.traceReaderFit('prime-shared-seed-result', {
+                startupDestinationPage,
+                didPrimeSharedSeed,
+            });
             this.pageNumber = startupDestinationPage;
             this.pageInput = startupDestinationPage;
             this._lastPageInputVisualValue = startupDestinationPage;
@@ -2336,6 +2466,9 @@ document.addEventListener('alpine:init', () => {
             this.queueStartupPreload();
             this.scheduleIdleWarmup();
             this.warmSearchIndex();
+            this.traceReaderFit('bootstrap-finished', {
+                startupDestinationPage,
+            });
         },
 
         async ensurePersistentStorage() {
@@ -5139,23 +5272,34 @@ document.addEventListener('alpine:init', () => {
             return this._activePageAbortController;
         },
 
-        async getPagePayload(
+        async getPagePayloadByAbsolutePage(
             pageNumber,
             { preferCache = true, forceNetwork = false, signal = null } = {},
         ) {
-            const normalizedPage = clampPage(pageNumber, this.maxPage);
+            const absolutePageNumber = Math.max(1, Math.trunc(Number(pageNumber ?? 1)));
 
-            if (this._pagePayloadByPage.has(normalizedPage) && !forceNetwork) {
-                return this._pagePayloadByPage.get(normalizedPage);
+            if (this._pagePayloadByPage.has(absolutePageNumber) && !forceNetwork) {
+                this.traceReaderFit('payload-hit-memory-cache', {
+                    absolutePageNumber,
+                });
+                return this._pagePayloadByPage.get(absolutePageNumber);
             }
 
-            const pendingLoad = this._pendingPageLoads.get(normalizedPage);
+            const pendingLoad = this._pendingPageLoads.get(absolutePageNumber);
 
             if (pendingLoad) {
+                this.traceReaderFit('payload-hit-pending-load', {
+                    absolutePageNumber,
+                });
                 return await pendingLoad;
             }
 
-            const url = this.pageDataUrl(normalizedPage);
+            const url = this.pageDataUrl(absolutePageNumber);
+            this.traceReaderFit('payload-fetch-start', {
+                absolutePageNumber,
+                preferCache,
+                forceNetwork,
+            });
             const loadPromise = (async () => {
                 try {
                     const payload = normalizePayload(
@@ -5168,26 +5312,53 @@ document.addEventListener('alpine:init', () => {
                         }),
                     );
 
-                    this._pagePayloadByPage.set(normalizedPage, payload);
+                    this._pagePayloadByPage.set(absolutePageNumber, payload);
                     await this.prefetchFontAsset(payload);
+                    this.traceReaderFit('payload-fetch-success', {
+                        absolutePageNumber,
+                        ready: payload.ready,
+                        lineCount: Array.isArray(payload.mushafLines)
+                            ? payload.mushafLines.length
+                            : 0,
+                    });
 
                     return payload;
                 } catch (error) {
                     if (error?.name === 'AbortError') {
+                        this.traceReaderFit('payload-fetch-aborted', {
+                            absolutePageNumber,
+                        });
                         return null;
                     }
 
+                    this.traceReaderFit('payload-fetch-error', {
+                        absolutePageNumber,
+                        message: String(error?.message ?? ''),
+                    });
                     throw error;
                 }
             })();
 
-            this._pendingPageLoads.set(normalizedPage, loadPromise);
+            this._pendingPageLoads.set(absolutePageNumber, loadPromise);
 
             try {
                 return await loadPromise;
             } finally {
-                this._pendingPageLoads.delete(normalizedPage);
+                this._pendingPageLoads.delete(absolutePageNumber);
             }
+        },
+
+        async getPagePayload(
+            pageNumber,
+            { preferCache = true, forceNetwork = false, signal = null } = {},
+        ) {
+            const normalizedPage = clampPage(pageNumber, this.maxPage);
+
+            return await this.getPagePayloadByAbsolutePage(normalizedPage, {
+                preferCache,
+                forceNetwork,
+                signal,
+            });
         },
 
         startupDestinationPage() {
@@ -7028,7 +7199,12 @@ document.addEventListener('alpine:init', () => {
         },
 
         clearFitResultCache({ persist = true } = {}) {
+            const previousSize = this._fitResultByContext.size;
             this._fitResultByContext.clear();
+            this.traceReaderFit('cache-clear-all', {
+                previousSize,
+                persist,
+            });
 
             if (persist) {
                 this.queuePersistedFitCacheWrite();
@@ -7155,6 +7331,68 @@ document.addEventListener('alpine:init', () => {
             } catch (_) {
                 return false;
             }
+        },
+
+        readerFitDebugEnabled() {
+            try {
+                return this.normalizeBooleanFlag(
+                    window.localStorage?.getItem?.(readerFitDebugStorageKey),
+                    false,
+                );
+            } catch (_) {
+                return false;
+            }
+        },
+
+        traceReaderFit(eventName, details = {}) {
+            if (!this.readerFitDebugEnabled()) {
+                return;
+            }
+
+            const normalizedEventName = String(eventName ?? '').trim() || 'event';
+            const payload =
+                details && typeof details === 'object' && !Array.isArray(details) ? details : {};
+
+            const tracePayload = {
+                pageNumber: this.pageNumber,
+                pageInput: this.pageInput,
+                loadedPayloadPageNumber: Math.max(
+                    0,
+                    Math.trunc(Number(this._loadedPayloadPageNumber ?? 0)),
+                ),
+                isFittingPage: this.isFittingPage,
+                isLoadingPage: this.isLoadingPage,
+                fitRunCounter: this._fitRunCounter,
+                lastFittedPageNumber: this._lastFittedPageNumber,
+                bypassNextFitCache: this._bypassNextFitCache,
+                fitCacheSize: this._fitResultByContext.size,
+                fitCacheBreakpoint: this._fitCacheBreakpoint,
+                modalLifecycleSettling: this._isModalLifecycleSettling,
+                activeModalCount: this._activeModalIds.size,
+                openModalCount: this.openModalCount(),
+                ...payload,
+            };
+
+            try {
+                const existingTrace = Array.isArray(window.__quranReaderFitTrace)
+                    ? window.__quranReaderFitTrace
+                    : [];
+                existingTrace.push({
+                    at: Date.now(),
+                    event: normalizedEventName,
+                    ...tracePayload,
+                });
+
+                if (existingTrace.length > 400) {
+                    existingTrace.splice(0, existingTrace.length - 400);
+                }
+
+                window.__quranReaderFitTrace = existingTrace;
+            } catch (_) {
+                //
+            }
+
+            console.log('[quran-reader][fit]', normalizedEventName, tracePayload);
         },
 
         traceReaderReveal(eventName, details = {}) {
@@ -8704,9 +8942,23 @@ document.addEventListener('alpine:init', () => {
                     this._fitSanityContextOutcome = '';
                     this._fitSanitySuppressedUntil = 0;
                     this._fitSanityDisabledContextKey = '';
+                    this.traceReaderFit('fit-sanity-ok', {
+                        pageNumber: normalizedPageNumber,
+                        fillWidth,
+                        fillHeight,
+                    });
 
                     return;
                 }
+
+                this.traceReaderFit('fit-sanity-anomaly', {
+                    pageNumber: normalizedPageNumber,
+                    fillWidth,
+                    fillHeight,
+                    hasOverflow,
+                    hasSuspiciousUnderfill,
+                    cacheKey: normalizedCacheKey,
+                });
 
                 if (
                     this._fitSanityContextKey === fitSanityContextKey &&
@@ -8769,6 +9021,11 @@ document.addEventListener('alpine:init', () => {
                         hasOverflow,
                         hasSuspiciousUnderfill,
                     });
+                    this.traceReaderFit('fit-sanity-recovery-suppressed', {
+                        pageNumber: normalizedPageNumber,
+                        reason: fitRecoveryDecision.reason,
+                        attemptCount: fitRecoveryDecision.attemptCount,
+                    });
 
                     return;
                 }
@@ -8776,6 +9033,11 @@ document.addEventListener('alpine:init', () => {
                 if (normalizedCacheKey !== '') {
                     this.forgetFitResult(normalizedCacheKey);
                 }
+                this.traceReaderFit('fit-sanity-recovery-triggered', {
+                    pageNumber: normalizedPageNumber,
+                    cacheKey: normalizedCacheKey,
+                    visibleReady: this.isCurrentPageVisiblyReady(),
+                });
 
                 if (this.isCurrentPageVisiblyReady()) {
                     this._bypassNextFitCache = true;
@@ -9056,11 +9318,40 @@ document.addEventListener('alpine:init', () => {
                 minScale,
                 maxScale,
             });
+            const sharedFitSeedSignatureParts = this.fitCacheSignatureParts({
+                breakpointName,
+                availableWidth,
+                availableHeight,
+                isModalLayoutContext,
+                isFontLayoutPending,
+                fitTargetWidthRatio,
+                fitAreaPaddingX,
+                fitAreaPaddingY,
+                minimumLeadingMultiplier,
+                minimumGapMultiplier,
+                minimumSurahHeaderScale,
+                minimumBasmallahBottomGapScale,
+                minScale,
+                maxScale,
+                includeFontFamilies: false,
+            });
             const fitCacheKey = this.fitCacheKeyForPage(
                 normalizedPageNumber,
                 fitCacheSignatureParts,
             );
-            const sharedFitSeedCacheKey = this.sharedFitSeedCacheKey(fitCacheSignatureParts);
+            const sharedFitSeedCacheKey = this.sharedFitSeedCacheKey(sharedFitSeedSignatureParts);
+            this.traceReaderFit('fit-start', {
+                normalizedPageNumber,
+                pageNumberOverride,
+                shouldBypassPageSpecificFitCache,
+                shouldBypassSharedFitSeed,
+                shouldSuppressPersistedCacheWrite,
+                isFontLayoutPending,
+                isModalLayoutContext,
+                fitCacheKey,
+                sharedFitSeedCacheKey,
+                sharedFitSeedSignatureParts,
+            });
 
             const strictWidthOverflowTolerance = 1.0025;
             const strictHeightOverflowTolerance = 1.0025;
@@ -9158,6 +9449,14 @@ document.addEventListener('alpine:init', () => {
                 : this._fitResultByContext.get(sharedFitSeedCacheKey);
             const shouldPreferSharedFitSeed =
                 normalizedPageNumber !== sharedFitSeedReferencePageNumber;
+            this.traceReaderFit('fit-cache-candidates', {
+                normalizedPageNumber,
+                shouldPreferSharedFitSeed,
+                hasPageCache: pageFitCacheResult !== null,
+                hasSharedCache: sharedFitSeedResult !== null,
+                pageCacheSourcePage: Number(pageFitCacheResult?.sourcePageNumber ?? 0),
+                sharedCacheSourcePage: Number(sharedFitSeedResult?.sourcePageNumber ?? 0),
+            });
             const tryCachedFitResult = (
                 cachedFitResult,
                 { cacheKey = '', cacheLabel = 'page' } = {},
@@ -9167,6 +9466,51 @@ document.addEventListener('alpine:init', () => {
                     !cachedFitResult.layout ||
                     !Number.isFinite(Number(cachedFitResult.scale))
                 ) {
+                    this.traceReaderFit('fit-cache-reject-invalid', {
+                        cacheLabel,
+                        cacheKey,
+                    });
+                    return false;
+                }
+
+                const normalizedSourcePageNumber = Math.max(
+                    0,
+                    Math.trunc(Number(cachedFitResult.sourcePageNumber ?? 0)),
+                );
+
+                if (
+                    cacheLabel === 'shared' &&
+                    normalizedSourcePageNumber > 0 &&
+                    normalizedSourcePageNumber !== sharedFitSeedReferencePageNumber
+                ) {
+                    this.traceReaderFit('fit-cache-reject-shared-source-mismatch', {
+                        cacheLabel,
+                        cacheKey,
+                        normalizedSourcePageNumber,
+                        expectedSourcePageNumber: sharedFitSeedReferencePageNumber,
+                    });
+                    if (cacheKey !== '') {
+                        this.forgetFitResult(cacheKey);
+                    }
+
+                    return false;
+                }
+
+                if (
+                    cacheLabel === 'page' &&
+                    normalizedSourcePageNumber > 0 &&
+                    normalizedSourcePageNumber !== normalizedPageNumber
+                ) {
+                    this.traceReaderFit('fit-cache-reject-page-source-mismatch', {
+                        cacheLabel,
+                        cacheKey,
+                        normalizedSourcePageNumber,
+                        expectedSourcePageNumber: normalizedPageNumber,
+                    });
+                    if (cacheKey !== '') {
+                        this.forgetFitResult(cacheKey);
+                    }
+
                     return false;
                 }
 
@@ -9177,7 +9521,16 @@ document.addEventListener('alpine:init', () => {
                     cached.fillHeight >= minimumHealthyFillHeight;
 
                 if (!(cached.fits && cacheHasHealthyFill)) {
-                    if (cacheKey !== '') {
+                    this.traceReaderFit('fit-cache-reject-unhealthy', {
+                        cacheLabel,
+                        cacheKey,
+                        fillWidth: cached.fillWidth,
+                        fillHeight: cached.fillHeight,
+                        fits: cached.fits,
+                        minimumHealthyFillWidth,
+                        minimumHealthyFillHeight,
+                    });
+                    if (cacheKey !== '' && cacheLabel !== 'shared') {
                         this.forgetFitResult(cacheKey);
                     }
 
@@ -9189,8 +9542,16 @@ document.addEventListener('alpine:init', () => {
 
                 this._fitRunCounter += 1;
                 this._lastFittedPageNumber = this.pageNumber;
+                this.traceReaderFit('fit-cache-accept', {
+                    cacheLabel,
+                    cacheKey,
+                    normalizedSourcePageNumber,
+                    scale: cached.scale,
+                    fillWidth: cached.fillWidth,
+                    fillHeight: cached.fillHeight,
+                });
                 this.scheduleFitSanityCheck({
-                    cacheKey: cacheLabel === 'shared' ? sharedFitSeedCacheKey : fitCacheKey,
+                    cacheKey: cacheLabel === 'shared' ? '' : fitCacheKey,
                     pageNumber: normalizedPageNumber,
                     availableWidth: targetWidth,
                     availableHeight: targetHeight,
@@ -9231,6 +9592,9 @@ document.addEventListener('alpine:init', () => {
             ) {
                 return;
             }
+            this.traceReaderFit('fit-cache-miss-solving', {
+                normalizedPageNumber,
+            });
 
             const midpointLayout = {
                 ...baselineLayout,
@@ -9348,6 +9712,14 @@ document.addEventListener('alpine:init', () => {
                 bestLayout = relaxedBestLayout;
                 finalEvaluation = relaxedBestEvaluation;
             }
+            this.traceReaderFit('fit-solve-selected', {
+                normalizedPageNumber,
+                bestScore,
+                finalScale: finalEvaluation.scale,
+                fillWidth: finalEvaluation.fillWidth,
+                fillHeight: finalEvaluation.fillHeight,
+                bestLayout,
+            });
 
             this.applyFitLayoutVariables(rootElement, bestLayout);
             rootElement.style.setProperty('--quran-page-scale', String(finalEvaluation.scale));
@@ -9357,11 +9729,25 @@ document.addEventListener('alpine:init', () => {
                 {
                     layout: { ...bestLayout },
                     scale: finalEvaluation.scale,
+                    sourcePageNumber: normalizedPageNumber,
                 },
                 {
                     persist: !shouldSuppressPersistedCacheWrite,
                 },
             );
+            if (normalizedPageNumber === sharedFitSeedReferencePageNumber) {
+                this.rememberFitResult(
+                    sharedFitSeedCacheKey,
+                    {
+                        layout: { ...bestLayout },
+                        scale: finalEvaluation.scale,
+                        sourcePageNumber: normalizedPageNumber,
+                    },
+                    {
+                        persist: !shouldSuppressPersistedCacheWrite,
+                    },
+                );
+            }
             this.scheduleFitSanityCheck({
                 cacheKey: fitCacheKey,
                 pageNumber: normalizedPageNumber,
@@ -9377,11 +9763,20 @@ document.addEventListener('alpine:init', () => {
                 this.scheduleFontReadyRecoveryRefit(normalizedPageNumber, {
                     delayMs: 110,
                 });
+                this.traceReaderFit('fit-schedule-font-recovery-refit', {
+                    normalizedPageNumber,
+                });
             }
 
             this._bypassNextFitCache = false;
             this._fitRunCounter += 1;
             this._lastFittedPageNumber = this.pageNumber;
+            this.traceReaderFit('fit-complete', {
+                normalizedPageNumber,
+                finalScale: finalEvaluation.scale,
+                persisted: !shouldSuppressPersistedCacheWrite,
+                fitCacheKey,
+            });
         },
 
         async prefetchFontAsset(payload) {
