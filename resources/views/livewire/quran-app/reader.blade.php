@@ -96,8 +96,9 @@
                 --quran-fit-area-pad-y: 0.3rem;
                 --quran-fit-target-width-ratio: 0.85;
                 --quran-fit-height-ratio: 0.9;
+                --quran-line-gap: 1.75rem;
                 --quran-min-page-leading-multiplier: 0.8;
-                --quran-min-page-gap-multiplier: 0.82;
+                --quran-min-page-gap-multiplier: 0.9;
                 --quran-min-page-surah-header-scale: 0.86;
                 --quran-basmallah-bottom-gap-scale: -0.3;
                 --quran-min-basmallah-bottom-gap-scale: -0.36;
