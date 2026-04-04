@@ -392,6 +392,7 @@
             backface-visibility: hidden;
         }
 
+        /* Credits: https://uiball.com/ldrs/ (squircle!) */
         .quran-calibration-spinner {
             --uib-size: 43px;
             --uib-stroke: 5px;
