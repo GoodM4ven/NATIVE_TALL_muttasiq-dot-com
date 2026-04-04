@@ -1708,7 +1708,7 @@
                 >
                     <!-- Credits: uiverse.io/gharsh11032000/loud-chicken-53 -->
                     <button
-                        class="quran-soorah-trigger 3xl:w-[13.2rem] 4xl:w-[13.4rem] 4xl:px-[2.35rem] 4xl:py-[0.42rem] 4xl:text-[0.95rem] 4xl:min-h-[2.2rem] min-h-[1.95rem] w-[10.25rem] shrink-0 px-[1.7rem] py-[0.34rem] text-[0.8rem] outline-none sm:min-h-[2rem] sm:w-[11rem] sm:px-[1.95rem] sm:py-[0.36rem] sm:text-[0.84rem] md:min-h-[2.05rem] md:w-[11.75rem] md:px-[2.1rem] md:py-[0.38rem] md:text-[0.88rem] lg:min-h-[2.1rem] lg:w-[12.35rem] lg:px-[2.2rem] lg:py-[0.4rem] lg:text-[0.9rem] xl:min-h-[2.15rem] xl:w-[12.7rem] xl:px-[2.28rem] xl:text-[0.92rem] 2xl:w-[13rem] 2xl:text-[0.93rem]"
+                        class="quran-soorah-trigger 3xl:w-[13.2rem] 4xl:w-[13.4rem] 4xl:px-[2.35rem] 4xl:py-[0.42rem] 4xl:text-[0.95rem] 4xl:min-h-[2.2rem] min-h-[1.95rem] w-41 shrink-0 px-[1.7rem] py-[0.34rem] text-[0.8rem] outline-none sm:min-h-8 sm:w-44 sm:px-[1.95rem] sm:py-[0.36rem] sm:text-[0.84rem] md:min-h-[2.05rem] md:w-47 md:px-[2.1rem] md:py-[0.38rem] md:text-[0.88rem] lg:min-h-[2.1rem] lg:w-[12.35rem] lg:px-[2.2rem] lg:py-[0.4rem] lg:text-[0.9rem] xl:min-h-[2.15rem] xl:w-[12.7rem] xl:px-[2.28rem] xl:text-[0.92rem] 2xl:w-52 2xl:text-[0.93rem]"
                         type="button"
                         dir="rtl"
                         x-bind:disabled="wirdModeActive"
@@ -1724,7 +1724,7 @@
                         x-bind:aria-label="@js(arabic_text('ابحث في ')) + currentSurahTitle()"
                     >
                         <x-icon
-                            class="quran-soorah-trigger-icon 4xl:size-[1rem] 4xl:[inset-inline-start:0.82rem] size-[0.8rem] [inset-inline-start:0.62rem] sm:size-[0.84rem] sm:[inset-inline-start:0.68rem] md:size-[0.88rem] md:[inset-inline-start:0.72rem] lg:size-[0.92rem] lg:[inset-inline-start:0.76rem] xl:size-[0.96rem] xl:[inset-inline-start:0.8rem]"
+                            class="quran-soorah-trigger-icon 4xl:size-4 4xl:inset-s-[0.82rem] size-[0.8rem] inset-s-[0.62rem] sm:size-[0.84rem] sm:inset-s-[0.68rem] md:size-[0.88rem] md:inset-s-[0.72rem] lg:size-[0.92rem] lg:inset-s-[0.76rem] xl:size-[0.96rem] xl:inset-s-[0.8rem]"
                             :name="'heroicon-o-magnifying-glass'"
                         />
                         <span class="quran-soorah-trigger-text">
@@ -1735,7 +1735,7 @@
                             ></span>
                         </span>
                         <span
-                            class="quran-soorah-trigger-circle 4xl:size-[1rem] size-[0.8rem] sm:size-[0.84rem] md:size-[0.88rem] lg:size-[0.92rem] xl:size-[0.96rem]"
+                            class="quran-soorah-trigger-circle 4xl:size-4 size-[0.8rem] sm:size-[0.84rem] md:size-[0.88rem] lg:size-[0.92rem] xl:size-[0.96rem]"
                         ></span>
                     </button>
                     <div
@@ -1744,7 +1744,7 @@
                     >
                         <!-- Credits: https://uiverse.io/vinodjangid07/tricky-bullfrog-41 -->
                         <button
-                            class="quran-history-toggle-button quran-top-actions-secondary 4xl:[flex-basis:2.35rem] 4xl:[inline-size:2.35rem] 4xl:[block-size:2.35rem] 4xl:max-w-[2.35rem] max-w-[1.95rem] outline-none [block-size:1.95rem] [flex-basis:1.95rem] [inline-size:1.95rem] sm:max-w-[2.05rem] sm:[block-size:2.05rem] sm:[flex-basis:2.05rem] sm:[inline-size:2.05rem] md:max-w-[2.12rem] md:[block-size:2.12rem] md:[flex-basis:2.12rem] md:[inline-size:2.12rem] lg:max-w-[2.2rem] lg:[block-size:2.2rem] lg:[flex-basis:2.2rem] lg:[inline-size:2.2rem] xl:max-w-[2.27rem] xl:[block-size:2.27rem] xl:[flex-basis:2.27rem] xl:[inline-size:2.27rem] 2xl:max-w-[2.3rem] 2xl:[block-size:2.3rem] 2xl:[flex-basis:2.3rem] 2xl:[inline-size:2.3rem]"
+                            class="quran-history-toggle-button quran-top-actions-secondary 4xl:basis-[2.35rem] 4xl:inline-[2.35rem] 4xl:block-[2.35rem] 4xl:max-w-[2.35rem] max-w-[1.95rem] outline-none block-[1.95rem] basis-[1.95rem] inline-[1.95rem] sm:max-w-[2.05rem] sm:block-[2.05rem] sm:basis-[2.05rem] sm:inline-[2.05rem] md:max-w-[2.12rem] md:block-[2.12rem] md:basis-[2.12rem] md:inline-[2.12rem] lg:max-w-[2.2rem] lg:block-[2.2rem] lg:basis-[2.2rem] lg:inline-[2.2rem] xl:max-w-[2.27rem] xl:block-[2.27rem] xl:basis-[2.27rem] xl:inline-[2.27rem] 2xl:max-w-[2.3rem] 2xl:block-[2.3rem] 2xl:basis-[2.3rem] 2xl:inline-[2.3rem]"
                             id="quran-reader-history-toggle"
                             data-quran-open-history
                             type="button"
@@ -1752,13 +1752,13 @@
                             x-on:click="if (!wirdModeActive) { $wire.mountAction('navigationHistory') }"
                         >
                             <x-icon
-                                class="quran-history-toggle-icon 4xl:size-[1.5rem] size-[1.18rem] sm:size-[1.26rem] md:size-[1.34rem] lg:size-[1.4rem] xl:size-[1.45rem]"
+                                class="quran-history-toggle-icon 4xl:size-6 size-[1.18rem] sm:size-[1.26rem] md:size-[1.34rem] lg:size-[1.4rem] xl:size-[1.45rem]"
                                 :name="'heroicon-o-clock'"
                             />
                         </button>
 
                         <button
-                            class="quran-support-lock-target quran-wird-progress-button 4xl:min-h-[2.5rem] 4xl:min-w-[min(13rem,_50vw)] min-h-[2.1rem] min-w-[min(10.8rem,_50vw)] outline-none sm:min-h-[2.2rem] sm:min-w-[min(11.4rem,_50vw)] md:min-h-[2.3rem] md:min-w-[min(11.9rem,_50vw)] lg:min-h-[2.38rem] lg:min-w-[min(12.3rem,_50vw)] xl:min-h-[2.44rem] xl:min-w-[min(12.6rem,_50vw)] 2xl:min-w-[min(12.8rem,_50vw)]"
+                            class="quran-support-lock-target quran-wird-progress-button 4xl:min-h-10 4xl:min-w-[min(13rem,50vw)] min-h-[2.1rem] min-w-[min(10.8rem,50vw)] outline-none sm:min-h-[2.2rem] sm:min-w-[min(11.4rem,50vw)] md:min-h-[2.3rem] md:min-w-[min(11.9rem,50vw)] lg:min-h-[2.38rem] lg:min-w-[min(12.3rem,50vw)] xl:min-h-[2.44rem] xl:min-w-[min(12.6rem,50vw)] 2xl:min-w-[min(12.8rem,50vw)]"
                             data-quran-wird-toggle
                             data-support-lock-target="wird-progress"
                             type="button"
@@ -1805,7 +1805,7 @@
                             ></span>
                             <span class="quran-wird-progress-content">
                                 <span
-                                    class="quran-wird-progress-percent 4xl:min-h-[1.56rem] 4xl:min-w-[2.54rem] 4xl:px-[0.52rem] 4xl:text-[0.68rem] min-h-[1.32rem] min-w-[2.1rem] px-[0.42rem] text-[0.58rem] sm:min-h-[1.4rem] sm:min-w-[2.22rem] sm:px-[0.46rem] sm:text-[0.61rem] md:min-h-[1.46rem] md:min-w-[2.32rem] md:px-[0.48rem] md:text-[0.64rem] lg:min-h-[1.5rem] lg:min-w-[2.42rem] lg:px-[0.5rem] lg:text-[0.66rem]"
+                                    class="quran-wird-progress-percent 4xl:min-h-[1.56rem] 4xl:min-w-[2.54rem] 4xl:px-[0.52rem] 4xl:text-[0.68rem] min-h-[1.32rem] min-w-[2.1rem] px-[0.42rem] text-[0.58rem] sm:min-h-[1.4rem] sm:min-w-[2.22rem] sm:px-[0.46rem] sm:text-[0.61rem] md:min-h-[1.46rem] md:min-w-[2.32rem] md:px-[0.48rem] md:text-[0.64rem] lg:min-h-6 lg:min-w-[2.42rem] lg:px-2 lg:text-[0.66rem]"
                                     x-text="wirdProgressPercentLabel()"
                                 ></span>
                                 <span
@@ -1825,7 +1825,7 @@
 
                         <!-- Credits: https://uiverse.io/vinodjangid07/breezy-goose-71 -->
                         <button
-                            class="quran-bookmark-toggle-button quran-top-actions-secondary 4xl:[flex-basis:2.35rem] 4xl:[inline-size:2.35rem] 4xl:[block-size:2.35rem] 4xl:max-w-[2.35rem] max-w-[1.95rem] outline-none [block-size:1.95rem] [flex-basis:1.95rem] [inline-size:1.95rem] sm:max-w-[2.05rem] sm:[block-size:2.05rem] sm:[flex-basis:2.05rem] sm:[inline-size:2.05rem] md:max-w-[2.12rem] md:[block-size:2.12rem] md:[flex-basis:2.12rem] md:[inline-size:2.12rem] lg:max-w-[2.2rem] lg:[block-size:2.2rem] lg:[flex-basis:2.2rem] lg:[inline-size:2.2rem] xl:max-w-[2.27rem] xl:[block-size:2.27rem] xl:[flex-basis:2.27rem] xl:[inline-size:2.27rem] 2xl:max-w-[2.3rem] 2xl:[block-size:2.3rem] 2xl:[flex-basis:2.3rem] 2xl:[inline-size:2.3rem]"
+                            class="quran-bookmark-toggle-button quran-top-actions-secondary 4xl:basis-[2.35rem] 4xl:inline-[2.35rem] 4xl:block-[2.35rem] 4xl:max-w-[2.35rem] max-w-[1.95rem] outline-none block-[1.95rem] basis-[1.95rem] inline-[1.95rem] sm:max-w-[2.05rem] sm:block-[2.05rem] sm:basis-[2.05rem] sm:inline-[2.05rem] md:max-w-[2.12rem] md:block-[2.12rem] md:basis-[2.12rem] md:inline-[2.12rem] lg:max-w-[2.2rem] lg:block-[2.2rem] lg:basis-[2.2rem] lg:inline-[2.2rem] xl:max-w-[2.27rem] xl:block-[2.27rem] xl:basis-[2.27rem] xl:inline-[2.27rem] 2xl:max-w-[2.3rem] 2xl:block-[2.3rem] 2xl:basis-[2.3rem] 2xl:inline-[2.3rem]"
                             id="quran-reader-bookmark-toggle"
                             data-quran-bookmark-toggle
                             type="button"
@@ -1843,7 +1843,7 @@
                                 aria-hidden="true"
                             ></span>
                             <svg
-                                class="quran-bookmark-toggle-icon 4xl:w-[0.9375rem] w-[0.78rem] sm:w-[0.82rem] md:w-[0.86rem] lg:w-[0.89rem] xl:w-[0.92rem]"
+                                class="quran-bookmark-toggle-icon 4xl:w-3.75 w-[0.78rem] sm:w-[0.82rem] md:w-[0.86rem] lg:w-[0.89rem] xl:w-[0.92rem]"
                                 aria-hidden="true"
                                 width="15"
                                 viewBox="0 0 50 70"
@@ -2057,7 +2057,7 @@
                     data-no-swipe
                 >
                     <button
-                        class="quran-swipe-hint quran-swipe-hint-button quran-bottom-strip-nav-prev 4xl:min-h-[2.2rem] 4xl:min-w-[4.2rem] 4xl:px-[0.25rem] 4xl:py-[0.1rem] min-h-[1.95rem] min-w-[3.45rem] select-none px-[0.18rem] py-[0.06rem] outline-none sm:min-h-[2rem] sm:min-w-[3.65rem] sm:px-[0.2rem] sm:py-[0.08rem] md:min-h-[2.05rem] md:min-w-[3.8rem] md:px-[0.22rem] md:py-[0.08rem] lg:min-h-[2.1rem] lg:min-w-[3.95rem] lg:px-[0.24rem] xl:min-w-[4.05rem]"
+                        class="quran-swipe-hint quran-swipe-hint-button quran-bottom-strip-nav-prev 4xl:min-h-[2.2rem] 4xl:min-w-[4.2rem] 4xl:px-1 4xl:py-[0.1rem] min-h-[1.95rem] min-w-[3.45rem] select-none px-[0.18rem] py-[0.06rem] outline-none sm:min-h-8 sm:min-w-[3.65rem] sm:px-[0.2rem] sm:py-[0.08rem] md:min-h-[2.05rem] md:min-w-[3.8rem] md:px-[0.22rem] md:py-[0.08rem] lg:min-h-[2.1rem] lg:min-w-[3.95rem] lg:px-[0.24rem] xl:min-w-[4.05rem]"
                         type="button"
                         aria-label="{{ arabic_text('الصفحة السابقة') }}"
                         x-ref="prevChevronButton"
@@ -2078,11 +2078,11 @@
                     </button>
                     <div class="quran-bottom-strip-center">
                         <div
-                            class="quran-page-counter 4xl:min-h-[2.4rem] min-h-[2rem] sm:min-h-[2.1rem] md:min-h-[2.2rem] lg:min-h-[2.28rem]"
+                            class="quran-page-counter 4xl:min-h-[2.4rem] min-h-8 sm:min-h-[2.1rem] md:min-h-[2.2rem] lg:min-h-[2.28rem]"
                             x-bind:class="{ 'quran-page-counter--morphing': pageCounterPulse.isActive && pageCounterPulse.hasChanges }"
                         >
                             <button
-                                class="quran-page-slider-chip 4xl:min-w-[5.8rem] 4xl:px-[0.56rem] 4xl:py-[0.28rem] 4xl:text-[0.84rem] min-w-[4.8rem] px-[0.42rem] py-[0.22rem] text-[0.72rem] outline-none sm:min-w-[5rem] sm:px-[0.46rem] sm:py-[0.24rem] sm:text-[0.76rem] md:min-w-[5.2rem] md:px-[0.5rem] md:py-[0.25rem] md:text-[0.79rem] lg:min-w-[5.4rem] lg:px-[0.52rem] lg:py-[0.26rem] lg:text-[0.81rem] xl:min-w-[5.6rem] xl:text-[0.82rem]"
+                                class="quran-page-slider-chip 4xl:min-w-[5.8rem] 4xl:px-[0.56rem] 4xl:py-[0.28rem] 4xl:text-[0.84rem] min-w-[4.8rem] px-[0.42rem] py-[0.22rem] text-[0.72rem] outline-none sm:min-w-20 sm:px-[0.46rem] sm:py-[0.24rem] sm:text-[0.76rem] md:min-w-[5.2rem] md:px-2 md:py-1 md:text-[0.79rem] lg:min-w-[5.4rem] lg:px-[0.52rem] lg:py-[0.26rem] lg:text-[0.81rem] xl:min-w-[5.6rem] xl:text-[0.82rem]"
                                 type="button"
                                 x-bind:aria-label="wirdModeActive ? @js(arabic_text('وضع الوِرد اليومي مفعل')) : @js(arabic_text('إدخال رقم صفحة'))"
                                 x-bind:style="`--quran-counter-digit-count: ${pageCounterDigitLength()};`"
@@ -2171,7 +2171,7 @@
                         />
                     </div>
                     <button
-                        class="quran-swipe-hint quran-swipe-hint-button quran-bottom-strip-nav-next 4xl:min-h-[2.2rem] 4xl:min-w-[4.2rem] 4xl:px-[0.25rem] 4xl:py-[0.1rem] min-h-[1.95rem] min-w-[3.45rem] select-none px-[0.18rem] py-[0.06rem] outline-none sm:min-h-[2rem] sm:min-w-[3.65rem] sm:px-[0.2rem] sm:py-[0.08rem] md:min-h-[2.05rem] md:min-w-[3.8rem] md:px-[0.22rem] md:py-[0.08rem] lg:min-h-[2.1rem] lg:min-w-[3.95rem] lg:px-[0.24rem] xl:min-w-[4.05rem]"
+                        class="quran-swipe-hint quran-swipe-hint-button quran-bottom-strip-nav-next 4xl:min-h-[2.2rem] 4xl:min-w-[4.2rem] 4xl:px-1 4xl:py-[0.1rem] min-h-[1.95rem] min-w-[3.45rem] select-none px-[0.18rem] py-[0.06rem] outline-none sm:min-h-8 sm:min-w-[3.65rem] sm:px-[0.2rem] sm:py-[0.08rem] md:min-h-[2.05rem] md:min-w-[3.8rem] md:px-[0.22rem] md:py-[0.08rem] lg:min-h-[2.1rem] lg:min-w-[3.95rem] lg:px-[0.24rem] xl:min-w-[4.05rem]"
                         type="button"
                         aria-label="{{ arabic_text('الصفحة التالية') }}"
                         x-ref="nextChevronButton"
