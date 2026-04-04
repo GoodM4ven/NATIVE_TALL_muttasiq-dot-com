@@ -360,44 +360,37 @@
         }
 
         .quran-calibration-loader {
-            transform: translateZ(0);
+            transform: translate3d(0, 0, 0);
             will-change: transform, opacity;
             backface-visibility: hidden;
+            contain: layout style paint;
+            isolation: isolate;
+            pointer-events: none;
         }
 
-        .quran-calibration-spinner {
+        .quran-calibration-loader l-squircle {
             display: block;
-            height: 37px;
-            width: 37px;
+            inline-size: 37px;
+            block-size: 37px;
+            transform: translate3d(0, 0, 0);
             transform-origin: center;
-            overflow: visible;
+            backface-visibility: hidden;
             contain: strict;
+            pointer-events: none;
         }
 
-        .quran-calibration-spinner-track {
-            stroke: color-mix(in srgb, var(--quran-panel-text) 72%, transparent);
-            opacity: 0.1;
-            transition: stroke 0.5s ease;
+        .quran-calibration-loader l-squircle.quran-calibration-squircle-fallback-spin {
+            animation: quran-calibration-squircle-spin 900ms linear infinite;
+            will-change: transform;
         }
 
-        .quran-calibration-spinner-car {
-            fill: none;
-            stroke: color-mix(in srgb, var(--quran-panel-text) 72%, transparent);
-            stroke-dasharray: 15, 85;
-            stroke-dashoffset: 0;
-            stroke-linecap: round;
-            animation: quran-calibration-travel 0.9s linear infinite;
-            will-change: stroke-dashoffset;
-            transition: stroke 0.5s ease;
-        }
-
-        @keyframes quran-calibration-travel {
+        @keyframes quran-calibration-squircle-spin {
             0% {
-                stroke-dashoffset: 0;
+                transform: translate3d(0, 0, 0) rotate(0deg);
             }
 
             100% {
-                stroke-dashoffset: -100;
+                transform: translate3d(0, 0, 0) rotate(-360deg);
             }
         }
 
@@ -1804,30 +1797,15 @@
                     x-bind:aria-hidden="isCalibrating ? 'false' : 'true'"
                 >
                     <div class="quran-calibration-loader flex flex-col items-center gap-3">
-                        <svg
-                            class="quran-calibration-spinner"
-                            x="0px"
-                            y="0px"
-                            viewBox="0 0 37 37"
-                            height="37"
-                            width="37"
-                            preserveAspectRatio="xMidYMid meet"
-                        >
-                            <path
-                                class="quran-calibration-spinner-track"
-                                fill="none"
-                                stroke-width="5"
-                                pathLength="100"
-                                d="M0.37 18.5 C0.37 5.772 5.772 0.37 18.5 0.37 S36.63 5.772 36.63 18.5 S31.228 36.63 18.5 36.63 S0.37 31.228 0.37 18.5"
-                            />
-                            <path
-                                class="quran-calibration-spinner-car"
-                                fill="none"
-                                stroke-width="5"
-                                pathLength="100"
-                                d="M0.37 18.5 C0.37 5.772 5.772 0.37 18.5 0.37 S36.63 5.772 36.63 18.5 S31.228 36.63 18.5 36.63 S0.37 31.228 0.37 18.5"
-                            />
-                        </svg>
+                        <l-squircle
+                            x-ref="calibrationSpinner"
+                            size="37"
+                            stroke="5"
+                            stroke-length="0.15"
+                            bg-opacity="0.1"
+                            speed="0.9"
+                            color="black"
+                        ></l-squircle>
                         <span
                             class="font-arabic-sans text-sm tracking-wide opacity-60"
                             dir="rtl"

@@ -879,6 +879,8 @@ document.addEventListener('alpine:init', () => {
         _startupTargetPageNumber: 1,
         _bootstrapDeferred: false,
         isCalibrating: false,
+        _calibrationSpinnerElement: null,
+        _calibrationSpinnerAnimation: null,
         _globalFitCalibrationLayout: null,
         _globalFitCalibrationScale: 0,
         _globalFitCalibrationPageNumber: 0,
@@ -1058,6 +1060,7 @@ document.addEventListener('alpine:init', () => {
                         this.registerNativeInputListeners();
                         this.initializeLayoutObservers();
                         this.queueSupportLockTargetsUiSync();
+                        this.ensureCalibrationSpinnerAnimation();
                     });
                     this.scheduleLayout({ revealDelayMs: 170 });
                 });
@@ -1067,6 +1070,7 @@ document.addEventListener('alpine:init', () => {
                 this.registerNativeInputListeners();
                 this.initializeLayoutObservers();
                 this.queueSupportLockTargetsUiSync();
+                this.ensureCalibrationSpinnerAnimation();
             });
             this.$nextTick(() => {
                 if (this.isReaderElementVisible()) {
@@ -1075,6 +1079,76 @@ document.addEventListener('alpine:init', () => {
                     this._bootstrapDeferred = true;
                 }
             });
+        },
+
+        ensureCalibrationSpinnerAnimation({ retries = 8 } = {}) {
+            const spinnerElement = this.$refs.calibrationSpinner;
+
+            if (!(spinnerElement instanceof HTMLElement)) {
+                return;
+            }
+
+            if (this._calibrationSpinnerElement !== spinnerElement) {
+                this.stopCalibrationSpinnerAnimation();
+                this._calibrationSpinnerElement = spinnerElement;
+            }
+
+            const shadowRoot = spinnerElement.shadowRoot;
+
+            if (!(shadowRoot instanceof ShadowRoot)) {
+                if (retries > 0) {
+                    window.setTimeout(() => {
+                        this.ensureCalibrationSpinnerAnimation({ retries: retries - 1 });
+                    }, 16);
+                }
+
+                return;
+            }
+
+            if (!shadowRoot.querySelector('[data-quran-calibration-spinner-patch="true"]')) {
+                const patchStyle = document.createElement('style');
+                patchStyle.setAttribute('data-quran-calibration-spinner-patch', 'true');
+                patchStyle.textContent =
+                    '.car{animation:none !important;stroke-dashoffset:0 !important;}';
+                shadowRoot.appendChild(patchStyle);
+            }
+
+            if (this._calibrationSpinnerAnimation !== null) {
+                return;
+            }
+
+            if (typeof spinnerElement.animate === 'function') {
+                this._calibrationSpinnerAnimation = spinnerElement.animate(
+                    [
+                        { transform: 'translate3d(0, 0, 0) rotate(0deg)' },
+                        { transform: 'translate3d(0, 0, 0) rotate(-360deg)' },
+                    ],
+                    {
+                        duration: 900,
+                        easing: 'linear',
+                        iterations: Number.POSITIVE_INFINITY,
+                    },
+                );
+
+                return;
+            }
+
+            spinnerElement.classList.add('quran-calibration-squircle-fallback-spin');
+        },
+
+        stopCalibrationSpinnerAnimation() {
+            if (this._calibrationSpinnerAnimation !== null) {
+                this._calibrationSpinnerAnimation.cancel();
+                this._calibrationSpinnerAnimation = null;
+            }
+
+            if (this._calibrationSpinnerElement instanceof HTMLElement) {
+                this._calibrationSpinnerElement.classList.remove(
+                    'quran-calibration-squircle-fallback-spin',
+                );
+            }
+
+            this._calibrationSpinnerElement = null;
         },
 
         isReaderElementVisible() {
@@ -1574,6 +1648,7 @@ document.addEventListener('alpine:init', () => {
 
         destroy() {
             this.unregisterNativeInputListeners();
+            this.stopCalibrationSpinnerAnimation();
 
             if (this._onWindowViewportChange) {
                 window.removeEventListener('resize', this._onWindowViewportChange);
@@ -2267,11 +2342,11 @@ document.addEventListener('alpine:init', () => {
                 await this.layoutPageGuaranteed({
                     revealDelayMs: 110,
                     maxAttempts: 5,
-                    useIdleFit: false,
+                    useIdleFit: true,
                 });
                 await this.waitForStableRenderedText(12);
                 this._bypassNextFitCache = true;
-                this.fitPageToViewport();
+                await this.runFitPageToViewportLazily();
                 const rootElement = this.$el.firstElementChild;
                 const frameElement = this.$refs.pageFrame;
                 const contentElement = this.$refs.pageContent;
@@ -8228,11 +8303,13 @@ document.addEventListener('alpine:init', () => {
             }
 
             const runLayoutPromise = (async () => {
+                const shouldUseIdleFit = Boolean(useIdleFit || this.isCalibrating);
+
                 for (let attempt = 0; attempt < layoutRequest.maxAttempts; attempt += 1) {
                     const fitRunsBeforeAttempt = this._fitRunCounter;
                     await this.layoutPage({
                         revealDelayMs: attempt === 0 ? layoutRequest.revealDelayMs : 160,
-                        useIdleFit,
+                        useIdleFit: shouldUseIdleFit,
                     });
 
                     if (
