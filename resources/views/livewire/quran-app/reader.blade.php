@@ -166,11 +166,16 @@
                 0 2px 8px color-mix(in srgb, var(--gray-700) 8%, transparent);
         }
 
-        .quran-segment-cluster.quran-segment-cluster-active {
+        .quran-segment-cluster.quran-segment-cluster-active,
+        .quran-segment-cluster.quran-segment-cluster-search-highlighted {
             background: var(--quran-active-bg);
             box-shadow:
                 inset 0 0 0 1px color-mix(in srgb, var(--success-300) 20%, transparent),
                 0 2px 10px color-mix(in srgb, var(--success-400) 12%, transparent);
+        }
+
+        .quran-segment-cluster.quran-segment-cluster-search-highlighted {
+            animation: quran-search-highlight-enter 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
         }
 
         .quran-segment-cluster.quran-segment-cluster-copied {
@@ -225,6 +230,18 @@
             from {
                 opacity: 0;
                 transform: translateY(0.08rem) scale(0.98);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @keyframes quran-search-highlight-enter {
+            from {
+                opacity: 0.4;
+                transform: translateY(0.06rem) scale(0.985);
             }
 
             to {
@@ -2037,6 +2054,8 @@
                                                         class="quran-segment-cluster"
                                                         x-bind:class="{
                                                             'quran-segment-cluster-active': isAyahClusterActive(
+                                                                cluster),
+                                                            'quran-segment-cluster-search-highlighted': isAyahClusterSearchHighlighted(
                                                                 cluster),
                                                             'quran-segment-cluster-hovered': isAyahClusterHovered(
                                                                 cluster),

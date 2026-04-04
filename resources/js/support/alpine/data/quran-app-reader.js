@@ -666,6 +666,7 @@ document.addEventListener('alpine:init', () => {
         maxPage: 0,
         activeAyahIndex: 0,
         activeWordIndex: 0,
+        searchHighlightedAyahIndex: 0,
         mushafLines: [],
         lineEntry: null,
         line: null,
@@ -5658,16 +5659,19 @@ document.addEventListener('alpine:init', () => {
             }
 
             this._pendingNavigationRequest = null;
+            const isSamePageNavigation =
+                request.targetPage === this.pageNumber && this.mushafLines.length > 0;
 
             await this.goToPage(request.targetPage, {
                 direction: request.direction,
                 animate: request.animate,
                 activeAyahIndex: request.activeAyahIndex,
+                searchHighlightAyahIndex: request.searchHighlightAyahIndex,
                 forceRefit: request.forceRefit,
                 source: request.source,
             });
 
-            if (request.animate) {
+            if (request.animate && !isSamePageNavigation) {
                 this.setNavigationRevealLock();
             }
         },
@@ -5678,6 +5682,7 @@ document.addEventListener('alpine:init', () => {
                 direction = 'next',
                 animate = true,
                 activeAyahIndex = null,
+                searchHighlightAyahIndex = null,
                 source = 'generic',
                 forceRefit = false,
                 commitNow = false,
@@ -5709,6 +5714,7 @@ document.addEventListener('alpine:init', () => {
                 direction: resolvedDirection,
                 animate: Boolean(animate),
                 activeAyahIndex,
+                searchHighlightAyahIndex,
                 source,
                 forceRefit: Boolean(forceRefit),
             };
@@ -5858,6 +5864,7 @@ document.addEventListener('alpine:init', () => {
             {
                 source = 'chevron-page',
                 activeAyahIndex = null,
+                searchHighlightAyahIndex = null,
                 forceRefit = true,
                 animate = true,
                 commitNow = null,
@@ -5880,6 +5887,7 @@ document.addEventListener('alpine:init', () => {
                 direction: this.resolveNavigationDirection(normalizedTargetPage),
                 animate: Boolean(animate),
                 activeAyahIndex,
+                searchHighlightAyahIndex,
                 source: sourceProfile,
                 forceRefit: Boolean(forceRefit),
                 commitNow: shouldCommitImmediately,
@@ -6161,11 +6169,19 @@ document.addEventListener('alpine:init', () => {
                 direction = 'next',
                 animate = true,
                 activeAyahIndex = null,
+                searchHighlightAyahIndex = null,
                 forceRefit = false,
                 source = 'generic',
             } = {},
         ) {
             const normalizedPage = clampPage(pageNumber, this.maxPage);
+            const normalizedSearchHighlightAyahIndex =
+                Number.isFinite(Number(searchHighlightAyahIndex)) &&
+                Number(searchHighlightAyahIndex) > 0
+                    ? Math.trunc(Number(searchHighlightAyahIndex))
+                    : 0;
+            const nextSearchHighlightedAyahIndex =
+                source === 'search-result' ? normalizedSearchHighlightAyahIndex : 0;
             this.clearWordPressState();
             this.hoveredAyahIndex = 0;
             this.hoveredWordIndex = 0;
@@ -6180,6 +6196,11 @@ document.addEventListener('alpine:init', () => {
                 this.pageInput = normalizedPage;
                 this._lastPageInputVisualValue = normalizedPage;
                 this.persistLastPageNumber(normalizedPage);
+                this.searchHighlightedAyahIndex = nextSearchHighlightedAyahIndex;
+
+                if (this.openModalCount() <= 0) {
+                    this.recoverStaleModalLifecycleState();
+                }
 
                 if (forceRefit) {
                     await this.layoutPageGuaranteed({ revealDelayMs: 200 });
@@ -6193,6 +6214,10 @@ document.addEventListener('alpine:init', () => {
 
                 if (this.hasRenderablePage()) {
                     this.isFittingPage = false;
+                }
+
+                if (this.openModalCount() <= 0) {
+                    this.recoverStaleModalLifecycleState();
                 }
 
                 return;
@@ -6246,6 +6271,7 @@ document.addEventListener('alpine:init', () => {
                         ? Math.trunc(Number(activeAyahIndex))
                         : 0;
                 this.activeWordIndex = 0;
+                this.searchHighlightedAyahIndex = nextSearchHighlightedAyahIndex;
 
                 if (animate) {
                     this.playPageMotion(direction);
@@ -7513,6 +7539,16 @@ document.addEventListener('alpine:init', () => {
                     useIdleFit: false,
                 });
             }
+
+            if (
+                this.isFittingPage &&
+                this.hasRenderablePage() &&
+                !this.isLoadingPage &&
+                this._pendingNavigationRequest === null &&
+                !this._navigationRevealLocked
+            ) {
+                this.forceRevealCurrentPage('startup-final-fit-pass-fail-open');
+            }
         },
 
         holdPageHiddenForModalLifecycle() {
@@ -7897,7 +7933,7 @@ document.addEventListener('alpine:init', () => {
                     layoutToken,
                 });
 
-                if (this._startupCalibrationPending) {
+                if (this._startupCalibrationPending && this.isCalibrating) {
                     this.isFittingPage = true;
                     this.queuePageReveal(layoutToken, 90);
 
@@ -10419,6 +10455,7 @@ document.addEventListener('alpine:init', () => {
             this.hoveredAyahIndex = 0;
             this.activeWordIndex = 0;
             this.hoveredWordIndex = 0;
+            this.searchHighlightedAyahIndex = 0;
         },
 
         isSelectableWord(word) {
@@ -10439,6 +10476,7 @@ document.addEventListener('alpine:init', () => {
                 return false;
             }
             const normalized = Math.trunc(normalizedAyahIndex);
+            this.searchHighlightedAyahIndex = 0;
 
             if (!this.shouldPersistActivationIndexes()) {
                 this.clearActivationIndexes();
@@ -10471,6 +10509,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             const normalized = Math.trunc(normalizedWordIndex);
+            this.searchHighlightedAyahIndex = 0;
 
             if (!this.shouldPersistActivationIndexes()) {
                 this.clearActivationIndexes();
@@ -12137,6 +12176,16 @@ document.addEventListener('alpine:init', () => {
             }
 
             return this.activeAyahIndex > 0 && ayahIndex > 0 && this.activeAyahIndex === ayahIndex;
+        },
+
+        isAyahClusterSearchHighlighted(cluster) {
+            const ayahIndex = Math.max(0, Math.trunc(Number(cluster?.ayahIndex ?? 0)));
+
+            return (
+                this.searchHighlightedAyahIndex > 0 &&
+                ayahIndex > 0 &&
+                this.searchHighlightedAyahIndex === ayahIndex
+            );
         },
 
         isAyahClusterHovered(cluster) {
@@ -13892,6 +13941,10 @@ document.addEventListener('alpine:init', () => {
             const waitDelayMs = Math.max(12, Math.trunc(Number(delayMs) || 24));
 
             for (let attempt = 0; attempt < attempts; attempt += 1) {
+                if (this.openModalCount() <= 0) {
+                    this.recoverStaleModalLifecycleState();
+                }
+
                 if (
                     this.openModalCount() <= 0 &&
                     !this._isModalLifecycleSettling &&
@@ -13903,7 +13956,15 @@ document.addEventListener('alpine:init', () => {
                 await wait(waitDelayMs);
             }
 
-            return this.openModalCount() <= 0;
+            if (this.openModalCount() <= 0) {
+                this.recoverStaleModalLifecycleState();
+            }
+
+            return (
+                this.openModalCount() <= 0 &&
+                !this._isModalLifecycleSettling &&
+                this._activeModalIds.size === 0
+            );
         },
 
         async requestHistoryModalClose() {
@@ -14230,6 +14291,7 @@ document.addEventListener('alpine:init', () => {
             this._bypassNextFitCache = true;
             await this.goToPageFromChevron(targetPage, {
                 activeAyahIndex: ayahIndex,
+                searchHighlightAyahIndex: ayahIndex,
                 source: 'search-result',
                 commitNow: true,
                 settleDelayMs: 0,
