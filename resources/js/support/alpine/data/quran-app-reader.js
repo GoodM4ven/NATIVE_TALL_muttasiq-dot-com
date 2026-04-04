@@ -875,6 +875,8 @@ document.addEventListener('alpine:init', () => {
         _startupRestoreInFlight: null,
         _startupCalibrationPending: true,
         _startupTargetPageNumber: 1,
+        _bootstrapDeferred: false,
+        isCalibrating: false,
         _globalFitCalibrationLayout: null,
         _globalFitCalibrationScale: 0,
         _globalFitCalibrationPageNumber: 0,
@@ -1022,6 +1024,15 @@ document.addEventListener('alpine:init', () => {
                     this.clearActivationIndexes();
                 }
 
+                if (this._bootstrapDeferred) {
+                    this._bootstrapDeferred = false;
+                    this.$nextTick(() => {
+                        this.bootstrap();
+                    });
+
+                    return;
+                }
+
                 this.scheduleLayout({ revealDelayMs: 200 });
             };
 
@@ -1055,7 +1066,23 @@ document.addEventListener('alpine:init', () => {
                 this.initializeLayoutObservers();
                 this.queueSupportLockTargetsUiSync();
             });
-            this.bootstrap();
+            this.$nextTick(() => {
+                if (this.isReaderElementVisible()) {
+                    this.bootstrap();
+                } else {
+                    this._bootstrapDeferred = true;
+                }
+            });
+        },
+
+        isReaderElementVisible() {
+            const el = this.$el;
+
+            if (!el) {
+                return false;
+            }
+
+            return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
         },
 
         registerNativeInputListeners() {
@@ -2209,6 +2236,8 @@ document.addEventListener('alpine:init', () => {
                 this.maxPage,
             );
 
+            this.isCalibrating = true;
+
             try {
                 const referencePayload = await this.getPagePayload(normalizedReferencePage, {
                     preferCache: true,
@@ -2363,6 +2392,7 @@ document.addEventListener('alpine:init', () => {
                     message: String(error?.message ?? ''),
                 });
             } finally {
+                this.isCalibrating = false;
                 this.pageInput = startupTargetPage;
                 this._lastPageInputVisualValue = startupTargetPage;
                 this._bypassNextFitCache = true;

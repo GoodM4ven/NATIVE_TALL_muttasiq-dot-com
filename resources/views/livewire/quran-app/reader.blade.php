@@ -309,6 +309,10 @@
             cursor: default;
         }
 
+        .quran-calibration-overlay {
+            background: var(--quran-panel-bg, color-mix(in srgb, var(--background) 92%, transparent));
+        }
+
         .quran-page-lines[data-fit-state='fading-out'] {
             opacity: 0;
             visibility: visible;
@@ -1861,9 +1865,47 @@
                 </header>
 
                 <div
-                    class="3xl:my-1 4xl:my-3 3xl:px-0 4xl:px-4 my-2 min-h-0 flex-1 overflow-hidden px-3 sm:my-3 sm:px-4 xl:my-1.5 xl:px-12 2xl:my-3 2xl:px-4"
+                    class="3xl:my-1 4xl:my-3 3xl:px-0 4xl:px-4 relative my-2 min-h-0 flex-1 overflow-hidden px-3 sm:my-3 sm:px-4 xl:my-1.5 xl:px-12 2xl:my-3 2xl:px-4"
                     x-ref="pageViewport"
                 >
+                    <div
+                        class="quran-calibration-overlay pointer-events-none absolute inset-0 z-20 grid place-items-center rounded-2xl transition-opacity duration-300"
+                        x-cloak
+                        x-show="isCalibrating"
+                        x-transition:enter="transition-opacity ease-out duration-200"
+                        x-transition:enter-start="opacity-0"
+                        x-transition:enter-end="opacity-100"
+                        x-transition:leave="transition-opacity ease-in duration-250"
+                        x-transition:leave-start="opacity-100"
+                        x-transition:leave-end="opacity-0"
+                    >
+                        <div class="flex flex-col items-center gap-3">
+                            <svg
+                                class="size-7 animate-spin text-current opacity-50"
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                            >
+                                <circle
+                                    class="opacity-25"
+                                    cx="12"
+                                    cy="12"
+                                    r="10"
+                                    stroke="currentColor"
+                                    stroke-width="3"
+                                ></circle>
+                                <path
+                                    class="opacity-75"
+                                    fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                                ></path>
+                            </svg>
+                            <span
+                                class="font-arabic-sans text-sm tracking-wide opacity-60"
+                                dir="rtl"
+                            >{{ arabic_text('جارٍ تجهيز العرض...') }}</span>
+                        </div>
+                    </div>
                     <div
                         class="quran-page-surface h-full rounded-2xl pt-2.5 transition-opacity duration-200"
                         x-bind:class="pageMotionClass"
