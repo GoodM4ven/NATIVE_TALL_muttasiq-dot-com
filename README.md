@@ -256,6 +256,7 @@ The assets used for the app so far can be found in this online [Penpot](https://
 - [Uiverse](https://uiverse.io)
 - [CodePen](https://codepen.io/trending)
 - [FreeFrontend](https://freefrontend.com)
+- [LDRS](https://uiball.com/ldrs/)
 - [https://heropatterns.com](https://heropatterns.com)
 - [https://blade-ui-kit.com/blade-icons](https://blade-ui-kit.com/blade-icons)
 - [https://laravel-package-ocean.com](https://laravel-package-ocean.com)

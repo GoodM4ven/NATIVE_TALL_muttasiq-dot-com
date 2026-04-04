@@ -6030,11 +6030,10 @@ document.addEventListener('alpine:init', () => {
                         });
                     }
 
-                    const requiresGuaranteedPostFit =
-                        !this.isCurrentPageVisiblyReady() ||
-                        this._lastFittedPageNumber !== this.pageNumber;
-
-                    if (requiresGuaranteedPostFit) {
+                    if (
+                        !this.isCurrentPageVisiblyReady() &&
+                        this._lastFittedPageNumber !== this.pageNumber
+                    ) {
                         this._bypassNextFitCache = true;
                         await this.layoutPageGuaranteed({
                             revealDelayMs: 170,

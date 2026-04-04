@@ -367,21 +367,39 @@
 
         .quran-calibration-spinner {
             display: block;
-            color: color-mix(in srgb, var(--quran-panel-text) 72%, transparent);
-            transform: translateZ(0);
-            will-change: transform;
-            /* animation: quran-calibration-spin 1.1s linear infinite; */
-        }
-
-        .quran-calibration-spinner-arc {
+            height: 37px;
+            width: 37px;
             transform-origin: center;
+            overflow: visible;
+            contain: strict;
         }
 
-        /* @keyframes quran-calibration-spin {
-            to {
-                transform: translateZ(0) rotate(360deg);
+        .quran-calibration-spinner-track {
+            stroke: color-mix(in srgb, var(--quran-panel-text) 72%, transparent);
+            opacity: 0.1;
+            transition: stroke 0.5s ease;
+        }
+
+        .quran-calibration-spinner-car {
+            fill: none;
+            stroke: color-mix(in srgb, var(--quran-panel-text) 72%, transparent);
+            stroke-dasharray: 15, 85;
+            stroke-dashoffset: 0;
+            stroke-linecap: round;
+            animation: quran-calibration-travel 0.9s linear infinite;
+            will-change: stroke-dashoffset;
+            transition: stroke 0.5s ease;
+        }
+
+        @keyframes quran-calibration-travel {
+            0% {
+                stroke-dashoffset: 0;
             }
-        } */
+
+            100% {
+                stroke-dashoffset: -100;
+            }
+        }
 
         .quran-page-lines[data-fit-state='fading-out'] {
             opacity: 0;
@@ -1788,37 +1806,26 @@
                     <div class="quran-calibration-loader flex flex-col items-center gap-3">
                         <svg
                             class="quran-calibration-spinner"
-                            width="37"
-                            height="37"
+                            x="0px"
+                            y="0px"
                             viewBox="0 0 37 37"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
+                            height="37"
+                            width="37"
+                            preserveAspectRatio="xMidYMid meet"
                         >
-                            <rect
-                                x="2.5"
-                                y="2.5"
-                                width="32"
-                                height="32"
-                                rx="8"
-                                stroke="currentColor"
-                                stroke-width="5"
-                                stroke-opacity="0.1"
+                            <path
+                                class="quran-calibration-spinner-track"
                                 fill="none"
-                            />
-                            <rect
-                                class="quran-calibration-spinner-arc"
-                                x="2.5"
-                                y="2.5"
-                                width="32"
-                                height="32"
-                                rx="8"
-                                stroke="currentColor"
                                 stroke-width="5"
-                                stroke-linecap="round"
-                                fill="none"
                                 pathLength="100"
-                                stroke-dasharray="15 85"
-                                stroke-dashoffset="0"
+                                d="M0.37 18.5 C0.37 5.772 5.772 0.37 18.5 0.37 S36.63 5.772 36.63 18.5 S31.228 36.63 18.5 36.63 S0.37 31.228 0.37 18.5"
+                            />
+                            <path
+                                class="quran-calibration-spinner-car"
+                                fill="none"
+                                stroke-width="5"
+                                pathLength="100"
+                                d="M0.37 18.5 C0.37 5.772 5.772 0.37 18.5 0.37 S36.63 5.772 36.63 18.5 S31.228 36.63 18.5 36.63 S0.37 31.228 0.37 18.5"
                             />
                         </svg>
                         <span
