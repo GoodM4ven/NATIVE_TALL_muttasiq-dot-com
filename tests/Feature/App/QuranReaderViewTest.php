@@ -314,7 +314,40 @@ it('wires quran reader entry points from main menu to hash navigation and view m
             'const shouldSuppressPersistedCacheWrite =',
         )
         ->and($quranReaderScriptSource)->toContain(
-            'const cachedFitResult = isModalLayoutContext',
+            'const fitCacheStorageVersion = 13;',
+        )
+        ->and($quranReaderScriptSource)->toContain(
+            "const fitCacheStorageKey = 'quran-reader-fit-cache-v13';",
+        )
+        ->and($quranReaderScriptSource)->toContain(
+            'const sharedFitSeedReferencePageNumber = 3;',
+        )
+        ->and($quranReaderScriptSource)->toContain(
+            'fitCacheSignatureParts({',
+        )
+        ->and($quranReaderScriptSource)->toContain(
+            'sharedFitSeedCacheKey(signatureParts = [])',
+        )
+        ->and($quranReaderScriptSource)->toContain(
+            'clearPageFitEntries(pageNumber = this.pageNumber)',
+        )
+        ->and($quranReaderScriptSource)->toContain(
+            'async primeSharedFitSeedFromReferencePage(',
+        )
+        ->and($quranReaderScriptSource)->toContain(
+            'syncVisualPageState = true',
+        )
+        ->and($quranReaderScriptSource)->toContain(
+            'const pageFitCacheResult = shouldBypassPageSpecificFitCache',
+        )
+        ->and($quranReaderScriptSource)->toContain(
+            'const sharedFitSeedResult = shouldBypassSharedFitSeed',
+        )
+        ->and($quranReaderScriptSource)->toContain(
+            'await this.primeSharedFitSeedFromReferencePage();',
+        )
+        ->and($quranReaderScriptSource)->toContain(
+            'this.clearPageFitEntries(normalizedReferencePage);',
         )
         ->and($quranReaderScriptSource)->toContain(
             'persist: !shouldSuppressPersistedCacheWrite',

@@ -120,10 +120,12 @@ const openingSpreadFinalScaleMultiplier = 0.72;
 const fitRobustWidthQuantile = 0.88;
 const fitRobustWidthOutlierThreshold = 1.2;
 const fitResultCacheLimit = 180;
-const fitCacheStorageVersion = 10;
-const fitCacheStorageKey = 'quran-reader-fit-cache-v10';
+const fitCacheStorageVersion = 13;
+const fitCacheStorageKey = 'quran-reader-fit-cache-v13';
 const fitCacheViewportBucketSizePx = 24;
-const shouldPersistFitCacheAcrossReloads = false;
+const shouldPersistFitCacheAcrossReloads = true;
+const sharedFitSeedReferencePageNumber = 3;
+const sharedFitSeedCachePageToken = `seed-page-${sharedFitSeedReferencePageNumber}`;
 const idleWarmupPauseOnHighFrequencyNavigationMs = 520;
 const idleWarmupPauseOnStandardNavigationMs = 160;
 const idleWarmupResumeDelayMs = 220;
@@ -1905,6 +1907,98 @@ document.addEventListener('alpine:init', () => {
             return Math.max(bucket, Math.round(normalizedValue / bucket) * bucket);
         },
 
+        fitCacheSignatureParts({
+            breakpointName = '',
+            availableWidth = 0,
+            availableHeight = 0,
+            isModalLayoutContext = false,
+            isFontLayoutPending = false,
+            fitTargetWidthRatio = 0.8,
+            fitAreaPaddingX = 0,
+            fitAreaPaddingY = 0,
+            minimumLeadingMultiplier = 1,
+            minimumGapMultiplier = 1,
+            minimumSurahHeaderScale = 1,
+            minimumBasmallahBottomGapScale = defaultBasmallahBottomGapScale,
+            minScale = 0.1,
+            maxScale = 1,
+        } = {}) {
+            return [
+                String(breakpointName ?? '').trim() || 'bp-unknown',
+                this.viewportBucketValue(availableWidth),
+                this.viewportBucketValue(availableHeight),
+                isModalLayoutContext ? 'modal-open' : 'modal-closed',
+                isFontLayoutPending ? 'fonts-pending' : 'fonts-loaded',
+                this.useCenteredAyahLayout ? 'centered' : 'rect',
+                'scale-only-v1',
+                Number(fitTargetWidthRatio).toFixed(3),
+                Number(fitAreaPaddingX).toFixed(2),
+                Number(fitAreaPaddingY).toFixed(2),
+                Number(minimumLeadingMultiplier).toFixed(3),
+                Number(minimumGapMultiplier).toFixed(3),
+                Number(minimumSurahHeaderScale).toFixed(3),
+                Number(minimumBasmallahBottomGapScale).toFixed(3),
+                String(this.qpcPageFontFamily ?? ''),
+                String(this.basmallahFontFamily ?? ''),
+                String(this.surahHeaderFontFamily ?? ''),
+                Number(minScale).toFixed(3),
+                Number(maxScale).toFixed(3),
+            ];
+        },
+
+        fitCacheKeyForPage(pageIdentifier, signatureParts = []) {
+            const pageToken = String(pageIdentifier ?? '').trim() || 'page-unknown';
+
+            return [pageToken, ...(Array.isArray(signatureParts) ? signatureParts : [])].join('|');
+        },
+
+        sharedFitSeedCacheKey(signatureParts = []) {
+            return this.fitCacheKeyForPage(sharedFitSeedCachePageToken, signatureParts);
+        },
+
+        clearSharedFitSeedEntries() {
+            for (const cacheKey of this._fitResultByContext.keys()) {
+                if (String(cacheKey ?? '').startsWith(`${sharedFitSeedCachePageToken}|`)) {
+                    this._fitResultByContext.delete(cacheKey);
+                }
+            }
+        },
+
+        clearPageFitEntries(pageNumber = this.pageNumber) {
+            const normalizedPageNumber = Math.max(1, Math.trunc(Number(pageNumber ?? 1)));
+            const pageCachePrefix = `${normalizedPageNumber}|`;
+
+            for (const cacheKey of this._fitResultByContext.keys()) {
+                if (String(cacheKey ?? '').startsWith(pageCachePrefix)) {
+                    this._fitResultByContext.delete(cacheKey);
+                }
+            }
+        },
+
+        syncSharedFitSeedFromPageCache(pageNumber = sharedFitSeedReferencePageNumber) {
+            const normalizedPageNumber = Math.max(1, Math.trunc(Number(pageNumber ?? 1)));
+            const pageCachePrefix = `${normalizedPageNumber}|`;
+            const matchingPageEntries = Array.from(this._fitResultByContext.entries()).filter(
+                ([cacheKey]) => String(cacheKey ?? '').startsWith(pageCachePrefix),
+            );
+
+            this.clearSharedFitSeedEntries();
+
+            matchingPageEntries.forEach(([cacheKey, entry]) => {
+                const signature = String(cacheKey ?? '').slice(pageCachePrefix.length);
+
+                if (signature === '') {
+                    return;
+                }
+
+                this.rememberFitResult(`${sharedFitSeedCachePageToken}|${signature}`, entry, {
+                    persist: false,
+                });
+            });
+
+            this.queuePersistedFitCacheWrite();
+        },
+
         normalizeFitCacheEntry(entry) {
             if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
                 return null;
@@ -2120,11 +2214,107 @@ document.addEventListener('alpine:init', () => {
             });
         },
 
+        currentPayloadSnapshot() {
+            return normalizePayload({
+                ready: this.ready,
+                pageNumber: this.pageNumber,
+                maxPage: this.maxPage,
+                activeAyahIndex: this.activeAyahIndex,
+                mushafLines: Array.isArray(this.mushafLines) ? this.mushafLines : [],
+                qpcPageFontFamily: this.qpcPageFontFamily,
+                qpcPageFontUrl: this.qpcPageFontUrl,
+                qpcPageFontFormat: this.qpcPageFontFormat,
+                basmallahFontFamily: this.basmallahFontFamily,
+                basmallahFontUrl: this.basmallahFontUrl,
+                basmallahFontFormat: this.basmallahFontFormat,
+                basmallahText: this.basmallahText,
+                surahHeaderFontFamily: this.surahHeaderFontFamily,
+                surahHeaderFontUrl: this.surahHeaderFontUrl,
+                surahHeaderFontFormat: this.surahHeaderFontFormat,
+                surahNames: this.search?.surahNames ?? {},
+                surahDirectory: this.search?.surahDirectory ?? [],
+                useCenteredAyahLayout: this.useCenteredAyahLayout,
+            });
+        },
+
+        async primeSharedFitSeedFromReferencePage(
+            referencePage = sharedFitSeedReferencePageNumber,
+        ) {
+            const normalizedReferencePage = clampPage(referencePage, this.maxPage);
+
+            if (
+                !this.hasRenderablePage() ||
+                normalizedReferencePage <= 0 ||
+                this.maxPage < normalizedReferencePage
+            ) {
+                return;
+            }
+
+            const currentPayload = this.currentPayloadSnapshot();
+            const currentPageInput = this.pageInput;
+            const currentLastPageInputVisualValue = this._lastPageInputVisualValue;
+            const currentLoadedPayloadPageNumber = this._loadedPayloadPageNumber;
+
+            try {
+                const referencePayload = await this.getPagePayload(normalizedReferencePage, {
+                    preferCache: true,
+                });
+
+                if (
+                    !referencePayload?.ready ||
+                    !Array.isArray(referencePayload?.mushafLines) ||
+                    referencePayload.mushafLines.length === 0
+                ) {
+                    return;
+                }
+
+                this.applyPayload(referencePayload, {
+                    setPageNumber: false,
+                    persistPageNumber: false,
+                    syncVisualPageState: false,
+                });
+                this.pageInput = currentPageInput;
+                this._lastPageInputVisualValue = currentLastPageInputVisualValue;
+                await this.nextTickAsync();
+                await this.waitForPageFontReady();
+                await this.waitForStablePageFrame({
+                    maxFrames: 16,
+                    requiredStableFrames: 2,
+                    tolerancePx: 0.8,
+                });
+                this.clearSharedFitSeedEntries();
+                this.clearPageFitEntries(normalizedReferencePage);
+                this._bypassNextFitCache = true;
+                this.fitPageToViewport({
+                    pageNumberOverride: normalizedReferencePage,
+                });
+                this.syncSharedFitSeedFromPageCache(normalizedReferencePage);
+            } catch (_) {
+                //
+            } finally {
+                this.applyPayload(currentPayload, {
+                    setPageNumber: false,
+                    persistPageNumber: false,
+                    syncVisualPageState: false,
+                });
+                this.pageInput = currentPageInput;
+                this._lastPageInputVisualValue = currentLastPageInputVisualValue;
+                this._loadedPayloadPageNumber =
+                    currentLoadedPayloadPageNumber > 0
+                        ? currentLoadedPayloadPageNumber
+                        : currentPayload.pageNumber;
+                this.resetCurrentPageFitStyles();
+                this._lastFittedPageNumber = 0;
+                await this.nextTickAsync();
+            }
+        },
+
         async bootstrap() {
             await this.ensurePersistentStorage();
             this.syncSupportLockTargetsUi();
             this.syncFitCacheBreakpoint({ persist: false });
             this.hydratePersistedFitCache();
+            const startupDestinationPage = this.startupDestinationPage();
 
             if (this._startupRestoreInFlight instanceof Promise) {
                 try {
@@ -2134,7 +2324,14 @@ document.addEventListener('alpine:init', () => {
                 }
             }
 
-            await this.ensureCurrentPageLoaded();
+            await this.ensureCurrentPageLoaded(startupDestinationPage);
+            await this.primeSharedFitSeedFromReferencePage();
+            this.pageNumber = startupDestinationPage;
+            this.pageInput = startupDestinationPage;
+            this._lastPageInputVisualValue = startupDestinationPage;
+            await this.ensureCurrentPageLoaded(startupDestinationPage);
+            this.refreshSurahTriggerCaption(false);
+            this.syncSearchActiveSurahNumber();
             await this.runStartupFinalFitPass();
             this.queueStartupPreload();
             this.scheduleIdleWarmup();
@@ -4993,9 +5190,24 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        async ensureCurrentPageLoaded() {
+        startupDestinationPage() {
+            const maxPage = this.maxPage || this.initialPayload.maxPage;
+            const storedLastPageNumber = readLastPageNumber();
+            const candidatePage =
+                storedLastPageNumber ??
+                this.pageInput ??
+                this.pageNumber ??
+                this.initialPayload.pageNumber;
+
+            return clampPage(candidatePage, maxPage);
+        },
+
+        async ensureCurrentPageLoaded(targetPageOverride = null) {
             const normalizedPage = clampPage(this.pageNumber, this.maxPage);
-            const targetPage = clampPage(Number(this.pageInput ?? this.pageNumber), this.maxPage);
+            const targetPage = clampPage(
+                Number(targetPageOverride ?? this.pageInput ?? this.pageNumber),
+                this.maxPage,
+            );
             const loadedPayloadPageNumber = Math.max(
                 0,
                 Math.trunc(Number(this._loadedPayloadPageNumber ?? 0)),
@@ -6319,7 +6531,10 @@ document.addEventListener('alpine:init', () => {
             });
         },
 
-        applyPayload(payload, { setPageNumber = false, persistPageNumber = true } = {}) {
+        applyPayload(
+            payload,
+            { setPageNumber = false, persistPageNumber = true, syncVisualPageState = true } = {},
+        ) {
             const normalizedPayload = normalizePayload(payload);
             const previousPageNumber = Math.max(1, Math.trunc(Number(this.pageNumber ?? 1)));
             const payloadPageNumber = clampPage(
@@ -6374,14 +6589,16 @@ document.addEventListener('alpine:init', () => {
                 }
             }
 
-            if (this.pageInput !== this.pageNumber) {
-                this.triggerPageCounterPulse(this.pageInput, this.pageNumber, {
-                    source: 'payload-sync',
-                });
-            }
+            if (syncVisualPageState) {
+                if (this.pageInput !== this.pageNumber) {
+                    this.triggerPageCounterPulse(this.pageInput, this.pageNumber, {
+                        source: 'payload-sync',
+                    });
+                }
 
-            this.pageInput = this.pageNumber;
-            this._lastPageInputVisualValue = this.pageNumber;
+                this.pageInput = this.pageNumber;
+                this._lastPageInputVisualValue = this.pageNumber;
+            }
             this.syncPageFontFace();
             this.syncBasmallahFontFace();
             this.syncSurahHeaderFontFace();
@@ -8657,7 +8874,7 @@ document.addEventListener('alpine:init', () => {
             return true;
         },
 
-        fitPageToViewport() {
+        fitPageToViewport({ pageNumberOverride = null } = {}) {
             const rootElement = this.$el.firstElementChild;
             const frameElement = this.$refs.pageFrame;
             const contentElement = this.$refs.pageContent;
@@ -8803,43 +9020,47 @@ document.addEventListener('alpine:init', () => {
                     baselineLayout.basmallahBottomGapScale - 0.12,
                 ),
             );
-            const normalizedPageNumber = Math.max(1, Math.trunc(Number(this.pageNumber ?? 1)));
+            const normalizedPageNumber = Math.max(
+                1,
+                Math.trunc(Number(pageNumberOverride ?? this.pageNumber ?? 1)),
+            );
             const breakpointName = this.resolveCurrentBreakpointName();
+            const hasForcedFitCacheBypass = this._bypassNextFitCache;
             const isModalLayoutContext =
-                this._bypassNextFitCache ||
                 this._isModalLifecycleSettling ||
                 this._activeModalIds.size > 0 ||
                 this.openModalCount() > 0;
             const isFontLayoutPending = !this.areTrackedPageFontsLoaded();
-            const shouldBypassFitCache = isModalLayoutContext || isFontLayoutPending;
-            const shouldSuppressPersistedCacheWrite = shouldBypassFitCache;
+            const shouldBypassPageSpecificFitCache =
+                hasForcedFitCacheBypass || isModalLayoutContext || isFontLayoutPending;
+            const shouldBypassSharedFitSeed = isModalLayoutContext || isFontLayoutPending;
+            const shouldSuppressPersistedCacheWrite = shouldBypassPageSpecificFitCache;
             const ayahLineCount = Array.isArray(this.mushafLines)
                 ? this.mushafLines.filter((line) => String(line?.line_type ?? '') === 'ayah').length
                 : 0;
             const targetMinimumFillWidth =
                 ayahLineCount >= 10 ? 0.9 : ayahLineCount >= 6 ? 0.86 : 0.8;
-            const fitCacheKey = [
+            const fitCacheSignatureParts = this.fitCacheSignatureParts({
+                breakpointName,
+                availableWidth,
+                availableHeight,
+                isModalLayoutContext,
+                isFontLayoutPending,
+                fitTargetWidthRatio,
+                fitAreaPaddingX,
+                fitAreaPaddingY,
+                minimumLeadingMultiplier,
+                minimumGapMultiplier,
+                minimumSurahHeaderScale,
+                minimumBasmallahBottomGapScale,
+                minScale,
+                maxScale,
+            });
+            const fitCacheKey = this.fitCacheKeyForPage(
                 normalizedPageNumber,
-                breakpointName || 'bp-unknown',
-                this.viewportBucketValue(availableWidth),
-                this.viewportBucketValue(availableHeight),
-                isModalLayoutContext ? 'modal-open' : 'modal-closed',
-                isFontLayoutPending ? 'fonts-pending' : 'fonts-loaded',
-                this.useCenteredAyahLayout ? 'centered' : 'rect',
-                'scale-only-v1',
-                Number(fitTargetWidthRatio).toFixed(3),
-                Number(fitAreaPaddingX).toFixed(2),
-                Number(fitAreaPaddingY).toFixed(2),
-                Number(minimumLeadingMultiplier).toFixed(3),
-                Number(minimumGapMultiplier).toFixed(3),
-                Number(minimumSurahHeaderScale).toFixed(3),
-                Number(minimumBasmallahBottomGapScale).toFixed(3),
-                String(this.qpcPageFontFamily ?? ''),
-                String(this.basmallahFontFamily ?? ''),
-                String(this.surahHeaderFontFamily ?? ''),
-                Number(minScale).toFixed(3),
-                Number(maxScale).toFixed(3),
-            ].join('|');
+                fitCacheSignatureParts,
+            );
+            const sharedFitSeedCacheKey = this.sharedFitSeedCacheKey(fitCacheSignatureParts);
 
             const strictWidthOverflowTolerance = 1.0025;
             const strictHeightOverflowTolerance = 1.0025;
@@ -8929,42 +9150,86 @@ document.addEventListener('alpine:init', () => {
                 };
             };
 
-            const cachedFitResult = isModalLayoutContext
+            const pageFitCacheResult = shouldBypassPageSpecificFitCache
                 ? null
-                : isFontLayoutPending
-                  ? null
-                  : this._fitResultByContext.get(fitCacheKey);
+                : this._fitResultByContext.get(fitCacheKey);
+            const sharedFitSeedResult = shouldBypassSharedFitSeed
+                ? null
+                : this._fitResultByContext.get(sharedFitSeedCacheKey);
+            const shouldPreferSharedFitSeed =
+                normalizedPageNumber !== sharedFitSeedReferencePageNumber;
+            const tryCachedFitResult = (
+                cachedFitResult,
+                { cacheKey = '', cacheLabel = 'page' } = {},
+            ) => {
+                if (
+                    !cachedFitResult ||
+                    !cachedFitResult.layout ||
+                    !Number.isFinite(Number(cachedFitResult.scale))
+                ) {
+                    return false;
+                }
 
-            if (
-                cachedFitResult &&
-                cachedFitResult.layout &&
-                Number.isFinite(Number(cachedFitResult.scale))
-            ) {
                 this.applyFitLayoutVariables(rootElement, cachedFitResult.layout);
                 const cached = evaluateScale(Number(cachedFitResult.scale));
                 const cacheHasHealthyFill =
                     cached.fillWidth >= minimumHealthyFillWidth &&
                     cached.fillHeight >= minimumHealthyFillHeight;
 
-                if (cached.fits && cacheHasHealthyFill) {
-                    this.pageScale = cached.scale;
-                    this._fitRunCounter += 1;
-                    this._lastFittedPageNumber = this.pageNumber;
-                    this.scheduleFitSanityCheck({
-                        cacheKey: fitCacheKey,
-                        pageNumber: normalizedPageNumber,
-                        availableWidth: targetWidth,
-                        availableHeight: targetHeight,
-                        strictWidthOverflowTolerance,
-                        strictHeightOverflowTolerance,
-                        minimumFillWidth: minimumHealthyFillWidth,
-                        minimumFillHeight: minimumHealthyFillHeight,
-                    });
+                if (!(cached.fits && cacheHasHealthyFill)) {
+                    if (cacheKey !== '') {
+                        this.forgetFitResult(cacheKey);
+                    }
 
-                    return;
+                    return false;
                 }
 
-                this.forgetFitResult(fitCacheKey);
+                this.pageScale = cached.scale;
+                this._bypassNextFitCache = false;
+
+                this._fitRunCounter += 1;
+                this._lastFittedPageNumber = this.pageNumber;
+                this.scheduleFitSanityCheck({
+                    cacheKey: cacheLabel === 'shared' ? sharedFitSeedCacheKey : fitCacheKey,
+                    pageNumber: normalizedPageNumber,
+                    availableWidth: targetWidth,
+                    availableHeight: targetHeight,
+                    strictWidthOverflowTolerance,
+                    strictHeightOverflowTolerance,
+                    minimumFillWidth: minimumHealthyFillWidth,
+                    minimumFillHeight: minimumHealthyFillHeight,
+                });
+
+                return true;
+            };
+
+            if (
+                shouldPreferSharedFitSeed &&
+                tryCachedFitResult(sharedFitSeedResult, {
+                    cacheKey: sharedFitSeedCacheKey,
+                    cacheLabel: 'shared',
+                })
+            ) {
+                return;
+            }
+
+            if (
+                tryCachedFitResult(pageFitCacheResult, {
+                    cacheKey: fitCacheKey,
+                    cacheLabel: 'page',
+                })
+            ) {
+                return;
+            }
+
+            if (
+                !shouldPreferSharedFitSeed &&
+                tryCachedFitResult(sharedFitSeedResult, {
+                    cacheKey: sharedFitSeedCacheKey,
+                    cacheLabel: 'shared',
+                })
+            ) {
+                return;
             }
 
             const midpointLayout = {
