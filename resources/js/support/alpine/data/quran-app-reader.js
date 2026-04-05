@@ -10041,12 +10041,13 @@ document.addEventListener('alpine:init', () => {
             }
 
             const source = this.swipeEventSource(event);
+
             const isTouchPointer =
                 String(event?.pointerType ?? '').toLowerCase() === 'touch' ||
                 String(event?.pointerType ?? '').toLowerCase() === 'pen';
 
             if (
-                event.target?.closest?.('[data-quran-word-button]') &&
+                event.target?.closest?.('[data-quran-word-button], [data-quran-line-text]') &&
                 source !== 'touch' &&
                 !isTouchPointer
             ) {

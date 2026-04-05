@@ -1326,6 +1326,13 @@
             box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--primary-500) 58%, transparent);
         }
 
+        .quran-reader-panel--calibrating .quran-top-strip {
+            filter: blur(2.4px);
+            opacity: 0.44;
+            pointer-events: none;
+            transition: opacity 180ms ease, filter 180ms ease;
+        }
+
         .quran-bottom-strip {
             display: grid;
             grid-template-columns: 1fr auto 1fr;
@@ -1335,6 +1342,40 @@
             row-gap: 0.42rem;
             padding: 0.45rem 1rem 0.74rem;
             min-height: 3.65rem;
+            position: relative;
+            isolation: isolate;
+            overflow: hidden;
+        }
+
+        .quran-bottom-strip::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top,
+                    rgb(255 255 255 / 0.98) 0%,
+                    rgb(255 255 255 / 0.84) 48%,
+                    rgb(255 255 255 / 0.15) 74%,
+                    transparent 100%);
+            opacity: 0;
+            transition: opacity 200ms ease;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .quran-bottom-strip>* {
+            position: relative;
+            z-index: 1;
+            transition: opacity 180ms ease, filter 180ms ease;
+        }
+
+        .quran-reader-panel--calibrating .quran-bottom-strip::before {
+            opacity: 1;
+        }
+
+        .quran-reader-panel--calibrating .quran-bottom-strip>* {
+            filter: blur(2.2px);
+            opacity: 0.36;
+            pointer-events: none;
         }
 
         .quran-bottom-strip-nav-prev {
@@ -1822,6 +1863,7 @@
             <section
                 class="quran-reader-panel min-w-75 3xl:h-196 3xl:w-140 4xl:h-240 4xl:w-176 relative flex h-[min(82svh,38rem)] w-[min(92vw,22rem)] flex-col overflow-hidden rounded-[1.75rem] border sm:w-[min(84vw,37rem)] xl:h-[min(73.5svh,46.75rem)] xl:w-[min(84vw,34rem)] 2xl:h-[min(73.5svh,55rem)] 2xl:w-[min(84vw,40rem)]"
                 x-bind:style="readerPanelStyle()"
+                x-bind:class="{ 'quran-reader-panel--calibrating': isCalibrating || _startupCalibrationPending }"
                 x-on:pointerdown.passive="onSwipeStart($event)"
                 x-on:pointermove.window.passive="onSwipeMove($event)"
                 x-on:pointerup.window.passive="onSwipeEnd($event)"
@@ -1873,7 +1915,6 @@
                 </template>
                 <header
                     class="quran-top-strip"
-                    data-no-swipe
                     x-bind:class="{ 'quran-top-strip--wird-active': wirdModeActive }"
                 >
                     <!-- Credits: uiverse.io/gharsh11032000/loud-chicken-53 -->
@@ -2224,10 +2265,7 @@
                     </div>
                 </div>
 
-                <footer
-                    class="quran-bottom-strip"
-                    data-no-swipe
-                >
+                <footer class="quran-bottom-strip">
                     <button
                         class="quran-swipe-hint quran-swipe-hint-button quran-bottom-strip-nav-prev 4xl:min-h-[2.2rem] 4xl:min-w-[4.2rem] 4xl:px-1 4xl:py-[0.1rem] min-h-[1.95rem] min-w-[3.45rem] select-none px-[0.18rem] py-[0.06rem] outline-none sm:min-h-8 sm:min-w-[3.65rem] sm:px-[0.2rem] sm:py-[0.08rem] md:min-h-[2.05rem] md:min-w-[3.8rem] md:px-[0.22rem] md:py-[0.08rem] lg:min-h-[2.1rem] lg:min-w-[3.95rem] lg:px-[0.24rem] xl:min-w-[4.05rem]"
                         type="button"

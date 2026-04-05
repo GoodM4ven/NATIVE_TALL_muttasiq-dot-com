@@ -7,20 +7,37 @@ namespace App\Filament\Resources\ThikrOverrideSubmissions;
 use App\Filament\Resources\ThikrOverrideSubmissions\Pages\ManageThikrOverrideSubmissions;
 use App\Models\Thikr;
 use App\Models\ThikrOverrideSubmission;
+use App\Services\Enums\ThikrTime;
+use App\Services\Enums\ThikrType;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Support\Arr;
+use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 
 class ThikrOverrideSubmissionResource extends Resource
 {
+    /**
+     * @var array<int, string>
+     */
+    private const OVERRIDE_COMPARISON_KEYS = [
+        'order',
+        'time',
+        'type',
+        'text',
+        'origin',
+        'count',
+        'is_aayah',
+    ];
+
     protected static ?string $model = ThikrOverrideSubmission::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedInboxStack;
@@ -116,6 +133,18 @@ class ThikrOverrideSubmissionResource extends Resource
                     ]),
             ])
             ->recordActions([
+                Action::make('viewReview')
+                    ->label(arabic_text('عرض المقارنة'))
+                    ->icon('heroicon-s-eye')
+                    ->color('gray')
+                    ->modalHeading(arabic_text('مقارنة التعديل المقترح'))
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel(arabic_text('إغلاق'))
+                    ->modalWidth(Width::SevenExtraLarge)
+                    ->modalContent(
+                        static fn (ThikrOverrideSubmission $record): HtmlString => self::overrideReviewModalContent($record),
+                    ),
+
                 Action::make('approve')
                     ->label(arabic_text('اعتماد'))
                     ->icon('heroicon-s-check-circle')
@@ -277,6 +306,126 @@ class ThikrOverrideSubmissionResource extends Resource
             'is_aayah' => arabic_text('نص آية'),
             default => $key,
         };
+    }
+
+    private static function overrideReviewModalContent(ThikrOverrideSubmission $record): HtmlString
+    {
+        $payload = self::normalizeOverridePayload($record->override_payload);
+        $thikrRelationRecord = $record->thikr;
+        $thikr = $thikrRelationRecord instanceof Thikr ? $thikrRelationRecord : null;
+        $baselineCurrent = [
+            'order' => $thikr instanceof Thikr ? max(1, (int) $thikr->order) : 1,
+            'time' => $thikr instanceof Thikr ? $thikr->time->value : '',
+            'type' => $thikr instanceof Thikr ? $thikr->type->value : '',
+            'text' => $thikr instanceof Thikr ? (string) $thikr->text : '',
+            'origin' => $thikr instanceof Thikr ? $thikr->origin : null,
+            'count' => $thikr instanceof Thikr ? max(1, (int) $thikr->count) : 1,
+            'is_aayah' => $thikr instanceof Thikr && (bool) $thikr->is_aayah,
+        ];
+        $currentSnapshot = Arr::get($payload, 'current');
+        $proposedSnapshot = Arr::get($payload, 'proposed');
+        $current = array_replace($baselineCurrent, is_array($currentSnapshot) ? $currentSnapshot : []);
+        $proposed = array_replace($current, is_array($proposedSnapshot) ? $proposedSnapshot : []);
+        $changedKeys = Arr::get($payload, 'changed_keys');
+        $normalizedChangedKeys = collect(is_array($changedKeys) ? $changedKeys : [])
+            ->map(static fn (mixed $key): string => trim((string) $key))
+            ->filter(
+                static fn (string $key): bool => $key !== '' && in_array($key, self::OVERRIDE_COMPARISON_KEYS, true),
+            )
+            ->values()
+            ->all();
+
+        if ($normalizedChangedKeys === []) {
+            $normalizedChangedKeys = collect(self::OVERRIDE_COMPARISON_KEYS)
+                ->filter(
+                    static fn (string $key): bool => Arr::get($proposed, $key) !== Arr::get($current, $key),
+                )
+                ->values()
+                ->all();
+        }
+
+        $renderSnapshotRows = static function (array $snapshot): string {
+            return collect(self::OVERRIDE_COMPARISON_KEYS)
+                ->map(function (string $key) use ($snapshot): string {
+                    $label = e(self::changedKeyLabel($key));
+                    $value = e(self::comparisonValueLabel($key, Arr::get($snapshot, $key)));
+
+                    return '<div class="grid grid-cols-[6.4rem_1fr] items-start gap-2 rounded-lg border border-slate-200/70 bg-white/70 px-3 py-2 dark:border-slate-700/70 dark:bg-slate-900/45">'
+                        .'<span class="text-[0.72rem] font-semibold text-slate-500 dark:text-slate-300">'.$label.'</span>'
+                        .'<span class="text-sm leading-7 whitespace-pre-wrap break-words text-slate-900 dark:text-slate-50">'.$value.'</span>'
+                        .'</div>';
+                })
+                ->implode('');
+        };
+        $comparisonRows = collect($normalizedChangedKeys)
+            ->map(function (string $key) use ($current, $proposed): string {
+                $label = e(self::changedKeyLabel($key));
+                $currentValue = e(self::comparisonValueLabel($key, Arr::get($current, $key)));
+                $proposedValue = e(self::comparisonValueLabel($key, Arr::get($proposed, $key)));
+
+                return '<tr class="border-b border-slate-200/70 dark:border-slate-700/70">'
+                    .'<td class="px-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300">'.$label.'</td>'
+                    .'<td class="px-3 py-2 text-sm leading-7 whitespace-pre-wrap break-words text-slate-900 dark:text-slate-100">'.$currentValue.'</td>'
+                    .'<td class="px-3 py-2 text-sm leading-7 whitespace-pre-wrap break-words text-primary-700 dark:text-primary-200">'.$proposedValue.'</td>'
+                    .'</tr>';
+            })
+            ->implode('');
+
+        if ($comparisonRows === '') {
+            $comparisonRows = '<tr>'
+                .'<td colspan="3" class="px-3 py-4 text-sm text-slate-500 dark:text-slate-300">'
+                .e(arabic_text('لا توجد فروقات محفوظة لهذا الطلب.'))
+                .'</td>'
+                .'</tr>';
+        }
+
+        return new HtmlString(
+            '<div class="space-y-4 text-right" dir="rtl">'
+                .'<div class="grid gap-4 lg:grid-cols-2">'
+                .'<section class="rounded-xl border border-slate-200/80 bg-white/80 p-4 shadow-xs dark:border-slate-700/70 dark:bg-slate-900/60">'
+                .'<h3 class="mb-3 text-sm font-semibold text-slate-900 dark:text-slate-100">'.e(arabic_text('السجل الأصلي الكامل')).'</h3>'
+                .'<div class="space-y-2">'.$renderSnapshotRows($current).'</div>'
+                .'</section>'
+                .'<section class="rounded-xl border border-primary-200/80 bg-primary-50/70 p-4 shadow-xs dark:border-primary-700/50 dark:bg-primary-900/20">'
+                .'<h3 class="mb-3 text-sm font-semibold text-primary-900 dark:text-primary-100">'.e(arabic_text('السجل المقترح بعد التعديل')).'</h3>'
+                .'<div class="space-y-2">'.$renderSnapshotRows($proposed).'</div>'
+                .'</section>'
+                .'</div>'
+                .'<section class="rounded-xl border border-slate-200/80 bg-white/80 p-4 shadow-xs dark:border-slate-700/70 dark:bg-slate-900/60">'
+                .'<h3 class="mb-3 text-sm font-semibold text-slate-900 dark:text-slate-100">'.e(arabic_text('صفوف الفروقات (الأصلي مقابل المقترح)')).'</h3>'
+                .'<div class="overflow-x-auto rounded-lg border border-slate-200/70 dark:border-slate-700/70">'
+                .'<table class="min-w-full border-collapse">'
+                .'<thead class="bg-slate-100/90 dark:bg-slate-800/80">'
+                .'<tr>'
+                .'<th class="px-3 py-2 text-right text-[0.7rem] font-semibold text-slate-600 dark:text-slate-300">'.e(arabic_text('الحقل')).'</th>'
+                .'<th class="px-3 py-2 text-right text-[0.7rem] font-semibold text-slate-600 dark:text-slate-300">'.e(arabic_text('الأصلي')).'</th>'
+                .'<th class="px-3 py-2 text-right text-[0.7rem] font-semibold text-primary-700 dark:text-primary-300">'.e(arabic_text('المقترح')).'</th>'
+                .'</tr>'
+                .'</thead>'
+                .'<tbody>'.$comparisonRows.'</tbody>'
+                .'</table>'
+                .'</div>'
+                .'</section>'
+                .'</div>',
+        );
+    }
+
+    private static function comparisonValueLabel(string $key, mixed $value): string
+    {
+        return match ($key) {
+            'time' => ThikrTime::labelFor((string) $value),
+            'type' => ThikrType::labelFor(is_string($value) ? $value : null),
+            'is_aayah' => (bool) $value ? arabic_text('نعم') : arabic_text('لا'),
+            'order', 'count' => (string) max(1, (int) $value),
+            default => self::normalizedTextValue($value),
+        };
+    }
+
+    private static function normalizedTextValue(mixed $value): string
+    {
+        $normalizedValue = trim((string) ($value ?? ''));
+
+        return $normalizedValue === '' ? arabic_text('—') : $normalizedValue;
     }
 
     /**

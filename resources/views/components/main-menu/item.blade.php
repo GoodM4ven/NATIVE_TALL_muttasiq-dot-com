@@ -184,7 +184,7 @@
         <x-icon
             class="{{ twMerge('will-change-[transform,opacity,filter] relative z-10 fill-primary-500 dark:fill-primary-200 h-8 w-8 transform-gpu transition-[opacity,scale,filter]', $iconClasses) }}"
             x-bind:class="{
-                'scale-[0.88]! opacity-[0.48] grayscale-[1]': containerHovered && !isActive,
+                'scale-[0.88]! opacity-[0.48] grayscale-[1]': containerHovered && isItemActive && !isActive,
                 'opacity-0 scale-[0.92]': isLockedActive,
             }"
             :name="$iconName"

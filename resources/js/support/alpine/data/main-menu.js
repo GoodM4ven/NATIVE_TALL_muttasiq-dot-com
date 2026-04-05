@@ -31,6 +31,8 @@ document.addEventListener('alpine:init', () => {
         isTouching: false,
         lockWiggles: new WeakMap(),
         isTouchDevice: false,
+        _onWindowMouseMove: null,
+        _onWindowBlur: null,
         init() {
             this.captionShadow = window.makeBoxShadowFromColor?.('--primary-500') ?? 'none';
             this.captionShadowDark = window.makeBoxShadowFromColor?.('--primary-100') ?? 'none';
@@ -48,6 +50,34 @@ document.addEventListener('alpine:init', () => {
                     this.idleCaption();
                 }
             });
+
+            this._onWindowMouseMove = (event) => {
+                if (this.isTouchDevice || this.isTouching || !this.containerHovered) {
+                    return;
+                }
+
+                const pointerX = Number(event?.clientX);
+                const pointerY = Number(event?.clientY);
+
+                if (!Number.isFinite(pointerX) || !Number.isFinite(pointerY)) {
+                    return;
+                }
+
+                if (this.isPointInsideGrid(pointerX, pointerY)) {
+                    return;
+                }
+
+                this.handleOutside(true);
+            };
+
+            this._onWindowBlur = () => {
+                this.handleOutside(true);
+            };
+
+            window.addEventListener('mousemove', this._onWindowMouseMove, {
+                passive: true,
+            });
+            window.addEventListener('blur', this._onWindowBlur);
         },
         getCaptionElements() {
             const captionWrap = this.$refs?.captionWrap;

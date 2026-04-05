@@ -11,8 +11,10 @@
             hasQueuedReaderMaintenance: false,
             westernNumeralChars: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
             arabicIndicNumeralChars: ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'],
+            arabicHarakatPattern: /[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED\u08D4-\u08FF]/g,
             sliderNumeralsObserver: null,
             sliderNumeralsSyncTimer: null,
+            fieldTextOriginalValues: new WeakMap(),
             resolveControlPanelModalWindow() {
                 const escapedId = window.CSS?.escape ?
                     window.CSS.escape(this.controlPanelModalId) :
@@ -35,7 +37,7 @@
                 const modalWindow = this.resolveControlPanelModalWindow();
                 const checkbox = modalWindow?.querySelector?.(
                     `input[type='checkbox'][name*='does_use_western_numerals'],
-                                            input[type='checkbox'][wire\\:model*='does_use_western_numerals']`,
+                                                    input[type='checkbox'][wire\\:model*='does_use_western_numerals']`,
                 );
         
                 if (checkbox instanceof HTMLInputElement) {
@@ -48,22 +50,50 @@
         
                 return normalizedSetting !== false && normalizedSetting !== 0 && normalizedSetting !== '0';
             },
-            convertDigitsForDisplay(
-                value,
-                useWesternNumerals, { preserveFixedSamples = false } = {},
+            resolveControlPanelPreserveHarakatState() {
+                const modalWindow = this.resolveControlPanelModalWindow();
+                const checkbox = modalWindow?.querySelector?.(
+                    `input[type='checkbox'][name*='does_preserve_harakat_in_display'],
+                                                    input[type='checkbox'][wire\\:model*='does_preserve_harakat_in_display']`,
+                );
+        
+                if (checkbox instanceof HTMLInputElement) {
+                    return checkbox.checked;
+                }
+        
+                const storedSettings = typeof window.getAthkarSettingsFromStorage === 'function' ?
+                    window.getAthkarSettingsFromStorage() : {};
+                const normalizedSetting = storedSettings?.does_preserve_harakat_in_display;
+        
+                return normalizedSetting !== false && normalizedSetting !== 0 && normalizedSetting !== '0';
+            },
+            stripHarakatForDisplay(value) {
+                return String(value ?? '').replace(this.arabicHarakatPattern, '');
+            },
+            convertControlPanelDisplayText(
+                value, {
+                    useWesternNumerals = true,
+                    preserveHarakat = true,
+                    preserveFixedSamples = false,
+                } = {},
             ) {
                 const source = String(value ?? '');
                 const protectedSamples = [];
                 const replaceWithTokens = preserveFixedSamples ?
                     source.replace(/\((?:123|١٢٣)\)/g, (sample) => {
-                        const token = `__FIXED_NUMERAL_SAMPLE_${protectedSamples.length}__`;
+                        const tokenSuffix = String.fromCharCode(65 + (protectedSamples.length % 26))
+                            .repeat(Math.floor(protectedSamples.length / 26) + 1);
+                        const token = `__FIXED_NUMERAL_SAMPLE_${tokenSuffix}__`;
                         protectedSamples.push({ token, sample });
         
                         return token;
                     }) :
                     source;
+                const normalizedText = preserveHarakat ?
+                    replaceWithTokens :
+                    this.stripHarakatForDisplay(replaceWithTokens);
         
-                let converted = replaceWithTokens.replace(/[0-9٠-٩]/g, (digit) => {
+                let converted = normalizedText.replace(/[0-9٠-٩]/g, (digit) => {
                     const westernIndex = this.westernNumeralChars.indexOf(digit);
         
                     if (westernIndex >= 0) {
@@ -97,11 +127,12 @@
                 }
         
                 const useWesternNumerals = this.resolveControlPanelWesternNumeralState();
+                const preserveHarakat = this.resolveControlPanelPreserveHarakatState();
                 const sliderTargets = modalWindow.querySelectorAll(
                     `[data-control-panel-main-text-size-slider] .noUi-value,
-                                            [data-control-panel-main-text-size-slider] .noUi-tooltip,
-                                            [data-control-panel-main-text-size-slider] [class*='slider'][class*='value'],
-                                            [data-control-panel-main-text-size-slider] [aria-valuetext]`,
+                                                    [data-control-panel-main-text-size-slider] .noUi-tooltip,
+                                                    [data-control-panel-main-text-size-slider] [class*='slider'][class*='value'],
+                                                    [data-control-panel-main-text-size-slider] [aria-valuetext]`,
                 );
         
                 sliderTargets.forEach((element) => {
@@ -111,10 +142,10 @@
         
                     if (element.hasAttribute('aria-valuetext')) {
                         const ariaValueText = String(element.getAttribute('aria-valuetext') ?? '');
-                        const convertedAriaValueText = this.convertDigitsForDisplay(
-                            ariaValueText,
+                        const convertedAriaValueText = this.convertControlPanelDisplayText(ariaValueText, {
                             useWesternNumerals,
-                        );
+                            preserveHarakat,
+                        });
         
                         if (convertedAriaValueText !== ariaValueText) {
                             element.setAttribute('aria-valuetext', convertedAriaValueText);
@@ -127,10 +158,11 @@
                         return;
                     }
         
-                    const convertedText = this.convertDigitsForDisplay(
-                        originalText,
-                        useWesternNumerals, { preserveFixedSamples: true },
-                    );
+                    const convertedText = this.convertControlPanelDisplayText(originalText, {
+                        useWesternNumerals,
+                        preserveHarakat,
+                        preserveFixedSamples: true,
+                    });
         
                     if (convertedText !== originalText) {
                         element.textContent = convertedText;
@@ -149,6 +181,7 @@
                 }
         
                 const useWesternNumerals = this.resolveControlPanelWesternNumeralState();
+                const preserveHarakat = this.resolveControlPanelPreserveHarakatState();
                 const textNodes = [];
                 const walker = document.createTreeWalker(
                     modalWindow,
@@ -170,7 +203,7 @@
         
                             const rawText = String(node.nodeValue ?? '');
         
-                            if (!/[0-9٠-٩]/.test(rawText)) {
+                            if (rawText.trim() === '') {
                                 return window.NodeFilter.FILTER_REJECT;
                             }
         
@@ -187,13 +220,22 @@
                 }
         
                 textNodes.forEach((node) => {
-                    const originalText = String(node.nodeValue ?? '');
-                    const convertedText = this.convertDigitsForDisplay(
-                        originalText,
-                        useWesternNumerals, { preserveFixedSamples: true },
-                    );
+                    const capturedOriginalText = this.fieldTextOriginalValues.has(node) ?
+                        String(this.fieldTextOriginalValues.get(node) ?? '') :
+                        String(node.nodeValue ?? '');
         
-                    if (convertedText !== originalText) {
+                    if (!this.fieldTextOriginalValues.has(node)) {
+                        this.fieldTextOriginalValues.set(node, capturedOriginalText);
+                    }
+        
+                    const convertedText = this.convertControlPanelDisplayText(capturedOriginalText, {
+                        useWesternNumerals,
+                        preserveHarakat,
+                        preserveFixedSamples: true,
+                    });
+                    const currentText = String(node.nodeValue ?? '');
+        
+                    if (convertedText !== currentText) {
                         node.nodeValue = convertedText;
                     }
                 });
