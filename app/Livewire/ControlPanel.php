@@ -188,8 +188,8 @@ class ControlPanel extends Component implements HasActions, HasSchemas
         $supportLinksCaption = arabic_text('روابط منصات الدعم:');
 
         return new HtmlString(
-            '<div class="space-y-4 text-right text-sm! leading-7">'
-                .'<p>'
+            '<div class="space-y-4 text-right text-base! leading-7">'
+                .'<p class="text-center">'
                 .e($introBeforeStrong)
                 .'<strong>'.e($introStrong).'</strong>'
                 .e($introAfterStrong)

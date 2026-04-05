@@ -2074,7 +2074,7 @@
                             x-ref="pageFrame"
                         >
                             <div
-                                class="quran-page-lines mx-auto"
+                                class="quran-page-lines mx-auto pb-4"
                                 x-bind:data-fit-state="typeof pageFitState === 'function' ? pageFitState() : (isFittingPage ? 'fitting' :
                                     'ready')"
                                 x-bind:style="pageContentStyle()"
