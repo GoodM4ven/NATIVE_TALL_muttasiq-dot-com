@@ -6,6 +6,7 @@ namespace App\Livewire;
 
 use App\Filament\Resources\Thikrs\Schemas\ThikrForm;
 use App\Models\Thikr;
+use App\Models\ThikrOverrideSubmission;
 use App\Services\Enums\ThikrTime;
 use App\Services\Enums\ThikrType;
 use BackedEnum;
@@ -16,6 +17,7 @@ use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Support\Enums\Width;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\HtmlString;
 use Livewire\Component;
@@ -97,15 +99,75 @@ class AthkarManager extends Component implements HasActions, HasSchemas
                 'id' => 'athkar-edit-modal',
             ])
             ->extraModalFooterActions([
+                Action::make('submitOverrideForReview')
+                    ->label(arabic_text('إرسال التعديل للمراجعة'))
+                    ->color('warning')
+                    ->requiresConfirmation()
+                    ->modalHeading(arabic_text('إرسال التعديل للإدارة'))
+                    ->modalDescription(arabic_text('سيتم إرسال التعديل الحالي لمراجعته واعتماده على السجل الأصلي.'))
+                    ->visible(function (array $mountedActions): bool {
+                        $thikrId = $this->resolveMountedEditAthkarId($mountedActions);
+
+                        if ($thikrId < 1) {
+                            return false;
+                        }
+
+                        return $this->canSubmitOverrideForReview($thikrId);
+                    })
+                    ->extraAttributes([
+                        'class' => 'quran-support-lock-target',
+                        'data-support-lock-target' => 'submit-thikr-override',
+                        'data-support-lock-caption' => arabic_text('هذا الخيار يحتاج تأكيد دعم المشروع'),
+                        'x-on:click.capture' => 'if (window.guardMuttasiqSupportLockedAction && !window.guardMuttasiqSupportLockedAction($event)) { return; }',
+                        'x-on:keydown.capture' => 'if (![\'Enter\', \' \'].includes($event.key)) { return; } if (window.guardMuttasiqSupportLockedAction && !window.guardMuttasiqSupportLockedAction($event)) { return; }',
+                    ])
+                    ->action(function (array $mountedActions): void {
+                        $thikrId = $this->resolveMountedEditAthkarId($mountedActions);
+
+                        if ($thikrId < 1) {
+                            return;
+                        }
+
+                        $editAthkarAction = collect($mountedActions)
+                            ->first(fn (Action $mountedAction): bool => $mountedAction->getName() === 'editAthkar');
+                        $rawData = $editAthkarAction?->getRawData();
+
+                        if (is_array($rawData) && $rawData !== []) {
+                            $didSave = $this->saveOverrideById($thikrId, $rawData);
+                            $didReorder = $this->applyRequestedOrderToCard($thikrId, $rawData);
+
+                            if ($didSave || $didReorder) {
+                                notify(
+                                    'heroicon-o-check-circle',
+                                    arabic_text('تم حفظ آخر تعديل محليًا'),
+                                );
+                            }
+                        }
+
+                        if ($this->submitOverrideForReviewById($thikrId)) {
+                            notify(
+                                'heroicon-o-paper-airplane',
+                                arabic_text('تم إرسال التعديل للمراجعة'),
+                                arabic_text('سيظهر في لوحة الإدارة حتى يتم اعتماده أو رفضه.'),
+                            );
+
+                            return;
+                        }
+
+                        notify(
+                            'heroicon-o-information-circle',
+                            arabic_text('لا يوجد تعديل جديد لإرساله'),
+                            arabic_text('جرّب تعديل النص أو البيانات أولًا ثم أعد الإرسال.'),
+                        );
+                    }),
+
                 Action::make('deleteAthkarFromEdit')
-                    ->label('حذف الذكر')
+                    ->label(arabic_text('حذف الذكر'))
                     ->color('danger')
                     ->requiresConfirmation()
                     ->modalAutofocus(false)
                     ->action(function (array $mountedActions): void {
-                        $editAthkarAction = collect($mountedActions)
-                            ->first(fn (Action $mountedAction): bool => $mountedAction->getName() === 'editAthkar');
-                        $thikrId = (int) ($editAthkarAction?->getArguments()['thikrId'] ?? 0);
+                        $thikrId = $this->resolveMountedEditAthkarId($mountedActions);
 
                         if ($thikrId < 1) {
                             return;
@@ -1222,6 +1284,156 @@ class AthkarManager extends Component implements HasActions, HasSchemas
         $this->dispatchOverridesPersisted(changedThikrId: $thikrId, hasOrderChange: true);
 
         return true;
+    }
+
+    /**
+     * @param  array<int, Action>  $mountedActions
+     */
+    private function resolveMountedEditAthkarId(array $mountedActions): int
+    {
+        $editAthkarAction = collect($mountedActions)
+            ->first(fn (Action $mountedAction): bool => $mountedAction->getName() === 'editAthkar');
+
+        return max(0, (int) ($editAthkarAction?->getArguments()['thikrId'] ?? 0));
+    }
+
+    private function canSubmitOverrideForReview(int $thikrId): bool
+    {
+        if (! $this->defaultCardById($thikrId)) {
+            return false;
+        }
+
+        $override = collect($this->normalizeOverrides($this->athkarOverrides))
+            ->firstWhere('thikr_id', $thikrId);
+
+        if (! $override) {
+            return false;
+        }
+
+        return $this->hasMeaningfulOverride($override);
+    }
+
+    /**
+     * @return array{
+     *     proposed: array{order: int, time: string, type: string, text: string, origin: string|null, count: int, is_aayah: bool},
+     *     current: array{order: int, time: string, type: string, text: string, origin: string|null, count: int, is_aayah: bool},
+     *     changed_keys: array<int, string>,
+     *     submitted_at: string
+     * }|null
+     */
+    private function buildOverrideSubmissionPayload(int $thikrId): ?array
+    {
+        $resolvedCard = $this->resolvedCardById($thikrId);
+        $defaultCard = $this->defaultCardById($thikrId);
+
+        if (! $resolvedCard || ! $defaultCard) {
+            return null;
+        }
+
+        $proposed = [
+            'order' => max(1, (int) $resolvedCard['order']),
+            'time' => (string) $resolvedCard['time'],
+            'type' => (string) $resolvedCard['type'],
+            'text' => Thikr::normalizeAayahText(
+                (string) $resolvedCard['text'],
+                (bool) $resolvedCard['is_aayah'],
+            ),
+            'origin' => $this->normalizeNullableText($resolvedCard['origin'] ?? null),
+            'count' => max(1, (int) $resolvedCard['count']),
+            'is_aayah' => (bool) $resolvedCard['is_aayah'],
+        ];
+        $current = [
+            'order' => max(1, (int) $defaultCard['order']),
+            'time' => (string) $defaultCard['time'],
+            'type' => (string) $defaultCard['type'],
+            'text' => Thikr::normalizeAayahText(
+                (string) $defaultCard['text'],
+                (bool) $defaultCard['is_aayah'],
+            ),
+            'origin' => $this->normalizeNullableText($defaultCard['origin'] ?? null),
+            'count' => max(1, (int) $defaultCard['count']),
+            'is_aayah' => (bool) $defaultCard['is_aayah'],
+        ];
+        $changedKeys = collect(array_keys($proposed))
+            ->filter(fn (string $key): bool => Arr::get($proposed, $key) !== Arr::get($current, $key))
+            ->values()
+            ->all();
+
+        if ($changedKeys === []) {
+            return null;
+        }
+
+        return [
+            'proposed' => $proposed,
+            'current' => $current,
+            'changed_keys' => $changedKeys,
+            'submitted_at' => now()->toIso8601String(),
+        ];
+    }
+
+    private function submitOverrideForReviewById(int $thikrId): bool
+    {
+        if (! $this->canSubmitOverrideForReview($thikrId)) {
+            return false;
+        }
+
+        $payload = $this->buildOverrideSubmissionPayload($thikrId);
+
+        if (! $payload) {
+            return false;
+        }
+
+        $submissionData = [
+            'override_payload' => $payload,
+            'submitted_from_ip' => request()->ip(),
+            'submitted_at' => now(),
+            'reviewed_at' => null,
+            'reviewed_by_user_id' => null,
+            'reviewed_note' => null,
+        ];
+        $pendingSubmission = ThikrOverrideSubmission::query()
+            ->where('thikr_id', $thikrId)
+            ->where('status', ThikrOverrideSubmission::STATUS_PENDING)
+            ->latest('id')
+            ->first();
+
+        if ($pendingSubmission) {
+            $pendingPayload = $this->normalizeSubmissionPayload($pendingSubmission->override_payload);
+
+            if ($pendingPayload === $payload) {
+                return false;
+            }
+
+            $pendingSubmission->fill($submissionData)->save();
+
+            return true;
+        }
+
+        ThikrOverrideSubmission::query()->create([
+            'thikr_id' => $thikrId,
+            'status' => ThikrOverrideSubmission::STATUS_PENDING,
+            ...$submissionData,
+        ]);
+
+        return true;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function normalizeSubmissionPayload(mixed $payload): array
+    {
+        if (is_array($payload)) {
+            return $payload;
+        }
+
+        if (! is_string($payload) || trim($payload) === '') {
+            return [];
+        }
+
+        $decodedPayload = json_decode($payload, true);
+
+        return is_array($decodedPayload) ? $decodedPayload : [];
     }
 
     private function nextCustomThikrId(): int

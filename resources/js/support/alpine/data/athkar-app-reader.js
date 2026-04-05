@@ -16,6 +16,12 @@ import { createShimmerController } from '../shimmer';
 const doesEnableVisualEnhancementsKey = 'enable_visual_enhancements';
 const skipGuidancePanelsSettingKey = 'does_skip_notice_panels';
 const progressStorageKey = 'athkar-progress-v1';
+const supportUnlockStorageKey = 'quran-support-unlock-v1';
+const supportUnlockModePermanent = 'permanent';
+const supportUnlockModeWeekly = 'weekly';
+const athkarCopyHoldDelayMs = 1250;
+const athkarCopyHoldMoveThresholdPx = 16;
+const athkarCopyPopoverVisibleDurationMs = 920;
 
 const defaultProgressState = () => ({
     sabah: { index: 0, counts: [], ids: [], activeId: null },
@@ -61,6 +67,7 @@ const readProgressFromStorage = () => {
 
 document.addEventListener('alpine:init', () => {
     window.Alpine.data('athkarAppReader', (config) => ({
+        nativeRuntime: Boolean(config?.nativeRuntime ?? false),
         defaultAthkar: normalizeAthkarDefaults(config.athkar),
         athkarOverrides: window.Alpine.$persist([]).as(athkarOverridesStorageKey),
         athkar: [],
@@ -141,6 +148,24 @@ document.addEventListener('alpine:init', () => {
             mode: null,
             index: null,
         },
+        copyFeedback: {
+            visible: false,
+            x: 0,
+            y: 0,
+            timer: null,
+            serial: 0,
+        },
+        copyHold: {
+            active: false,
+            pointerId: null,
+            source: null,
+            startX: 0,
+            startY: 0,
+            index: null,
+            target: null,
+            triggered: false,
+            anchor: null,
+        },
         layerScrollOffsets: {},
         topUi: {
             progressOverride: null,
@@ -211,6 +236,8 @@ document.addEventListener('alpine:init', () => {
         },
         _athkarVersion: 0,
         _persistTimer: null,
+        _copyHoldTimer: null,
+        _onWindowNativeVolumeButton: null,
         lastSeenDay: window.Alpine.$persist(null).as('athkar-last-day'),
         progress: defaultProgressState(),
         completedOn: window.Alpine.$persist({
@@ -335,9 +362,17 @@ document.addEventListener('alpine:init', () => {
                 }
 
                 this.clearRapidTapReleaseTimer();
+                this.hideCopyFeedback();
+                this.cancelHoldCopy();
+                this.unregisterNativeVolumeNavigation();
             });
 
             this.setupTextFit();
+            this.registerNativeVolumeNavigation();
+            this.syncNativeVolumeNavigation();
+            window.isMuttasiqSupportUnlocked = () => this.isSupportUnlocked();
+            window.guardMuttasiqSupportLockedAction = (event = null) =>
+                this.guardSupportLockedAction(event);
             this.textShimmerController = createShimmerController({
                 resolveRoot: () => this.$el,
                 resolveUseAlternateTarget: () => this.isOriginVisible(this.activeIndex),
@@ -360,6 +395,7 @@ document.addEventListener('alpine:init', () => {
                 this.resetSwipeState();
                 this.hideOrigin();
                 this.queueTextFit();
+                this.syncNativeVolumeNavigation();
             });
             this.$watch('activeIndex', () => {
                 this.resetMaintenanceTapTracking();
@@ -376,12 +412,19 @@ document.addEventListener('alpine:init', () => {
                         this.resetSwipeState();
                         this.queueReaderTextFit();
                     }
+
+                    this.syncNativeVolumeNavigation();
                 },
             );
             this.$watch('isNoticeVisible', (isNoticeVisible) => {
                 if (!isNoticeVisible && this.views?.['athkar-app-gate']?.isReaderVisible) {
                     this.queueReaderTextFit();
                 }
+
+                this.syncNativeVolumeNavigation();
+            });
+            this.$watch('isCompletionVisible', () => {
+                this.syncNativeVolumeNavigation();
             });
         },
         applyAthkarOverrides(nextOverrides, { persist = true } = {}) {
@@ -495,6 +538,131 @@ document.addEventListener('alpine:init', () => {
 
             this.queueTextFit();
             this.queueReaderTextFit();
+            this.syncNativeVolumeNavigation();
+        },
+        readSupportUnlockState() {
+            if (typeof localStorage === 'undefined') {
+                return { mode: 'locked', expiresAt: null };
+            }
+
+            try {
+                const rawValue = JSON.parse(
+                    localStorage.getItem(supportUnlockStorageKey) ?? 'null',
+                );
+                const normalizedMode = String(rawValue?.mode ?? '')
+                    .trim()
+                    .toLowerCase();
+                const expiresAt = Math.max(0, Math.trunc(Number(rawValue?.expires_at ?? 0)));
+
+                if (normalizedMode === supportUnlockModePermanent) {
+                    return { mode: supportUnlockModePermanent, expiresAt: null };
+                }
+
+                if (normalizedMode === supportUnlockModeWeekly && expiresAt > Date.now()) {
+                    return { mode: supportUnlockModeWeekly, expiresAt };
+                }
+            } catch (_) {
+                //
+            }
+
+            return { mode: 'locked', expiresAt: null };
+        },
+        isSupportUnlocked() {
+            return this.readSupportUnlockState().mode !== 'locked';
+        },
+        guardSupportLockedAction(event = null) {
+            if (this.isSupportUnlocked()) {
+                return true;
+            }
+
+            if (event && typeof event.preventDefault === 'function') {
+                event.preventDefault();
+            }
+
+            if (event && typeof event.stopPropagation === 'function') {
+                event.stopPropagation();
+            }
+
+            window.dispatchEvent(new CustomEvent('open-support-unlock-modal'));
+
+            return false;
+        },
+        canUseNativeVolumeButtonNavigation() {
+            const isReaderVisible = Boolean(this.views?.['athkar-app-gate']?.isReaderVisible);
+
+            return (
+                this.nativeRuntime &&
+                Boolean(this.activeMode) &&
+                isReaderVisible &&
+                !this.isNoticeVisible &&
+                !this.isCompletionVisible &&
+                this.settingValue('does_quran_use_volume_buttons_navigation', false)
+            );
+        },
+        setAndroidVolumeNavigationEnabled(enabled) {
+            if (!this.nativeRuntime || !window.AndroidBridge) {
+                return;
+            }
+
+            if (typeof window.AndroidBridge.setQuranVolumeNavigationEnabled !== 'function') {
+                return;
+            }
+
+            window.AndroidBridge.setQuranVolumeNavigationEnabled(Boolean(enabled));
+        },
+        syncNativeVolumeNavigation() {
+            this.$nextTick(() => {
+                this.setAndroidVolumeNavigationEnabled(this.canUseNativeVolumeButtonNavigation());
+            });
+        },
+        registerNativeVolumeNavigation() {
+            if (this._onWindowNativeVolumeButton) {
+                return;
+            }
+
+            this._onWindowNativeVolumeButton = (event) => {
+                void this.handleNativeVolumeButton(event?.detail?.direction ?? null, event);
+            };
+
+            window.addEventListener(
+                'quran-native-volume-button',
+                this._onWindowNativeVolumeButton,
+                true,
+            );
+        },
+        unregisterNativeVolumeNavigation() {
+            if (!this._onWindowNativeVolumeButton) {
+                this.setAndroidVolumeNavigationEnabled(false);
+
+                return;
+            }
+
+            window.removeEventListener(
+                'quran-native-volume-button',
+                this._onWindowNativeVolumeButton,
+                true,
+            );
+            this._onWindowNativeVolumeButton = null;
+            this.setAndroidVolumeNavigationEnabled(false);
+        },
+        async handleNativeVolumeButton(direction, _event = null) {
+            if (!this.canUseNativeVolumeButtonNavigation()) {
+                return;
+            }
+
+            const normalizedDirection = String(direction ?? '')
+                .trim()
+                .toLowerCase();
+
+            if (normalizedDirection === 'next') {
+                this.next();
+
+                return;
+            }
+
+            if (normalizedDirection === 'previous' || normalizedDirection === 'prev') {
+                this.prev();
+            }
         },
         toggleHint(index) {
             if (this.shouldSkipGuidancePanels() && !this.isMobileViewport()) {
@@ -895,6 +1063,7 @@ document.addEventListener('alpine:init', () => {
             this.resetNavState();
             this.closeHint();
             this.resetSwipeState();
+            this.syncNativeVolumeNavigation();
 
             return true;
         },
@@ -951,6 +1120,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             this.$nextTick(() => this.queueTextFit());
+            this.syncNativeVolumeNavigation();
         },
         confirmNotice() {
             if (!this.activeMode) {
@@ -969,6 +1139,7 @@ document.addEventListener('alpine:init', () => {
             this.resumeModeIndex();
             this.$nextTick(() => this.queueTextFit());
             this.queueReaderTextFit();
+            this.syncNativeVolumeNavigation();
         },
         returnToGateFromNotice() {
             this.isNoticeVisible = false;
@@ -978,6 +1149,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             this.closeMode();
+            this.syncNativeVolumeNavigation();
         },
         openGateAndManageAthkar() {
             if (!this.activeMode) {
@@ -1016,6 +1188,9 @@ document.addEventListener('alpine:init', () => {
             this.hideCompletionHack({ force: true });
             this.resetNavState();
             this.stopTextShimmer();
+            this.hideCopyFeedback();
+            this.cancelHoldCopy();
+            this.syncNativeVolumeNavigation();
 
             setTimeout(() => {
                 if (
@@ -1047,6 +1222,9 @@ document.addEventListener('alpine:init', () => {
             this.stopTextShimmer();
             this.hideCompletionHack({ force: true });
             this.resetNavState();
+            this.hideCopyFeedback();
+            this.cancelHoldCopy();
+            this.syncNativeVolumeNavigation();
 
             if (!lastMode) {
                 return;
@@ -2361,8 +2539,11 @@ document.addEventListener('alpine:init', () => {
                     if (!this.views[`athkar-app-gate`].isReaderVisible) {
                         this.activeMode = null;
                         this.$viewNav('athkar-app-gate');
+                        this.syncNativeVolumeNavigation();
                     }
                 }, this.readerLeaveMs);
+
+                this.syncNativeVolumeNavigation();
 
                 return;
             }
@@ -2378,14 +2559,18 @@ document.addEventListener('alpine:init', () => {
 
             this.completionTimer = setTimeout(() => {
                 this.isCompletionVisible = false;
+                this.syncNativeVolumeNavigation();
             }, this.completionVisibleMs);
 
             setTimeout(() => {
                 if (!this.views[`athkar-app-gate`].isReaderVisible) {
                     this.activeMode = null;
                     this.$viewNav('athkar-app-gate');
+                    this.syncNativeVolumeNavigation();
                 }
             }, this.readerLeaveMs);
+
+            this.syncNativeVolumeNavigation();
         },
         itemKey(item, index) {
             const itemId = item?.id ?? `index-${index}`;
@@ -2519,6 +2704,8 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            this.cancelHoldCopy();
+
             const source = event?.type?.startsWith('touch') ? 'touch' : 'pointer';
 
             if (this.textScroll.source && source !== this.textScroll.source) {
@@ -2565,6 +2752,342 @@ document.addEventListener('alpine:init', () => {
             this.textScroll.startScrollTop = 0;
             this.textScroll.pointerId = null;
             this.textScroll.element = null;
+        },
+        copyFeedbackStyle() {
+            const x = Number(this.copyFeedback?.x ?? 0);
+            const y = Number(this.copyFeedback?.y ?? 0);
+            const normalizedX = Number.isFinite(x) ? Math.round(x) : 0;
+            const normalizedY = Number.isFinite(y) ? Math.round(y) : 0;
+
+            return `left: ${normalizedX}px; top: ${normalizedY}px;`;
+        },
+        copyPointFromElement(element) {
+            if (!(element instanceof Element)) {
+                return null;
+            }
+
+            const rect = element.getBoundingClientRect();
+
+            if (!Number.isFinite(rect?.left) || !Number.isFinite(rect?.top)) {
+                return null;
+            }
+
+            return {
+                x: rect.left + rect.width / 2,
+                y: rect.top,
+            };
+        },
+        copyPointFromAnchor(anchor = null) {
+            const directX = Number(anchor?.x);
+            const directY = Number(anchor?.y);
+
+            if (
+                Number.isFinite(directX) &&
+                Number.isFinite(directY) &&
+                (directX > 0 || directY > 0)
+            ) {
+                return {
+                    x: directX,
+                    y: directY,
+                };
+            }
+
+            const targetPoint = this.copyPointFromElement(anchor?.target ?? null);
+
+            if (targetPoint) {
+                return targetPoint;
+            }
+
+            return {
+                x: Math.max(0, Math.round((window.innerWidth ?? 0) / 2)),
+                y: Math.max(0, Math.round((window.innerHeight ?? 0) / 2)),
+            };
+        },
+        showCopyFeedback(anchor = null) {
+            const point = this.copyPointFromAnchor(anchor);
+
+            if (!point) {
+                return;
+            }
+
+            this.copyFeedback.x = point.x;
+            this.copyFeedback.y = point.y;
+            this.copyFeedback.visible = true;
+            this.copyFeedback.serial += 1;
+            const serial = this.copyFeedback.serial;
+
+            if (this.copyFeedback.timer !== null) {
+                clearTimeout(this.copyFeedback.timer);
+            }
+
+            this.copyFeedback.timer = window.setTimeout(() => {
+                if (this.copyFeedback.serial !== serial) {
+                    return;
+                }
+
+                this.copyFeedback.visible = false;
+                this.copyFeedback.timer = null;
+            }, athkarCopyPopoverVisibleDurationMs);
+        },
+        hideCopyFeedback() {
+            if (this.copyFeedback.timer !== null) {
+                clearTimeout(this.copyFeedback.timer);
+                this.copyFeedback.timer = null;
+            }
+
+            this.copyFeedback.visible = false;
+        },
+        fallbackCopyText(text) {
+            if (typeof document === 'undefined') {
+                return false;
+            }
+
+            const textarea = document.createElement('textarea');
+            textarea.value = String(text ?? '');
+            textarea.setAttribute('readonly', '');
+            textarea.style.position = 'fixed';
+            textarea.style.top = '-9999px';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+
+            try {
+                return document.execCommand('copy');
+            } catch (_) {
+                return false;
+            } finally {
+                textarea.remove();
+            }
+        },
+        async writeClipboardText(text) {
+            const normalizedText = String(text ?? '').trim();
+
+            if (!normalizedText) {
+                return false;
+            }
+
+            if (
+                typeof navigator !== 'undefined' &&
+                navigator.clipboard &&
+                typeof navigator.clipboard.writeText === 'function'
+            ) {
+                try {
+                    await navigator.clipboard.writeText(normalizedText);
+
+                    return true;
+                } catch (_) {
+                    return this.fallbackCopyText(normalizedText);
+                }
+            }
+
+            return this.fallbackCopyText(normalizedText);
+        },
+        resolveCopyTargetFromEvent(event = null, index = null) {
+            const target = event?.target;
+
+            if (!(target instanceof Element)) {
+                return null;
+            }
+
+            if (target.closest('[data-athkar-origin-text]')) {
+                return 'origin';
+            }
+
+            if (target.closest('[data-athkar-text]')) {
+                return 'text';
+            }
+
+            const textBox = target.closest('[data-athkar-text-box]');
+
+            if (textBox instanceof Element) {
+                const normalizedIndex = Math.max(0, Math.trunc(Number(index ?? -1)));
+
+                if (Number.isFinite(normalizedIndex) && this.isOriginVisible(normalizedIndex)) {
+                    return 'origin';
+                }
+
+                return 'text';
+            }
+
+            return null;
+        },
+        resolveCopyTextForTarget(index, target = 'text') {
+            const item = this.activeList?.[index] ?? null;
+
+            if (!item) {
+                return '';
+            }
+
+            if (target === 'origin') {
+                return String(item?.origin ?? '').trim();
+            }
+
+            return String(item?.text ?? '').trim();
+        },
+        resetHoldCopyState() {
+            if (this._copyHoldTimer !== null) {
+                clearTimeout(this._copyHoldTimer);
+                this._copyHoldTimer = null;
+            }
+
+            this.copyHold.active = false;
+            this.copyHold.pointerId = null;
+            this.copyHold.source = null;
+            this.copyHold.startX = 0;
+            this.copyHold.startY = 0;
+            this.copyHold.index = null;
+            this.copyHold.target = null;
+            this.copyHold.triggered = false;
+            this.copyHold.anchor = null;
+        },
+        beginHoldCopy(event, index) {
+            if (!this.activeMode || this.isCompletionVisible || this.isNoticeVisible) {
+                this.resetHoldCopyState();
+
+                return;
+            }
+
+            const normalizedIndex = Math.max(0, Math.trunc(Number(index ?? -1)));
+
+            if (!Number.isFinite(normalizedIndex) || normalizedIndex !== this.activeIndex) {
+                this.resetHoldCopyState();
+
+                return;
+            }
+
+            const target = this.resolveCopyTargetFromEvent(event, normalizedIndex);
+
+            if (!target) {
+                this.resetHoldCopyState();
+
+                return;
+            }
+
+            const text = this.resolveCopyTextForTarget(normalizedIndex, target);
+
+            if (text === '') {
+                this.resetHoldCopyState();
+
+                return;
+            }
+
+            const point = this.swipePoint(event);
+
+            if (!point) {
+                this.resetHoldCopyState();
+
+                return;
+            }
+
+            this.resetHoldCopyState();
+            this.copyHold.active = true;
+            this.copyHold.pointerId = point.pointerId;
+            this.copyHold.source = event?.type?.startsWith('touch') ? 'touch' : 'pointer';
+            this.copyHold.startX = point.x;
+            this.copyHold.startY = point.y;
+            this.copyHold.index = normalizedIndex;
+            this.copyHold.target = target;
+            this.copyHold.triggered = false;
+            this.copyHold.anchor = {
+                x: point.x,
+                y: point.y,
+                target: event?.target instanceof Element ? event.target : null,
+            };
+
+            this._copyHoldTimer = window.setTimeout(async () => {
+                if (!this.copyHold.active || this.copyHold.triggered) {
+                    return;
+                }
+
+                const holdText = this.resolveCopyTextForTarget(
+                    this.copyHold.index,
+                    this.copyHold.target,
+                );
+
+                if (!holdText) {
+                    return;
+                }
+
+                const didCopy = await this.writeClipboardText(holdText);
+
+                if (!didCopy) {
+                    return;
+                }
+
+                this.copyHold.triggered = true;
+                this.swipe.ignoreClick = true;
+                this.showCopyFeedback(this.copyHold.anchor);
+            }, athkarCopyHoldDelayMs);
+        },
+        moveHoldCopy(event) {
+            if (!this.copyHold.active || this.copyHold.triggered) {
+                return;
+            }
+
+            const source = event?.type?.startsWith('touch') ? 'touch' : 'pointer';
+
+            if (this.copyHold.source && source !== this.copyHold.source) {
+                this.resetHoldCopyState();
+
+                return;
+            }
+
+            const point = this.swipePoint(event);
+
+            if (!point) {
+                this.resetHoldCopyState();
+
+                return;
+            }
+
+            if (
+                this.copyHold.pointerId !== null &&
+                point.pointerId !== null &&
+                this.copyHold.pointerId !== point.pointerId
+            ) {
+                this.resetHoldCopyState();
+
+                return;
+            }
+
+            const deltaX = Math.abs(point.x - this.copyHold.startX);
+            const deltaY = Math.abs(point.y - this.copyHold.startY);
+
+            if (
+                deltaX > athkarCopyHoldMoveThresholdPx ||
+                deltaY > athkarCopyHoldMoveThresholdPx ||
+                this.textScroll.active
+            ) {
+                this.resetHoldCopyState();
+            }
+        },
+        endHoldCopy(event = null) {
+            if (!this.copyHold.active) {
+                return;
+            }
+
+            if (event) {
+                const point = this.swipePoint(event);
+
+                if (
+                    this.copyHold.pointerId !== null &&
+                    point?.pointerId !== null &&
+                    this.copyHold.pointerId !== point.pointerId
+                ) {
+                    return;
+                }
+            }
+
+            const didTrigger = this.copyHold.triggered;
+
+            this.resetHoldCopyState();
+
+            if (didTrigger) {
+                this.swipe.ignoreClick = true;
+            }
+        },
+        cancelHoldCopy() {
+            this.resetHoldCopyState();
         },
         setupTextShimmer(text = null, options = {}) {
             if (this.rapidTap.isActive) {
@@ -2798,6 +3321,7 @@ document.addEventListener('alpine:init', () => {
             this.swipe.pointerType = null;
             this.swipe.source = null;
             this.swipe.startedInScrollableText = false;
+            this.cancelHoldCopy();
             this.endTextScroll();
         },
         buildDigitMorphSegments(previousValue, nextValue) {

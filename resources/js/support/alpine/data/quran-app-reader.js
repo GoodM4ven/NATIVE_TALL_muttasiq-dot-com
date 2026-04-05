@@ -97,6 +97,7 @@ const managerRowUpdateAnimationDurationMs = 520;
 const managerRowReplaceAnimationDurationMs = 560;
 const swipeActivationThresholdPx = 40;
 const copyPopoverVisibleDurationMs = 920;
+const wirdCompletionVisibleDurationMs = 3400;
 const copiedHighlightVisibleDurationMs = 3000;
 const wordClickSuppressionResetMs = 180;
 const pageCounterPulseDurationMs = 540;
@@ -121,8 +122,8 @@ const openingSpreadFinalScaleMultiplier = 0.72;
 const fitRobustWidthQuantile = 0.88;
 const fitRobustWidthOutlierThreshold = 1.2;
 const fitResultCacheLimit = 180;
-const fitCacheStorageVersion = 10;
-const fitCacheStorageKey = 'quran-reader-fit-cache-v10';
+const fitCacheStorageVersion = 18;
+const fitCacheStorageKey = 'quran-reader-fit-cache-v18';
 const fitCacheViewportBucketSizePx = 24;
 const shouldPersistFitCacheAcrossReloads = false;
 const fitCalibrationReferencePage = 3;
@@ -743,6 +744,7 @@ document.addEventListener('alpine:init', () => {
             minQueryLength: 5,
             results: [],
             isLoading: false,
+            streamHasUpdates: false,
             isReady: false,
             isOpen: false,
             modalOpen: false,
@@ -770,6 +772,7 @@ document.addEventListener('alpine:init', () => {
             timer: null,
             serial: 0,
         },
+        isWirdCompletionVisible: false,
         copiedHighlights: {
             wordKeys: [],
             ayahIndexes: [],
@@ -842,6 +845,7 @@ document.addEventListener('alpine:init', () => {
         _fitSanityDisabledContextKey: '',
         _fitCachePersistWriteTimer: null,
         _supportUnlockExpiryTimer: null,
+        _wirdCompletionTimer: null,
         _fontReadyRecoveryTimer: null,
         _fontReadyRecoveryPage: 0,
         _fontReadyRecoveryAttemptPage: 0,
@@ -1798,6 +1802,12 @@ document.addEventListener('alpine:init', () => {
                 clearTimeout(this._supportUnlockExpiryTimer);
                 this._supportUnlockExpiryTimer = null;
             }
+
+            if (this._wirdCompletionTimer !== null) {
+                clearTimeout(this._wirdCompletionTimer);
+                this._wirdCompletionTimer = null;
+            }
+            this.isWirdCompletionVisible = false;
 
             if (this._fontReadyRecoveryTimer !== null) {
                 clearTimeout(this._fontReadyRecoveryTimer);
@@ -3890,6 +3900,8 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            const wasCompleted = Boolean(record.completed);
+
             const requiredPages = Math.max(
                 1,
                 this.normalizeIntegerFlag(record?.requiredPages, 1, { min: 1 }),
@@ -3904,6 +3916,10 @@ document.addEventListener('alpine:init', () => {
             this.syncWirdSliderVisualStep(record);
             this.reconcileWirdNextAbsolutePage(record);
             this.persistWirdState();
+
+            if (!wasCompleted) {
+                this.showWirdCompletionFeedback();
+            }
         },
 
         navigationSourceProfile(source = 'generic') {
@@ -10024,7 +10040,16 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            if (event.target?.closest?.('[data-quran-line-text]')) {
+            const source = this.swipeEventSource(event);
+            const isTouchPointer =
+                String(event?.pointerType ?? '').toLowerCase() === 'touch' ||
+                String(event?.pointerType ?? '').toLowerCase() === 'pen';
+
+            if (
+                event.target?.closest?.('[data-quran-word-button]') &&
+                source !== 'touch' &&
+                !isTouchPointer
+            ) {
                 this.resetSwipeState();
 
                 return;
@@ -10035,8 +10060,6 @@ document.addEventListener('alpine:init', () => {
 
                 return;
             }
-
-            const source = this.swipeEventSource(event);
 
             if (this.swipe.source && this.swipe.source !== source) {
                 return;
@@ -10102,6 +10125,17 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            if (this.wordPress?.holdTriggered || this.wordPress?.dragActive) {
+                return;
+            }
+
+            if (
+                this.wordPress?.active &&
+                String(point.pointerType ?? this.swipe.pointerType ?? '').toLowerCase() === 'mouse'
+            ) {
+                return;
+            }
+
             if (this.swipe.pointerId !== null && point.pointerId !== this.swipe.pointerId) {
                 this.resetSwipeState();
 
@@ -10163,6 +10197,21 @@ document.addEventListener('alpine:init', () => {
             const point = this.swipePoint(event);
 
             if (!point) {
+                this.resetSwipeState();
+
+                return;
+            }
+
+            if (this.wordPress?.holdTriggered || this.wordPress?.dragActive) {
+                this.resetSwipeState();
+
+                return;
+            }
+
+            if (
+                this.wordPress?.active &&
+                String(point.pointerType ?? this.swipe.pointerType ?? '').toLowerCase() === 'mouse'
+            ) {
                 this.resetSwipeState();
 
                 return;
@@ -10365,7 +10414,7 @@ document.addEventListener('alpine:init', () => {
             );
             const defaultVisualEnhancements = this.normalizeBooleanFlag(
                 this.initialSettings?.enableVisualEnhancements,
-                true,
+                false,
             );
             const defaultWordTargeting = this.normalizeBooleanFlag(
                 this.initialSettings?.targetWordsByDefault,
@@ -10385,7 +10434,7 @@ document.addEventListener('alpine:init', () => {
             );
             const defaultUseVolumeButtonsNavigation = this.normalizeBooleanFlag(
                 this.initialSettings?.useVolumeButtonsNavigation,
-                true,
+                false,
             );
             const defaultUseWesternNumerals = this.normalizeBooleanFlag(
                 this.initialSettings?.useWesternNumerals,
@@ -10416,7 +10465,7 @@ document.addEventListener('alpine:init', () => {
                 hasVisualEnhancements
                     ? input[controlPanelSettingKeys.enableVisualEnhancements]
                     : defaultVisualEnhancements,
-                true,
+                false,
             );
             this.doesTargetWordsByDefault = this.normalizeBooleanFlag(
                 hasWordTargeting
@@ -10446,7 +10495,7 @@ document.addEventListener('alpine:init', () => {
                 hasUseVolumeButtonsNavigation
                     ? input[controlPanelSettingKeys.useVolumeButtonsNavigation]
                     : defaultUseVolumeButtonsNavigation,
-                true,
+                false,
             );
             this.doesUseWesternNumerals = this.normalizeBooleanFlag(
                 hasUseWesternNumerals
@@ -10517,6 +10566,14 @@ document.addEventListener('alpine:init', () => {
             }
 
             return 'quran-app-tilawa';
+        },
+
+        isAnyQuranReaderViewOpen() {
+            return Boolean(
+                this.views?.['quran-app-tilawa']?.isOpen ||
+                this.views?.['quran-app-hifth']?.isOpen ||
+                this.views?.['quran-app-tadabbur']?.isOpen,
+            );
         },
 
         shouldPersistActivationIndexes() {
@@ -11617,6 +11674,23 @@ document.addEventListener('alpine:init', () => {
             }
 
             this.copyFeedback.visible = false;
+        },
+
+        showWirdCompletionFeedback({ durationMs = wirdCompletionVisibleDurationMs } = {}) {
+            if (this._wirdCompletionTimer !== null) {
+                clearTimeout(this._wirdCompletionTimer);
+                this._wirdCompletionTimer = null;
+            }
+
+            this.isWirdCompletionVisible = true;
+
+            this._wirdCompletionTimer = window.setTimeout(
+                () => {
+                    this._wirdCompletionTimer = null;
+                    this.isWirdCompletionVisible = false;
+                },
+                Math.max(1200, Math.trunc(Number(durationMs) || wirdCompletionVisibleDurationMs)),
+            );
         },
 
         async copyWordSelection(word, activationAnchor = null) {
@@ -13420,28 +13494,81 @@ document.addEventListener('alpine:init', () => {
             try {
                 payload = JSON.parse(rawPayload);
             } catch (_) {
-                return;
+                try {
+                    payload = JSON.parse(this.decodeSearchStreamPayload(rawPayload));
+                } catch (__) {
+                    return;
+                }
             }
 
             this.applySearchStreamPayload(payload);
         },
 
-        applySearchStreamPayload(payload) {
-            if (!this.search.modalOpen) {
-                return;
+        decodeSearchStreamPayload(rawPayload) {
+            if (typeof document === 'undefined') {
+                return String(rawPayload ?? '');
             }
 
+            const parser = document.createElement('textarea');
+            parser.innerHTML = String(rawPayload ?? '');
+
+            return parser.value;
+        },
+
+        mergeSearchResults(existingResults, incomingResults) {
+            const merged = [];
+            const seenKeys = new Set();
+            const pushResult = (result) => {
+                if (!result || typeof result !== 'object') {
+                    return;
+                }
+
+                const id = Math.max(0, Math.trunc(Number(result.id ?? 0)));
+                const fallbackKey = `${Math.max(0, Math.trunc(Number(result.surah_number ?? 0)))}:${Math.max(0, Math.trunc(Number(result.ayah_number ?? 0)))}:${Math.max(0, Math.trunc(Number(result.page_number ?? 0)))}:${Math.max(0, Math.trunc(Number(result.match_rank ?? 0)))}`;
+                const dedupeKey = id > 0 ? `id:${id}` : `fallback:${fallbackKey}`;
+
+                if (seenKeys.has(dedupeKey)) {
+                    return;
+                }
+
+                seenKeys.add(dedupeKey);
+                merged.push(result);
+            };
+
+            (Array.isArray(existingResults) ? existingResults : []).forEach(pushResult);
+            (Array.isArray(incomingResults) ? incomingResults : []).forEach(pushResult);
+
+            return merged;
+        },
+
+        applySearchStreamPayload(payload) {
             const requestSerial = Math.max(0, Math.trunc(Number(payload?.request_serial ?? 0)));
 
             if (requestSerial !== this._searchRequestSerial) {
                 return;
             }
 
-            const results = Array.isArray(payload?.items) ? payload.items.slice(0, 24) : [];
+            const stage = String(payload?.stage ?? '').trim();
+            const stageResults = Array.isArray(payload?.stage_items)
+                ? payload.stage_items.slice(0, 24)
+                : [];
+            const allResults = Array.isArray(payload?.items) ? payload.items.slice(0, 24) : [];
+            const hasStreamChunk = stageResults.length > 0;
 
-            this.search.results = results;
-            this.search.isOpen = results.length > 0;
-            this.search.readyResult = results.length === 1 ? results[0] : null;
+            if (hasStreamChunk && stage !== 'complete') {
+                this.search.streamHasUpdates = true;
+                this.search.results = stageResults;
+            } else if (allResults.length > 0) {
+                this.search.results = this.search.streamHasUpdates
+                    ? this.mergeSearchResults(this.search.results, allResults).slice(0, 24)
+                    : allResults;
+            } else if (!this.search.streamHasUpdates) {
+                this.search.results = [];
+            }
+
+            this.search.isOpen = this.search.results.length > 0;
+            this.search.readyResult =
+                this.search.results.length === 1 ? this.search.results[0] : null;
 
             if (typeof payload?.is_loading === 'boolean') {
                 this.search.isLoading = payload.is_loading;
@@ -14286,6 +14413,7 @@ document.addEventListener('alpine:init', () => {
                 this.search.isOpen = false;
                 this.search.readyResult = null;
                 this.search.isLoading = false;
+                this.search.streamHasUpdates = false;
                 this._searchRequestSerial += 1;
                 this.clearSearchStreamTarget();
 
@@ -14297,6 +14425,7 @@ document.addEventListener('alpine:init', () => {
                 this.search.isOpen = false;
                 this.search.readyResult = null;
                 this.search.isLoading = false;
+                this.search.streamHasUpdates = false;
                 this._searchRequestSerial += 1;
                 this.clearSearchStreamTarget();
 
@@ -14312,6 +14441,7 @@ document.addEventListener('alpine:init', () => {
                 this.search.isOpen = false;
                 this.search.readyResult = null;
                 this.search.isLoading = false;
+                this.search.streamHasUpdates = false;
                 this._searchRequestSerial += 1;
                 this.clearSearchStreamTarget();
 
@@ -14320,6 +14450,7 @@ document.addEventListener('alpine:init', () => {
 
             const requestSerial = ++this._searchRequestSerial;
             this.search.isLoading = true;
+            this.search.streamHasUpdates = false;
             this.clearSearchStreamTarget();
 
             try {
@@ -14333,9 +14464,12 @@ document.addEventListener('alpine:init', () => {
                     return;
                 }
 
-                this.search.results = results;
-                this.search.isOpen = results.length > 0;
-                this.search.readyResult = results.length === 1 ? results[0] : null;
+                this.search.results = this.search.streamHasUpdates
+                    ? this.mergeSearchResults(this.search.results, results).slice(0, 24)
+                    : results;
+                this.search.isOpen = this.search.results.length > 0;
+                this.search.readyResult =
+                    this.search.results.length === 1 ? this.search.results[0] : null;
                 this.$nextTick(() => {
                     this.ensureSearchResultAnimations();
                 });

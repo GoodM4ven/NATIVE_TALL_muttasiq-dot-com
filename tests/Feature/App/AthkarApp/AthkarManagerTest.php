@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Livewire\AthkarManager;
 use App\Models\Thikr;
+use App\Models\ThikrOverrideSubmission;
 use App\Services\Enums\ThikrTime;
 use App\Services\Enums\ThikrType;
 
@@ -507,4 +508,103 @@ it('normalizes enum and legacy payloads when syncing overrides', function () {
         ->and($override['is_aayah'])->toBeTrue()
         ->and($card)->not->toBeNull()
         ->and($card['is_aayah'])->toBeTrue();
+});
+
+it('creates a pending override submission for a modified default thikr and skips exact duplicates', function () {
+    $thikr = Thikr::factory()->create([
+        'time' => ThikrTime::Sabah,
+        'type' => ThikrType::Glorification,
+        'text' => 'ذكر أصلي للاختبار',
+        'origin' => 'مرجع أصلي',
+        'count' => 3,
+        'is_aayah' => false,
+    ]);
+
+    $component = livewire(AthkarManager::class)
+        ->set('athkarOverrides', [
+            [
+                'thikr_id' => $thikr->id,
+                'text' => 'ذكر معدل للاعتماد',
+                'origin' => 'مرجع معدل',
+                'count' => 4,
+                'is_aayah' => false,
+                'is_deleted' => false,
+                'is_custom' => false,
+            ],
+        ])
+        ->instance();
+
+    $submitOverride = Closure::bind(
+        static fn (AthkarManager $instance, int $thikrId): bool => $instance->submitOverrideForReviewById($thikrId),
+        null,
+        AthkarManager::class,
+    );
+
+    $firstSubmit = $submitOverride($component, $thikr->id);
+    $secondSubmit = $submitOverride($component, $thikr->id);
+
+    $submission = ThikrOverrideSubmission::query()
+        ->where('thikr_id', $thikr->id)
+        ->where('status', ThikrOverrideSubmission::STATUS_PENDING)
+        ->first();
+
+    expect($firstSubmit)->toBeTrue()
+        ->and($secondSubmit)->toBeFalse()
+        ->and($submission)->not->toBeNull()
+        ->and($submission?->status)->toBe(ThikrOverrideSubmission::STATUS_PENDING)
+        ->and(collect($submission?->override_payload['changed_keys'] ?? [])->contains('text'))->toBeTrue()
+        ->and((string) ($submission?->override_payload['proposed']['text'] ?? ''))->toContain('ذكر معدل للاعتماد');
+});
+
+it('updates the existing pending submission payload when override changes', function () {
+    $thikr = Thikr::factory()->create([
+        'time' => ThikrTime::Masaa,
+        'type' => ThikrType::Supplication,
+        'text' => 'ذكر أساسي',
+        'origin' => null,
+        'count' => 1,
+        'is_aayah' => false,
+    ]);
+
+    $component = livewire(AthkarManager::class)
+        ->set('athkarOverrides', [
+            [
+                'thikr_id' => $thikr->id,
+                'text' => 'صياغة أولى',
+                'count' => 1,
+                'is_deleted' => false,
+                'is_custom' => false,
+            ],
+        ])
+        ->instance();
+
+    $submitOverride = Closure::bind(
+        static fn (AthkarManager $instance, int $thikrId): bool => $instance->submitOverrideForReviewById($thikrId),
+        null,
+        AthkarManager::class,
+    );
+
+    expect($submitOverride($component, $thikr->id))->toBeTrue();
+
+    $component->athkarOverrides = [
+        [
+            'thikr_id' => $thikr->id,
+            'text' => 'صياغة ثانية',
+            'count' => 2,
+            'is_deleted' => false,
+            'is_custom' => false,
+        ],
+    ];
+
+    expect($submitOverride($component, $thikr->id))->toBeTrue();
+
+    $pendingSubmissions = ThikrOverrideSubmission::query()
+        ->where('thikr_id', $thikr->id)
+        ->where('status', ThikrOverrideSubmission::STATUS_PENDING)
+        ->get();
+    $latestSubmission = $pendingSubmissions->first();
+
+    expect($pendingSubmissions)->toHaveCount(1)
+        ->and((string) ($latestSubmission?->override_payload['proposed']['text'] ?? ''))->toContain('صياغة ثانية')
+        ->and((int) ($latestSubmission?->override_payload['proposed']['count'] ?? 0))->toBe(2);
 });

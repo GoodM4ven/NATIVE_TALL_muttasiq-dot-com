@@ -26,6 +26,17 @@ class QuranReaderDataService
     private const DISPLAYED_PAGE_CACHE_PREFIX = 'quran-reader-display-page-v1';
 
     /**
+     * @var array<int, string>
+     */
+    private const SEARCH_PROGRESS_STAGE_ORDER = [
+        'exact_phrase',
+        'exact_tokens',
+        'stem_tokens',
+        'root_tokens',
+        'word_prefix',
+    ];
+
+    /**
      * @phpstan-impure
      */
     public function isReady(): bool
@@ -351,7 +362,7 @@ class QuranReaderDataService
         $cachedMatches = Cache::memo()->get($cacheKey);
 
         if (is_array($cachedMatches)) {
-            $this->emitSearchProgress($onProgress, $cachedMatches, 'complete', true);
+            $this->emitProgressFromResolvedMatches($onProgress, $cachedMatches);
 
             return $cachedMatches;
         }
@@ -1017,6 +1028,130 @@ class QuranReaderDataService
         }
 
         $onProgress($matches, $stage, $isComplete);
+    }
+
+    /**
+     * @param  array<int, array{
+     *     id: int,
+     *     ayah_index: int,
+     *     surah_number: int,
+     *     ayah_number: int,
+     *     page_number: int,
+     *     text_uthmani: string,
+     *     text_searchable_typed: string,
+     *     search_snippet: string,
+     *     match_strategy: string,
+     *     match_tone: string,
+     *     match_shade: int,
+     *     match_label: string,
+     *     match_rank: int
+     * }>  $matches
+     */
+    private function emitProgressFromResolvedMatches(?callable $onProgress, array $matches): void
+    {
+        if ($onProgress === null) {
+            return;
+        }
+
+        if ($matches === []) {
+            $this->emitSearchProgress($onProgress, [], 'complete', true);
+
+            return;
+        }
+
+        $accumulatedMatches = [];
+        $seenVerseIds = [];
+        $didEmitProgress = false;
+
+        foreach (self::SEARCH_PROGRESS_STAGE_ORDER as $stage) {
+            $stageMatches = $this->collectStageMatches($matches, $stage, $seenVerseIds);
+
+            if ($stageMatches === []) {
+                continue;
+            }
+
+            $accumulatedMatches = [...$accumulatedMatches, ...$stageMatches];
+            $this->emitSearchProgress($onProgress, $accumulatedMatches, $stage);
+            $didEmitProgress = true;
+        }
+
+        $fallbackMatches = $this->collectStageMatches($matches, '', $seenVerseIds);
+
+        if ($fallbackMatches !== []) {
+            $accumulatedMatches = [...$accumulatedMatches, ...$fallbackMatches];
+            $this->emitSearchProgress($onProgress, $accumulatedMatches, 'fallback');
+            $didEmitProgress = true;
+        }
+
+        if (! $didEmitProgress) {
+            $this->emitSearchProgress($onProgress, $matches, 'complete', true);
+
+            return;
+        }
+
+        $this->emitSearchProgress($onProgress, $accumulatedMatches, 'complete', true);
+    }
+
+    /**
+     * @param  array<int, array{
+     *     id: int,
+     *     ayah_index: int,
+     *     surah_number: int,
+     *     ayah_number: int,
+     *     page_number: int,
+     *     text_uthmani: string,
+     *     text_searchable_typed: string,
+     *     search_snippet: string,
+     *     match_strategy: string,
+     *     match_tone: string,
+     *     match_shade: int,
+     *     match_label: string,
+     *     match_rank: int
+     * }>  $matches
+     * @param  array<int, true>  $seenVerseIds
+     * @return array<int, array{
+     *     id: int,
+     *     ayah_index: int,
+     *     surah_number: int,
+     *     ayah_number: int,
+     *     page_number: int,
+     *     text_uthmani: string,
+     *     text_searchable_typed: string,
+     *     search_snippet: string,
+     *     match_strategy: string,
+     *     match_tone: string,
+     *     match_shade: int,
+     *     match_label: string,
+     *     match_rank: int
+     * }>
+     */
+    private function collectStageMatches(array $matches, string $stage, array &$seenVerseIds): array
+    {
+        $collectedMatches = [];
+
+        foreach ($matches as $match) {
+            $matchStage = (string) $match['match_strategy'];
+            $isKnownStage = in_array($matchStage, self::SEARCH_PROGRESS_STAGE_ORDER, true);
+
+            if ($stage !== '') {
+                if ($matchStage !== $stage) {
+                    continue;
+                }
+            } elseif ($isKnownStage) {
+                continue;
+            }
+
+            $verseId = max(0, (int) $match['id']);
+
+            if ($verseId < 1 || array_key_exists($verseId, $seenVerseIds)) {
+                continue;
+            }
+
+            $seenVerseIds[$verseId] = true;
+            $collectedMatches[] = $match;
+        }
+
+        return $collectedMatches;
     }
 
     /**

@@ -322,11 +322,28 @@ class Reader extends Component implements HasActions, HasSchemas
             24,
             function (array $matches, string $stage, bool $isComplete) use (
                 $normalizedRequestSerial,
-                &$didStreamChunks
+                &$didStreamChunks,
             ): void {
                 $didStreamChunks = true;
+
+                $normalizedMatches = array_values($matches);
+                $normalizedStage = trim($stage);
+                $stageMatches = $isComplete
+                    ? []
+                    : array_values(array_filter(
+                        $normalizedMatches,
+                        static function (array $match) use ($normalizedStage): bool {
+                            return trim((string) ($match['match_strategy'] ?? '')) === $normalizedStage;
+                        },
+                    ));
+
+                if (! $isComplete && $stageMatches === []) {
+                    $stageMatches = $normalizedMatches;
+                }
+
                 $this->streamSearchPayload(
-                    $matches,
+                    $normalizedMatches,
+                    $stageMatches,
                     $normalizedRequestSerial,
                     $stage,
                     $isComplete,
@@ -336,6 +353,7 @@ class Reader extends Component implements HasActions, HasSchemas
 
         if (! $didStreamChunks) {
             $this->streamSearchPayload(
+                $results,
                 $results,
                 $normalizedRequestSerial,
                 'complete',
@@ -531,12 +549,12 @@ class Reader extends Component implements HasActions, HasSchemas
             ),
         );
         $quranReaderSettings = [
-            'enableVisualEnhancements' => (bool) ($normalizedSettings[Setting::DOES_ENABLE_VISUAL_ENHANCEMENTS] ?? true),
+            'enableVisualEnhancements' => (bool) ($normalizedSettings[Setting::DOES_ENABLE_VISUAL_ENHANCEMENTS] ?? false),
             'targetWordsByDefault' => (bool) ($normalizedSettings[Setting::DOES_QURAN_TARGET_WORDS_BY_DEFAULT] ?? false),
             'preserveHarakatOnCopy' => (bool) ($normalizedSettings[Setting::DOES_QURAN_PRESERVE_HARAKAT_ON_COPY] ?? true),
             'appendSurahAffixOnMultiCopy' => (bool) ($normalizedSettings[Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ON_MULTI_COPY] ?? true),
             'appendSurahAffixAlwaysOnCopy' => (bool) ($normalizedSettings[Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ALWAYS_ON_COPY] ?? false),
-            'useVolumeButtonsNavigation' => (bool) ($normalizedSettings[Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION] ?? true),
+            'useVolumeButtonsNavigation' => (bool) ($normalizedSettings[Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION] ?? false),
             'useWesternNumerals' => (bool) ($normalizedSettings[Setting::DOES_USE_WESTERN_NUMERALS] ?? true),
             'wirdFrequencyMode' => (int) ($normalizedSettings[Setting::QURAN_WIRD_FREQUENCY_MODE] ?? Setting::QURAN_WIRD_FREQUENCY_MONTHLY),
             'wirdKhatmatTarget' => (int) ($normalizedSettings[Setting::QURAN_WIRD_KHATMAT_TARGET] ?? 1),
@@ -592,9 +610,25 @@ class Reader extends Component implements HasActions, HasSchemas
      *     match_label: string,
      *     match_rank: int
      * }>  $matches
+     * @param  array<int, array{
+     *     id: int,
+     *     ayah_index: int,
+     *     surah_number: int,
+     *     ayah_number: int,
+     *     page_number: int,
+     *     text_uthmani: string,
+     *     text_searchable_typed: string,
+     *     search_snippet: string,
+     *     match_strategy: string,
+     *     match_tone: string,
+     *     match_shade: int,
+     *     match_label: string,
+     *     match_rank: int
+     * }>  $stageMatches
      */
     private function streamSearchPayload(
         array $matches,
+        array $stageMatches,
         int $requestSerial,
         string $stage,
         bool $isComplete,
@@ -604,6 +638,7 @@ class Reader extends Component implements HasActions, HasSchemas
             'stage' => $stage,
             'is_loading' => ! $isComplete,
             'items' => array_values($matches),
+            'stage_items' => array_values($stageMatches),
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
         if (! is_string($encodedPayload)) {

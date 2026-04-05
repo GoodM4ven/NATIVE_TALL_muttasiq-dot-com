@@ -30,7 +30,7 @@ it('returns normalized settings payload with limits/version and migrates legacy 
     expect($settings)
         ->toBeArray()
         ->toHaveKey(Setting::DOES_SKIP_GUIDANCE_PANELS, true)
-        ->toHaveKey(Setting::DOES_ENABLE_VISUAL_ENHANCEMENTS, true)
+        ->toHaveKey(Setting::DOES_ENABLE_VISUAL_ENHANCEMENTS, false)
         ->toHaveKey(Setting::DOES_PRESERVE_HARAKAT_IN_DISPLAY, true)
         ->toHaveKey(Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ON_MULTI_COPY, true)
         ->toHaveKey(Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ALWAYS_ON_COPY, false)

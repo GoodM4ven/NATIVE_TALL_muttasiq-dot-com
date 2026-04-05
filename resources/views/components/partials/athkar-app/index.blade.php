@@ -28,6 +28,7 @@
         athkarSettings: @js($athkarSettings),
         athkarMainTextSizeLimits: @js($athkarMainTextSizeLimits),
         typeLabels: @js(\App\Services\Enums\ThikrType::labels()),
+        nativeRuntime: @js((bool) config('nativephp-internal.running', false) && is_platform('mobile')),
     })"
     x-on:close-athkar-mode.window="closeMode()"
     x-on:control-panel-updated.window="applySettings($event.detail?.controlPanel, { maintenancePulse: Boolean($event.detail?.maintenancePulse) })"

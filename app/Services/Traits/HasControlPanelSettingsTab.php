@@ -50,7 +50,10 @@ trait HasControlPanelSettingsTab
                     ->schema([
                         Components\Slider::make(self::MAIN_TEXT_SIZE_RANGE)
                             ->label(arabic_text('1. نطاق حجم النصوص المحورية (الأدنى/الأقصى).'))
-                            ->extraFieldWrapperAttributes(['class' => 'pb-6 sm:pb-8 md:pb-0'])
+                            ->extraFieldWrapperAttributes([
+                                'class' => 'pb-6 sm:pb-8 md:pb-0',
+                                'data-control-panel-main-text-size-slider' => '1',
+                            ])
                             ->range(
                                 minValue: Setting::MIN_MAIN_TEXT_SIZE_MIN,
                                 maxValue: Setting::MAX_MAIN_TEXT_SIZE_MAX,
@@ -64,7 +67,7 @@ trait HasControlPanelSettingsTab
                             ->pips(PipsMode::Steps, density: 1),
 
                         Components\Checkbox::make(Setting::DOES_ENABLE_VISUAL_ENHANCEMENTS)
-                            ->default((bool) ($generalDefinitions[Setting::DOES_ENABLE_VISUAL_ENHANCEMENTS]['default'] ?? true))
+                            ->default((bool) ($generalDefinitions[Setting::DOES_ENABLE_VISUAL_ENHANCEMENTS]['default'] ?? false))
                             ->extraFieldWrapperAttributes([
                                 'class' => 'quran-support-lock-target relative z-20 mt-1 sm:mt-3 md:mt-0',
                                 'data-support-lock-target' => 'enable-visual-enhancements',
@@ -138,13 +141,6 @@ trait HasControlPanelSettingsTab
                                 Text::make((string) ($quranDefinitions[Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ALWAYS_ON_COPY]['help'] ?? ''))->size(TextSize::ExtraSmall),
                             ]),
 
-                        Components\Checkbox::make(Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION)
-                            ->default((bool) ($quranDefinitions[Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION]['default'] ?? true))
-                            ->label($quranDefinitions[Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION]['label'])
-                            ->belowContent([
-                                Text::make((string) ($quranDefinitions[Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION]['help'] ?? ''))->size(TextSize::ExtraSmall),
-                            ]),
-
                         FusedGroup::make([
                             Components\Radio::make(Setting::QURAN_WIRD_FREQUENCY_MODE)
                                 ->default((int) ($quranDefinitions[Setting::QURAN_WIRD_FREQUENCY_MODE]['default'] ?? Setting::QURAN_WIRD_FREQUENCY_MONTHLY))
@@ -193,9 +189,17 @@ trait HasControlPanelSettingsTab
                                 )
                                 ->columnSpan(1),
                         ])
-                            ->label(arabic_text('إعداد الوِرد'))
+                            ->label($quranDefinitions[Setting::QURAN_WIRD_FREQUENCY_MODE]['label'])
                             ->columns(2)
                             ->columnSpanFull(),
+
+                        Components\Checkbox::make(Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION)
+                            ->default((bool) ($quranDefinitions[Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION]['default'] ?? false))
+                            ->visible(fn (): bool => is_platform('native'))
+                            ->label($quranDefinitions[Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION]['label'])
+                            ->belowContent([
+                                Text::make((string) ($quranDefinitions[Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION]['help'] ?? ''))->size(TextSize::ExtraSmall),
+                            ]),
                     ]),
 
                 Text::make(new HtmlString('<hr class="border-0 h-px bg-linear-to-r from-transparent via-gray-400 to-transparent mt-5">'))

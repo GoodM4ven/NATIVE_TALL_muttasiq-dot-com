@@ -1787,7 +1787,7 @@
     jumpPageModalId: @js('quran-reader-jump-page-modal'),
     historyModalId: @js('quran-reader-history-modal'),
     bookmarksModalId: @js('quran-reader-bookmarks-modal'),
-    settings: @js($quranReaderSettings ?? ['enableVisualEnhancements' => true, 'targetWordsByDefault' => false, 'preserveHarakatOnCopy' => true, 'appendSurahAffixOnMultiCopy' => true, 'appendSurahAffixAlwaysOnCopy' => false, 'useVolumeButtonsNavigation' => true, 'useWesternNumerals' => true, 'wirdFrequencyMode' => 0, 'wirdKhatmatTarget' => 1]),
+    settings: @js($quranReaderSettings ?? ['enableVisualEnhancements' => false, 'targetWordsByDefault' => false, 'preserveHarakatOnCopy' => true, 'appendSurahAffixOnMultiCopy' => true, 'appendSurahAffixAlwaysOnCopy' => false, 'useVolumeButtonsNavigation' => false, 'useWesternNumerals' => true, 'wirdFrequencyMode' => 0, 'wirdKhatmatTarget' => 1]),
 })">
     <div
         class="quran-reader relative grid h-full w-full place-items-center items-center"
@@ -1854,9 +1854,10 @@
                         class="quran-calibration-hud"
                         wire:ignore
                         x-cloak
-                        x-show="isCalibrating"
+                        x-show="isCalibrating && (views?.['quran-app-tilawa']?.isOpen || views?.['quran-app-hifth']?.isOpen || views?.['quran-app-tadabbur']?.isOpen)"
                         x-bind:style="calibrationHudStyle()"
-                        x-bind:aria-hidden="isCalibrating ? 'false' : 'true'"
+                        x-bind:aria-hidden="isCalibrating && (views?.['quran-app-tilawa']?.isOpen || views?.['quran-app-hifth']?.isOpen ||
+                            views?.['quran-app-tadabbur']?.isOpen) ? 'false' : 'true'"
                     >
                         <div class="quran-calibration-loader flex flex-col items-center gap-3">
                             <div class="quran-calibration-spinner">
@@ -2385,6 +2386,18 @@
                         <span>{{ arabic_text('تم النسخ') }}</span>
                     </div>
                 </template>
+
+                <x-partials.shared.congrats-overlay
+                    show="isWirdCompletionVisible"
+                    :title="arabic_text('هنيئًا لك إتمام الوِرد اليومي')"
+                    :subtitle="arabic_text('ثبَّتَ الله لك الأجر، وتم حفظ تقدّمك لليوم.')"
+                    decorated
+                    arabesque
+                    with-backdrop
+                    backdrop-class="bg-white"
+                    fixed-layer
+                    max-width-class="max-w-4xl"
+                />
             </section>
         @endif
     </div>

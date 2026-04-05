@@ -320,37 +320,34 @@ it('wires quran reader entry points from main menu to hash navigation and view m
             "const fitCacheStorageKey = 'quran-reader-fit-cache-v18';",
         )
         ->and($quranReaderScriptSource)->toContain(
-            'const sharedFitSeedReferencePageNumber = 3;',
+            'const fitCalibrationReferencePage = 3;',
         )
         ->and($quranReaderScriptSource)->toContain(
-            'fitCacheSignatureParts({',
+            'syncFitCacheBreakpoint({ persist = true } = {})',
         )
         ->and($quranReaderScriptSource)->toContain(
-            'sharedFitSeedCacheKey(signatureParts = [])',
+            'hydratePersistedFitCache()',
         )
         ->and($quranReaderScriptSource)->toContain(
-            'async getPagePayloadByAbsolutePage(',
+            'async calibrateGlobalFitLayoutFromReferencePage(',
         )
         ->and($quranReaderScriptSource)->toContain(
-            'clearPageFitEntries(pageNumber = this.pageNumber)',
+            'referencePage = fitCalibrationReferencePage,',
         )
         ->and($quranReaderScriptSource)->toContain(
-            'async primeSharedFitSeedFromReferencePage(',
+            'const referencePayload = await this.getPagePayload(normalizedReferencePage, {',
         )
         ->and($quranReaderScriptSource)->toContain(
-            'syncVisualPageState = true',
+            'await this.layoutPageGuaranteed({',
         )
         ->and($quranReaderScriptSource)->toContain(
-            'const pageFitCacheResult = shouldBypassPageSpecificFitCache',
+            'await this.runFitPageToViewportLazily();',
         )
         ->and($quranReaderScriptSource)->toContain(
-            'const sharedFitSeedResult = shouldBypassSharedFitSeed',
+            'await this.calibrateGlobalFitLayoutFromReferencePage();',
         )
         ->and($quranReaderScriptSource)->toContain(
-            'await this.primeSharedFitSeedFromReferencePage();',
-        )
-        ->and($quranReaderScriptSource)->toContain(
-            'this.clearPageFitEntries(normalizedReferencePage);',
+            'this.syncFitCacheBreakpoint({ persist: false });',
         )
         ->and($quranReaderScriptSource)->toContain(
             'persist: !shouldSuppressPersistedCacheWrite',
@@ -478,12 +475,13 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($settingModelSource)->toContain("DOES_USE_WESTERN_NUMERALS = 'does_use_western_numerals'")
         ->and($settingModelSource)->toContain("'default' => true")
         ->and($settingModelSource)->toContain('إظهار الحركات في النصوص العربية المعروضة')
-        ->and($settingModelSource)->toContain('الحفاظ على الحركات عند نسخ نص الآيات')
-        ->and($settingModelSource)->toContain('إضافة لاحقة السورة (~ [سورة ...]) عند النسخ المتعدد بين الآيات')
-        ->and($settingModelSource)->toContain('إضافة لاحقة السورة (~ [سورة ...]) دائمًا عند النسخ بالسحب')
-        ->and($settingModelSource)->toContain('وتيرة الوِرد: ختمات موزعة على الشهر أو هدف يومي مباشر')
-        ->and($settingModelSource)->toContain('عدد الختمات المستهدفة للوِرد.')
-        ->and($settingModelSource)->toContain('استخدام الأرقام العربية الغربية (123) بدل العربية الشرقية (١٢٣) في العرض');
+        ->and($settingModelSource)->toContain('الحفاظ على الحركات والزخارف عند نسخ نص الآيات')
+        ->and($settingModelSource)->toContain('إضافة اسم السورة عند النسخ المتعدد بين الآيات')
+        ->and($settingModelSource)->toContain('إضافة اسم السورة دائمًا عند النسخ')
+        ->and($settingModelSource)->toContain('إعداد الوِرد اليومي: ختمات موزعة على الشهر أو هدف يومي مباشر')
+        ->and($settingModelSource)->toContain('هدف عدد الختمات المستهدفة للوِرد.')
+        ->and($settingModelSource)->toContain('__WESTERN_NUMERALS_SAMPLE__')
+        ->and($settingModelSource)->toContain('__ARABIC_NUMERALS_SAMPLE__');
 
     expect($controlPanelSettingsTabSource)->not->toBeFalse()
         ->and($controlPanelSettingsTabSource)->toContain('Setting::DOES_PRESERVE_HARAKAT_IN_DISPLAY')
@@ -626,10 +624,22 @@ it('caches repeated quran search queries while preserving complete progress emis
 
     expect($firstResults)->toBeArray()->not->toBeEmpty()
         ->and($secondResults)->toEqual($firstResults)
-        ->and($progressEvents)->toHaveCount(1)
-        ->and($progressEvents[0]['stage'])->toBe('complete')
-        ->and($progressEvents[0]['is_complete'])->toBeTrue()
-        ->and((int) $progressEvents[0]['count'])->toBe(count($firstResults));
+        ->and(count($progressEvents))->toBeGreaterThan(1)
+        ->and($progressEvents[array_key_last($progressEvents)]['stage'])->toBe('complete')
+        ->and($progressEvents[array_key_last($progressEvents)]['is_complete'])->toBeTrue()
+        ->and((int) $progressEvents[array_key_last($progressEvents)]['count'])->toBe(count($firstResults));
+
+    $nonCompleteEvents = array_values(array_filter(
+        $progressEvents,
+        static fn (array $event): bool => ! (bool) ($event['is_complete'] ?? false),
+    ));
+    $eventCounts = array_map(
+        static fn (array $event): int => max(0, (int) ($event['count'] ?? 0)),
+        $progressEvents,
+    );
+
+    expect($nonCompleteEvents)->not->toBeEmpty()
+        ->and($eventCounts)->toEqual(collect($eventCounts)->sort()->values()->all());
 });
 
 it('injects visible basmallah lines under late-page surah headers', function () {

@@ -20,11 +20,11 @@ test('athkar setting defaults are available for the home payload', function () {
     expect($defaults[Setting::DOES_SKIP_GUIDANCE_PANELS])->toBeFalse();
     expect($defaults[Setting::MINIMUM_MAIN_TEXT_SIZE])->toBe(Setting::MIN_MAIN_TEXT_SIZE_DEFAULT);
     expect($defaults[Setting::MAXIMUM_MAIN_TEXT_SIZE])->toBe(Setting::MAX_MAIN_TEXT_SIZE_DEFAULT);
-    expect($defaults[Setting::DOES_ENABLE_VISUAL_ENHANCEMENTS])->toBeTrue();
+    expect($defaults[Setting::DOES_ENABLE_VISUAL_ENHANCEMENTS])->toBeFalse();
     expect($defaults[Setting::DOES_PRESERVE_HARAKAT_IN_DISPLAY])->toBeTrue();
     expect($defaults[Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ON_MULTI_COPY])->toBeTrue();
     expect($defaults[Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ALWAYS_ON_COPY])->toBeFalse();
-    expect($defaults[Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION])->toBeTrue();
+    expect($defaults[Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION])->toBeFalse();
 });
 
 test('it exposes main text size limits for frontend consumers', function () {
@@ -51,6 +51,15 @@ test('it resolves translated setting definitions without recursive arabic text l
 
     expect($label)->toBeString();
     expect(strlen((string) $label))->toBeGreaterThan(0);
+});
+
+test('it keeps explicit numeral samples fixed in western numeral setting label', function () {
+    $definitions = Setting::definitions();
+    $label = (string) ($definitions[Setting::DOES_USE_WESTERN_NUMERALS]['label'] ?? '');
+
+    expect($label)
+        ->toContain('(123)')
+        ->toContain('(١٢٣)');
 });
 
 test('it normalizes settings payload values by their definitions', function () {

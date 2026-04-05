@@ -609,6 +609,7 @@
 
         .athkar-origin-text.is-origin-visible {
             opacity: 1 !important;
+            pointer-events: auto;
             transition-duration: 260ms;
         }
 
@@ -903,6 +904,63 @@
         .athkar-nav__arrow:focus-visible {
             outline: 2px solid color-mix(in srgb, var(--primary-400) 70%, transparent);
             outline-offset: 2px;
+        }
+
+        .quran-copy-popover {
+            position: fixed;
+            z-index: 90;
+            pointer-events: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.28rem;
+            transform: translate(-50%, -132%);
+            border-radius: 999px;
+            border: 1px solid color-mix(in srgb, var(--primary-500) 54%, transparent);
+            background: color-mix(in srgb, var(--background) 88%, transparent);
+            color: color-mix(in srgb, var(--primary-900) 92%, var(--primary-950));
+            box-shadow:
+                inset 0 0 0 1px color-mix(in srgb, var(--primary-100) 24%, transparent),
+                0 8px 18px color-mix(in srgb, var(--gray-900) 20%, transparent);
+            padding: 0.26rem 0.56rem;
+            font-family: 'IBM Plex Sans Arabic', 'Manrope', ui-sans-serif, system-ui, sans-serif;
+            font-size: 0.74rem;
+            font-weight: 700;
+            line-height: 1;
+            white-space: nowrap;
+            direction: rtl;
+        }
+
+        .quran-copy-popover-enter {
+            transition:
+                opacity 180ms cubic-bezier(0.2, 0.75, 0.25, 1),
+                transform 180ms cubic-bezier(0.2, 0.75, 0.25, 1);
+        }
+
+        .quran-copy-popover-enter-start {
+            opacity: 0;
+            transform: translate(-50%, -118%) scale(0.84);
+        }
+
+        .quran-copy-popover-enter-end {
+            opacity: 1;
+            transform: translate(-50%, -132%) scale(1);
+        }
+
+        .quran-copy-popover-leave {
+            transition:
+                opacity 220ms cubic-bezier(0.4, 0, 1, 1),
+                transform 220ms cubic-bezier(0.4, 0, 1, 1);
+        }
+
+        .quran-copy-popover-leave-start {
+            opacity: 1;
+            transform: translate(-50%, -132%) scale(1);
+        }
+
+        .quran-copy-popover-leave-end {
+            opacity: 0;
+            transform: translate(-50%, -156%) scale(1);
         }
 
         @keyframes athkar-nav-flow {
@@ -1354,6 +1412,14 @@
                                             data-athkar-text-box
                                             data-fitty-box
                                             dir="rtl"
+                                            x-on:pointerdown.capture="beginHoldCopy($event, index)"
+                                            x-on:pointermove.capture="moveHoldCopy($event)"
+                                            x-on:pointerup.capture="endHoldCopy($event)"
+                                            x-on:pointercancel.capture="cancelHoldCopy()"
+                                            x-on:touchstart.capture="beginHoldCopy($event, index)"
+                                            x-on:touchmove.capture="moveHoldCopy($event)"
+                                            x-on:touchend.capture="endHoldCopy($event)"
+                                            x-on:touchcancel.capture="cancelHoldCopy()"
                                             x-on:pointerdown="
                                         beginTextScroll($event);
                                     "
@@ -1611,5 +1677,27 @@
                 </svg>
             </button>
         </div>
+
+        <template x-teleport="body">
+            <div
+                class="quran-copy-popover"
+                data-athkar-copy-popover
+                x-cloak
+                x-show="copyFeedback.visible"
+                x-bind:style="copyFeedbackStyle()"
+                x-transition:enter="quran-copy-popover-enter"
+                x-transition:enter-start="quran-copy-popover-enter-start"
+                x-transition:enter-end="quran-copy-popover-enter-end"
+                x-transition:leave="quran-copy-popover-leave"
+                x-transition:leave-start="quran-copy-popover-leave-start"
+                x-transition:leave-end="quran-copy-popover-leave-end"
+            >
+                <x-icon
+                    class="h-3.5 w-3.5"
+                    :name="'heroicon-o-clipboard'"
+                />
+                <span>{{ arabic_text('تم النسخ') }}</span>
+            </div>
+        </template>
     </section>
 </div>

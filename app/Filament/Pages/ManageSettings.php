@@ -134,6 +134,10 @@ class ManageSettings extends Page
         $hasWirdKhatmat = array_key_exists(Setting::QURAN_WIRD_KHATMAT_TARGET, $definitions);
 
         foreach ($definitions as $name => $definition) {
+            if ($name === Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION && ! is_platform('native')) {
+                continue;
+            }
+
             if (
                 $name === Setting::QURAN_WIRD_FREQUENCY_MODE ||
                 $name === Setting::QURAN_WIRD_KHATMAT_TARGET
@@ -143,7 +147,8 @@ class ManageSettings extends Page
 
             if ($definition['type'] === 'boolean') {
                 $fields[] = Components\Checkbox::make($name)
-                    ->label($definition['label']);
+                    ->label($definition['label'])
+                    ->helperText($definition['help'] ?? null);
             }
 
             if ($definition['type'] === 'integer') {
@@ -151,7 +156,8 @@ class ManageSettings extends Page
                     ->label($definition['label'])
                     ->numeric()
                     ->minValue($definition['min'] ?? 0)
-                    ->maxValue($definition['max'] ?? 100);
+                    ->maxValue($definition['max'] ?? 100)
+                    ->helperText($definition['help'] ?? null);
 
                 $fields[] = $field;
             }
@@ -200,7 +206,7 @@ class ManageSettings extends Page
                     )
                     ->columnSpan(1),
             ])
-                ->label('إعداد الوِرد')
+                ->label($wirdFrequencyDefinition['label'])
                 ->columns(2);
         }
 

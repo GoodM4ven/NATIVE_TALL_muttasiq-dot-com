@@ -114,7 +114,7 @@ class Setting extends Model
                 'max' => self::MAX_MAIN_TEXT_SIZE_MAX,
             ],
             self::DOES_ENABLE_VISUAL_ENHANCEMENTS => [
-                'default' => true,
+                'default' => false,
                 'label' => '2. تحسين التأثيرات البصرية وتجميل النصوص المحورية.',
                 'group' => self::GROUP_GENERAL,
                 'type' => 'boolean',
@@ -127,7 +127,7 @@ class Setting extends Model
             ],
             self::DOES_USE_WESTERN_NUMERALS => [
                 'default' => true,
-                'label' => '4. استخدام الأرقام العربية الغربية (123) بدل العربية الشرقية (١٢٣) في العرض.',
+                'label' => '4. استخدام الأرقام العربية الغربية (__WESTERN_NUMERALS_SAMPLE__) بدل العربية الشرقية (__ARABIC_NUMERALS_SAMPLE__) في العرض.',
                 'group' => self::GROUP_GENERAL,
                 'type' => 'boolean',
             ],
@@ -164,16 +164,9 @@ class Setting extends Model
                 'group' => self::GROUP_QURAN,
                 'type' => 'boolean',
             ],
-            self::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION => [
-                'default' => true,
-                'label' => '5. استخدام أزرار رفع وخفض الصوت للتنقل بين الأذكار أو صفحات القرآن.',
-                'help' => 'زر رفع الصوت يعود للسابق، وزر خفض الصوت ينتقل للتالي.',
-                'group' => self::GROUP_QURAN,
-                'type' => 'boolean',
-            ],
             self::QURAN_WIRD_FREQUENCY_MODE => [
                 'default' => self::QURAN_WIRD_FREQUENCY_MONTHLY,
-                'label' => '6. وتيرة الوِرد اليومي: ختمات موزعة على الشهر أو هدف يومي مباشر.',
+                'label' => '5. إعداد الوِرد اليومي: ختمات موزعة على الشهر أو هدف يومي مباشر.',
                 'group' => self::GROUP_QURAN,
                 'type' => 'integer',
                 'min' => self::QURAN_WIRD_FREQUENCY_MONTHLY,
@@ -181,12 +174,19 @@ class Setting extends Model
             ],
             self::QURAN_WIRD_KHATMAT_TARGET => [
                 'default' => 1,
-                'label' => '7. عدد الختمات المستهدفة للوِرد.',
+                'label' => 'هدف عدد الختمات المستهدفة للوِرد.',
                 'help' => 'في الوضع اليومي: الحد الأقصى 4 ختمات/يوم. في الوضع الشهري: الحد الأقصى 20 ختمة.',
                 'group' => self::GROUP_QURAN,
                 'type' => 'integer',
                 'min' => self::QURAN_WIRD_KHATMAT_MIN,
                 'max' => self::QURAN_WIRD_KHATMAT_MONTHLY_MAX,
+            ],
+            self::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION => [
+                'default' => false,
+                'label' => '6. استخدام أزرار رفع وخفض الصوت للتنقل بين الأذكار أو صفحات القرآن.',
+                'help' => 'زر رفع الصوت يعود للسابق، وزر خفض الصوت ينتقل للتالي.',
+                'group' => self::GROUP_QURAN,
+                'type' => 'boolean',
             ],
         ];
 
@@ -197,6 +197,12 @@ class Setting extends Model
                 $definitions[$name]['help'] = arabic_text((string) $definition['help']);
             }
         }
+
+        $definitions[self::DOES_USE_WESTERN_NUMERALS]['label'] = str_replace(
+            ['__WESTERN_NUMERALS_SAMPLE__', '__ARABIC_NUMERALS_SAMPLE__'],
+            ['123', '١٢٣'],
+            $definitions[self::DOES_USE_WESTERN_NUMERALS]['label'],
+        );
 
         return $definitions;
     }

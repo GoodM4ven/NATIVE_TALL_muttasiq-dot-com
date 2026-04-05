@@ -64,9 +64,10 @@ This shared source code base is representing the web version primarily, the one 
 
 ## Workflow: Quran Reader Fitting and Cache
 - Main implementation is in [resources/js/support/alpine/data/quran-app-reader.js].
-- Think in terms of one pipeline: schedule layout, fit the current page, then reveal it. If a page is loaded but looks blank, tiny, oversized, or unfitted, assume the reveal step or a post-fit recovery step did not complete.
-- Respect the fit cache, but treat modal state, stale guards, and fresh navigation as cache-risky contexts. Reads should be bypassed when modal lifecycle is still settling, while suppressed write windows are about persistence only, not about disabling healthy reuse.
-- The main failure mode is hidden-page state getting stuck behind modal or navigation guards. When debugging, check `isFittingPage`, modal-settling state, pending navigation state, and whether stale guards need recovery before assuming the fitting math is wrong.
-- `wird` mode and rapid navigation are race-prone. Preserve last-write-wins behavior, keep navigation source profiling consistent with normal reader navigation, and prefer visibility recovery helpers over ad-hoc fixes.
-- History and bookmark manager jumps are special: they often need both an immediate fit and a deferred post-modal refit. Replay of `bookmark-navigation` history is especially sensitive to modal-close timing.
+- Treat reader rendering as one pipeline: queue navigation, load target page, fit text to viewport, then reveal.
+- Reveal is guarded. When loading, modal transitions, or navigation locks are active, the page should stay hidden until safe to reveal.
+- Fit cache is valid for normal navigation, but cache reads must be bypassed in unstable contexts (modal transitions, pending fonts, forced refits). Write suppression affects persistence only, not in-memory reuse.
+- Modal open/close timing is a common risk area. After modal-driven jumps (search, history, bookmarks), always allow a targeted post-close refit/reveal recovery.
+- Wird navigation is race-prone. Preserve last-write-wins behavior and avoid stale reveal state after rapid navigation or re-entry.
+- Recovery behavior is expected and should remain: watchdog-based reveal recovery, sanity-based refit recovery, and fail-open reveal when guards become stale.
 - When touching this area, run the focused browser regressions `lands on the final wird slider page and keeps the re-entered completed page visible` and `keeps quran text fitted and visible across all reader navigation paths`.
