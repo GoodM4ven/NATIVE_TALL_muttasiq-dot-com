@@ -7638,10 +7638,16 @@ document.addEventListener('alpine:init', () => {
             this._modalLayoutResumeTimer = window.setTimeout(
                 () => {
                     this._modalLayoutResumeTimer = null;
+                    this._isModalLifecycleSettling = false;
+                    const wasPreviouslyFitted = this._lastFittedPageNumber === this.pageNumber;
+
                     this.clearLayoutTimers();
                     this.isFittingPage = true;
-                    this._isModalLifecycleSettling = false;
-                    this._bypassNextFitCache = true;
+
+                    if (!wasPreviouslyFitted) {
+                        this._bypassNextFitCache = true;
+                    }
+
                     void this.layoutPageGuaranteed({ revealDelayMs: 240, maxAttempts: 5 });
                 },
                 Math.max(0, Math.trunc(Number(delayMs) || 220)),
