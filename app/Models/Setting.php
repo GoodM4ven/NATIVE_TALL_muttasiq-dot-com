@@ -153,14 +153,14 @@ class Setting extends Model
             self::DOES_QURAN_APPEND_SURAH_AFFIX_ON_MULTI_COPY => [
                 'default' => true,
                 'label' => '3. إضافة اسم السورة عند النسخ المتعدد بين الآيات.',
-                'help' => 'عند التفعيل: تُضاف اسم السورة لكل سورة مشاركة إذا امتد النسخ بالسحب عبر أكثر من آية.',
+                'help' => 'عند التفعيل: يُضاف اسم السورة لكل سورة مشاركة إذا امتد النسخ بالسحب عبر أكثر من آية.',
                 'group' => self::GROUP_QURAN,
                 'type' => 'boolean',
             ],
             self::DOES_QURAN_APPEND_SURAH_AFFIX_ALWAYS_ON_COPY => [
                 'default' => false,
                 'label' => '4. إضافة اسم السورة دائمًا عند النسخ.',
-                'help' => 'عند التفعيل: تُضاف اسم السورة حتى عند نسخ كلمات من آية واحدة فقط.',
+                'help' => 'عند التفعيل: يُضاف اسم السورة حتى عند نسخ كلمات من آية واحدة فقط.',
                 'group' => self::GROUP_QURAN,
                 'type' => 'boolean',
             ],
