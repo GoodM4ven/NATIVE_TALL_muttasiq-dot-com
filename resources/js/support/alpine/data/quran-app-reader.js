@@ -169,6 +169,7 @@ const lastPageStorageKey = 'quran-reader-last-page-v1';
 const navigationHistoryStorageKey = 'quran-reader-navigation-history-v1';
 const bookmarksStorageKey = 'quran-reader-bookmarks-v1';
 const wirdProgressStorageKey = 'quran-reader-wird-progress-v1';
+const wirdDayOffsetStorageKey = 'quran-reader-wird-day-offset-v1';
 const wirdProgressStorageVersion = 1;
 const supportUnlockStorageKey = 'quran-support-unlock-v1';
 const supportUnlockStorageVersion = 1;
@@ -269,13 +270,38 @@ const writeLocalStorage = (key, value) => {
     }
 };
 
+const normalizeDayOffsetDays = (value, fallback = 0) => {
+    const parsed = Math.trunc(Number(value));
+
+    if (!Number.isFinite(parsed)) {
+        return Math.trunc(Number(fallback) || 0);
+    }
+
+    return Math.max(-3650, Math.min(3650, parsed));
+};
+
+const readWirdDayOffsetDays = () =>
+    normalizeDayOffsetDays(readLocalStorage(wirdDayOffsetStorageKey, 0), 0);
+
+const writeWirdDayOffsetDays = (value) => {
+    writeLocalStorage(wirdDayOffsetStorageKey, normalizeDayOffsetDays(value, 0));
+};
+
 const currentDateKey = () => {
     const now = new Date();
+    now.setDate(now.getDate() + readWirdDayOffsetDays());
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
 
     return `${year}-${month}-${day}`;
+};
+
+const historyEntryHasPersistenceMeta = (entry = {}) => {
+    const tags = Array.isArray(entry?.tags) ? entry.tags : [];
+    const note = normalizeTextValue(entry?.note);
+
+    return tags.length > 0 || Boolean(note);
 };
 
 const normalizeHistoryEntry = (entry = {}) => {
@@ -298,6 +324,7 @@ const normalizeHistoryEntry = (entry = {}) => {
         query: normalizeTextValue(entry?.query),
         tags: normalizeTags(entry?.tags),
         created_at: Number.isFinite(createdAt) ? Math.trunc(createdAt) : Date.now(),
+        sort_order: Math.max(0, Math.trunc(Number(entry?.sort_order ?? entry?.sortOrder ?? 0))),
     };
 };
 
@@ -305,22 +332,50 @@ const pruneNavigationHistory = (entries = []) => {
     const sortedEntries = entries
         .slice()
         .sort((firstEntry, secondEntry) => secondEntry.created_at - firstEntry.created_at);
-    const taggedEntries = [];
-    const untaggedEntries = [];
+    const persistedEntries = [];
+    const untrackedEntries = [];
 
     sortedEntries.forEach((entry) => {
-        if (Array.isArray(entry.tags) && entry.tags.length > 0) {
-            taggedEntries.push(entry);
+        if (historyEntryHasPersistenceMeta(entry)) {
+            persistedEntries.push(entry);
 
             return;
         }
 
-        untaggedEntries.push(entry);
+        untrackedEntries.push(entry);
     });
 
-    return [...taggedEntries, ...untaggedEntries.slice(0, navigationHistoryLimit)].sort(
-        (firstEntry, secondEntry) => secondEntry.created_at - firstEntry.created_at,
-    );
+    const normalizedPersistedEntries = persistedEntries
+        .slice()
+        .sort((firstEntry, secondEntry) => {
+            const firstSortOrder = Number(firstEntry?.sort_order ?? 0);
+            const secondSortOrder = Number(secondEntry?.sort_order ?? 0);
+
+            if (firstSortOrder > 0 && secondSortOrder > 0 && firstSortOrder !== secondSortOrder) {
+                return firstSortOrder - secondSortOrder;
+            }
+
+            if (firstSortOrder > 0 && secondSortOrder <= 0) {
+                return -1;
+            }
+
+            if (firstSortOrder <= 0 && secondSortOrder > 0) {
+                return 1;
+            }
+
+            return Number(secondEntry?.created_at ?? 0) - Number(firstEntry?.created_at ?? 0);
+        })
+        .map((entry, index) => ({
+            ...entry,
+            sort_order: index + 1,
+        }));
+
+    const retainedEntries = untrackedEntries.slice(0, navigationHistoryLimit).map((entry) => ({
+        ...entry,
+        sort_order: 0,
+    }));
+
+    return [...normalizedPersistedEntries, ...retainedEntries];
 };
 
 const normalizeNavigationHistory = (entries = []) => {
@@ -370,6 +425,7 @@ const normalizeBookmarkEntry = (entry = {}) => {
         tags: normalizeTags(entry?.tags),
         created_at: Number.isFinite(createdAt) ? Math.trunc(createdAt) : Date.now(),
         updated_at: Number.isFinite(updatedAt) ? Math.trunc(updatedAt) : Date.now(),
+        sort_order: Math.max(1, Math.trunc(Number(entry?.sort_order ?? entry?.sortOrder ?? 0))),
     };
 };
 
@@ -392,9 +448,29 @@ const normalizeBookmarks = (entries = []) => {
         uniqueById.push(normalizedEntry);
     });
 
-    return uniqueById.sort(
-        (firstEntry, secondEntry) => secondEntry.updated_at - firstEntry.updated_at,
-    );
+    return uniqueById
+        .sort((firstEntry, secondEntry) => {
+            const firstSortOrder = Number(firstEntry?.sort_order ?? 0);
+            const secondSortOrder = Number(secondEntry?.sort_order ?? 0);
+
+            if (firstSortOrder > 0 && secondSortOrder > 0 && firstSortOrder !== secondSortOrder) {
+                return firstSortOrder - secondSortOrder;
+            }
+
+            if (firstSortOrder > 0 && secondSortOrder <= 0) {
+                return -1;
+            }
+
+            if (firstSortOrder <= 0 && secondSortOrder > 0) {
+                return 1;
+            }
+
+            return Number(secondEntry?.updated_at ?? 0) - Number(firstEntry?.updated_at ?? 0);
+        })
+        .map((entry, index) => ({
+            ...entry,
+            sort_order: index + 1,
+        }));
 };
 
 const readBookmarks = () => normalizeBookmarks(readLocalStorage(bookmarksStorageKey, []));
@@ -700,6 +776,7 @@ document.addEventListener('alpine:init', () => {
         wirdSliderVisualStep: null,
         wirdHoverShimmerRunning: false,
         wirdTodayKey: '',
+        wirdDayOffsetDays: readWirdDayOffsetDays(),
         wirdDailyRecord: null,
         wirdState: null,
         westernNumeralCharacters: defaultWesternNumerals.slice(),
@@ -805,6 +882,7 @@ document.addEventListener('alpine:init', () => {
         _onVisualViewportChange: null,
         _onWindowScroll: null,
         _onSwitchView: null,
+        _onWirdSimulateDay: null,
         _lastQuranReaderView: 'quran-app-tilawa',
         _onWindowKeydown: null,
         _onPanelPointerDown: null,
@@ -860,6 +938,8 @@ document.addEventListener('alpine:init', () => {
         _wirdSliderLastInputStep: null,
         _wirdSliderLastInputAt: 0,
         _wirdNavigationRequestSerial: 0,
+        _wirdLastCommittedTargetPage: 0,
+        _wirdLastCommittedAt: 0,
         _wirdHoverShimmerTimer: null,
         _pageInputCommitTimer: null,
         _pageInputTweenRaf: null,
@@ -1032,12 +1112,22 @@ document.addEventListener('alpine:init', () => {
 
             this._onSwitchView = (event) => {
                 const to = String(event?.detail?.to ?? '');
+                const quranViews = ['quran-app-tilawa', 'quran-app-hifth', 'quran-app-tadabbur'];
+                const isGoingToQuranReader = quranViews.includes(to);
 
-                if (!['quran-app-tilawa', 'quran-app-hifth', 'quran-app-tadabbur'].includes(to)) {
+                if (!isGoingToQuranReader) {
+                    if (this.hasRenderablePage()) {
+                        this.isFittingPage = true;
+                        this.clearLayoutTimers();
+                    }
+
+                    this.resetSwipeState();
                     return;
                 }
 
                 this._lastQuranReaderView = to;
+                this.isFittingPage = true;
+                this.clearLayoutTimers();
 
                 if (to !== 'quran-app-tadabbur') {
                     this.clearActivationIndexes();
@@ -1056,6 +1146,15 @@ document.addEventListener('alpine:init', () => {
             };
 
             window.addEventListener('switch-view', this._onSwitchView);
+            this._onWirdSimulateDay = (event) => {
+                const deltaDays = normalizeDayOffsetDays(event?.detail?.days ?? 1, 1);
+                const nextOffset = normalizeDayOffsetDays(this.wirdDayOffsetDays + deltaDays, 0);
+
+                this.wirdDayOffsetDays = nextOffset;
+                writeWirdDayOffsetDays(nextOffset);
+                this.ensureWirdDailyRecord();
+            };
+            window.addEventListener('quran-wird-simulate-day', this._onWirdSimulateDay);
             ensureSupportLockLivewireMorphBridge();
             this._onSupportLockLivewireMorphed = () => {
                 this.queueSupportLockTargetsUiSync();
@@ -1644,6 +1743,11 @@ document.addEventListener('alpine:init', () => {
 
             if (this._onSwitchView) {
                 window.removeEventListener('switch-view', this._onSwitchView);
+            }
+
+            if (this._onWirdSimulateDay) {
+                window.removeEventListener('quran-wird-simulate-day', this._onWirdSimulateDay);
+                this._onWirdSimulateDay = null;
             }
 
             if (typeof this._stopIsCalibratingWatcher === 'function') {
@@ -4134,6 +4238,24 @@ document.addEventListener('alpine:init', () => {
             );
             const targetPage = this.wirdTargetPageFromStep(normalizedStep, record);
             const direction = this.resolveNavigationDirection(targetPage);
+            const pendingTargetPage = clampPage(
+                Number(this._pendingNavigationRequest?.targetPage ?? 0),
+                this.maxPage,
+            );
+
+            if (
+                pendingTargetPage === targetPage ||
+                (this.isLoadingPage &&
+                    clampPage(Number(this.pageInput ?? this.pageNumber), this.maxPage) ===
+                        targetPage)
+            ) {
+                this.pageInput = targetPage;
+                this._lastPageInputVisualValue = targetPage;
+                this.clearWirdSliderVisualTween();
+                this.wirdSliderVisualStep = normalizedStep;
+
+                return;
+            }
 
             if (record?.completed) {
                 this.wirdBrowseStep = normalizedStep;
@@ -4211,10 +4333,12 @@ document.addEventListener('alpine:init', () => {
 
         persistNavigationHistory() {
             this.navigationHistory = writeNavigationHistory(this.navigationHistory);
+            this.syncHistoryManagerTableRecords();
         },
 
         persistBookmarks() {
             this.bookmarks = writeBookmarks(this.bookmarks);
+            this.syncBookmarksManagerTableRecords();
         },
 
         normalizeHistoryEntryId(entryId) {
@@ -4500,6 +4624,285 @@ document.addEventListener('alpine:init', () => {
             return '-';
         },
 
+        nextHistorySortOrder() {
+            return (
+                this.navigationHistory
+                    .filter((entry) => historyEntryHasPersistenceMeta(entry))
+                    .reduce((maxValue, entry) => {
+                        const sortOrder = Number(entry?.sort_order ?? 0);
+
+                        return sortOrder > maxValue ? sortOrder : maxValue;
+                    }, 0) + 1
+            );
+        },
+
+        normalizePersistedHistorySortOrder() {
+            let nextSortOrder = 1;
+
+            this.navigationHistory = this.navigationHistory.map((entry) => {
+                if (!historyEntryHasPersistenceMeta(entry)) {
+                    return {
+                        ...entry,
+                        sort_order: 0,
+                    };
+                }
+
+                const normalizedEntry = {
+                    ...entry,
+                    sort_order: nextSortOrder,
+                };
+
+                nextSortOrder += 1;
+
+                return normalizedEntry;
+            });
+        },
+
+        reorderNavigationHistoryByIds(orderIds = []) {
+            const normalizedOrderIds = (Array.isArray(orderIds) ? orderIds : [])
+                .map((entryId) => this.normalizeHistoryEntryId(entryId))
+                .filter((entryId) => entryId !== '');
+
+            if (normalizedOrderIds.length < 1) {
+                return;
+            }
+
+            const historyById = new Map(
+                this.navigationHistory.map((entry) => [
+                    this.normalizeHistoryEntryId(entry?.id),
+                    entry,
+                ]),
+            );
+            const orderedEntries = [];
+            const usedIds = new Set();
+
+            normalizedOrderIds.forEach((entryId) => {
+                const entry = historyById.get(entryId);
+
+                if (!entry || usedIds.has(entryId)) {
+                    return;
+                }
+
+                usedIds.add(entryId);
+                orderedEntries.push(entry);
+            });
+
+            this.navigationHistory.forEach((entry) => {
+                const entryId = this.normalizeHistoryEntryId(entry?.id);
+
+                if (entryId === '' || usedIds.has(entryId)) {
+                    return;
+                }
+
+                orderedEntries.push(entry);
+            });
+
+            this.navigationHistory = orderedEntries;
+            this.normalizePersistedHistorySortOrder();
+            this.persistNavigationHistory();
+        },
+
+        normalizeBookmarksSortOrder() {
+            let nextSortOrder = 1;
+
+            this.bookmarks = this.bookmarks.map((bookmark) => {
+                const normalizedBookmark = {
+                    ...bookmark,
+                    sort_order: nextSortOrder,
+                };
+
+                nextSortOrder += 1;
+
+                return normalizedBookmark;
+            });
+        },
+
+        reorderBookmarksByIds(orderIds = []) {
+            const normalizedOrderIds = (Array.isArray(orderIds) ? orderIds : [])
+                .map((entryId) => this.normalizeBookmarkEntryId(entryId))
+                .filter((entryId) => entryId !== '');
+
+            if (normalizedOrderIds.length < 1) {
+                return;
+            }
+
+            const bookmarksById = new Map(
+                this.bookmarks.map((bookmark) => [
+                    this.normalizeBookmarkEntryId(bookmark?.id),
+                    bookmark,
+                ]),
+            );
+            const orderedBookmarks = [];
+            const usedIds = new Set();
+
+            normalizedOrderIds.forEach((bookmarkId) => {
+                const bookmark = bookmarksById.get(bookmarkId);
+
+                if (!bookmark || usedIds.has(bookmarkId)) {
+                    return;
+                }
+
+                usedIds.add(bookmarkId);
+                orderedBookmarks.push(bookmark);
+            });
+
+            this.bookmarks.forEach((bookmark) => {
+                const bookmarkId = this.normalizeBookmarkEntryId(bookmark?.id);
+
+                if (bookmarkId === '' || usedIds.has(bookmarkId)) {
+                    return;
+                }
+
+                orderedBookmarks.push(bookmark);
+            });
+
+            this.bookmarks = orderedBookmarks;
+            this.normalizeBookmarksSortOrder();
+            this.persistBookmarks();
+        },
+
+        emitLivewireManagerEvent(eventName, detail = {}) {
+            const normalizedEventName = String(eventName ?? '').trim();
+
+            if (normalizedEventName === '') {
+                return;
+            }
+
+            if (typeof window?.Livewire?.dispatch === 'function') {
+                window.Livewire.dispatch(normalizedEventName, detail);
+            }
+        },
+
+        syncHistoryManagerTableRecords() {
+            const payload = {
+                records: this.navigationHistory,
+                surahNames: this.search?.surahNames ?? {},
+            };
+
+            this.emitLivewireManagerEvent('quran-history-manager-sync', payload);
+
+            if (this.historyModalOpen) {
+                window.setTimeout(() => {
+                    this.emitLivewireManagerEvent('quran-history-manager-sync', payload);
+                }, 90);
+            }
+        },
+
+        syncBookmarksManagerTableRecords() {
+            const payload = {
+                records: this.bookmarks,
+            };
+
+            this.emitLivewireManagerEvent('quran-bookmarks-manager-sync', payload);
+
+            if (this.bookmarksModalOpen) {
+                window.setTimeout(() => {
+                    this.emitLivewireManagerEvent('quran-bookmarks-manager-sync', payload);
+                }, 90);
+            }
+        },
+
+        extractReorderIdsFromPayload(payload = null) {
+            if (Array.isArray(payload)) {
+                return payload
+                    .map((value) => String(value ?? '').trim())
+                    .filter((value) => value !== '');
+            }
+
+            if (!payload || typeof payload !== 'object') {
+                return [];
+            }
+
+            return Object.entries(payload)
+                .map(([recordId, order]) => ({
+                    recordId: String(recordId ?? '').trim(),
+                    order: Number(order ?? 0),
+                }))
+                .filter((entry) => entry.recordId !== '')
+                .sort((left, right) => left.order - right.order)
+                .map((entry) => entry.recordId);
+        },
+
+        async handleHistoryManagerGoEvent(detail = {}) {
+            const entry = this.historyEntryById(detail?.id);
+
+            if (!entry) {
+                return;
+            }
+
+            await this.goToHistoryEntry(entry);
+        },
+
+        applyHistoryManagerRecordUpdate(detail = {}) {
+            const entryId = this.normalizeHistoryEntryId(detail?.id);
+
+            if (!entryId) {
+                return;
+            }
+
+            if (Object.prototype.hasOwnProperty.call(detail ?? {}, 'note')) {
+                this.updateHistoryEntryNote(entryId, detail?.note);
+            }
+
+            if (Object.prototype.hasOwnProperty.call(detail ?? {}, 'tags')) {
+                this.updateHistoryEntryTags(entryId, detail?.tags ?? [], {
+                    markUpdated: false,
+                });
+            }
+
+            this.markManagerRowUpdated('history', entryId);
+        },
+
+        applyHistoryManagerReorder(detail = {}) {
+            const orderIds = this.extractReorderIdsFromPayload(detail?.order ?? detail);
+
+            if (orderIds.length < 1) {
+                return;
+            }
+
+            this.reorderNavigationHistoryByIds(orderIds);
+        },
+
+        async handleBookmarksManagerGoEvent(detail = {}) {
+            const bookmark = this.bookmarkEntryById(detail?.id);
+
+            if (!bookmark) {
+                return;
+            }
+
+            await this.goToBookmark(bookmark);
+        },
+
+        applyBookmarkManagerRecordUpdate(detail = {}) {
+            const bookmarkId = this.normalizeBookmarkEntryId(detail?.id);
+
+            if (!bookmarkId) {
+                return;
+            }
+
+            if (Object.prototype.hasOwnProperty.call(detail ?? {}, 'note')) {
+                this.updateBookmarkNote(bookmarkId, detail?.note);
+            }
+
+            if (Object.prototype.hasOwnProperty.call(detail ?? {}, 'tags')) {
+                this.updateBookmarkTags(bookmarkId, detail?.tags ?? [], {
+                    markUpdated: false,
+                });
+            }
+
+            this.markManagerRowUpdated('bookmarks', bookmarkId);
+        },
+
+        applyBookmarksManagerReorder(detail = {}) {
+            const orderIds = this.extractReorderIdsFromPayload(detail?.order ?? detail);
+
+            if (orderIds.length < 1) {
+                return;
+            }
+
+            this.reorderBookmarksByIds(orderIds);
+        },
+
         dispatchManagerModalsVisibilityState() {
             window.dispatchEvent(
                 new CustomEvent('quran-manager-modals-visibility', {
@@ -4659,11 +5062,17 @@ document.addEventListener('alpine:init', () => {
                 }
 
                 didUpdateEntry = true;
+                const nextNote = normalizeTextValue(entry?.note);
+                const nextSortOrder =
+                    parsedTags.length > 0 || Boolean(nextNote)
+                        ? Math.max(1, Number(entry?.sort_order ?? this.nextHistorySortOrder()))
+                        : 0;
 
                 return {
                     ...entry,
                     tags: parsedTags,
                     created_at: Number(entry?.created_at ?? Date.now()),
+                    sort_order: nextSortOrder,
                 };
             });
 
@@ -4673,6 +5082,7 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            this.normalizePersistedHistorySortOrder();
             this.persistNavigationHistory();
 
             if (markUpdated) {
@@ -4702,11 +5112,17 @@ document.addEventListener('alpine:init', () => {
                 }
 
                 didUpdateEntry = true;
+                const existingTags = normalizeTags(entry?.tags ?? []);
+                const nextSortOrder =
+                    existingTags.length > 0 || Boolean(normalizedNote)
+                        ? Math.max(1, Number(entry?.sort_order ?? this.nextHistorySortOrder()))
+                        : 0;
 
                 return {
                     ...entry,
                     note: normalizedNote,
                     created_at: Number(entry?.created_at ?? Date.now()),
+                    sort_order: nextSortOrder,
                 };
             });
 
@@ -4714,13 +5130,14 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            this.normalizePersistedHistorySortOrder();
             this.persistNavigationHistory();
             this.markManagerRowUpdated('history', normalizedEntryId);
         },
 
         clearNavigationHistory() {
             const removableIds = this.navigationHistory
-                .filter((entry) => !Array.isArray(entry?.tags) || entry.tags.length === 0)
+                .filter((entry) => !historyEntryHasPersistenceMeta(entry))
                 .map((entry) => String(entry?.id ?? '').trim())
                 .filter((entryId) => entryId !== '');
 
@@ -4736,6 +5153,7 @@ document.addEventListener('alpine:init', () => {
 
                     return !removableIds.includes(normalizedEntryId);
                 });
+                this.normalizePersistedHistorySortOrder();
                 this.persistNavigationHistory();
                 this.syncHistoryTagDrafts();
                 removableIds.forEach((entryId) => {
@@ -4778,9 +5196,14 @@ document.addEventListener('alpine:init', () => {
                     query: normalizedQuery,
                     tags: normalizedTags,
                     created_at: Date.now(),
+                    sort_order:
+                        normalizedTags.length > 0 || Boolean(normalizedNote)
+                            ? this.nextHistorySortOrder()
+                            : 0,
                 }),
                 ...this.navigationHistory,
             ];
+            this.normalizePersistedHistorySortOrder();
             this.persistNavigationHistory();
             this.syncHistoryTagDrafts();
         },
@@ -4992,6 +5415,7 @@ document.addEventListener('alpine:init', () => {
             this.bookmarks = this.bookmarks.filter(
                 (bookmark) => String(bookmark?.id ?? '') !== String(existingEntry?.id ?? ''),
             );
+            this.normalizeBookmarksSortOrder();
             this.bookmarks.unshift(
                 normalizeBookmarkEntry({
                     id: nextId,
@@ -5003,8 +5427,10 @@ document.addEventListener('alpine:init', () => {
                             ? Number(preserveCreatedAt)
                             : Number(existingEntry?.created_at ?? timestamp),
                     updated_at: timestamp,
+                    sort_order: 1,
                 }),
             );
+            this.normalizeBookmarksSortOrder();
             this.persistBookmarks();
             this.markManagerRowUpdated('bookmarks', nextId);
             this.syncBookmarkTagDraftForEntry(nextId);
@@ -5035,6 +5461,7 @@ document.addEventListener('alpine:init', () => {
                 this.bookmarks = this.bookmarks.filter(
                     (bookmark) => String(bookmark?.id ?? '') !== normalizedBookmarkId,
                 );
+                this.normalizeBookmarksSortOrder();
                 this.persistBookmarks();
                 this.setManagerRowEffect('bookmarks', normalizedBookmarkId, '');
                 this.syncBookmarkTagDrafts();
@@ -5073,6 +5500,7 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            this.normalizeBookmarksSortOrder();
             this.persistBookmarks();
             this.markManagerRowUpdated('bookmarks', normalizedBookmarkId);
         },
@@ -5113,6 +5541,7 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            this.normalizeBookmarksSortOrder();
             this.persistBookmarks();
 
             if (markUpdated) {
@@ -5162,21 +5591,12 @@ document.addEventListener('alpine:init', () => {
                     updated_at: Date.now(),
                 });
             });
-            this.bookmarks = this.bookmarks.slice().sort((firstEntry, secondEntry) => {
-                const firstId = String(firstEntry?.id ?? '');
-                const secondId = String(secondEntry?.id ?? '');
-
-                if (firstId === normalizedBookmarkId && secondId !== normalizedBookmarkId) {
-                    return -1;
-                }
-
-                if (firstId !== normalizedBookmarkId && secondId === normalizedBookmarkId) {
-                    return 1;
-                }
-
-                return Number(secondEntry?.updated_at ?? 0) - Number(firstEntry?.updated_at ?? 0);
-            });
-            this.persistBookmarks();
+            this.reorderBookmarksByIds([
+                normalizedBookmarkId,
+                ...this.bookmarks
+                    .map((bookmark) => this.normalizeBookmarkEntryId(bookmark?.id))
+                    .filter((bookmarkId) => bookmarkId !== normalizedBookmarkId),
+            ]);
             this.markManagerRowReplaced('bookmarks', normalizedBookmarkId);
             this.syncBookmarkTagDrafts();
         },
@@ -6486,6 +6906,28 @@ document.addEventListener('alpine:init', () => {
                     this._wirdSliderLastInputAt = 0;
                     this.clearWirdSliderVisualTween();
                     this.wirdSliderVisualStep = commitStep;
+                    const record = this.ensureWirdDailyRecord();
+                    const targetPage = this.wirdTargetPageFromStep(commitStep, record);
+                    const pendingTargetPage = clampPage(
+                        Number(this._pendingNavigationRequest?.targetPage ?? 0),
+                        this.maxPage,
+                    );
+                    const now = Date.now();
+
+                    if (pendingTargetPage === targetPage) {
+                        return;
+                    }
+
+                    if (
+                        targetPage === this._wirdLastCommittedTargetPage &&
+                        now - this._wirdLastCommittedAt < 320 &&
+                        (this.isLoadingPage || this._pendingNavigationRequest !== null)
+                    ) {
+                        return;
+                    }
+
+                    this._wirdLastCommittedTargetPage = targetPage;
+                    this._wirdLastCommittedAt = now;
                     void this.navigateWirdToStep(commitStep, source);
                 },
                 Math.max(0, Math.trunc(Number(delayMs) || 0)),
@@ -8019,7 +8461,7 @@ document.addEventListener('alpine:init', () => {
                     layoutToken,
                 });
 
-                if (this._startupCalibrationPending && this.isCalibrating) {
+                if (this._startupCalibrationPending) {
                     this.isFittingPage = true;
                     this.queuePageReveal(layoutToken, 90);
 
@@ -13857,6 +14299,7 @@ document.addEventListener('alpine:init', () => {
                     this.historyModalOpen = true;
                     this.$nextTick(() => {
                         this.ensureHistoryRowsAnimations();
+                        this.syncHistoryManagerTableRecords();
                     });
                 }
 
@@ -13873,6 +14316,7 @@ document.addEventListener('alpine:init', () => {
                     this.bookmarksModalOpen = true;
                     this.$nextTick(() => {
                         this.ensureBookmarksRowsAnimations();
+                        this.syncBookmarksManagerTableRecords();
                     });
                 }
 

@@ -37,7 +37,7 @@
                 const modalWindow = this.resolveControlPanelModalWindow();
                 const checkbox = modalWindow?.querySelector?.(
                     `input[type='checkbox'][name*='does_use_western_numerals'],
-                                                    input[type='checkbox'][wire\\:model*='does_use_western_numerals']`,
+                                                                                    input[type='checkbox'][wire\\:model*='does_use_western_numerals']`,
                 );
         
                 if (checkbox instanceof HTMLInputElement) {
@@ -54,7 +54,7 @@
                 const modalWindow = this.resolveControlPanelModalWindow();
                 const checkbox = modalWindow?.querySelector?.(
                     `input[type='checkbox'][name*='does_preserve_harakat_in_display'],
-                                                    input[type='checkbox'][wire\\:model*='does_preserve_harakat_in_display']`,
+                                                                                    input[type='checkbox'][wire\\:model*='does_preserve_harakat_in_display']`,
                 );
         
                 if (checkbox instanceof HTMLInputElement) {
@@ -78,22 +78,10 @@
                 } = {},
             ) {
                 const source = String(value ?? '');
-                const protectedSamples = [];
-                const replaceWithTokens = preserveFixedSamples ?
-                    source.replace(/\((?:123|١٢٣)\)/g, (sample) => {
-                        const tokenSuffix = String.fromCharCode(65 + (protectedSamples.length % 26))
-                            .repeat(Math.floor(protectedSamples.length / 26) + 1);
-                        const token = `__FIXED_NUMERAL_SAMPLE_${tokenSuffix}__`;
-                        protectedSamples.push({ token, sample });
-        
-                        return token;
-                    }) :
-                    source;
                 const normalizedText = preserveHarakat ?
-                    replaceWithTokens :
-                    this.stripHarakatForDisplay(replaceWithTokens);
-        
-                let converted = normalizedText.replace(/[0-9٠-٩]/g, (digit) => {
+                    source :
+                    this.stripHarakatForDisplay(source);
+                const convertDigit = (digit) => {
                     const westernIndex = this.westernNumeralChars.indexOf(digit);
         
                     if (westernIndex >= 0) {
@@ -111,13 +99,38 @@
                     }
         
                     return digit;
-                });
+                };
+                const shouldPreserveSample = (digitChunk, offset) => {
+                    if (!preserveFixedSamples) {
+                        return false;
+                    }
         
-                protectedSamples.forEach(({ token, sample }) => {
-                    converted = converted.replace(token, sample);
-                });
+                    const before = normalizedText[offset - 1] ?? '';
+                    const after = normalizedText[offset + digitChunk.length] ?? '';
         
-                return converted;
+                    if (before !== '(' || after !== ')') {
+                        return false;
+                    }
+        
+                    const normalizedDigits = String(digitChunk ?? '').replace(/[٠-٩]/g, (digit) => {
+                        const index = this.arabicIndicNumeralChars.indexOf(digit);
+        
+                        return index >= 0 ? this.westernNumeralChars[index] : digit;
+                    });
+        
+                    return normalizedDigits === '123';
+                };
+        
+                return normalizedText.replace(/[0-9٠-٩]+/g, (digitChunk, offset) => {
+                    if (shouldPreserveSample(digitChunk, offset)) {
+                        return digitChunk;
+                    }
+        
+                    return String(digitChunk ?? '')
+                        .split('')
+                        .map((digit) => convertDigit(digit))
+                        .join('');
+                });
             },
             syncControlPanelSliderNumerals() {
                 const modalWindow = this.resolveControlPanelModalWindow();
@@ -130,9 +143,9 @@
                 const preserveHarakat = this.resolveControlPanelPreserveHarakatState();
                 const sliderTargets = modalWindow.querySelectorAll(
                     `[data-control-panel-main-text-size-slider] .noUi-value,
-                                                    [data-control-panel-main-text-size-slider] .noUi-tooltip,
-                                                    [data-control-panel-main-text-size-slider] [class*='slider'][class*='value'],
-                                                    [data-control-panel-main-text-size-slider] [aria-valuetext]`,
+                                                                                    [data-control-panel-main-text-size-slider] .noUi-tooltip,
+                                                                                    [data-control-panel-main-text-size-slider] [class*='slider'][class*='value'],
+                                                                                    [data-control-panel-main-text-size-slider] [aria-valuetext]`,
                 );
         
                 sliderTargets.forEach((element) => {
@@ -193,7 +206,11 @@
                                 return window.NodeFilter.FILTER_REJECT;
                             }
         
-                            if (parent.closest('[data-control-panel-main-text-size-slider]')) {
+                            if (
+                                parent.closest(
+                                    '[data-control-panel-main-text-size-slider] .noUi-value, [data-control-panel-main-text-size-slider] .noUi-tooltip, [data-control-panel-main-text-size-slider] [class*=\'slider\'][class*=\'value\']',
+                                )
+                            ) {
                                 return window.NodeFilter.FILTER_REJECT;
                             }
         

@@ -442,7 +442,7 @@
             }
 
             100% {
-                transform: rotate(360deg);
+                transform: rotate(-360deg);
             }
         }
 
@@ -1849,6 +1849,15 @@
         x-on:closing-form-component-action-modal.window="handleModalLifecycleEvent('closing', $event)"
         x-on:closed-form-component-action-modal.window="handleModalLifecycleEvent('closed', $event)"
         x-on:support-unlock-updated.window="applySupportUnlockDecision($event.detail?.mode ?? null)"
+        x-on:quran-history-manager-go.window="handleHistoryManagerGoEvent($event.detail ?? {})"
+        x-on:quran-history-manager-updated.window="applyHistoryManagerRecordUpdate($event.detail ?? {})"
+        x-on:quran-history-manager-clear-untagged.window="clearNavigationHistory()"
+        x-on:quran-history-manager-reordered.window="applyHistoryManagerReorder($event.detail ?? {})"
+        x-on:quran-bookmarks-manager-go.window="handleBookmarksManagerGoEvent($event.detail ?? {})"
+        x-on:quran-bookmarks-manager-updated.window="applyBookmarkManagerRecordUpdate($event.detail ?? {})"
+        x-on:quran-bookmarks-manager-replaced.window="replaceBookmarkPage($event.detail?.id)"
+        x-on:quran-bookmarks-manager-removed.window="removeBookmark($event.detail?.id)"
+        x-on:quran-bookmarks-manager-reordered.window="applyBookmarksManagerReorder($event.detail ?? {})"
     >
         @if (!$ready)
             <section
@@ -2431,8 +2440,9 @@
                     :subtitle="arabic_text('ثبَّتَ الله لك الأجر، وتم حفظ تقدّمك لليوم.')"
                     decorated
                     arabesque
+                    pattern-variant="connected"
                     with-backdrop
-                    backdrop-class="bg-white"
+                    backdrop-class="bg-white/98"
                     fixed-layer
                     max-width-class="max-w-4xl"
                 />

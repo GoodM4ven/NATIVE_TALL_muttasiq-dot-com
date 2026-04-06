@@ -4,6 +4,7 @@
     'subtitle' => null,
     'decorated' => false,
     'arabesque' => false,
+    'patternVariant' => 'default',
     'withBackdrop' => false,
     'backdropClass' => 'bg-white/94 dark:bg-slate-950/90',
     'fixedLayer' => false,
@@ -33,7 +34,29 @@
     @endif
 
     <div class="{{ $maxWidthClass }} relative z-10 flex w-full flex-col items-center gap-6 text-center">
-        @if ($decorated && $arabesque)
+        @if ($decorated && $arabesque && $patternVariant === 'connected')
+            <div
+                class="pointer-events-none absolute inset-0 z-0 flex items-center justify-center"
+                aria-hidden="true"
+            >
+                <span
+                    class="absolute h-[46rem] w-[46rem] rounded-full border border-emerald-300/35"
+                    style="background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 62%), repeating-conic-gradient(from 0deg, rgba(16,185,129,0.14) 0deg 12deg, rgba(245,158,11,0.14) 12deg 24deg, rgba(14,165,233,0.12) 24deg 36deg); mask: radial-gradient(circle, transparent 0 28%, #000 28% 86%, transparent 86% 100%);"
+                ></span>
+                <span
+                    class="absolute h-[38rem] w-[38rem] rounded-full border border-amber-300/35"
+                    style="background: repeating-radial-gradient(circle at 50% 50%, rgba(255,255,255,0) 0 0.95rem, rgba(16,185,129,0.18) 0.95rem 1.15rem, rgba(255,255,255,0) 1.15rem 2rem);"
+                ></span>
+                <span
+                    class="absolute h-[30rem] w-[30rem] rounded-full border border-sky-300/35"
+                    style="background: radial-gradient(circle at 50% 50%, rgba(16,185,129,0.14) 0%, rgba(245,158,11,0.1) 44%, rgba(14,165,233,0.12) 72%, rgba(255,255,255,0) 100%);"
+                ></span>
+                <span
+                    class="absolute h-[22rem] w-[22rem] rounded-full border border-emerald-400/40"
+                    style="background: repeating-conic-gradient(from 8deg, rgba(16,185,129,0.24) 0deg 18deg, rgba(255,255,255,0) 18deg 36deg); mask: radial-gradient(circle, transparent 0 24%, #000 24% 88%, transparent 88% 100%);"
+                ></span>
+            </div>
+        @elseif ($decorated && $arabesque)
             <div
                 class="pointer-events-none absolute inset-0 z-0 flex items-center justify-center"
                 aria-hidden="true"

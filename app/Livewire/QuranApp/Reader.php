@@ -348,6 +348,10 @@ class Reader extends Component implements HasActions, HasSchemas
                     $stage,
                     $isComplete,
                 );
+
+                if (! $isComplete) {
+                    usleep(35000);
+                }
             },
         );
 
@@ -449,7 +453,7 @@ class Reader extends Component implements HasActions, HasSchemas
     {
         return Action::make('navigationHistory')
             ->modalHeading(arabic_text('سجل التنقّل'))
-            ->modalDescription(arabic_text('آخر الانتقالات بين الصفحات. يبقى الموسوم محفوظًا، زيادة على آخر 100 عنصر.'))
+            ->modalDescription(arabic_text('آخر الانتقالات بين الصفحات. يبقى ما عليه وسم أو ملاحظة محفوظًا، إضافةً إلى آخر 100 عنصر عادي.'))
             ->modalAutofocus(false)
             ->modalWidth(Width::FiveExtraLarge)
             ->modalSubmitAction(false)
@@ -468,7 +472,7 @@ class Reader extends Component implements HasActions, HasSchemas
     {
         return Action::make('bookmarksManager')
             ->modalHeading(arabic_text('إدارة علامات الصفحات'))
-            ->modalDescription(arabic_text('انقر للانتقال، عدّل الملاحظة وأدر الوسوم مباشرة، أو استبدل الصفحة المحفوظة بالصفحة الحالية.'))
+            ->modalDescription(arabic_text('جدول موحّد للبحث والتصفية والترتيب. انقر للانتقال، عدّل الملاحظة والوسوم، أو استبدل الصفحة بالموضع الحالي.'))
             ->modalAutofocus(false)
             ->slideOver()
             ->modalWidth(Width::FiveExtraLarge)

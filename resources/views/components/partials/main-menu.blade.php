@@ -52,5 +52,12 @@
             :iconClasses="'scale-[1.15]'"
             :caption="arabic_text('المحفوظات')"
         />
+
+        <button
+            class="absolute start-1 top-1 z-10 h-5 w-5 opacity-0"
+            type="button"
+            aria-label="{{ arabic_text('محاكاة يوم جديد للوِرد') }}"
+            x-on:click.prevent="window.dispatchEvent(new CustomEvent('quran-wird-simulate-day', { detail: { days: 1 } }))"
+        ></button>
     </x-main-menu>
 </div>

@@ -229,24 +229,14 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranSearchModalViewSource)->toContain('goToSurahFromDirectory(entry)');
 
     expect($quranHistoryModalViewSource)->not->toBeFalse()
-        ->and($quranHistoryModalViewSource)->toContain('navigationHistory.length')
-        ->and($quranHistoryModalViewSource)->toContain('goToHistoryEntry(entry)')
-        ->and($quranHistoryModalViewSource)->toContain('historyEntrySurahName(entry)')
-        ->and($quranHistoryModalViewSource)->toContain('setHistoryTagDraft(entry.id, $event.target.value)')
-        ->and($quranHistoryModalViewSource)->toContain('commitHistoryTagDraft(entry.id)')
-        ->and($quranHistoryModalViewSource)->toContain('clearNavigationHistory()')
-        ->and($quranHistoryModalViewSource)->toContain('x-ref="historyRowsList"')
-        ->and($quranHistoryModalViewSource)->toContain('historyRowEffectClass(entry)');
+        ->and($quranHistoryModalViewSource)->toContain('quran-manager-shell')
+        ->and($quranHistoryModalViewSource)->toContain('data-no-swipe')
+        ->and($quranHistoryModalViewSource)->toContain('livewire:quran-app.history-manager-table');
 
     expect($quranBookmarksModalViewSource)->not->toBeFalse()
-        ->and($quranBookmarksModalViewSource)->toContain('bookmarks.length')
-        ->and($quranBookmarksModalViewSource)->toContain('goToBookmark(bookmark)')
-        ->and($quranBookmarksModalViewSource)->toContain('updateBookmarkNote(bookmark.id, $event.target.value)')
-        ->and($quranBookmarksModalViewSource)->toContain('commitBookmarkTagDraft(bookmark.id)')
-        ->and($quranBookmarksModalViewSource)->toContain('replaceBookmarkPage(bookmark.id)')
-        ->and($quranBookmarksModalViewSource)->toContain('removeBookmark(bookmark.id)')
-        ->and($quranBookmarksModalViewSource)->toContain('x-ref="bookmarksRowsList"')
-        ->and($quranBookmarksModalViewSource)->toContain('bookmarkRowEffectClass(bookmark)');
+        ->and($quranBookmarksModalViewSource)->toContain('quran-manager-shell')
+        ->and($quranBookmarksModalViewSource)->toContain('data-no-swipe')
+        ->and($quranBookmarksModalViewSource)->toContain('livewire:quran-app.bookmarks-manager-table');
 
     expect($quranReaderScriptSource)->not->toBeFalse()
         ->and($quranReaderScriptSource)->toContain('const wordPressHoldDelayMs = 750;')
