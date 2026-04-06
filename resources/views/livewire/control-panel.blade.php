@@ -35,10 +35,7 @@
             },
             resolveControlPanelWesternNumeralState() {
                 const modalWindow = this.resolveControlPanelModalWindow();
-                const checkbox = modalWindow?.querySelector?.(
-                    `input[type='checkbox'][name*='does_use_western_numerals'],
-                                                                                                                                                                                                    input[type='checkbox'][wire\\:model*='does_use_western_numerals']`,
-                );
+                const checkbox = modalWindow?.querySelector?.(`input[type='checkbox'][name*='does_use_western_numerals'],input[type='checkbox'][wire\\:model*='does_use_western_numerals']`);
         
                 if (checkbox instanceof HTMLInputElement) {
                     return checkbox.checked;
@@ -53,9 +50,7 @@
             resolveControlPanelPreserveHarakatState() {
                 const modalWindow = this.resolveControlPanelModalWindow();
                 const checkbox = modalWindow?.querySelector?.(
-                    `input[type='checkbox'][name*='does_preserve_harakat_in_display'],
-                                                                                                                                                                                                    input[type='checkbox'][wire\\:model*='does_preserve_harakat_in_display']`,
-                );
+                    `input[type='checkbox'][name*='does_preserve_harakat_in_display'],input[type='checkbox'][wire\\:model*='does_preserve_harakat_in_display']`);
         
                 if (checkbox instanceof HTMLInputElement) {
                     return checkbox.checked;
@@ -141,12 +136,7 @@
         
                 const useWesternNumerals = this.resolveControlPanelWesternNumeralState();
                 const preserveHarakat = this.resolveControlPanelPreserveHarakatState();
-                const sliderTargets = modalWindow.querySelectorAll(
-                    `[data-control-panel-main-text-size-slider] .noUi-value,
-                                                                                                                                                                                                    [data-control-panel-main-text-size-slider] .noUi-tooltip,
-                                                                                                                                                                                                    [data-control-panel-main-text-size-slider] [class*='slider'][class*='value'],
-                                                                                                                                                                                                    [data-control-panel-main-text-size-slider] [aria-valuetext]`,
-                );
+                const sliderTargets = modalWindow.querySelectorAll(`[data-control-panel-main-text-size-slider] .noUi-value,[data-control-panel-main-text-size-slider] .noUi-tooltip,[data-control-panel-main-text-size-slider] [class*='slider'][class*='value'],[data-control-panel-main-text-size-slider] [aria-valuetext]`);
         
                 sliderTargets.forEach((element) => {
                     if (!(element instanceof Element)) {
