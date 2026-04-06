@@ -1914,11 +1914,11 @@
                         x-cloak
                         x-show="isCalibrating && (views?.['quran-app-tilawa']?.isOpen || views?.['quran-app-hifth']?.isOpen || views?.['quran-app-tadabbur']?.isOpen)"
                         x-transition:enter="transition duration-220 ease-out"
-                        x-transition:enter-start="translate-y-0.5 scale-[0.985] opacity-0"
-                        x-transition:enter-end="translate-y-0 scale-100 opacity-100"
+                        x-transition:enter-start="translate-y-0.5 opacity-0"
+                        x-transition:enter-end="translate-y-0 opacity-100"
                         x-transition:leave="transition duration-180 ease-in"
-                        x-transition:leave-start="translate-y-0 scale-100 opacity-100"
-                        x-transition:leave-end="-translate-y-0.5 scale-[0.985] opacity-0"
+                        x-transition:leave-start="translate-y-0 opacity-100"
+                        x-transition:leave-end="-translate-y-0.5 opacity-0"
                         x-bind:style="calibrationHudStyle()"
                         x-bind:aria-hidden="isCalibrating && (views?.['quran-app-tilawa']?.isOpen || views?.['quran-app-hifth']?.isOpen ||
                             views?.['quran-app-tadabbur']?.isOpen) ? 'false' : 'true'"
@@ -1932,7 +1932,7 @@
                                 ></l-jelly-triangle>
                             </div>
                             <span
-                                class="font-arabic-sans text-sm tracking-wide opacity-60"
+                                class="mt-2 font-arabic-sans text-sm sm:text-lg tracking-wide opacity-60"
                                 dir="rtl"
                             >{{ arabic_text('تجهيز المصحف...') }}</span>
                         </div>
