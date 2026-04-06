@@ -54,7 +54,7 @@
         />
     </x-main-menu>
 
-    <div class="z-100 fixed bottom-4 left-4 flex flex-col gap-2">
+    {{-- <div class="z-100 fixed bottom-4 left-4 flex flex-col gap-2">
         <button
             class="bg-white/92 rounded-lg border border-emerald-500/45 px-3 py-1.5 text-xs font-semibold text-emerald-800 shadow-sm backdrop-blur-sm"
             type="button"
@@ -84,5 +84,5 @@
         >
             {{ arabic_text('إغلاق المعاينة') }}
         </button>
-    </div>
+    </div> --}}
 </div>

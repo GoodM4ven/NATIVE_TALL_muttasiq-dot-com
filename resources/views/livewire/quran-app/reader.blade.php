@@ -392,15 +392,13 @@
             backface-visibility: hidden;
         }
 
-        /* Credits: https://uiball.com/ldrs/ (squircle!) */
+        /* Credits: https://uiball.com/ldrs/ (jelly triangle) */
         .quran-calibration-spinner {
-            --uib-size: 43px;
-            --uib-stroke: 5px;
-            --uib-arc: 54deg;
-            --uib-car-color: var(--primary-400);
-            --uib-track-color: color-mix(in srgb, #0a6571 35%, transparent);
-            --uib-speed: 0.9s;
+            --uib-size: 34px;
+            --uib-color: color-mix(in srgb, var(--primary-500) 74%, #0a6571);
             position: relative;
+            display: grid;
+            place-items: center;
             inline-size: var(--uib-size);
             block-size: var(--uib-size);
             transform: translate3d(0, 0, 0);
@@ -410,40 +408,10 @@
             filter: drop-shadow(0 0 0.35rem color-mix(in srgb, var(--primary-400) 34%, transparent));
         }
 
-        .quran-calibration-spinner-track,
-        .quran-calibration-spinner-car {
-            position: absolute;
-            inset: 0;
-            border-radius: 38%;
-            -webkit-mask: radial-gradient(farthest-side,
-                    transparent calc(100% - var(--uib-stroke) - 0.2px),
-                    #000 calc(100% - var(--uib-stroke)));
-            mask: radial-gradient(farthest-side,
-                    transparent calc(100% - var(--uib-stroke) - 0.2px),
-                    #000 calc(100% - var(--uib-stroke)));
-        }
-
-        .quran-calibration-spinner-track {
-            background: var(--uib-track-color);
-            opacity: 0.38;
-        }
-
-        .quran-calibration-spinner-car {
-            background: conic-gradient(from 0deg,
-                    var(--uib-car-color) 0deg var(--uib-arc),
-                    transparent var(--uib-arc) 360deg);
-            animation: quran-calibration-car-orbit var(--uib-speed) linear infinite;
-            will-change: transform;
-        }
-
-        @keyframes quran-calibration-car-orbit {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(-360deg);
-            }
+        .quran-calibration-spinner l-jelly-triangle {
+            inline-size: var(--uib-size);
+            block-size: var(--uib-size);
+            color: var(--uib-color);
         }
 
         .quran-page-lines[data-fit-state='fading-out'] {
@@ -1337,10 +1305,13 @@
         }
 
         .quran-reader-panel--calibrating .quran-top-strip {
-            filter: blur(2.4px);
-            opacity: 0.44;
+            filter: none;
+            opacity: 0;
+            visibility: hidden;
             pointer-events: none;
-            transition: opacity 180ms ease, filter 180ms ease;
+            transition:
+                opacity 180ms ease,
+                visibility 0ms linear 180ms;
         }
 
         .quran-bottom-strip {
@@ -1935,8 +1906,11 @@
                     >
                         <div class="quran-calibration-loader flex flex-col items-center gap-3">
                             <div class="quran-calibration-spinner">
-                                <span class="quran-calibration-spinner-track"></span>
-                                <span class="quran-calibration-spinner-car"></span>
+                                <l-jelly-triangle
+                                    size="34"
+                                    speed="1.75"
+                                    color="#0a6571"
+                                ></l-jelly-triangle>
                             </div>
                             <span
                                 class="font-arabic-sans text-sm tracking-wide opacity-60"
@@ -1949,8 +1923,10 @@
                     class="quran-top-strip"
                     x-bind:class="{
                         'quran-top-strip--wird-active': wirdModeActive,
-                        'quran-top-strip--initial-loading': !hasCompletedInitialMushafPreparation,
-                        'quran-top-strip--visible': hasCompletedInitialMushafPreparation,
+                        'quran-top-strip--initial-loading': isCalibrating || _startupCalibrationPending || !
+                            hasCompletedInitialMushafPreparation,
+                        'quran-top-strip--visible': !isCalibrating && !_startupCalibrationPending &&
+                            hasCompletedInitialMushafPreparation,
                     }"
                 >
                     <!-- Credits: uiverse.io/gharsh11032000/loud-chicken-53 -->
@@ -2328,7 +2304,7 @@
                             x-bind:class="{ 'quran-page-counter--morphing': pageCounterPulse.isActive && pageCounterPulse.hasChanges }"
                         >
                             <button
-                                class="select-none quran-page-slider-chip 4xl:min-w-[5.8rem] 4xl:px-[0.56rem] 4xl:py-[0.28rem] 4xl:text-[0.84rem] min-w-[4.8rem] px-[0.42rem] py-[0.22rem] text-[0.72rem] outline-none sm:min-w-20 sm:px-[0.46rem] sm:py-[0.24rem] sm:text-[0.76rem] md:min-w-[5.2rem] md:px-2 md:py-1 md:text-[0.79rem] lg:min-w-[5.4rem] lg:px-[0.52rem] lg:py-[0.26rem] lg:text-[0.81rem] xl:min-w-[5.6rem] xl:text-[0.82rem]"
+                                class="quran-page-slider-chip 4xl:min-w-[5.8rem] 4xl:px-[0.56rem] 4xl:py-[0.28rem] 4xl:text-[0.84rem] min-w-[4.8rem] select-none px-[0.42rem] py-[0.22rem] text-[0.72rem] outline-none sm:min-w-20 sm:px-[0.46rem] sm:py-[0.24rem] sm:text-[0.76rem] md:min-w-[5.2rem] md:px-2 md:py-1 md:text-[0.79rem] lg:min-w-[5.4rem] lg:px-[0.52rem] lg:py-[0.26rem] lg:text-[0.81rem] xl:min-w-[5.6rem] xl:text-[0.82rem]"
                                 type="button"
                                 x-bind:aria-label="wirdModeActive ? @js(arabic_text('وضع الوِرد اليومي مفعل')) : @js(arabic_text('إدخال رقم صفحة'))"
                                 x-bind:style="`--quran-counter-digit-count: ${pageCounterDigitLength()};`"
