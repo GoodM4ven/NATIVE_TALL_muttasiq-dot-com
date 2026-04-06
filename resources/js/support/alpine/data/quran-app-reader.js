@@ -8236,12 +8236,16 @@ document.addEventListener('alpine:init', () => {
                     this._isModalLifecycleSettling = false;
                     const wasPreviouslyFitted = this._lastFittedPageNumber === this.pageNumber;
 
+                    if (wasPreviouslyFitted && this.hasRenderablePage()) {
+                        this.isFittingPage = false;
+                        this._bypassNextFitCache = false;
+
+                        return;
+                    }
+
                     this.clearLayoutTimers();
                     this.isFittingPage = true;
-
-                    if (!wasPreviouslyFitted) {
-                        this._bypassNextFitCache = true;
-                    }
+                    this._bypassNextFitCache = true;
 
                     void this.layoutPageGuaranteed({ revealDelayMs: 240, maxAttempts: 5 });
                 },
@@ -8559,8 +8563,13 @@ document.addEventListener('alpine:init', () => {
 
             if (kind === 'closing') {
                 if (modalId === '' || this._activeModalIds.has(modalId) || openModalCount > 0) {
-                    this._bypassNextFitCache = true;
-                    this.holdPageHiddenForModalLifecycle();
+                    const navigatedAway = this._lastFittedPageNumber !== this.pageNumber;
+
+                    if (navigatedAway) {
+                        this._bypassNextFitCache = true;
+                        this.holdPageHiddenForModalLifecycle();
+                    }
+
                     this.resumeLayoutWhenNoOpenModals();
                 }
 
@@ -8572,8 +8581,12 @@ document.addEventListener('alpine:init', () => {
                     this._activeModalIds.delete(modalId);
                 }
 
-                this._bypassNextFitCache = true;
-                this.holdPageHiddenForModalLifecycle();
+                const navigatedAway = this._lastFittedPageNumber !== this.pageNumber;
+
+                if (navigatedAway) {
+                    this._bypassNextFitCache = true;
+                    this.holdPageHiddenForModalLifecycle();
+                }
 
                 window.setTimeout(() => {
                     this.resumeLayoutWhenNoOpenModals();
