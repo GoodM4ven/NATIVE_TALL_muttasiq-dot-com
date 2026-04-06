@@ -527,20 +527,16 @@
             align-items: center;
             gap: 0.65rem;
             padding: 0.8rem 1rem 0.5rem;
-            opacity: 1;
-            visibility: visible;
-            transition:
-                opacity 220ms ease,
-                visibility 0ms linear 0ms;
+            opacity: 0;
+            transition: opacity 220ms ease;
         }
 
-        .quran-top-strip.quran-top-strip--loading {
-            opacity: 0;
-            visibility: hidden;
+        .quran-top-strip.quran-top-strip--initial-loading {
             pointer-events: none;
-            transition:
-                opacity 220ms ease,
-                visibility 0ms linear 220ms;
+        }
+
+        .quran-top-strip.quran-top-strip--visible {
+            opacity: 1;
         }
 
         .quran-top-actions {
@@ -1426,7 +1422,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 0;
+            gap: 0.36rem;
         }
 
         .quran-page-slider {
@@ -1526,6 +1522,17 @@
             box-shadow:
                 inset 0 0 0 1px color-mix(in srgb, var(--gray-500) 8%, transparent),
                 0 4px 10px color-mix(in srgb, var(--gray-900) 12%, transparent);
+        }
+
+        .quran-page-slider-chip.quran-page-slider-chip--mushaf-reference {
+            pointer-events: none;
+            cursor: default;
+        }
+
+        .quran-page-chip-label {
+            opacity: 0.8;
+            font-size: 0.92em;
+            margin-inline-end: 0.16rem;
         }
 
         .quran-page-chip-current-wrap {
@@ -1942,7 +1949,8 @@
                     class="quran-top-strip"
                     x-bind:class="{
                         'quran-top-strip--wird-active': wirdModeActive,
-                        'quran-top-strip--loading invisible': isLoadingPage,
+                        'quran-top-strip--initial-loading': !hasCompletedInitialMushafPreparation,
+                        'quran-top-strip--visible': hasCompletedInitialMushafPreparation,
                     }"
                 >
                     <!-- Credits: uiverse.io/gharsh11032000/loud-chicken-53 -->
@@ -2320,7 +2328,7 @@
                             x-bind:class="{ 'quran-page-counter--morphing': pageCounterPulse.isActive && pageCounterPulse.hasChanges }"
                         >
                             <button
-                                class="quran-page-slider-chip 4xl:min-w-[5.8rem] 4xl:px-[0.56rem] 4xl:py-[0.28rem] 4xl:text-[0.84rem] min-w-[4.8rem] px-[0.42rem] py-[0.22rem] text-[0.72rem] outline-none sm:min-w-20 sm:px-[0.46rem] sm:py-[0.24rem] sm:text-[0.76rem] md:min-w-[5.2rem] md:px-2 md:py-1 md:text-[0.79rem] lg:min-w-[5.4rem] lg:px-[0.52rem] lg:py-[0.26rem] lg:text-[0.81rem] xl:min-w-[5.6rem] xl:text-[0.82rem]"
+                                class="select-none quran-page-slider-chip 4xl:min-w-[5.8rem] 4xl:px-[0.56rem] 4xl:py-[0.28rem] 4xl:text-[0.84rem] min-w-[4.8rem] px-[0.42rem] py-[0.22rem] text-[0.72rem] outline-none sm:min-w-20 sm:px-[0.46rem] sm:py-[0.24rem] sm:text-[0.76rem] md:min-w-[5.2rem] md:px-2 md:py-1 md:text-[0.79rem] lg:min-w-[5.4rem] lg:px-[0.52rem] lg:py-[0.26rem] lg:text-[0.81rem] xl:min-w-[5.6rem] xl:text-[0.82rem]"
                                 type="button"
                                 x-bind:aria-label="wirdModeActive ? @js(arabic_text('وضع الوِرد اليومي مفعل')) : @js(arabic_text('إدخال رقم صفحة'))"
                                 x-bind:style="`--quran-counter-digit-count: ${pageCounterDigitLength()};`"

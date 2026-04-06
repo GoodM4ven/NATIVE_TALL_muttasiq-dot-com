@@ -851,6 +851,7 @@ document.addEventListener('alpine:init', () => {
         },
         isWirdCompletionVisible: false,
         isWirdCompletionPreviewPinned: false,
+        hasCompletedInitialMushafPreparation: false,
         copiedHighlights: {
             wordKeys: [],
             ayahIndexes: [],
@@ -2407,6 +2408,7 @@ document.addEventListener('alpine:init', () => {
                 this.warmSearchIndex();
             } finally {
                 this._startupCalibrationPending = false;
+                this.hasCompletedInitialMushafPreparation = true;
             }
         },
 
@@ -4317,12 +4319,7 @@ document.addEventListener('alpine:init', () => {
                 this.maxPage,
             );
 
-            if (
-                pendingTargetPage === targetPage ||
-                (this.isLoadingPage &&
-                    clampPage(Number(this.pageInput ?? this.pageNumber), this.maxPage) ===
-                        targetPage)
-            ) {
+            if (pendingTargetPage === targetPage) {
                 this.pageInput = targetPage;
                 this._lastPageInputVisualValue = targetPage;
                 this.clearWirdSliderVisualTween();
