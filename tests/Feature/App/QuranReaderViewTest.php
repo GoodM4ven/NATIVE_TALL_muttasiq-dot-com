@@ -36,13 +36,21 @@ it('wires quran reader entry points from main menu to hash navigation and view m
     $quranReaderDataServiceSource = file_get_contents(app_path('Services/Quran/QuranReaderDataService.php'));
     $settingModelSource = file_get_contents(app_path('Models/Setting.php'));
     $controlPanelSettingsTabSource = file_get_contents(app_path('Services/Traits/HasControlPanelSettingsTab.php'));
+    $historyManagerTableSource = file_get_contents(app_path('Livewire/QuranApp/HistoryManagerTable.php'));
+    $bookmarksManagerTableSource = file_get_contents(app_path('Livewire/QuranApp/BookmarksManagerTable.php'));
+    $mainMenuComponentSource = file_get_contents(resource_path('views/components/main-menu/index.blade.php'));
     $routesSource = file_get_contents(base_path('routes/web.php'));
     $appJsSource = file_get_contents(resource_path('js/app.js'));
     $filamentComponentsCssSource = file_get_contents(resource_path('css/core/filament/components.css'));
 
     expect($menuSource)->not->toBeFalse()
         ->and($menuSource)->toContain(":caption=\"arabic_text('الكتاب')\"")
-        ->and($menuSource)->toContain(":onClickCallback=\"'() => openQuranEntry()'\"");
+        ->and($menuSource)->toContain(":onClickCallback=\"'() => openQuranEntry()'\"")
+        ->and($menuSource)->toContain("x-bind:data-main-menu-exiting=\"views['main-menu'].isOpen ? 'false' : 'true'\"");
+
+    expect($mainMenuComponentSource)->not->toBeFalse()
+        ->and($mainMenuComponentSource)->toContain("[data-main-menu-exiting='true'] [data-main-menu-item]")
+        ->and($mainMenuComponentSource)->toContain('transition-delay: calc(var(--main-menu-item-index) * 34ms);');
 
     expect($homeSource)->not->toBeFalse()
         ->and($homeSource)->toContain("'quran-app-gate': {")
@@ -173,8 +181,8 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderViewSource)->toContain('x-on:pointermove.window.passive="onSwipeMove($event)"')
         ->and($quranReaderViewSource)->toContain('x-on:touchstart.passive="onSwipeStart($event)"')
         ->and($quranReaderViewSource)->toContain('x-on:touchmove.window.passive="onSwipeMove($event)"')
-        ->and($quranReaderViewSource)->toContain('x-on:keydown.left.window.prevent="onGlobalArrowNavigate(\'left\', $event)"')
-        ->and($quranReaderViewSource)->toContain('x-on:keydown.right.window.prevent="onGlobalArrowNavigate(\'right\', $event)"')
+        ->and($quranReaderViewSource)->toContain('x-on:keydown.left.window="onGlobalArrowNavigate(\'left\', $event)"')
+        ->and($quranReaderViewSource)->toContain('x-on:keydown.right.window="onGlobalArrowNavigate(\'right\', $event)"')
         ->and($quranReaderViewSource)->toContain('x-on:pointerup.window.passive="onWordPointerUp($event)"')
         ->and($quranReaderViewSource)->toContain('data-quran-word-button')
         ->and($quranReaderViewSource)->toContain('x-bind:data-quran-surah-number=')
@@ -209,6 +217,9 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderScriptSource)->toContain('prepareQuranFromMainMenu(detail = {})')
         ->and($quranReaderScriptSource)->toContain('setAndroidVolumeNavigationEnabled(enabled)')
         ->and($quranReaderScriptSource)->toContain("'quran-native-volume-button'")
+        ->and($quranReaderScriptSource)->toContain('searchResultIsLeaving(result)')
+        ->and($quranReaderScriptSource)->toContain('setSearchResults(nextResults, { immediate = false } = {})')
+        ->and($quranReaderScriptSource)->toContain('queueSearchLeaveCleanup()')
         ->and($quranReaderScriptSource)->toContain("useVolumeButtonsNavigation: 'does_quran_use_volume_buttons_navigation'")
         ->and($quranReaderScriptSource)->toContain('async goToPageFromChevron(')
         ->and($quranReaderScriptSource)->toContain('await this.goToPageFromChevron(requestedPage, {')
@@ -221,12 +232,25 @@ it('wires quran reader entry points from main menu to hash navigation and view m
     expect($quranSearchModalViewSource)->not->toBeFalse()
         ->and($quranSearchModalViewSource)->toContain('quran-search-shell')
         ->and($quranSearchModalViewSource)->toContain('quran-search-results-shell')
+        ->and($quranSearchModalViewSource)->toContain('quran-search-results--active')
+        ->and($quranSearchModalViewSource)->toContain('quran-search-result-btn--leaving')
+        ->and($quranSearchModalViewSource)->toContain('searchResultIsLeaving(result)')
         ->and($quranSearchModalViewSource)->toContain('quran-surah-grid')
         ->and($quranSearchModalViewSource)->toContain('x-ref="surahDirectoryGrid"')
         ->and($quranSearchModalViewSource)->toContain("'quran-surah-tile--active': isSurahDirectoryEntryActive(entry)")
         ->and($quranSearchModalViewSource)->toContain('x-ref="searchResultsList"')
         ->and($quranSearchModalViewSource)->toContain('goToSearchResult(result)')
         ->and($quranSearchModalViewSource)->toContain('goToSurahFromDirectory(entry)');
+
+    expect($historyManagerTableSource)->not->toBeFalse()
+        ->and($historyManagerTableSource)->toContain('public function reorderTable(array $order, int|string|null $draggedRecordKey = null): void')
+        ->and($historyManagerTableSource)->toContain("'lang' => 'en'")
+        ->and($historyManagerTableSource)->toContain('private function normalizeTagsInput(mixed $value): array');
+
+    expect($bookmarksManagerTableSource)->not->toBeFalse()
+        ->and($bookmarksManagerTableSource)->toContain('public function reorderTable(array $order, int|string|null $draggedRecordKey = null): void')
+        ->and($bookmarksManagerTableSource)->toContain("'lang' => 'en'")
+        ->and($bookmarksManagerTableSource)->toContain('private function normalizeTagsInput(mixed $value): array');
 
     expect($quranHistoryModalViewSource)->not->toBeFalse()
         ->and($quranHistoryModalViewSource)->toContain('quran-manager-shell')

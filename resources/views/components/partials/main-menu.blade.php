@@ -2,12 +2,12 @@
     class="absolute inset-0 flex items-center justify-center xl:[zoom:1.25]"
     x-cloak
     x-show="views['main-menu'].isOpen"
-    x-transition:enter="transition-[opacity,filter] ease-out duration-1000 delay-400"
-    x-transition:enter-start="opacity-0! blur-[2px]"
+    x-transition:enter="transition-all ease-out duration-1000 delay-400"
+    x-transition:enter-start="opacity-0 blur-[2px]"
     x-transition:enter-end="opacity-100 blur-0"
-    x-transition:leave="transition-[opacity,filter] ease-in duration-350"
-    x-transition:leave-start="opacity-100 blur-0"
-    x-transition:leave-end="opacity-0! blur-[2px]"
+    x-transition:leave="transition-all ease-in duration-75"
+    x-transition:leave-start="opacity-100 scale-100"
+    x-transition:leave-end="opacity-0 scale-0"
 >
     <x-main-menu>
         <x-main-menu.item
@@ -52,12 +52,37 @@
             :iconClasses="'scale-[1.15]'"
             :caption="arabic_text('المحفوظات')"
         />
+    </x-main-menu>
 
+    <div class="z-100 fixed bottom-4 left-4 flex flex-col gap-2">
         <button
-            class="absolute start-1 top-1 z-10 h-5 w-5 opacity-0"
+            class="bg-white/92 rounded-lg border border-emerald-500/45 px-3 py-1.5 text-xs font-semibold text-emerald-800 shadow-sm backdrop-blur-sm"
             type="button"
             aria-label="{{ arabic_text('محاكاة يوم جديد للوِرد') }}"
             x-on:click.prevent="window.dispatchEvent(new CustomEvent('quran-wird-simulate-day', { detail: { days: 1 } }))"
-        ></button>
-    </x-main-menu>
+        >
+            {{ arabic_text('اختبار: يوم جديد') }}
+        </button>
+
+        <button
+            class="bg-white/92 rounded-lg border border-sky-500/45 px-3 py-1.5 text-xs font-semibold text-sky-800 shadow-sm backdrop-blur-sm"
+            type="button"
+            aria-label="{{ arabic_text('معاينة تهنئة إتمام الوِرد') }}"
+            x-on:click.prevent="
+                $viewNav('quran-app-tilawa');
+                window.dispatchEvent(new CustomEvent('quran-wird-congrats-preview', { detail: { mode: 'open' } }));
+            "
+        >
+            {{ arabic_text('اختبار: تهنئة الوِرد') }}
+        </button>
+
+        <button
+            class="bg-white/92 rounded-lg border border-slate-500/45 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm backdrop-blur-sm"
+            type="button"
+            aria-label="{{ arabic_text('إغلاق معاينة تهنئة إتمام الوِرد') }}"
+            x-on:click.prevent="window.dispatchEvent(new CustomEvent('quran-wird-congrats-preview', { detail: { mode: 'close' } }))"
+        >
+            {{ arabic_text('إغلاق المعاينة') }}
+        </button>
+    </div>
 </div>

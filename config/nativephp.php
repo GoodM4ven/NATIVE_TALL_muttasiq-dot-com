@@ -113,6 +113,12 @@ return [
         '*_SECRET',
         'DB_PASSWORD',
         'DB_USERNAME',
+        'ADMIN_*',
+        'ANDROID_KEYSTORE_PASSWORD',
+        'ANDROID_KEY_PASSWORD',
+        'NATIVEPHP_DEVELOPMENT_TEAM',
+        'IOS_DISTRIBUTION_CERTIFICATE_PASSWORD',
+        'NATIVEPHP_DEVELOPMENT_TEAM',
     ],
 
     /*

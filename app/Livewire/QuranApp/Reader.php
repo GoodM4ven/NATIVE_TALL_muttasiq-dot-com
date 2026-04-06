@@ -341,17 +341,28 @@ class Reader extends Component implements HasActions, HasSchemas
                     $stageMatches = $normalizedMatches;
                 }
 
+                if (! $isComplete) {
+                    foreach ($stageMatches as $stageMatch) {
+                        $this->streamSearchPayload(
+                            $normalizedMatches,
+                            [$stageMatch],
+                            $normalizedRequestSerial,
+                            $stage,
+                            false,
+                        );
+                        usleep(32000);
+                    }
+
+                    return;
+                }
+
                 $this->streamSearchPayload(
                     $normalizedMatches,
-                    $stageMatches,
+                    [],
                     $normalizedRequestSerial,
                     $stage,
-                    $isComplete,
+                    true,
                 );
-
-                if (! $isComplete) {
-                    usleep(35000);
-                }
             },
         );
 
@@ -386,7 +397,7 @@ class Reader extends Component implements HasActions, HasSchemas
                     ->type('search')
                     ->placeholder(arabic_text('يا بنيّ أقم الصلاة، وأمر بالمعروف، وانه عن المنكر...'))
                     ->extraFieldWrapperAttributes([
-                        'class' => 'quran-search-field-wrapper',
+                        'class' => 'quran-search-field-wrapper mb-4',
                     ])
                     ->extraInputAttributes([
                         'id' => 'quran-reader-search-input',

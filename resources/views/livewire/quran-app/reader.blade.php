@@ -527,6 +527,20 @@
             align-items: center;
             gap: 0.65rem;
             padding: 0.8rem 1rem 0.5rem;
+            opacity: 1;
+            visibility: visible;
+            transition:
+                opacity 220ms ease,
+                visibility 0ms linear 0ms;
+        }
+
+        .quran-top-strip.quran-top-strip--loading {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition:
+                opacity 220ms ease,
+                visibility 0ms linear 220ms;
         }
 
         .quran-top-actions {
@@ -1858,6 +1872,8 @@
         x-on:quran-bookmarks-manager-replaced.window="replaceBookmarkPage($event.detail?.id)"
         x-on:quran-bookmarks-manager-removed.window="removeBookmark($event.detail?.id)"
         x-on:quran-bookmarks-manager-reordered.window="applyBookmarksManagerReorder($event.detail ?? {})"
+        x-on:quran-history-manager-request-sync.window="syncHistoryManagerTableRecords()"
+        x-on:quran-bookmarks-manager-request-sync.window="syncBookmarksManagerTableRecords()"
     >
         @if (!$ready)
             <section
@@ -1881,8 +1897,8 @@
                 x-on:touchmove.window.passive="onSwipeMove($event)"
                 x-on:touchend.window.passive="onSwipeEnd($event)"
                 x-on:touchcancel.window.passive="onSwipeCancel()"
-                x-on:keydown.left.window.prevent="onGlobalArrowNavigate('left', $event)"
-                x-on:keydown.right.window.prevent="onGlobalArrowNavigate('right', $event)"
+                x-on:keydown.left.window="onGlobalArrowNavigate('left', $event)"
+                x-on:keydown.right.window="onGlobalArrowNavigate('right', $event)"
                 x-on:quran-go-prev.window="handleRequestedNavigation('prev', $event.detail)"
                 x-on:quran-go-next.window="handleRequestedNavigation('next', $event.detail)"
                 x-on:quran-go-page.window="handleRequestedNavigation('page', $event.detail)"
@@ -1924,7 +1940,10 @@
                 </template>
                 <header
                     class="quran-top-strip"
-                    x-bind:class="{ 'quran-top-strip--wird-active': wirdModeActive }"
+                    x-bind:class="{
+                        'quran-top-strip--wird-active': wirdModeActive,
+                        'quran-top-strip--loading invisible': isLoadingPage,
+                    }"
                 >
                     <!-- Credits: uiverse.io/gharsh11032000/loud-chicken-53 -->
                     <button
@@ -2435,7 +2454,7 @@
                 </template>
 
                 <x-partials.shared.congrats-overlay
-                    show="isWirdCompletionVisible"
+                    show="isWirdCompletionVisible || isWirdCompletionPreviewPinned"
                     :title="arabic_text('هنيئًا لك إتمام الوِرد اليومي')"
                     :subtitle="arabic_text('ثبَّتَ الله لك الأجر، وتم حفظ تقدّمك لليوم.')"
                     decorated
@@ -2444,7 +2463,7 @@
                     with-backdrop
                     backdrop-class="bg-white/98"
                     fixed-layer
-                    max-width-class="max-w-4xl"
+                    max-width-class="max-w-4xl py-12"
                 />
             </section>
         @endif

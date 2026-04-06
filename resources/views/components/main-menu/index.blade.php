@@ -65,6 +65,66 @@
             mask-size: 100% 100%;
         }
 
+        [data-main-menu-item] {
+            --main-menu-item-index: 0;
+            transition:
+                opacity 280ms cubic-bezier(0.22, 1, 0.36, 1),
+                transform 340ms cubic-bezier(0.22, 1, 0.36, 1),
+                filter 300ms ease;
+            transition-delay: calc(var(--main-menu-item-index) * 34ms);
+            transform-origin: center;
+            will-change: transform, opacity, filter;
+        }
+
+        [data-main-menu-item]:nth-child(1) {
+            --main-menu-item-index: 0;
+        }
+
+        [data-main-menu-item]:nth-child(2) {
+            --main-menu-item-index: 1;
+        }
+
+        [data-main-menu-item]:nth-child(3) {
+            --main-menu-item-index: 2;
+        }
+
+        [data-main-menu-item]:nth-child(4) {
+            --main-menu-item-index: 3;
+        }
+
+        [data-main-menu-item]:nth-child(5) {
+            --main-menu-item-index: 4;
+        }
+
+        [data-main-menu-item]:nth-child(6) {
+            --main-menu-item-index: 5;
+        }
+
+        [data-main-menu-item]:nth-child(7) {
+            --main-menu-item-index: 6;
+        }
+
+        [data-main-menu-item]:nth-child(8) {
+            --main-menu-item-index: 7;
+        }
+
+        [data-main-menu-item]:nth-child(9) {
+            --main-menu-item-index: 8;
+        }
+
+        [data-main-menu-exiting='true'] [data-main-menu-item] {
+            opacity: 0;
+            transform: scale(0.72);
+            filter: blur(1.3px);
+        }
+
+        [data-main-menu-exiting='false'] [data-main-menu-item] {
+            opacity: 1;
+            transform: scale(1);
+            filter: blur(0);
+            transition-delay: calc((8 - var(--main-menu-item-index)) * 20ms + 120ms);
+        }
+
         .main-menu-caption--burst .main-menu-caption__burst {
             animation: main-menu-burst 900ms ease-out;
             will-change: transform, opacity;
@@ -133,7 +193,7 @@
 @endassets
 
 <div
-    class="relative flex flex-col items-center will-change-[opacity]"
+    {{ $attributes->merge(['class' => 'relative flex flex-col items-center will-change-[opacity]']) }}
     x-data="mainMenu($el)"
     x-on:main-menu-item-enter="handleItemEnter($event.detail)"
     x-on:main-menu-item-leave="handleItemLeave()"

@@ -34,6 +34,11 @@ class BookmarksManagerTable extends Component implements HasActions, HasSchemas,
      */
     public array $records = [];
 
+    public function mount(): void
+    {
+        $this->dispatch('quran-bookmarks-manager-request-sync');
+    }
+
     #[On('quran-bookmarks-manager-sync')]
     public function syncFromClient(array $records = []): void
     {
@@ -45,10 +50,6 @@ class BookmarksManagerTable extends Component implements HasActions, HasSchemas,
         return $table
             ->defaultSort('sort_order')
             ->reorderable('sort_order')
-            ->afterReordering(fn (array $order): mixed => $this->dispatch(
-                'quran-bookmarks-manager-reordered',
-                order: $order,
-            ))
             ->records(function (
                 ?string $sortColumn,
                 ?string $sortDirection,
@@ -80,7 +81,10 @@ class BookmarksManagerTable extends Component implements HasActions, HasSchemas,
             ->columns([
                 TextColumn::make('sort_order')
                     ->label(arabic_text('الترتيب'))
-                    ->numeric()
+                    ->state(static fn (array $record): string => (string) max(1, (int) ($record['sort_order'] ?? 1)))
+                    ->extraAttributes([
+                        'lang' => 'en',
+                    ])
                     ->sortable(),
                 TextColumn::make('page_number')
                     ->label(arabic_text('الصفحة'))
@@ -139,7 +143,7 @@ class BookmarksManagerTable extends Component implements HasActions, HasSchemas,
                         'quran-bookmarks-manager-updated',
                         id: (string) ($record['id'] ?? ''),
                         note: (string) ($data['note'] ?? ''),
-                        tags: array_values($data['tags'] ?? []),
+                        tags: $this->normalizeTagsInput($data['tags'] ?? []),
                     )),
                 Action::make('replacePage')
                     ->label(arabic_text('استبدال الصفحة'))
@@ -191,7 +195,7 @@ class BookmarksManagerTable extends Component implements HasActions, HasSchemas,
 
             $normalizedRecords[] = [
                 'id' => $id,
-                'sort_order' => max(1, (int) ($record['sort_order'] ?? $index + 1)),
+                'sort_order' => $this->resolveSortOrderValue($record['sort_order'] ?? null, $index),
                 'page_number' => max(1, (int) ($record['page_number'] ?? 1)),
                 'note' => trim((string) ($record['note'] ?? '')),
                 'tags' => $tags,
@@ -203,6 +207,29 @@ class BookmarksManagerTable extends Component implements HasActions, HasSchemas,
             ->sortBy('sort_order', SORT_NATURAL)
             ->values()
             ->all();
+    }
+
+    /**
+     * @param  array<int|string, int|string>  $order
+     */
+    public function reorderTable(array $order, int|string|null $draggedRecordKey = null): void
+    {
+        if (! $this->getTable()->isReorderable()) {
+            return;
+        }
+
+        $normalizedOrder = array_values(array_filter(
+            array_map(static fn (mixed $recordKey): string => trim((string) $recordKey), $order),
+            static fn (string $recordKey): bool => $recordKey !== '',
+        ));
+
+        if ($normalizedOrder === []) {
+            return;
+        }
+
+        $this->getTable()->callBeforeReordering($normalizedOrder);
+        $this->dispatch('quran-bookmarks-manager-reordered', order: $normalizedOrder);
+        $this->getTable()->callAfterReordering($normalizedOrder);
     }
 
     private function applyTagsFilter(Collection $records, array $filters): Collection
@@ -287,5 +314,29 @@ class BookmarksManagerTable extends Component implements HasActions, HasSchemas,
             array_map(static fn (mixed $tag): string => trim((string) $tag), $tags),
             static fn (string $tag): bool => $tag !== '',
         )));
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function normalizeTagsInput(mixed $value): array
+    {
+        $source = is_array($value) ? $value : explode(',', (string) $value);
+
+        return array_values(array_filter(
+            array_map(static fn (mixed $tag): string => trim((string) $tag), $source),
+            static fn (string $tag): bool => $tag !== '',
+        ));
+    }
+
+    private function resolveSortOrderValue(mixed $value, int $index): int
+    {
+        $parsed = (int) $value;
+
+        if ($parsed > 0) {
+            return $parsed;
+        }
+
+        return $index + 1;
     }
 }

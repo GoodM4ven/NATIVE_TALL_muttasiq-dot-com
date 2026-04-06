@@ -78,8 +78,7 @@
                 },
             },
             init() {
-                const initialView = this.views?.[this.activeView] ? this.activeView : 'main-menu';
-                this.applyViewState(initialView, { persist: false });
+                this.applyViewState('main-menu', { persist: false });
             },
             openQuranEntry() {
                 if (!this.isNativeRuntime) {

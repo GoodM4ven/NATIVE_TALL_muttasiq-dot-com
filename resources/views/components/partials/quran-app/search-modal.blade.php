@@ -41,24 +41,27 @@
             class="quran-search-results"
             x-cloak
             x-ref="searchResultsList"
-            x-show="search.results.length > 0"
-            x-transition:enter="transition duration-260 ease-out"
-            x-transition:enter-start="opacity-0 translate-y-1"
-            x-transition:enter-end="opacity-100 translate-y-0"
-            x-transition:leave="transition duration-200 ease-in"
-            x-transition:leave-start="opacity-100 translate-y-0"
-            x-transition:leave-end="opacity-0 -translate-y-1"
+            x-bind:class="{
+                'quran-search-results--active': search.results.length > 0,
+                'quran-search-results--empty': search.results.length === 0,
+            }"
         >
             <template
                 x-for="(result, resultIndex) in search.results"
-                :key="`quran-search-modal-${result.id}`"
+                :key="result.__key ||
+                    `quran-search-modal-${result.id || [result.surah_number, result.ayah_number, result.page_number, result.match_rank].join('-')}`"
             >
                 <button
-                    class="quran-search-result-btn nth-[2]:mt-2"
+                    class="quran-search-result-btn"
                     type="button"
                     x-bind:data-match-tone="searchMatchTone(result)"
-                    x-bind:tabindex="resultIndex === 0 ? 0 : -1"
-                    x-on:click="goToSearchResult(result)"
+                    x-bind:data-result-key="result.__key || ''"
+                    x-bind:tabindex="searchResultIsLeaving(result) ? -1 : (resultIndex === 0 ? 0 : -1)"
+                    x-bind:class="{
+                        'quran-search-result-btn--active': !searchResultIsLeaving(result),
+                        'quran-search-result-btn--leaving': searchResultIsLeaving(result),
+                    }"
+                    x-on:click="if (!searchResultIsLeaving(result)) { goToSearchResult(result) }"
                 >
                     <span
                         class="quran-search-result-meta"

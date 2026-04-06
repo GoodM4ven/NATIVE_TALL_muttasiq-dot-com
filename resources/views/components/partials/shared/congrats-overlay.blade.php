@@ -15,6 +15,75 @@
     $containerPositionClass = $fixedLayer ? 'fixed' : 'absolute';
 @endphp
 
+@once
+    @assets
+        <style>
+            .quran-congrats-style-one {
+                background-color: #16a085;
+                background-image:
+                    linear-gradient(67.5deg, #16a085 10%, transparent 10%),
+                    linear-gradient(157.5deg, #16a085 10%, transparent 10%),
+                    linear-gradient(67.5deg, transparent 90%, #16a085 90%),
+                    linear-gradient(157.5deg, transparent 90%, #16a085 90%),
+                    linear-gradient(22.5deg, #16a085 10%, transparent 10%),
+                    linear-gradient(112.5deg, #16a085 10%, transparent 10%),
+                    linear-gradient(22.5deg, transparent 90%, #16a085 90%),
+                    linear-gradient(112.5deg, transparent 90%, #16a085 90%),
+                    linear-gradient(22.5deg,
+                        transparent 33%,
+                        #d5d8dc 33%,
+                        #d5d8dc 36%,
+                        transparent 36%,
+                        transparent 64%,
+                        #d5d8dc 64%,
+                        #d5d8dc 67%,
+                        transparent 67%),
+                    linear-gradient(-22.5deg,
+                        transparent 33%,
+                        #d5d8dc 33%,
+                        #d5d8dc 36%,
+                        transparent 36%,
+                        transparent 64%,
+                        #d5d8dc 64%,
+                        #d5d8dc 67%,
+                        transparent 67%),
+                    linear-gradient(112.5deg,
+                        transparent 33%,
+                        #d5d8dc 33%,
+                        #d5d8dc 36%,
+                        transparent 36%,
+                        transparent 64%,
+                        #d5d8dc 64%,
+                        #d5d8dc 67%,
+                        transparent 67%),
+                    linear-gradient(-112.5deg,
+                        transparent 33%,
+                        #d5d8dc 33%,
+                        #d5d8dc 36%,
+                        transparent 36%,
+                        transparent 64%,
+                        #d5d8dc 64%,
+                        #d5d8dc 67%,
+                        transparent 67%);
+                background-size: 250px 250px;
+                background-position:
+                    -100px 150px,
+                    -150px 150px,
+                    -150px 100px,
+                    -100px 100px,
+                    -150px 100px,
+                    -100px 100px,
+                    -100px 150px,
+                    -150px 150px,
+                    0 0,
+                    0 0,
+                    0 0,
+                    0 0;
+            }
+        </style>
+    @endassets
+@endonce
+
 <div
     class="{{ $containerPositionClass }} inset-0 z-40 flex items-center justify-center px-6 py-12"
     x-cloak
@@ -39,22 +108,7 @@
                 class="pointer-events-none absolute inset-0 z-0 flex items-center justify-center"
                 aria-hidden="true"
             >
-                <span
-                    class="absolute h-[46rem] w-[46rem] rounded-full border border-emerald-300/35"
-                    style="background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 62%), repeating-conic-gradient(from 0deg, rgba(16,185,129,0.14) 0deg 12deg, rgba(245,158,11,0.14) 12deg 24deg, rgba(14,165,233,0.12) 24deg 36deg); mask: radial-gradient(circle, transparent 0 28%, #000 28% 86%, transparent 86% 100%);"
-                ></span>
-                <span
-                    class="absolute h-[38rem] w-[38rem] rounded-full border border-amber-300/35"
-                    style="background: repeating-radial-gradient(circle at 50% 50%, rgba(255,255,255,0) 0 0.95rem, rgba(16,185,129,0.18) 0.95rem 1.15rem, rgba(255,255,255,0) 1.15rem 2rem);"
-                ></span>
-                <span
-                    class="absolute h-[30rem] w-[30rem] rounded-full border border-sky-300/35"
-                    style="background: radial-gradient(circle at 50% 50%, rgba(16,185,129,0.14) 0%, rgba(245,158,11,0.1) 44%, rgba(14,165,233,0.12) 72%, rgba(255,255,255,0) 100%);"
-                ></span>
-                <span
-                    class="absolute h-[22rem] w-[22rem] rounded-full border border-emerald-400/40"
-                    style="background: repeating-conic-gradient(from 8deg, rgba(16,185,129,0.24) 0deg 18deg, rgba(255,255,255,0) 18deg 36deg); mask: radial-gradient(circle, transparent 0 24%, #000 24% 88%, transparent 88% 100%);"
-                ></span>
+                <span class="quran-congrats-style-one absolute inset-0 rounded-3xl opacity-30"></span>
             </div>
         @elseif ($decorated && $arabesque)
             <div
@@ -62,34 +116,30 @@
                 aria-hidden="true"
             >
                 <span
-                    class="absolute h-[38rem] w-[38rem] rounded-full border border-emerald-300/35 shadow-[0_0_0_1px_rgba(16,185,129,0.08)]"
+                    class="h-152 w-152 absolute rounded-full border border-emerald-300/35 shadow-[0_0_0_1px_rgba(16,185,129,0.08)]"
                 ></span>
-                <span class="absolute h-[34rem] w-[34rem] rounded-full border border-amber-300/35"></span>
-                <span class="absolute h-[30rem] w-[30rem] rounded-full border border-sky-300/30"></span>
-                <span
-                    class="border-primary-300/35 absolute h-[26rem] w-[26rem] rounded-full border border-dashed"></span>
-                <span
-                    class="absolute h-[22rem] w-[22rem] rounded-full border border-dotted border-emerald-400/40"></span>
-                <span class="absolute h-[18rem] w-[18rem] rounded-full border border-amber-500/40"></span>
-                <span class="absolute h-[14rem] w-[14rem] rounded-full border border-sky-400/40"></span>
+                <span class="h-136 w-136 absolute rounded-full border border-amber-300/35"></span>
+                <span class="h-120 w-120 absolute rounded-full border border-sky-300/30"></span>
+                <span class="border-primary-300/35 h-104 w-104 absolute rounded-full border border-dashed"></span>
+                <span class="h-88 w-88 absolute rounded-full border border-dotted border-emerald-400/40"></span>
+                <span class="absolute h-72 w-[18rem] rounded-full border border-amber-500/40"></span>
+                <span class="absolute h-56 w-56 rounded-full border border-sky-400/40"></span>
 
                 <span
-                    class="absolute h-[2px] w-[17rem] bg-gradient-to-r from-transparent via-emerald-500/55 to-transparent"
+                    class="w-68 bg-linear-to-r absolute h-[2px] from-transparent via-emerald-500/55 to-transparent"></span>
+                <span
+                    class="h-68 bg-linear-to-b absolute w-[2px] from-transparent via-amber-500/55 to-transparent"></span>
+                <span
+                    class="rotate-30 bg-linear-to-r absolute h-[2px] w-56 from-transparent via-sky-500/45 to-transparent"
                 ></span>
                 <span
-                    class="absolute h-[17rem] w-[2px] bg-gradient-to-b from-transparent via-amber-500/55 to-transparent"
+                    class="-rotate-30 via-primary-500/45 bg-linear-to-r absolute h-[2px] w-56 from-transparent to-transparent"
                 ></span>
                 <span
-                    class="rotate-30 absolute h-[2px] w-[14rem] bg-gradient-to-r from-transparent via-sky-500/45 to-transparent"
+                    class="rotate-60 bg-linear-to-r absolute h-[2px] w-56 from-transparent via-emerald-500/40 to-transparent"
                 ></span>
                 <span
-                    class="-rotate-30 via-primary-500/45 absolute h-[2px] w-[14rem] bg-gradient-to-r from-transparent to-transparent"
-                ></span>
-                <span
-                    class="rotate-60 absolute h-[2px] w-[14rem] bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent"
-                ></span>
-                <span
-                    class="-rotate-60 absolute h-[2px] w-[14rem] bg-gradient-to-r from-transparent via-amber-500/40 to-transparent"
+                    class="-rotate-60 bg-linear-to-r absolute h-[2px] w-56 from-transparent via-amber-500/40 to-transparent"
                 ></span>
 
                 @for ($index = 0; $index < 12; $index++)
@@ -119,8 +169,12 @@
         @endif
 
         <div
-            class="relative z-10 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-700 shadow-sm dark:bg-emerald-400/15 dark:text-emerald-200"
             aria-hidden="true"
+            @class([
+                'absolute! top-1/2! z-10! flex! h-40! w-40! text-[4rem]!' =>
+                    $decorated && $arabesque,
+                'relative z-10 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-700 shadow-sm dark:bg-emerald-400/15 dark:text-emerald-200',
+            ])
         >
             {{ $icon ?? '✓' }}
         </div>

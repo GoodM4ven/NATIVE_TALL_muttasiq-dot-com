@@ -850,6 +850,7 @@ document.addEventListener('alpine:init', () => {
             serial: 0,
         },
         isWirdCompletionVisible: false,
+        isWirdCompletionPreviewPinned: false,
         copiedHighlights: {
             wordKeys: [],
             ayahIndexes: [],
@@ -883,6 +884,9 @@ document.addEventListener('alpine:init', () => {
         _onWindowScroll: null,
         _onSwitchView: null,
         _onWirdSimulateDay: null,
+        _onWirdCongratsPreview: null,
+        _onHistoryManagerRequestSync: null,
+        _onBookmarksManagerRequestSync: null,
         _lastQuranReaderView: 'quran-app-tilawa',
         _onWindowKeydown: null,
         _onPanelPointerDown: null,
@@ -949,6 +953,7 @@ document.addEventListener('alpine:init', () => {
         _searchRequestSerial: 0,
         _searchStreamObserver: null,
         _lastSearchStreamPayloadRaw: '',
+        _searchResultsLeaveTimer: null,
         _stopLivewireMorphedHook: null,
         _supportLockTargetsSyncRaf: null,
         _onSupportLockLivewireMorphed: null,
@@ -977,6 +982,8 @@ document.addEventListener('alpine:init', () => {
         _surahDirectoryPostOpenTimers: [],
         _wirdEntryRevealTimers: [],
         _wirdEntryLayoutSuppressedUntil: 0,
+        _historyManagerSyncTimers: [],
+        _bookmarksManagerSyncTimers: [],
         _modalLayoutResumeTimer: null,
         _postModalTargetFitPage: 0,
         _postModalTargetFitRetries: 0,
@@ -1155,6 +1162,24 @@ document.addEventListener('alpine:init', () => {
                 this.ensureWirdDailyRecord();
             };
             window.addEventListener('quran-wird-simulate-day', this._onWirdSimulateDay);
+            this._onWirdCongratsPreview = (event) => {
+                this.handleWirdCompletionPreviewEvent(event?.detail ?? {});
+            };
+            window.addEventListener('quran-wird-congrats-preview', this._onWirdCongratsPreview);
+            this._onHistoryManagerRequestSync = () => {
+                this.queueHistoryManagerTableSync();
+            };
+            window.addEventListener(
+                'quran-history-manager-request-sync',
+                this._onHistoryManagerRequestSync,
+            );
+            this._onBookmarksManagerRequestSync = () => {
+                this.queueBookmarksManagerTableSync();
+            };
+            window.addEventListener(
+                'quran-bookmarks-manager-request-sync',
+                this._onBookmarksManagerRequestSync,
+            );
             ensureSupportLockLivewireMorphBridge();
             this._onSupportLockLivewireMorphed = () => {
                 this.queueSupportLockTargetsUiSync();
@@ -1750,6 +1775,30 @@ document.addEventListener('alpine:init', () => {
                 this._onWirdSimulateDay = null;
             }
 
+            if (this._onWirdCongratsPreview) {
+                window.removeEventListener(
+                    'quran-wird-congrats-preview',
+                    this._onWirdCongratsPreview,
+                );
+                this._onWirdCongratsPreview = null;
+            }
+
+            if (this._onHistoryManagerRequestSync) {
+                window.removeEventListener(
+                    'quran-history-manager-request-sync',
+                    this._onHistoryManagerRequestSync,
+                );
+                this._onHistoryManagerRequestSync = null;
+            }
+
+            if (this._onBookmarksManagerRequestSync) {
+                window.removeEventListener(
+                    'quran-bookmarks-manager-request-sync',
+                    this._onBookmarksManagerRequestSync,
+                );
+                this._onBookmarksManagerRequestSync = null;
+            }
+
             if (typeof this._stopIsCalibratingWatcher === 'function') {
                 this._stopIsCalibratingWatcher();
                 this._stopIsCalibratingWatcher = null;
@@ -1912,6 +1961,7 @@ document.addEventListener('alpine:init', () => {
                 this._wirdCompletionTimer = null;
             }
             this.isWirdCompletionVisible = false;
+            this.isWirdCompletionPreviewPinned = false;
 
             if (this._fontReadyRecoveryTimer !== null) {
                 clearTimeout(this._fontReadyRecoveryTimer);
@@ -1936,6 +1986,10 @@ document.addEventListener('alpine:init', () => {
 
             this.teardownSearchStreamObserver();
             this._lastSearchStreamPayloadRaw = '';
+            if (this._searchResultsLeaveTimer !== null) {
+                clearTimeout(this._searchResultsLeaveTimer);
+                this._searchResultsLeaveTimer = null;
+            }
 
             if (typeof this._searchResultsAutoAnimateStop === 'function') {
                 this._searchResultsAutoAnimateStop();
@@ -3687,6 +3741,16 @@ document.addEventListener('alpine:init', () => {
                 clearTimeout(timerId);
             });
             this._wirdEntryRevealTimers = [];
+
+            this._historyManagerSyncTimers.forEach((timerId) => {
+                clearTimeout(timerId);
+            });
+            this._historyManagerSyncTimers = [];
+
+            this._bookmarksManagerSyncTimers.forEach((timerId) => {
+                clearTimeout(timerId);
+            });
+            this._bookmarksManagerSyncTimers = [];
         },
 
         clearWirdEntryRecovery({ resetSuppression = true } = {}) {
@@ -4040,6 +4104,12 @@ document.addEventListener('alpine:init', () => {
             return this.navigationSourceProfile(source);
         },
 
+        shouldScheduleWirdRevealRecovery(source = 'generic') {
+            const normalizedSource = this.wirdNavigationSourceProfile(source);
+
+            return !normalizedSource.startsWith('slider');
+        },
+
         async stepWird(direction = 'next', source = 'generic') {
             if (!this.wirdModeActive) {
                 return;
@@ -4130,7 +4200,9 @@ document.addEventListener('alpine:init', () => {
                     return;
                 }
 
-                this.queueWirdEntryRevealRecovery(targetPage, navigationRequestSerial);
+                if (this.shouldScheduleWirdRevealRecovery(source)) {
+                    this.queueWirdEntryRevealRecovery(targetPage, navigationRequestSerial);
+                }
 
                 return;
             }
@@ -4209,7 +4281,9 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            this.queueWirdEntryRevealRecovery(targetPage, navigationRequestSerial);
+            if (this.shouldScheduleWirdRevealRecovery(source)) {
+                this.queueWirdEntryRevealRecovery(targetPage, navigationRequestSerial);
+            }
         },
 
         async navigateWirdToStep(step, source = 'slider') {
@@ -4300,7 +4374,9 @@ document.addEventListener('alpine:init', () => {
                     return;
                 }
 
-                this.queueWirdEntryRevealRecovery(targetPage, navigationRequestSerial);
+                if (this.shouldScheduleWirdRevealRecovery(source)) {
+                    this.queueWirdEntryRevealRecovery(targetPage, navigationRequestSerial);
+                }
 
                 return;
             }
@@ -4328,7 +4404,9 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            this.queueWirdEntryRevealRecovery(targetPage, navigationRequestSerial);
+            if (this.shouldScheduleWirdRevealRecovery(source)) {
+                this.queueWirdEntryRevealRecovery(targetPage, navigationRequestSerial);
+            }
         },
 
         persistNavigationHistory() {
@@ -4773,6 +4851,50 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        clearHistoryManagerSyncQueue() {
+            this._historyManagerSyncTimers.forEach((timerId) => {
+                clearTimeout(timerId);
+            });
+            this._historyManagerSyncTimers = [];
+        },
+
+        clearBookmarksManagerSyncQueue() {
+            this._bookmarksManagerSyncTimers.forEach((timerId) => {
+                clearTimeout(timerId);
+            });
+            this._bookmarksManagerSyncTimers = [];
+        },
+
+        queueHistoryManagerTableSync() {
+            this.clearHistoryManagerSyncQueue();
+
+            [0, 72, 180, 360].forEach((delayMs) => {
+                const timerId = window.setTimeout(() => {
+                    this._historyManagerSyncTimers = this._historyManagerSyncTimers.filter(
+                        (activeTimerId) => activeTimerId !== timerId,
+                    );
+                    this.syncHistoryManagerTableRecords();
+                }, delayMs);
+
+                this._historyManagerSyncTimers.push(timerId);
+            });
+        },
+
+        queueBookmarksManagerTableSync() {
+            this.clearBookmarksManagerSyncQueue();
+
+            [0, 72, 180, 360].forEach((delayMs) => {
+                const timerId = window.setTimeout(() => {
+                    this._bookmarksManagerSyncTimers = this._bookmarksManagerSyncTimers.filter(
+                        (activeTimerId) => activeTimerId !== timerId,
+                    );
+                    this.syncBookmarksManagerTableRecords();
+                }, delayMs);
+
+                this._bookmarksManagerSyncTimers.push(timerId);
+            });
+        },
+
         syncHistoryManagerTableRecords() {
             const payload = {
                 records: this.navigationHistory,
@@ -4780,12 +4902,6 @@ document.addEventListener('alpine:init', () => {
             };
 
             this.emitLivewireManagerEvent('quran-history-manager-sync', payload);
-
-            if (this.historyModalOpen) {
-                window.setTimeout(() => {
-                    this.emitLivewireManagerEvent('quran-history-manager-sync', payload);
-                }, 90);
-            }
         },
 
         syncBookmarksManagerTableRecords() {
@@ -4794,12 +4910,6 @@ document.addEventListener('alpine:init', () => {
             };
 
             this.emitLivewireManagerEvent('quran-bookmarks-manager-sync', payload);
-
-            if (this.bookmarksModalOpen) {
-                window.setTimeout(() => {
-                    this.emitLivewireManagerEvent('quran-bookmarks-manager-sync', payload);
-                }, 90);
-            }
         },
 
         extractReorderIdsFromPayload(payload = null) {
@@ -6583,9 +6693,13 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            if (event?.ctrlKey || event?.metaKey || event?.altKey || event?.shiftKey) {
+                return;
+            }
+
             if (
                 event?.target?.closest?.(
-                    'input:not(.quran-page-counter-input):not([type="range"]), textarea, select, [contenteditable="true"]',
+                    'input:not([type="range"]), textarea, select, [contenteditable="true"], [role="textbox"]',
                 )
             ) {
                 return;
@@ -7658,8 +7772,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             if (
-                this._isModalLifecycleSettling ||
-                this._activeModalIds.size > 0 ||
+                this.hasBlockingModalLifecycleState() ||
                 this.isLoadingPage ||
                 !this.hasRenderablePage()
             ) {
@@ -7675,6 +7788,24 @@ document.addEventListener('alpine:init', () => {
             return Array.from(document.querySelectorAll('.fi-modal')).filter((modalElement) =>
                 modalElement.classList.contains('fi-modal-open'),
             ).length;
+        },
+
+        hasBlockingModalLifecycleState({ recoverStaleState = false } = {}) {
+            const openModalCount = this.openModalCount();
+
+            if (openModalCount > 0) {
+                return true;
+            }
+
+            if (!this._isModalLifecycleSettling && this._activeModalIds.size === 0) {
+                return false;
+            }
+
+            if (!recoverStaleState) {
+                return true;
+            }
+
+            return !this.recoverStaleModalLifecycleState();
         },
 
         recoverStaleModalLifecycleState() {
@@ -7785,6 +7916,15 @@ document.addEventListener('alpine:init', () => {
                 return false;
             }
 
+            if (this.hasBlockingModalLifecycleState()) {
+                this.traceReaderReveal('force-reveal-skipped', {
+                    reason,
+                    blockedByModalLifecycle: true,
+                });
+
+                return false;
+            }
+
             this.clearSwipeRevealWatchdog();
             this.syncPageInputToCurrentPage();
             this.isFittingPage = false;
@@ -7825,7 +7965,7 @@ document.addEventListener('alpine:init', () => {
                     return;
                 }
 
-                if (this.openModalCount() > 0 || this._isModalLifecycleSettling) {
+                if (this.hasBlockingModalLifecycleState()) {
                     return;
                 }
 
@@ -8468,14 +8608,7 @@ document.addEventListener('alpine:init', () => {
                     return;
                 }
 
-                if (this._isModalLifecycleSettling || this._activeModalIds.size > 0) {
-                    if (this.recoverStaleModalLifecycleState()) {
-                        this.traceReaderReveal('queue-page-reveal-recover-modal-state');
-                        this.queuePageReveal(layoutToken, 90);
-
-                        return;
-                    }
-
+                if (this.hasBlockingModalLifecycleState({ recoverStaleState: true })) {
                     this.traceReaderReveal('queue-page-reveal-blocked', {
                         reason: 'modal-lifecycle',
                     });
@@ -8598,14 +8731,21 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            if (this._isModalLifecycleSettling || this._activeModalIds.size > 0) {
-                if (this.recoverStaleModalLifecycleState()) {
-                    this._bypassNextFitCache = true;
-                } else {
-                    this.holdPageHiddenForModalLifecycle();
+            const hadTrackedModalLifecycleState =
+                this._isModalLifecycleSettling || this._activeModalIds.size > 0;
 
-                    return;
-                }
+            if (this.hasBlockingModalLifecycleState({ recoverStaleState: true })) {
+                this.holdPageHiddenForModalLifecycle();
+
+                return;
+            }
+
+            if (
+                hadTrackedModalLifecycleState &&
+                !this._isModalLifecycleSettling &&
+                this._activeModalIds.size === 0
+            ) {
+                this._bypassNextFitCache = true;
             }
 
             const isWaitingOnlyForReveal =
@@ -10698,7 +10838,7 @@ document.addEventListener('alpine:init', () => {
                 return 'fading-out';
             }
 
-            if (this.isFittingPage) {
+            if (this.isFittingPage || this.hasBlockingModalLifecycleState()) {
                 return 'fitting';
             }
 
@@ -12127,6 +12267,10 @@ document.addEventListener('alpine:init', () => {
 
             this.isWirdCompletionVisible = true;
 
+            if (this.isWirdCompletionPreviewPinned) {
+                return;
+            }
+
             this._wirdCompletionTimer = window.setTimeout(
                 () => {
                     this._wirdCompletionTimer = null;
@@ -12134,6 +12278,50 @@ document.addEventListener('alpine:init', () => {
                 },
                 Math.max(1200, Math.trunc(Number(durationMs) || wirdCompletionVisibleDurationMs)),
             );
+        },
+
+        openWirdCompletionPreview() {
+            if (this._wirdCompletionTimer !== null) {
+                clearTimeout(this._wirdCompletionTimer);
+                this._wirdCompletionTimer = null;
+            }
+
+            this.isWirdCompletionPreviewPinned = true;
+            this.isWirdCompletionVisible = true;
+        },
+
+        closeWirdCompletionPreview() {
+            if (this._wirdCompletionTimer !== null) {
+                clearTimeout(this._wirdCompletionTimer);
+                this._wirdCompletionTimer = null;
+            }
+
+            this.isWirdCompletionPreviewPinned = false;
+            this.isWirdCompletionVisible = false;
+        },
+
+        handleWirdCompletionPreviewEvent(detail = {}) {
+            const mode = String(detail?.mode ?? 'open')
+                .trim()
+                .toLowerCase();
+
+            if (mode === 'close') {
+                this.closeWirdCompletionPreview();
+
+                return;
+            }
+
+            if (mode === 'toggle') {
+                if (this.isWirdCompletionPreviewPinned) {
+                    this.closeWirdCompletionPreview();
+                } else {
+                    this.openWirdCompletionPreview();
+                }
+
+                return;
+            }
+
+            this.openWirdCompletionPreview();
         },
 
         async copyWordSelection(word, activationAnchor = null) {
@@ -13958,30 +14146,159 @@ document.addEventListener('alpine:init', () => {
             return parser.value;
         },
 
+        searchResultKey(result) {
+            const id = Math.max(0, Math.trunc(Number(result?.id ?? 0)));
+
+            if (id > 0) {
+                return `id:${id}`;
+            }
+
+            return `fallback:${Math.max(0, Math.trunc(Number(result?.surah_number ?? 0)))}:${Math.max(0, Math.trunc(Number(result?.ayah_number ?? 0)))}:${Math.max(0, Math.trunc(Number(result?.page_number ?? 0)))}:${Math.max(0, Math.trunc(Number(result?.match_rank ?? 0)))}`;
+        },
+
+        searchResultIsLeaving(result) {
+            return Boolean(result?.__leaving);
+        },
+
+        activeSearchResults() {
+            return (Array.isArray(this.search.results) ? this.search.results : []).filter(
+                (result) => !this.searchResultIsLeaving(result),
+            );
+        },
+
+        normalizeSearchResults(nextResults = []) {
+            return (Array.isArray(nextResults) ? nextResults : [])
+                .map((result) => {
+                    if (!result || typeof result !== 'object') {
+                        return null;
+                    }
+
+                    const key = this.searchResultKey(result);
+
+                    return {
+                        ...result,
+                        __key: key,
+                        __leaving: false,
+                    };
+                })
+                .filter((result) => result !== null)
+                .slice(0, 24);
+        },
+
         mergeSearchResults(existingResults, incomingResults) {
-            const merged = [];
-            const seenKeys = new Set();
-            const pushResult = (result) => {
-                if (!result || typeof result !== 'object') {
+            const mergedByKey = new Map();
+
+            this.normalizeSearchResults(existingResults).forEach((result) => {
+                mergedByKey.set(result.__key, result);
+            });
+
+            this.normalizeSearchResults(incomingResults).forEach((result) => {
+                const previous = mergedByKey.get(result.__key) ?? {};
+                mergedByKey.set(result.__key, {
+                    ...previous,
+                    ...result,
+                    __key: result.__key,
+                    __leaving: false,
+                });
+            });
+
+            return Array.from(mergedByKey.values()).slice(0, 24);
+        },
+
+        syncSearchResultMetadata(results = []) {
+            const activeResults = (Array.isArray(results) ? results : []).filter(
+                (result) => !this.searchResultIsLeaving(result),
+            );
+
+            this.search.isOpen = (Array.isArray(results) ? results : []).length > 0;
+            this.search.readyResult = activeResults.length === 1 ? activeResults[0] : null;
+        },
+
+        queueSearchLeaveCleanup() {
+            if (this._searchResultsLeaveTimer !== null) {
+                clearTimeout(this._searchResultsLeaveTimer);
+                this._searchResultsLeaveTimer = null;
+            }
+
+            const hasLeavingResults = (
+                Array.isArray(this.search.results) ? this.search.results : []
+            ).some((result) => this.searchResultIsLeaving(result));
+
+            if (!hasLeavingResults) {
+                return;
+            }
+
+            this._searchResultsLeaveTimer = window.setTimeout(() => {
+                this.search.results = (
+                    Array.isArray(this.search.results) ? this.search.results : []
+                ).filter((result) => !this.searchResultIsLeaving(result));
+                this.syncSearchResultMetadata(this.search.results);
+                this._searchResultsLeaveTimer = null;
+            }, 190);
+        },
+
+        setSearchResults(nextResults, { immediate = false } = {}) {
+            const normalizedNextResults = this.normalizeSearchResults(nextResults);
+
+            if (immediate) {
+                if (this._searchResultsLeaveTimer !== null) {
+                    clearTimeout(this._searchResultsLeaveTimer);
+                    this._searchResultsLeaveTimer = null;
+                }
+
+                this.search.results = normalizedNextResults;
+                this.syncSearchResultMetadata(this.search.results);
+
+                return;
+            }
+
+            const currentResults = Array.isArray(this.search.results) ? this.search.results : [];
+            const nextByKey = new Map(
+                normalizedNextResults.map((result) => [result.__key, result]),
+            );
+            const composedResults = [];
+            const usedKeys = new Set();
+
+            currentResults.forEach((result) => {
+                const resultKey = this.searchResultKey(result);
+                const nextMatch = nextByKey.get(resultKey);
+
+                if (nextMatch) {
+                    composedResults.push({
+                        ...result,
+                        ...nextMatch,
+                        __key: resultKey,
+                        __leaving: false,
+                    });
+                    usedKeys.add(resultKey);
+
                     return;
                 }
 
-                const id = Math.max(0, Math.trunc(Number(result.id ?? 0)));
-                const fallbackKey = `${Math.max(0, Math.trunc(Number(result.surah_number ?? 0)))}:${Math.max(0, Math.trunc(Number(result.ayah_number ?? 0)))}:${Math.max(0, Math.trunc(Number(result.page_number ?? 0)))}:${Math.max(0, Math.trunc(Number(result.match_rank ?? 0)))}`;
-                const dedupeKey = id > 0 ? `id:${id}` : `fallback:${fallbackKey}`;
+                if (this.searchResultIsLeaving(result)) {
+                    composedResults.push(result);
 
-                if (seenKeys.has(dedupeKey)) {
                     return;
                 }
 
-                seenKeys.add(dedupeKey);
-                merged.push(result);
-            };
+                composedResults.push({
+                    ...result,
+                    __key: resultKey,
+                    __leaving: true,
+                });
+            });
 
-            (Array.isArray(existingResults) ? existingResults : []).forEach(pushResult);
-            (Array.isArray(incomingResults) ? incomingResults : []).forEach(pushResult);
+            normalizedNextResults.forEach((result) => {
+                if (usedKeys.has(result.__key)) {
+                    return;
+                }
 
-            return merged;
+                composedResults.push(result);
+            });
+
+            this.search.results = composedResults;
+            this.syncSearchResultMetadata(this.search.results);
+            this.queueSearchLeaveCleanup();
         },
 
         applySearchStreamPayload(payload) {
@@ -14000,18 +14317,18 @@ document.addEventListener('alpine:init', () => {
 
             if (hasStreamChunk && stage !== 'complete') {
                 this.search.streamHasUpdates = true;
-                this.search.results = stageResults;
+                this.setSearchResults(
+                    this.mergeSearchResults(this.activeSearchResults(), stageResults),
+                );
             } else if (allResults.length > 0) {
-                this.search.results = this.search.streamHasUpdates
-                    ? this.mergeSearchResults(this.search.results, allResults).slice(0, 24)
-                    : allResults;
+                this.setSearchResults(
+                    this.search.streamHasUpdates
+                        ? this.mergeSearchResults(this.activeSearchResults(), allResults)
+                        : allResults,
+                );
             } else if (!this.search.streamHasUpdates) {
-                this.search.results = [];
+                this.setSearchResults([], { immediate: true });
             }
-
-            this.search.isOpen = this.search.results.length > 0;
-            this.search.readyResult =
-                this.search.results.length === 1 ? this.search.results[0] : null;
 
             if (typeof payload?.is_loading === 'boolean') {
                 this.search.isLoading = payload.is_loading;
@@ -14299,7 +14616,7 @@ document.addEventListener('alpine:init', () => {
                     this.historyModalOpen = true;
                     this.$nextTick(() => {
                         this.ensureHistoryRowsAnimations();
-                        this.syncHistoryManagerTableRecords();
+                        this.queueHistoryManagerTableSync();
                     });
                 }
 
@@ -14316,7 +14633,7 @@ document.addEventListener('alpine:init', () => {
                     this.bookmarksModalOpen = true;
                     this.$nextTick(() => {
                         this.ensureBookmarksRowsAnimations();
-                        this.syncBookmarksManagerTableRecords();
+                        this.queueBookmarksManagerTableSync();
                     });
                 }
 
@@ -14443,25 +14760,10 @@ document.addEventListener('alpine:init', () => {
         },
 
         ensureSearchResultAnimations() {
-            if (typeof window.autoAnimate !== 'function') {
-                return;
-            }
-
             if (typeof this._searchResultsAutoAnimateStop === 'function') {
-                return;
+                this._searchResultsAutoAnimateStop();
+                this._searchResultsAutoAnimateStop = null;
             }
-
-            const resultsContainer = this.$refs.searchResultsList;
-
-            if (!(resultsContainer instanceof Element)) {
-                return;
-            }
-
-            this._searchResultsAutoAnimateStop = window.autoAnimate(resultsContainer, {
-                duration: 230,
-                easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
-                disrespectUserMotionPreference: true,
-            });
         },
 
         async handleSearchModalOpened() {
@@ -14479,9 +14781,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             this.search.query = '';
-            this.search.results = [];
-            this.search.readyResult = null;
-            this.search.isOpen = false;
+            this.setSearchResults([], { immediate: true });
             this.activeAyahIndex = 0;
             this.hoveredAyahIndex = 0;
             this.activeWordIndex = 0;
@@ -14512,9 +14812,7 @@ document.addEventListener('alpine:init', () => {
             this.search.modalOpen = false;
             this._lastKnownModalOpenState = false;
             this.search.query = '';
-            this.search.results = [];
-            this.search.readyResult = null;
-            this.search.isOpen = false;
+            this.setSearchResults([], { immediate: true });
             this.search.isLoading = false;
             this.dispatchManagerModalsVisibilityState();
 
@@ -14854,9 +15152,7 @@ document.addEventListener('alpine:init', () => {
             const normalizedQuery = this.normalizeSearchQuery(this.search.query);
 
             if (!normalizedQuery) {
-                this.search.results = [];
-                this.search.isOpen = false;
-                this.search.readyResult = null;
+                this.setSearchResults([], { immediate: true });
                 this.search.isLoading = false;
                 this.search.streamHasUpdates = false;
                 this._searchRequestSerial += 1;
@@ -14866,9 +15162,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             if (normalizedQuery.length < this.search.minQueryLength) {
-                this.search.results = [];
-                this.search.isOpen = false;
-                this.search.readyResult = null;
+                this.setSearchResults([], { immediate: true });
                 this.search.isLoading = false;
                 this.search.streamHasUpdates = false;
                 this._searchRequestSerial += 1;
@@ -14882,9 +15176,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             if (!this.search.isReady) {
-                this.search.results = [];
-                this.search.isOpen = false;
-                this.search.readyResult = null;
+                this.setSearchResults([], { immediate: true });
                 this.search.isLoading = false;
                 this.search.streamHasUpdates = false;
                 this._searchRequestSerial += 1;
@@ -14909,12 +15201,11 @@ document.addEventListener('alpine:init', () => {
                     return;
                 }
 
-                this.search.results = this.search.streamHasUpdates
-                    ? this.mergeSearchResults(this.search.results, results).slice(0, 24)
-                    : results;
-                this.search.isOpen = this.search.results.length > 0;
-                this.search.readyResult =
-                    this.search.results.length === 1 ? this.search.results[0] : null;
+                this.setSearchResults(
+                    this.search.streamHasUpdates
+                        ? this.mergeSearchResults(this.activeSearchResults(), results)
+                        : results,
+                );
                 this.$nextTick(() => {
                     this.ensureSearchResultAnimations();
                 });
@@ -14923,9 +15214,7 @@ document.addEventListener('alpine:init', () => {
                     return;
                 }
 
-                this.search.results = [];
-                this.search.isOpen = false;
-                this.search.readyResult = null;
+                this.setSearchResults([], { immediate: true });
             } finally {
                 if (requestSerial === this._searchRequestSerial) {
                     this.search.isLoading = false;

@@ -39,6 +39,11 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
      */
     public array $surahNames = [];
 
+    public function mount(): void
+    {
+        $this->dispatch('quran-history-manager-request-sync');
+    }
+
     #[On('quran-history-manager-sync')]
     public function syncFromClient(array $records = [], array $surahNames = []): void
     {
@@ -51,10 +56,6 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
         return $table
             ->defaultSort('sort_order')
             ->reorderable('sort_order')
-            ->afterReordering(fn (array $order): mixed => $this->dispatch(
-                'quran-history-manager-reordered',
-                order: $order,
-            ))
             ->records(function (
                 ?string $sortColumn,
                 ?string $sortDirection,
@@ -86,7 +87,10 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
             ->columns([
                 TextColumn::make('sort_order')
                     ->label(arabic_text('الترتيب'))
-                    ->numeric()
+                    ->state(static fn (array $record): string => (string) max(1, (int) ($record['sort_order'] ?? 1)))
+                    ->extraAttributes([
+                        'lang' => 'en',
+                    ])
                     ->sortable(),
                 TextColumn::make('page_number')
                     ->label(arabic_text('الصفحة'))
@@ -155,7 +159,7 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
                         'quran-history-manager-updated',
                         id: (string) ($record['id'] ?? ''),
                         note: (string) ($data['note'] ?? ''),
-                        tags: array_values($data['tags'] ?? []),
+                        tags: $this->normalizeTagsInput($data['tags'] ?? []),
                     )),
             ])
             ->headerActions([
@@ -198,7 +202,7 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
 
             $normalizedRecords[] = [
                 'id' => $id,
-                'sort_order' => max(1, (int) ($record['sort_order'] ?? $index + 1)),
+                'sort_order' => $this->resolveSortOrderValue($record['sort_order'] ?? null, $index),
                 'page_number' => max(1, (int) ($record['page_number'] ?? 1)),
                 'surah_number' => max(0, (int) ($record['surah_number'] ?? 0)),
                 'source' => trim((string) ($record['source'] ?? 'search-result')),
@@ -212,6 +216,29 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
             ->sortBy('sort_order', SORT_NATURAL)
             ->values()
             ->all();
+    }
+
+    /**
+     * @param  array<int|string, int|string>  $order
+     */
+    public function reorderTable(array $order, int|string|null $draggedRecordKey = null): void
+    {
+        if (! $this->getTable()->isReorderable()) {
+            return;
+        }
+
+        $normalizedOrder = array_values(array_filter(
+            array_map(static fn (mixed $recordKey): string => trim((string) $recordKey), $order),
+            static fn (string $recordKey): bool => $recordKey !== '',
+        ));
+
+        if ($normalizedOrder === []) {
+            return;
+        }
+
+        $this->getTable()->callBeforeReordering($normalizedOrder);
+        $this->dispatch('quran-history-manager-reordered', order: $normalizedOrder);
+        $this->getTable()->callAfterReordering($normalizedOrder);
     }
 
     /**
@@ -342,5 +369,29 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
             array_map(static fn (mixed $tag): string => trim((string) $tag), $tags),
             static fn (string $tag): bool => $tag !== '',
         )));
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function normalizeTagsInput(mixed $value): array
+    {
+        $source = is_array($value) ? $value : explode(',', (string) $value);
+
+        return array_values(array_filter(
+            array_map(static fn (mixed $tag): string => trim((string) $tag), $source),
+            static fn (string $tag): bool => $tag !== '',
+        ));
+    }
+
+    private function resolveSortOrderValue(mixed $value, int $index): int
+    {
+        $parsed = (int) $value;
+
+        if ($parsed > 0) {
+            return $parsed;
+        }
+
+        return $index + 1;
     }
 }
