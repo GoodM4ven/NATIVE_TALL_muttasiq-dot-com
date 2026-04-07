@@ -32,11 +32,13 @@ document.addEventListener('alpine:init', () => {
         lockWiggles: new WeakMap(),
         isTouchDevice: false,
         isInsightsExpanded: false,
+        isInsightsFastClosing: false,
         isInsightsPointerInside: false,
         insightsHideDelayMs: 2500,
         insightsHideTimer: null,
         insightsRefreshTimer: null,
         insightsPanelHeight: 0,
+        insightsFastCloseDurationMs: 450,
         progressLabels: {
             sabah: config?.progressLabels?.sabah ?? 'أذكار الصباح',
             wird: config?.progressLabels?.wird ?? 'الوِرد اليومي',
@@ -58,6 +60,7 @@ document.addEventListener('alpine:init', () => {
         _onWindowStorage: null,
         _onSwitchView: null,
         _onWindowResize: null,
+        _insightsFastCloseToken: null,
         init() {
             this.captionShadow = window.makeBoxShadowFromColor?.('--primary-500') ?? 'none';
             this.captionShadowDark = window.makeBoxShadowFromColor?.('--primary-100') ?? 'none';
@@ -233,6 +236,26 @@ document.addEventListener('alpine:init', () => {
             const rect = insightsZone.getBoundingClientRect();
 
             return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+        },
+        isInsightsZoneHoveredNow() {
+            const insightsZone = this.getInsightsZoneElement();
+
+            if (!(insightsZone instanceof Element) || this.isTouchDevice) {
+                return false;
+            }
+
+            try {
+                return insightsZone.matches(':hover');
+            } catch {
+                return false;
+            }
+        },
+        handleRootOutsideClick() {
+            if (!this.isTouchDevice && this.isInsightsExpanded) {
+                this.collapseInsightsForNavigation();
+            }
+
+            this.handleOutside(true);
         },
         normalizeProgressPercent(value) {
             const numeric = Number(value ?? NaN);
@@ -420,6 +443,7 @@ document.addEventListener('alpine:init', () => {
         },
         showInsightsPanel({ refresh = true } = {}) {
             this.clearInsightsHideTimer();
+            this.isInsightsFastClosing = false;
 
             if (refresh) {
                 this.refreshDailyProgress();
@@ -436,18 +460,104 @@ document.addEventListener('alpine:init', () => {
             }
 
             this.insightsHideTimer = window.setTimeout(() => {
-                if (this.isInsightsPointerInside) {
+                if (this.isInsightsPointerInside || this.isInsightsZoneHoveredNow()) {
+                    this.isInsightsPointerInside = true;
+                    this.clearInsightsHideTimer();
                     return;
                 }
 
+                this.isInsightsFastClosing = false;
                 this.isInsightsExpanded = false;
             }, this.insightsHideDelayMs);
         },
         resetInsightsPanelState() {
             this.clearInsightsHideTimer();
             this.stopInsightsRefreshLoop();
+            this.isInsightsFastClosing = false;
             this.isInsightsPointerInside = false;
             this.isInsightsExpanded = false;
+        },
+        collapseInsightsForNavigation() {
+            this.clearInsightsHideTimer();
+            this.isInsightsPointerInside = false;
+
+            if (!this.isInsightsExpanded) {
+                this.isInsightsFastClosing = false;
+                return 0;
+            }
+
+            const durationMs = Math.max(
+                0,
+                Math.trunc(Number(this.insightsFastCloseDurationMs) || 450),
+            );
+            const resetToken = Symbol('insights-fast-close-token');
+
+            this._insightsFastCloseToken = resetToken;
+            this.isInsightsFastClosing = true;
+            this.isInsightsExpanded = false;
+
+            window.setTimeout(() => {
+                if (this._insightsFastCloseToken !== resetToken) {
+                    return;
+                }
+
+                this.isInsightsFastClosing = false;
+            }, durationMs + 40);
+
+            return durationMs;
+        },
+        shouldDelayNavigationCallback(callback) {
+            if (typeof callback !== 'string') {
+                return false;
+            }
+
+            const normalized = callback.replace(/\s+/g, '');
+
+            return (
+                normalized.includes('athkar-app-gate') ||
+                normalized.includes('quran-app-gate') ||
+                normalized.includes('openQuranEntry()')
+            );
+        },
+        executeItemCallback(callback, element) {
+            if (typeof callback === 'function') {
+                callback();
+                return;
+            }
+
+            if (typeof callback !== 'string') {
+                return;
+            }
+
+            try {
+                if (element && window.Alpine?.evaluate) {
+                    const result = window.Alpine.evaluate(element, callback);
+
+                    if (typeof result === 'function') {
+                        result();
+                    }
+                    return;
+                }
+            } catch {
+                // Fall through to direct execution.
+            }
+
+            try {
+                const maybeFunction = new Function(`return (${callback})`)();
+
+                if (typeof maybeFunction === 'function') {
+                    maybeFunction();
+                    return;
+                }
+            } catch {
+                // Fall through to direct execution.
+            }
+
+            try {
+                new Function(callback)();
+            } catch {
+                // Silently ignore malformed callbacks.
+            }
         },
         handleInsightsHoverEnter() {
             this.isInsightsPointerInside = true;
@@ -485,6 +595,11 @@ document.addEventListener('alpine:init', () => {
             this.showInsightsPanel();
         },
         toggleInsightsPanel() {
+            if (this.isInsightsExpanded) {
+                this.collapseInsightsForNavigation();
+                return;
+            }
+
             this.isInsightsPointerInside = true;
             this.showInsightsPanel();
         },
@@ -574,6 +689,10 @@ document.addEventListener('alpine:init', () => {
 
             const touch = event.touches[0];
             const item = this.getItemFromPoint(touch.clientX, touch.clientY);
+
+            if (item) {
+                this.collapseInsightsForNavigation();
+            }
 
             this.isTouching = true;
             this.lastTouchAt = Date.now();
@@ -762,44 +881,18 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            if (typeof callback === 'function') {
-                callback();
-                return;
-            }
+            if (this.shouldDelayNavigationCallback(callback)) {
+                const delayMs = this.collapseInsightsForNavigation();
 
-            if (typeof callback !== 'string') {
-                return;
-            }
-
-            try {
-                if (element && window.Alpine?.evaluate) {
-                    const result = window.Alpine.evaluate(element, callback);
-
-                    if (typeof result === 'function') {
-                        result();
-                    }
+                if (delayMs > 0) {
+                    window.setTimeout(() => {
+                        this.executeItemCallback(callback, element);
+                    }, delayMs);
                     return;
                 }
-            } catch {
-                // Fall through to direct execution.
             }
 
-            try {
-                const maybeFunction = new Function(`return (${callback})`)();
-
-                if (typeof maybeFunction === 'function') {
-                    maybeFunction();
-                    return;
-                }
-            } catch {
-                // Fall through to direct execution.
-            }
-
-            try {
-                new Function(callback)();
-            } catch {
-                // Silently ignore malformed callbacks.
-            }
+            this.executeItemCallback(callback, element);
         },
         setActiveItem(detail, source, fromTouch = false) {
             if (!detail?.element || !detail.caption) {

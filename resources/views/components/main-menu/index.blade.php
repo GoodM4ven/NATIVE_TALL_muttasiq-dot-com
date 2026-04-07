@@ -221,7 +221,6 @@
         .main-menu-insights-zone {
             --main-menu-grid-reference-width: 20rem;
             width: min(100%, calc(var(--main-menu-grid-reference-width) * 1.1));
-            margin-top: 0.7rem;
             padding: 0.4rem 0.15rem 0.15rem;
             user-select: none;
             -webkit-user-select: none;
@@ -240,27 +239,30 @@
             justify-content: center;
             width: 100%;
             min-height: 1.85rem;
+            position: relative;
+            z-index: 8;
         }
 
         .main-menu-insights-trigger {
             position: relative;
             display: inline-flex;
             width: 100%;
-            height: 0.46rem;
+            height: 0.56rem;
             border-radius: 9999px;
             background: linear-gradient(90deg,
-                    color-mix(in srgb, var(--primary-100) 40%, white 60%) 0%,
-                    color-mix(in srgb, var(--primary-200) 32%, white 68%) 48%,
-                    color-mix(in srgb, var(--primary-100) 40%, white 60%) 100%);
+                    color-mix(in srgb, var(--primary-300) 78%, white 5%) 0%,
+                    color-mix(in srgb, var(--primary-400) 86%, white 5%) 52%,
+                    color-mix(in srgb, var(--primary-300) 78%, white 5%) 100%);
+            border: 1px solid color-mix(in srgb, var(--primary-500) 30%, white 38%);
             box-shadow:
-                0 0 0 1px color-mix(in srgb, white 78%, var(--primary-200) 22%),
-                0 0 18px color-mix(in srgb, white 56%, transparent),
-                0 0 34px color-mix(in srgb, var(--primary-300) 34%, transparent);
+                0 0 0 1px color-mix(in srgb, var(--primary-100) 50%, transparent),
+                0 0 16px color-mix(in srgb, var(--primary-300) 20%, transparent),
+                0 0 32px color-mix(in srgb, var(--primary-400) 0%, transparent);
             transition:
-                transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
-                box-shadow 320ms ease,
-                opacity 260ms ease;
-            opacity: 0.98;
+                transform 750ms cubic-bezier(0.22, 1, 0.36, 1),
+                box-shadow 450ms ease,
+                opacity 340ms ease;
+            opacity: 1;
             outline: none;
             transform: translateY(0) scaleX(1);
         }
@@ -268,31 +270,32 @@
         .main-menu-insights-trigger::before {
             content: '';
             position: absolute;
-            inset: -0.52rem;
+            inset-inline: 1rem;
+            inset-block: -1rem;
             border-radius: inherit;
             background: radial-gradient(ellipse at center,
-                    color-mix(in srgb, white 66%, transparent) 0%,
-                    color-mix(in srgb, var(--primary-200) 28%, transparent) 42%,
-                    transparent 78%);
+                    color-mix(in srgb, white 60%, transparent) 10%,
+                    color-mix(in srgb, var(--primary-200) 10%, transparent) 70%,
+                    transparent 50%);
             opacity: 0;
-            transition: opacity 280ms ease;
+            transition: opacity 400ms ease;
             filter: blur(2px);
         }
 
         .main-menu-insights-trigger::after {
             content: '';
             position: absolute;
-            inset: 0;
+            inset: 0.1rem;
             border-radius: inherit;
             background: linear-gradient(105deg,
                     transparent 0%,
-                    color-mix(in srgb, white 94%, transparent) 45%,
+                    color-mix(in srgb, white 90%, transparent) 50%,
                     transparent 70%);
             opacity: 0;
             transform: translateX(-30%) skewX(-16deg);
             transition:
-                opacity 260ms ease,
-                transform 380ms ease;
+                opacity 400ms ease,
+                transform 400ms ease;
         }
 
         .main-menu-insights-trigger:hover,
@@ -300,10 +303,10 @@
             opacity: 1;
             transform: translateY(-1px) scaleX(1.05);
             box-shadow:
-                0 0 0 1px color-mix(in srgb, white 90%, var(--primary-200) 10%),
-                0 0 22px color-mix(in srgb, white 76%, transparent),
-                0 0 44px color-mix(in srgb, var(--primary-300) 42%, transparent),
-                0 0 70px color-mix(in srgb, var(--primary-400) 34%, transparent);
+                0 0 0 1px color-mix(in srgb, white 70%, var(--primary-200) 40%),
+                0 0 22px color-mix(in srgb, white 40%, transparent),
+                0 0 44px color-mix(in srgb, var(--primary-300) 50%, transparent),
+                0 0 66px color-mix(in srgb, var(--primary-400) 70%, transparent);
         }
 
         .main-menu-insights-trigger[data-expanded='true'] {
@@ -344,9 +347,15 @@
             opacity: 0;
             pointer-events: none;
             transition:
-                max-height 520ms cubic-bezier(0.22, 1, 0.36, 1),
-                opacity 280ms ease;
+                max-height 900ms cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 400ms ease;
             will-change: max-height, opacity;
+        }
+
+        .main-menu-insights-reveal[data-fast-close='true'] {
+            transition:
+                max-height 180ms cubic-bezier(0.4, 0, 1, 1),
+                opacity 140ms ease;
         }
 
         .main-menu-insights-reveal[data-expanded='true'] {
@@ -374,8 +383,14 @@
             transform-origin: top center;
             opacity: 0;
             transition:
-                transform 520ms cubic-bezier(0.22, 1, 0.36, 1),
-                opacity 320ms ease;
+                transform 450ms cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 450ms ease;
+        }
+
+        .main-menu-insights-panel[data-fast-close='true'] {
+            transition:
+                transform 180ms cubic-bezier(0.4, 0, 1, 1),
+                opacity 140ms ease;
         }
 
         .main-menu-insights-panel::before {
@@ -471,10 +486,14 @@
         .main-menu-insights-row {
             display: grid;
             grid-template-columns: minmax(0, 1fr) auto;
+            grid-template-rows: 1.25rem 0.56rem;
             align-items: center;
             gap: 0.55rem 0.7rem;
             position: relative;
-            padding: 0.62rem 0.68rem 0.68rem;
+            height: 4.3rem;
+            min-height: 4.3rem;
+            max-height: 4.3rem;
+            padding: 0.62rem 0.68rem 0.64rem;
             border-radius: 0.95rem;
             border: 1px solid color-mix(in srgb, white 52%, var(--primary-200) 16%);
             background: linear-gradient(160deg,
@@ -484,6 +503,7 @@
                 0 10px 22px color-mix(in srgb, var(--primary-900) 10%, transparent),
                 0 0 26px color-mix(in srgb, white 22%, transparent);
             backdrop-filter: blur(20px) saturate(165%);
+            overflow: clip;
         }
 
         .dark .main-menu-insights-row {
@@ -501,6 +521,12 @@
         }
 
         .main-menu-insights-title {
+            display: inline-flex;
+            align-items: center;
+            min-height: 1.25rem;
+            height: 1.25rem;
+            max-height: 1.25rem;
+            line-height: 1;
             color: color-mix(in srgb, var(--primary-900) 84%, transparent);
         }
 
@@ -511,12 +537,18 @@
         .main-menu-insights-meta {
             display: inline-flex;
             align-items: center;
+            justify-self: start;
             gap: 0.36rem;
+            min-height: 1.25rem;
+            height: 1.25rem;
+            max-height: 1.25rem;
             font-size: 0.72rem;
             font-weight: 800;
+            line-height: 1.25rem;
             letter-spacing: 0.01em;
             color: color-mix(in srgb, var(--primary-800) 82%, transparent);
             text-shadow: 0 0 12px color-mix(in srgb, white 32%, transparent);
+            font-variant-numeric: tabular-nums;
         }
 
         .dark .main-menu-insights-meta {
@@ -571,13 +603,16 @@
             content: '';
             position: absolute;
             inset: 0;
-            background: linear-gradient(108deg,
+            background-image: linear-gradient(90deg,
                     transparent 0%,
-                    color-mix(in srgb, white 84%, transparent) 45%,
-                    transparent 70%);
-            opacity: 0.78;
-            transform: translateX(-32%) skewX(-16deg);
-            animation: main-menu-insights-neon-sweep 1.55s ease-in-out infinite;
+                    color-mix(in srgb, var(--primary-400) 35%, transparent) 35%,
+                    color-mix(in srgb, var(--primary-500) 45%, transparent) 50%,
+                    color-mix(in srgb, var(--success-400) 35%, transparent) 65%,
+                    transparent 100%);
+            background-size: 200% 100%;
+            mix-blend-mode: screen;
+            opacity: 0.75;
+            animation: main-menu-insights-flow 7.5s linear infinite;
             pointer-events: none;
         }
 
@@ -609,19 +644,13 @@
             }
         }
 
-        @keyframes main-menu-insights-neon-sweep {
+        @keyframes main-menu-insights-flow {
             0% {
-                transform: translateX(-34%) skewX(-16deg);
-                opacity: 0.12;
-            }
-
-            42% {
-                opacity: 0.95;
+                background-position: 0% 50%;
             }
 
             100% {
-                transform: translateX(34%) skewX(-16deg);
-                opacity: 0.2;
+                background-position: 200% 50%;
             }
         }
     </style>
@@ -639,7 +668,7 @@
     x-on:main-menu-item-enter="handleItemEnter($event.detail)"
     x-on:main-menu-item-leave="handleItemLeave()"
     x-on:main-menu-item-click="handleItemClick($event.detail)"
-    x-on:click.outside="handleOutside(true)"
+    x-on:click.outside="handleRootOutsideClick()"
 >
     <!-- Selected Item Caption -->
     <div
@@ -757,12 +786,14 @@
                 class="main-menu-insights-reveal"
                 x-ref="insightsReveal"
                 x-bind:data-expanded="isInsightsExpanded ? 'true' : 'false'"
+                x-bind:data-fast-close="isInsightsFastClosing ? 'true' : 'false'"
                 x-bind:style="`max-height: ${isInsightsExpanded ? insightsPanelHeight : 0}px;`"
             >
                 <section
                     class="main-menu-insights-panel"
                     data-testid="main-menu-insights-panel"
                     x-ref="insightsPanelBody"
+                    x-bind:data-fast-close="isInsightsFastClosing ? 'true' : 'false'"
                 >
                     <span class="main-menu-insights-powered main-menu-insights-powered--tl">POWERED</span>
                     <span class="main-menu-insights-powered main-menu-insights-powered--tr">POWERED</span>
