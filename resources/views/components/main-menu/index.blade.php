@@ -232,6 +232,7 @@
 
         .main-menu-insights-zone {
             --main-menu-grid-reference-width: 20rem;
+            --main-menu-insights-panel-gap: 0.68rem;
             width: min(100%, calc(var(--main-menu-grid-reference-width) * 1.1));
             padding: 0.4rem 0.15rem 0.15rem;
             user-select: none;
@@ -252,12 +253,13 @@
             width: 100%;
             min-height: 1.85rem;
             position: relative;
-            z-index: 8;
+            z-index: 10;
         }
 
         .main-menu-insights-trigger {
             position: relative;
             display: inline-flex;
+            overflow: hidden;
             width: 100%;
             height: 0.56rem;
             border-radius: 9999px;
@@ -282,8 +284,7 @@
         .main-menu-insights-trigger::before {
             content: '';
             position: absolute;
-            inset-inline: 1rem;
-            inset-block: -1rem;
+            inset: 0;
             border-radius: inherit;
             background: radial-gradient(ellipse at center,
                     color-mix(in srgb, white 60%, transparent) 10%,
@@ -297,7 +298,7 @@
         .main-menu-insights-trigger::after {
             content: '';
             position: absolute;
-            inset: 0.1rem;
+            inset: 0;
             border-radius: inherit;
             background: linear-gradient(105deg,
                     transparent 0%,
@@ -309,6 +310,7 @@
                 opacity 400ms ease,
                 transform 400ms ease;
             animation: main-menu-insights-line-shimmer 2.5s linear infinite;
+            pointer-events: none;
         }
 
         .main-menu-insights-trigger:hover,
@@ -353,10 +355,12 @@
         }
 
         .main-menu-insights-reveal {
+            position: relative;
+            z-index: 2;
             width: 100%;
             max-height: 0;
             opacity: 0;
-            transform: translateY(-0.7rem);
+            transform: translateY(-0.28rem);
             pointer-events: none;
             transition:
                 max-height 900ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -394,7 +398,7 @@
                 0 8px 20px color-mix(in srgb, var(--primary-400) 14%, transparent),
                 0 0 46px color-mix(in srgb, white 32%, transparent);
             padding: 1.05rem 0.92rem 0.95rem;
-            transform: translateY(-1.1rem) scale(0.985);
+            transform: translateY(-1rem) scale(0.985);
             transform-origin: top center;
             opacity: 0;
             transition:
@@ -440,7 +444,7 @@
         }
 
         .main-menu-insights-reveal[data-expanded='true'] .main-menu-insights-panel {
-            transform: translateY(0);
+            transform: translateY(var(--main-menu-insights-panel-gap));
             opacity: 1;
         }
 
@@ -526,12 +530,16 @@
             text-align: start;
             appearance: none;
             outline: none;
-            cursor: pointer;
+            cursor: pointer !important;
             transition:
                 background 260ms ease,
                 border-color 260ms ease,
                 box-shadow 260ms ease,
                 transform 220ms ease;
+        }
+
+        .main-menu-insights-row--button * {
+            cursor: pointer !important;
         }
 
         .main-menu-insights-row--button:hover,
@@ -859,10 +867,6 @@
                     x-ref="insightsPanelBody"
                     x-bind:data-fast-close="isInsightsFastClosing ? 'true' : 'false'"
                 >
-                    <span class="main-menu-insights-powered main-menu-insights-powered--tl">POWERED</span>
-                    <span class="main-menu-insights-powered main-menu-insights-powered--tr">POWERED</span>
-                    <span class="main-menu-insights-powered main-menu-insights-powered--bl">POWERED</span>
-                    <span class="main-menu-insights-powered main-menu-insights-powered--br">POWERED</span>
                     <button
                         class="main-menu-insights-row main-menu-insights-row--button"
                         type="button"
