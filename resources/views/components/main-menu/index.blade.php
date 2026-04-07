@@ -354,8 +354,8 @@
 
         .main-menu-insights-reveal[data-fast-close='true'] {
             transition:
-                max-height 180ms cubic-bezier(0.4, 0, 1, 1),
-                opacity 140ms ease;
+                max-height var(--main-menu-insights-fast-close-duration, 450ms) cubic-bezier(0.4, 0, 1, 1),
+                opacity var(--main-menu-insights-fast-close-opacity-duration, 360ms) ease;
         }
 
         .main-menu-insights-reveal[data-expanded='true'] {
@@ -389,8 +389,8 @@
 
         .main-menu-insights-panel[data-fast-close='true'] {
             transition:
-                transform 180ms cubic-bezier(0.4, 0, 1, 1),
-                opacity 140ms ease;
+                transform var(--main-menu-insights-fast-close-duration, 450ms) cubic-bezier(0.4, 0, 1, 1),
+                opacity var(--main-menu-insights-fast-close-opacity-duration, 360ms) ease;
         }
 
         .main-menu-insights-panel::before {
@@ -787,7 +787,7 @@
                 x-ref="insightsReveal"
                 x-bind:data-expanded="isInsightsExpanded ? 'true' : 'false'"
                 x-bind:data-fast-close="isInsightsFastClosing ? 'true' : 'false'"
-                x-bind:style="`max-height: ${isInsightsExpanded ? insightsPanelHeight : 0}px;`"
+                x-bind:style="`--main-menu-insights-fast-close-duration: ${insightsFastCloseDurationMs}ms; --main-menu-insights-fast-close-opacity-duration: ${Math.max(220, Math.round(insightsFastCloseDurationMs * 0.8))}ms; max-height: ${isInsightsExpanded ? insightsPanelHeight : 0}px;`"
             >
                 <section
                     class="main-menu-insights-panel"

@@ -5,9 +5,9 @@
     x-transition:enter="transition-all ease-out duration-1000 delay-400"
     x-transition:enter-start="opacity-0 blur-[2px]"
     x-transition:enter-end="opacity-100 blur-0"
-    x-transition:leave="transition-all ease-in duration-75"
+    x-transition:leave="transition-all ease-in duration-150"
     x-transition:leave-start="opacity-100 scale-100"
-    x-transition:leave-end="opacity-0 scale-0"
+    x-transition:leave-end="opacity-0 scale-60"
 >
     <x-main-menu>
         <x-main-menu.item
