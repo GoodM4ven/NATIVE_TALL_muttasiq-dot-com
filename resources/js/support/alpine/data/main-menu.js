@@ -1,5 +1,5 @@
 document.addEventListener('alpine:init', () => {
-    window.Alpine.data('mainMenu', (el) => ({
+    window.Alpine.data('mainMenu', (el, config = {}) => ({
         containerHovered: false,
         currentCaption: '',
         isItemActive: false,
@@ -31,8 +31,31 @@ document.addEventListener('alpine:init', () => {
         isTouching: false,
         lockWiggles: new WeakMap(),
         isTouchDevice: false,
+        isInsightsExpanded: false,
+        isInsightsPointerInside: false,
+        insightsHideDelayMs: 2500,
+        insightsHideTimer: null,
+        insightsRefreshTimer: null,
+        progressLabels: {
+            sabah: config?.progressLabels?.sabah ?? 'أذكار الصباح',
+            wird: config?.progressLabels?.wird ?? 'الوِرد اليومي',
+            masaa: config?.progressLabels?.masaa ?? 'أذكار المساء',
+        },
+        progressStateLabels: {
+            completed: config?.progressStateLabels?.completed ?? 'مكتمل',
+            inProgress: config?.progressStateLabels?.inProgress ?? 'قيد التقدّم',
+            notStarted: config?.progressStateLabels?.notStarted ?? 'لم يبدأ',
+        },
+        dailyProgress: {
+            sabah: { percent: 0, isComplete: false, stateLabel: '' },
+            wird: { percent: 0, isComplete: false, stateLabel: '' },
+            masaa: { percent: 0, isComplete: false, stateLabel: '' },
+        },
         _onWindowMouseMove: null,
         _onWindowBlur: null,
+        _onWindowPointerDown: null,
+        _onWindowStorage: null,
+        _onSwitchView: null,
         init() {
             this.captionShadow = window.makeBoxShadowFromColor?.('--primary-500') ?? 'none';
             this.captionShadowDark = window.makeBoxShadowFromColor?.('--primary-100') ?? 'none';
@@ -78,6 +101,67 @@ document.addEventListener('alpine:init', () => {
                 passive: true,
             });
             window.addEventListener('blur', this._onWindowBlur);
+
+            this._onWindowPointerDown = (event) => {
+                this.handleInsightsWindowPointerDown(event);
+            };
+            this._onWindowStorage = () => {
+                this.refreshDailyProgress();
+            };
+            this._onSwitchView = (event) => {
+                const nextView = String(event?.detail?.to ?? '').trim();
+
+                if (nextView === 'main-menu') {
+                    this.refreshDailyProgress();
+                    return;
+                }
+
+                this.resetInsightsPanelState();
+            };
+
+            window.addEventListener('pointerdown', this._onWindowPointerDown, true);
+            window.addEventListener('storage', this._onWindowStorage);
+            window.addEventListener('switch-view', this._onSwitchView);
+
+            this.refreshDailyProgress();
+
+            this.$watch('isInsightsExpanded', (isExpanded) => {
+                if (isExpanded) {
+                    this.refreshDailyProgress();
+                    this.startInsightsRefreshLoop();
+                } else {
+                    this.stopInsightsRefreshLoop();
+                }
+            });
+        },
+        destroy() {
+            this.clearInsightsHideTimer();
+            this.stopInsightsRefreshLoop();
+
+            if (this._onWindowMouseMove) {
+                window.removeEventListener('mousemove', this._onWindowMouseMove);
+                this._onWindowMouseMove = null;
+            }
+
+            if (this._onWindowBlur) {
+                window.removeEventListener('blur', this._onWindowBlur);
+                this._onWindowBlur = null;
+            }
+
+            if (this._onWindowPointerDown) {
+                window.removeEventListener('pointerdown', this._onWindowPointerDown, true);
+                this._onWindowPointerDown = null;
+            }
+
+            if (this._onWindowStorage) {
+                window.removeEventListener('storage', this._onWindowStorage);
+                this._onWindowStorage = null;
+            }
+
+            if (this._onSwitchView) {
+                window.removeEventListener('switch-view', this._onSwitchView);
+                this._onSwitchView = null;
+            }
         },
         getCaptionElements() {
             const captionWrap = this.$refs?.captionWrap;
@@ -111,6 +195,298 @@ document.addEventListener('alpine:init', () => {
             const rect = grid.getBoundingClientRect();
 
             return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+        },
+        getInsightsZoneElement() {
+            return this.$refs?.insightsZone ?? null;
+        },
+        isPointInsideInsightsZone(x, y) {
+            const insightsZone = this.getInsightsZoneElement();
+
+            if (!(insightsZone instanceof Element)) {
+                return false;
+            }
+
+            const rect = insightsZone.getBoundingClientRect();
+
+            return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+        },
+        normalizeProgressPercent(value) {
+            const numeric = Number(value ?? NaN);
+
+            if (!Number.isFinite(numeric)) {
+                return 0;
+            }
+
+            return Math.max(0, Math.min(100, Math.round(numeric)));
+        },
+        resolveProgressStateLabel(percent, isComplete) {
+            if (isComplete || percent >= 100) {
+                return this.progressStateLabels.completed;
+            }
+
+            if (percent > 0) {
+                return this.progressStateLabels.inProgress;
+            }
+
+            return this.progressStateLabels.notStarted;
+        },
+        setDailyProgressEntry(key, percent, isComplete) {
+            if (!Object.prototype.hasOwnProperty.call(this.dailyProgress, key)) {
+                return;
+            }
+
+            const normalizedPercent = this.normalizeProgressPercent(percent);
+            const normalizedCompletion = Boolean(isComplete) || normalizedPercent >= 100;
+
+            this.dailyProgress[key] = {
+                percent: normalizedCompletion ? 100 : normalizedPercent,
+                isComplete: normalizedCompletion,
+                stateLabel: this.resolveProgressStateLabel(
+                    normalizedCompletion ? 100 : normalizedPercent,
+                    normalizedCompletion,
+                ),
+            };
+        },
+        getAthkarReaderData() {
+            if (!window.Alpine?.$data) {
+                return null;
+            }
+
+            const root = document.querySelector('[data-athkar-app-reader-root]');
+
+            if (!(root instanceof Element)) {
+                return null;
+            }
+
+            try {
+                return window.Alpine.$data(root);
+            } catch {
+                return null;
+            }
+        },
+        getQuranReaderData() {
+            if (!window.Alpine?.$data) {
+                return null;
+            }
+
+            const root = document.querySelector('[data-quran-app-reader-root]');
+
+            if (!(root instanceof Element)) {
+                return null;
+            }
+
+            try {
+                return window.Alpine.$data(root);
+            } catch {
+                return null;
+            }
+        },
+        refreshAthkarProgress(mode) {
+            const athkarReader = this.getAthkarReaderData();
+
+            if (!athkarReader) {
+                this.setDailyProgressEntry(mode, 0, false);
+                return;
+            }
+
+            try {
+                if (typeof athkarReader.ensureState === 'function') {
+                    athkarReader.ensureState();
+                }
+
+                if (typeof athkarReader.syncDay === 'function') {
+                    athkarReader.syncDay();
+                }
+
+                if (typeof athkarReader.ensureProgress === 'function') {
+                    athkarReader.ensureProgress(mode);
+                }
+
+                const metrics =
+                    typeof athkarReader.ensureModeMetrics === 'function'
+                        ? athkarReader.ensureModeMetrics(mode)
+                        : null;
+                const requiredLetters = Number(metrics?.totalRequiredLetters ?? 0);
+                const completedLetters = Number(metrics?.totalCompletedLetters ?? 0);
+                const requiredCount = Number(metrics?.totalRequiredCount ?? 0);
+                const completedCount = Number(metrics?.totalCompletedCount ?? 0);
+                const useLettersScale = requiredLetters > 0;
+                const requiredUnits = useLettersScale ? requiredLetters : requiredCount;
+                const completedUnitsRaw = useLettersScale ? completedLetters : completedCount;
+                const normalizedRequired = Number.isFinite(requiredUnits)
+                    ? Math.max(0, requiredUnits)
+                    : 0;
+                const normalizedCompleted = Number.isFinite(completedUnitsRaw)
+                    ? Math.max(0, completedUnitsRaw)
+                    : 0;
+                const percent =
+                    normalizedRequired > 0
+                        ? (Math.min(normalizedCompleted, normalizedRequired) / normalizedRequired) *
+                          100
+                        : 0;
+                const isComplete =
+                    typeof athkarReader.isModeComplete === 'function'
+                        ? Boolean(athkarReader.isModeComplete(mode))
+                        : percent >= 100;
+
+                this.setDailyProgressEntry(mode, percent, isComplete);
+            } catch {
+                this.setDailyProgressEntry(mode, 0, false);
+            }
+        },
+        refreshWirdProgress() {
+            const quranReader = this.getQuranReaderData();
+
+            if (!quranReader) {
+                this.setDailyProgressEntry('wird', 0, false);
+                return;
+            }
+
+            try {
+                const record =
+                    typeof quranReader.ensureWirdDailyRecord === 'function'
+                        ? quranReader.ensureWirdDailyRecord()
+                        : null;
+                const percent =
+                    typeof quranReader.wirdProgressPercent === 'function'
+                        ? quranReader.wirdProgressPercent(record)
+                        : 0;
+                const isComplete = Boolean(record?.completed) || Number(percent) >= 100;
+
+                this.setDailyProgressEntry('wird', percent, isComplete);
+            } catch {
+                this.setDailyProgressEntry('wird', 0, false);
+            }
+        },
+        refreshDailyProgress() {
+            this.refreshAthkarProgress('sabah');
+            this.refreshWirdProgress();
+            this.refreshAthkarProgress('masaa');
+        },
+        clearInsightsHideTimer() {
+            if (this.insightsHideTimer !== null) {
+                clearTimeout(this.insightsHideTimer);
+                this.insightsHideTimer = null;
+            }
+        },
+        startInsightsRefreshLoop() {
+            this.stopInsightsRefreshLoop();
+            this.insightsRefreshTimer = window.setInterval(() => {
+                this.refreshDailyProgress();
+            }, 1400);
+        },
+        stopInsightsRefreshLoop() {
+            if (this.insightsRefreshTimer !== null) {
+                clearInterval(this.insightsRefreshTimer);
+                this.insightsRefreshTimer = null;
+            }
+        },
+        showInsightsPanel({ refresh = true } = {}) {
+            this.clearInsightsHideTimer();
+
+            if (refresh) {
+                this.refreshDailyProgress();
+            }
+
+            this.isInsightsExpanded = true;
+        },
+        scheduleInsightsCollapse() {
+            this.clearInsightsHideTimer();
+
+            if (!this.isInsightsExpanded) {
+                return;
+            }
+
+            this.insightsHideTimer = window.setTimeout(() => {
+                if (this.isInsightsPointerInside) {
+                    return;
+                }
+
+                this.isInsightsExpanded = false;
+            }, this.insightsHideDelayMs);
+        },
+        resetInsightsPanelState() {
+            this.clearInsightsHideTimer();
+            this.stopInsightsRefreshLoop();
+            this.isInsightsPointerInside = false;
+            this.isInsightsExpanded = false;
+        },
+        handleInsightsHoverEnter() {
+            if (this.isTouchDevice) {
+                return;
+            }
+
+            this.isInsightsPointerInside = true;
+            this.showInsightsPanel();
+        },
+        handleInsightsHoverLeave() {
+            if (this.isTouchDevice) {
+                return;
+            }
+
+            this.isInsightsPointerInside = false;
+            this.scheduleInsightsCollapse();
+        },
+        handleInsightsFocusIn() {
+            this.isInsightsPointerInside = true;
+            this.showInsightsPanel();
+        },
+        handleInsightsFocusOut(event) {
+            const zone = this.getInsightsZoneElement();
+            const nextTarget = event?.relatedTarget;
+
+            if (
+                zone instanceof Element &&
+                nextTarget instanceof Node &&
+                zone.contains(nextTarget)
+            ) {
+                return;
+            }
+
+            this.isInsightsPointerInside = false;
+            this.scheduleInsightsCollapse();
+        },
+        handleInsightsTouchStart() {
+            if (!this.isTouchDevice) {
+                return;
+            }
+
+            this.isInsightsPointerInside = true;
+            this.showInsightsPanel();
+        },
+        toggleInsightsPanel() {
+            if (this.isTouchDevice) {
+                this.isInsightsPointerInside = true;
+                this.showInsightsPanel();
+                return;
+            }
+
+            if (this.isInsightsExpanded) {
+                this.isInsightsPointerInside = false;
+                this.scheduleInsightsCollapse();
+                return;
+            }
+
+            this.isInsightsPointerInside = true;
+            this.showInsightsPanel();
+        },
+        handleInsightsWindowPointerDown(event) {
+            if (!this.isTouchDevice || !this.isInsightsExpanded) {
+                return;
+            }
+
+            const pointerX = Number(event?.clientX);
+            const pointerY = Number(event?.clientY);
+            const hasCoordinates = Number.isFinite(pointerX) && Number.isFinite(pointerY);
+
+            if (hasCoordinates && this.isPointInsideInsightsZone(pointerX, pointerY)) {
+                this.isInsightsPointerInside = true;
+                this.showInsightsPanel({ refresh: false });
+                return;
+            }
+
+            this.isInsightsPointerInside = false;
+            this.scheduleInsightsCollapse();
         },
         getItemDetailsFromElement(element) {
             if (!element) {
@@ -460,6 +836,8 @@ document.addEventListener('alpine:init', () => {
             this.resetLockedItem();
             this.setTouchActiveElement(null, true);
             clearTimeout(this.idleTimeout);
+            this.isInsightsPointerInside = false;
+            this.scheduleInsightsCollapse();
 
             this.syncUI();
         },

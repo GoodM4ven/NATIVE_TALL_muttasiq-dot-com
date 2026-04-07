@@ -177,5 +177,8 @@ it('renders expected icon and markup contracts while resetting app version to co
     expect(substr_count($content, 'athkar-origin-indicator__icon'))->toBeGreaterThanOrEqual(2)
         ->and($content)->not->toContain('-left-px -top-px')
         ->and($content)->toContain('relative grid h-9 w-9 rotate-45 place-items-center overflow-hidden')
-        ->and($content)->toContain('absolute top-1/2 left-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 -rotate-45 shrink-0');
+        ->and($content)->toContain('absolute top-1/2 left-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 -rotate-45 shrink-0')
+        ->and($content)->toContain('data-testid="main-menu-insights-trigger"')
+        ->and($content)->toContain('data-testid="main-menu-insights-panel"')
+        ->and($content)->toContain('data-quran-app-reader-root');
 });

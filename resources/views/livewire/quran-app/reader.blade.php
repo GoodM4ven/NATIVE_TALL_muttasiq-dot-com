@@ -1818,23 +1818,26 @@
     ];
 @endphp
 
-<div x-data="quranAppReader({
-    api: {
-        pageDataTemplate: @js(url('/quran-reader/pages/__PAGE__.json')),
-        searchIndexUrl: @js(url('/quran-reader/search-index.json')),
-    },
-    initialPayload: @js($initialReaderPayload),
-    nativeRuntime: @js(is_platform('native')),
-    prewarmPages: @js(is_platform('native') ? 12 : 6),
-    prefetchRadius: @js(is_platform('native') ? 3 : 2),
-    searchModalId: @js('quran-reader-search-modal'),
-    searchModalDomId: @js('quran-reader-search-modal'),
-    searchActionModalId: @js(''),
-    jumpPageModalId: @js('quran-reader-jump-page-modal'),
-    historyModalId: @js('quran-reader-history-modal'),
-    bookmarksModalId: @js('quran-reader-bookmarks-modal'),
-    settings: @js($quranReaderSettings ?? ['enableVisualEnhancements' => false, 'targetWordsByDefault' => false, 'preserveHarakatOnCopy' => true, 'appendSurahAffixOnMultiCopy' => true, 'appendSurahAffixAlwaysOnCopy' => false, 'useVolumeButtonsNavigation' => false, 'useWesternNumerals' => true, 'wirdFrequencyMode' => 0, 'wirdKhatmatTarget' => 1]),
-})">
+<div
+    data-quran-app-reader-root
+    x-data="quranAppReader({
+        api: {
+            pageDataTemplate: @js(url('/quran-reader/pages/__PAGE__.json')),
+            searchIndexUrl: @js(url('/quran-reader/search-index.json')),
+        },
+        initialPayload: @js($initialReaderPayload),
+        nativeRuntime: @js(is_platform('native')),
+        prewarmPages: @js(is_platform('native') ? 12 : 6),
+        prefetchRadius: @js(is_platform('native') ? 3 : 2),
+        searchModalId: @js('quran-reader-search-modal'),
+        searchModalDomId: @js('quran-reader-search-modal'),
+        searchActionModalId: @js(''),
+        jumpPageModalId: @js('quran-reader-jump-page-modal'),
+        historyModalId: @js('quran-reader-history-modal'),
+        bookmarksModalId: @js('quran-reader-bookmarks-modal'),
+        settings: @js($quranReaderSettings ?? ['enableVisualEnhancements' => false, 'targetWordsByDefault' => false, 'preserveHarakatOnCopy' => true, 'appendSurahAffixOnMultiCopy' => true, 'appendSurahAffixAlwaysOnCopy' => false, 'useVolumeButtonsNavigation' => false, 'useWesternNumerals' => true, 'wirdFrequencyMode' => 0, 'wirdKhatmatTarget' => 1]),
+    })"
+>
     <div
         class="quran-reader relative grid h-full w-full place-items-center items-center"
         dir="rtl"
@@ -1932,7 +1935,7 @@
                                 ></l-jelly-triangle>
                             </div>
                             <span
-                                class="mt-2 font-arabic-sans text-sm sm:text-lg tracking-wide opacity-60"
+                                class="font-arabic-sans mt-2 text-sm tracking-wide opacity-60 sm:text-lg"
                                 dir="rtl"
                             >{{ arabic_text('تجهيز المصحف...') }}</span>
                         </div>

@@ -13,20 +13,49 @@
         isHovering: false,
         isTouching: false,
         shouldWaitForStartupSync: @js(is_platform('mobile')),
-        hasStartedRevealLoop: false,
+        isStartupReady: false,
+        lastRevealEligibility: null,
         startupSyncResolvedListener: null,
         appVersion: @js(\App\Models\Setting::appVersion()),
         waitDuration: 3000,
         visibleDuration: 3000,
         waitTimeoutId: null,
         hideTimeoutId: null,
-        startRevealLoop() {
-            if (this.hasStartedRevealLoop) {
+        isRevealEligible() {
+            return Boolean(
+                this.views?.['main-menu']?.isOpen ||
+                this.views?.['athkar-app-gate']?.isOpen ||
+                this.views?.['quran-app-gate']?.isOpen,
+            );
+        },
+        isRevealLoopReady() {
+            return this.isStartupReady && this.isRevealEligible();
+        },
+        syncRevealLoop() {
+            const isEligible = this.isRevealLoopReady();
+    
+            if (!isEligible) {
+                if (this.lastRevealEligibility !== false) {
+                    this.clearLoopTimers();
+                    this.isVisible = false;
+                }
+    
+                this.lastRevealEligibility = false;
                 return;
             }
     
-            this.hasStartedRevealLoop = true;
-            this.queueNextReveal();
+            const becameEligible = this.lastRevealEligibility !== true;
+            this.lastRevealEligibility = true;
+    
+            if (becameEligible) {
+                this.isVisible = false;
+                this.queueNextReveal(this.waitDuration);
+                return;
+            }
+    
+            if (!this.isVisible && this.waitTimeoutId === null && this.hideTimeoutId === null) {
+                this.queueNextReveal(this.waitDuration);
+            }
         },
         setAppVersion(version) {
             if (typeof version !== 'string') {
@@ -64,13 +93,29 @@
         },
         queueNextReveal(delay = this.waitDuration) {
             this.clearLoopTimers();
+    
+            if (!this.isRevealLoopReady()) {
+                this.isVisible = false;
+                return;
+            }
+    
             if (this.isHovering || this.isTouching) {
                 this.isVisible = true;
                 return;
             }
             this.waitTimeoutId = setTimeout(() => {
+                if (!this.isRevealLoopReady()) {
+                    this.isVisible = false;
+                    return;
+                }
+    
                 this.isVisible = true;
                 this.hideTimeoutId = setTimeout(() => {
+                    if (!this.isRevealLoopReady()) {
+                        this.isVisible = false;
+                        return;
+                    }
+    
                     if (this.isHovering || this.isTouching) {
                         return;
                     }
@@ -80,17 +125,38 @@
             }, delay);
         },
         holdVisible() {
+            if (!this.isRevealLoopReady()) {
+                return;
+            }
+    
             this.clearLoopTimers();
             this.isVisible = true;
         },
         releaseVisible() {
+            if (!this.isRevealLoopReady()) {
+                this.clearLoopTimers();
+                this.isVisible = false;
+                return;
+            }
+    
             this.isVisible = false;
             this.queueNextReveal();
         },
         releaseVisibleAfter(delay) {
+            if (!this.isRevealLoopReady()) {
+                this.clearLoopTimers();
+                this.isVisible = false;
+                return;
+            }
+    
             this.clearLoopTimers();
             this.isVisible = true;
             this.hideTimeoutId = setTimeout(() => {
+                if (!this.isRevealLoopReady()) {
+                    this.isVisible = false;
+                    return;
+                }
+    
                 if (this.isHovering || this.isTouching) {
                     return;
                 }
@@ -127,13 +193,15 @@
         },
         init() {
             if (!this.shouldWaitForStartupSync || window.__startupSyncResolved === true) {
-                this.startRevealLoop();
+                this.isStartupReady = true;
+                this.syncRevealLoop();
                 return;
             }
     
             this.startupSyncResolvedListener = () => {
                 this.startupSyncResolvedListener = null;
-                this.startRevealLoop();
+                this.isStartupReady = true;
+                this.syncRevealLoop();
             };
     
             window.addEventListener('startup-sync-resolved', this.startupSyncResolvedListener, {
@@ -155,6 +223,7 @@
     x-on:touchend.passive="handleTouchEnd()"
     x-on:touchcancel.passive="handleTouchEnd()"
     x-on:app-version-updated.window="setAppVersion($event.detail?.version)"
+    x-effect="syncRevealLoop()"
 >
     <div
         class="relative w-fit max-w-[90vw] rounded-lg border border-white/70 bg-gray-100/40 px-2 py-1.5 text-[clamp(0.65rem,2.65vw,0.8rem)] text-gray-600 opacity-0 shadow-2xl ring-1 ring-gray-200/70 transition-all duration-500 ease-out sm:max-w-none sm:rounded-2xl sm:px-4 sm:py-3 sm:text-[0.82rem] md:px-5 md:py-3 md:text-[0.88rem] lg:px-6 lg:py-4 lg:text-[1rem] dark:border-white/10 dark:bg-gray-900/20 dark:text-gray-300 dark:ring-white/10"
