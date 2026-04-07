@@ -509,6 +509,57 @@ document.addEventListener('alpine:init', () => {
 
             this.executeItemCallback(`() => ($viewNav(\`${normalizedView}\`))`, this.$el);
         },
+        runQuranEntryNavigation() {
+            this.executeItemCallback('() => openQuranEntry()', this.$el);
+        },
+        runWhenQuranGateOpens(task, { timeoutMs = 26000 } = {}) {
+            if (typeof task !== 'function') {
+                return;
+            }
+
+            let switchViewListener = null;
+            let guardTimeoutId = null;
+            let didRun = false;
+
+            const cleanup = () => {
+                if (switchViewListener !== null) {
+                    window.removeEventListener('switch-view', switchViewListener);
+                    switchViewListener = null;
+                }
+
+                if (guardTimeoutId !== null) {
+                    clearTimeout(guardTimeoutId);
+                    guardTimeoutId = null;
+                }
+            };
+
+            const runTaskOnce = () => {
+                if (didRun) {
+                    return;
+                }
+
+                didRun = true;
+                cleanup();
+                task();
+            };
+
+            switchViewListener = (event) => {
+                const nextView = String(event?.detail?.to ?? '').trim();
+
+                if (nextView !== 'quran-app-gate') {
+                    return;
+                }
+
+                runTaskOnce();
+            };
+
+            window.addEventListener('switch-view', switchViewListener);
+
+            const normalizedTimeout = Math.max(1200, Math.trunc(Number(timeoutMs) || 26000));
+            guardTimeoutId = window.setTimeout(() => {
+                cleanup();
+            }, normalizedTimeout);
+        },
         doesPreventSwitchingAthkarUntilCompletion() {
             const athkarReader = this.getAthkarReaderData();
 
@@ -656,19 +707,21 @@ document.addEventListener('alpine:init', () => {
                     this._quranWirdAutoEntryDeadlineAt = Date.now() + 22000;
                 }
 
-                this.runViewNavigation('quran-app-gate');
+                this.runWhenQuranGateOpens(() => {
+                    this.queueInsightsGateLaunch(() => {
+                        window.dispatchEvent(
+                            new CustomEvent('quran-gate-open', {
+                                detail: { mode: 'tilawa' },
+                            }),
+                        );
 
-                this.queueInsightsGateLaunch(() => {
-                    window.dispatchEvent(
-                        new CustomEvent('quran-gate-open', {
-                            detail: { mode: 'tilawa' },
-                        }),
-                    );
-
-                    if (canAutoEnterWirdMode) {
-                        this.scheduleQuranWirdAutoEntry();
-                    }
+                        if (canAutoEnterWirdMode) {
+                            this.scheduleQuranWirdAutoEntry();
+                        }
+                    });
                 });
+
+                this.runQuranEntryNavigation();
             });
         },
         startInsightsRefreshLoop() {

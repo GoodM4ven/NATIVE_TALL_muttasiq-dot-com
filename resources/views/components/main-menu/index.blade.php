@@ -211,16 +211,16 @@
             opacity: 0.2;
             pointer-events: none;
             -webkit-mask-image: radial-gradient(circle at center,
-                    rgba(0, 0, 0, 1) 44%,
-                    rgba(0, 0, 0, 0.92) 62%,
-                    rgba(0, 0, 0, 0.56) 80%,
-                    rgba(0, 0, 0, 0.12) 92%,
+                    rgba(0, 0, 0, 1) 15%,
+                    rgba(0, 0, 0, 0.72) 35%,
+                    rgba(0, 0, 0, 0.40) 55%,
+                    rgba(0, 0, 0, 0.25) 77.5%,
                     rgba(0, 0, 0, 0) 100%);
             mask-image: radial-gradient(circle at center,
-                    rgba(0, 0, 0, 1) 44%,
-                    rgba(0, 0, 0, 0.92) 62%,
-                    rgba(0, 0, 0, 0.56) 80%,
-                    rgba(0, 0, 0, 0.12) 92%,
+                    rgba(0, 0, 0, 1) 15%,
+                    rgba(0, 0, 0, 0.72) 35%,
+                    rgba(0, 0, 0, 0.40) 55%,
+                    rgba(0, 0, 0, 0.25) 77.5%,
                     rgba(0, 0, 0, 0) 100%);
         }
 

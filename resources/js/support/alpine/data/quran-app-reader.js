@@ -1163,6 +1163,9 @@ document.addEventListener('alpine:init', () => {
                         this.isFittingPage = true;
                         this.clearLayoutTimers();
                     }
+                    this.recoverStaleModalLifecycleState();
+                    this.pruneModalLifecycleSuppression();
+                    this.clearPendingPostModalTargetFit();
 
                     this.resetSwipeState();
                     return;
@@ -1178,7 +1181,12 @@ document.addEventListener('alpine:init', () => {
 
                 if (this._bootstrapDeferred) {
                     this._bootstrapDeferred = false;
+                    console.log('[QR:switch-view] deferred bootstrap triggered for:', to);
                     this.$nextTick(() => {
+                        console.log(
+                            '[QR:switch-view] running deferred bootstrap, visible:',
+                            this.isReaderElementVisible(),
+                        );
                         this.bootstrap();
                     });
 
@@ -1254,7 +1262,18 @@ document.addEventListener('alpine:init', () => {
                 }
             });
             this.$nextTick(() => {
-                if (this.isReaderElementVisible()) {
+                const visible = this.isReaderElementVisible();
+                console.log(
+                    '[QR:init] isReaderElementVisible:',
+                    visible,
+                    'ready:',
+                    this.ready,
+                    'maxPage:',
+                    this.maxPage,
+                    'mushafLines:',
+                    this.mushafLines.length,
+                );
+                if (visible) {
                     this.bootstrap();
                 } else {
                     this._bootstrapDeferred = true;
@@ -2095,6 +2114,12 @@ document.addEventListener('alpine:init', () => {
                         return;
                     }
 
+                    if (!this.isReaderElementVisible()) {
+                        console.log('[QR:MutationObserver] skipping scheduleLayout — not visible');
+                        return;
+                    }
+
+                    console.log('[QR:MutationObserver] scheduleLayout');
                     this.scheduleLayout({ revealDelayMs: 170 });
                 });
 
@@ -2425,6 +2450,16 @@ document.addEventListener('alpine:init', () => {
         },
 
         async bootstrap() {
+            console.log(
+                '[QR:bootstrap] START, visible:',
+                this.isReaderElementVisible(),
+                'ready:',
+                this.ready,
+                'maxPage:',
+                this.maxPage,
+                'pageNumber:',
+                this.pageNumber,
+            );
             await this.ensurePersistentStorage();
             this.syncSupportLockTargetsUi();
             this.syncFitCacheBreakpoint({ persist: false });
@@ -2433,6 +2468,7 @@ document.addEventListener('alpine:init', () => {
 
             try {
                 if (this._startupRestoreInFlight instanceof Promise) {
+                    console.log('[QR:bootstrap] awaiting _startupRestoreInFlight');
                     try {
                         await this._startupRestoreInFlight;
                     } catch (_) {
@@ -2440,15 +2476,43 @@ document.addEventListener('alpine:init', () => {
                     }
                 }
 
+                console.log(
+                    '[QR:bootstrap] before calibrate, visible:',
+                    this.isReaderElementVisible(),
+                );
                 await this.calibrateGlobalFitLayoutFromReferencePage();
+                console.log(
+                    '[QR:bootstrap] after calibrate, _globalFitCalibrationLayout:',
+                    !!this._globalFitCalibrationLayout,
+                    '_globalFitCalibrationScale:',
+                    this._globalFitCalibrationScale,
+                );
                 await this.ensureCurrentPageLoaded();
+                console.log(
+                    '[QR:bootstrap] after ensureCurrentPageLoaded, pageNumber:',
+                    this.pageNumber,
+                );
                 await this.runStartupFinalFitPass();
+                console.log(
+                    '[QR:bootstrap] after runStartupFinalFitPass, pageScale:',
+                    this.pageScale,
+                    'isFittingPage:',
+                    this.isFittingPage,
+                );
                 this.queueStartupPreload();
                 this.scheduleIdleWarmup();
                 this.warmSearchIndex();
+            } catch (error) {
+                console.error('[QR:bootstrap] ERROR:', error);
             } finally {
                 this._startupCalibrationPending = false;
                 this.hasCompletedInitialMushafPreparation = true;
+                console.log(
+                    '[QR:bootstrap] DONE, hasCompletedInitialMushafPreparation:',
+                    true,
+                    'pageScale:',
+                    this.pageScale,
+                );
             }
         },
 
@@ -9713,6 +9777,7 @@ document.addEventListener('alpine:init', () => {
             const contentElement = this.$refs.pageContent;
 
             if (!rootElement || !frameElement || !contentElement) {
+                console.log('[QR:fitPageToViewport] missing element refs');
                 return;
             }
 
@@ -9861,6 +9926,21 @@ document.addEventListener('alpine:init', () => {
                 typeof this._globalFitCalibrationLayout === 'object' &&
                 Number.isFinite(Number(this._globalFitCalibrationScale)) &&
                 Number(this._globalFitCalibrationScale) > 0;
+
+            console.log(
+                '[QR:fitPageToViewport] hasGlobalCalibration:',
+                hasGlobalCalibrationProfile,
+                'bypass:',
+                this._bypassNextFitCache,
+                'frameW:',
+                frameRect?.width,
+                'frameH:',
+                frameRect?.height,
+                'page:',
+                this.pageNumber,
+                'visible:',
+                this.isReaderElementVisible(),
+            );
 
             if (hasGlobalCalibrationProfile) {
                 const globalLayout = {
@@ -14666,6 +14746,14 @@ document.addEventListener('alpine:init', () => {
         },
 
         handleModalLifecycleEvent(kind, event) {
+            if (!this.isAnyQuranReaderViewOpen()) {
+                this.recoverStaleModalLifecycleState();
+                this.pruneModalLifecycleSuppression();
+                this.clearPendingPostModalTargetFit();
+
+                return;
+            }
+
             this.trackModalLifecycle(kind, event);
             const isSearchModalEvent = this.isSearchModalEvent(kind, event);
             const isHistoryModalEvent = this.isHistoryModalEvent(kind, event);
