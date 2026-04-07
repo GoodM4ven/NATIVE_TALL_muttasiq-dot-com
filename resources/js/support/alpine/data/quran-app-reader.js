@@ -258,6 +258,18 @@ const readLocalStorage = (key, fallbackValue) => {
     }
 };
 
+const readLocalStorageRaw = (key) => {
+    if (typeof localStorage === 'undefined') {
+        return null;
+    }
+
+    try {
+        return localStorage.getItem(key);
+    } catch (_) {
+        return null;
+    }
+};
+
 const writeLocalStorage = (key, value) => {
     if (typeof localStorage === 'undefined') {
         return;
@@ -886,6 +898,7 @@ document.addEventListener('alpine:init', () => {
         _onSwitchView: null,
         _onWirdSimulateDay: null,
         _onWirdCongratsPreview: null,
+        _onWindowStorage: null,
         _onHistoryManagerRequestSync: null,
         _onBookmarksManagerRequestSync: null,
         _lastQuranReaderView: 'quran-app-tilawa',
@@ -1008,6 +1021,8 @@ document.addEventListener('alpine:init', () => {
         _lastPageInputVisualValue: 1,
         _lastWordHoldAt: 0,
         _lastWordGapRebalancedPageNumber: 0,
+        _wirdStateStorageRawSnapshot: null,
+        _wirdDayOffsetStorageRawSnapshot: null,
         _idleWarmupQueue: [],
         _idleWarmupQueuedPages: new Set(),
         _idleWarmupHandle: null,
@@ -1090,6 +1105,26 @@ document.addEventListener('alpine:init', () => {
             }
 
             this.ensureWirdDailyRecord();
+
+            this._onWindowStorage = (event) => {
+                const storageKey = String(event?.key ?? '');
+
+                if (
+                    storageKey !== wirdProgressStorageKey &&
+                    storageKey !== wirdDayOffsetStorageKey
+                ) {
+                    return;
+                }
+
+                this.syncWirdStorageState({
+                    force: true,
+                    clearDailyRecord: true,
+                });
+                this.ensureWirdDailyRecord({
+                    forceRebuild: storageKey === wirdDayOffsetStorageKey,
+                });
+            };
+            window.addEventListener('storage', this._onWindowStorage);
 
             this._onWindowViewportChange = () => {
                 this.handleViewportChange();
@@ -1782,6 +1817,11 @@ document.addEventListener('alpine:init', () => {
                     this._onWirdCongratsPreview,
                 );
                 this._onWirdCongratsPreview = null;
+            }
+
+            if (this._onWindowStorage) {
+                window.removeEventListener('storage', this._onWindowStorage);
+                this._onWindowStorage = null;
             }
 
             if (this._onHistoryManagerRequestSync) {
@@ -3133,9 +3173,10 @@ document.addEventListener('alpine:init', () => {
         },
 
         hydrateWirdState() {
-            this.wirdState = this.normalizeWirdState(
-                readLocalStorage(wirdProgressStorageKey, null),
-            );
+            this.syncWirdStorageState({
+                force: true,
+                clearDailyRecord: true,
+            });
 
             return this.wirdState;
         },
@@ -3146,6 +3187,40 @@ document.addEventListener('alpine:init', () => {
             }
 
             writeLocalStorage(wirdProgressStorageKey, this.wirdState);
+            this._wirdStateStorageRawSnapshot = readLocalStorageRaw(wirdProgressStorageKey);
+        },
+
+        syncWirdStorageState({ force = false, clearDailyRecord = false } = {}) {
+            const progressRaw = readLocalStorageRaw(wirdProgressStorageKey);
+            const shouldSyncProgress = force || progressRaw !== this._wirdStateStorageRawSnapshot;
+
+            if (shouldSyncProgress) {
+                const parsedState =
+                    progressRaw === null ? null : readLocalStorage(wirdProgressStorageKey, null);
+
+                this.wirdState = this.normalizeWirdState(parsedState);
+                this._wirdStateStorageRawSnapshot = progressRaw;
+
+                if (clearDailyRecord) {
+                    this.wirdDailyRecord = null;
+                }
+            }
+
+            const dayOffsetRaw = readLocalStorageRaw(wirdDayOffsetStorageKey);
+            const shouldSyncDayOffset =
+                force || dayOffsetRaw !== this._wirdDayOffsetStorageRawSnapshot;
+
+            if (shouldSyncDayOffset) {
+                this.wirdDayOffsetDays = normalizeDayOffsetDays(
+                    dayOffsetRaw === null ? 0 : readLocalStorage(wirdDayOffsetStorageKey, 0),
+                    0,
+                );
+                this._wirdDayOffsetStorageRawSnapshot = dayOffsetRaw;
+
+                if (clearDailyRecord) {
+                    this.wirdDailyRecord = null;
+                }
+            }
         },
 
         absolutePageToPageNumber(absolutePage) {
@@ -3208,6 +3283,10 @@ document.addEventListener('alpine:init', () => {
         },
 
         ensureWirdDailyRecord({ forceRebuild = false } = {}) {
+            this.syncWirdStorageState({
+                clearDailyRecord: true,
+            });
+
             if (!this.wirdState || typeof this.wirdState !== 'object') {
                 this.hydrateWirdState();
             }
