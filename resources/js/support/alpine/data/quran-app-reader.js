@@ -11341,7 +11341,8 @@ document.addEventListener('alpine:init', () => {
             return Boolean(
                 this.isCalibrating &&
                 this.isAnyQuranReaderViewOpen() &&
-                !this.isAnyAthkarViewOpen(),
+                !this.isAnyAthkarViewOpen() &&
+                this.isReaderPanelVisible(),
             );
         },
 

@@ -1912,10 +1912,14 @@
                 </div>
                 <template x-teleport="body">
                     <div
-                        class="quran-calibration-hud"
+                        class="quran-calibration-hud pointer-events-none invisible opacity-0"
                         wire:ignore
                         x-cloak
                         x-show="shouldShowCalibrationHud()"
+                        x-bind:class="{
+                            'visible opacity-100': shouldShowCalibrationHud(),
+                            'pointer-events-none invisible opacity-0': !shouldShowCalibrationHud(),
+                        }"
                         x-transition:enter="transition duration-220 ease-out"
                         x-transition:enter-start="translate-y-0.5 opacity-0"
                         x-transition:enter-end="translate-y-0 opacity-100"
