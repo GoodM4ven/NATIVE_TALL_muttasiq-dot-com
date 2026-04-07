@@ -643,10 +643,9 @@
 
         .main-menu-insights-track {
             grid-column: 1 / -1;
-            display: flex;
-            justify-content: flex-end;
-            align-items: stretch;
             position: relative;
+            direction: ltr;
+            unicode-bidi: isolate;
             height: 0.56rem;
             border-radius: 9999px;
             background: color-mix(in srgb, white 8%, transparent);
@@ -667,17 +666,21 @@
         }
 
         .main-menu-insights-fill {
-            position: relative;
-            height: 100%;
-            margin-inline-start: auto;
+            position: absolute;
+            display: block;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 0%;
             border-radius: inherit;
-            background: linear-gradient(270deg,
-                    color-mix(in srgb, var(--primary-200) 76%, white 24%) 0%,
-                    color-mix(in srgb, var(--primary-300) 84%, white 16%) 52%,
-                    color-mix(in srgb, var(--primary-500) 90%, white 10%) 100%);
+            overflow: hidden;
+            background: linear-gradient(to left,
+                    color-mix(in srgb, var(--primary-500) 88%, white 12%) 0%,
+                    color-mix(in srgb, var(--primary-400) 90%, white 10%) 48%,
+                    color-mix(in srgb, var(--primary-300) 94%, white 6%) 100%);
             box-shadow:
-                0 0 10px color-mix(in srgb, var(--primary-300) 48%, transparent),
-                0 0 18px color-mix(in srgb, var(--primary-500) 30%, transparent);
+                0 0 8px color-mix(in srgb, var(--primary-400) 44%, transparent),
+                0 0 14px color-mix(in srgb, var(--primary-500) 26%, transparent);
             transition:
                 width 364ms cubic-bezier(0.22, 1, 0.36, 1),
                 background 180ms ease,
@@ -690,37 +693,51 @@
             position: absolute;
             inset: 0;
             background: linear-gradient(180deg,
-                    color-mix(in srgb, white 30%, transparent) 0%,
+                    color-mix(in srgb, white 16%, transparent) 0%,
                     transparent 72%);
-            opacity: 0.52;
+            opacity: 0.32;
             pointer-events: none;
         }
 
         .main-menu-insights-fill::after {
             content: '';
             position: absolute;
-            inset: 0;
-            background-image: linear-gradient(270deg,
+            top: 0;
+            bottom: 0;
+            width: 42%;
+            right: -50%;
+            border-radius: inherit;
+            background-image: linear-gradient(to left,
                     transparent 0%,
-                    color-mix(in srgb, var(--primary-400) 35%, transparent) 35%,
-                    color-mix(in srgb, var(--primary-500) 45%, transparent) 50%,
-                    color-mix(in srgb, var(--primary-200) 30%, transparent) 65%,
+                    color-mix(in srgb, var(--primary-200) 48%, transparent) 40%,
+                    color-mix(in srgb, var(--primary-100) 72%, transparent) 52%,
+                    color-mix(in srgb, var(--primary-300) 52%, transparent) 64%,
                     transparent 100%);
-            background-size: 200% 100%;
+            filter: blur(0.6px);
             mix-blend-mode: screen;
-            opacity: 0.6;
-            animation: main-menu-insights-flow 5.8s linear infinite;
+            opacity: 0.5;
+            animation: main-menu-insights-flow-rtl 2.35s linear infinite;
             pointer-events: none;
         }
 
         .main-menu-insights-fill--complete {
-            background: linear-gradient(270deg,
+            background: linear-gradient(to left,
                     color-mix(in srgb, var(--success-300) 82%, white 18%) 0%,
                     color-mix(in srgb, var(--success-500) 88%, white 12%) 52%,
                     color-mix(in srgb, var(--success-600) 92%, white 8%) 100%);
             box-shadow:
                 0 0 18px color-mix(in srgb, var(--success-400) 74%, transparent),
                 0 0 34px color-mix(in srgb, var(--success-500) 52%, transparent);
+        }
+
+        .main-menu-insights-fill--complete::after {
+            background-image: linear-gradient(to left,
+                    transparent 0%,
+                    color-mix(in srgb, var(--success-200) 44%, transparent) 40%,
+                    color-mix(in srgb, var(--success-100) 68%, transparent) 54%,
+                    color-mix(in srgb, var(--success-300) 52%, transparent) 68%,
+                    transparent 100%);
+            opacity: 0.46;
         }
 
         @media (hover: none),
@@ -778,10 +795,10 @@
             }
 
             .main-menu-insights-row--button:active .main-menu-insights-fill {
-                background: linear-gradient(270deg,
-                        color-mix(in srgb, var(--primary-200) 74%, white 26%) 0%,
-                        color-mix(in srgb, var(--primary-300) 84%, white 16%) 48%,
-                        color-mix(in srgb, var(--primary-500) 92%, white 8%) 100%);
+                background: linear-gradient(to left,
+                        color-mix(in srgb, var(--primary-500) 88%, white 12%) 0%,
+                        color-mix(in srgb, var(--primary-400) 90%, white 10%) 48%,
+                        color-mix(in srgb, var(--primary-300) 94%, white 6%) 100%);
                 filter: brightness(1.08) saturate(1.08);
             }
         }
@@ -814,13 +831,13 @@
             }
         }
 
-        @keyframes main-menu-insights-flow {
+        @keyframes main-menu-insights-flow-rtl {
             0% {
-                background-position: 200% 50%;
+                transform: translateX(0);
             }
 
             100% {
-                background-position: 0% 50%;
+                transform: translateX(-340%);
             }
         }
     </style>

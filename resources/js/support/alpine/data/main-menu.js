@@ -539,6 +539,39 @@ document.addEventListener('alpine:init', () => {
 
             return true;
         },
+        isQuranSupportUnlockedForWird() {
+            const quranReader = this.getQuranReaderData();
+
+            if (quranReader && typeof quranReader.isSupportLockActive === 'function') {
+                try {
+                    return !Boolean(quranReader.isSupportLockActive());
+                } catch {
+                    // Fall through to storage/default.
+                }
+            }
+
+            try {
+                const raw = localStorage.getItem('quran-support-unlock-v1');
+                const parsed = raw ? JSON.parse(raw) : null;
+                const mode = String(parsed?.mode ?? '')
+                    .trim()
+                    .toLowerCase();
+
+                if (mode === 'permanent') {
+                    return true;
+                }
+
+                if (mode === 'weekly') {
+                    const expiresAt = Math.trunc(Number(parsed?.expires_at ?? 0));
+
+                    return Number.isFinite(expiresAt) && expiresAt > Date.now();
+                }
+            } catch {
+                // Ignore malformed storage and fallback to locked.
+            }
+
+            return false;
+        },
         scheduleQuranWirdAutoEntry() {
             if (!this.shouldAutoEnterQuranWirdMode) {
                 return;
@@ -568,12 +601,18 @@ document.addEventListener('alpine:init', () => {
                 const wirdButton = document.querySelector('[data-quran-wird-toggle]');
                 const isButtonVisible =
                     wirdButton instanceof HTMLElement && wirdButton.offsetParent !== null;
+                const isSupportUnlocked = this.isQuranSupportUnlockedForWird();
                 const isReaderReady =
                     Boolean(quranReader?.ready) && !Boolean(quranReader?.isLoadingPage);
                 const isPageVisiblyReady =
                     quranReader && typeof quranReader.pageFitState === 'function'
                         ? quranReader.pageFitState() === 'ready'
                         : false;
+
+                if (!isSupportUnlocked) {
+                    this.clearQuranWirdAutoEntry();
+                    return;
+                }
 
                 if (isButtonVisible && isReaderReady && isPageVisiblyReady) {
                     if (!quranReader?.wirdModeActive && wirdButton instanceof HTMLElement) {
@@ -592,33 +631,28 @@ document.addEventListener('alpine:init', () => {
         handleInsightsAthkarRowClick(mode) {
             const normalizedMode = mode === 'masaa' ? 'masaa' : 'sabah';
             const entry = this.dailyProgress?.[normalizedMode];
-            const shouldStayOnGate =
-                Boolean(entry?.isComplete) && this.doesPreventSwitchingAthkarUntilCompletion();
+            const isModeComplete = Boolean(entry?.isComplete);
+            const targetReaderView =
+                normalizedMode === 'masaa' ? 'athkar-app-masaa' : 'athkar-app-sabah';
 
             this.runAfterInsightsCollapse(() => {
-                this.runViewNavigation('athkar-app-gate');
-
-                if (shouldStayOnGate) {
+                if (isModeComplete) {
+                    this.runViewNavigation('athkar-app-gate');
                     return;
                 }
 
-                this.queueInsightsGateLaunch(() => {
-                    window.dispatchEvent(
-                        new CustomEvent('athkar-gate-open', {
-                            detail: { mode: normalizedMode },
-                        }),
-                    );
-                });
+                this.runViewNavigation(targetReaderView);
             });
         },
         handleInsightsWirdRowClick() {
             const isWirdComplete = Boolean(this.dailyProgress?.wird?.isComplete);
+            const canAutoEnterWirdMode = !isWirdComplete && this.isQuranSupportUnlockedForWird();
 
             this.runAfterInsightsCollapse(() => {
                 this.clearQuranWirdAutoEntry();
-                this.shouldAutoEnterQuranWirdMode = !isWirdComplete;
+                this.shouldAutoEnterQuranWirdMode = canAutoEnterWirdMode;
 
-                if (!isWirdComplete) {
+                if (canAutoEnterWirdMode) {
                     this._quranWirdAutoEntryDeadlineAt = Date.now() + 22000;
                 }
 
@@ -631,7 +665,7 @@ document.addEventListener('alpine:init', () => {
                         }),
                     );
 
-                    if (!isWirdComplete) {
+                    if (canAutoEnterWirdMode) {
                         this.scheduleQuranWirdAutoEntry();
                     }
                 });
