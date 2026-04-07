@@ -1915,7 +1915,7 @@
                         class="quran-calibration-hud"
                         wire:ignore
                         x-cloak
-                        x-show="isCalibrating && (views?.['quran-app-tilawa']?.isOpen || views?.['quran-app-hifth']?.isOpen || views?.['quran-app-tadabbur']?.isOpen)"
+                        x-show="shouldShowCalibrationHud()"
                         x-transition:enter="transition duration-220 ease-out"
                         x-transition:enter-start="translate-y-0.5 opacity-0"
                         x-transition:enter-end="translate-y-0 opacity-100"
@@ -1923,8 +1923,7 @@
                         x-transition:leave-start="translate-y-0 opacity-100"
                         x-transition:leave-end="-translate-y-0.5 opacity-0"
                         x-bind:style="calibrationHudStyle()"
-                        x-bind:aria-hidden="isCalibrating && (views?.['quran-app-tilawa']?.isOpen || views?.['quran-app-hifth']?.isOpen ||
-                            views?.['quran-app-tadabbur']?.isOpen) ? 'false' : 'true'"
+                        x-bind:aria-hidden="shouldShowCalibrationHud() ? 'false' : 'true'"
                     >
                         <div class="quran-calibration-loader flex flex-col items-center gap-3">
                             <div class="quran-calibration-spinner">

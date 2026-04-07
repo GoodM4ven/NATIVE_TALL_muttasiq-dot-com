@@ -11248,6 +11248,23 @@ document.addEventListener('alpine:init', () => {
             );
         },
 
+        isAnyAthkarViewOpen() {
+            return Boolean(
+                this.views?.['athkar-app-gate']?.isOpen ||
+                this.views?.['athkar-app-gate']?.isReaderVisible ||
+                this.views?.['athkar-app-sabah']?.isOpen ||
+                this.views?.['athkar-app-masaa']?.isOpen,
+            );
+        },
+
+        shouldShowCalibrationHud() {
+            return Boolean(
+                this.isCalibrating &&
+                this.isAnyQuranReaderViewOpen() &&
+                !this.isAnyAthkarViewOpen(),
+            );
+        },
+
         shouldPersistActivationIndexes() {
             return this.activeQuranReaderView() === 'quran-app-tadabbur';
         },
