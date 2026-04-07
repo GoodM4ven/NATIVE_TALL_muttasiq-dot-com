@@ -41,6 +41,8 @@ document.addEventListener('alpine:init', () => {
         activeTransitionDirection: null,
         _onSwitchView: null,
         _onReaderGoGate: null,
+        _onExternalGateOpen: null,
+        externalGateOpenTimerId: null,
         init() {
             this._onSwitchView = (event) => {
                 const nextView = String(event?.detail?.to ?? '');
@@ -63,8 +65,42 @@ document.addEventListener('alpine:init', () => {
             this._onReaderGoGate = () => {
                 this.returnToGate();
             };
+            this._onExternalGateOpen = (event) => {
+                const requestedMode = String(event?.detail?.mode ?? 'tilawa')
+                    .trim()
+                    .toLowerCase();
+                const mode = ['tilawa', 'hifth', 'tadabbur'].includes(requestedMode)
+                    ? requestedMode
+                    : 'tilawa';
+                const requestedDelay = Number(event?.detail?.delayMs ?? NaN);
+                const delayMs = Number.isFinite(requestedDelay)
+                    ? Math.max(0, Math.trunc(requestedDelay))
+                    : 0;
+
+                if (!this.views?.['quran-app-gate']?.isOpen) {
+                    return;
+                }
+
+                if (this.externalGateOpenTimerId !== null) {
+                    clearTimeout(this.externalGateOpenTimerId);
+                    this.externalGateOpenTimerId = null;
+                }
+
+                const openRequestedMode = () => {
+                    this.externalGateOpenTimerId = null;
+                    this.openMode(mode);
+                };
+
+                if (delayMs > 0) {
+                    this.externalGateOpenTimerId = window.setTimeout(openRequestedMode, delayMs);
+                    return;
+                }
+
+                openRequestedMode();
+            };
             window.addEventListener('switch-view', this._onSwitchView);
             window.addEventListener('quran-reader-go-gate', this._onReaderGoGate);
+            window.addEventListener('quran-gate-open', this._onExternalGateOpen);
 
             this.$nextTick(() => {
                 this.positionPuckAtDefault();
@@ -81,6 +117,16 @@ document.addEventListener('alpine:init', () => {
             if (typeof window !== 'undefined' && this._onReaderGoGate) {
                 window.removeEventListener('quran-reader-go-gate', this._onReaderGoGate);
                 this._onReaderGoGate = null;
+            }
+
+            if (typeof window !== 'undefined' && this._onExternalGateOpen) {
+                window.removeEventListener('quran-gate-open', this._onExternalGateOpen);
+                this._onExternalGateOpen = null;
+            }
+
+            if (this.externalGateOpenTimerId !== null) {
+                clearTimeout(this.externalGateOpenTimerId);
+                this.externalGateOpenTimerId = null;
             }
         },
         isFastUiMode() {

@@ -68,10 +68,10 @@
         [data-main-menu-item] {
             --main-menu-item-index: 0;
             transition:
-                opacity 280ms cubic-bezier(0.22, 1, 0.36, 1),
-                transform 340ms cubic-bezier(0.22, 1, 0.36, 1),
-                filter 300ms ease;
-            transition-delay: calc(var(--main-menu-item-index) * 34ms);
+                opacity 196ms cubic-bezier(0.22, 1, 0.36, 1),
+                transform 238ms cubic-bezier(0.22, 1, 0.36, 1),
+                filter 210ms ease;
+            transition-delay: calc(var(--main-menu-item-index) * 24ms);
             transform-origin: center;
             will-change: transform, opacity, filter;
         }
@@ -122,7 +122,7 @@
             opacity: 1;
             transform: scale(1);
             filter: blur(0);
-            transition-delay: calc((8 - var(--main-menu-item-index)) * 20ms + 120ms);
+            transition-delay: calc((8 - var(--main-menu-item-index)) * 14ms + 84ms);
         }
 
         .main-menu-caption--burst .main-menu-caption__burst {
@@ -261,7 +261,7 @@
             display: inline-flex;
             overflow: hidden;
             width: 100%;
-            height: 0.56rem;
+            height: 0.64rem;
             border-radius: 9999px;
             background: linear-gradient(90deg,
                     color-mix(in srgb, var(--primary-300) 78%, white 5%) 0%,
@@ -273,9 +273,11 @@
                 0 0 16px color-mix(in srgb, var(--primary-300) 20%, transparent),
                 0 0 32px color-mix(in srgb, var(--primary-400) 0%, transparent);
             transition:
-                transform 750ms cubic-bezier(0.22, 1, 0.36, 1),
-                box-shadow 450ms ease,
-                opacity 340ms ease;
+                width 525ms cubic-bezier(0.22, 1, 0.36, 1),
+                height 420ms cubic-bezier(0.22, 1, 0.36, 1),
+                transform 525ms cubic-bezier(0.22, 1, 0.36, 1),
+                box-shadow 315ms ease,
+                opacity 238ms ease;
             opacity: 1;
             outline: none;
             transform: translateY(0);
@@ -291,7 +293,7 @@
                     color-mix(in srgb, var(--primary-200) 10%, transparent) 70%,
                     transparent 50%);
             opacity: 0;
-            transition: opacity 400ms ease;
+            transition: opacity 280ms ease;
             filter: blur(2px);
         }
 
@@ -307,14 +309,16 @@
             opacity: 0.42;
             transform: translateX(-120%) skewX(-18deg);
             transition:
-                opacity 400ms ease,
-                transform 400ms ease;
-            animation: main-menu-insights-line-shimmer 2.5s linear infinite;
+                opacity 280ms ease,
+                transform 280ms ease;
+            animation: main-menu-insights-line-shimmer 1.75s linear infinite;
             pointer-events: none;
         }
 
         .main-menu-insights-trigger:hover,
         .main-menu-insights-trigger:focus-visible {
+            width: 110%;
+            height: 0.42rem;
             opacity: 1;
             transform: translateY(-1px);
             box-shadow:
@@ -325,6 +329,8 @@
         }
 
         .main-menu-insights-trigger[data-expanded='true'] {
+            width: 92%;
+            height: 0.42rem;
             opacity: 1;
             transform: translateY(-1px);
             box-shadow:
@@ -333,7 +339,7 @@
                 0 0 62px color-mix(in srgb, white 72%, transparent),
                 0 0 96px color-mix(in srgb, var(--primary-400) 52%, transparent),
                 0 0 138px color-mix(in srgb, var(--primary-500) 34%, transparent);
-            animation: main-menu-insights-trigger-power 1.4s ease-in-out infinite alternate;
+            animation: main-menu-insights-trigger-power 0.98s ease-in-out infinite alternate;
         }
 
         .main-menu-insights-trigger:hover::before,
@@ -360,12 +366,12 @@
             width: 100%;
             max-height: 0;
             opacity: 0;
-            transform: translateY(-0.28rem);
+            transform: translateY(0);
             pointer-events: none;
             transition:
-                max-height 900ms cubic-bezier(0.22, 1, 0.36, 1),
-                transform 450ms cubic-bezier(0.22, 1, 0.36, 1),
-                opacity 400ms ease;
+                max-height 630ms cubic-bezier(0.22, 1, 0.36, 1),
+                transform 315ms cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 280ms ease;
             will-change: max-height, opacity, transform;
         }
 
@@ -398,15 +404,16 @@
                 0 8px 20px color-mix(in srgb, var(--primary-400) 14%, transparent),
                 0 0 46px color-mix(in srgb, white 32%, transparent);
             padding: 1.05rem 0.92rem 0.95rem;
-            transform: translateY(-1rem) scale(0.985);
+            transform: translateY(calc(var(--main-menu-insights-panel-gap) - 5rem)) scale(0.975);
             transform-origin: top center;
             opacity: 0;
             transition:
-                transform 450ms cubic-bezier(0.22, 1, 0.36, 1),
-                opacity 450ms ease;
+                transform 315ms cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 315ms ease;
         }
 
         .main-menu-insights-panel[data-fast-close='true'] {
+            transform: translateY(0);
             transition:
                 transform var(--main-menu-insights-fast-close-duration, 450ms) cubic-bezier(0.4, 0, 1, 1),
                 opacity var(--main-menu-insights-fast-close-opacity-duration, 360ms) ease;
@@ -532,10 +539,10 @@
             outline: none;
             cursor: pointer !important;
             transition:
-                background 260ms ease,
-                border-color 260ms ease,
-                box-shadow 260ms ease,
-                transform 220ms ease;
+                background 180ms ease,
+                border-color 180ms ease,
+                box-shadow 180ms ease,
+                transform 154ms ease;
         }
 
         .main-menu-insights-row--button * {
@@ -568,6 +575,11 @@
             background: color-mix(in srgb, var(--primary-700) 14%, transparent);
         }
 
+        .main-menu-insights-row--button:hover .main-menu-insights-fill,
+        .main-menu-insights-row--button:focus-visible .main-menu-insights-fill {
+            filter: brightness(1.08) saturate(1.08);
+        }
+
         .dark .main-menu-insights-row {
             border-color: color-mix(in srgb, var(--primary-200) 30%, transparent);
             background: linear-gradient(160deg,
@@ -590,6 +602,7 @@
             max-height: 1.25rem;
             line-height: 1;
             color: color-mix(in srgb, var(--primary-900) 84%, transparent);
+            transition: color 180ms ease, text-shadow 180ms ease, opacity 180ms ease;
         }
 
         .dark .main-menu-insights-title {
@@ -611,6 +624,7 @@
             color: color-mix(in srgb, var(--primary-800) 82%, transparent);
             text-shadow: 0 0 12px color-mix(in srgb, white 32%, transparent);
             font-variant-numeric: tabular-nums;
+            transition: color 180ms ease, text-shadow 180ms ease, opacity 180ms ease;
         }
 
         .dark .main-menu-insights-meta {
@@ -627,6 +641,11 @@
             overflow: hidden;
             box-shadow: none;
             backdrop-filter: blur(6px);
+            transition:
+                background 180ms ease,
+                border-color 180ms ease,
+                box-shadow 180ms ease,
+                opacity 180ms ease;
         }
 
         .dark .main-menu-insights-track {
@@ -645,7 +664,10 @@
             box-shadow:
                 0 0 12px color-mix(in srgb, var(--primary-300) 64%, transparent),
                 0 0 24px color-mix(in srgb, var(--primary-500) 40%, transparent);
-            transition: width 520ms cubic-bezier(0.22, 1, 0.36, 1);
+            transition:
+                width 364ms cubic-bezier(0.22, 1, 0.36, 1),
+                filter 180ms ease,
+                box-shadow 180ms ease;
         }
 
         .main-menu-insights-fill::before {
@@ -708,11 +730,11 @@
 
         @keyframes main-menu-insights-line-shimmer {
             0% {
-                transform: translateX(-120%) skewX(-18deg);
+                transform: translateX(120%) skewX(-18deg);
             }
 
             100% {
-                transform: translateX(120%) skewX(-18deg);
+                transform: translateX(-120%) skewX(-18deg);
             }
         }
 

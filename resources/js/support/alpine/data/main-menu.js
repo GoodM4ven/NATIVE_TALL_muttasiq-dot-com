@@ -38,7 +38,8 @@ document.addEventListener('alpine:init', () => {
         insightsHideTimer: null,
         insightsRefreshTimer: null,
         insightsPanelHeight: 0,
-        insightsFastCloseDurationMs: 450,
+        insightsFastCloseDurationMs: 315,
+        insightsGateLaunchDelayMs: 420,
         progressLabels: {
             sabah: config?.progressLabels?.sabah ?? 'أذكار الصباح',
             wird: config?.progressLabels?.wird ?? 'الوِرد اليومي',
@@ -61,6 +62,7 @@ document.addEventListener('alpine:init', () => {
         _onSwitchView: null,
         _onWindowResize: null,
         _insightsFastCloseToken: null,
+        _insightsGateLaunchTimer: null,
         _quranWirdAutoEntryTimer: null,
         _quranWirdAutoEntryDeadlineAt: 0,
         shouldAutoEnterQuranWirdMode: false,
@@ -125,8 +127,12 @@ document.addEventListener('alpine:init', () => {
             };
             this._onSwitchView = (event) => {
                 const nextView = String(event?.detail?.to ?? '').trim();
+                const shouldPreserveGateLaunch =
+                    this._insightsGateLaunchTimer !== null &&
+                    (nextView === 'athkar-app-gate' || nextView === 'quran-app-gate');
 
                 if (nextView === 'main-menu') {
+                    this.clearInsightsGateLaunchTimer();
                     this.clearQuranWirdAutoEntry();
                     this.refreshDailyProgress();
                     this.measureInsightsPanelHeight();
@@ -139,7 +145,9 @@ document.addEventListener('alpine:init', () => {
                     this.clearQuranWirdAutoEntry();
                 }
 
-                this.resetInsightsPanelState();
+                this.resetInsightsPanelState({
+                    preservePendingGateLaunch: shouldPreserveGateLaunch,
+                });
             };
             this._onWindowResize = () => {
                 this.measureInsightsPanelHeight();
@@ -168,6 +176,7 @@ document.addEventListener('alpine:init', () => {
         },
         destroy() {
             this.clearInsightsHideTimer();
+            this.clearInsightsGateLaunchTimer();
             this.stopInsightsRefreshLoop();
             this.clearQuranWirdAutoEntry();
 
@@ -440,6 +449,32 @@ document.addEventListener('alpine:init', () => {
                 this.insightsHideTimer = null;
             }
         },
+        clearInsightsGateLaunchTimer() {
+            if (this._insightsGateLaunchTimer !== null) {
+                clearTimeout(this._insightsGateLaunchTimer);
+                this._insightsGateLaunchTimer = null;
+            }
+        },
+        queueInsightsGateLaunch(task, delayMs = null) {
+            if (typeof task !== 'function') {
+                return;
+            }
+
+            this.clearInsightsGateLaunchTimer();
+
+            const resolvedDelay = Math.max(
+                0,
+                Math.trunc(
+                    Number(delayMs === null ? this.insightsGateLaunchDelayMs : delayMs) ||
+                        this.insightsGateLaunchDelayMs,
+                ),
+            );
+
+            this._insightsGateLaunchTimer = window.setTimeout(() => {
+                this._insightsGateLaunchTimer = null;
+                task();
+            }, resolvedDelay);
+        },
         clearQuranWirdAutoEntry() {
             if (this._quranWirdAutoEntryTimer !== null) {
                 clearTimeout(this._quranWirdAutoEntryTimer);
@@ -557,32 +592,40 @@ document.addEventListener('alpine:init', () => {
         handleInsightsAthkarRowClick(mode) {
             const normalizedMode = mode === 'masaa' ? 'masaa' : 'sabah';
             const entry = this.dailyProgress?.[normalizedMode];
-            const shouldRouteToGate =
+            const shouldStayOnGate =
                 Boolean(entry?.isComplete) && this.doesPreventSwitchingAthkarUntilCompletion();
-            const targetView = shouldRouteToGate
-                ? 'athkar-app-gate'
-                : normalizedMode === 'masaa'
-                  ? 'athkar-app-masaa'
-                  : 'athkar-app-sabah';
 
             this.runAfterInsightsCollapse(() => {
-                this.runViewNavigation(targetView);
-            });
-        },
-        handleInsightsWirdRowClick() {
-            const isWirdComplete = Boolean(this.dailyProgress?.wird?.isComplete);
+                this.runViewNavigation('athkar-app-gate');
 
-            this.runAfterInsightsCollapse(() => {
-                this.runViewNavigation('quran-app-tilawa');
-
-                if (!isWirdComplete) {
-                    this.clearQuranWirdAutoEntry();
+                if (shouldStayOnGate) {
                     return;
                 }
 
+                this.queueInsightsGateLaunch(() => {
+                    window.dispatchEvent(
+                        new CustomEvent('athkar-gate-open', {
+                            detail: { mode: normalizedMode },
+                        }),
+                    );
+                });
+            });
+        },
+        handleInsightsWirdRowClick() {
+            this.runAfterInsightsCollapse(() => {
+                this.clearQuranWirdAutoEntry();
                 this.shouldAutoEnterQuranWirdMode = true;
-                this._quranWirdAutoEntryDeadlineAt = Date.now() + 16000;
-                this.scheduleQuranWirdAutoEntry();
+                this._quranWirdAutoEntryDeadlineAt = Date.now() + 22000;
+                this.runViewNavigation('quran-app-gate');
+
+                this.queueInsightsGateLaunch(() => {
+                    window.dispatchEvent(
+                        new CustomEvent('quran-gate-open', {
+                            detail: { mode: 'tilawa' },
+                        }),
+                    );
+                    this.scheduleQuranWirdAutoEntry();
+                });
             });
         },
         startInsightsRefreshLoop() {
@@ -626,8 +669,11 @@ document.addEventListener('alpine:init', () => {
                 this.isInsightsExpanded = false;
             }, this.insightsHideDelayMs);
         },
-        resetInsightsPanelState() {
+        resetInsightsPanelState({ preservePendingGateLaunch = false } = {}) {
             this.clearInsightsHideTimer();
+            if (!preservePendingGateLaunch) {
+                this.clearInsightsGateLaunchTimer();
+            }
             this.stopInsightsRefreshLoop();
             this.isInsightsFastClosing = false;
             this.isInsightsPointerInside = false;
