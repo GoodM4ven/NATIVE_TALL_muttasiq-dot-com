@@ -612,10 +612,16 @@ document.addEventListener('alpine:init', () => {
             });
         },
         handleInsightsWirdRowClick() {
+            const isWirdComplete = Boolean(this.dailyProgress?.wird?.isComplete);
+
             this.runAfterInsightsCollapse(() => {
                 this.clearQuranWirdAutoEntry();
-                this.shouldAutoEnterQuranWirdMode = true;
-                this._quranWirdAutoEntryDeadlineAt = Date.now() + 22000;
+                this.shouldAutoEnterQuranWirdMode = !isWirdComplete;
+
+                if (!isWirdComplete) {
+                    this._quranWirdAutoEntryDeadlineAt = Date.now() + 22000;
+                }
+
                 this.runViewNavigation('quran-app-gate');
 
                 this.queueInsightsGateLaunch(() => {
@@ -624,7 +630,10 @@ document.addEventListener('alpine:init', () => {
                             detail: { mode: 'tilawa' },
                         }),
                     );
-                    this.scheduleQuranWirdAutoEntry();
+
+                    if (!isWirdComplete) {
+                        this.scheduleQuranWirdAutoEntry();
+                    }
                 });
             });
         },

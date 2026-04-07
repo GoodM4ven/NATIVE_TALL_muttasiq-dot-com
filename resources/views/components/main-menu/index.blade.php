@@ -366,7 +366,7 @@
             width: 100%;
             max-height: 0;
             opacity: 0;
-            transform: translateY(0);
+            transform: translateY(-0.32rem);
             pointer-events: none;
             transition:
                 max-height 630ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -390,6 +390,7 @@
 
         .main-menu-insights-panel {
             position: relative;
+            top: calc(var(--main-menu-insights-panel-gap) - 2.9rem);
             isolation: isolate;
             width: 100%;
             border-radius: 1.25rem;
@@ -404,17 +405,18 @@
                 0 8px 20px color-mix(in srgb, var(--primary-400) 14%, transparent),
                 0 0 46px color-mix(in srgb, white 32%, transparent);
             padding: 1.05rem 0.92rem 0.95rem;
-            transform: translateY(calc(var(--main-menu-insights-panel-gap) - 5rem)) scale(0.975);
+            transform: scale(0.972);
             transform-origin: top center;
             opacity: 0;
             transition:
+                top 315ms cubic-bezier(0.22, 1, 0.36, 1),
                 transform 315ms cubic-bezier(0.22, 1, 0.36, 1),
                 opacity 315ms ease;
         }
 
         .main-menu-insights-panel[data-fast-close='true'] {
-            transform: translateY(0);
             transition:
+                top var(--main-menu-insights-fast-close-duration, 450ms) cubic-bezier(0.4, 0, 1, 1),
                 transform var(--main-menu-insights-fast-close-duration, 450ms) cubic-bezier(0.4, 0, 1, 1),
                 opacity var(--main-menu-insights-fast-close-opacity-duration, 360ms) ease;
         }
@@ -451,7 +453,8 @@
         }
 
         .main-menu-insights-reveal[data-expanded='true'] .main-menu-insights-panel {
-            transform: translateY(var(--main-menu-insights-panel-gap));
+            top: var(--main-menu-insights-panel-gap);
+            transform: scale(1);
             opacity: 1;
         }
 
@@ -537,7 +540,10 @@
             text-align: start;
             appearance: none;
             outline: none;
+            border-radius: inherit;
             cursor: pointer !important;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
             transition:
                 background 180ms ease,
                 border-color 180ms ease,
@@ -551,7 +557,7 @@
 
         .main-menu-insights-row--button:hover,
         .main-menu-insights-row--button:focus-visible {
-            transform: translateY(-1px);
+            transform: translateY(0);
             border-color: color-mix(in srgb, var(--primary-500) 44%, white 56%);
             background: linear-gradient(160deg,
                     color-mix(in srgb, var(--primary-500) 22%, transparent) 0%,
@@ -577,6 +583,10 @@
 
         .main-menu-insights-row--button:hover .main-menu-insights-fill,
         .main-menu-insights-row--button:focus-visible .main-menu-insights-fill {
+            background: linear-gradient(270deg,
+                    color-mix(in srgb, var(--primary-200) 74%, white 26%) 0%,
+                    color-mix(in srgb, var(--primary-300) 84%, white 16%) 48%,
+                    color-mix(in srgb, var(--primary-500) 92%, white 8%) 100%);
             filter: brightness(1.08) saturate(1.08);
         }
 
@@ -633,6 +643,9 @@
 
         .main-menu-insights-track {
             grid-column: 1 / -1;
+            display: flex;
+            justify-content: flex-end;
+            align-items: stretch;
             position: relative;
             height: 0.56rem;
             border-radius: 9999px;
@@ -656,16 +669,18 @@
         .main-menu-insights-fill {
             position: relative;
             height: 100%;
+            margin-inline-start: auto;
             border-radius: inherit;
-            background: linear-gradient(90deg,
-                    color-mix(in srgb, var(--primary-200) 78%, white 22%) 0%,
-                    color-mix(in srgb, var(--primary-300) 84%, white 16%) 45%,
+            background: linear-gradient(270deg,
+                    color-mix(in srgb, var(--primary-200) 76%, white 24%) 0%,
+                    color-mix(in srgb, var(--primary-300) 84%, white 16%) 52%,
                     color-mix(in srgb, var(--primary-500) 90%, white 10%) 100%);
             box-shadow:
-                0 0 12px color-mix(in srgb, var(--primary-300) 64%, transparent),
-                0 0 24px color-mix(in srgb, var(--primary-500) 40%, transparent);
+                0 0 10px color-mix(in srgb, var(--primary-300) 48%, transparent),
+                0 0 18px color-mix(in srgb, var(--primary-500) 30%, transparent);
             transition:
                 width 364ms cubic-bezier(0.22, 1, 0.36, 1),
+                background 180ms ease,
                 filter 180ms ease,
                 box-shadow 180ms ease;
         }
@@ -673,13 +688,11 @@
         .main-menu-insights-fill::before {
             content: '';
             position: absolute;
-            inset: -46% -18%;
-            background: radial-gradient(ellipse at center,
-                    color-mix(in srgb, white 56%, transparent) 0%,
-                    color-mix(in srgb, var(--primary-300) 22%, transparent) 44%,
-                    transparent 76%);
-            opacity: 0.66;
-            filter: blur(5px);
+            inset: 0;
+            background: linear-gradient(180deg,
+                    color-mix(in srgb, white 30%, transparent) 0%,
+                    transparent 72%);
+            opacity: 0.52;
             pointer-events: none;
         }
 
@@ -687,27 +700,90 @@
             content: '';
             position: absolute;
             inset: 0;
-            background-image: linear-gradient(90deg,
+            background-image: linear-gradient(270deg,
                     transparent 0%,
                     color-mix(in srgb, var(--primary-400) 35%, transparent) 35%,
                     color-mix(in srgb, var(--primary-500) 45%, transparent) 50%,
-                    color-mix(in srgb, var(--success-400) 35%, transparent) 65%,
+                    color-mix(in srgb, var(--primary-200) 30%, transparent) 65%,
                     transparent 100%);
             background-size: 200% 100%;
             mix-blend-mode: screen;
-            opacity: 0.75;
-            animation: main-menu-insights-flow 7.5s linear infinite;
+            opacity: 0.6;
+            animation: main-menu-insights-flow 5.8s linear infinite;
             pointer-events: none;
         }
 
         .main-menu-insights-fill--complete {
-            background: linear-gradient(90deg,
+            background: linear-gradient(270deg,
                     color-mix(in srgb, var(--success-300) 82%, white 18%) 0%,
                     color-mix(in srgb, var(--success-500) 88%, white 12%) 52%,
                     color-mix(in srgb, var(--success-600) 92%, white 8%) 100%);
             box-shadow:
                 0 0 18px color-mix(in srgb, var(--success-400) 74%, transparent),
                 0 0 34px color-mix(in srgb, var(--success-500) 52%, transparent);
+        }
+
+        @media (hover: none),
+        (pointer: coarse) {
+
+            .main-menu-insights-row--button:hover,
+            .main-menu-insights-row--button:focus-visible {
+                border-color: color-mix(in srgb, white 52%, var(--primary-200) 16%);
+                background: linear-gradient(160deg,
+                        color-mix(in srgb, white 14%, transparent) 0%,
+                        color-mix(in srgb, var(--primary-100) 8%, transparent) 100%);
+                box-shadow:
+                    0 10px 22px color-mix(in srgb, var(--primary-900) 10%, transparent),
+                    0 0 26px color-mix(in srgb, white 22%, transparent);
+            }
+
+            .main-menu-insights-row--button:hover .main-menu-insights-title,
+            .main-menu-insights-row--button:focus-visible .main-menu-insights-title,
+            .main-menu-insights-row--button:hover .main-menu-insights-meta,
+            .main-menu-insights-row--button:focus-visible .main-menu-insights-meta {
+                color: color-mix(in srgb, var(--primary-900) 84%, transparent);
+                text-shadow: 0 0 12px color-mix(in srgb, white 32%, transparent);
+            }
+
+            .main-menu-insights-row--button:hover .main-menu-insights-track,
+            .main-menu-insights-row--button:focus-visible .main-menu-insights-track {
+                border-color: color-mix(in srgb, white 40%, var(--primary-200) 22%);
+                background: color-mix(in srgb, white 8%, transparent);
+            }
+
+            .main-menu-insights-row--button:hover .main-menu-insights-fill,
+            .main-menu-insights-row--button:focus-visible .main-menu-insights-fill {
+                filter: none;
+            }
+
+            .main-menu-insights-row--button:active {
+                border-color: color-mix(in srgb, var(--primary-500) 44%, white 56%);
+                background: linear-gradient(160deg,
+                        color-mix(in srgb, var(--primary-500) 22%, transparent) 0%,
+                        color-mix(in srgb, var(--primary-600) 28%, transparent) 100%);
+                box-shadow:
+                    0 12px 28px color-mix(in srgb, var(--primary-800) 20%, transparent),
+                    0 0 28px color-mix(in srgb, var(--primary-400) 22%, transparent);
+            }
+
+            .main-menu-insights-row--button:active .main-menu-insights-title,
+            .main-menu-insights-row--button:active .main-menu-insights-meta {
+                color: color-mix(in srgb, white 88%, var(--primary-100) 12%);
+                text-shadow: 0 0 14px color-mix(in srgb, var(--primary-200) 42%, transparent);
+            }
+
+            .main-menu-insights-row--button:active .main-menu-insights-track {
+                border-color: color-mix(in srgb, white 62%, var(--primary-300) 38%);
+                background: color-mix(in srgb, var(--primary-700) 14%, transparent);
+            }
+
+            .main-menu-insights-row--button:active .main-menu-insights-fill {
+                background: linear-gradient(270deg,
+                        color-mix(in srgb, var(--primary-200) 74%, white 26%) 0%,
+                        color-mix(in srgb, var(--primary-300) 84%, white 16%) 48%,
+                        color-mix(in srgb, var(--primary-500) 92%, white 8%) 100%);
+                filter: brightness(1.08) saturate(1.08);
+            }
         }
 
         @keyframes main-menu-insights-trigger-power {
@@ -740,11 +816,11 @@
 
         @keyframes main-menu-insights-flow {
             0% {
-                background-position: 0% 50%;
+                background-position: 200% 50%;
             }
 
             100% {
-                background-position: 200% 50%;
+                background-position: 0% 50%;
             }
         }
     </style>
