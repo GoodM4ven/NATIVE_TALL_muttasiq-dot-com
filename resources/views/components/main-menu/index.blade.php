@@ -210,6 +210,18 @@
             z-index: -1;
             opacity: 0.2;
             pointer-events: none;
+            -webkit-mask-image: radial-gradient(circle at center,
+                    rgba(0, 0, 0, 1) 44%,
+                    rgba(0, 0, 0, 0.92) 62%,
+                    rgba(0, 0, 0, 0.56) 80%,
+                    rgba(0, 0, 0, 0.12) 92%,
+                    rgba(0, 0, 0, 0) 100%);
+            mask-image: radial-gradient(circle at center,
+                    rgba(0, 0, 0, 1) 44%,
+                    rgba(0, 0, 0, 0.92) 62%,
+                    rgba(0, 0, 0, 0.56) 80%,
+                    rgba(0, 0, 0, 0.12) 92%,
+                    rgba(0, 0, 0, 0) 100%);
         }
 
         .main-menu-grid-pattern {
@@ -264,7 +276,7 @@
                 opacity 340ms ease;
             opacity: 1;
             outline: none;
-            transform: translateY(0) scaleX(1);
+            transform: translateY(0);
         }
 
         .main-menu-insights-trigger::before {
@@ -291,17 +303,18 @@
                     transparent 0%,
                     color-mix(in srgb, white 90%, transparent) 50%,
                     transparent 70%);
-            opacity: 0;
-            transform: translateX(-30%) skewX(-16deg);
+            opacity: 0.42;
+            transform: translateX(-120%) skewX(-18deg);
             transition:
                 opacity 400ms ease,
                 transform 400ms ease;
+            animation: main-menu-insights-line-shimmer 2.5s linear infinite;
         }
 
         .main-menu-insights-trigger:hover,
         .main-menu-insights-trigger:focus-visible {
             opacity: 1;
-            transform: translateY(-1px) scaleX(1.05);
+            transform: translateY(-1px);
             box-shadow:
                 0 0 0 1px color-mix(in srgb, white 70%, var(--primary-200) 40%),
                 0 0 22px color-mix(in srgb, white 40%, transparent),
@@ -311,7 +324,7 @@
 
         .main-menu-insights-trigger[data-expanded='true'] {
             opacity: 1;
-            transform: translateY(-1px) scaleX(1.14);
+            transform: translateY(-1px);
             box-shadow:
                 0 0 0 1px color-mix(in srgb, white 96%, transparent),
                 0 0 34px color-mix(in srgb, white 92%, transparent),
@@ -329,7 +342,6 @@
         .main-menu-insights-trigger:hover::after,
         .main-menu-insights-trigger:focus-visible::after {
             opacity: 0.7;
-            transform: translateX(30%) skewX(-16deg);
         }
 
         .main-menu-insights-trigger[data-expanded='true']::before {
@@ -338,28 +350,31 @@
 
         .main-menu-insights-trigger[data-expanded='true']::after {
             opacity: 0.92;
-            transform: translateX(30%) skewX(-16deg);
         }
 
         .main-menu-insights-reveal {
             width: 100%;
             max-height: 0;
             opacity: 0;
+            transform: translateY(-0.7rem);
             pointer-events: none;
             transition:
                 max-height 900ms cubic-bezier(0.22, 1, 0.36, 1),
+                transform 450ms cubic-bezier(0.22, 1, 0.36, 1),
                 opacity 400ms ease;
-            will-change: max-height, opacity;
+            will-change: max-height, opacity, transform;
         }
 
         .main-menu-insights-reveal[data-fast-close='true'] {
             transition:
                 max-height var(--main-menu-insights-fast-close-duration, 450ms) cubic-bezier(0.4, 0, 1, 1),
+                transform var(--main-menu-insights-fast-close-duration, 450ms) cubic-bezier(0.4, 0, 1, 1),
                 opacity var(--main-menu-insights-fast-close-opacity-duration, 360ms) ease;
         }
 
         .main-menu-insights-reveal[data-expanded='true'] {
             opacity: 1;
+            transform: translateY(0);
             pointer-events: auto;
         }
 
@@ -506,6 +521,45 @@
             overflow: clip;
         }
 
+        .main-menu-insights-row--button {
+            width: 100%;
+            text-align: start;
+            appearance: none;
+            outline: none;
+            cursor: pointer;
+            transition:
+                background 260ms ease,
+                border-color 260ms ease,
+                box-shadow 260ms ease,
+                transform 220ms ease;
+        }
+
+        .main-menu-insights-row--button:hover,
+        .main-menu-insights-row--button:focus-visible {
+            transform: translateY(-1px);
+            border-color: color-mix(in srgb, var(--primary-500) 44%, white 56%);
+            background: linear-gradient(160deg,
+                    color-mix(in srgb, var(--primary-500) 22%, transparent) 0%,
+                    color-mix(in srgb, var(--primary-600) 28%, transparent) 100%);
+            box-shadow:
+                0 12px 28px color-mix(in srgb, var(--primary-800) 20%, transparent),
+                0 0 28px color-mix(in srgb, var(--primary-400) 22%, transparent);
+        }
+
+        .main-menu-insights-row--button:hover .main-menu-insights-title,
+        .main-menu-insights-row--button:focus-visible .main-menu-insights-title,
+        .main-menu-insights-row--button:hover .main-menu-insights-meta,
+        .main-menu-insights-row--button:focus-visible .main-menu-insights-meta {
+            color: color-mix(in srgb, white 88%, var(--primary-100) 12%);
+            text-shadow: 0 0 14px color-mix(in srgb, var(--primary-200) 42%, transparent);
+        }
+
+        .main-menu-insights-row--button:hover .main-menu-insights-track,
+        .main-menu-insights-row--button:focus-visible .main-menu-insights-track {
+            border-color: color-mix(in srgb, white 62%, var(--primary-300) 38%);
+            background: color-mix(in srgb, var(--primary-700) 14%, transparent);
+        }
+
         .dark .main-menu-insights-row {
             border-color: color-mix(in srgb, var(--primary-200) 30%, transparent);
             background: linear-gradient(160deg,
@@ -641,6 +695,16 @@
                     0 0 40px color-mix(in srgb, white 94%, transparent),
                     0 0 72px color-mix(in srgb, var(--primary-400) 58%, transparent),
                     0 0 126px color-mix(in srgb, var(--primary-500) 42%, transparent);
+            }
+        }
+
+        @keyframes main-menu-insights-line-shimmer {
+            0% {
+                transform: translateX(-120%) skewX(-18deg);
+            }
+
+            100% {
+                transform: translateX(120%) skewX(-18deg);
             }
         }
 
@@ -799,7 +863,12 @@
                     <span class="main-menu-insights-powered main-menu-insights-powered--tr">POWERED</span>
                     <span class="main-menu-insights-powered main-menu-insights-powered--bl">POWERED</span>
                     <span class="main-menu-insights-powered main-menu-insights-powered--br">POWERED</span>
-                    <div class="main-menu-insights-row">
+                    <button
+                        class="main-menu-insights-row main-menu-insights-row--button"
+                        type="button"
+                        x-on:click.stop.prevent="handleInsightsAthkarRowClick('sabah')"
+                        x-bind:aria-label="`${progressLabels.sabah} ${dailyProgress.sabah.percent}%`"
+                    >
                         <p
                             class="main-menu-insights-title text-[0.72rem] font-semibold leading-none sm:text-[0.76rem]"
                             x-text="progressLabels.sabah"
@@ -814,9 +883,14 @@
                                 x-bind:style="`width: ${dailyProgress.sabah.percent}%;`"
                             ></div>
                         </div>
-                    </div>
+                    </button>
 
-                    <div class="main-menu-insights-row">
+                    <button
+                        class="main-menu-insights-row main-menu-insights-row--button"
+                        type="button"
+                        x-on:click.stop.prevent="handleInsightsWirdRowClick()"
+                        x-bind:aria-label="`${progressLabels.wird} ${dailyProgress.wird.percent}%`"
+                    >
                         <p
                             class="main-menu-insights-title text-[0.72rem] font-semibold leading-none sm:text-[0.76rem]"
                             x-text="progressLabels.wird"
@@ -831,9 +905,14 @@
                                 x-bind:style="`width: ${dailyProgress.wird.percent}%;`"
                             ></div>
                         </div>
-                    </div>
+                    </button>
 
-                    <div class="main-menu-insights-row">
+                    <button
+                        class="main-menu-insights-row main-menu-insights-row--button"
+                        type="button"
+                        x-on:click.stop.prevent="handleInsightsAthkarRowClick('masaa')"
+                        x-bind:aria-label="`${progressLabels.masaa} ${dailyProgress.masaa.percent}%`"
+                    >
                         <p
                             class="main-menu-insights-title text-[0.72rem] font-semibold leading-none sm:text-[0.76rem]"
                             x-text="progressLabels.masaa"
@@ -848,7 +927,7 @@
                                 x-bind:style="`width: ${dailyProgress.masaa.percent}%;`"
                             ></div>
                         </div>
-                    </div>
+                    </button>
                 </section>
             </div>
         </div>

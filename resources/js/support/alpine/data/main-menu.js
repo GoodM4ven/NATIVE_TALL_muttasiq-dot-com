@@ -61,6 +61,9 @@ document.addEventListener('alpine:init', () => {
         _onSwitchView: null,
         _onWindowResize: null,
         _insightsFastCloseToken: null,
+        _quranWirdAutoEntryTimer: null,
+        _quranWirdAutoEntryDeadlineAt: 0,
+        shouldAutoEnterQuranWirdMode: false,
         init() {
             this.captionShadow = window.makeBoxShadowFromColor?.('--primary-500') ?? 'none';
             this.captionShadowDark = window.makeBoxShadowFromColor?.('--primary-100') ?? 'none';
@@ -124,9 +127,16 @@ document.addEventListener('alpine:init', () => {
                 const nextView = String(event?.detail?.to ?? '').trim();
 
                 if (nextView === 'main-menu') {
+                    this.clearQuranWirdAutoEntry();
                     this.refreshDailyProgress();
                     this.measureInsightsPanelHeight();
                     return;
+                }
+
+                if (nextView.startsWith('quran-app-') && this.shouldAutoEnterQuranWirdMode) {
+                    this.scheduleQuranWirdAutoEntry();
+                } else if (!nextView.startsWith('quran-app-')) {
+                    this.clearQuranWirdAutoEntry();
                 }
 
                 this.resetInsightsPanelState();
@@ -159,6 +169,7 @@ document.addEventListener('alpine:init', () => {
         destroy() {
             this.clearInsightsHideTimer();
             this.stopInsightsRefreshLoop();
+            this.clearQuranWirdAutoEntry();
 
             if (this._onWindowMouseMove) {
                 window.removeEventListener('mousemove', this._onWindowMouseMove);
@@ -428,6 +439,151 @@ document.addEventListener('alpine:init', () => {
                 clearTimeout(this.insightsHideTimer);
                 this.insightsHideTimer = null;
             }
+        },
+        clearQuranWirdAutoEntry() {
+            if (this._quranWirdAutoEntryTimer !== null) {
+                clearTimeout(this._quranWirdAutoEntryTimer);
+                this._quranWirdAutoEntryTimer = null;
+            }
+
+            this._quranWirdAutoEntryDeadlineAt = 0;
+            this.shouldAutoEnterQuranWirdMode = false;
+        },
+        runAfterInsightsCollapse(task) {
+            if (typeof task !== 'function') {
+                return;
+            }
+
+            const delayMs = this.collapseInsightsForNavigation();
+
+            if (delayMs > 0) {
+                window.setTimeout(() => {
+                    task();
+                }, delayMs);
+                return;
+            }
+
+            task();
+        },
+        runViewNavigation(viewName) {
+            const normalizedView = String(viewName ?? '').trim();
+
+            if (normalizedView === '') {
+                return;
+            }
+
+            this.executeItemCallback(`() => ($viewNav(\`${normalizedView}\`))`, this.$el);
+        },
+        doesPreventSwitchingAthkarUntilCompletion() {
+            const athkarReader = this.getAthkarReaderData();
+
+            if (athkarReader && typeof athkarReader.settingValue === 'function') {
+                try {
+                    return Boolean(
+                        athkarReader.settingValue(
+                            'does_prevent_switching_athkar_until_completion',
+                            true,
+                        ),
+                    );
+                } catch {
+                    // Fall through to storage/default.
+                }
+            }
+
+            try {
+                const raw = localStorage.getItem('athkar-settings-v1');
+                const parsed = raw ? JSON.parse(raw) : null;
+                const value = parsed?.does_prevent_switching_athkar_until_completion;
+
+                if (typeof value === 'boolean') {
+                    return value;
+                }
+            } catch {
+                // Ignore malformed storage and fallback to default.
+            }
+
+            return true;
+        },
+        scheduleQuranWirdAutoEntry() {
+            if (!this.shouldAutoEnterQuranWirdMode) {
+                return;
+            }
+
+            if (this._quranWirdAutoEntryDeadlineAt <= 0) {
+                this._quranWirdAutoEntryDeadlineAt = Date.now() + 16000;
+            }
+
+            if (this._quranWirdAutoEntryTimer !== null) {
+                clearTimeout(this._quranWirdAutoEntryTimer);
+                this._quranWirdAutoEntryTimer = null;
+            }
+
+            const attempt = () => {
+                if (!this.shouldAutoEnterQuranWirdMode) {
+                    this.clearQuranWirdAutoEntry();
+                    return;
+                }
+
+                if (Date.now() >= this._quranWirdAutoEntryDeadlineAt) {
+                    this.clearQuranWirdAutoEntry();
+                    return;
+                }
+
+                const quranReader = this.getQuranReaderData();
+                const wirdButton = document.querySelector('[data-quran-wird-toggle]');
+                const isButtonVisible =
+                    wirdButton instanceof HTMLElement && wirdButton.offsetParent !== null;
+                const isReaderReady =
+                    Boolean(quranReader?.ready) && !Boolean(quranReader?.isLoadingPage);
+                const isPageVisiblyReady =
+                    quranReader && typeof quranReader.pageFitState === 'function'
+                        ? quranReader.pageFitState() === 'ready'
+                        : false;
+
+                if (isButtonVisible && isReaderReady && isPageVisiblyReady) {
+                    if (!quranReader?.wirdModeActive && wirdButton instanceof HTMLElement) {
+                        wirdButton.click();
+                    }
+
+                    this.clearQuranWirdAutoEntry();
+                    return;
+                }
+
+                this._quranWirdAutoEntryTimer = window.setTimeout(attempt, 130);
+            };
+
+            this._quranWirdAutoEntryTimer = window.setTimeout(attempt, 180);
+        },
+        handleInsightsAthkarRowClick(mode) {
+            const normalizedMode = mode === 'masaa' ? 'masaa' : 'sabah';
+            const entry = this.dailyProgress?.[normalizedMode];
+            const shouldRouteToGate =
+                Boolean(entry?.isComplete) && this.doesPreventSwitchingAthkarUntilCompletion();
+            const targetView = shouldRouteToGate
+                ? 'athkar-app-gate'
+                : normalizedMode === 'masaa'
+                  ? 'athkar-app-masaa'
+                  : 'athkar-app-sabah';
+
+            this.runAfterInsightsCollapse(() => {
+                this.runViewNavigation(targetView);
+            });
+        },
+        handleInsightsWirdRowClick() {
+            const isWirdComplete = Boolean(this.dailyProgress?.wird?.isComplete);
+
+            this.runAfterInsightsCollapse(() => {
+                this.runViewNavigation('quran-app-tilawa');
+
+                if (!isWirdComplete) {
+                    this.clearQuranWirdAutoEntry();
+                    return;
+                }
+
+                this.shouldAutoEnterQuranWirdMode = true;
+                this._quranWirdAutoEntryDeadlineAt = Date.now() + 16000;
+                this.scheduleQuranWirdAutoEntry();
+            });
         },
         startInsightsRefreshLoop() {
             this.stopInsightsRefreshLoop();
