@@ -196,18 +196,22 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            transition: transform 460ms cubic-bezier(0.22, 1, 0.36, 1);
-            will-change: transform;
-        }
-
-        .main-menu-layout-shell--insights-open {
-            transform: translate3d(0, -1.45rem, 0);
         }
 
         .main-menu-insights-zone {
-            width: min(100%, 21rem);
-            margin-top: 0.88rem;
-            padding: 0.45rem 0.4rem 0.8rem;
+            --main-menu-grid-reference-width: 20rem;
+            width: min(100%, calc(var(--main-menu-grid-reference-width) * 1.1));
+            margin-top: 0.7rem;
+            padding: 0.4rem 0.15rem 0.15rem;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .main-menu-insights-zone,
+        .main-menu-insights-zone * {
+            cursor: default !important;
+            user-select: none;
+            -webkit-user-select: none;
         }
 
         .main-menu-insights-trigger-wrap {
@@ -221,33 +225,35 @@
         .main-menu-insights-trigger {
             position: relative;
             display: inline-flex;
-            width: min(12.8rem, 86%);
-            height: 0.48rem;
+            width: 100%;
+            height: 0.46rem;
             border-radius: 9999px;
             background: linear-gradient(90deg,
-                    color-mix(in srgb, var(--primary-200) 86%, transparent) 0%,
-                    color-mix(in srgb, var(--primary-400) 64%, transparent) 48%,
-                    color-mix(in srgb, var(--primary-200) 86%, transparent) 100%);
+                    color-mix(in srgb, white 95%, var(--primary-200) 5%) 0%,
+                    color-mix(in srgb, white 100%, var(--primary-300) 0%) 52%,
+                    color-mix(in srgb, white 95%, var(--primary-200) 5%) 100%);
             box-shadow:
-                0 0 0 1px color-mix(in srgb, var(--primary-200) 74%, transparent),
-                0 0 14px color-mix(in srgb, var(--primary-400) 40%, transparent);
+                0 0 0 1px color-mix(in srgb, white 98%, transparent),
+                0 0 28px color-mix(in srgb, white 88%, transparent),
+                0 0 58px color-mix(in srgb, white 76%, transparent),
+                0 0 76px color-mix(in srgb, var(--primary-300) 36%, transparent);
             transition:
                 transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
                 box-shadow 320ms ease,
                 opacity 260ms ease;
-            opacity: 0.92;
+            opacity: 0.98;
             outline: none;
-            cursor: pointer;
+            transform: translateY(0) scaleX(1);
         }
 
         .main-menu-insights-trigger::before {
             content: '';
             position: absolute;
-            inset: -0.2rem;
+            inset: -0.28rem;
             border-radius: inherit;
-            background: radial-gradient(circle at 50% 50%,
-                    color-mix(in srgb, var(--primary-300) 52%, transparent) 0%,
-                    transparent 72%);
+            background: radial-gradient(ellipse at center,
+                    color-mix(in srgb, white 58%, transparent) 0%,
+                    transparent 75%);
             opacity: 0;
             transition: opacity 280ms ease;
         }
@@ -259,7 +265,7 @@
             border-radius: inherit;
             background: linear-gradient(105deg,
                     transparent 0%,
-                    color-mix(in srgb, white 68%, transparent) 45%,
+                    color-mix(in srgb, white 88%, transparent) 45%,
                     transparent 70%);
             opacity: 0;
             transform: translateX(-30%) skewX(-16deg);
@@ -269,50 +275,174 @@
         }
 
         .main-menu-insights-trigger:hover,
-        .main-menu-insights-trigger:focus-visible,
+        .main-menu-insights-trigger:focus-visible {
+            opacity: 1;
+            transform: translateY(-1px) scaleX(1.05);
+            box-shadow:
+                0 0 0 1px color-mix(in srgb, white 96%, transparent),
+                0 0 24px color-mix(in srgb, white 86%, transparent),
+                0 0 48px color-mix(in srgb, white 68%, transparent),
+                0 0 66px color-mix(in srgb, var(--primary-300) 28%, transparent);
+        }
+
         .main-menu-insights-trigger[data-expanded='true'] {
             opacity: 1;
-            transform: translateY(-1px) scaleX(1.02);
+            transform: translateY(-1px) scaleX(1.14);
             box-shadow:
-                0 0 0 1px color-mix(in srgb, var(--primary-300) 78%, transparent),
-                0 0 20px color-mix(in srgb, var(--primary-400) 54%, transparent);
+                0 0 0 1px color-mix(in srgb, white 98%, transparent),
+                0 0 30px color-mix(in srgb, white 92%, transparent),
+                0 0 64px color-mix(in srgb, white 80%, transparent),
+                0 0 90px color-mix(in srgb, var(--primary-300) 46%, transparent);
         }
 
         .main-menu-insights-trigger:hover::before,
-        .main-menu-insights-trigger:focus-visible::before,
-        .main-menu-insights-trigger[data-expanded='true']::before {
+        .main-menu-insights-trigger:focus-visible::before {
             opacity: 1;
         }
 
         .main-menu-insights-trigger:hover::after,
-        .main-menu-insights-trigger:focus-visible::after,
-        .main-menu-insights-trigger[data-expanded='true']::after {
+        .main-menu-insights-trigger:focus-visible::after {
             opacity: 0.7;
             transform: translateX(30%) skewX(-16deg);
         }
 
-        .main-menu-insights-panel {
+        .main-menu-insights-trigger[data-expanded='true']::before {
+            opacity: 1;
+        }
+
+        .main-menu-insights-trigger[data-expanded='true']::after {
+            opacity: 0.86;
+            transform: translateX(30%) skewX(-16deg);
+        }
+
+        .main-menu-insights-reveal {
             width: 100%;
-            border-radius: 1.15rem;
-            border: 1px solid color-mix(in srgb, var(--primary-200) 66%, transparent);
-            background: linear-gradient(165deg,
-                    color-mix(in srgb, var(--gray-50) 88%, transparent) 0%,
-                    color-mix(in srgb, var(--primary-50) 76%, transparent) 100%);
-            backdrop-filter: blur(8px);
+            max-height: 0;
+            opacity: 0;
+            pointer-events: none;
+            transition:
+                max-height 520ms cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 280ms ease;
+            will-change: max-height, opacity;
+        }
+
+        .main-menu-insights-reveal[data-expanded='true'] {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .main-menu-insights-panel {
+            position: relative;
+            isolation: isolate;
+            width: 100%;
+            overflow: hidden;
+            border-radius: 1.25rem;
+            border: 1px solid color-mix(in srgb, white 56%, var(--primary-300) 14%);
+            background: linear-gradient(160deg,
+                    color-mix(in srgb, white 12%, transparent) 0%,
+                    color-mix(in srgb, var(--primary-100) 7%, transparent) 52%,
+                    color-mix(in srgb, var(--primary-200) 5%, transparent) 100%);
+            backdrop-filter: blur(28px) saturate(180%);
             box-shadow:
-                0 18px 38px color-mix(in srgb, var(--primary-900) 13%, transparent),
-                inset 0 1px 0 color-mix(in srgb, white 62%, transparent);
-            padding: 0.76rem 0.86rem 0.82rem;
+                0 20px 52px color-mix(in srgb, var(--primary-900) 16%, transparent),
+                0 8px 20px color-mix(in srgb, var(--primary-400) 14%, transparent),
+                0 0 46px color-mix(in srgb, white 32%, transparent);
+            padding: 1.05rem 0.92rem 0.95rem;
+            transform: translateY(-0.4rem);
+            opacity: 0;
+            transition:
+                transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 260ms ease;
+        }
+
+        .main-menu-insights-panel::before {
+            content: '';
+            position: absolute;
+            inset: -24% -18%;
+            z-index: -1;
+            background: radial-gradient(84% 58% at 50% 8%,
+                    color-mix(in srgb, white 26%, transparent) 0%,
+                    color-mix(in srgb, var(--primary-200) 8%, transparent) 58%,
+                    transparent 100%);
+            filter: blur(22px);
+            opacity: 0.78;
+            pointer-events: none;
+        }
+
+        .main-menu-insights-panel::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            border-radius: inherit;
+            background:
+                radial-gradient(120% 100% at 14% 0%,
+                    color-mix(in srgb, white 22%, transparent) 0%,
+                    transparent 56%),
+                linear-gradient(112deg,
+                    transparent 0%,
+                    color-mix(in srgb, white 18%, transparent) 48%,
+                    transparent 74%);
+            opacity: 0.72;
+        }
+
+        .main-menu-insights-reveal[data-expanded='true'] .main-menu-insights-panel {
+            transform: translateY(0);
+            opacity: 1;
         }
 
         .dark .main-menu-insights-panel {
-            border-color: color-mix(in srgb, var(--primary-200) 38%, transparent);
+            border-color: color-mix(in srgb, var(--primary-100) 32%, transparent);
             background: linear-gradient(160deg,
-                    color-mix(in srgb, var(--background-dark) 84%, transparent) 0%,
-                    color-mix(in srgb, var(--gray-800) 74%, transparent) 100%);
+                    color-mix(in srgb, var(--background-dark) 22%, transparent) 0%,
+                    color-mix(in srgb, var(--primary-900) 24%, transparent) 100%);
             box-shadow:
-                0 22px 38px color-mix(in srgb, black 38%, transparent),
-                inset 0 1px 0 color-mix(in srgb, var(--primary-200) 24%, transparent);
+                0 24px 58px color-mix(in srgb, black 38%, transparent),
+                0 10px 24px color-mix(in srgb, var(--primary-500) 22%, transparent),
+                0 0 44px color-mix(in srgb, var(--primary-200) 18%, transparent);
+        }
+
+        .main-menu-insights-powered {
+            position: absolute;
+            z-index: 3;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.5rem;
+            font-weight: 800;
+            letter-spacing: 0.2em;
+            line-height: 1;
+            text-transform: uppercase;
+            color: color-mix(in srgb, white 90%, var(--primary-300) 10%);
+            text-shadow:
+                0 0 10px color-mix(in srgb, white 72%, transparent),
+                0 0 24px color-mix(in srgb, var(--primary-300) 46%, transparent);
+            opacity: 0.52;
+            pointer-events: none;
+        }
+
+        .main-menu-insights-powered--tl {
+            top: 0.36rem;
+            left: 0.64rem;
+            transform: rotate(-5deg);
+        }
+
+        .main-menu-insights-powered--tr {
+            top: 0.36rem;
+            right: 0.64rem;
+            transform: rotate(5deg);
+        }
+
+        .main-menu-insights-powered--bl {
+            bottom: 0.42rem;
+            left: 0.64rem;
+            transform: rotate(5deg);
+        }
+
+        .main-menu-insights-powered--br {
+            bottom: 0.42rem;
+            right: 0.64rem;
+            transform: rotate(-5deg);
         }
 
         .main-menu-insights-row {
@@ -320,14 +450,35 @@
             grid-template-columns: minmax(0, 1fr) auto;
             align-items: center;
             gap: 0.55rem 0.7rem;
+            position: relative;
+            padding: 0.62rem 0.68rem 0.68rem;
+            border-radius: 0.95rem;
+            border: 1px solid color-mix(in srgb, white 52%, var(--primary-200) 16%);
+            background: linear-gradient(160deg,
+                    color-mix(in srgb, white 14%, transparent) 0%,
+                    color-mix(in srgb, var(--primary-100) 8%, transparent) 100%);
+            box-shadow:
+                0 10px 22px color-mix(in srgb, var(--primary-900) 10%, transparent),
+                0 0 26px color-mix(in srgb, white 22%, transparent);
+            backdrop-filter: blur(20px) saturate(165%);
+        }
+
+        .dark .main-menu-insights-row {
+            border-color: color-mix(in srgb, var(--primary-200) 30%, transparent);
+            background: linear-gradient(160deg,
+                    color-mix(in srgb, var(--primary-900) 14%, transparent) 0%,
+                    color-mix(in srgb, var(--gray-800) 24%, transparent) 100%);
+            box-shadow:
+                0 12px 28px color-mix(in srgb, black 26%, transparent),
+                0 0 26px color-mix(in srgb, var(--primary-200) 14%, transparent);
         }
 
         .main-menu-insights-row+.main-menu-insights-row {
-            margin-top: 0.52rem;
+            margin-top: 0.62rem;
         }
 
         .main-menu-insights-title {
-            color: color-mix(in srgb, var(--primary-900) 86%, transparent);
+            color: color-mix(in srgb, var(--primary-900) 84%, transparent);
         }
 
         .dark .main-menu-insights-title {
@@ -338,89 +489,93 @@
             display: inline-flex;
             align-items: center;
             gap: 0.36rem;
-            font-size: 0.62rem;
-            font-weight: 700;
+            font-size: 0.72rem;
+            font-weight: 800;
             letter-spacing: 0.01em;
-            color: color-mix(in srgb, var(--gray-700) 76%, transparent);
+            color: color-mix(in srgb, var(--primary-800) 82%, transparent);
+            text-shadow: 0 0 12px color-mix(in srgb, white 32%, transparent);
         }
 
         .dark .main-menu-insights-meta {
-            color: color-mix(in srgb, var(--primary-100) 74%, transparent);
-        }
-
-        .main-menu-insights-state-pill {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 1.08rem;
-            border-radius: 9999px;
-            padding: 0.12rem 0.45rem;
-            font-size: 0.57rem;
-            line-height: 1;
-            font-weight: 700;
-            border: 1px solid transparent;
-            white-space: nowrap;
-            transition: background-color 220ms ease, border-color 220ms ease, color 220ms ease;
-        }
-
-        .main-menu-insights-state-pill--complete {
-            background: color-mix(in srgb, var(--success-100) 88%, transparent);
-            border-color: color-mix(in srgb, var(--success-400) 45%, transparent);
-            color: color-mix(in srgb, var(--success-700) 84%, transparent);
-        }
-
-        .dark .main-menu-insights-state-pill--complete {
-            background: color-mix(in srgb, var(--success-700) 28%, transparent);
-            border-color: color-mix(in srgb, var(--success-300) 50%, transparent);
-            color: color-mix(in srgb, var(--success-100) 84%, transparent);
-        }
-
-        .main-menu-insights-state-pill--pending {
-            background: color-mix(in srgb, var(--primary-100) 70%, transparent);
-            border-color: color-mix(in srgb, var(--primary-300) 52%, transparent);
-            color: color-mix(in srgb, var(--primary-700) 78%, transparent);
-        }
-
-        .dark .main-menu-insights-state-pill--pending {
-            background: color-mix(in srgb, var(--primary-700) 28%, transparent);
-            border-color: color-mix(in srgb, var(--primary-300) 38%, transparent);
-            color: color-mix(in srgb, var(--primary-100) 82%, transparent);
+            color: color-mix(in srgb, white 90%, var(--primary-100) 10%);
         }
 
         .main-menu-insights-track {
             grid-column: 1 / -1;
             position: relative;
-            height: 0.48rem;
+            height: 0.58rem;
             border-radius: 9999px;
-            background: color-mix(in srgb, var(--background-dark) 14%, transparent);
-            border: 1px solid color-mix(in srgb, var(--primary-200) 46%, transparent);
+            background: linear-gradient(180deg,
+                    color-mix(in srgb, white 18%, transparent) 0%,
+                    color-mix(in srgb, var(--background-dark) 16%, transparent) 100%);
+            border: 1px solid color-mix(in srgb, white 44%, var(--primary-200) 24%);
             overflow: hidden;
+            box-shadow:
+                0 0 18px color-mix(in srgb, white 18%, transparent),
+                inset 0 1px 0 color-mix(in srgb, white 22%, transparent);
+            backdrop-filter: blur(8px);
         }
 
         .dark .main-menu-insights-track {
-            background: color-mix(in srgb, black 30%, transparent);
-            border-color: color-mix(in srgb, var(--primary-200) 34%, transparent);
+            background: linear-gradient(180deg,
+                    color-mix(in srgb, black 34%, transparent) 0%,
+                    color-mix(in srgb, var(--primary-900) 22%, transparent) 100%);
+            border-color: color-mix(in srgb, var(--primary-200) 38%, transparent);
         }
 
         .main-menu-insights-fill {
+            position: relative;
             height: 100%;
             border-radius: inherit;
             background: linear-gradient(90deg,
-                    color-mix(in srgb, var(--primary-400) 92%, transparent) 0%,
-                    color-mix(in srgb, var(--primary-600) 95%, transparent) 100%);
+                    color-mix(in srgb, var(--primary-200) 78%, white 22%) 0%,
+                    color-mix(in srgb, var(--primary-400) 88%, white 12%) 44%,
+                    color-mix(in srgb, var(--primary-600) 92%, white 8%) 100%);
             box-shadow:
-                0 0 10px color-mix(in srgb, var(--primary-500) 52%, transparent),
-                inset 0 -1px 0 color-mix(in srgb, black 26%, transparent);
+                0 0 18px color-mix(in srgb, var(--primary-300) 74%, transparent),
+                0 0 32px color-mix(in srgb, white 62%, transparent),
+                0 0 44px color-mix(in srgb, var(--primary-500) 44%, transparent);
             transition: width 520ms cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .main-menu-insights-fill::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(108deg,
+                    transparent 0%,
+                    color-mix(in srgb, white 84%, transparent) 45%,
+                    transparent 70%);
+            opacity: 0.92;
+            transform: translateX(-32%) skewX(-16deg);
+            animation: main-menu-insights-neon-sweep 1.55s ease-in-out infinite;
+            pointer-events: none;
         }
 
         .main-menu-insights-fill--complete {
             background: linear-gradient(90deg,
-                    color-mix(in srgb, var(--success-400) 88%, transparent) 0%,
-                    color-mix(in srgb, var(--success-600) 94%, transparent) 100%);
+                    color-mix(in srgb, var(--success-300) 82%, white 18%) 0%,
+                    color-mix(in srgb, var(--success-500) 88%, white 12%) 52%,
+                    color-mix(in srgb, var(--success-600) 92%, white 8%) 100%);
             box-shadow:
-                0 0 11px color-mix(in srgb, var(--success-500) 55%, transparent),
-                inset 0 -1px 0 color-mix(in srgb, black 24%, transparent);
+                0 0 18px color-mix(in srgb, var(--success-400) 74%, transparent),
+                0 0 34px color-mix(in srgb, var(--success-500) 52%, transparent);
+        }
+
+        @keyframes main-menu-insights-neon-sweep {
+            0% {
+                transform: translateX(-34%) skewX(-16deg);
+                opacity: 0.12;
+            }
+
+            42% {
+                opacity: 0.95;
+            }
+
+            100% {
+                transform: translateX(34%) skewX(-16deg);
+                opacity: 0.2;
+            }
         }
     </style>
 @endassets
@@ -429,14 +584,9 @@
     {{ $attributes->merge(['class' => 'relative flex flex-col items-center will-change-[opacity]']) }}
     x-data="mainMenu($el, {
         progressLabels: {
-            sabah: @js(arabic_text('أذكار الصباح')),
-            wird: @js(arabic_text('الوِرد اليومي')),
-            masaa: @js(arabic_text('أذكار المساء')),
-        },
-        progressStateLabels: {
-            completed: @js(arabic_text('مكتمل')),
-            inProgress: @js(arabic_text('قيد التقدّم')),
-            notStarted: @js(arabic_text('لم يبدأ')),
+            sabah: @js(arabic_text('أذكار الصَّباح')),
+            wird: @js(arabic_text('وِرد القرآن')),
+            masaa: @js(arabic_text('أذكار المَساء')),
         },
     })"
     x-on:main-menu-item-enter="handleItemEnter($event.detail)"
@@ -521,10 +671,7 @@
         </div>
     </div>
 
-    <div
-        class="main-menu-layout-shell"
-        x-bind:class="{ 'main-menu-layout-shell--insights-open': isInsightsExpanded }"
-    >
+    <div class="main-menu-layout-shell">
         <!-- Items -->
         <div
             x-on:click.self="idleCaption()"
@@ -542,8 +689,8 @@
         <div
             class="main-menu-insights-zone"
             x-ref="insightsZone"
-            x-on:mouseenter="handleInsightsHoverEnter()"
-            x-on:mouseleave="handleInsightsHoverLeave()"
+            x-on:pointerenter="if ($event.pointerType !== 'touch') { handleInsightsHoverEnter() }"
+            x-on:pointerleave="if ($event.pointerType !== 'touch') { handleInsightsHoverLeave() }"
             x-on:focusin="handleInsightsFocusIn()"
             x-on:focusout="handleInsightsFocusOut($event)"
             x-on:touchstart.passive="handleInsightsTouchStart()"
@@ -560,69 +707,73 @@
                 ></button>
             </div>
 
-            <section
-                class="main-menu-insights-panel"
-                data-testid="main-menu-insights-panel"
-                x-cloak
-                x-show="isInsightsExpanded"
-                x-transition:enter="transition-[opacity,transform] duration-420 ease-out"
-                x-transition:enter-start="opacity-0 translate-y-3 scale-[0.97]"
-                x-transition:enter-end="opacity-100 translate-y-0 scale-100"
-                x-transition:leave="transition-[opacity,transform] duration-320 ease-in"
-                x-transition:leave-start="opacity-100 translate-y-0 scale-100"
-                x-transition:leave-end="opacity-0 translate-y-2 scale-[0.985]"
+            <div
+                class="main-menu-insights-reveal"
+                x-ref="insightsReveal"
+                x-bind:data-expanded="isInsightsExpanded ? 'true' : 'false'"
+                x-bind:style="`max-height: ${isInsightsExpanded ? insightsPanelHeight : 0}px;`"
             >
-                <div class="main-menu-insights-row">
-                    <p
-                        class="main-menu-insights-title text-[0.72rem] font-semibold leading-none sm:text-[0.76rem]"
-                        x-text="progressLabels.sabah"
-                    ></p>
-                    <span class="main-menu-insights-meta">
-                        <span x-text="`${dailyProgress.sabah.percent}%`"></span>
-                    </span>
-                    <div class="main-menu-insights-track">
-                        <div
-                            class="main-menu-insights-fill"
-                            x-bind:class="{ 'main-menu-insights-fill--complete': dailyProgress.sabah.isComplete }"
-                            x-bind:style="`width: ${dailyProgress.sabah.percent}%;`"
-                        ></div>
+                <section
+                    class="main-menu-insights-panel"
+                    data-testid="main-menu-insights-panel"
+                    x-ref="insightsPanelBody"
+                >
+                    <span class="main-menu-insights-powered main-menu-insights-powered--tl">POWERED</span>
+                    <span class="main-menu-insights-powered main-menu-insights-powered--tr">POWERED</span>
+                    <span class="main-menu-insights-powered main-menu-insights-powered--bl">POWERED</span>
+                    <span class="main-menu-insights-powered main-menu-insights-powered--br">POWERED</span>
+                    <div class="main-menu-insights-row">
+                        <p
+                            class="main-menu-insights-title text-[0.72rem] font-semibold leading-none sm:text-[0.76rem]"
+                            x-text="progressLabels.sabah"
+                        ></p>
+                        <span class="main-menu-insights-meta">
+                            <span x-text="`${dailyProgress.sabah.percent}%`"></span>
+                        </span>
+                        <div class="main-menu-insights-track">
+                            <div
+                                class="main-menu-insights-fill"
+                                x-bind:class="{ 'main-menu-insights-fill--complete': dailyProgress.sabah.isComplete }"
+                                x-bind:style="`width: ${dailyProgress.sabah.percent}%;`"
+                            ></div>
+                        </div>
                     </div>
-                </div>
 
-                <div class="main-menu-insights-row">
-                    <p
-                        class="main-menu-insights-title text-[0.72rem] font-semibold leading-none sm:text-[0.76rem]"
-                        x-text="progressLabels.wird"
-                    ></p>
-                    <span class="main-menu-insights-meta">
-                        <span x-text="`${dailyProgress.wird.percent}%`"></span>
-                    </span>
-                    <div class="main-menu-insights-track">
-                        <div
-                            class="main-menu-insights-fill"
-                            x-bind:class="{ 'main-menu-insights-fill--complete': dailyProgress.wird.isComplete }"
-                            x-bind:style="`width: ${dailyProgress.wird.percent}%;`"
-                        ></div>
+                    <div class="main-menu-insights-row">
+                        <p
+                            class="main-menu-insights-title text-[0.72rem] font-semibold leading-none sm:text-[0.76rem]"
+                            x-text="progressLabels.wird"
+                        ></p>
+                        <span class="main-menu-insights-meta">
+                            <span x-text="`${dailyProgress.wird.percent}%`"></span>
+                        </span>
+                        <div class="main-menu-insights-track">
+                            <div
+                                class="main-menu-insights-fill"
+                                x-bind:class="{ 'main-menu-insights-fill--complete': dailyProgress.wird.isComplete }"
+                                x-bind:style="`width: ${dailyProgress.wird.percent}%;`"
+                            ></div>
+                        </div>
                     </div>
-                </div>
 
-                <div class="main-menu-insights-row">
-                    <p
-                        class="main-menu-insights-title text-[0.72rem] font-semibold leading-none sm:text-[0.76rem]"
-                        x-text="progressLabels.masaa"
-                    ></p>
-                    <span class="main-menu-insights-meta">
-                        <span x-text="`${dailyProgress.masaa.percent}%`"></span>
-                    </span>
-                    <div class="main-menu-insights-track">
-                        <div
-                            class="main-menu-insights-fill"
-                            x-bind:class="{ 'main-menu-insights-fill--complete': dailyProgress.masaa.isComplete }"
-                            x-bind:style="`width: ${dailyProgress.masaa.percent}%;`"
-                        ></div>
+                    <div class="main-menu-insights-row">
+                        <p
+                            class="main-menu-insights-title text-[0.72rem] font-semibold leading-none sm:text-[0.76rem]"
+                            x-text="progressLabels.masaa"
+                        ></p>
+                        <span class="main-menu-insights-meta">
+                            <span x-text="`${dailyProgress.masaa.percent}%`"></span>
+                        </span>
+                        <div class="main-menu-insights-track">
+                            <div
+                                class="main-menu-insights-fill"
+                                x-bind:class="{ 'main-menu-insights-fill--complete': dailyProgress.masaa.isComplete }"
+                                x-bind:style="`width: ${dailyProgress.masaa.percent}%;`"
+                            ></div>
+                        </div>
                     </div>
-                </div>
-            </section>
+                </section>
+            </div>
         </div>
     </div>
 </div>

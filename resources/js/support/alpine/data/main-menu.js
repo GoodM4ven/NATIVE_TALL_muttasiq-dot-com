@@ -36,6 +36,7 @@ document.addEventListener('alpine:init', () => {
         insightsHideDelayMs: 2500,
         insightsHideTimer: null,
         insightsRefreshTimer: null,
+        insightsPanelHeight: 0,
         progressLabels: {
             sabah: config?.progressLabels?.sabah ?? 'أذكار الصباح',
             wird: config?.progressLabels?.wird ?? 'الوِرد اليومي',
@@ -56,6 +57,7 @@ document.addEventListener('alpine:init', () => {
         _onWindowPointerDown: null,
         _onWindowStorage: null,
         _onSwitchView: null,
+        _onWindowResize: null,
         init() {
             this.captionShadow = window.makeBoxShadowFromColor?.('--primary-500') ?? 'none';
             this.captionShadowDark = window.makeBoxShadowFromColor?.('--primary-100') ?? 'none';
@@ -68,7 +70,9 @@ document.addEventListener('alpine:init', () => {
 
             this.$watch('containerHovered', (value) => {
                 if (!value) {
-                    this.handleOutside();
+                    this.handleOutside(false, {
+                        preserveInsights: this.isInsightsPointerInside,
+                    });
                 } else if (!this.isItemActive) {
                     this.idleCaption();
                 }
@@ -87,6 +91,11 @@ document.addEventListener('alpine:init', () => {
                 }
 
                 if (this.isPointInsideGrid(pointerX, pointerY)) {
+                    return;
+                }
+
+                if (this.isPointInsideInsightsZone(pointerX, pointerY)) {
+                    this.handleOutside(false, { preserveInsights: true });
                     return;
                 }
 
@@ -113,17 +122,27 @@ document.addEventListener('alpine:init', () => {
 
                 if (nextView === 'main-menu') {
                     this.refreshDailyProgress();
+                    this.measureInsightsPanelHeight();
                     return;
                 }
 
                 this.resetInsightsPanelState();
             };
+            this._onWindowResize = () => {
+                this.measureInsightsPanelHeight();
+            };
 
             window.addEventListener('pointerdown', this._onWindowPointerDown, true);
             window.addEventListener('storage', this._onWindowStorage);
             window.addEventListener('switch-view', this._onSwitchView);
+            window.addEventListener('resize', this._onWindowResize, {
+                passive: true,
+            });
 
             this.refreshDailyProgress();
+            this.$nextTick(() => {
+                this.measureInsightsPanelHeight();
+            });
 
             this.$watch('isInsightsExpanded', (isExpanded) => {
                 if (isExpanded) {
@@ -161,6 +180,11 @@ document.addEventListener('alpine:init', () => {
             if (this._onSwitchView) {
                 window.removeEventListener('switch-view', this._onSwitchView);
                 this._onSwitchView = null;
+            }
+
+            if (this._onWindowResize) {
+                window.removeEventListener('resize', this._onWindowResize);
+                this._onWindowResize = null;
             }
         },
         getCaptionElements() {
@@ -363,6 +387,19 @@ document.addEventListener('alpine:init', () => {
             this.refreshWirdProgress();
             this.refreshAthkarProgress('masaa');
         },
+        measureInsightsPanelHeight() {
+            const panelBody = this.$refs?.insightsPanelBody;
+
+            if (!(panelBody instanceof HTMLElement)) {
+                return;
+            }
+
+            const nextHeight = Math.max(0, Math.ceil(panelBody.scrollHeight));
+
+            if (nextHeight !== this.insightsPanelHeight) {
+                this.insightsPanelHeight = nextHeight;
+            }
+        },
         clearInsightsHideTimer() {
             if (this.insightsHideTimer !== null) {
                 clearTimeout(this.insightsHideTimer);
@@ -388,6 +425,7 @@ document.addEventListener('alpine:init', () => {
                 this.refreshDailyProgress();
             }
 
+            this.measureInsightsPanelHeight();
             this.isInsightsExpanded = true;
         },
         scheduleInsightsCollapse() {
@@ -412,18 +450,10 @@ document.addEventListener('alpine:init', () => {
             this.isInsightsExpanded = false;
         },
         handleInsightsHoverEnter() {
-            if (this.isTouchDevice) {
-                return;
-            }
-
             this.isInsightsPointerInside = true;
             this.showInsightsPanel();
         },
         handleInsightsHoverLeave() {
-            if (this.isTouchDevice) {
-                return;
-            }
-
             this.isInsightsPointerInside = false;
             this.scheduleInsightsCollapse();
         },
@@ -455,23 +485,17 @@ document.addEventListener('alpine:init', () => {
             this.showInsightsPanel();
         },
         toggleInsightsPanel() {
-            if (this.isTouchDevice) {
-                this.isInsightsPointerInside = true;
-                this.showInsightsPanel();
-                return;
-            }
-
-            if (this.isInsightsExpanded) {
-                this.isInsightsPointerInside = false;
-                this.scheduleInsightsCollapse();
-                return;
-            }
-
             this.isInsightsPointerInside = true;
             this.showInsightsPanel();
         },
         handleInsightsWindowPointerDown(event) {
             if (!this.isTouchDevice || !this.isInsightsExpanded) {
+                return;
+            }
+
+            const pointerType = String(event?.pointerType ?? '').toLowerCase();
+
+            if (pointerType && pointerType !== 'touch' && pointerType !== 'pen') {
                 return;
             }
 
@@ -822,7 +846,7 @@ document.addEventListener('alpine:init', () => {
                 }
             }, 80);
         },
-        handleOutside(clearHover = false) {
+        handleOutside(clearHover = false, { preserveInsights = false } = {}) {
             if (clearHover) {
                 this.containerHovered = false;
             }
@@ -836,8 +860,14 @@ document.addEventListener('alpine:init', () => {
             this.resetLockedItem();
             this.setTouchActiveElement(null, true);
             clearTimeout(this.idleTimeout);
-            this.isInsightsPointerInside = false;
-            this.scheduleInsightsCollapse();
+
+            if (preserveInsights) {
+                this.isInsightsPointerInside = true;
+                this.clearInsightsHideTimer();
+            } else {
+                this.isInsightsPointerInside = false;
+                this.scheduleInsightsCollapse();
+            }
 
             this.syncUI();
         },
