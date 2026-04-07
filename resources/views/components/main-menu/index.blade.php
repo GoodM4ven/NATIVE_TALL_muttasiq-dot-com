@@ -198,6 +198,26 @@
             justify-content: center;
         }
 
+        .main-menu-grid-shell {
+            position: relative;
+            isolation: isolate;
+            width: min(100%, 20rem);
+        }
+
+        .main-menu-grid-pattern-wrap {
+            position: absolute;
+            inset: -5.2rem -6.4rem -5rem;
+            z-index: -1;
+            opacity: 0.2;
+            pointer-events: none;
+        }
+
+        .main-menu-grid-pattern {
+            position: absolute;
+            inset: 0;
+            border-radius: 9999px;
+        }
+
         .main-menu-insights-zone {
             --main-menu-grid-reference-width: 20rem;
             width: min(100%, calc(var(--main-menu-grid-reference-width) * 1.1));
@@ -229,14 +249,13 @@
             height: 0.46rem;
             border-radius: 9999px;
             background: linear-gradient(90deg,
-                    color-mix(in srgb, white 95%, var(--primary-200) 5%) 0%,
-                    color-mix(in srgb, white 100%, var(--primary-300) 0%) 52%,
-                    color-mix(in srgb, white 95%, var(--primary-200) 5%) 100%);
+                    color-mix(in srgb, var(--primary-100) 40%, white 60%) 0%,
+                    color-mix(in srgb, var(--primary-200) 32%, white 68%) 48%,
+                    color-mix(in srgb, var(--primary-100) 40%, white 60%) 100%);
             box-shadow:
-                0 0 0 1px color-mix(in srgb, white 98%, transparent),
-                0 0 28px color-mix(in srgb, white 88%, transparent),
-                0 0 58px color-mix(in srgb, white 76%, transparent),
-                0 0 76px color-mix(in srgb, var(--primary-300) 36%, transparent);
+                0 0 0 1px color-mix(in srgb, white 78%, var(--primary-200) 22%),
+                0 0 18px color-mix(in srgb, white 56%, transparent),
+                0 0 34px color-mix(in srgb, var(--primary-300) 34%, transparent);
             transition:
                 transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
                 box-shadow 320ms ease,
@@ -249,13 +268,15 @@
         .main-menu-insights-trigger::before {
             content: '';
             position: absolute;
-            inset: -0.28rem;
+            inset: -0.52rem;
             border-radius: inherit;
             background: radial-gradient(ellipse at center,
-                    color-mix(in srgb, white 58%, transparent) 0%,
-                    transparent 75%);
+                    color-mix(in srgb, white 66%, transparent) 0%,
+                    color-mix(in srgb, var(--primary-200) 28%, transparent) 42%,
+                    transparent 78%);
             opacity: 0;
             transition: opacity 280ms ease;
+            filter: blur(2px);
         }
 
         .main-menu-insights-trigger::after {
@@ -265,7 +286,7 @@
             border-radius: inherit;
             background: linear-gradient(105deg,
                     transparent 0%,
-                    color-mix(in srgb, white 88%, transparent) 45%,
+                    color-mix(in srgb, white 94%, transparent) 45%,
                     transparent 70%);
             opacity: 0;
             transform: translateX(-30%) skewX(-16deg);
@@ -279,20 +300,22 @@
             opacity: 1;
             transform: translateY(-1px) scaleX(1.05);
             box-shadow:
-                0 0 0 1px color-mix(in srgb, white 96%, transparent),
-                0 0 24px color-mix(in srgb, white 86%, transparent),
-                0 0 48px color-mix(in srgb, white 68%, transparent),
-                0 0 66px color-mix(in srgb, var(--primary-300) 28%, transparent);
+                0 0 0 1px color-mix(in srgb, white 90%, var(--primary-200) 10%),
+                0 0 22px color-mix(in srgb, white 76%, transparent),
+                0 0 44px color-mix(in srgb, var(--primary-300) 42%, transparent),
+                0 0 70px color-mix(in srgb, var(--primary-400) 34%, transparent);
         }
 
         .main-menu-insights-trigger[data-expanded='true'] {
             opacity: 1;
             transform: translateY(-1px) scaleX(1.14);
             box-shadow:
-                0 0 0 1px color-mix(in srgb, white 98%, transparent),
-                0 0 30px color-mix(in srgb, white 92%, transparent),
-                0 0 64px color-mix(in srgb, white 80%, transparent),
-                0 0 90px color-mix(in srgb, var(--primary-300) 46%, transparent);
+                0 0 0 1px color-mix(in srgb, white 96%, transparent),
+                0 0 34px color-mix(in srgb, white 92%, transparent),
+                0 0 62px color-mix(in srgb, white 72%, transparent),
+                0 0 96px color-mix(in srgb, var(--primary-400) 52%, transparent),
+                0 0 138px color-mix(in srgb, var(--primary-500) 34%, transparent);
+            animation: main-menu-insights-trigger-power 1.4s ease-in-out infinite alternate;
         }
 
         .main-menu-insights-trigger:hover::before,
@@ -307,11 +330,11 @@
         }
 
         .main-menu-insights-trigger[data-expanded='true']::before {
-            opacity: 1;
+            opacity: 0.96;
         }
 
         .main-menu-insights-trigger[data-expanded='true']::after {
-            opacity: 0.86;
+            opacity: 0.92;
             transform: translateX(30%) skewX(-16deg);
         }
 
@@ -335,7 +358,6 @@
             position: relative;
             isolation: isolate;
             width: 100%;
-            overflow: hidden;
             border-radius: 1.25rem;
             border: 1px solid color-mix(in srgb, white 56%, var(--primary-300) 14%);
             background: linear-gradient(160deg,
@@ -348,11 +370,12 @@
                 0 8px 20px color-mix(in srgb, var(--primary-400) 14%, transparent),
                 0 0 46px color-mix(in srgb, white 32%, transparent);
             padding: 1.05rem 0.92rem 0.95rem;
-            transform: translateY(-0.4rem);
+            transform: translateY(-1.1rem) scale(0.985);
+            transform-origin: top center;
             opacity: 0;
             transition:
-                transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
-                opacity 260ms ease;
+                transform 520ms cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 320ms ease;
         }
 
         .main-menu-insights-panel::before {
@@ -503,24 +526,18 @@
         .main-menu-insights-track {
             grid-column: 1 / -1;
             position: relative;
-            height: 0.58rem;
+            height: 0.56rem;
             border-radius: 9999px;
-            background: linear-gradient(180deg,
-                    color-mix(in srgb, white 18%, transparent) 0%,
-                    color-mix(in srgb, var(--background-dark) 16%, transparent) 100%);
-            border: 1px solid color-mix(in srgb, white 44%, var(--primary-200) 24%);
+            background: color-mix(in srgb, white 8%, transparent);
+            border: 1px solid color-mix(in srgb, white 40%, var(--primary-200) 22%);
             overflow: hidden;
-            box-shadow:
-                0 0 18px color-mix(in srgb, white 18%, transparent),
-                inset 0 1px 0 color-mix(in srgb, white 22%, transparent);
-            backdrop-filter: blur(8px);
+            box-shadow: none;
+            backdrop-filter: blur(6px);
         }
 
         .dark .main-menu-insights-track {
-            background: linear-gradient(180deg,
-                    color-mix(in srgb, black 34%, transparent) 0%,
-                    color-mix(in srgb, var(--primary-900) 22%, transparent) 100%);
-            border-color: color-mix(in srgb, var(--primary-200) 38%, transparent);
+            background: color-mix(in srgb, black 20%, transparent);
+            border-color: color-mix(in srgb, var(--primary-200) 34%, transparent);
         }
 
         .main-menu-insights-fill {
@@ -529,13 +546,25 @@
             border-radius: inherit;
             background: linear-gradient(90deg,
                     color-mix(in srgb, var(--primary-200) 78%, white 22%) 0%,
-                    color-mix(in srgb, var(--primary-400) 88%, white 12%) 44%,
-                    color-mix(in srgb, var(--primary-600) 92%, white 8%) 100%);
+                    color-mix(in srgb, var(--primary-300) 84%, white 16%) 45%,
+                    color-mix(in srgb, var(--primary-500) 90%, white 10%) 100%);
             box-shadow:
-                0 0 18px color-mix(in srgb, var(--primary-300) 74%, transparent),
-                0 0 32px color-mix(in srgb, white 62%, transparent),
-                0 0 44px color-mix(in srgb, var(--primary-500) 44%, transparent);
+                0 0 12px color-mix(in srgb, var(--primary-300) 64%, transparent),
+                0 0 24px color-mix(in srgb, var(--primary-500) 40%, transparent);
             transition: width 520ms cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .main-menu-insights-fill::before {
+            content: '';
+            position: absolute;
+            inset: -46% -18%;
+            background: radial-gradient(ellipse at center,
+                    color-mix(in srgb, white 56%, transparent) 0%,
+                    color-mix(in srgb, var(--primary-300) 22%, transparent) 44%,
+                    transparent 76%);
+            opacity: 0.66;
+            filter: blur(5px);
+            pointer-events: none;
         }
 
         .main-menu-insights-fill::after {
@@ -546,7 +575,7 @@
                     transparent 0%,
                     color-mix(in srgb, white 84%, transparent) 45%,
                     transparent 70%);
-            opacity: 0.92;
+            opacity: 0.78;
             transform: translateX(-32%) skewX(-16deg);
             animation: main-menu-insights-neon-sweep 1.55s ease-in-out infinite;
             pointer-events: none;
@@ -560,6 +589,24 @@
             box-shadow:
                 0 0 18px color-mix(in srgb, var(--success-400) 74%, transparent),
                 0 0 34px color-mix(in srgb, var(--success-500) 52%, transparent);
+        }
+
+        @keyframes main-menu-insights-trigger-power {
+            0% {
+                box-shadow:
+                    0 0 0 1px color-mix(in srgb, white 94%, transparent),
+                    0 0 28px color-mix(in srgb, white 86%, transparent),
+                    0 0 54px color-mix(in srgb, var(--primary-300) 48%, transparent),
+                    0 0 96px color-mix(in srgb, var(--primary-500) 28%, transparent);
+            }
+
+            100% {
+                box-shadow:
+                    0 0 0 1px color-mix(in srgb, white 98%, transparent),
+                    0 0 40px color-mix(in srgb, white 94%, transparent),
+                    0 0 72px color-mix(in srgb, var(--primary-400) 58%, transparent),
+                    0 0 126px color-mix(in srgb, var(--primary-500) 42%, transparent);
+            }
         }
 
         @keyframes main-menu-insights-neon-sweep {
@@ -594,47 +641,6 @@
     x-on:main-menu-item-click="handleItemClick($event.detail)"
     x-on:click.outside="handleOutside(true)"
 >
-    <!-- Pattern -->
-    <span
-        class="pointer-events-none absolute -inset-20 -z-10 opacity-20"
-        aria-hidden="true"
-    >
-        <!-- Pattern layer (fills the whole span) -->
-        <!-- Credits: https://heropatterns.com -->
-        <span
-            class="main-menu-pattern absolute inset-0 rounded-full"
-            x-data='{
-                get fill() {
-                    return $store.colorScheme.isDarkModeOn
-                        ? window.cssVar("--primary-100")
-                        : window.cssVar("--primary-500");
-                },
-                get bgStyle() {
-                    const svg = `
-                        <svg xmlns="http://www.w3.org/2000/svg" width="152" height="152" viewBox="0 0 152 152">
-                            <g fill-rule="evenodd">
-                                <g id="masjid">
-                                <path fill="${this.fill}" fill-opacity="0.2"
-                                    d="M152 150v2H0v-2h28v-8H8v-20H0v-2h8V80h42v20h20v42H30v8h90v-8H80v-42h20V80h42v40h8V30h-8v40h-42V50H80V8h40V0h2v8h20v20h8V0h2v150zm-2 0v-28h-8v20h-20v8h28zM82 30v18h18V30H82zm20 18h20v20h18V30h-20V10H82v18h20v20zm0 2v18h18V50h-18zm20-22h18V10h-18v18zm-54 92v-18H50v18h18zm-20-18H28V82H10v38h20v20h38v-18H48v-20zm0-2V82H30v18h18zm-20 22H10v18h18v-18zm54 0v18h38v-20h20V82h-18v20h-20v20H82zm18-20H82v18h18v-18zm2-2h18V82h-18v18zm20 40v-18h18v18h-18zM30 0h-2v8H8v20H0v2h8v40h42V50h20V8H30V0zm20 48h18V30H50v18zm18-20H48v20H28v20H10V30h20V10h38v18zM30 50h18v18H30V50zm-2-40H10v18h18V10z"/>
-                                </g>
-                            </g>
-                        </svg>
-                    `.trim();
-
-                    const encoded = encodeURIComponent(svg);
-
-                    return {
-                        backgroundImage: `url("data:image/svg+xml,${encoded}")`,
-                        backgroundRepeat: "repeat",
-                        backgroundSize: "152px 152px",
-                        backgroundPosition: "center center",
-                    };
-                }
-            }'
-            x-bind:style="bgStyle"
-        ></span>
-    </span>
-
     <!-- Selected Item Caption -->
     <div
         class="pointer-events-none absolute inset-x-0 top-0 z-20 -mt-10 flex -translate-y-full select-none items-center justify-center overflow-visible">
@@ -673,17 +679,57 @@
 
     <div class="main-menu-layout-shell">
         <!-- Items -->
-        <div
-            x-on:click.self="idleCaption()"
-            x-ref="itemsGrid"
-            x-on:touchstart="handleTouchStart($event)"
-            x-on:touchmove.prevent="handleTouchMove($event)"
-            x-on:touchend="handleTouchEnd($event)"
-            x-on:touchcancel="handleTouchEnd($event)"
-            {{ $attributes->twMerge(['grid grid-cols-3 place-items-center w-full gap-2 max-w-xs']) }}
-        >
-            <!-- Credits: https://uiverse.io/gharsh11032000/new-squid-17 -->
-            {{ $slot }}
+        <div class="main-menu-grid-shell">
+            <!-- Pattern (items-only; follows grid and does not belong to insights line/panel) -->
+            <span
+                class="main-menu-grid-pattern-wrap"
+                aria-hidden="true"
+            >
+                <span
+                    class="main-menu-grid-pattern"
+                    x-data='{
+                        get fill() {
+                            return $store.colorScheme.isDarkModeOn
+                                ? window.cssVar("--primary-100")
+                                : window.cssVar("--primary-500");
+                        },
+                        get bgStyle() {
+                            const svg = `
+                                <svg xmlns="http://www.w3.org/2000/svg" width="152" height="152" viewBox="0 0 152 152">
+                                    <g fill-rule="evenodd">
+                                        <g id="masjid">
+                                        <path fill="${this.fill}" fill-opacity="0.2"
+                                            d="M152 150v2H0v-2h28v-8H8v-20H0v-2h8V80h42v20h20v42H30v8h90v-8H80v-42h20V80h42v40h8V30h-8v40h-42V50H80V8h40V0h2v8h20v20h8V0h2v150zm-2 0v-28h-8v20h-20v8h28zM82 30v18h18V30H82zm20 18h20v20h18V30h-20V10H82v18h20v20zm0 2v18h18V50h-18zm20-22h18V10h-18v18zm-54 92v-18H50v18h18zm-20-18H28V82H10v38h20v20h38v-18H48v-20zm0-2V82H30v18h18zm-20 22H10v18h18v-18zm54 0v18h38v-20h20V82h-18v20h-20v20H82zm18-20H82v18h18v-18zm2-2h18V82h-18v18zm20 40v-18h18v18h-18zM30 0h-2v8H8v20H0v2h8v40h42V50h20V8H30V0zm20 48h18V30H50v18zm18-20H48v20H28v20H10V30h20V10h38v18zM30 50h18v18H30V50zm-2-40H10v18h18V10z"/>
+                                        </g>
+                                    </g>
+                                </svg>
+                            `.trim();
+
+                            const encoded = encodeURIComponent(svg);
+
+                            return {
+                                backgroundImage: `url("data:image/svg+xml,${encoded}")`,
+                                backgroundRepeat: "repeat",
+                                backgroundSize: "152px 152px",
+                                backgroundPosition: "center center",
+                            };
+                        }
+                    }'
+                    x-bind:style="bgStyle"
+                ></span>
+            </span>
+            <div
+                x-on:click.self="idleCaption()"
+                x-ref="itemsGrid"
+                x-on:touchstart="handleTouchStart($event)"
+                x-on:touchmove.prevent="handleTouchMove($event)"
+                x-on:touchend="handleTouchEnd($event)"
+                x-on:touchcancel="handleTouchEnd($event)"
+                {{ $attributes->twMerge(['grid grid-cols-3 place-items-center w-full gap-2 max-w-xs']) }}
+            >
+                <!-- Credits: https://uiverse.io/gharsh11032000/new-squid-17 -->
+                {{ $slot }}
+            </div>
         </div>
 
         <div
