@@ -95,6 +95,11 @@ class AthkarManager extends Component implements HasActions, HasSchemas
             ->modalHeading('تعديل الذكر')
             ->modalAutofocus(false)
             ->modalSubmitActionLabel('حفظ التعديل')
+            ->modalSubmitAction(
+                fn (Action $action): Action => $action
+                    ->label(arabic_text('حفظ التعديل'))
+                    ->icon('heroicon-o-pencil-square'),
+            )
             ->extraModalWindowAttributes([
                 'id' => 'athkar-edit-modal',
             ])
@@ -163,6 +168,7 @@ class AthkarManager extends Component implements HasActions, HasSchemas
 
                 Action::make('deleteAthkarFromEdit')
                     ->label(arabic_text('حذف الذكر'))
+                    ->icon('heroicon-o-x-mark')
                     ->color('danger')
                     ->requiresConfirmation()
                     ->modalAutofocus(false)

@@ -5,5 +5,5 @@
     x-data
     x-init="$nextTick(() => window.dispatchEvent(new CustomEvent('quran-history-manager-request-sync')))"
 >
-    <livewire:quran-app.history-manager-table :key="'quran-history-manager-table'" />
+    <livewire:quran-app.history-manager-table />
 </div>

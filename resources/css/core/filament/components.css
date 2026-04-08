@@ -611,14 +611,24 @@
         padding-bottom: 1rem;
     }
 
+    .fi-modal-header:not(:has(.fi-modal-close-btn)) .fi-modal-heading {
+        margin-inline-start: 0 !important;
+    }
+
     #quran-reader-search-modal > .fi-modal-header,
     #quran-reader-history-modal > .fi-modal-header,
-    #quran-reader-bookmarks-modal > .fi-modal-header {}
+    #quran-reader-bookmarks-modal > .fi-modal-header {
+    }
 
     #quran-reader-history-modal .fi-modal-content,
     #quran-reader-bookmarks-modal .fi-modal-content {
         padding: 0.9rem 1rem 1rem;
         /* background: transparent; */
+    }
+
+    #quran-reader-history-modal .fi-modal-footer,
+    #quran-reader-bookmarks-modal .fi-modal-footer {
+        padding-top: 0.25rem;
     }
 
     .quran-manager-shell {

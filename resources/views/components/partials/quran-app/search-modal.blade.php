@@ -3,7 +3,7 @@
     data-no-swipe
 >
     <div
-        class="quran-search-results-shell"
+        class="quran-search-results-shell mt-4"
         x-cloak
     >
         <div

@@ -249,11 +249,12 @@ it('wires quran reader entry points from main menu to hash navigation and view m
     expect($quranReaderClassSource)->not->toBeFalse()
         ->and($quranReaderClassSource)->toContain('private const SEARCH_STREAM_BATCH_SIZE = 3;')
         ->and($quranReaderClassSource)->toContain("'x-model.debounce.350ms' => 'search.query'")
-        ->and($quranReaderClassSource)->toContain("'x-on:input.debounce.350ms' => 'updateSearchResults()'");
+        ->and($quranReaderClassSource)->not->toContain("'x-on:input.debounce.350ms' => 'updateSearchResults()'")
+        ->and($quranReaderClassSource)->toContain("'class' => 'quran-search-field-wrapper'");
 
     expect($quranSearchModalViewSource)->not->toBeFalse()
         ->and($quranSearchModalViewSource)->toContain('quran-search-shell')
-        ->and($quranSearchModalViewSource)->toContain('quran-search-results-shell')
+        ->and($quranSearchModalViewSource)->toContain('quran-search-results-shell mt-4')
         ->and($quranSearchModalViewSource)->toContain('quran-search-results--active')
         ->and($quranSearchModalViewSource)->toContain('quran-search-result-btn--leaving')
         ->and($quranSearchModalViewSource)->toContain('searchResultIsLeaving(result)')
@@ -573,13 +574,20 @@ it('keeps quran manager table defaults for pagination filters and replace confir
     expect($historyManagerTableSource)->not->toBeFalse()
         ->and($historyManagerTableSource)->toContain('->defaultPaginationPageOption(8)')
         ->and($historyManagerTableSource)->toContain('->paginationPageOptions([8, 10, 25, 50])')
-        ->and($historyManagerTableSource)->not->toContain("->default('all')");
+        ->and($historyManagerTableSource)->toContain("->placeholder(arabic_text('الكل'))")
+        ->and($historyManagerTableSource)->not->toContain("'all' => arabic_text('الكل')")
+        ->and($historyManagerTableSource)->toContain("->modalSubmitActionLabel(arabic_text('تعديل'))")
+        ->and($historyManagerTableSource)->toContain("->modalSubmitAction(fn (Action \$action): Action => \$action->icon('heroicon-o-pencil-square'))")
+        ->and($historyManagerTableSource)->toContain("->icon('heroicon-o-x-mark')");
 
     expect($bookmarksManagerTableSource)->not->toBeFalse()
         ->and($bookmarksManagerTableSource)->toContain("Action::make('replacePage')")
         ->and($bookmarksManagerTableSource)->toContain('->requiresConfirmation()')
         ->and($bookmarksManagerTableSource)->toContain('->modalHeading(arabic_text(\'تأكيد استبدال الصفحة\'))')
-        ->and($bookmarksManagerTableSource)->not->toContain("->default('all')");
+        ->and($bookmarksManagerTableSource)->toContain("->placeholder(arabic_text('الكل'))")
+        ->and($bookmarksManagerTableSource)->not->toContain("'all' => arabic_text('الكل')")
+        ->and($bookmarksManagerTableSource)->toContain("->modalSubmitActionLabel(arabic_text('تعديل'))")
+        ->and($bookmarksManagerTableSource)->toContain("->modalSubmitAction(fn (Action \$action): Action => \$action->icon('heroicon-o-pencil-square'))");
 });
 
 it('returns matches for legacy orthography phrases in quran search endpoint', function () {

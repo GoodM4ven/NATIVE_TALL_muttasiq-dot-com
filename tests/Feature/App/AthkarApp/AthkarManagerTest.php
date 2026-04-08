@@ -63,6 +63,16 @@ it('passes native mobile runtime flag to the manager card interaction bridge', f
         ->and($source)->toContain("is_platform('mobile')");
 });
 
+it('configures athkar edit modal submit and delete buttons with explicit icons', function () {
+    $source = file_get_contents(app_path('Livewire/AthkarManager.php'));
+
+    expect($source)->not->toBeFalse()
+        ->and($source)->toContain("->modalSubmitActionLabel('حفظ التعديل')")
+        ->and($source)->toContain("->icon('heroicon-o-pencil-square')")
+        ->and($source)->toContain("Action::make('deleteAthkarFromEdit')")
+        ->and($source)->toContain("->icon('heroicon-o-x-mark')");
+});
+
 it('renders explicit sortable config and dedicated drag handle markup for manager cards', function () {
     $source = file_get_contents(resource_path('views/components/partials/athkar-app/slideover-content.blade.php'));
 

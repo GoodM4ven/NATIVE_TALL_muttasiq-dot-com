@@ -965,6 +965,8 @@ document.addEventListener('alpine:init', () => {
         _lastPageSliderCommitPage: 0,
         _lastPageSliderCommitAt: 0,
         _searchRequestSerial: 0,
+        _searchRequestInFlight: false,
+        _searchQueuedNormalizedQuery: null,
         _searchStreamObserver: null,
         _lastSearchStreamPayloadRaw: '',
         _searchResultsLeaveTimer: null,
@@ -8380,20 +8382,15 @@ document.addEventListener('alpine:init', () => {
                 () => {
                     this._modalLayoutResumeTimer = null;
                     this._isModalLifecycleSettling = false;
-                    const wasPreviouslyFitted = this._lastFittedPageNumber === this.pageNumber;
-
-                    if (wasPreviouslyFitted && this.hasRenderablePage()) {
-                        this.isFittingPage = false;
-                        this._bypassNextFitCache = false;
-
-                        return;
-                    }
-
                     this.clearLayoutTimers();
                     this.isFittingPage = true;
                     this._bypassNextFitCache = true;
 
-                    void this.layoutPageGuaranteed({ revealDelayMs: 240, maxAttempts: 5 });
+                    void this.layoutPageGuaranteed({
+                        revealDelayMs: 180,
+                        maxAttempts: 5,
+                        useIdleFit: false,
+                    });
                 },
                 Math.max(0, Math.trunc(Number(delayMs) || 220)),
             );
@@ -15029,6 +15026,8 @@ document.addEventListener('alpine:init', () => {
             this.clearSearchStreamTarget();
             this.teardownSearchResultAnimations();
             this._searchRequestSerial += 1;
+            this._searchRequestInFlight = false;
+            this._searchQueuedNormalizedQuery = null;
             this.search.modalOpen = false;
             this._lastKnownModalOpenState = false;
             this.search.query = '';
@@ -15430,6 +15429,7 @@ document.addEventListener('alpine:init', () => {
             const normalizedQuery = this.normalizeSearchQuery(this.search.query);
 
             if (!normalizedQuery) {
+                this._searchQueuedNormalizedQuery = null;
                 this.setSearchResults([], { immediate: true });
                 this.search.isLoading = false;
                 this.search.streamHasUpdates = false;
@@ -15440,6 +15440,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             if (normalizedQuery.length < this.search.minQueryLength) {
+                this._searchQueuedNormalizedQuery = null;
                 this.setSearchResults([], { immediate: true });
                 this.search.isLoading = false;
                 this.search.streamHasUpdates = false;
@@ -15454,6 +15455,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             if (!this.search.isReady) {
+                this._searchQueuedNormalizedQuery = null;
                 this.setSearchResults([], { immediate: true });
                 this.search.isLoading = false;
                 this.search.streamHasUpdates = false;
@@ -15463,7 +15465,19 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            if (this._searchRequestInFlight) {
+                this._searchQueuedNormalizedQuery = normalizedQuery;
+
+                return;
+            }
+
+            if (!this.search.modalOpen) {
+                return;
+            }
+
             const requestSerial = ++this._searchRequestSerial;
+            this._searchRequestInFlight = true;
+            this._searchQueuedNormalizedQuery = null;
             this.search.isLoading = true;
             this.search.streamHasUpdates = false;
             this.clearSearchStreamTarget();
@@ -15496,6 +15510,23 @@ document.addEventListener('alpine:init', () => {
             } finally {
                 if (requestSerial === this._searchRequestSerial) {
                     this.search.isLoading = false;
+                }
+
+                this._searchRequestInFlight = false;
+
+                const normalizedCurrentQuery = this.normalizeSearchQuery(this.search.query);
+                const queuedQuery = String(this._searchQueuedNormalizedQuery ?? '').trim();
+                const nextQuery = queuedQuery !== '' ? queuedQuery : normalizedCurrentQuery;
+                const shouldQueueFollowUpSearch =
+                    this.search.modalOpen &&
+                    nextQuery !== '' &&
+                    nextQuery.length >= this.search.minQueryLength &&
+                    nextQuery !== normalizedQuery;
+
+                this._searchQueuedNormalizedQuery = null;
+
+                if (shouldQueueFollowUpSearch) {
+                    void this.updateSearchResults();
                 }
             }
         },
