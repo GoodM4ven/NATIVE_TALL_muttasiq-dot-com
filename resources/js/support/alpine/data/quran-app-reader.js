@@ -831,6 +831,7 @@ document.addEventListener('alpine:init', () => {
         search: {
             query: '',
             minQueryLength: 5,
+            inputDebounceMs: 600,
             results: [],
             isLoading: false,
             streamHasUpdates: false,
@@ -980,6 +981,7 @@ document.addEventListener('alpine:init', () => {
         _searchModalOpenInFlight: null,
         _searchModalInputSyncElement: null,
         _onSearchModalInputSync: null,
+        _searchInputSyncDebounceTimer: null,
         _stopIsCalibratingWatcher: null,
         _stopSearchQueryWatcher: null,
         _quranPreparationInFlight: null,
@@ -1269,7 +1271,7 @@ document.addEventListener('alpine:init', () => {
                 }
             });
             this._stopSearchQueryWatcher = this.$watch('search.query', () => {
-                void this.updateSearchResults();
+                this.queueSearchResultsUpdate();
             });
             this.$nextTick(() => {
                 const visible = this.isReaderElementVisible();
@@ -1817,6 +1819,7 @@ document.addEventListener('alpine:init', () => {
 
         destroy() {
             this.unregisterNativeInputListeners();
+            this.clearSearchResultsUpdateQueue();
             this.unbindSearchModalInputSyncListener();
 
             if (this._onWindowViewportChange) {
@@ -14092,6 +14095,37 @@ document.addEventListener('alpine:init', () => {
             this._onSearchModalInputSync = null;
         },
 
+        clearSearchResultsUpdateQueue() {
+            if (this._searchInputSyncDebounceTimer !== null) {
+                clearTimeout(this._searchInputSyncDebounceTimer);
+                this._searchInputSyncDebounceTimer = null;
+            }
+        },
+
+        queueSearchResultsUpdate(delayMs = null) {
+            const fallbackDelayMs = Math.max(
+                120,
+                Math.trunc(Number(this.search.inputDebounceMs ?? 600) || 600),
+            );
+            const normalizedDelayMs =
+                delayMs === null
+                    ? fallbackDelayMs
+                    : Math.max(0, Math.trunc(Number(delayMs) || fallbackDelayMs));
+
+            this.clearSearchResultsUpdateQueue();
+
+            if (normalizedDelayMs === 0) {
+                void this.updateSearchResults();
+
+                return;
+            }
+
+            this._searchInputSyncDebounceTimer = window.setTimeout(() => {
+                this._searchInputSyncDebounceTimer = null;
+                void this.updateSearchResults();
+            }, normalizedDelayMs);
+        },
+
         bindSearchModalInputSyncListener() {
             const inputElement = this.searchModalInputElement();
 
@@ -14118,7 +14152,7 @@ document.addEventListener('alpine:init', () => {
                 }
 
                 this.search.query = nextQuery;
-                void this.updateSearchResults();
+                this.queueSearchResultsUpdate();
             };
             this._searchModalInputSyncElement = inputElement;
             this._searchModalInputSyncElement.addEventListener(
@@ -15129,6 +15163,7 @@ document.addEventListener('alpine:init', () => {
 
         handleSearchModalClosed() {
             this.cancelSurahDirectoryAutoFocus();
+            this.clearSearchResultsUpdateQueue();
             this.unbindSearchModalInputSyncListener();
             this.teardownSearchStreamObserver();
             this.clearSearchStreamTarget();
@@ -15155,7 +15190,10 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        async requestModalCloseByKnownIds(knownModalIds = [], { onFallback = null } = {}) {
+        async requestModalCloseByKnownIds(
+            knownModalIds = [],
+            { onFallback = null, isModalStillVisible = null } = {},
+        ) {
             const modalId = knownModalIds
                 .map((value) => String(value ?? '').trim())
                 .find((value) => value !== '');
@@ -15170,7 +15208,12 @@ document.addEventListener('alpine:init', () => {
                 );
                 await wait(12);
 
-                if (!this.isModalWindowVisibleById(modalId)) {
+                const modalRemainsVisible =
+                    typeof isModalStillVisible === 'function'
+                        ? Boolean(isModalStillVisible())
+                        : this.isModalWindowVisibleById(modalId);
+
+                if (!modalRemainsVisible) {
                     return;
                 }
             }
@@ -15201,8 +15244,14 @@ document.addEventListener('alpine:init', () => {
                     onFallback: () => {
                         this.handleSearchModalClosed();
                     },
+                    isModalStillVisible: () => this.isSearchModalWindowVisible(),
                 },
             );
+
+            if (this.isSearchModalWindowVisible()) {
+                window.dispatchEvent(new CustomEvent('close-modal'));
+                await wait(24);
+            }
 
             if (this.search.modalOpen && !this.isSearchModalWindowVisible()) {
                 this.handleSearchModalClosed();

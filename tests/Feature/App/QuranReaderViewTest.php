@@ -248,8 +248,10 @@ it('wires quran reader entry points from main menu to hash navigation and view m
 
     expect($quranReaderClassSource)->not->toBeFalse()
         ->and($quranReaderClassSource)->toContain('private const SEARCH_STREAM_BATCH_SIZE = 3;')
-        ->and($quranReaderClassSource)->toContain("'x-model.debounce.350ms' => 'search.query'")
-        ->and($quranReaderClassSource)->toContain("'x-on:input.debounce.350ms' => 'updateSearchResults()'")
+        ->and($quranReaderClassSource)->toContain("'x-model.debounce.600ms' => 'search.query'")
+        ->and($quranReaderClassSource)->toContain(
+            "'x-on:input.debounce.600ms' => 'queueSearchResultsUpdate()'",
+        )
         ->and($quranReaderClassSource)->toContain("'class' => 'quran-search-field-wrapper'");
 
     expect($quranSearchModalViewSource)->not->toBeFalse()
@@ -1324,11 +1326,14 @@ it('reacts to quran search query changes through an alpine watcher', function ()
         ->and($quranReaderScriptSource)->toContain(
             "this._stopSearchQueryWatcher = this.\$watch('search.query', () => {",
         )
-        ->and($quranReaderScriptSource)->toContain('void this.updateSearchResults();')
+        ->and($quranReaderScriptSource)->toContain('this.queueSearchResultsUpdate();')
         ->and($quranReaderScriptSource)->toContain(
             'const isSearchModalVisible = this.search.modalOpen || this.isSearchModalWindowVisible();',
         )
         ->and($quranReaderScriptSource)->toContain(
             'bindSearchModalInputSyncListener()',
+        )
+        ->and($quranReaderScriptSource)->toContain(
+            'inputDebounceMs: 600',
         );
 });
