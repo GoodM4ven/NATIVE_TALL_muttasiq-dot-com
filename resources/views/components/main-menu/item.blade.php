@@ -103,7 +103,7 @@
                 0%,
                 44% {
                     opacity: 0;
-                    transform: translateX(-175%) skewX(-18deg);
+                    transform: translateX(175%) skewX(45deg);
                 }
 
                 58% {
@@ -112,12 +112,12 @@
 
                 76% {
                     opacity: 0;
-                    transform: translateX(175%) skewX(-18deg);
+                    transform: translateX(-175%) skewX(45deg);
                 }
 
                 100% {
                     opacity: 0;
-                    transform: translateX(175%) skewX(-18deg);
+                    transform: translateX(-175%) skewX(45deg);
                 }
             }
         </style>

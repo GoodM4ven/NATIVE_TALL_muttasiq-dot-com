@@ -28,6 +28,10 @@ class Reader extends Component implements HasActions, HasSchemas
 
     private const SEARCH_STREAM_TARGET = 'quran-search-results-stream';
 
+    private const SEARCH_STREAM_BATCH_SIZE = 3;
+
+    private const SEARCH_STREAM_CHUNK_DELAY_MICROSECONDS = 10000;
+
     private const HISTORY_MODAL_ID = 'quran-reader-history-modal';
 
     private const BOOKMARKS_MODAL_ID = 'quran-reader-bookmarks-modal';
@@ -342,15 +346,16 @@ class Reader extends Component implements HasActions, HasSchemas
                 }
 
                 if (! $isComplete) {
-                    foreach ($stageMatches as $stageMatch) {
+                    foreach (array_chunk($stageMatches, self::SEARCH_STREAM_BATCH_SIZE) as $stageChunk) {
                         $this->streamSearchPayload(
-                            $normalizedMatches,
-                            [$stageMatch],
+                            [],
+                            $stageChunk,
                             $normalizedRequestSerial,
                             $stage,
                             false,
                         );
-                        usleep(32000);
+
+                        usleep(self::SEARCH_STREAM_CHUNK_DELAY_MICROSECONDS);
                     }
 
                     return;
@@ -369,7 +374,7 @@ class Reader extends Component implements HasActions, HasSchemas
         if (! $didStreamChunks) {
             $this->streamSearchPayload(
                 $results,
-                $results,
+                [],
                 $normalizedRequestSerial,
                 'complete',
                 true,
@@ -402,8 +407,8 @@ class Reader extends Component implements HasActions, HasSchemas
                     ->extraInputAttributes([
                         'id' => 'quran-reader-search-input',
                         'x-ref' => 'searchModalInput',
-                        'x-model.debounce.1000ms' => 'search.query',
-                        'x-on:input.debounce.1000ms' => 'updateSearchResults()',
+                        'x-model.debounce.350ms' => 'search.query',
+                        'x-on:input.debounce.350ms' => 'updateSearchResults()',
                         'x-on:keydown.enter.prevent' => 'confirmSearchSelection()',
                         'autocomplete' => 'off',
                         'class' => 'relative top-[0.25rem]',

@@ -236,7 +236,7 @@
         display: grid;
         gap: 0.4rem;
         align-content: start;
-        justify-items: stretch;
+        justify-items: center;
         position: relative;
         overflow: visible;
         isolation: isolate;
@@ -251,7 +251,7 @@
     }
 
     .quran-search-results > * {
-        width: 100%;
+        width: min(100%, 46rem);
     }
 
     .quran-search-result-btn {
@@ -278,7 +278,7 @@
             box-shadow 180ms ease,
             border-color 180ms ease,
             opacity 180ms ease;
-        transform-origin: center top;
+        transform-origin: center center;
     }
 
     .quran-search-result-btn--active {

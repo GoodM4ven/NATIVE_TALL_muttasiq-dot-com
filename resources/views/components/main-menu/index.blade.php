@@ -704,19 +704,21 @@
             position: absolute;
             top: 0;
             bottom: 0;
-            width: 42%;
-            right: -50%;
+            width: 55%;
+            right: -60%;
             border-radius: inherit;
             background-image: linear-gradient(to left,
                     transparent 0%,
-                    color-mix(in srgb, var(--primary-200) 48%, transparent) 40%,
-                    color-mix(in srgb, var(--primary-100) 72%, transparent) 52%,
-                    color-mix(in srgb, var(--primary-300) 52%, transparent) 64%,
+                    color-mix(in srgb, white 10%, transparent) 15%,
+                    color-mix(in srgb, white 55%, transparent) 40%,
+                    color-mix(in srgb, white 80%, transparent) 55%,
+                    color-mix(in srgb, white 50%, transparent) 70%,
+                    color-mix(in srgb, white 10%, transparent) 88%,
                     transparent 100%);
-            filter: blur(0.6px);
-            mix-blend-mode: screen;
-            opacity: 0.5;
-            animation: main-menu-insights-flow-rtl 2.35s linear infinite;
+            filter: blur(3px);
+            mix-blend-mode: overlay;
+            opacity: 0.75;
+            animation: main-menu-insights-flow-rtl 2.35s ease-in-out infinite;
             pointer-events: none;
         }
 
@@ -982,71 +984,32 @@
                     x-ref="insightsPanelBody"
                     x-bind:data-fast-close="isInsightsFastClosing ? 'true' : 'false'"
                 >
-                    <button
-                        class="main-menu-insights-row main-menu-insights-row--button"
-                        type="button"
-                        x-on:click.stop.prevent="handleInsightsAthkarRowClick('sabah')"
-                        x-bind:aria-label="`${progressLabels.sabah} ${dailyProgress.sabah.percent}%`"
+                    <template
+                        x-for="row in sortedInsightsRows()"
+                        :key="`main-menu-insights-row-${row.key}`"
                     >
-                        <p
-                            class="main-menu-insights-title text-[0.72rem] font-semibold leading-none sm:text-[0.76rem]"
-                            x-text="progressLabels.sabah"
-                        ></p>
-                        <span class="main-menu-insights-meta">
-                            <span x-text="`${dailyProgress.sabah.percent}%`"></span>
-                        </span>
-                        <div class="main-menu-insights-track">
-                            <div
-                                class="main-menu-insights-fill"
-                                x-bind:class="{ 'main-menu-insights-fill--complete': dailyProgress.sabah.isComplete }"
-                                x-bind:style="`width: ${dailyProgress.sabah.percent}%;`"
-                            ></div>
-                        </div>
-                    </button>
-
-                    <button
-                        class="main-menu-insights-row main-menu-insights-row--button"
-                        type="button"
-                        x-on:click.stop.prevent="handleInsightsWirdRowClick()"
-                        x-bind:aria-label="`${progressLabels.wird} ${dailyProgress.wird.percent}%`"
-                    >
-                        <p
-                            class="main-menu-insights-title text-[0.72rem] font-semibold leading-none sm:text-[0.76rem]"
-                            x-text="progressLabels.wird"
-                        ></p>
-                        <span class="main-menu-insights-meta">
-                            <span x-text="`${dailyProgress.wird.percent}%`"></span>
-                        </span>
-                        <div class="main-menu-insights-track">
-                            <div
-                                class="main-menu-insights-fill"
-                                x-bind:class="{ 'main-menu-insights-fill--complete': dailyProgress.wird.isComplete }"
-                                x-bind:style="`width: ${dailyProgress.wird.percent}%;`"
-                            ></div>
-                        </div>
-                    </button>
-
-                    <button
-                        class="main-menu-insights-row main-menu-insights-row--button"
-                        type="button"
-                        x-on:click.stop.prevent="handleInsightsAthkarRowClick('masaa')"
-                        x-bind:aria-label="`${progressLabels.masaa} ${dailyProgress.masaa.percent}%`"
-                    >
-                        <p
-                            class="main-menu-insights-title text-[0.72rem] font-semibold leading-none sm:text-[0.76rem]"
-                            x-text="progressLabels.masaa"
-                        ></p>
-                        <span class="main-menu-insights-meta">
-                            <span x-text="`${dailyProgress.masaa.percent}%`"></span>
-                        </span>
-                        <div class="main-menu-insights-track">
-                            <div
-                                class="main-menu-insights-fill"
-                                x-bind:class="{ 'main-menu-insights-fill--complete': dailyProgress.masaa.isComplete }"
-                                x-bind:style="`width: ${dailyProgress.masaa.percent}%;`"
-                            ></div>
-                        </div>
-                    </button>
+                        <button
+                            class="main-menu-insights-row main-menu-insights-row--button"
+                            type="button"
+                            x-on:click.stop.prevent="handleInsightsRowClick(row.key)"
+                            x-bind:aria-label="`${row.label} ${row.percent}%`"
+                        >
+                            <p
+                                class="main-menu-insights-title text-[0.72rem] font-semibold leading-none sm:text-[0.76rem]"
+                                x-text="row.label"
+                            ></p>
+                            <span class="main-menu-insights-meta">
+                                <span x-text="`${row.percent}%`"></span>
+                            </span>
+                            <div class="main-menu-insights-track">
+                                <div
+                                    class="main-menu-insights-fill"
+                                    x-bind:class="{ 'main-menu-insights-fill--complete': row.isComplete }"
+                                    x-bind:style="`width: ${row.percent}%;`"
+                                ></div>
+                            </div>
+                        </button>
+                    </template>
                 </section>
             </div>
         </div>

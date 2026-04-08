@@ -14954,11 +14954,32 @@ document.addEventListener('alpine:init', () => {
             this._bookmarksRowsAutoAnimateStop = null;
         },
 
-        ensureSearchResultAnimations() {
+        teardownSearchResultAnimations() {
             if (typeof this._searchResultsAutoAnimateStop === 'function') {
                 this._searchResultsAutoAnimateStop();
                 this._searchResultsAutoAnimateStop = null;
             }
+        },
+        ensureSearchResultAnimations() {
+            if (typeof window.autoAnimate !== 'function') {
+                return;
+            }
+
+            if (typeof this._searchResultsAutoAnimateStop === 'function') {
+                return;
+            }
+
+            const searchResultsContainer = this.$refs.searchResultsList;
+
+            if (!(searchResultsContainer instanceof Element)) {
+                return;
+            }
+
+            this._searchResultsAutoAnimateStop = window.autoAnimate(searchResultsContainer, {
+                duration: 260,
+                easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+                disrespectUserMotionPreference: true,
+            });
         },
 
         async handleSearchModalOpened() {
@@ -15003,6 +15024,7 @@ document.addEventListener('alpine:init', () => {
             this.cancelSurahDirectoryAutoFocus();
             this.teardownSearchStreamObserver();
             this.clearSearchStreamTarget();
+            this.teardownSearchResultAnimations();
             this._searchRequestSerial += 1;
             this.search.modalOpen = false;
             this._lastKnownModalOpenState = false;

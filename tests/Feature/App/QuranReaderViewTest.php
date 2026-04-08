@@ -39,6 +39,8 @@ it('wires quran reader entry points from main menu to hash navigation and view m
     $historyManagerTableSource = file_get_contents(app_path('Livewire/QuranApp/HistoryManagerTable.php'));
     $bookmarksManagerTableSource = file_get_contents(app_path('Livewire/QuranApp/BookmarksManagerTable.php'));
     $mainMenuComponentSource = file_get_contents(resource_path('views/components/main-menu/index.blade.php'));
+    $mainMenuItemSource = file_get_contents(resource_path('views/components/main-menu/item.blade.php'));
+    $mainMenuScriptSource = file_get_contents(resource_path('js/support/alpine/data/main-menu.js'));
     $routesSource = file_get_contents(base_path('routes/web.php'));
     $appJsSource = file_get_contents(resource_path('js/app.js'));
     $filamentComponentsCssSource = file_get_contents(resource_path('css/core/filament/components.css'));
@@ -50,7 +52,19 @@ it('wires quran reader entry points from main menu to hash navigation and view m
 
     expect($mainMenuComponentSource)->not->toBeFalse()
         ->and($mainMenuComponentSource)->toContain("[data-main-menu-exiting='true'] [data-main-menu-item]")
-        ->and($mainMenuComponentSource)->toContain('transition-delay: calc(var(--main-menu-item-index) * 34ms);');
+        ->and($mainMenuComponentSource)->toContain('transition-delay: calc(var(--main-menu-item-index) * 24ms);')
+        ->and($mainMenuComponentSource)->toContain('x-for="row in sortedInsightsRows()"')
+        ->and($mainMenuComponentSource)->toContain('handleInsightsRowClick(row.key)');
+
+    expect($mainMenuScriptSource)->not->toBeFalse()
+        ->and($mainMenuScriptSource)->toContain('resolveInsightsRowPriority(entry)')
+        ->and($mainMenuScriptSource)->toContain('sortedInsightsRows()')
+        ->and($mainMenuScriptSource)->toContain("insightsRowOrder: ['sabah', 'wird', 'masaa']")
+        ->and($mainMenuScriptSource)->toContain('insightsMostlyDoneThreshold: 70');
+
+    expect($mainMenuItemSource)->not->toBeFalse()
+        ->and($mainMenuItemSource)->toContain('transform: translateX(175%) skewX(-18deg);')
+        ->and($mainMenuItemSource)->toContain('transform: translateX(-175%) skewX(-18deg);');
 
     expect($homeSource)->not->toBeFalse()
         ->and($homeSource)->toContain("'quran-app-gate': {")
@@ -227,7 +241,15 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderScriptSource)->toContain("await this.goToPageFromChevron(pageNumber, {\n                activeAyahIndex: 0,")
         ->and($quranReaderScriptSource)->toContain("window.addEventListener('keydown', this._onWindowKeydown, true)")
         ->and($quranReaderScriptSource)->toContain("readerPanel.addEventListener('pointerdown', this._onPanelPointerDown, {")
-        ->and($quranReaderScriptSource)->toContain("window.addEventListener('touchmove', this._onWindowTouchMove, {");
+        ->and($quranReaderScriptSource)->toContain("window.addEventListener('touchmove', this._onWindowTouchMove, {")
+        ->and($quranReaderScriptSource)->toContain('teardownSearchResultAnimations()')
+        ->and($quranReaderScriptSource)->toContain('window.autoAnimate(searchResultsContainer, {')
+        ->and($quranReaderScriptSource)->toContain('disrespectUserMotionPreference: true,');
+
+    expect($quranReaderClassSource)->not->toBeFalse()
+        ->and($quranReaderClassSource)->toContain('private const SEARCH_STREAM_BATCH_SIZE = 3;')
+        ->and($quranReaderClassSource)->toContain("'x-model.debounce.350ms' => 'search.query'")
+        ->and($quranReaderClassSource)->toContain("'x-on:input.debounce.350ms' => 'updateSearchResults()'");
 
     expect($quranSearchModalViewSource)->not->toBeFalse()
         ->and($quranSearchModalViewSource)->toContain('quran-search-shell')
@@ -531,7 +553,10 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($filamentComponentsCssSource)->toContain('#quran-reader-bookmarks-modal')
         ->and($filamentComponentsCssSource)->toContain('.quran-manager-table')
         ->and($filamentComponentsCssSource)->toContain('.quran-surah-grid-caption::before')
-        ->and($filamentComponentsCssSource)->toContain('.fi-input-wrp-suffix .fi-input-wrp-label');
+        ->and($filamentComponentsCssSource)->toContain('.fi-input-wrp-suffix .fi-input-wrp-label')
+        ->and($filamentComponentsCssSource)->toContain('justify-items: center;')
+        ->and($filamentComponentsCssSource)->toContain('width: min(100%, 46rem);')
+        ->and($filamentComponentsCssSource)->toContain('transform-origin: center center;');
 });
 
 it('registers qpc page font route contract used by quran reader pages', function () {

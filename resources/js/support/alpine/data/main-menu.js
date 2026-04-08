@@ -55,6 +55,8 @@ document.addEventListener('alpine:init', () => {
             wird: { percent: 0, isComplete: false, stateLabel: '' },
             masaa: { percent: 0, isComplete: false, stateLabel: '' },
         },
+        insightsRowOrder: ['sabah', 'wird', 'masaa'],
+        insightsMostlyDoneThreshold: 70,
         _onWindowMouseMove: null,
         _onWindowBlur: null,
         _onWindowPointerDown: null,
@@ -430,6 +432,52 @@ document.addEventListener('alpine:init', () => {
             this.refreshWirdProgress();
             this.refreshAthkarProgress('masaa');
         },
+        resolveInsightsRowPriority(entry) {
+            const percent = this.normalizeProgressPercent(entry?.percent ?? 0);
+            const isComplete = Boolean(entry?.isComplete) || percent >= 100;
+
+            if (isComplete) {
+                return 2;
+            }
+
+            if (percent >= this.insightsMostlyDoneThreshold) {
+                return 0;
+            }
+
+            return 1;
+        },
+        sortedInsightsRows() {
+            return this.insightsRowOrder
+                .map((key, index) => {
+                    const entry = this.dailyProgress?.[key] ?? {
+                        percent: 0,
+                        isComplete: false,
+                        stateLabel: this.progressStateLabels.notStarted,
+                    };
+                    const percent = this.normalizeProgressPercent(entry.percent);
+
+                    return {
+                        key,
+                        label: this.progressLabels?.[key] ?? key,
+                        percent,
+                        isComplete: Boolean(entry.isComplete) || percent >= 100,
+                        stateLabel: String(entry.stateLabel ?? ''),
+                        priority: this.resolveInsightsRowPriority(entry),
+                        originalOrder: index,
+                    };
+                })
+                .sort((left, right) => {
+                    if (left.priority !== right.priority) {
+                        return left.priority - right.priority;
+                    }
+
+                    if (left.percent !== right.percent) {
+                        return right.percent - left.percent;
+                    }
+
+                    return left.originalOrder - right.originalOrder;
+                });
+        },
         measureInsightsPanelHeight() {
             const panelBody = this.$refs?.insightsPanelBody;
 
@@ -694,6 +742,15 @@ document.addEventListener('alpine:init', () => {
 
                 this.runViewNavigation(targetReaderView);
             });
+        },
+        handleInsightsRowClick(mode) {
+            if (mode === 'wird') {
+                this.handleInsightsWirdRowClick();
+
+                return;
+            }
+
+            this.handleInsightsAthkarRowClick(mode);
         },
         handleInsightsWirdRowClick() {
             const isWirdComplete = Boolean(this.dailyProgress?.wird?.isComplete);
