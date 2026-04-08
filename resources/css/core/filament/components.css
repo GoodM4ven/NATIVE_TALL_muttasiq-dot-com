@@ -611,8 +611,9 @@
         padding-bottom: 1rem;
     }
 
+    .fi-modal-window.fi-align-center.fi-modal-window-has-icon .fi-modal-header .fi-modal-heading,
     .fi-modal-header:not(:has(.fi-modal-close-btn)) .fi-modal-heading {
-        margin-inline-start: 0 !important;
+        margin-inline: 0 !important;
     }
 
     #quran-reader-search-modal > .fi-modal-header,

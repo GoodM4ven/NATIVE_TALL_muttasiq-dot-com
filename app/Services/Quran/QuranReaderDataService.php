@@ -21,9 +21,26 @@ class QuranReaderDataService
 
     private const MAX_PAGE_CACHE_KEY = 'quran-reader-max-page-v2';
 
-    private const SEARCH_RESULTS_CACHE_PREFIX = 'quran-reader-search-results-v2';
+    private const SEARCH_RESULTS_CACHE_PREFIX = 'quran-reader-search-results-v3';
 
     private const DISPLAYED_PAGE_CACHE_PREFIX = 'quran-reader-display-page-v1';
+
+    /**
+     * @var array<int, string>
+     */
+    private const SACRED_NAME_SEARCH_TOKENS = [
+        'الله',
+        'والله',
+        'فالله',
+        'بالله',
+        'تالله',
+        'كالله',
+        'لله',
+        'ولله',
+        'فلله',
+        'تلله',
+        'بلله',
+    ];
 
     /**
      * @var array<int, string>
@@ -534,11 +551,16 @@ class QuranReaderDataService
             return $matches;
         }
 
+        $rootAndStemTokens = array_values(array_filter(
+            $tokens,
+            fn (string $token): bool => ! $this->isSacredNameToken($token),
+        ));
+        $hasRootAndStemTokens = $rootAndStemTokens !== [];
         $shouldUseExpandedRoots = count($tokens) <= 6;
         $shouldUseRootStage = count($tokens) <= 4;
 
-        if ($shouldUseExpandedRoots) {
-            $stemVerseIds = $this->collectVerseIdsByStemTokens($tokens, $limit);
+        if ($shouldUseExpandedRoots && $hasRootAndStemTokens) {
+            $stemVerseIds = $this->collectVerseIdsByStemTokens($rootAndStemTokens, $limit);
             $this->appendVerseMatches(
                 $matches,
                 $seenAyahIndexes,
@@ -556,8 +578,8 @@ class QuranReaderDataService
             return $matches;
         }
 
-        if ($shouldUseExpandedRoots && $shouldUseRootStage) {
-            $rootVerseIds = $this->collectVerseIdsByRootTokens($tokens, $limit);
+        if ($shouldUseExpandedRoots && $shouldUseRootStage && $hasRootAndStemTokens) {
+            $rootVerseIds = $this->collectVerseIdsByRootTokens($rootAndStemTokens, $limit);
             $this->appendVerseMatches(
                 $matches,
                 $seenAyahIndexes,
@@ -909,6 +931,10 @@ class QuranReaderDataService
      */
     private function resolveStemCandidatesForToken(string $token): array
     {
+        if ($this->isSacredNameToken($token)) {
+            return [];
+        }
+
         $tokenVariants = $this->expandSearchTextVariants($token);
         $seedCandidates = array_map(
             static fn (string $value): string => ArabicFilter::forSearch($value),
@@ -939,6 +965,10 @@ class QuranReaderDataService
      */
     private function resolveRootCandidatesForToken(string $token): array
     {
+        if ($this->isSacredNameToken($token)) {
+            return [];
+        }
+
         $stemCandidates = $this->resolveStemCandidatesForToken($token);
         $tokenVariants = $this->expandSearchTextVariants($token);
         $searchColumns = $this->resolveTokenSearchColumns();
@@ -1359,6 +1389,23 @@ class QuranReaderDataService
         }
 
         return '“'.$snippet.'”';
+    }
+
+    private function isSacredNameToken(string $token): bool
+    {
+        $normalizedToken = trim(ArabicFilter::forSearch($token));
+
+        if ($normalizedToken === '') {
+            return false;
+        }
+
+        if (in_array($normalizedToken, self::SACRED_NAME_SEARCH_TOKENS, true)) {
+            return true;
+        }
+
+        $strippedToken = preg_replace('/^[وفبكلت]+/u', '', $normalizedToken) ?? $normalizedToken;
+
+        return in_array($strippedToken, ['الله', 'لله'], true);
     }
 
     private function resolveDisplayedMushafPage(

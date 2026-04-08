@@ -978,7 +978,10 @@ document.addEventListener('alpine:init', () => {
         _bookmarksRowsAutoAnimateStop: null,
         _searchModalCloseDebounceTimer: null,
         _searchModalOpenInFlight: null,
+        _searchModalInputSyncElement: null,
+        _onSearchModalInputSync: null,
         _stopIsCalibratingWatcher: null,
+        _stopSearchQueryWatcher: null,
         _quranPreparationInFlight: null,
         _quranPreparationRequestPromise: null,
         _startupRestoreInFlight: null,
@@ -1264,6 +1267,9 @@ document.addEventListener('alpine:init', () => {
                         this.syncCalibrationHudPosition();
                     });
                 }
+            });
+            this._stopSearchQueryWatcher = this.$watch('search.query', () => {
+                void this.updateSearchResults();
             });
             this.$nextTick(() => {
                 const visible = this.isReaderElementVisible();
@@ -1811,6 +1817,7 @@ document.addEventListener('alpine:init', () => {
 
         destroy() {
             this.unregisterNativeInputListeners();
+            this.unbindSearchModalInputSyncListener();
 
             if (this._onWindowViewportChange) {
                 window.removeEventListener('resize', this._onWindowViewportChange);
@@ -1866,6 +1873,11 @@ document.addEventListener('alpine:init', () => {
             if (typeof this._stopIsCalibratingWatcher === 'function') {
                 this._stopIsCalibratingWatcher();
                 this._stopIsCalibratingWatcher = null;
+            }
+
+            if (typeof this._stopSearchQueryWatcher === 'function') {
+                this._stopSearchQueryWatcher();
+                this._stopSearchQueryWatcher = null;
             }
 
             if (this._onSupportLockLivewireMorphed) {
@@ -5388,6 +5400,34 @@ document.addEventListener('alpine:init', () => {
             this.normalizePersistedHistorySortOrder();
             this.persistNavigationHistory();
             this.markManagerRowUpdated('history', normalizedEntryId);
+        },
+
+        removeHistoryEntry(entryId) {
+            const normalizedEntryId = this.normalizeHistoryEntryId(entryId);
+
+            if (!normalizedEntryId) {
+                return;
+            }
+
+            const hasEntry = this.navigationHistory.some(
+                (entry) => this.normalizeHistoryEntryId(entry?.id) === normalizedEntryId,
+            );
+
+            if (!hasEntry) {
+                return;
+            }
+
+            this.markManagerRowsRemoving('history', [normalizedEntryId]);
+
+            window.setTimeout(() => {
+                this.navigationHistory = this.navigationHistory.filter((entry) => {
+                    return this.normalizeHistoryEntryId(entry?.id) !== normalizedEntryId;
+                });
+                this.normalizePersistedHistorySortOrder();
+                this.persistNavigationHistory();
+                this.syncHistoryTagDrafts();
+                this.setManagerRowEffect('history', normalizedEntryId, '');
+            }, managerRowRemoveAnimationDurationMs);
         },
 
         clearNavigationHistory() {
@@ -14037,6 +14077,64 @@ document.addEventListener('alpine:init', () => {
             return rankedCandidates[0]?.element ?? null;
         },
 
+        unbindSearchModalInputSyncListener() {
+            if (
+                this._searchModalInputSyncElement instanceof HTMLInputElement &&
+                typeof this._onSearchModalInputSync === 'function'
+            ) {
+                this._searchModalInputSyncElement.removeEventListener(
+                    'input',
+                    this._onSearchModalInputSync,
+                );
+            }
+
+            this._searchModalInputSyncElement = null;
+            this._onSearchModalInputSync = null;
+        },
+
+        bindSearchModalInputSyncListener() {
+            const inputElement = this.searchModalInputElement();
+
+            if (!(inputElement instanceof HTMLInputElement)) {
+                return false;
+            }
+
+            if (
+                this._searchModalInputSyncElement === inputElement &&
+                typeof this._onSearchModalInputSync === 'function'
+            ) {
+                return true;
+            }
+
+            this.unbindSearchModalInputSyncListener();
+
+            this._onSearchModalInputSync = (event) => {
+                const targetInput =
+                    event?.target instanceof HTMLInputElement ? event.target : inputElement;
+                const nextQuery = String(targetInput?.value ?? '');
+
+                if (nextQuery === this.search.query) {
+                    return;
+                }
+
+                this.search.query = nextQuery;
+                void this.updateSearchResults();
+            };
+            this._searchModalInputSyncElement = inputElement;
+            this._searchModalInputSyncElement.addEventListener(
+                'input',
+                this._onSearchModalInputSync,
+            );
+
+            const nextQuery = String(inputElement.value ?? '');
+
+            if (nextQuery !== this.search.query) {
+                this.search.query = nextQuery;
+            }
+
+            return true;
+        },
+
         jumpPageInputElement() {
             const inputElement = document.getElementById('quran-reader-page-counter-input');
 
@@ -14815,6 +14913,10 @@ document.addEventListener('alpine:init', () => {
                     });
                 }
 
+                if (kind === 'closing' || kind === 'closed') {
+                    this.clearHistoryManagerSyncQueue();
+                }
+
                 if (kind === 'closed') {
                     this.historyModalOpen = false;
                     this.teardownHistoryRowsAnimations();
@@ -14830,6 +14932,10 @@ document.addEventListener('alpine:init', () => {
                         this.ensureBookmarksRowsAnimations();
                         this.queueBookmarksManagerTableSync();
                     });
+                }
+
+                if (kind === 'closing' || kind === 'closed') {
+                    this.clearBookmarksManagerSyncQueue();
                 }
 
                 if (kind === 'closed') {
@@ -15007,6 +15113,7 @@ document.addEventListener('alpine:init', () => {
             this.setupSearchStreamObserver();
             this.clearSearchStreamTarget();
             this.ensureSearchResultAnimations();
+            this.bindSearchModalInputSyncListener();
             this.searchModalInputElement()?.focus?.();
             this.queueSurahDirectoryAutoFocus();
             this._surahDirectoryPostOpenTimers = [260, 560, 920].map((delayMs) =>
@@ -15022,6 +15129,7 @@ document.addEventListener('alpine:init', () => {
 
         handleSearchModalClosed() {
             this.cancelSurahDirectoryAutoFocus();
+            this.unbindSearchModalInputSyncListener();
             this.teardownSearchStreamObserver();
             this.clearSearchStreamTarget();
             this.teardownSearchResultAnimations();
@@ -15052,6 +15160,21 @@ document.addEventListener('alpine:init', () => {
                 .map((value) => String(value ?? '').trim())
                 .find((value) => value !== '');
 
+            if (modalId) {
+                window.dispatchEvent(
+                    new CustomEvent('close-modal', {
+                        detail: {
+                            id: modalId,
+                        },
+                    }),
+                );
+                await wait(12);
+
+                if (!this.isModalWindowVisibleById(modalId)) {
+                    return;
+                }
+            }
+
             if (typeof this.$wire?.unmountAction === 'function') {
                 try {
                     await this.$wire.unmountAction(false);
@@ -15062,21 +15185,9 @@ document.addEventListener('alpine:init', () => {
                 }
             }
 
-            if (!modalId) {
-                if (typeof onFallback === 'function') {
-                    onFallback();
-                }
-
-                return;
+            if (typeof onFallback === 'function') {
+                onFallback();
             }
-
-            window.dispatchEvent(
-                new CustomEvent('close-modal', {
-                    detail: {
-                        id: modalId,
-                    },
-                }),
-            );
         },
 
         async requestSearchModalClose({ skipLayout = false } = {}) {
@@ -15471,8 +15582,15 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            if (!this.search.modalOpen) {
+            const isSearchModalVisible = this.search.modalOpen || this.isSearchModalWindowVisible();
+
+            if (!isSearchModalVisible) {
                 return;
+            }
+
+            if (!this.search.modalOpen) {
+                this.search.modalOpen = true;
+                this._lastKnownModalOpenState = true;
             }
 
             const requestSerial = ++this._searchRequestSerial;
@@ -15518,7 +15636,7 @@ document.addEventListener('alpine:init', () => {
                 const queuedQuery = String(this._searchQueuedNormalizedQuery ?? '').trim();
                 const nextQuery = queuedQuery !== '' ? queuedQuery : normalizedCurrentQuery;
                 const shouldQueueFollowUpSearch =
-                    this.search.modalOpen &&
+                    (this.search.modalOpen || this.isSearchModalWindowVisible()) &&
                     nextQuery !== '' &&
                     nextQuery.length >= this.search.minQueryLength &&
                     nextQuery !== normalizedQuery;

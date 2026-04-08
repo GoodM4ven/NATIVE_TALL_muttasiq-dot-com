@@ -1859,6 +1859,7 @@
         x-on:support-unlock-updated.window="applySupportUnlockDecision($event.detail?.mode ?? null)"
         x-on:quran-history-manager-go.window="handleHistoryManagerGoEvent($event.detail ?? {})"
         x-on:quran-history-manager-updated.window="applyHistoryManagerRecordUpdate($event.detail ?? {})"
+        x-on:quran-history-manager-removed.window="removeHistoryEntry($event.detail?.id)"
         x-on:quran-history-manager-clear-untagged.window="clearNavigationHistory()"
         x-on:quran-history-manager-reordered.window="applyHistoryManagerReorder($event.detail ?? {})"
         x-on:quran-bookmarks-manager-go.window="handleBookmarksManagerGoEvent($event.detail ?? {})"

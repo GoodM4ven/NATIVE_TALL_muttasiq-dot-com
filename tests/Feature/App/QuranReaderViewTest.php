@@ -249,7 +249,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
     expect($quranReaderClassSource)->not->toBeFalse()
         ->and($quranReaderClassSource)->toContain('private const SEARCH_STREAM_BATCH_SIZE = 3;')
         ->and($quranReaderClassSource)->toContain("'x-model.debounce.350ms' => 'search.query'")
-        ->and($quranReaderClassSource)->not->toContain("'x-on:input.debounce.350ms' => 'updateSearchResults()'")
+        ->and($quranReaderClassSource)->toContain("'x-on:input.debounce.350ms' => 'updateSearchResults()'")
         ->and($quranReaderClassSource)->toContain("'class' => 'quran-search-field-wrapper'");
 
     expect($quranSearchModalViewSource)->not->toBeFalse()
@@ -570,24 +570,93 @@ it('registers qpc page font route contract used by quran reader pages', function
 it('keeps quran manager table defaults for pagination filters and replace confirmation', function () {
     $historyManagerTableSource = file_get_contents(app_path('Livewire/QuranApp/HistoryManagerTable.php'));
     $bookmarksManagerTableSource = file_get_contents(app_path('Livewire/QuranApp/BookmarksManagerTable.php'));
+    $quranReaderViewSource = file_get_contents(resource_path('views/livewire/quran-app/reader.blade.php'));
+    $historyModalPartialSource = file_get_contents(
+        resource_path('views/components/partials/quran-app/history-modal.blade.php'),
+    );
+    $bookmarksModalPartialSource = file_get_contents(
+        resource_path('views/components/partials/quran-app/bookmarks-modal.blade.php'),
+    );
 
     expect($historyManagerTableSource)->not->toBeFalse()
         ->and($historyManagerTableSource)->toContain('->defaultPaginationPageOption(8)')
+        ->and($historyManagerTableSource)->toContain('->selectable(false)')
         ->and($historyManagerTableSource)->toContain('->paginationPageOptions([8, 10, 25, 50])')
         ->and($historyManagerTableSource)->toContain("->placeholder(arabic_text('الكل'))")
         ->and($historyManagerTableSource)->not->toContain("'all' => arabic_text('الكل')")
         ->and($historyManagerTableSource)->toContain("->modalSubmitActionLabel(arabic_text('تعديل'))")
         ->and($historyManagerTableSource)->toContain("->modalSubmitAction(fn (Action \$action): Action => \$action->icon('heroicon-o-pencil-square'))")
+        ->and($historyManagerTableSource)->toContain("Action::make('remove')")
+        ->and($historyManagerTableSource)->toContain("'quran-history-manager-removed'")
         ->and($historyManagerTableSource)->toContain("->icon('heroicon-o-x-mark')");
 
     expect($bookmarksManagerTableSource)->not->toBeFalse()
         ->and($bookmarksManagerTableSource)->toContain("Action::make('replacePage')")
+        ->and($bookmarksManagerTableSource)->toContain('->selectable(false)')
         ->and($bookmarksManagerTableSource)->toContain('->requiresConfirmation()')
         ->and($bookmarksManagerTableSource)->toContain('->modalHeading(arabic_text(\'تأكيد استبدال الصفحة\'))')
         ->and($bookmarksManagerTableSource)->toContain("->placeholder(arabic_text('الكل'))")
         ->and($bookmarksManagerTableSource)->not->toContain("'all' => arabic_text('الكل')")
         ->and($bookmarksManagerTableSource)->toContain("->modalSubmitActionLabel(arabic_text('تعديل'))")
-        ->and($bookmarksManagerTableSource)->toContain("->modalSubmitAction(fn (Action \$action): Action => \$action->icon('heroicon-o-pencil-square'))");
+        ->and($bookmarksManagerTableSource)->toContain("->modalSubmitAction(fn (Action \$action): Action => \$action->icon('heroicon-o-pencil-square'))")
+        ->and($bookmarksManagerTableSource)->toContain("Action::make('remove')")
+        ->and($bookmarksManagerTableSource)->toContain("->icon('heroicon-o-x-mark')");
+
+    expect($quranReaderViewSource)->not->toBeFalse()
+        ->and($quranReaderViewSource)->toContain(
+            'x-on:quran-history-manager-removed.window="removeHistoryEntry($event.detail?.id)"',
+        );
+
+    expect($historyModalPartialSource)->not->toBeFalse()
+        ->and($historyModalPartialSource)->toContain('quran-history-manager-request-sync');
+
+    expect($bookmarksModalPartialSource)->not->toBeFalse()
+        ->and($bookmarksModalPartialSource)->toContain('quran-bookmarks-manager-request-sync');
+});
+
+it('keeps sacred divine name tokens out of stem and root search stages', function () {
+    /** @var QuranReaderDataService $service */
+    $service = app(QuranReaderDataService::class);
+
+    if (! $service->isReady()) {
+        $this->markTestSkipped('Quran reader search dependencies are unavailable.');
+    }
+
+    $sacredTokenResults = $service->searchProgressively('تالله', 20);
+
+    expect($sacredTokenResults)->toBeArray()->not->toBeEmpty()
+        ->and(collect($sacredTokenResults)->contains(
+            static fn (array $item): bool => (string) ($item['match_strategy'] ?? '') === 'exact_phrase',
+        ))->toBeTrue()
+        ->and(collect($sacredTokenResults)->contains(
+            static fn (array $item): bool => in_array(
+                (string) ($item['match_strategy'] ?? ''),
+                ['stem_tokens', 'root_tokens'],
+                true,
+            ),
+        ))->toBeFalse();
+});
+
+it('guards mobile js error reporting against known benign runtime noise', function () {
+    $mobileJsErrorsHandlerSource = file_get_contents(
+        resource_path('views/components/partials/scripts/mobile-js-errors-handler.blade.php'),
+    );
+    $breakpointerSource = file_get_contents(resource_path('js/support/alpine/storage/breakpointer.js'));
+    $livewireTransitionConsistencySource = file_get_contents(
+        resource_path('js/overrides/livewire-transition-consistency.js'),
+    );
+
+    expect($mobileJsErrorsHandlerSource)->not->toBeFalse()
+        ->and($mobileJsErrorsHandlerSource)->toContain('Uncaught [object Object]')
+        ->and($mobileJsErrorsHandlerSource)->toContain('isLikelyOpaqueLivewireThrow')
+        ->and($mobileJsErrorsHandlerSource)->toContain('shouldPreventDefaultErrorEvent')
+        ->and($mobileJsErrorsHandlerSource)->toContain('event.preventDefault();');
+
+    expect($breakpointerSource)->not->toBeFalse()
+        ->and($breakpointerSource)->toContain("typeof window.AndroidBridge === 'undefined'");
+
+    expect($livewireTransitionConsistencySource)->not->toBeFalse()
+        ->and($livewireTransitionConsistencySource)->toContain('window.isRecordSelected = () => false;');
 });
 
 it('returns matches for legacy orthography phrases in quran search endpoint', function () {
@@ -1243,4 +1312,23 @@ it('builds canonical copy payloads for every ayah in the quran dataset', functio
         ->and(array_slice($missingAyahIndexes, 0, 20))->toBeEmpty()
         ->and(array_slice($unexpectedAyahIndexes, 0, 20))->toBeEmpty()
         ->and(array_slice($mismatchedAyahs, 0, 10))->toBeEmpty();
+});
+
+it('reacts to quran search query changes through an alpine watcher', function () {
+    $quranReaderScriptSource = file_get_contents(
+        resource_path('js/support/alpine/data/quran-app-reader.js'),
+    );
+
+    expect($quranReaderScriptSource)->not->toBeFalse()
+        ->and($quranReaderScriptSource)->toContain('_stopSearchQueryWatcher: null')
+        ->and($quranReaderScriptSource)->toContain(
+            "this._stopSearchQueryWatcher = this.\$watch('search.query', () => {",
+        )
+        ->and($quranReaderScriptSource)->toContain('void this.updateSearchResults();')
+        ->and($quranReaderScriptSource)->toContain(
+            'const isSearchModalVisible = this.search.modalOpen || this.isSearchModalWindowVisible();',
+        )
+        ->and($quranReaderScriptSource)->toContain(
+            'bindSearchModalInputSyncListener()',
+        );
 });

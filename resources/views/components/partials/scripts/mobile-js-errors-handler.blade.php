@@ -109,6 +109,21 @@
             return knownNoiseMessagePatterns.some((pattern) => pattern.test(normalizedMessage));
         };
 
+        const isLikelyOpaqueLivewireThrow = (entry) => {
+            const normalizedMessage = normalizeNoiseMessage(entry?.message);
+
+            if (!normalizedMessage || normalizedMessage !== 'Uncaught [object Object]') {
+                return false;
+            }
+
+            const normalizedSource = trimTo(entry?.source, maxSourceLength);
+            const normalizedStack = trimTo(entry?.stack, maxStackLength);
+            const hasLivewireSource = Boolean(normalizedSource && normalizedSource.includes('/livewire'));
+            const hasLivewireStack = Boolean(normalizedStack && normalizedStack.includes('/livewire'));
+
+            return hasLivewireSource || hasLivewireStack;
+        };
+
         const isLikelyExternalOnlyNoise = (message) => {
             const normalizedMessage = normalizeNoiseMessage(message);
             if (!normalizedMessage) {
@@ -176,11 +191,23 @@
                 return true;
             }
 
+            if (isLikelyOpaqueLivewireThrow(entry)) {
+                return true;
+            }
+
             if (!entry.source && !hasAppOwnedStack) {
                 return true;
             }
 
             return false;
+        };
+
+        const shouldPreventDefaultErrorEvent = (entry) => {
+            if (isLikelyBrowserNoise(entry?.message)) {
+                return true;
+            }
+
+            return isLikelyOpaqueLivewireThrow(entry);
         };
 
         const normalizeEntry = (entry) => {
@@ -311,7 +338,7 @@
         };
 
         window.addEventListener('error', (event) => {
-            addEntry({
+            const candidateEntry = {
                 type: 'error',
                 time: new Date().toISOString(),
                 message: event.message,
@@ -319,12 +346,18 @@
                 line: event.lineno,
                 column: event.colno,
                 stack: event.error ? event.error.stack : null,
-            });
+            };
+
+            if (shouldPreventDefaultErrorEvent(candidateEntry)) {
+                event.preventDefault();
+            }
+
+            addEntry(candidateEntry);
         });
 
         window.addEventListener('unhandledrejection', (event) => {
             const reason = event.reason;
-            addEntry({
+            const candidateEntry = {
                 type: 'promise',
                 time: new Date().toISOString(),
                 message: reason && reason.message ? reason.message : String(reason),
@@ -332,7 +365,13 @@
                 line: null,
                 column: null,
                 stack: reason && reason.stack ? reason.stack : null,
-            });
+            };
+
+            if (shouldPreventDefaultErrorEvent(candidateEntry)) {
+                event.preventDefault();
+            }
+
+            addEntry(candidateEntry);
         });
 
         window.addEventListener('js-error-report-submitted', () => {

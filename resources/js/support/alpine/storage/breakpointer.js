@@ -76,7 +76,10 @@ document.addEventListener('alpine:init', function () {
         });
     };
 
-    if (typeof window.ResizeObserver === 'function') {
+    const shouldUseResizeObserver =
+        typeof window.ResizeObserver === 'function' && typeof window.AndroidBridge === 'undefined';
+
+    if (shouldUseResizeObserver) {
         const resizeObserver = new ResizeObserver(() => {
             scheduleSync();
         });

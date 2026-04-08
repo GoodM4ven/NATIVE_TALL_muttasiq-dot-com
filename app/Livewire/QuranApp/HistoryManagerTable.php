@@ -55,6 +55,7 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
     {
         return $table
             ->defaultSort('sort_order')
+            ->selectable(false)
             ->defaultPaginationPageOption(8)
             ->paginationPageOptions([8, 10, 25, 50])
             ->reorderable('sort_order')
@@ -76,7 +77,7 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
                 $resolvedPerPage = max(1, $recordsPerPage);
                 $items = $records
                     ->slice(($resolvedPage - 1) * $resolvedPerPage, $resolvedPerPage)
-                    ->mapWithKeys(fn(array $record): array => [(string) $record['id'] => $record])
+                    ->mapWithKeys(fn (array $record): array => [(string) $record['id'] => $record])
                     ->all();
 
                 return new LengthAwarePaginator(
@@ -89,7 +90,7 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
             ->columns([
                 TextColumn::make('sort_order')
                     ->label(arabic_text('الترتيب'))
-                    ->state(static fn(array $record): string => (string) max(1, (int) ($record['sort_order'] ?? 1)))
+                    ->state(static fn (array $record): string => (string) max(1, (int) ($record['sort_order'] ?? 1)))
                     ->extraAttributes([
                         'lang' => 'en',
                     ])
@@ -100,16 +101,16 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
                     ->sortable(),
                 TextColumn::make('surah_label')
                     ->label(arabic_text('السورة'))
-                    ->state(fn(array $record): string => (string) ($record['surah_label'] ?? '-'))
+                    ->state(fn (array $record): string => (string) ($record['surah_label'] ?? '-'))
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('source_label')
                     ->label(arabic_text('النوع'))
                     ->badge()
-                    ->state(fn(array $record): string => $this->resolveSourceLabel($record)),
+                    ->state(fn (array $record): string => $this->resolveSourceLabel($record)),
                 TextColumn::make('tags_text')
                     ->label(arabic_text('الوسوم'))
-                    ->state(fn(array $record): string => $this->resolveTagsText($record))
+                    ->state(fn (array $record): string => $this->resolveTagsText($record))
                     ->wrap(),
                 TextColumn::make('note')
                     ->label(arabic_text('الملاحظة'))
@@ -132,7 +133,7 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
                 Action::make('go')
                     ->label(arabic_text('انتقال'))
                     ->icon('heroicon-s-arrow-up-right')
-                    ->action(fn(array $record): mixed => $this->dispatch(
+                    ->action(fn (array $record): mixed => $this->dispatch(
                         'quran-history-manager-go',
                         id: (string) ($record['id'] ?? ''),
                     )),
@@ -140,15 +141,15 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
                     ->label(arabic_text('تعديل'))
                     ->icon('heroicon-s-pencil-square')
                     ->modalSubmitActionLabel(arabic_text('تعديل'))
-                    ->modalSubmitAction(fn(Action $action): Action => $action->icon('heroicon-o-pencil-square'))
-                    ->fillForm(fn(array $record): array => [
+                    ->modalSubmitAction(fn (Action $action): Action => $action->icon('heroicon-o-pencil-square'))
+                    ->fillForm(fn (array $record): array => [
                         'note' => (string) ($record['note'] ?? ''),
                         'tags' => array_values(array_filter(
                             array_map(
-                                static fn(mixed $tag): string => trim((string) $tag),
+                                static fn (mixed $tag): string => trim((string) $tag),
                                 is_array($record['tags'] ?? null) ? $record['tags'] : [],
                             ),
-                            static fn(string $tag): bool => $tag !== '',
+                            static fn (string $tag): bool => $tag !== '',
                         )),
                     ])
                     ->schema([
@@ -160,11 +161,20 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
                             ->separator(',')
                             ->nestedRecursiveRules(['min:1', 'max:60']),
                     ])
-                    ->action(fn(array $data, array $record): mixed => $this->dispatch(
+                    ->action(fn (array $data, array $record): mixed => $this->dispatch(
                         'quran-history-manager-updated',
                         id: (string) ($record['id'] ?? ''),
                         note: (string) ($data['note'] ?? ''),
                         tags: $this->normalizeTagsInput($data['tags'] ?? []),
+                    )),
+                Action::make('remove')
+                    ->label(arabic_text('حذف'))
+                    ->icon('heroicon-o-x-mark')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->action(fn (array $record): mixed => $this->dispatch(
+                        'quran-history-manager-removed',
+                        id: (string) ($record['id'] ?? ''),
                     )),
             ])
             ->headerActions([
@@ -173,7 +183,7 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
                     ->icon('heroicon-o-x-mark')
                     ->color('danger')
                     ->requiresConfirmation()
-                    ->action(fn(): mixed => $this->dispatch('quran-history-manager-clear-untagged')),
+                    ->action(fn (): mixed => $this->dispatch('quran-history-manager-clear-untagged')),
             ])
             ->emptyStateHeading(arabic_text('لا توجد عناصر بعد.'));
     }
@@ -200,10 +210,10 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
 
             $tags = array_values(array_filter(
                 array_map(
-                    static fn(mixed $tag): string => trim((string) $tag),
+                    static fn (mixed $tag): string => trim((string) $tag),
                     is_array($record['tags'] ?? null) ? $record['tags'] : [],
                 ),
-                static fn(string $tag): bool => $tag !== '',
+                static fn (string $tag): bool => $tag !== '',
             ));
 
             $normalizedRecords[] = [
@@ -236,8 +246,8 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
         }
 
         $normalizedOrder = array_values(array_filter(
-            array_map(static fn(mixed $recordKey): string => trim((string) $recordKey), $order),
-            static fn(string $recordKey): bool => $recordKey !== '',
+            array_map(static fn (mixed $recordKey): string => trim((string) $recordKey), $order),
+            static fn (string $recordKey): bool => $recordKey !== '',
         ));
 
         if ($normalizedOrder === []) {
@@ -284,7 +294,7 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
         }
 
         return $records->filter(
-            static fn(array $record): bool => (string) ($record['source'] ?? '') === $source,
+            static fn (array $record): bool => (string) ($record['source'] ?? '') === $source,
         )->values();
     }
 
@@ -334,7 +344,7 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
 
         return $records
             ->sortBy(
-                static fn(array $record): mixed => $record[$resolvedColumn] ?? null,
+                static fn (array $record): mixed => $record[$resolvedColumn] ?? null,
                 SORT_NATURAL,
                 $descending,
             )
@@ -383,8 +393,8 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
         }
 
         return implode(', ', array_values(array_filter(
-            array_map(static fn(mixed $tag): string => trim((string) $tag), $tags),
-            static fn(string $tag): bool => $tag !== '',
+            array_map(static fn (mixed $tag): string => trim((string) $tag), $tags),
+            static fn (string $tag): bool => $tag !== '',
         )));
     }
 
@@ -396,8 +406,8 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
         $source = is_array($value) ? $value : explode(',', (string) $value);
 
         return array_values(array_filter(
-            array_map(static fn(mixed $tag): string => trim((string) $tag), $source),
-            static fn(string $tag): bool => $tag !== '',
+            array_map(static fn (mixed $tag): string => trim((string) $tag), $source),
+            static fn (string $tag): bool => $tag !== '',
         ));
     }
 

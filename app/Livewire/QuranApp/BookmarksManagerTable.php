@@ -49,6 +49,7 @@ class BookmarksManagerTable extends Component implements HasActions, HasSchemas,
     {
         return $table
             ->defaultSort('sort_order')
+            ->selectable(false)
             ->reorderable('sort_order')
             ->records(function (
                 ?string $sortColumn,
@@ -162,7 +163,7 @@ class BookmarksManagerTable extends Component implements HasActions, HasSchemas,
                     ->label(arabic_text('حذف'))
                     ->color('danger')
                     ->requiresConfirmation()
-                    ->icon('heroicon-s-trash')
+                    ->icon('heroicon-o-x-mark')
                     ->action(fn (array $record): mixed => $this->dispatch(
                         'quran-bookmarks-manager-removed',
                         id: (string) ($record['id'] ?? ''),
