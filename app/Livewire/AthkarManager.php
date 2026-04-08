@@ -58,7 +58,7 @@ class AthkarManager extends Component implements HasActions, HasSchemas
     {
         return Action::make('manageAthkar')
             ->modalHeading('إدارة أذكار الصباح والمساء')
-            ->modalDescription('يمكنك تخصيص الأذكار كما ترغب، مع إمكانية استعادة الأذكار الافتراضية عبر زر استعادة.')
+            ->modalDescription('يمكنك تخصيص الأذكار كما ترغب، مع إمكانية استعادة الأذكار الافتراضية، أو تقديم التعديلات للتعميم.')
             ->modalAutofocus(false)
             ->slideOver(! $this->isManageAthkarMobile)
             ->modalWidth($this->isManageAthkarMobile ? Width::FiveExtraLarge : Width::SevenExtraLarge)
