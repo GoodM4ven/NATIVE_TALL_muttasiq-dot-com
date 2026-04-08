@@ -4226,6 +4226,22 @@ JS,
 
     safeClick($page, '[data-quran-wird-toggle]');
     waitForScriptWithTimeout($page, quranReaderDataScript('Boolean(data.wirdModeActive)'), true, 8_000);
+    waitForScriptWithTimeout(
+        $page,
+        <<<'JS'
+(() => {
+  const indicator = document.querySelector('[data-quran-mushaf-page-indicator]');
+  if (!(indicator instanceof HTMLElement)) {
+    return false;
+  }
+
+  const styles = window.getComputedStyle(indicator);
+  return styles.display === 'none' || Number.parseFloat(styles.opacity || '1') === 0;
+})()
+JS,
+        true,
+        8_000,
+    );
 
     $counterState = $page->script(
         quranReaderDataScript(

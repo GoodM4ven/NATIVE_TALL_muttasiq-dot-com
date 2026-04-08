@@ -6187,6 +6187,14 @@ document.addEventListener('alpine:init', () => {
             return clampPage(this.pageInput ?? this.pageNumber, this.maxPage);
         },
 
+        shouldShowMushafPageIndicator() {
+            if (!this.wirdModeActive) {
+                return false;
+            }
+
+            return this.pageCounterMaxDisplayValue() > Math.max(1, this.resolveReaderMaxPage());
+        },
+
         clampPage(value, maxPage = this.maxPage) {
             return clampPage(value, maxPage);
         },
