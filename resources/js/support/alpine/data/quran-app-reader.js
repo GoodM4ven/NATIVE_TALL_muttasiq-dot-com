@@ -30,6 +30,7 @@ const controlPanelSettingKeys = Object.freeze({
     wirdFrequencyMode: 'quran_wird_frequency_mode',
     wirdKhatmatTarget: 'quran_wird_khatmat_target',
 });
+const athkarSettingsUserOverridesStorageKey = 'athkar-settings-user-overrides-v1';
 
 const normalizePayload = (payload = {}) => ({
     ready: Boolean(payload?.ready),
@@ -3841,23 +3842,34 @@ document.addEventListener('alpine:init', () => {
         applyWirdNavigationVisualState(
             targetPage,
             targetStep,
-            { source = 'generic', sliderDurationMs = 220 } = {},
+            { source = 'generic', sliderDurationMs = 220, previousStep = null } = {},
         ) {
             const normalizedTargetPage = clampPage(targetPage, this.maxPage);
-            const previousVisualPage = clampPage(
-                this._lastPageInputVisualValue || this.pageInput || this.pageNumber,
-                this.maxPage,
+            const range = this.wirdRangeState();
+            const normalizedTargetStep = this.normalizeIntegerFlag(targetStep, 0, {
+                min: 0,
+                max: range.maxStep,
+            });
+            const normalizedPreviousStep = this.normalizeIntegerFlag(
+                previousStep,
+                normalizedTargetStep,
+                {
+                    min: 0,
+                    max: range.maxStep,
+                },
             );
+            const previousCounterValue = normalizedPreviousStep + 1;
+            const nextCounterValue = normalizedTargetStep + 1;
 
-            if (normalizedTargetPage !== previousVisualPage) {
-                this.triggerPageCounterPulse(previousVisualPage, normalizedTargetPage, {
-                    source: `wird-${String(source ?? 'generic').trim() || 'generic'}`,
+            if (nextCounterValue !== previousCounterValue) {
+                this.triggerPageCounterPulse(previousCounterValue, nextCounterValue, {
+                    source: `wird-${String(source ?? 'generic').trim() || 'generic'}-counter`,
                 });
             }
 
             this.pageInput = normalizedTargetPage;
             this._lastPageInputVisualValue = normalizedTargetPage;
-            this.animateWirdSliderVisualStepTo(targetStep, {
+            this.animateWirdSliderVisualStepTo(normalizedTargetStep, {
                 durationMs: sliderDurationMs,
             });
         },
@@ -4369,6 +4381,7 @@ document.addEventListener('alpine:init', () => {
                     return;
                 }
 
+                const previousBrowseStep = browseStep;
                 browseStep = isNextDirection ? browseStep + 1 : browseStep - 1;
                 this.wirdBrowseStep = browseStep;
                 const startAbsolutePage = Math.max(
@@ -4378,6 +4391,7 @@ document.addEventListener('alpine:init', () => {
                 const targetPage = this.absolutePageToPageNumber(startAbsolutePage + browseStep);
                 this.applyWirdNavigationVisualState(targetPage, browseStep, {
                     source: sourceProfile,
+                    previousStep: previousBrowseStep,
                 });
 
                 await this.goToPage(targetPage, {
@@ -4453,6 +4467,7 @@ document.addEventListener('alpine:init', () => {
             const targetPage = this.absolutePageToPageNumber(this.wirdCurrentAbsolutePage(record));
             this.applyWirdNavigationVisualState(targetPage, record.currentStep, {
                 source: sourceProfile,
+                previousStep: effectiveCurrentStep,
             });
 
             await this.goToPage(targetPage, {
@@ -6089,8 +6104,8 @@ document.addEventListener('alpine:init', () => {
         },
 
         buildDigitMorphSegments(previousValue, nextValue) {
-            const previous = String(clampPage(previousValue, this.maxPage));
-            const next = String(clampPage(nextValue, this.maxPage));
+            const previous = String(this.pageCounterNormalizeDisplayValue(previousValue, 1));
+            const next = String(this.pageCounterNormalizeDisplayValue(nextValue, previousValue));
             const length = this.pageCounterDigitLength();
             const previousChars = previous.padStart(length, ' ').split('');
             const nextChars = next.padStart(length, ' ').split('');
@@ -6115,11 +6130,26 @@ document.addEventListener('alpine:init', () => {
         },
 
         pageCounterDigitLength() {
-            return Math.max(3, String(clampPage(this.maxPage, this.maxPage)).length);
+            return Math.max(3, String(this.pageCounterMaxDisplayValue()).length);
+        },
+
+        pageCounterNormalizeDisplayValue(value, fallback = 1) {
+            const maxDisplayValue = Math.max(
+                1,
+                Math.trunc(Number(this.pageCounterMaxDisplayValue()) || 1),
+            );
+            const normalizedFallback = Number.isFinite(Number(fallback))
+                ? Math.trunc(Number(fallback))
+                : 1;
+            const normalizedValue = Number.isFinite(Number(value))
+                ? Math.trunc(Number(value))
+                : normalizedFallback;
+
+            return Math.max(1, Math.min(maxDisplayValue, normalizedValue));
         },
 
         pageCounterDisplayDigits(value) {
-            return String(clampPage(value, this.maxPage))
+            return String(this.pageCounterNormalizeDisplayValue(value))
                 .padStart(this.pageCounterDigitLength(), ' ')
                 .split('')
                 .map((digit) => (digit === ' ' ? '' : digit));
@@ -6132,7 +6162,29 @@ document.addEventListener('alpine:init', () => {
 
             const range = this.wirdRangeState();
 
-            return this.absolutePageToPageNumber(range.startAbsolutePage + range.maxStep);
+            return Math.max(1, range.requiredPages);
+        },
+
+        pageCounterCurrentDisplayValue() {
+            if (!this.wirdModeActive) {
+                return clampPage(this.pageInput, this.maxPage);
+            }
+
+            const range = this.wirdRangeState();
+            const currentStep = this.normalizeIntegerFlag(
+                this.wirdSliderDisplayStep(range.record),
+                this.wirdActiveStepForNavigation(range.record),
+                {
+                    min: 0,
+                    max: range.maxStep,
+                },
+            );
+
+            return currentStep + 1;
+        },
+
+        currentMushafPageDisplayValue() {
+            return clampPage(this.pageInput ?? this.pageNumber, this.maxPage);
         },
 
         clampPage(value, maxPage = this.maxPage) {
@@ -7319,11 +7371,12 @@ document.addEventListener('alpine:init', () => {
                 max: range.maxStep,
             });
             const targetPage = this.wirdTargetPageFromStep(step, range.record);
-            const previousVisualPage = clampPage(this._lastPageInputVisualValue, this.maxPage);
+            const previousCounterValue = this.pageCounterCurrentDisplayValue();
+            const nextCounterValue = step + 1;
 
-            if (targetPage !== previousVisualPage) {
-                this.triggerPageCounterPulse(previousVisualPage, targetPage, {
-                    source: 'page-slider',
+            if (nextCounterValue !== previousCounterValue) {
+                this.triggerPageCounterPulse(previousCounterValue, nextCounterValue, {
+                    source: 'page-slider-logical',
                 });
             }
 
@@ -11152,14 +11205,48 @@ document.addEventListener('alpine:init', () => {
                     ? defaultSettings
                     : {};
 
-            if (
-                typeof window === 'undefined' ||
-                typeof window.getUserSettingsOverrides !== 'function'
-            ) {
+            if (typeof window === 'undefined') {
                 return defaults;
             }
 
-            const userOverrides = window.getUserSettingsOverrides();
+            let helperOverrides = {};
+
+            if (typeof window.getUserSettingsOverrides === 'function') {
+                const resolvedOverrides = window.getUserSettingsOverrides();
+
+                if (
+                    resolvedOverrides &&
+                    typeof resolvedOverrides === 'object' &&
+                    !Array.isArray(resolvedOverrides)
+                ) {
+                    helperOverrides = resolvedOverrides;
+                }
+            }
+
+            let storageOverrides = {};
+
+            if (typeof localStorage !== 'undefined') {
+                try {
+                    const parsedOverrides = JSON.parse(
+                        localStorage.getItem(athkarSettingsUserOverridesStorageKey) ?? 'null',
+                    );
+
+                    if (
+                        parsedOverrides &&
+                        typeof parsedOverrides === 'object' &&
+                        !Array.isArray(parsedOverrides)
+                    ) {
+                        storageOverrides = parsedOverrides;
+                    }
+                } catch (_) {
+                    storageOverrides = {};
+                }
+            }
+
+            const userOverrides = {
+                ...storageOverrides,
+                ...helperOverrides,
+            };
 
             if (
                 !userOverrides ||
@@ -11170,13 +11257,54 @@ document.addEventListener('alpine:init', () => {
             }
 
             const merged = { ...defaults };
+            const applyOverrideValue = (key, value) => {
+                merged[key] = value;
+
+                if (
+                    Object.prototype.hasOwnProperty.call(controlPanelSettingKeys, key) &&
+                    typeof controlPanelSettingKeys[key] === 'string'
+                ) {
+                    merged[controlPanelSettingKeys[key]] = value;
+                }
+            };
 
             Object.keys(defaults).forEach((key) => {
-                if (!Object.prototype.hasOwnProperty.call(userOverrides, key)) {
+                const persistedSettingKey =
+                    Object.prototype.hasOwnProperty.call(controlPanelSettingKeys, key) &&
+                    typeof controlPanelSettingKeys[key] === 'string'
+                        ? controlPanelSettingKeys[key]
+                        : key;
+
+                if (Object.prototype.hasOwnProperty.call(userOverrides, key)) {
+                    applyOverrideValue(key, userOverrides[key]);
+
                     return;
                 }
 
-                merged[key] = userOverrides[key];
+                if (Object.prototype.hasOwnProperty.call(userOverrides, persistedSettingKey)) {
+                    applyOverrideValue(key, userOverrides[persistedSettingKey]);
+                }
+            });
+
+            Object.keys(controlPanelSettingKeys).forEach((key) => {
+                const persistedSettingKey = controlPanelSettingKeys[key];
+
+                if (
+                    typeof persistedSettingKey !== 'string' ||
+                    Object.prototype.hasOwnProperty.call(merged, persistedSettingKey)
+                ) {
+                    return;
+                }
+
+                if (Object.prototype.hasOwnProperty.call(userOverrides, persistedSettingKey)) {
+                    applyOverrideValue(key, userOverrides[persistedSettingKey]);
+
+                    return;
+                }
+
+                if (Object.prototype.hasOwnProperty.call(userOverrides, key)) {
+                    applyOverrideValue(key, userOverrides[key]);
+                }
             });
 
             return merged;

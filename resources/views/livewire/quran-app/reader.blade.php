@@ -2351,7 +2351,7 @@
                                 <span class="quran-page-chip-current-wrap">
                                     <span class="quran-page-chip-current">
                                         <template
-                                            x-for="(digit, digitIndex) in pageCounterDisplayDigits(pageInput)"
+                                            x-for="(digit, digitIndex) in pageCounterDisplayDigits(pageCounterCurrentDisplayValue())"
                                             :key="`quran-page-current-digit-${digitIndex}`"
                                         >
                                             <span class="quran-counter-cell">
@@ -2395,6 +2395,17 @@
                                     </span>
                                 </span>
                             </button>
+                            <span
+                                class="border-primary-300/55 bg-primary-50/75 text-primary-800 4xl:ms-1.5 4xl:min-h-[2.06rem] 4xl:rounded-[0.72rem] 4xl:px-2.5 4xl:text-[0.72rem] ms-1 inline-flex min-h-[1.72rem] items-center gap-1 rounded-[0.58rem] border px-2 text-[0.62rem] font-semibold sm:min-h-[1.78rem] sm:text-[0.64rem] md:min-h-[1.84rem] md:text-[0.66rem] lg:min-h-[1.9rem] lg:text-[0.68rem]"
+                                data-quran-mushaf-page-indicator
+                                x-cloak
+                                x-show="wirdModeActive"
+                                x-transition.opacity.duration.180ms
+                                x-bind:aria-label="`${@js(arabic_text('رقم صفحة المصحف الحالية'))}: ${formatReaderNumber(currentMushafPageDisplayValue())}`"
+                            >
+                                <span>{{ arabic_text('صفحة') }}</span>
+                                <span x-text="formatReaderNumber(currentMushafPageDisplayValue())"></span>
+                            </span>
                         </div>
                     </div>
                     <div class="quran-bottom-strip-slider">

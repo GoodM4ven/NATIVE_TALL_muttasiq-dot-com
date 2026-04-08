@@ -4178,6 +4178,236 @@ JS,
     $page->assertNoJavaScriptErrors();
 });
 
+it('shows logical wird counter values with morph animations for multi-khatma daily mode', function () {
+    $page = visit('/');
+
+    resetBrowserState($page, true);
+    waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
+    hashAction($page, '#quran-app-tilawa', true);
+
+    waitForScript($page, homeDataScript('data.activeView'), 'quran-app-tilawa');
+    waitForScript($page, 'window.location.hash', '#quran-app-tilawa');
+    waitForQuranReaderVisible($page);
+    waitForScript($page, quranReaderDataScript('data.ready && data.mushafLines.length > 0'), true);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
+
+    safeClick($page, '[data-quran-wird-toggle]');
+    waitForScriptWithTimeout(
+        $page,
+        'Boolean(document.querySelector("#support-unlock-modal"))',
+        true,
+        6_000,
+    );
+    $page->script(
+        <<<'JS'
+(() => {
+  const buttons = Array.from(document.querySelectorAll('#support-unlock-modal button'));
+  const bypassButton = buttons.find((button) =>
+    String(button.textContent ?? '').includes('أشهد الله أني لا أستطيع دعمكم الآن')
+  );
+
+  if (!(bypassButton instanceof HTMLButtonElement)) {
+    return false;
+  }
+
+  bypassButton.click();
+
+  return true;
+})()
+JS,
+    );
+    waitForScriptWithTimeout($page, modalClosedScript(), true, 8_000);
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('Boolean(data.isSupportLockActive())'),
+        false,
+        8_000,
+    );
+
+    safeClick($page, '[data-quran-wird-toggle]');
+    waitForScriptWithTimeout($page, quranReaderDataScript('Boolean(data.wirdModeActive)'), true, 8_000);
+
+    $counterState = $page->script(
+        quranReaderDataScript(
+            <<<'JS'
+(() => {
+  data.wirdFrequencyMode = data.normalizeWirdFrequencyMode(1, 1);
+  data.wirdKhatmatTarget = data.normalizeWirdKhatmatTarget(2, 2, {
+    frequencyMode: data.wirdFrequencyMode,
+  });
+  const record = data.ensureWirdDailyRecord({ forceRebuild: true });
+  data.wirdDailyRecord = record;
+  data.wirdBrowseStep = null;
+  data.syncWirdSliderVisualStep(record);
+
+  const slider = document.querySelector('.quran-page-slider');
+
+  return {
+    maxPage: Number(data.resolveReaderMaxPage?.() ?? data.maxPage ?? 0),
+    requiredPages: Number(record?.requiredPages ?? 0),
+    counterMax: Number(data.pageCounterMaxDisplayValue?.() ?? 0),
+    counterCurrent: Number(data.pageCounterCurrentDisplayValue?.() ?? 0),
+    counterDigits: Number(data.pageCounterDigitLength?.() ?? 0),
+    sliderMax: Number(data.sliderMax?.() ?? slider?.max ?? 0),
+  };
+})()
+JS,
+        ),
+    );
+
+    expect($counterState)->toBeArray();
+    $maxPage = (int) ($counterState['maxPage'] ?? 0);
+    $requiredPages = (int) ($counterState['requiredPages'] ?? 0);
+    expect($maxPage)->toBeGreaterThan(0);
+    expect($requiredPages)->toBe($maxPage * 2);
+    expect((int) ($counterState['counterMax'] ?? 0))->toBe($requiredPages);
+    expect((int) ($counterState['counterCurrent'] ?? 0))->toBe(1);
+    expect((int) ($counterState['counterDigits'] ?? 0))->toBeGreaterThanOrEqual(4);
+    expect((int) ($counterState['sliderMax'] ?? -1))->toBe($requiredPages - 1);
+
+    $page->script(quranReaderCommandScript("void data.stepWird('next', 'test-logical-counter-next');"));
+
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('Number(data.pageCounterCurrentDisplayValue() ?? 0)'),
+        2,
+        8_000,
+    );
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript(
+            'Boolean(data.pageCounterPulse?.hasChanges) && Number((data.pageCounterPulse?.segments ?? []).length || 0) >= 4',
+        ),
+        true,
+        8_000,
+    );
+    waitForScriptWithTimeout(
+        $page,
+        <<<'JS'
+(() => {
+  const indicator = document.querySelector('[data-quran-mushaf-page-indicator]');
+  if (!(indicator instanceof HTMLElement)) {
+    return false;
+  }
+
+  const styles = window.getComputedStyle(indicator);
+  return styles.display !== 'none' && styles.visibility !== 'hidden' && Number.parseFloat(styles.opacity || '1') > 0;
+})()
+JS,
+        true,
+        8_000,
+    );
+
+    $page->assertNoJavaScriptErrors();
+});
+
+it('restores persisted wird settings from user overrides after refresh', function () {
+    $page = visit('/');
+
+    safeBrowserResize($page, 375, 812);
+    $page->script(
+        <<<'JS'
+(() => {
+  window.__disableJsErrorReporting = true;
+  localStorage.clear();
+  sessionStorage.clear();
+  window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+})()
+JS,
+    );
+    $page->refresh();
+    waitForAlpineReady($page);
+    applyTestSpeedups($page);
+    $page->script('window.__disableJsErrorReporting = true;');
+    enableMobileContext($page);
+
+    if ($page->script('window.location.hash') !== '#main-menu') {
+        setHashOnly($page, '#main-menu', true, true);
+    }
+
+    if ($page->script(homeDataScript('data.activeView')) !== 'main-menu') {
+        forceHomeView($page, 'main-menu');
+    }
+
+    if ($page->script('JSON.parse(localStorage.getItem("app-active-view"))') !== 'main-menu') {
+        $page->script('localStorage.setItem("app-active-view", JSON.stringify("main-menu"));');
+    }
+
+    waitForScript($page, 'window.location.hash', '#main-menu');
+    waitForScript($page, homeDataScript('data.activeView'), 'main-menu');
+    waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
+    hashAction($page, '#quran-app-tilawa', true);
+
+    waitForScript($page, homeDataScript('data.activeView'), 'quran-app-tilawa');
+    waitForScript($page, 'window.location.hash', '#quran-app-tilawa');
+    waitForQuranReaderVisible($page);
+    waitForScript($page, quranReaderDataScript('data.ready && data.mushafLines.length > 0'), true);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
+
+    $page->script(
+        <<<'JS'
+localStorage.setItem('athkar-settings-user-overrides-v1', JSON.stringify({
+  quran_wird_frequency_mode: 1,
+  quran_wird_khatmat_target: 2,
+}));
+JS,
+    );
+    $persistedOverridesBeforeRefresh = $page->script(
+        <<<'JS'
+JSON.parse(localStorage.getItem('athkar-settings-user-overrides-v1') ?? 'null')
+JS,
+    );
+
+    expect($persistedOverridesBeforeRefresh)->toBeArray();
+    expect((int) ($persistedOverridesBeforeRefresh['quran_wird_frequency_mode'] ?? -1))->toBe(1);
+    expect((int) ($persistedOverridesBeforeRefresh['quran_wird_khatmat_target'] ?? -1))->toBe(2);
+
+    $page->refresh();
+    waitForAlpineReady($page);
+    $persistedOverridesAfterRefresh = $page->script(
+        <<<'JS'
+JSON.parse(localStorage.getItem('athkar-settings-user-overrides-v1') ?? 'null')
+JS,
+    );
+    expect($persistedOverridesAfterRefresh)->toBeArray();
+    expect((int) ($persistedOverridesAfterRefresh['quran_wird_frequency_mode'] ?? -1))->toBe(1);
+    expect((int) ($persistedOverridesAfterRefresh['quran_wird_khatmat_target'] ?? -1))->toBe(2);
+
+    hashAction($page, '#quran-app-tilawa', true);
+    waitForScript($page, homeDataScript('data.activeView'), 'quran-app-tilawa');
+    waitForScript($page, 'window.location.hash', '#quran-app-tilawa');
+    waitForQuranReaderVisible($page);
+    waitForScript($page, quranReaderDataScript('data.ready && data.mushafLines.length > 0'), true);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 8_000);
+
+    $restoredState = $page->script(
+        quranReaderDataScript(
+            <<<'JS'
+(() => {
+  const record = data.ensureWirdDailyRecord({ forceRebuild: true });
+  const maxPage = Number(data.resolveReaderMaxPage?.() ?? data.maxPage ?? 0);
+
+  return {
+    frequencyMode: Number(data.wirdFrequencyMode ?? -1),
+    khatmatTarget: Number(data.wirdKhatmatTarget ?? -1),
+    requiredPages: Number(record?.requiredPages ?? 0),
+    maxPage,
+  };
+})()
+JS,
+        ),
+    );
+
+    expect($restoredState)->toBeArray();
+    expect((int) ($restoredState['frequencyMode'] ?? -1))->toBe(1);
+    expect((int) ($restoredState['khatmatTarget'] ?? -1))->toBe(2);
+    expect((int) ($restoredState['maxPage'] ?? 0))->toBeGreaterThan(0);
+    expect((int) ($restoredState['requiredPages'] ?? 0))
+        ->toBe((int) ($restoredState['maxPage'] ?? 0) * 2);
+
+    $page->assertNoJavaScriptErrors();
+});
+
 it('keeps wird committed progress monotonic and completion badge sticky while browsing back', function () {
     $page = visit('/');
 
