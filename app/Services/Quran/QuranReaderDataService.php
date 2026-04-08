@@ -21,7 +21,7 @@ class QuranReaderDataService
 
     private const MAX_PAGE_CACHE_KEY = 'quran-reader-max-page-v2';
 
-    private const SEARCH_RESULTS_CACHE_PREFIX = 'quran-reader-search-results-v1';
+    private const SEARCH_RESULTS_CACHE_PREFIX = 'quran-reader-search-results-v2';
 
     private const DISPLAYED_PAGE_CACHE_PREFIX = 'quran-reader-display-page-v1';
 
@@ -595,7 +595,7 @@ class QuranReaderDataService
      */
     private function collectVerseIdsByExactPhrase(string $searchQuery, int $limit): array
     {
-        $queryVariants = $this->expandStrictExactPhraseVariants($searchQuery);
+        $queryVariants = $this->exactPhraseQueryVariants($searchQuery);
 
         if ($queryVariants === []) {
             return [];
@@ -620,6 +620,66 @@ class QuranReaderDataService
             ->pluck('id')
             ->map(static fn (mixed $value): int => (int) $value)
             ->all();
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function exactPhraseQueryVariants(string $searchQuery): array
+    {
+        $strictVariants = $this->expandStrictExactPhraseVariants($searchQuery);
+        $legacySpellingVariants = $this->expandLegacySpellingExactPhraseVariants($searchQuery);
+        $variants = [];
+
+        foreach ([$searchQuery, ...$strictVariants, ...$legacySpellingVariants] as $variant) {
+            $normalizedVariant = trim((string) $variant);
+
+            if ($normalizedVariant === '') {
+                continue;
+            }
+
+            $variants[$normalizedVariant] = true;
+        }
+
+        return array_keys($variants);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function expandLegacySpellingExactPhraseVariants(string $searchQuery): array
+    {
+        $trimmedQuery = trim($searchQuery);
+
+        if ($trimmedQuery === '') {
+            return [];
+        }
+
+        $normalizedIla = preg_replace('/(^|\s)الي(?=\s|$)/u', '$1اليا', $trimmedQuery) ?? $trimmedQuery;
+        $normalizedWawVerb = preg_replace(
+            '/(^|\s)([\p{Arabic}]{2,}عو)(?=\s|$)/u',
+            '$1$2ا',
+            $trimmedQuery,
+        ) ?? $trimmedQuery;
+        $normalizedCombined = preg_replace(
+            '/(^|\s)([\p{Arabic}]{2,}عو)(?=\s|$)/u',
+            '$1$2ا',
+            $normalizedIla,
+        ) ?? $normalizedIla;
+
+        $variants = [];
+
+        foreach ([$normalizedIla, $normalizedWawVerb, $normalizedCombined] as $candidateVariant) {
+            $normalizedVariant = trim((string) $candidateVariant);
+
+            if ($normalizedVariant === '' || $normalizedVariant === $trimmedQuery) {
+                continue;
+            }
+
+            $variants[$normalizedVariant] = true;
+        }
+
+        return array_keys($variants);
     }
 
     /**

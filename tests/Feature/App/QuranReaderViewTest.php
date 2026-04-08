@@ -566,6 +566,22 @@ it('registers qpc page font route contract used by quran reader pages', function
     expect(route('quran-reader-search-index', [], false))->toBe('/quran-reader/search-index.json');
 });
 
+it('keeps quran manager table defaults for pagination filters and replace confirmation', function () {
+    $historyManagerTableSource = file_get_contents(app_path('Livewire/QuranApp/HistoryManagerTable.php'));
+    $bookmarksManagerTableSource = file_get_contents(app_path('Livewire/QuranApp/BookmarksManagerTable.php'));
+
+    expect($historyManagerTableSource)->not->toBeFalse()
+        ->and($historyManagerTableSource)->toContain('->defaultPaginationPageOption(8)')
+        ->and($historyManagerTableSource)->toContain('->paginationPageOptions([8, 10, 25, 50])')
+        ->and($historyManagerTableSource)->not->toContain("->default('all')");
+
+    expect($bookmarksManagerTableSource)->not->toBeFalse()
+        ->and($bookmarksManagerTableSource)->toContain("Action::make('replacePage')")
+        ->and($bookmarksManagerTableSource)->toContain('->requiresConfirmation()')
+        ->and($bookmarksManagerTableSource)->toContain('->modalHeading(arabic_text(\'تأكيد استبدال الصفحة\'))')
+        ->and($bookmarksManagerTableSource)->not->toContain("->default('all')");
+});
+
 it('returns matches for legacy orthography phrases in quran search endpoint', function () {
     if (! Schema::hasTable('quran_verses')) {
         $this->markTestSkipped('Quran verses table is unavailable.');
@@ -596,6 +612,11 @@ it('returns matches for legacy orthography phrases in quran search endpoint', fu
         ->and(collect($legacyItems)->contains(
             static fn (array $item): bool => (int) ($item['surah_number'] ?? 0) === 10
                 && (int) ($item['ayah_number'] ?? 0) === 25,
+        ))->toBeTrue()
+        ->and(collect($legacyItems)->contains(
+            static fn (array $item): bool => (int) ($item['surah_number'] ?? 0) === 10
+                && (int) ($item['ayah_number'] ?? 0) === 25
+                && (string) ($item['match_strategy'] ?? '') === 'exact_phrase',
         ))->toBeTrue();
 });
 

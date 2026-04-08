@@ -606,13 +606,14 @@
         direction: rtl;
     }
 
-    #quran-reader-search-modal > .fi-modal-header,
-    #quran-reader-history-modal > .fi-modal-header,
-    #quran-reader-bookmarks-modal > .fi-modal-header {
-        border-bottom: 1px solid color-mix(in srgb, var(--quran-chip-border) 34%, transparent);
-        /* background: color-mix(in srgb, var(--quran-page-surface) 40%, transparent); */
+    .fi-modal-header {
+        border-bottom: 1px solid color-mix(in srgb, var(--gray-200) 61%, transparent);
         padding-bottom: 1rem;
     }
+
+    #quran-reader-search-modal > .fi-modal-header,
+    #quran-reader-history-modal > .fi-modal-header,
+    #quran-reader-bookmarks-modal > .fi-modal-header {}
 
     #quran-reader-history-modal .fi-modal-content,
     #quran-reader-bookmarks-modal .fi-modal-content {

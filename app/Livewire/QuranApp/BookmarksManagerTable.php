@@ -68,7 +68,7 @@ class BookmarksManagerTable extends Component implements HasActions, HasSchemas,
                 $resolvedPerPage = max(1, $recordsPerPage);
                 $items = $records
                     ->slice(($resolvedPage - 1) * $resolvedPerPage, $resolvedPerPage)
-                    ->mapWithKeys(fn (array $record): array => [(string) $record['id'] => $record])
+                    ->mapWithKeys(fn(array $record): array => [(string) $record['id'] => $record])
                     ->all();
 
                 return new LengthAwarePaginator(
@@ -81,7 +81,7 @@ class BookmarksManagerTable extends Component implements HasActions, HasSchemas,
             ->columns([
                 TextColumn::make('sort_order')
                     ->label(arabic_text('الترتيب'))
-                    ->state(static fn (array $record): string => (string) max(1, (int) ($record['sort_order'] ?? 1)))
+                    ->state(static fn(array $record): string => (string) max(1, (int) ($record['sort_order'] ?? 1)))
                     ->extraAttributes([
                         'lang' => 'en',
                     ])
@@ -90,12 +90,12 @@ class BookmarksManagerTable extends Component implements HasActions, HasSchemas,
                     ->label(arabic_text('الصفحة'))
                     ->badge()
                     ->sortable(),
-                TextColumn::make('note')
-                    ->label(arabic_text('الملاحظة'))
-                    ->wrap(),
                 TextColumn::make('tags_text')
                     ->label(arabic_text('الوسوم'))
-                    ->state(fn (array $record): string => $this->resolveTagsText($record))
+                    ->state(fn(array $record): string => $this->resolveTagsText($record))
+                    ->wrap(),
+                TextColumn::make('note')
+                    ->label(arabic_text('الملاحظة'))
                     ->wrap(),
             ])
             ->filters([
@@ -105,41 +105,40 @@ class BookmarksManagerTable extends Component implements HasActions, HasSchemas,
                         'all' => arabic_text('الكل'),
                         'tagged' => arabic_text('بوسوم'),
                         'untagged' => arabic_text('بدون وسوم'),
-                    ])
-                    ->default('all'),
+                    ]),
             ])
             ->searchable()
             ->recordActions([
                 Action::make('go')
                     ->label(arabic_text('انتقال'))
                     ->icon('heroicon-s-arrow-up-right')
-                    ->action(fn (array $record): mixed => $this->dispatch(
+                    ->action(fn(array $record): mixed => $this->dispatch(
                         'quran-bookmarks-manager-go',
                         id: (string) ($record['id'] ?? ''),
                     )),
                 Action::make('edit')
                     ->label(arabic_text('تعديل'))
                     ->icon('heroicon-s-pencil-square')
-                    ->fillForm(fn (array $record): array => [
+                    ->fillForm(fn(array $record): array => [
                         'note' => (string) ($record['note'] ?? ''),
                         'tags' => array_values(array_filter(
                             array_map(
-                                static fn (mixed $tag): string => trim((string) $tag),
+                                static fn(mixed $tag): string => trim((string) $tag),
                                 is_array($record['tags'] ?? null) ? $record['tags'] : [],
                             ),
-                            static fn (string $tag): bool => $tag !== '',
+                            static fn(string $tag): bool => $tag !== '',
                         )),
                     ])
                     ->schema([
-                        TextInput::make('note')
-                            ->label(arabic_text('الملاحظة'))
-                            ->maxLength(300),
                         TagsInput::make('tags')
                             ->label(arabic_text('الوسوم'))
                             ->separator(',')
                             ->nestedRecursiveRules(['min:1', 'max:60']),
+                        TextInput::make('note')
+                            ->label(arabic_text('الملاحظة'))
+                            ->maxLength(300),
                     ])
-                    ->action(fn (array $data, array $record): mixed => $this->dispatch(
+                    ->action(fn(array $data, array $record): mixed => $this->dispatch(
                         'quran-bookmarks-manager-updated',
                         id: (string) ($record['id'] ?? ''),
                         note: (string) ($data['note'] ?? ''),
@@ -148,7 +147,12 @@ class BookmarksManagerTable extends Component implements HasActions, HasSchemas,
                 Action::make('replacePage')
                     ->label(arabic_text('استبدال الصفحة'))
                     ->icon('heroicon-s-arrow-path')
-                    ->action(fn (array $record): mixed => $this->dispatch(
+                    ->color('warning')
+                    ->requiresConfirmation()
+                    ->modalHeading(arabic_text('تأكيد استبدال الصفحة'))
+                    ->modalDescription(arabic_text('سيتم استبدال الصفحة المحفوظة لهذه العلامة بالصفحة الحالية.'))
+                    ->modalSubmitActionLabel(arabic_text('استبدال الصفحة'))
+                    ->action(fn(array $record): mixed => $this->dispatch(
                         'quran-bookmarks-manager-replaced',
                         id: (string) ($record['id'] ?? ''),
                     )),
@@ -157,7 +161,7 @@ class BookmarksManagerTable extends Component implements HasActions, HasSchemas,
                     ->color('danger')
                     ->requiresConfirmation()
                     ->icon('heroicon-s-trash')
-                    ->action(fn (array $record): mixed => $this->dispatch(
+                    ->action(fn(array $record): mixed => $this->dispatch(
                         'quran-bookmarks-manager-removed',
                         id: (string) ($record['id'] ?? ''),
                     )),
@@ -187,10 +191,10 @@ class BookmarksManagerTable extends Component implements HasActions, HasSchemas,
 
             $tags = array_values(array_filter(
                 array_map(
-                    static fn (mixed $tag): string => trim((string) $tag),
+                    static fn(mixed $tag): string => trim((string) $tag),
                     is_array($record['tags'] ?? null) ? $record['tags'] : [],
                 ),
-                static fn (string $tag): bool => $tag !== '',
+                static fn(string $tag): bool => $tag !== '',
             ));
 
             $normalizedRecords[] = [
@@ -219,8 +223,8 @@ class BookmarksManagerTable extends Component implements HasActions, HasSchemas,
         }
 
         $normalizedOrder = array_values(array_filter(
-            array_map(static fn (mixed $recordKey): string => trim((string) $recordKey), $order),
-            static fn (string $recordKey): bool => $recordKey !== '',
+            array_map(static fn(mixed $recordKey): string => trim((string) $recordKey), $order),
+            static fn(string $recordKey): bool => $recordKey !== '',
         ));
 
         if ($normalizedOrder === []) {
@@ -242,14 +246,14 @@ class BookmarksManagerTable extends Component implements HasActions, HasSchemas,
 
         if ($tagState === 'tagged') {
             return $records->filter(
-                static fn (array $record): bool => is_array($record['tags'] ?? null) && $record['tags'] !== [],
-            )->map(static fn (array $record): array => $record)->values();
+                static fn(array $record): bool => is_array($record['tags'] ?? null) && $record['tags'] !== [],
+            )->map(static fn(array $record): array => $record)->values();
         }
 
         if ($tagState === 'untagged') {
             return $records->filter(
-                static fn (array $record): bool => ! is_array($record['tags'] ?? null) || $record['tags'] === [],
-            )->map(static fn (array $record): array => $record)->values();
+                static fn(array $record): bool => ! is_array($record['tags'] ?? null) || $record['tags'] === [],
+            )->map(static fn(array $record): array => $record)->values();
         }
 
         return $records;
@@ -292,7 +296,7 @@ class BookmarksManagerTable extends Component implements HasActions, HasSchemas,
 
         return $records
             ->sortBy(
-                static fn (array $record): mixed => $record[$resolvedColumn] ?? null,
+                static fn(array $record): mixed => $record[$resolvedColumn] ?? null,
                 SORT_NATURAL,
                 $descending,
             )
@@ -307,12 +311,12 @@ class BookmarksManagerTable extends Component implements HasActions, HasSchemas,
         $tags = is_array($record['tags'] ?? null) ? $record['tags'] : [];
 
         if ($tags === []) {
-            return '-';
+            return '';
         }
 
         return implode(', ', array_values(array_filter(
-            array_map(static fn (mixed $tag): string => trim((string) $tag), $tags),
-            static fn (string $tag): bool => $tag !== '',
+            array_map(static fn(mixed $tag): string => trim((string) $tag), $tags),
+            static fn(string $tag): bool => $tag !== '',
         )));
     }
 
@@ -324,8 +328,8 @@ class BookmarksManagerTable extends Component implements HasActions, HasSchemas,
         $source = is_array($value) ? $value : explode(',', (string) $value);
 
         return array_values(array_filter(
-            array_map(static fn (mixed $tag): string => trim((string) $tag), $source),
-            static fn (string $tag): bool => $tag !== '',
+            array_map(static fn(mixed $tag): string => trim((string) $tag), $source),
+            static fn(string $tag): bool => $tag !== '',
         ));
     }
 

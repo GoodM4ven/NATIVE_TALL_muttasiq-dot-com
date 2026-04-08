@@ -1912,14 +1912,10 @@
                 </div>
                 <template x-teleport="body">
                     <div
-                        class="quran-calibration-hud pointer-events-none invisible opacity-0"
+                        class="quran-calibration-hud"
                         wire:ignore
                         x-cloak
                         x-show="shouldShowCalibrationHud()"
-                        x-bind:class="{
-                            'visible opacity-100': shouldShowCalibrationHud(),
-                            'pointer-events-none invisible opacity-0': !shouldShowCalibrationHud(),
-                        }"
                         x-transition:enter="transition duration-220 ease-out"
                         x-transition:enter-start="translate-y-0.5 opacity-0"
                         x-transition:enter-end="translate-y-0 opacity-100"
@@ -2466,6 +2462,12 @@
                     show="isWirdCompletionVisible || isWirdCompletionPreviewPinned"
                     :title="arabic_text('هنيئًا لك إتمام الوِرد اليومي')"
                     :subtitle="arabic_text('ثبَّتَ الله لك الأجر، وتم حفظ تقدّمك لليوم.')"
+                    transition-enter="transition-opacity ease-out duration-200"
+                    transition-enter-start="opacity-0"
+                    transition-enter-end="opacity-100"
+                    transition-leave="transition-opacity ease-in duration-200"
+                    transition-leave-start="opacity-100"
+                    transition-leave-end="opacity-0"
                     decorated
                     arabesque
                     pattern-variant="connected"

@@ -55,6 +55,8 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
     {
         return $table
             ->defaultSort('sort_order')
+            ->defaultPaginationPageOption(8)
+            ->paginationPageOptions([8, 10, 25, 50])
             ->reorderable('sort_order')
             ->records(function (
                 ?string $sortColumn,
@@ -121,8 +123,7 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
                         'bookmark-navigation' => arabic_text('إشارة مرجعية'),
                         'page-jump' => arabic_text('قفزة صفحة'),
                         'page-slider-commit' => arabic_text('شريط الصفحات'),
-                    ])
-                    ->default('all'),
+                    ]),
             ])
             ->searchable()
             ->recordActions([

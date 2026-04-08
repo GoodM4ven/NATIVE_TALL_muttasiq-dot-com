@@ -9,6 +9,12 @@
     'backdropClass' => 'bg-white/94 dark:bg-slate-950/90',
     'fixedLayer' => false,
     'maxWidthClass' => 'max-w-3xl',
+    'transitionEnter' => 'transition-all ease-out duration-700 delay-500',
+    'transitionEnterStart' => 'opacity-0! translate-y-6 blur-[2px]',
+    'transitionEnterEnd' => 'opacity-100 translate-y-0 blur-0',
+    'transitionLeave' => 'transition-all ease-in duration-300',
+    'transitionLeaveStart' => 'opacity-100 translate-y-0 blur-0',
+    'transitionLeaveEnd' => 'opacity-0! translate-y-6 blur-[2px]',
 ])
 
 @php
@@ -88,12 +94,12 @@
     class="{{ $containerPositionClass }} inset-0 z-40 flex items-center justify-center px-6 py-12"
     x-cloak
     x-show="{{ $show }}"
-    x-transition:enter="transition-all ease-out duration-700 delay-500"
-    x-transition:enter-start="opacity-0! translate-y-6 blur-[2px]"
-    x-transition:enter-end="opacity-100 translate-y-0 blur-0"
-    x-transition:leave="transition-all ease-in duration-300"
-    x-transition:leave-start="opacity-100 translate-y-0 blur-0"
-    x-transition:leave-end="opacity-0! translate-y-6 blur-[2px]"
+    x-transition:enter="{{ $transitionEnter }}"
+    x-transition:enter-start="{{ $transitionEnterStart }}"
+    x-transition:enter-end="{{ $transitionEnterEnd }}"
+    x-transition:leave="{{ $transitionLeave }}"
+    x-transition:leave-start="{{ $transitionLeaveStart }}"
+    x-transition:leave-end="{{ $transitionLeaveEnd }}"
 >
     @if ($withBackdrop)
         <div

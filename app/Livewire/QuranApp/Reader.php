@@ -389,7 +389,7 @@ class Reader extends Component implements HasActions, HasSchemas
     {
         return Action::make('searchQuran')
             ->modalHeading(arabic_text('البحث الشامل للقرآن الكريم'))
-            ->modalDescription(arabic_text('ابحث عن الآيات وانتقل مباشرة إلى السورة والموضع المقصود...'))
+            ->modalDescription(arabic_text('ابحث عن الآيات وانتقل مباشرة، إلى السورة أو الموضع المقصود...'))
             ->modalAutofocus(false)
             ->modalWidth(Width::FiveExtraLarge)
             ->modalSubmitAction(false)
@@ -469,8 +469,8 @@ class Reader extends Component implements HasActions, HasSchemas
     public function navigationHistoryAction(): Action
     {
         return Action::make('navigationHistory')
-            ->modalHeading(arabic_text('سجل التنقّل'))
-            ->modalDescription(arabic_text('آخر الانتقالات بين الصفحات. يبقى ما عليه وسم أو ملاحظة محفوظًا، إضافةً إلى آخر 100 عنصر عادي.'))
+            ->modalHeading(arabic_text('سجلّ الانتقالات'))
+            ->modalDescription(arabic_text('آخر الانتقالات بين الصفحات. يتم حفظ المميّز (بالوسوم والملاحظات)، إضافةً إلى آخر مئة انتقال.'))
             ->modalAutofocus(false)
             ->modalWidth(Width::FiveExtraLarge)
             ->modalSubmitAction(false)
@@ -489,7 +489,7 @@ class Reader extends Component implements HasActions, HasSchemas
     {
         return Action::make('bookmarksManager')
             ->modalHeading(arabic_text('إدارة علامات الصفحات'))
-            ->modalDescription(arabic_text('جدول موحّد للبحث والتصفية والترتيب. انقر للانتقال، عدّل الملاحظة والوسوم، أو استبدل الصفحة بالموضع الحالي.'))
+            ->modalDescription(arabic_text('جدول للبحث والتصفية (بالوسوم والملاحظات) والترتيب، من أجل الانتقال السريع.'))
             ->modalAutofocus(false)
             ->slideOver()
             ->modalWidth(Width::FiveExtraLarge)
