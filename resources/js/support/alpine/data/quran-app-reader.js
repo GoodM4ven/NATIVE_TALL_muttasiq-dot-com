@@ -1033,6 +1033,8 @@ document.addEventListener('alpine:init', () => {
         _idleWarmupAbortController: null,
         _idleWarmupHasBackgroundSweepQueued: false,
         _managerRowEffectTimers: new Map(),
+        _managerModalsPrewarmPromise: null,
+        _managerModalsPrewarmed: false,
         wordPress: {
             active: false,
             pointerId: null,
@@ -2502,6 +2504,7 @@ document.addEventListener('alpine:init', () => {
                 this.queueStartupPreload();
                 this.scheduleIdleWarmup();
                 this.warmSearchIndex();
+                this.scheduleManagerModalsPrewarm();
             } catch (error) {
                 console.error('[QR:bootstrap] ERROR:', error);
             } finally {
@@ -14421,7 +14424,7 @@ document.addEventListener('alpine:init', () => {
                 ).filter((result) => !this.searchResultIsLeaving(result));
                 this.syncSearchResultMetadata(this.search.results);
                 this._searchResultsLeaveTimer = null;
-            }, 190);
+            }, 260);
         },
 
         setSearchResults(nextResults, { immediate = false } = {}) {
@@ -15283,6 +15286,64 @@ document.addEventListener('alpine:init', () => {
                 pageNumber,
                 surahNumber,
             });
+        },
+
+        scheduleManagerModalsPrewarm(delayMs = 220) {
+            const normalizedDelay = Math.max(0, Math.trunc(Number(delayMs) || 0));
+
+            window.setTimeout(() => {
+                if (
+                    this._managerModalsPrewarmed ||
+                    this._managerModalsPrewarmPromise !== null ||
+                    this.historyModalOpen ||
+                    this.bookmarksModalOpen ||
+                    this.search.modalOpen ||
+                    this.jumpPageModalOpen
+                ) {
+                    return;
+                }
+
+                const runPrewarm = () => {
+                    void this.prewarmManagerModals();
+                };
+
+                if (typeof window.requestIdleCallback === 'function') {
+                    window.requestIdleCallback(runPrewarm, { timeout: 640 });
+
+                    return;
+                }
+
+                runPrewarm();
+            }, normalizedDelay);
+        },
+
+        async prewarmManagerModals() {
+            if (this._managerModalsPrewarmed) {
+                return;
+            }
+
+            if (this._managerModalsPrewarmPromise !== null) {
+                await this._managerModalsPrewarmPromise;
+
+                return;
+            }
+
+            if (typeof this.$wire?.prewarmManagerModals !== 'function') {
+                return;
+            }
+
+            this._managerModalsPrewarmPromise = (async () => {
+                try {
+                    await this.$wire.prewarmManagerModals();
+                    this._managerModalsPrewarmed = true;
+                } catch (_) {
+                    // Ignore background prewarm failures.
+                } finally {
+                    this._managerModalsPrewarmPromise = null;
+                }
+            })();
+
+            await this._managerModalsPrewarmPromise;
         },
 
         searchRequestUrl(query = '') {

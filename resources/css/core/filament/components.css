@@ -58,70 +58,10 @@
         /* background: color-mix(in srgb, white 72%, transparent); */
     }
 
-    :is(#quran-reader-search-modal, .fi-modal-window:has(#quran-reader-search-input)) {
-        --quran-search-panel-bg: var(
-            --quran-panel-bg,
-            color-mix(in srgb, var(--fi-surface-bg-light, var(--background)) 94%, transparent)
-        );
-        --quran-search-panel-surface: var(
-            --quran-page-surface,
-            color-mix(
-                in srgb,
-                var(--fi-surface-raised-bg-light, var(--background)) 92%,
-                transparent
-            )
-        );
-        --quran-search-panel-border: var(
-            --quran-panel-border,
-            color-mix(in srgb, var(--gray-300) 62%, transparent)
-        );
-        --quran-search-panel-chip-border: var(
-            --quran-chip-border,
-            color-mix(in srgb, var(--gray-300) 48%, transparent)
-        );
-        border-color: color-mix(in srgb, var(--quran-search-panel-border) 86%, transparent);
-        background: linear-gradient(
-            180deg,
-            color-mix(in srgb, var(--quran-search-panel-bg) 100%, transparent),
-            color-mix(in srgb, var(--quran-search-panel-surface) 100%, transparent)
-        );
-        box-shadow:
-            0 32px 70px color-mix(in srgb, var(--gray-950) 32%, transparent),
-            inset 0 0 0 1px
-                color-mix(in srgb, var(--quran-search-panel-chip-border) 18%, transparent);
-        backdrop-filter: blur(18px) saturate(1.05);
-        -webkit-backdrop-filter: blur(18px) saturate(1.05);
-    }
-
-    :is(#quran-reader-search-modal, .fi-modal-window:has(#quran-reader-search-input))
-        > .fi-modal-header,
-    :is(#quran-reader-search-modal, .fi-modal-window:has(#quran-reader-search-input))
-        .fi-modal-content,
-    :is(#quran-reader-search-modal, .fi-modal-window:has(#quran-reader-search-input))
-        .fi-modal-footer {
-        background: color-mix(in srgb, var(--quran-search-panel-surface) 74%, transparent);
-    }
-
-    :is(#quran-reader-search-modal, .fi-modal-window:has(#quran-reader-search-input))
-        > .fi-modal-header {
-        border-bottom: 1px solid
-            color-mix(in srgb, var(--quran-search-panel-chip-border) 32%, transparent);
-        /* background: transparent; */
-    }
-
-    .fi-modal.fi-modal-open:has(
-            :is(#quran-reader-search-modal, .fi-modal-window:has(#quran-reader-search-input))
-        )
-        > .fi-modal-close-overlay {
-        background: color-mix(in srgb, var(--gray-950) 22%, transparent);
-        backdrop-filter: blur(5px);
-        -webkit-backdrop-filter: blur(5px);
-    }
-
     #quran-reader-search-modal .fi-modal-content {
         padding: 1rem 1.2rem 1.25rem;
-        /* background: transparent; */
         display: flex;
+        background: transparent;
         flex-direction: column;
         gap: 0 !important;
     }
@@ -133,14 +73,6 @@
     #quran-reader-search-modal > .fi-modal-header {
         /* background-color: transparent !important; */
         padding-bottom: 1rem;
-    }
-
-    #quran-reader-search-modal > .fi-modal-header {
-        background-color: transparent;
-    }
-
-    #quran-reader-search-modal > .fi-modal-content {
-        background-color: transparent;
     }
 
     #quran-reader-search-modal .fi-modal-description {
@@ -287,7 +219,7 @@
 
     .quran-search-result-btn--leaving {
         opacity: 0;
-        transform: translateY(-0.24rem) scale(0.994);
+        filter: saturate(0.9);
         pointer-events: none;
     }
 
@@ -637,9 +569,11 @@
         direction: ltr;
     }
 
+    #quran-reader-search-modal,
     #quran-reader-history-modal,
     #quran-reader-bookmarks-modal {
         border-color: color-mix(in srgb, var(--quran-panel-border) 86%, transparent);
+        border-radius: 1.2rem;
         box-shadow:
             0 28px 68px color-mix(in srgb, var(--gray-950) 30%, transparent),
             inset 0 0 0 1px color-mix(in srgb, var(--quran-chip-border) 20%, transparent);
@@ -656,6 +590,13 @@
         padding-bottom: 1rem;
     }
 
+    #quran-reader-bookmarks-modal {
+        border-radius: 0;
+    }
+
+    #quran-reader-search-modal .fi-modal-header,
+    #quran-reader-search-modal .fi-modal-content,
+    #quran-reader-search-modal .fi-modal-footer,
     #quran-reader-history-modal .fi-modal-header,
     #quran-reader-history-modal .fi-modal-content,
     #quran-reader-history-modal .fi-modal-footer,
@@ -665,6 +606,7 @@
         direction: rtl;
     }
 
+    #quran-reader-search-modal > .fi-modal-header,
     #quran-reader-history-modal > .fi-modal-header,
     #quran-reader-bookmarks-modal > .fi-modal-header {
         border-bottom: 1px solid color-mix(in srgb, var(--quran-chip-border) 34%, transparent);

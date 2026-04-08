@@ -148,7 +148,14 @@ trait HasControlPanelSettingsTab
                                 ->options(Setting::quranWirdFrequencyModeOptions())
                                 ->inline()
                                 ->live()
-                                ->extraFieldWrapperAttributes(['class' => 'quran-wird-frequency-field'])
+                                ->extraFieldWrapperAttributes([
+                                    'class' => 'quran-support-lock-target quran-wird-frequency-field',
+                                    'data-support-lock-target' => 'wird-frequency-mode',
+                                    'data-support-lock-caption' => arabic_text('هذا الخيار يحتاج تأكيد دعم المشروع'),
+                                    'x-on:pointerdown.capture' => 'if (!$el.classList.contains(`quran-support-lock-target--locked`)) { return; } $event.preventDefault(); $event.stopPropagation(); window.dispatchEvent(new CustomEvent(`open-support-unlock-modal`));',
+                                    'x-on:click.capture' => 'if (!$el.classList.contains(`quran-support-lock-target--locked`)) { return; } $event.preventDefault(); $event.stopPropagation(); window.dispatchEvent(new CustomEvent(`open-support-unlock-modal`));',
+                                    'x-on:keydown.capture' => 'if (![`Enter`, ` `].includes($event.key) || !$el.classList.contains(`quran-support-lock-target--locked`)) { return; } $event.preventDefault(); $event.stopPropagation(); window.dispatchEvent(new CustomEvent(`open-support-unlock-modal`));',
+                                ])
                                 ->extraAttributes(['class' => 'quran-wird-frequency-options'])
                                 ->afterStateUpdated(function (Set $set, Get $get, mixed $state): void {
                                     $maximum = Setting::quranWirdKhatmatMaxForFrequency((int) $state);

@@ -19,6 +19,7 @@ use GoodMaven\Arabicable\Enums\ArabicSpecialCharacters;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\HtmlString;
+use Livewire\Attributes\Renderless;
 use Livewire\Component;
 
 class Reader extends Component implements HasActions, HasSchemas
@@ -501,6 +502,14 @@ class Reader extends Component implements HasActions, HasSchemas
                 fn (): HtmlString => new HtmlString(Blade::render('<x-partials.quran-app.bookmarks-modal />')),
             )
             ->action(static fn (): null => null);
+    }
+
+    #[Renderless]
+    public function prewarmManagerModals(): void
+    {
+        foreach (['history-modal', 'bookmarks-modal'] as $partial) {
+            Blade::render("<x-partials.quran-app.{$partial} />");
+        }
     }
 
     public function supportUnlockAction(): Action

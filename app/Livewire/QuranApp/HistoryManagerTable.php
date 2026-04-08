@@ -164,7 +164,7 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
             ])
             ->headerActions([
                 Action::make('clearUntagged')
-                    ->label(arabic_text('مسح غير الموسوم/المعلّق'))
+                    ->label(arabic_text('مسح غير المميّز'))
                     ->color('danger')
                     ->requiresConfirmation()
                     ->action(fn (): mixed => $this->dispatch('quran-history-manager-clear-untagged')),
