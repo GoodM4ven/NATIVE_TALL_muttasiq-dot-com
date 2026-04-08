@@ -958,6 +958,7 @@ document.addEventListener('alpine:init', () => {
         _wirdSliderLastInputAt: 0,
         _wirdNavigationRequestSerial: 0,
         _wirdLastCommittedTargetPage: 0,
+        _wirdLastCommittedStep: null,
         _wirdLastCommittedAt: 0,
         _wirdHoverShimmerTimer: null,
         _pageInputCommitTimer: null,
@@ -1953,6 +1954,9 @@ document.addEventListener('alpine:init', () => {
             this._wirdSliderPendingCommitStep = null;
             this._wirdSliderLastInputStep = null;
             this._wirdSliderLastInputAt = 0;
+            this._wirdLastCommittedTargetPage = 0;
+            this._wirdLastCommittedStep = null;
+            this._wirdLastCommittedAt = 0;
 
             if (this._wirdHoverShimmerTimer !== null) {
                 clearTimeout(this._wirdHoverShimmerTimer);
@@ -3684,17 +3688,49 @@ document.addEventListener('alpine:init', () => {
             return this.absolutePageToPageNumber(range.startAbsolutePage + normalizedStep);
         },
 
-        wirdStepForPage(pageNumber, record = this.wirdDailyRecord) {
+        wirdStepForPage(pageNumber, record = this.wirdDailyRecord, { preferredStep = null } = {}) {
             const range = this.wirdRangeState(record);
             const targetPage = clampPage(pageNumber, this.maxPage);
+            const maxReaderPage = Math.max(1, this.resolveReaderMaxPage());
+            const startPage = this.absolutePageToPageNumber(range.startAbsolutePage);
+            const initialStep =
+                (((targetPage - startPage) % maxReaderPage) + maxReaderPage) % maxReaderPage;
 
-            for (let step = 0; step <= range.maxStep; step += 1) {
-                if (this.absolutePageToPageNumber(range.startAbsolutePage + step) === targetPage) {
-                    return step;
-                }
+            if (initialStep > range.maxStep) {
+                return null;
             }
 
-            return null;
+            if (!Number.isFinite(Number(preferredStep))) {
+                return initialStep;
+            }
+
+            const normalizedPreferredStep = this.normalizeIntegerFlag(preferredStep, initialStep, {
+                min: 0,
+                max: range.maxStep,
+            });
+            let resolvedStep = initialStep;
+            let smallestDistance = Math.abs(initialStep - normalizedPreferredStep);
+
+            for (
+                let candidateStep = initialStep + maxReaderPage;
+                candidateStep <= range.maxStep;
+                candidateStep += maxReaderPage
+            ) {
+                const distance = Math.abs(candidateStep - normalizedPreferredStep);
+
+                if (distance > smallestDistance) {
+                    continue;
+                }
+
+                if (distance === smallestDistance && candidateStep < resolvedStep) {
+                    continue;
+                }
+
+                resolvedStep = candidateStep;
+                smallestDistance = distance;
+            }
+
+            return resolvedStep;
         },
 
         clearWirdSliderVisualTween() {
@@ -4184,6 +4220,9 @@ document.addEventListener('alpine:init', () => {
             this._wirdSliderPendingCommitStep = null;
             this._wirdSliderLastInputStep = null;
             this._wirdSliderLastInputAt = 0;
+            this._wirdLastCommittedTargetPage = 0;
+            this._wirdLastCommittedStep = null;
+            this._wirdLastCommittedAt = 0;
 
             this.clearWirdSliderVisualTween();
 
@@ -4301,16 +4340,15 @@ document.addEventListener('alpine:init', () => {
             });
             const isNextDirection = direction === 'next';
             const sourceProfile = this.wirdNavigationSourceProfile(source);
-            const pageStep = this.wirdStepForPage(this.pageNumber, record);
+            const pageStep = this.wirdStepForPage(this.pageNumber, record, {
+                preferredStep: this.wirdActiveStepForNavigation(record),
+            });
 
             if (record?.completed) {
                 let browseStep = this.wirdBrowseStepValue(record);
 
                 if (pageStep !== null) {
-                    browseStep = this.normalizeIntegerFlag(browseStep, pageStep, {
-                        min: 0,
-                        max: maxStep,
-                    });
+                    browseStep = pageStep;
                 }
 
                 if (isNextDirection && browseStep >= maxStep) {
@@ -4373,13 +4411,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             this.wirdBrowseStep = null;
-            const effectiveCurrentStep =
-                pageStep === null
-                    ? currentStep
-                    : this.normalizeIntegerFlag(currentStep, pageStep, {
-                          min: 0,
-                          max: maxStep,
-                      });
+            const effectiveCurrentStep = pageStep === null ? currentStep : pageStep;
 
             if (isNextDirection && effectiveCurrentStep >= maxStep) {
                 this.markWirdAsCompleted(record);
@@ -4477,19 +4509,6 @@ document.addEventListener('alpine:init', () => {
             );
             const targetPage = this.wirdTargetPageFromStep(normalizedStep, record);
             const direction = this.resolveNavigationDirection(targetPage);
-            const pendingTargetPage = clampPage(
-                Number(this._pendingNavigationRequest?.targetPage ?? 0),
-                this.maxPage,
-            );
-
-            if (pendingTargetPage === targetPage) {
-                this.pageInput = targetPage;
-                this._lastPageInputVisualValue = targetPage;
-                this.clearWirdSliderVisualTween();
-                this.wirdSliderVisualStep = normalizedStep;
-
-                return;
-            }
 
             if (record?.completed) {
                 this.wirdBrowseStep = normalizedStep;
@@ -6600,7 +6619,9 @@ document.addEventListener('alpine:init', () => {
         isFirstNavigationPage() {
             if (this.wirdModeActive) {
                 const record = this.ensureWirdDailyRecord();
-                const pageStep = this.wirdStepForPage(this.pageNumber, record);
+                const pageStep = this.wirdStepForPage(this.pageNumber, record, {
+                    preferredStep: this.wirdActiveStepForNavigation(record),
+                });
 
                 if (pageStep !== null) {
                     return pageStep <= 0;
@@ -6623,7 +6644,9 @@ document.addEventListener('alpine:init', () => {
                     1,
                     this.normalizeIntegerFlag(record?.requiredPages, 1, { min: 1 }),
                 );
-                const pageStep = this.wirdStepForPage(this.pageNumber, record);
+                const pageStep = this.wirdStepForPage(this.pageNumber, record, {
+                    preferredStep: this.wirdActiveStepForNavigation(record),
+                });
 
                 if (pageStep !== null) {
                     return pageStep >= requiredPages - 1;
@@ -7210,18 +7233,11 @@ document.addEventListener('alpine:init', () => {
                     this.wirdSliderVisualStep = commitStep;
                     const record = this.ensureWirdDailyRecord();
                     const targetPage = this.wirdTargetPageFromStep(commitStep, record);
-                    const pendingTargetPage = clampPage(
-                        Number(this._pendingNavigationRequest?.targetPage ?? 0),
-                        this.maxPage,
-                    );
                     const now = Date.now();
-
-                    if (pendingTargetPage === targetPage) {
-                        return;
-                    }
 
                     if (
                         targetPage === this._wirdLastCommittedTargetPage &&
+                        commitStep === this._wirdLastCommittedStep &&
                         now - this._wirdLastCommittedAt < 320 &&
                         (this.isLoadingPage || this._pendingNavigationRequest !== null)
                     ) {
@@ -7229,6 +7245,7 @@ document.addEventListener('alpine:init', () => {
                     }
 
                     this._wirdLastCommittedTargetPage = targetPage;
+                    this._wirdLastCommittedStep = commitStep;
                     this._wirdLastCommittedAt = now;
                     void this.navigateWirdToStep(commitStep, source);
                 },

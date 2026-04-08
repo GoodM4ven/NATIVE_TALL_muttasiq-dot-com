@@ -4131,6 +4131,50 @@ JS,
     );
     $assertReaderRenderable();
 
+    $duplicateCycleState = $page->script(
+        quranReaderDataScript(
+            <<<'JS'
+(() => {
+  const record = data.ensureWirdDailyRecord();
+  const maxPage = Math.max(1, Number(data.resolveReaderMaxPage?.() ?? data.maxPage ?? 604));
+
+  record.startAbsolutePage = 1;
+  record.requiredPages = maxPage * 4;
+  record.currentStep = Math.max(0, record.requiredPages - 1);
+  record.progressStep = record.currentStep;
+  record.completed = true;
+  record.updatedAt = Date.now();
+  data.wirdDailyRecord = record;
+  data.wirdBrowseStep = record.currentStep;
+
+  const repeatedPage = Number(data.wirdTargetPageFromStep(0, record) ?? 0);
+  const repeatedCycleStep = maxPage;
+  const repeatedCyclePage = Number(data.wirdTargetPageFromStep(repeatedCycleStep, record) ?? 0);
+
+  return {
+    repeatedPage,
+    repeatedCyclePage,
+    resolvedNearStart: Number(
+      data.wirdStepForPage(repeatedPage, record, { preferredStep: 0 }) ?? -1,
+    ),
+    resolvedNearCycle: Number(
+      data.wirdStepForPage(repeatedCyclePage, record, { preferredStep: repeatedCycleStep }) ?? -1,
+    ),
+    repeatedCycleStep,
+  };
+})()
+JS,
+        ),
+    );
+
+    expect($duplicateCycleState)->toBeArray();
+    expect((int) ($duplicateCycleState['repeatedPage'] ?? 0))->toBeGreaterThan(0);
+    expect((int) ($duplicateCycleState['repeatedPage'] ?? 0))
+        ->toBe((int) ($duplicateCycleState['repeatedCyclePage'] ?? -1));
+    expect((int) ($duplicateCycleState['resolvedNearStart'] ?? -1))->toBe(0);
+    expect((int) ($duplicateCycleState['resolvedNearCycle'] ?? -1))
+        ->toBe((int) ($duplicateCycleState['repeatedCycleStep'] ?? -1));
+
     $page->assertNoJavaScriptErrors();
 });
 
