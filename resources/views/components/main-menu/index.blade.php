@@ -311,7 +311,6 @@
             transition:
                 opacity 280ms ease,
                 transform 280ms ease;
-            animation: main-menu-insights-line-shimmer 1.75s linear infinite;
             pointer-events: none;
         }
 
@@ -358,6 +357,10 @@
 
         .main-menu-insights-trigger[data-expanded='true']::after {
             opacity: 0.92;
+        }
+
+        .main-menu--visual-enhancements-enabled .main-menu-insights-trigger::after {
+            animation: main-menu-insights-line-shimmer 1.75s linear infinite;
         }
 
         .main-menu-insights-reveal {
@@ -718,8 +721,11 @@
             filter: blur(3px);
             mix-blend-mode: overlay;
             opacity: 0.75;
-            animation: main-menu-insights-flow-rtl 2.35s ease-in-out infinite;
             pointer-events: none;
+        }
+
+        .main-menu--visual-enhancements-enabled .main-menu-insights-fill::after {
+            animation: main-menu-insights-flow-rtl 2.35s ease-in-out infinite;
         }
 
         .main-menu-insights-fill--complete {
@@ -854,6 +860,9 @@
             masaa: @js(arabic_text('أذكار المَساء')),
         },
     })"
+    x-bind:class="{
+        'main-menu--visual-enhancements-enabled': doesEnableVisualEnhancements,
+    }"
     x-on:main-menu-item-enter="handleItemEnter($event.detail)"
     x-on:main-menu-item-leave="handleItemLeave()"
     x-on:main-menu-item-click="handleItemClick($event.detail)"

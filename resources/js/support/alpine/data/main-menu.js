@@ -31,6 +31,7 @@ document.addEventListener('alpine:init', () => {
         isTouching: false,
         lockWiggles: new WeakMap(),
         isTouchDevice: false,
+        doesEnableVisualEnhancements: false,
         isInsightsExpanded: false,
         isInsightsFastClosing: false,
         isInsightsPointerInside: false,
@@ -75,6 +76,7 @@ document.addEventListener('alpine:init', () => {
                 'ontouchstart' in window ||
                 window.matchMedia?.('(pointer: coarse)')?.matches ||
                 navigator.maxTouchPoints > 0;
+            this.refreshVisualEnhancementsSetting();
             el.addEventListener('mouseenter', () => (this.containerHovered = true));
             el.addEventListener('mouseleave', () => (this.containerHovered = false));
 
@@ -126,6 +128,7 @@ document.addEventListener('alpine:init', () => {
             };
             this._onWindowStorage = () => {
                 this.refreshDailyProgress();
+                this.refreshVisualEnhancementsSetting();
             };
             this._onSwitchView = (event) => {
                 const nextView = String(event?.detail?.to ?? '').trim();
@@ -137,6 +140,7 @@ document.addEventListener('alpine:init', () => {
                     this.clearInsightsGateLaunchTimer();
                     this.clearQuranWirdAutoEntry();
                     this.refreshDailyProgress();
+                    this.refreshVisualEnhancementsSetting();
                     this.measureInsightsPanelHeight();
                     return;
                 }
@@ -607,6 +611,107 @@ document.addEventListener('alpine:init', () => {
             guardTimeoutId = window.setTimeout(() => {
                 cleanup();
             }, normalizedTimeout);
+        },
+        normalizeBooleanSettingValue(value, fallback = false) {
+            if (typeof value === 'boolean') {
+                return value;
+            }
+
+            if (value === 1 || value === '1') {
+                return true;
+            }
+
+            if (value === 0 || value === '0') {
+                return false;
+            }
+
+            if (value === null || value === undefined || value === '') {
+                return Boolean(fallback);
+            }
+
+            const normalized = String(value).trim().toLowerCase();
+
+            if (normalized === 'true' || normalized === 'yes' || normalized === 'on') {
+                return true;
+            }
+
+            if (normalized === 'false' || normalized === 'no' || normalized === 'off') {
+                return false;
+            }
+
+            return Boolean(fallback);
+        },
+        readAthkarSettingFromStorage(settingName, storageKey = 'athkar-settings-v1') {
+            if (typeof localStorage === 'undefined') {
+                return null;
+            }
+
+            try {
+                const raw = localStorage.getItem(storageKey);
+                const parsed = raw ? JSON.parse(raw) : null;
+
+                if (
+                    !parsed ||
+                    typeof parsed !== 'object' ||
+                    Array.isArray(parsed) ||
+                    !Object.prototype.hasOwnProperty.call(parsed, settingName)
+                ) {
+                    return null;
+                }
+
+                return parsed[settingName];
+            } catch {
+                return null;
+            }
+        },
+        resolveVisualEnhancementsSetting() {
+            const visualEnhancementsSettingKey = 'enable_visual_enhancements';
+            const athkarReader = this.getAthkarReaderData();
+
+            if (athkarReader && typeof athkarReader.settingValue === 'function') {
+                try {
+                    return this.normalizeBooleanSettingValue(
+                        athkarReader.settingValue(visualEnhancementsSettingKey, false),
+                        false,
+                    );
+                } catch {
+                    // Fall through to other sources.
+                }
+            }
+
+            const quranReader = this.getQuranReaderData();
+
+            if (
+                quranReader &&
+                Object.prototype.hasOwnProperty.call(quranReader, 'doesEnableVisualEnhancements')
+            ) {
+                return this.normalizeBooleanSettingValue(
+                    quranReader.doesEnableVisualEnhancements,
+                    false,
+                );
+            }
+
+            const userOverrideValue = this.readAthkarSettingFromStorage(
+                visualEnhancementsSettingKey,
+                'athkar-settings-user-overrides-v1',
+            );
+
+            if (userOverrideValue !== null) {
+                return this.normalizeBooleanSettingValue(userOverrideValue, false);
+            }
+
+            const defaultStorageValue = this.readAthkarSettingFromStorage(
+                visualEnhancementsSettingKey,
+            );
+
+            if (defaultStorageValue !== null) {
+                return this.normalizeBooleanSettingValue(defaultStorageValue, false);
+            }
+
+            return false;
+        },
+        refreshVisualEnhancementsSetting() {
+            this.doesEnableVisualEnhancements = this.resolveVisualEnhancementsSetting();
         },
         doesPreventSwitchingAthkarUntilCompletion() {
             const athkarReader = this.getAthkarReaderData();
