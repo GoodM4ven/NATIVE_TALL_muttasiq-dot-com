@@ -470,7 +470,7 @@ class Reader extends Component implements HasActions, HasSchemas
     {
         return Action::make('navigationHistory')
             ->modalHeading(arabic_text('سجلّ الانتقالات'))
-            ->modalDescription(arabic_text('آخر الانتقالات بين الصفحات. يتم حفظ المميّز (بالوسوم والملاحظات)، إضافةً إلى آخر مئة انتقال.'))
+            ->modalDescription(arabic_text('آخر مئة انتقال بين الصفحات، بالإضافة لحفظ المميّز (بالوسوم والملاحظات).'))
             ->modalAutofocus(false)
             ->modalWidth(Width::FiveExtraLarge)
             ->modalSubmitAction(false)
