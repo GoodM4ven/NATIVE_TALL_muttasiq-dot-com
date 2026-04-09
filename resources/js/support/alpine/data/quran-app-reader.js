@@ -127,6 +127,40 @@ const fitCacheStorageVersion = 18;
 const fitCacheStorageKey = 'quran-reader-fit-cache-v18';
 const fitCacheViewportBucketSizePx = 24;
 const shouldPersistFitCacheAcrossReloads = false;
+const quranReaderDebugLogsToggleEventName = 'quran-reader-debug-logs';
+const quranReaderDebugLogsEnabledByEnv = (() => {
+    const normalizeBoolean = (value, fallback = false) => {
+        if (typeof value === 'boolean') {
+            return value;
+        }
+
+        if (value === 1 || value === '1') {
+            return true;
+        }
+
+        if (value === 0 || value === '0') {
+            return false;
+        }
+
+        if (value === null || value === undefined || value === '') {
+            return Boolean(fallback);
+        }
+
+        const normalizedValue = String(value).trim().toLowerCase();
+
+        if (['true', 'yes', 'on'].includes(normalizedValue)) {
+            return true;
+        }
+
+        if (['false', 'no', 'off'].includes(normalizedValue)) {
+            return false;
+        }
+
+        return Boolean(fallback);
+    };
+
+    return normalizeBoolean(import.meta.env?.VITE_QURAN_READER_DEBUG_LOGS, false);
+})();
 const fitCalibrationReferencePage = 3;
 const idleWarmupPauseOnHighFrequencyNavigationMs = 520;
 const idleWarmupPauseOnStandardNavigationMs = 160;
@@ -903,6 +937,7 @@ document.addEventListener('alpine:init', () => {
         _onWindowStorage: null,
         _onHistoryManagerRequestSync: null,
         _onBookmarksManagerRequestSync: null,
+        _onQrDebugLogsToggle: null,
         _lastQuranReaderView: 'quran-app-tilawa',
         _onWindowKeydown: null,
         _onPanelPointerDown: null,
@@ -1044,6 +1079,7 @@ document.addEventListener('alpine:init', () => {
         _managerRowEffectTimers: new Map(),
         _managerModalsPrewarmPromise: null,
         _managerModalsPrewarmed: false,
+        isQrDebugLoggingEnabled: quranReaderDebugLogsEnabledByEnv,
         wordPress: {
             active: false,
             pointerId: null,
@@ -1083,6 +1119,22 @@ document.addEventListener('alpine:init', () => {
             this.bookmarks = readBookmarks();
             this.syncBookmarkTagDrafts();
             this.dispatchManagerModalsVisibilityState();
+            this._onQrDebugLogsToggle = (event) => {
+                const details =
+                    event?.detail && typeof event.detail === 'object' ? event.detail : {};
+
+                if (Object.prototype.hasOwnProperty.call(details, 'enabled')) {
+                    this.isQrDebugLoggingEnabled = this.normalizeBooleanFlag(
+                        details.enabled,
+                        false,
+                    );
+
+                    return;
+                }
+
+                this.isQrDebugLoggingEnabled = !this.isQrDebugLoggingEnabled;
+            };
+            window.addEventListener(quranReaderDebugLogsToggleEventName, this._onQrDebugLogsToggle);
 
             const storedLastPageNumber = readLastPageNumber();
             const restoredPage = clampPage(
@@ -1192,9 +1244,9 @@ document.addEventListener('alpine:init', () => {
 
                 if (this._bootstrapDeferred) {
                     this._bootstrapDeferred = false;
-                    console.log('[QR:switch-view] deferred bootstrap triggered for:', to);
+                    this.qrDebugLog('[QR:switch-view] deferred bootstrap triggered for:', to);
                     this.$nextTick(() => {
-                        console.log(
+                        this.qrDebugLog(
                             '[QR:switch-view] running deferred bootstrap, visible:',
                             this.isReaderElementVisible(),
                         );
@@ -1277,7 +1329,7 @@ document.addEventListener('alpine:init', () => {
             });
             this.$nextTick(() => {
                 const visible = this.isReaderElementVisible();
-                console.log(
+                this.qrDebugLog(
                     '[QR:init] isReaderElementVisible:',
                     visible,
                     'ready:',
@@ -1841,6 +1893,14 @@ document.addEventListener('alpine:init', () => {
                 window.removeEventListener('switch-view', this._onSwitchView);
             }
 
+            if (this._onQrDebugLogsToggle) {
+                window.removeEventListener(
+                    quranReaderDebugLogsToggleEventName,
+                    this._onQrDebugLogsToggle,
+                );
+                this._onQrDebugLogsToggle = null;
+            }
+
             if (this._onWirdSimulateDay) {
                 window.removeEventListener('quran-wird-simulate-day', this._onWirdSimulateDay);
                 this._onWirdSimulateDay = null;
@@ -2139,11 +2199,13 @@ document.addEventListener('alpine:init', () => {
                     }
 
                     if (!this.isReaderElementVisible()) {
-                        console.log('[QR:MutationObserver] skipping scheduleLayout — not visible');
+                        this.qrDebugLog(
+                            '[QR:MutationObserver] skipping scheduleLayout — not visible',
+                        );
                         return;
                     }
 
-                    console.log('[QR:MutationObserver] scheduleLayout');
+                    this.qrDebugLog('[QR:MutationObserver] scheduleLayout');
                     this.scheduleLayout({ revealDelayMs: 170 });
                 });
 
@@ -2474,7 +2536,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         async bootstrap() {
-            console.log(
+            this.qrDebugLog(
                 '[QR:bootstrap] START, visible:',
                 this.isReaderElementVisible(),
                 'ready:',
@@ -2492,7 +2554,7 @@ document.addEventListener('alpine:init', () => {
 
             try {
                 if (this._startupRestoreInFlight instanceof Promise) {
-                    console.log('[QR:bootstrap] awaiting _startupRestoreInFlight');
+                    this.qrDebugLog('[QR:bootstrap] awaiting _startupRestoreInFlight');
                     try {
                         await this._startupRestoreInFlight;
                     } catch (_) {
@@ -2500,24 +2562,24 @@ document.addEventListener('alpine:init', () => {
                     }
                 }
 
-                console.log(
+                this.qrDebugLog(
                     '[QR:bootstrap] before calibrate, visible:',
                     this.isReaderElementVisible(),
                 );
                 await this.calibrateGlobalFitLayoutFromReferencePage();
-                console.log(
+                this.qrDebugLog(
                     '[QR:bootstrap] after calibrate, _globalFitCalibrationLayout:',
                     !!this._globalFitCalibrationLayout,
                     '_globalFitCalibrationScale:',
                     this._globalFitCalibrationScale,
                 );
                 await this.ensureCurrentPageLoaded();
-                console.log(
+                this.qrDebugLog(
                     '[QR:bootstrap] after ensureCurrentPageLoaded, pageNumber:',
                     this.pageNumber,
                 );
                 await this.runStartupFinalFitPass();
-                console.log(
+                this.qrDebugLog(
                     '[QR:bootstrap] after runStartupFinalFitPass, pageScale:',
                     this.pageScale,
                     'isFittingPage:',
@@ -2528,11 +2590,11 @@ document.addEventListener('alpine:init', () => {
                 this.warmSearchIndex();
                 this.scheduleManagerModalsPrewarm();
             } catch (error) {
-                console.error('[QR:bootstrap] ERROR:', error);
+                this.qrDebugError('[QR:bootstrap] ERROR:', error);
             } finally {
                 this._startupCalibrationPending = false;
                 this.hasCompletedInitialMushafPreparation = true;
-                console.log(
+                this.qrDebugLog(
                     '[QR:bootstrap] DONE, hasCompletedInitialMushafPreparation:',
                     true,
                     'pageScale:',
@@ -9898,7 +9960,7 @@ document.addEventListener('alpine:init', () => {
             const contentElement = this.$refs.pageContent;
 
             if (!rootElement || !frameElement || !contentElement) {
-                console.log('[QR:fitPageToViewport] missing element refs');
+                this.qrDebugLog('[QR:fitPageToViewport] missing element refs');
                 return;
             }
 
@@ -10048,7 +10110,7 @@ document.addEventListener('alpine:init', () => {
                 Number.isFinite(Number(this._globalFitCalibrationScale)) &&
                 Number(this._globalFitCalibrationScale) > 0;
 
-            console.log(
+            this.qrDebugLog(
                 '[QR:fitPageToViewport] hasGlobalCalibration:',
                 hasGlobalCalibrationProfile,
                 'bypass:',
@@ -11163,6 +11225,22 @@ document.addEventListener('alpine:init', () => {
             }
 
             return Boolean(fallback);
+        },
+
+        qrDebugLog(...messages) {
+            if (!this.isQrDebugLoggingEnabled) {
+                return;
+            }
+
+            console.log(...messages);
+        },
+
+        qrDebugError(...messages) {
+            if (!this.isQrDebugLoggingEnabled) {
+                return;
+            }
+
+            console.error(...messages);
         },
 
         normalizeNumeralCharacters(characters, fallback = defaultWesternNumerals) {

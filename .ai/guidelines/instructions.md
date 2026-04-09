@@ -70,4 +70,5 @@ This shared source code base is representing the web version primarily, the one 
 - Modal open/close timing is a common risk area. After modal-driven jumps (search, history, bookmarks), always allow a targeted post-close refit/reveal recovery.
 - Wird navigation is race-prone. Preserve last-write-wins behavior and avoid stale reveal state after rapid navigation or re-entry.
 - Recovery behavior is expected and should remain: watchdog-based reveal recovery, sanity-based refit recovery, and fail-open reveal when guards become stale.
+- `[QR:*]` reader flow console diagnostics are disabled by default. Enable only when needed via `VITE_QURAN_READER_DEBUG_LOGS=true` or runtime event `window.dispatchEvent(new CustomEvent('quran-reader-debug-logs', { detail: { enabled: true } }))` (disable with `enabled: false`; event without `enabled` toggles current state).
 - When touching this area, run the focused browser regressions `lands on the final wird slider page and keeps the re-entered completed page visible` and `keeps quran text fitted and visible across all reader navigation paths`.
