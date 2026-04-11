@@ -2,8 +2,6 @@
     <style>
         .athkar-notice {
             position: relative;
-            width: min(94vw, 780px);
-            min-height: min(72svh, 560px);
             border-radius: 26px;
             padding: 0;
             box-shadow: none;
@@ -258,7 +256,7 @@
 
     <!-- Panel -->
     <section
-        class="athkar-notice relative z-10 mt-4 flex max-h-fit flex-col gap-4 overflow-hidden text-center sm:mt-0 sm:max-h-[65svh] sm:gap-6 md:max-h-[75svh]"
+        class="athkar-notice relative z-10 mt-4 flex flex-col gap-4 overflow-hidden text-center sm:mt-0 sm:max-h-[65svh] sm:gap-6 md:max-h-[75svh] 3xl:max-h-[min(75svh,30rem)] 4xl:max-h-[min(75svh,40rem)] w-full max-w-[min(58vw,43rem)] 4xl:max-w-[min(65vw,50rem)]"
         role="dialog"
         aria-live="polite"
     >
