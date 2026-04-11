@@ -1051,27 +1051,15 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            this.clearActiveItemForInsightsTrigger();
             this.isInsightsPointerInside = true;
             this.showInsightsPanel();
         },
         shouldClearActiveItemOnInsightsTrigger() {
             const breakpointStore = window.Alpine?.store?.('bp');
-            const hasTouchInput =
-                typeof breakpointStore?.isTouch === 'function'
-                    ? Boolean(breakpointStore.isTouch())
-                    : Boolean(breakpointStore?.hasTouch ?? this.isTouchDevice);
-
-            if (!hasTouchInput) {
-                return false;
-            }
 
             if (typeof breakpointStore?.is === 'function') {
-                return (
-                    breakpointStore.is('base') ||
-                    breakpointStore.is('sm') ||
-                    breakpointStore.is('md') ||
-                    breakpointStore.is('lg')
-                );
+                return breakpointStore.is('lg-');
             }
 
             const currentBreakpoint = String(breakpointStore?.current ?? '').trim();
@@ -1082,10 +1070,15 @@ document.addEventListener('alpine:init', () => {
 
             return ['base', 'sm', 'md', 'lg'].includes(currentBreakpoint);
         },
-        toggleInsightsPanel() {
-            if (this.shouldClearActiveItemOnInsightsTrigger()) {
-                this.handleOutside(false, { preserveInsights: true });
+        clearActiveItemForInsightsTrigger() {
+            if (!this.shouldClearActiveItemOnInsightsTrigger()) {
+                return;
             }
+
+            this.handleOutside(false, { preserveInsights: true });
+        },
+        toggleInsightsPanel() {
+            this.clearActiveItemForInsightsTrigger();
 
             if (this.isInsightsExpanded) {
                 this.collapseInsightsForNavigation();
