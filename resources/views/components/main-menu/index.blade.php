@@ -630,7 +630,6 @@
             min-height: 1.25rem;
             height: 1.25rem;
             max-height: 1.25rem;
-            font-size: 0.72rem;
             font-weight: 800;
             line-height: 1.25rem;
             letter-spacing: 0.01em;
@@ -998,13 +997,13 @@
                         :key="`main-menu-insights-row-${row.key}`"
                     >
                         <button
-                            class="main-menu-insights-row main-menu-insights-row--button"
+                            class="main-menu-insights-row main-menu-insights-row--button text-[0.72rem] sm:text-[0.76rem] lg:text-[0.85rem] xl:text-[0.9rem] 2xl:text-[0.9rem] 3xl:text-[0.95rem]"
                             type="button"
                             x-on:click.stop.prevent="handleInsightsRowClick(row.key)"
                             x-bind:aria-label="`${row.label} ${row.percent}%`"
                         >
                             <p
-                                class="main-menu-insights-title text-[0.72rem] font-semibold leading-none sm:text-[0.76rem]"
+                                class="main-menu-insights-title font-semibold leading-none"
                                 x-text="row.label"
                             ></p>
                             <span class="main-menu-insights-meta">
