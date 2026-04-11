@@ -19,7 +19,7 @@
 @endassets
 
 <div
-    class="-top-7! sm:top-0! absolute inset-0 flex items-center justify-center xl:[zoom:1.25]"
+    class="-top-12! sm:top-0! absolute inset-0 flex items-center justify-center xl:[zoom:1.25]"
     data-athkar-app-reader-root
     x-cloak
     x-show="views['athkar-app-gate'].isOpen || views['athkar-app-sabah'].isOpen || views['athkar-app-masaa'].isOpen"

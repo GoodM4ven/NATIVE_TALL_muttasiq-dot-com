@@ -20,13 +20,13 @@
             --gate-glass-border-radius: calc(var(--radius) - 10px);
         }
 
-        .athkar-gate-wrap:not(.is-enhanced) {
+        /* .athkar-gate-wrap:not(.is-enhanced) {
             --pane-split-duration: 250ms;
             --spill-split-duration: 400ms;
             --gate-blur: 0px !important;
             --divider-glow-blur: 0px !important;
             --spill-blur: 0px !important;
-        }
+        } */
 
         @media (max-width: 639px) {
             .athkar-gate-wrap {
@@ -44,7 +44,7 @@
             --edge-glow: rgba(56, 189, 248, 0.3);
         }
 
-        .athkar-gate-wrap:not(.is-enhanced) .athkar-gate {
+        /* .athkar-gate-wrap:not(.is-enhanced) .athkar-gate {
             box-shadow:
                 0 20px 45px rgba(15, 23, 42, 0.22),
                 inset 0 1px 0 rgba(255, 255, 255, 0.2);
@@ -74,7 +74,7 @@
         .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__divider {
             filter: none;
             opacity: 0.85;
-        }
+        } */
 
         .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__divider,
         .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__veil {
@@ -83,14 +83,14 @@
 
         .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__divider-glow,
         .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__ping {
-            display: none;
+            /* display: none; */
         }
 
-        .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__label {
+        /* .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__label {
             backdrop-filter: none;
             -webkit-backdrop-filter: none;
             text-shadow: 0 6px 12px rgba(2, 6, 23, 0.3);
-        }
+        } */
 
         .athkar-gate {
             position: relative;
@@ -159,18 +159,11 @@
 
         .athkar-gate__glass {
             position: absolute;
-            inset: 8px;
             border-radius: var(--gate-glass-border-radius);
             overflow: hidden;
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.12);
             z-index: 4;
-        }
-
-        @media (min-width: 640px) {
-            .athkar-gate__glass {
-                inset: 12px;
-            }
         }
 
         .dark .athkar-gate__glass {
@@ -297,14 +290,13 @@
             z-index: 5;
         }
 
-        .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__divider-glow {
+        /* .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__divider-glow {
             opacity: 0.4;
-        }
+        } */
 
         .athkar-gate__label {
             position: absolute;
             z-index: 60;
-            padding: 0.45rem 1.1rem;
             border-radius: 999px;
             border: 1px solid rgba(255, 255, 255, 0.22);
             text-shadow: 0 8px 18px rgba(2, 6, 23, 0.32);
@@ -314,22 +306,18 @@
             opacity: 0.72;
         }
 
-        .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__label {
+        /* .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__label {
             opacity: 1;
-        }
+        } */
 
         .athkar-gate__label--night {
             background: color-mix(in srgb, var(--background) 72%, transparent);
             color: var(--foreground);
-            left: 1.35rem;
-            bottom: 1.35rem;
         }
 
         .athkar-gate__label--morning {
             background: color-mix(in srgb, var(--background-dark) 72%, transparent);
             color: var(--foreground-dark);
-            top: 1.35rem;
-            right: 1.35rem;
         }
 
         .athkar-gate-shell.is-night .athkar-gate__label--night,
@@ -370,7 +358,7 @@
         }
 
         .athkar-gate-wrap:not(.is-spill-ready) .athkar-gate__spill {
-            display: none;
+            /* display: none; */
         }
 
         .athkar-gate__spill-pane {
@@ -398,7 +386,7 @@
         }
 
         .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__spill {
-            display: none;
+            /* display: none; */
         }
 
         .athkar-gate__spill-image {
@@ -439,7 +427,7 @@
 >
     <div class="relative flex select-none flex-col items-center">
         <div
-            class="athkar-gate-wrap relative w-full max-w-5xl"
+            class="athkar-gate-wrap relative w-full"
             x-data="athkarAppGate"
             x-bind:class="{ 'is-enhanced': isEnhanced, 'is-spill-ready': isSpillReady }"
             x-bind:style="{
@@ -447,7 +435,7 @@
                 '--spill-opacity': spillOpacity,
                 '--spill-transition': `${spillTransitionMs}ms`,
                 '--spill-inset': isEnhanced ? '-48vmax' : '-42vmax',
-                '--spill-blur': isEnhanced ? '6px' : '0px',
+                '--spill-blur': isEnhanced ? '6px' : '3px',
                 '--spill-scale': isEnhanced ? '1.18' : '1.12',
                 '--spill-split': `${splitValue}%`,
                 '--gate-blur': isEnhanced ? '14px' : '0px',
@@ -457,7 +445,7 @@
             x-on:click.outside="handleOutsideActivation()"
         >
             <div
-                class="athkar-gate-shell relative z-10 h-[min(92vw,760px)] max-h-[55svh] w-[min(92vw,920px)] sm:max-h-[65svh] md:max-h-[70svh] lg:max-h-[75svh]"
+                class="athkar-gate-shell relative z-10 h-[min(92vw,760px)] max-h-[clamp(10rem,75svh,50rem)] w-[min(92vw,920px)] sm:max-h-[min(65svh,18rem)] md:max-h-[min(70svh,28rem)] lg:max-h-[min(75svh,25rem)] xl:max-h-[min(75svh,25rem)] 2xl:max-h-[min(75svh,31rem)] 3xl:max-h-[min(75svh,38rem)] 4xl:max-h-[75svh] mx-auto max-w-[clamp(10rem,84svw,26rem)] sm:max-w-[clamp(20rem,60svw,40rem)] md:max-w-[clamp(25rem,60svw,40rem)] lg:max-w-130 xl:max-w-140 2xl:max-w-176 3xl:max-w-3xl 4xl:max-w-5xl"
                 x-ref="gate"
                 x-bind:class="{
                     'is-hovering': isHovering,
@@ -499,7 +487,7 @@
 
                 <!-- Buttons -->
                 <div class="athkar-gate">
-                    <div class="athkar-gate__glass">
+                    <div class="athkar-gate__glass inset-[8px] sm:inset-[6px] md:inset-[6px] lg:inset-[8px] xl:inset-[12px]">
                         <button
                             class="athkar-gate__pane athkar-gate__pane--night"
                             type="button"
@@ -520,7 +508,7 @@
                                 imageClasses="athkar-gate__image-img select-none"
                             />
                             <span
-                                class="athkar-gate__label athkar-gate__label--night font-arabic-serif text-base sm:text-xl"
+                                class="athkar-gate__label px-[1rem] py-[0.4rem] sm:px-[0.65rem] sm:py-[0.25rem] md:px-[0.8rem] md:py-[0.35rem] lg:px-[1.1rem] lg:py-[0.45rem] athkar-gate__label--night left-[0.55rem] bottom-[0.75rem] sm:left-[1.35rem] sm:bottom-[1.35rem] font-arabic-serif text-[0.9rem] sm:text-[0.65rem] md:text-[0.7rem] lg:text-[0.85rem] xl:text-[1rem] 2xl:text-[1.1rem] 3xl:text-xl"
                             >
                                 <span class="inline-flex items-center gap-2">
                                     <span
@@ -561,7 +549,7 @@
                             />
                             <span class="athkar-gate__veil athkar-gate__veil--morning"></span>
                             <span
-                                class="athkar-gate__label athkar-gate__label--morning font-arabic-serif text-base sm:text-xl"
+                                class="athkar-gate__label px-[1rem] py-[0.4rem] sm:px-[0.65rem] sm:py-[0.25rem] md:px-[0.8rem] md:py-[0.35rem] lg:px-[1.1rem] lg:py-[0.45rem] athkar-gate__label--morning top-[0.75rem] right-[0.55rem] sm:top-[1.35rem] sm:right-[1.35rem] font-arabic-serif text-[0.9rem] sm:text-[0.65rem] md:text-[0.7rem] lg:text-[0.85rem] xl:text-[1rem] 2xl:text-[1.1rem] 3xl:text-xl"
                             >
                                 <span class="inline-flex items-center gap-2">
                                     <span

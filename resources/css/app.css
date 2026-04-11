@@ -44,7 +44,7 @@
 @theme {
     /* 1080p (2k) */
     --breakpoint-3xl: 120rem;
-    /* 1440p (4k) */
+    /* 1440p */
     --breakpoint-4xl: 160rem;
     --background: #fef7ff;
     --background-dark: #201f25;

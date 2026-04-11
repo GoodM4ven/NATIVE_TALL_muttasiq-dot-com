@@ -72,7 +72,7 @@
             }
         }
 
-        @media (min-width: 1536px) and (max-width: 1979px) {
+        @media (min-width: 1536px) and (max-width: 1919px) {
             .quran-reader {
                 --quran-fit-target-width-ratio: 0.85;
                 --quran-fit-area-pad-x: 2rem;
@@ -80,7 +80,7 @@
             }
         }
 
-        @media (min-width: 1980px) and (max-width: 2559px) {
+        @media (min-width: 1920px) and (max-width: 2559px) {
             .quran-reader {
                 --quran-fit-target-width-ratio: 0.85;
                 --quran-fit-area-pad-x: 2rem;
@@ -387,11 +387,24 @@
             transform: translate3d(-50%, -50%, 0);
             z-index: 120;
             pointer-events: none;
-            will-change: transform;
+            opacity: 0;
+            visibility: hidden;
+            will-change: transform, opacity;
+            transition:
+                opacity 220ms ease,
+                visibility 0ms linear 220ms;
             contain: layout style;
             overflow: visible;
             isolation: isolate;
             backface-visibility: hidden;
+        }
+
+        .quran-calibration-hud.quran-calibration-hud--visible {
+            opacity: 1;
+            visibility: visible;
+            transition:
+                opacity 220ms ease,
+                visibility 0ms linear 0ms;
         }
 
         /* Credits: https://uiball.com/ldrs/ (jelly triangle) */
@@ -1915,14 +1928,7 @@
                     <div
                         class="quran-calibration-hud"
                         wire:ignore
-                        x-cloak
-                        x-show="shouldShowCalibrationHud() ?? false"
-                        x-transition:enter="transition duration-220 ease-out"
-                        x-transition:enter-start="translate-y-0.5 opacity-0"
-                        x-transition:enter-end="translate-y-0 opacity-100"
-                        x-transition:leave="transition duration-180 ease-in"
-                        x-transition:leave-start="translate-y-0 opacity-100"
-                        x-transition:leave-end="-translate-y-0.5 opacity-0"
+                        x-bind:class="{ 'quran-calibration-hud--visible': shouldShowCalibrationHud() }"
                         x-bind:style="calibrationHudStyle()"
                         x-bind:aria-hidden="shouldShowCalibrationHud() ? 'false' : 'true'"
                     >

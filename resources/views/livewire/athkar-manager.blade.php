@@ -1,6 +1,6 @@
 <div>
     <div
-        class="sm:start-26 inset-s-10 fixed top-5 z-30 sm:top-5 md:top-8 xl:[zoom:1.25]"
+        class="sm:start-13! md:start-15! lg:inset-s-17! xl:inset-s-22! 2xl:inset-s-26! 3xl:inset-s-28! 4xl:start-29! fixed top-5 z-30 sm:top-4 md:top-5 lg:top-5 xl:top-6.5 2xl:top-8"
         data-stack-item
         x-data="{
             managerModalId: @js('fi-' . $this->getId() . '-action-0'),

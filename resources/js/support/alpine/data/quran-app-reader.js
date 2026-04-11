@@ -11614,6 +11614,8 @@ document.addEventListener('alpine:init', () => {
         shouldShowCalibrationHud() {
             return Boolean(
                 this.isCalibrating &&
+                this._startupCalibrationPending &&
+                !this.hasCompletedInitialMushafPreparation &&
                 this.isAnyQuranReaderViewOpen() &&
                 !this.isAnyAthkarViewOpen() &&
                 this.isReaderPanelVisible(),

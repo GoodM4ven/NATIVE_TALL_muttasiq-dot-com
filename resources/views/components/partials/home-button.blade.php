@@ -3,7 +3,7 @@
 ])
 
 <div
-    class="inset-e-10 fixed bottom-7 z-30 sm:bottom-7 md:bottom-12 xl:[zoom:1.25]"
+    class="inset-e-10 sm:inset-e-4.5 md:inset-e-6 lg:inset-e-6.5 xl:inset-e-8 2xl:inset-e-10 fixed bottom-7 z-30 sm:bottom-6 md:bottom-6 lg:bottom-7 xl:bottom-10 2xl:bottom-12"
     data-stack-item
     x-transition
     x-cloak

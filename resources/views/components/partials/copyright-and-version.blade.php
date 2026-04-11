@@ -1,8 +1,8 @@
 <div
     class="{{ \Illuminate\Support\Arr::toCssClasses([
-        'bottom-4 sm:bottom-10' => !is_platform('mobile'),
+        'bottom-4 sm:bottom-12 md:bottom-10 lg:bottom-8.5 xl:bottom-10 2xl:bottom-8 3xl:bottom-10' => !is_platform('mobile'),
         'bottom-7' => is_platform('mobile'),
-        'fixed inset-x-0 z-30 flex w-full max-w-full justify-center overflow-hidden px-4 opacity-0 transition-opacity sm:w-auto sm:max-w-none sm:px-5 md:px-5 lg:px-6 pointer-events-none xl:[zoom:1.25]',
+        'fixed inset-x-0 z-30 flex w-full max-w-full justify-center px-4 opacity-0 transition-opacity sm:w-auto sm:max-w-none sm:px-5 md:px-5 lg:px-6 pointer-events-none sm:[zoom:0.5] md:[zoom:0.5] lg:[zoom:0.675] xl:[zoom:0.8] 2xl:[zoom:0.95] 3xl:[zoom:1.05] 4xl:[zoom:1.25]',
     ]) }}"
     data-testid="copyright-version-shell"
     x-bind:class="{
@@ -226,14 +226,14 @@
     x-effect="syncRevealLoop()"
 >
     <div
-        class="relative w-fit max-w-[90vw] rounded-lg border border-white/70 bg-gray-100/40 px-2 py-1.5 text-[clamp(0.65rem,2.65vw,0.8rem)] text-gray-600 opacity-0 shadow-2xl ring-1 ring-gray-200/70 transition-all duration-500 ease-out sm:max-w-none sm:rounded-2xl sm:px-4 sm:py-3 sm:text-[0.82rem] md:px-5 md:py-3 md:text-[0.88rem] lg:px-6 lg:py-4 lg:text-[1rem] dark:border-white/10 dark:bg-gray-900/20 dark:text-gray-300 dark:ring-white/10"
+        class="relative w-fit max-w-[90vw] rounded-lg border border-white/70 bg-gray-100/40 px-2.5 py-2 text-[clamp(0.65rem,2.65vw,0.8rem)] text-gray-600 opacity-0 shadow-2xl ring-1 ring-gray-200/70 transition-all duration-500 ease-out sm:max-w-none sm:rounded-2xl sm:px-4 sm:py-3 sm:text-[0.82rem] md:px-5 md:py-3 md:text-[0.88rem] lg:px-4 xl:px-6 lg:py-3 xl:py-4 lg:text-[0.85rem] xl:text-[1rem] 2xl:text-[0.9rem] 3xl:text-[1rem] dark:border-white/10 dark:bg-gray-900/20 dark:text-gray-300 dark:ring-white/10"
         data-testid="copyright-version-panel"
         x-bind:class="{
             'opacity-100!': isVisible,
             'bg-gray-100/70! text-gray-800!': views['quran-app-gate'].isOpen,
         }"
     >
-        <p class="whitespace-normal text-center leading-tight">
+        <p class="whitespace-nowrap text-center leading-tight">
             {{ arabic_text('جميع الحقوق محفوظة') }} •
             {{ arabic_text('متسق') }} @ <span x-text="window.dayjs().calendar('hijri').format('YYYY')"></span>
             {{ arabic_text('هـ') }}
