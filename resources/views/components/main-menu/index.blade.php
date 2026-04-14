@@ -997,7 +997,7 @@
                         :key="`main-menu-insights-row-${row.key}`"
                     >
                         <button
-                            class="main-menu-insights-row main-menu-insights-row--button text-[0.89rem] sm:text-[0.9rem] md:text-[0.8rem] lg:text-[0.85rem] xl:text-[0.9rem] 2xl:text-[0.9rem] 3xl:text-[0.95rem]"
+                            class="main-menu-insights-row main-menu-insights-row--button 3xl:text-[0.95rem] text-[0.89rem] sm:text-[0.9rem] md:text-[0.8rem] lg:text-[0.85rem] xl:text-[0.9rem] 2xl:text-[0.9rem]"
                             type="button"
                             x-on:click.stop.prevent="handleInsightsRowClick(row.key)"
                             x-bind:aria-label="`${row.label} ${row.percent}%`"

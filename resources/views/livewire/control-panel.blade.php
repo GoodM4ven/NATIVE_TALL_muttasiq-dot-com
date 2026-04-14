@@ -1,6 +1,6 @@
 <div>
     <div
-        class="inset-e-10 sm:inset-e-4.5 md:inset-e-6 lg:inset-e-6.5 xl:inset-e-8 2xl:inset-e-10 fixed top-5 z-30 sm:top-4 md:top-5 lg:top-5 xl:top-6.5 2xl:top-8"
+        class="inset-e-10 sm:inset-e-4.5 md:inset-e-6 lg:inset-e-6.5 xl:inset-e-8 2xl:inset-e-10 xl:top-6.5 fixed top-5 z-30 sm:top-4 md:top-5 lg:top-5 2xl:top-8"
         data-stack-item
         wire:ignore
         x-transition

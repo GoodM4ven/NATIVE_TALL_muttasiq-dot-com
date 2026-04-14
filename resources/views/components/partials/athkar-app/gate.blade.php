@@ -21,13 +21,12 @@
         }
 
         /* .athkar-gate-wrap:not(.is-enhanced) {
-            --pane-split-duration: 250ms;
-            --spill-split-duration: 400ms;
-            --gate-blur: 0px !important;
-            --divider-glow-blur: 0px !important;
-            --spill-blur: 0px !important;
-        } */
-
+                --pane-split-duration: 250ms;
+                --spill-split-duration: 400ms;
+                --gate-blur: 0px !important;
+                --divider-glow-blur: 0px !important;
+                --spill-blur: 0px !important;
+            } */
         @media (max-width: 639px) {
             .athkar-gate-wrap {
                 --tilt: 5%;
@@ -45,37 +44,36 @@
         }
 
         /* .athkar-gate-wrap:not(.is-enhanced) .athkar-gate {
-            box-shadow:
-                0 20px 45px rgba(15, 23, 42, 0.22),
-                inset 0 1px 0 rgba(255, 255, 255, 0.2);
-            backdrop-filter: none;
-            -webkit-backdrop-filter: none;
-        }
+                box-shadow:
+                    0 20px 45px rgba(15, 23, 42, 0.22),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+                backdrop-filter: none;
+                -webkit-backdrop-filter: none;
+            }
 
-        .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__glass {
-            backdrop-filter: none;
-            -webkit-backdrop-filter: none;
-            background: rgba(255, 255, 255, 0.08);
-        }
+            .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__glass {
+                backdrop-filter: none;
+                -webkit-backdrop-filter: none;
+                background: rgba(255, 255, 255, 0.08);
+            }
 
-        .dark .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__glass {
-            background: rgba(2, 6, 23, 0.45);
-        }
+            .dark .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__glass {
+                background: rgba(2, 6, 23, 0.45);
+            }
 
-        .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__spill {
-            filter: none;
-        }
+            .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__spill {
+                filter: none;
+            }
 
-        .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__spill-image {
-            opacity: 0.5;
-            transform: scale(1.03);
-        }
+            .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__spill-image {
+                opacity: 0.5;
+                transform: scale(1.03);
+            }
 
-        .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__divider {
-            filter: none;
-            opacity: 0.85;
-        } */
-
+            .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__divider {
+                filter: none;
+                opacity: 0.85;
+            } */
         .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__divider,
         .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__veil {
             /* mix-blend-mode: normal; */
@@ -87,11 +85,10 @@
         }
 
         /* .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__label {
-            backdrop-filter: none;
-            -webkit-backdrop-filter: none;
-            text-shadow: 0 6px 12px rgba(2, 6, 23, 0.3);
-        } */
-
+                backdrop-filter: none;
+                -webkit-backdrop-filter: none;
+                text-shadow: 0 6px 12px rgba(2, 6, 23, 0.3);
+            } */
         .athkar-gate {
             position: relative;
             height: 100%;
@@ -291,9 +288,8 @@
         }
 
         /* .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__divider-glow {
-            opacity: 0.4;
-        } */
-
+                opacity: 0.4;
+            } */
         .athkar-gate__label {
             position: absolute;
             z-index: 60;
@@ -307,9 +303,8 @@
         }
 
         /* .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__label {
-            opacity: 1;
-        } */
-
+                opacity: 1;
+            } */
         .athkar-gate__label--night {
             background: color-mix(in srgb, var(--background) 72%, transparent);
             color: var(--foreground);
@@ -445,7 +440,7 @@
             x-on:click.outside="handleOutsideActivation()"
         >
             <div
-                class="athkar-gate-shell relative z-10 h-[min(92vw,760px)] max-h-[clamp(10rem,75svh,50rem)] w-[min(92vw,920px)] sm:max-h-[min(65svh,18rem)] md:max-h-[min(70svh,28rem)] lg:max-h-[min(75svh,25rem)] xl:max-h-[min(75svh,25rem)] 2xl:max-h-[min(75svh,31rem)] 3xl:max-h-[min(75svh,38rem)] 4xl:max-h-[75svh] mx-auto max-w-[clamp(10rem,84svw,26rem)] sm:max-w-[clamp(20rem,60svw,40rem)] md:max-w-[clamp(25rem,60svw,40rem)] lg:max-w-130 xl:max-w-140 2xl:max-w-176 3xl:max-w-3xl 4xl:max-w-5xl"
+                class="athkar-gate-shell 3xl:max-h-[min(75svh,38rem)] 4xl:max-h-[75svh] lg:max-w-130 xl:max-w-140 2xl:max-w-176 3xl:max-w-3xl 4xl:max-w-5xl relative z-10 mx-auto h-[min(92vw,760px)] max-h-[clamp(10rem,75svh,50rem)] w-[min(92vw,920px)] max-w-[clamp(10rem,84svw,26rem)] sm:max-h-[min(65svh,18rem)] sm:max-w-[clamp(20rem,60svw,40rem)] md:max-h-[min(70svh,28rem)] md:max-w-[clamp(25rem,60svw,40rem)] lg:max-h-[min(75svh,25rem)] xl:max-h-[min(75svh,25rem)] 2xl:max-h-[min(75svh,31rem)]"
                 x-ref="gate"
                 x-bind:class="{
                     'is-hovering': isHovering,
@@ -487,7 +482,8 @@
 
                 <!-- Buttons -->
                 <div class="athkar-gate">
-                    <div class="athkar-gate__glass inset-[8px] sm:inset-[6px] md:inset-[6px] lg:inset-[8px] xl:inset-[12px]">
+                    <div
+                        class="athkar-gate__glass inset-[8px] sm:inset-[6px] md:inset-[6px] lg:inset-[8px] xl:inset-[12px]">
                         <button
                             class="athkar-gate__pane athkar-gate__pane--night"
                             type="button"
@@ -508,7 +504,7 @@
                                 imageClasses="athkar-gate__image-img select-none"
                             />
                             <span
-                                class="athkar-gate__label px-[1rem] py-[0.4rem] sm:px-[0.65rem] sm:py-[0.25rem] md:px-[0.8rem] md:py-[0.35rem] lg:px-[1.1rem] lg:py-[0.45rem] athkar-gate__label--night left-[0.55rem] bottom-[0.75rem] sm:left-[1.35rem] sm:bottom-[1.35rem] font-arabic-serif text-[0.9rem] sm:text-[0.65rem] md:text-[0.7rem] lg:text-[0.85rem] xl:text-[1rem] 2xl:text-[1.1rem] 3xl:text-xl"
+                                class="athkar-gate__label athkar-gate__label--night font-arabic-serif 3xl:text-xl bottom-[0.75rem] left-[0.55rem] px-[1rem] py-[0.4rem] text-[0.9rem] sm:bottom-[1.35rem] sm:left-[1.35rem] sm:px-[0.65rem] sm:py-[0.25rem] sm:text-[0.65rem] md:px-[0.8rem] md:py-[0.35rem] md:text-[0.7rem] lg:px-[1.1rem] lg:py-[0.45rem] lg:text-[0.85rem] xl:text-[1rem] 2xl:text-[1.1rem]"
                             >
                                 <span class="inline-flex items-center gap-2">
                                     <span
@@ -549,7 +545,7 @@
                             />
                             <span class="athkar-gate__veil athkar-gate__veil--morning"></span>
                             <span
-                                class="athkar-gate__label px-[1rem] py-[0.4rem] sm:px-[0.65rem] sm:py-[0.25rem] md:px-[0.8rem] md:py-[0.35rem] lg:px-[1.1rem] lg:py-[0.45rem] athkar-gate__label--morning top-[0.75rem] right-[0.55rem] sm:top-[1.35rem] sm:right-[1.35rem] font-arabic-serif text-[0.9rem] sm:text-[0.65rem] md:text-[0.7rem] lg:text-[0.85rem] xl:text-[1rem] 2xl:text-[1.1rem] 3xl:text-xl"
+                                class="athkar-gate__label athkar-gate__label--morning font-arabic-serif 3xl:text-xl right-[0.55rem] top-[0.75rem] px-[1rem] py-[0.4rem] text-[0.9rem] sm:right-[1.35rem] sm:top-[1.35rem] sm:px-[0.65rem] sm:py-[0.25rem] sm:text-[0.65rem] md:px-[0.8rem] md:py-[0.35rem] md:text-[0.7rem] lg:px-[1.1rem] lg:py-[0.45rem] lg:text-[0.85rem] xl:text-[1rem] 2xl:text-[1.1rem]"
                             >
                                 <span class="inline-flex items-center gap-2">
                                     <span

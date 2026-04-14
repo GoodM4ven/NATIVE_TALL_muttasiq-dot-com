@@ -28,6 +28,28 @@ const defaultProgressState = () => ({
     masaa: { index: 0, counts: [], ids: [], activeId: null },
 });
 
+const emptyProgressStats = Object.freeze({
+    totalRequiredCount: 0,
+    totalCompletedCount: 0,
+    totalRequiredLetters: 0,
+    totalCompletedLetters: 0,
+    totalRemainingLetters: 0,
+    slideProgressPercent: 0,
+    maxNavigableIndex: 0,
+});
+
+const resolveProgressStatsSafely = (context) => {
+    if (typeof context?.resolveProgressStats !== 'function') {
+        return emptyProgressStats;
+    }
+
+    try {
+        return context.resolveProgressStats() ?? emptyProgressStats;
+    } catch (_) {
+        return emptyProgressStats;
+    }
+};
+
 const readProgressFromStorage = () => {
     if (typeof localStorage === 'undefined') {
         return defaultProgressState();
@@ -1818,10 +1840,10 @@ document.addEventListener('alpine:init', () => {
             return Math.trunc(index);
         },
         get totalRequiredCount() {
-            return this.resolveProgressStats().totalRequiredCount;
+            return resolveProgressStatsSafely(this).totalRequiredCount;
         },
         get totalCompletedCount() {
-            return this.resolveProgressStats().totalCompletedCount;
+            return resolveProgressStatsSafely(this).totalCompletedCount;
         },
         textLetterCount(text) {
             const normalized = String(text ?? '');
@@ -1857,19 +1879,19 @@ document.addEventListener('alpine:init', () => {
             return count;
         },
         get totalRequiredLetters() {
-            return this.resolveProgressStats().totalRequiredLetters;
+            return resolveProgressStatsSafely(this).totalRequiredLetters;
         },
         get totalCompletedLetters() {
-            return this.resolveProgressStats().totalCompletedLetters;
+            return resolveProgressStatsSafely(this).totalCompletedLetters;
         },
         get totalRemainingLetters() {
-            return this.resolveProgressStats().totalRemainingLetters;
+            return resolveProgressStatsSafely(this).totalRemainingLetters;
         },
         get slideProgressPercent() {
-            return this.resolveProgressStats().slideProgressPercent;
+            return resolveProgressStatsSafely(this).slideProgressPercent;
         },
         get maxNavigableIndex() {
-            return this.resolveProgressStats().maxNavigableIndex;
+            return resolveProgressStatsSafely(this).maxNavigableIndex;
         },
         settingValue(name, fallback) {
             const value = this.settings?.[name];

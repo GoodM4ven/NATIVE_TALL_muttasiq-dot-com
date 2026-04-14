@@ -17,3 +17,18 @@ it('uses the shared athkar-agnostic shimmer helper from the reader script', func
         ->and($source)->not->toContain('athkar-')
         ->and($source)->not->toContain('createAthkarShimmerController');
 });
+
+it('guards progress stats getters when reader data is inspected without method bindings', function () {
+    $source = file_get_contents(resource_path('js/support/alpine/data/athkar-app-reader.js'));
+
+    expect($source)->not->toBeFalse()
+        ->and($source)->toContain('const resolveProgressStatsSafely = (context) => {')
+        ->and($source)->toContain('if (typeof context?.resolveProgressStats !== \'function\') {')
+        ->and($source)->toContain('return resolveProgressStatsSafely(this).totalRequiredCount;')
+        ->and($source)->toContain('return resolveProgressStatsSafely(this).totalCompletedCount;')
+        ->and($source)->toContain('return resolveProgressStatsSafely(this).totalRequiredLetters;')
+        ->and($source)->toContain('return resolveProgressStatsSafely(this).totalCompletedLetters;')
+        ->and($source)->toContain('return resolveProgressStatsSafely(this).totalRemainingLetters;')
+        ->and($source)->toContain('return resolveProgressStatsSafely(this).slideProgressPercent;')
+        ->and($source)->toContain('return resolveProgressStatsSafely(this).maxNavigableIndex;');
+});
