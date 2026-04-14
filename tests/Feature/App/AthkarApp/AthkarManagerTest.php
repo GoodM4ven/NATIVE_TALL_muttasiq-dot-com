@@ -21,8 +21,10 @@ it('loads default athkar cards and keeps origin badge semantics correct', functi
     ]);
 
     $cards = livewire(AthkarManager::class)->instance()->defaultAthkarCards();
+    $resolvedCard = collect($cards)->firstWhere('id', $thikr->id);
 
-    expect(collect($cards)->contains(fn (array $card): bool => $card['text'] === $defaultText))->toBeTrue()
+    expect($resolvedCard)->not->toBeNull()
+        ->and($resolvedCard['text'])->toBe(arabic_text($defaultText))
         ->and(collect($cards)->contains(fn (array $card): bool => $card['id'] === $thikr->id))->toBeTrue()
         ->and(collect($cards)->contains(fn (array $card): bool => array_key_exists('is_aayah', $card)))->toBeTrue()
         ->and(collect($cards)->contains(fn (array $card): bool => $card['type'] === ThikrType::Repentance->value))->toBeTrue()

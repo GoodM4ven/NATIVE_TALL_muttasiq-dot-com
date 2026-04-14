@@ -8,8 +8,11 @@ it('renders teleported css jelly triangle loader indicator for quran calibration
     expect($readerViewSource)->not->toBeFalse()
         ->and($readerViewSource)->toContain('<template x-teleport="body">')
         ->and($readerViewSource)->toContain('class="quran-calibration-hud"')
-        ->and($readerViewSource)->toContain('x-transition:enter="transition duration-220 ease-out"')
-        ->and($readerViewSource)->toContain('x-transition:leave="transition duration-180 ease-in"')
+        ->and($readerViewSource)->toContain(
+            "x-bind:class=\"{ 'quran-calibration-hud--visible': shouldShowCalibrationHud() }\"",
+        )
+        ->and($readerViewSource)->toContain('opacity 220ms ease,')
+        ->and($readerViewSource)->toContain('visibility 0ms linear 220ms;')
         ->and($readerViewSource)->toContain('class="quran-calibration-spinner"')
         ->and($readerViewSource)->toContain('<l-jelly-triangle')
         ->and($readerViewSource)->toContain('--uib-size: 34px;')

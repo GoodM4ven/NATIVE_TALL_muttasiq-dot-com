@@ -63,8 +63,8 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($mainMenuScriptSource)->toContain('insightsMostlyDoneThreshold: 70');
 
     expect($mainMenuItemSource)->not->toBeFalse()
-        ->and($mainMenuItemSource)->toContain('transform: translateX(175%) skewX(-18deg);')
-        ->and($mainMenuItemSource)->toContain('transform: translateX(-175%) skewX(-18deg);');
+        ->and($mainMenuItemSource)->toContain('transform: translateX(175%) skewX(45deg);')
+        ->and($mainMenuItemSource)->toContain('transform: translateX(-175%) skewX(45deg);');
 
     expect($homeSource)->not->toBeFalse()
         ->and($homeSource)->toContain("'quran-app-gate': {")
@@ -430,7 +430,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderScriptSource)->toContain('doesAppendSurahAffixAlwaysOnCopy: false')
         ->and($quranReaderScriptSource)->toContain('doesUseWesternNumerals: true')
         ->and($quranReaderScriptSource)->toContain('resolveControlPanelSettingsWithUserOverrides(defaultSettings = {})')
-        ->and($quranReaderScriptSource)->toContain('typeof window.getUserSettingsOverrides !== \'function\'')
+        ->and($quranReaderScriptSource)->toContain('if (typeof window.getUserSettingsOverrides === \'function\')')
         ->and($quranReaderScriptSource)->toContain('selectedDraggedSurahNumbers()')
         ->and($quranReaderScriptSource)->toContain('shouldAppendDraggedSurahAffix()')
         ->and($quranReaderScriptSource)->toContain('draggedSelectionSurahAffixes()')
@@ -482,7 +482,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderClassSource)->toContain('QuranReaderDataService');
 
     expect($navigationHistoryActionSource)
-        ->toContain('modalHeading(arabic_text(\'سجل التنقّل\'))')
+        ->toContain('modalHeading(arabic_text(\'سجلّ الانتقالات\'))')
         ->not->toContain('->slideOver()');
 
     expect($bookmarksManagerActionSource)
