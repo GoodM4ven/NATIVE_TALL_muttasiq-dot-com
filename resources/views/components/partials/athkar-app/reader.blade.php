@@ -1005,7 +1005,7 @@
     x-transition:leave-end="opacity-0! blur-[2px] athkar-shift-away"
 >
     <section
-        class="athkar-reader relative flex h-full min-h-0 w-full max-w-5xl flex-col justify-end gap-4 pb-5 pt-10 sm:h-auto sm:justify-center sm:gap-6 sm:py-10 md:py-5 lg:py-0"
+        class="athkar-reader relative flex h-full min-h-0 w-full max-w-5xl 3xl:max-w-4xl 4xl:max-w-4xl flex-col justify-end gap-4 pb-5 pt-10 sm:h-auto sm:justify-center sm:gap-6 sm:py-10 md:py-5 lg:py-0"
     >
         <div
             class="athkar-panel athkar-panel-actions flex flex-wrap items-center gap-2 px-3 py-2 sm:flex-nowrap sm:gap-4 sm:px-4 sm:py-3">
@@ -1088,7 +1088,7 @@
         </div>
 
         <div
-            class="athkar-panel Xoutline-primary-500/80 dark:Xoutline-primary-200/25 Xoutline-offset-[-0.75rem] sm:Xoutline-4 Xmax-h-[70svh] relative flex min-h-0 flex-1 touch-pan-y flex-col overflow-hidden transition-all focus:outline-none active:outline-none sm:max-h-[55svh] md:max-h-[58svh] lg:max-h-[60svh] 2xl:max-h-[min(45svh,40rem)]"
+            class="athkar-panel Xoutline-primary-500/80 dark:Xoutline-primary-200/25 Xoutline-offset-[-0.75rem] sm:Xoutline-4 Xmax-h-[70svh] relative flex min-h-0 flex-1 touch-pan-y flex-col overflow-hidden transition-all focus:outline-none active:outline-none sm:max-h-[55svh] md:max-h-[58svh] lg:max-h-[60svh] 2xl:max-h-[min(45svh,40rem)] 3xl:max-h-[min(39svh,33rem)] 4xl:max-h-[min(39svh,33rem)]"
             role="region"
             aria-roledescription="carousel"
             tabindex="0"
