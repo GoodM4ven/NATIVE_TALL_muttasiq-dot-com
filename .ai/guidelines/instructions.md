@@ -49,6 +49,9 @@ This shared source code base is representing the web version primarily, the one 
 - Do not write tests unless explicitely told to, except when shipping a new main feature; when you do add tests, prefer extending an existing related test, and keep feature tests under `tests/Feature/App` or `tests/Feature/Browser`.
 - For fast checks, start with the smallest relevant non-browser run, usually `php artisan test --compact <file-or-filter>`, then scale to the project wrappers `.scripts/testing/test.sh` or `.scripts/testing/paral.sh` and their Composer entrypoints such as `composer run test:raw` or `composer run testparal:raw`.
 - Browser tests are special in this Docker setup, so do not call Pest browser tests directly; use `.scripts/testing/browser.sh` or `composer run testbrowser:raw`, and treat `composer green` as the full pre-commit flow because it runs the verification checks, linting, and the raw parallel non-browser plus browser suites.
+  - Browser test wrapper defaults to fail-fast (`--stop-on-failure`) unless an explicit stop option is already passed. Set `BROWSER_TEST_STOP_ON_FAILURE=0` only when you intentionally want full-suite browser output.
+  - Browser timeout has a hard minimum floor of `10m` in the wrapper to avoid false halts from short `timeout` values.
+  - Browser wrapper auto-syncs Playwright runtime install when runtime version or install locations drift; do not bump Playwright package versions by default just because tests fail.
   - Do not run multiple individual browser tests simultaneously.
 
 ## Debugging

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 it('renders the home shell, validates core controls, and persists color scheme behavior', function () {
-    $page = visit('/');
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     resetBrowserState($page);
 
@@ -123,7 +123,7 @@ JS, true);
 });
 
 it('handles copyright panel visibility and opens updates tab from desktop and touch interactions', function () {
-    $desktopPage = visit('/');
+    $desktopPage = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     resetBrowserState($desktopPage);
 
@@ -217,7 +217,7 @@ JS, true);
 })()
 JS, true);
 
-    $mobilePage = visit('/');
+    $mobilePage = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     resetBrowserState($mobilePage, true);
 
@@ -303,7 +303,7 @@ JS);
 });
 
 it('maintains quick stack layout and navigation resilience across reload, modal, and color-scheme flows', function () {
-    $desktopPage = visit('/');
+    $desktopPage = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     resetBrowserState($desktopPage);
 
@@ -401,7 +401,7 @@ JS);
     expect((float) ($snapshot['maxOffset'] ?? 0.0))
         ->toBeLessThanOrEqual((float) ($snapshot['expectedMaxOffset'] ?? 0.0) + 0.15);
 
-    $mobilePage = visit('/');
+    $mobilePage = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     resetBrowserState($mobilePage, true);
     openAthkarGate($mobilePage, true);

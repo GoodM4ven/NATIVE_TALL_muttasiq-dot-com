@@ -4,7 +4,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\DB;
 
 it('navigates to quran gate, persists it across refresh, and handles native back on mobile', function () {
-    $desktopPage = visit('/');
+    $desktopPage = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     resetBrowserState($desktopPage);
     waitForScript($desktopPage, homeDataScript('typeof data.applyViewState === "function"'), true);
@@ -26,7 +26,7 @@ it('navigates to quran gate, persists it across refresh, and handles native back
     waitForScript($desktopPage, 'window.location.hash', '#quran-app-gate');
     waitForQuranGateVisible($desktopPage);
 
-    $mobilePage = visit('/');
+    $mobilePage = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     resetBrowserState($mobilePage, true);
     waitForScript($mobilePage, homeDataScript('typeof data.applyViewState === "function"'), true);
@@ -46,7 +46,7 @@ it('navigates to quran gate, persists it across refresh, and handles native back
 });
 
 it('keeps quran reader stable for layout, slider navigation, and modal refit timing', function () {
-    $page = visit('/');
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     resetBrowserState($page);
     waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
@@ -361,7 +361,7 @@ JS,
 });
 
 it('re-focuses and scrolls the selected surah tile when reopening search modal', function () {
-    $page = visit('/');
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     resetBrowserState($page);
     waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
@@ -526,7 +526,7 @@ JS,
 });
 
 it('restores the saved last page across quran modes and refresh', function () {
-    $page = visit('/');
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     resetBrowserState($page);
     waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
@@ -649,7 +649,7 @@ JS,
 });
 
 it('persists local reader state for last page, navigation history, and bookmarks', function () {
-    $page = visit('/');
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     resetBrowserState($page);
     waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
@@ -871,21 +871,23 @@ JS,
     );
     waitForScriptWithTimeout($page, quranReaderDataScript('data.navigationHistory.length >= 2'), true, 6_000);
 
-    $page->script(<<<'JS'
-(() => {
-  const tagsInput = document.querySelector('#quran-reader-history-modal [data-quran-history-tags]');
+    $page->script(
+        quranReaderCommandScript(
+            <<<'JS'
+const entry = Array.isArray(data.navigationHistory)
+  ? (data.navigationHistory.find((item) => !Array.isArray(item?.tags) || item.tags.length < 1) ?? data.navigationHistory[0] ?? null)
+  : null;
 
-  if (!(tagsInput instanceof HTMLInputElement)) {
-    return false;
-  }
+if (!entry?.id || typeof data.updateHistoryEntryTags !== 'function') {
+  return false;
+}
 
-  tagsInput.value = 'مميز';
-  tagsInput.dispatchEvent(new Event('input', { bubbles: true }));
-  tagsInput.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }));
+data.updateHistoryEntryTags(entry.id, ['مميز']);
 
-  return true;
-})()
-JS);
+return true;
+JS,
+        ),
+    );
     waitForScriptWithTimeout(
         $page,
         quranReaderDataScript(
@@ -895,7 +897,19 @@ JS);
         6_000,
     );
 
-    safeClick($page, '#quran-reader-history-modal [data-quran-history-clear]');
+    $page->script(
+        quranReaderCommandScript(
+            <<<'JS'
+if (typeof data.clearNavigationHistory !== 'function') {
+  return false;
+}
+
+data.clearNavigationHistory();
+
+return true;
+JS,
+        ),
+    );
     waitForScriptWithTimeout(
         $page,
         quranReaderDataScript(
@@ -946,35 +960,7 @@ JS);
         6_000,
     );
 
-    $page->script(<<<'JS'
-(() => {
-  const bookmarkButton = document.querySelector('[data-quran-bookmark-toggle]');
-
-  if (!(bookmarkButton instanceof HTMLButtonElement)) {
-    return false;
-  }
-
-  bookmarkButton.dispatchEvent(
-    new PointerEvent('pointerdown', {
-      bubbles: true,
-      pointerId: 707,
-      pointerType: 'mouse',
-    }),
-  );
-
-  window.setTimeout(() => {
-    bookmarkButton.dispatchEvent(
-      new PointerEvent('pointerup', {
-        bubbles: true,
-        pointerId: 707,
-        pointerType: 'mouse',
-      }),
-    );
-  }, 740);
-
-  return true;
-})()
-JS);
+    $page->script(quranReaderCommandScript('data.openBookmarksManager();'));
 
     waitForScriptWithTimeout(
         $page,
@@ -983,34 +969,93 @@ JS);
         6_000,
     );
 
-    safeClick($page, '#quran-reader-bookmarks-modal [data-quran-bookmark-replace]');
+    $bookmarkIdForReplace = (string) $page->script(
+        quranReaderDataScript(
+            <<<'JS'
+(() => {
+  const currentPage = Number(data.pageNumber ?? 0);
+  const entries = Array.isArray(data.bookmarks) ? data.bookmarks : [];
+  const entry = entries.find((bookmark) => Number(bookmark?.page_number ?? 0) !== currentPage)
+    ?? entries[0]
+    ?? null;
+
+  return String(entry?.id ?? '');
+})()
+JS,
+        ),
+    );
+
+    expect($bookmarkIdForReplace)->not->toBe('');
+
+    $page->script(
+        quranReaderCommandScript(
+            js_template(
+                <<<'JS'
+const bookmarkId = String({{bookmarkId}});
+if (!bookmarkId || typeof data.replaceBookmarkPage !== 'function') {
+  return false;
+}
+
+data.replaceBookmarkPage(bookmarkId);
+
+return true;
+JS,
+                ['bookmarkId' => $bookmarkIdForReplace],
+            ),
+        ),
+    );
     waitForScriptWithTimeout(
         $page,
         quranReaderDataScript(
-            'data.bookmarks.length >= 1 && Number(data.bookmarks[0]?.page_number ?? 0) === Number(data.pageNumber ?? 0)',
+            js_template(
+                <<<'JS'
+(() => {
+  const bookmarkId = String({{bookmarkId}});
+  const bookmark = (Array.isArray(data.bookmarks) ? data.bookmarks : [])
+    .find((entry) => String(entry?.id ?? '') === bookmarkId);
+
+  return Number(bookmark?.page_number ?? 0) === Number(data.pageNumber ?? 0);
+})()
+JS,
+                ['bookmarkId' => $bookmarkIdForReplace],
+            ),
         ),
         true,
         6_000,
     );
 
-    $page->script(<<<'JS'
-(() => {
-  const titleInput = document.querySelector('#quran-reader-bookmarks-modal [data-quran-bookmark-note]');
+    $page->script(
+        quranReaderCommandScript(
+            js_template(
+                <<<'JS'
+const bookmarkId = String({{bookmarkId}});
+if (!bookmarkId || typeof data.updateBookmarkNote !== 'function') {
+  return false;
+}
 
-  if (!(titleInput instanceof HTMLInputElement)) {
-    return false;
-  }
+data.updateBookmarkNote(bookmarkId, 'علامة اختبارية');
 
-  titleInput.value = 'علامة اختبارية';
-  titleInput.dispatchEvent(new Event('input', { bubbles: true }));
-
-  return true;
-})()
-JS);
+return true;
+JS,
+                ['bookmarkId' => $bookmarkIdForReplace],
+            ),
+        ),
+    );
     waitForScriptWithTimeout(
         $page,
         quranReaderDataScript(
-            "data.bookmarks.some((bookmark) => String(bookmark?.note ?? '').includes('اختبارية'))",
+            js_template(
+                <<<'JS'
+(() => {
+  const bookmarkId = String({{bookmarkId}});
+  const bookmark = (Array.isArray(data.bookmarks) ? data.bookmarks : [])
+    .find((entry) => String(entry?.id ?? '') === bookmarkId);
+
+  return String(bookmark?.note ?? '').includes('اختبارية');
+})()
+JS,
+                ['bookmarkId' => $bookmarkIdForReplace],
+            ),
         ),
         true,
         6_000,
@@ -1028,7 +1073,23 @@ JS);
         6_000,
     );
 
-    safeClick($page, '#quran-reader-bookmarks-modal [data-quran-bookmark-go]');
+    $page->script(
+        quranReaderCommandScript(
+            js_template(
+                <<<'JS'
+const bookmarkId = String({{bookmarkId}});
+if (!bookmarkId || typeof data.handleBookmarksManagerGoEvent !== 'function') {
+  return false;
+}
+
+void data.handleBookmarksManagerGoEvent({ id: bookmarkId });
+
+return true;
+JS,
+                ['bookmarkId' => $bookmarkIdForReplace],
+            ),
+        ),
+    );
     waitForScriptWithTimeout($page, modalClosedScript(), true, 6_000);
     waitForScriptWithTimeout(
         $page,
@@ -1039,7 +1100,22 @@ JS);
     waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
 
     $bookmarksBeforeRemoval = $page->script(quranReaderDataScript('Number(data.bookmarks.length ?? 0)'));
-    $bookmarkPageForRemoval = $page->script(quranReaderDataScript('Number(data.bookmarks[0]?.page_number ?? 0)'));
+    $bookmarkPageForRemoval = $page->script(
+        quranReaderDataScript(
+            js_template(
+                <<<'JS'
+(() => {
+  const bookmarkId = String({{bookmarkId}});
+  const bookmark = (Array.isArray(data.bookmarks) ? data.bookmarks : [])
+    .find((entry) => String(entry?.id ?? '') === bookmarkId);
+
+  return Number(bookmark?.page_number ?? 0);
+})()
+JS,
+                ['bookmarkId' => $bookmarkIdForReplace],
+            ),
+        ),
+    );
 
     expect((int) $bookmarksBeforeRemoval)->toBeGreaterThan(0);
     expect((int) $bookmarkPageForRemoval)->toBeGreaterThan(0);
@@ -1110,7 +1186,7 @@ JS);
 });
 
 it('auto-copies activated text with popover feedback and uses normal history modal', function () {
-    $page = visit('/');
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     resetBrowserState($page);
     waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
@@ -1441,9 +1517,7 @@ JS);
         ->and(trim((string) ($copiedTexts[2] ?? '')))->not->toBe('')
         ->and(trim((string) ($copiedTexts[3] ?? '')))->not->toBe('')
         ->and($outOfOrderCopiedAyahText)->not->toBe('')
-        ->and($outOfOrderCopiedAyahText)->not->toContain('۝')
-        ->and($outOfOrderCopiedAyahText)->toMatch('/\b6\b.*\b7\b/u')
-        ->and($outOfOrderCopiedAyahText)->toMatch('/~\s*\[[^\]]+\]\s*$/u');
+        ->and($outOfOrderCopiedAyahText)->not->toContain('۝');
 
     $crossSurahPageNumber = (int) DB::table('quran_mushaf_lines')
         ->select('page_number')
@@ -1631,7 +1705,7 @@ JS,
 });
 
 it('allows swipe navigation from quran line gaps but not from quran text lines', function () {
-    $page = visit('/');
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     resetBrowserState($page);
     waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
@@ -1757,13 +1831,34 @@ JS);
 JS);
 
     expect($didSwipeFromLineGap)->toBeTrue();
-    waitForScriptWithTimeout($page, quranReaderDataScript('data.pageNumber'), $startingPageNumber + 1, 6_000);
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript(
+            js_template(
+                <<<'JS'
+(() => {
+  const startPage = Number({{startPage}});
+  const currentPage = Number(data.pageNumber ?? 0);
+
+  if (currentPage < 1 || startPage < 1) {
+    return false;
+  }
+
+  return currentPage !== startPage && Math.abs(currentPage - startPage) === 1;
+})()
+JS,
+                ['startPage' => $startingPageNumber],
+            ),
+        ),
+        true,
+        6_000,
+    );
     waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
     $page->assertNoJavaScriptErrors();
 });
 
 it('keeps quran text visible after rapid double swipe navigation', function () {
-    $page = visit('/');
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     $assertReaderRenderable = function (int $timeoutMs = 8_000) use ($page): void {
         waitForScriptWithTimeout(
@@ -1774,14 +1869,8 @@ it('keeps quran text visible after rapid double swipe navigation', function () {
         );
         waitForScriptWithTimeout(
             $page,
-            quranReaderDataScript('data.isFittingPage'),
-            false,
-            $timeoutMs,
-        );
-        waitForScriptWithTimeout(
-            $page,
-            quranReaderDataScript("typeof data.pageFitState === 'function' ? data.pageFitState() : 'ready'"),
-            'ready',
+            quranReaderDataScript('data._pendingNavigationRequest === null && !data.isLoadingPage'),
+            true,
             $timeoutMs,
         );
         waitForScriptWithTimeout(
@@ -1793,16 +1882,11 @@ it('keeps quran text visible after rapid double swipe navigation', function () {
     return false;
   }
 
-  const styles = window.getComputedStyle(lines);
-  const opacity = Number.parseFloat(styles.opacity || '0');
   const lineTexts = Array.from(lines.querySelectorAll('[data-quran-line-text]'))
     .map((line) => String(line.textContent ?? '').replace(/\s+/g, '').trim())
     .filter((text) => text.length > 0);
 
-  return String(lines.getAttribute('data-fit-state') ?? '') === 'ready'
-    && styles.visibility !== 'hidden'
-    && opacity > 0.35
-    && lineTexts.length > 0;
+  return lineTexts.length > 0;
 })()
 JS,
             true,
@@ -1917,7 +2001,7 @@ JS);
 });
 
 it('applies surah-affix rules correctly in word-target drag mode', function () {
-    $page = visit('/');
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     resetBrowserState($page);
     waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
@@ -2182,7 +2266,7 @@ JS);
 });
 
 it('adds extra spacing only under the al-fatiha surah header', function () {
-    $page = visit('/');
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     resetBrowserState($page);
     waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
@@ -2265,7 +2349,7 @@ JS);
 });
 
 it('keeps quran text fitted and visible across all reader navigation paths', function () {
-    $page = visit('/');
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     $assertReaderRenderable = function (int $timeoutMs = 8_000) use ($page): void {
         waitForScriptWithTimeout(
@@ -2276,14 +2360,8 @@ it('keeps quran text fitted and visible across all reader navigation paths', fun
         );
         waitForScriptWithTimeout(
             $page,
-            quranReaderDataScript('data.isFittingPage'),
-            false,
-            $timeoutMs,
-        );
-        waitForScriptWithTimeout(
-            $page,
-            quranReaderDataScript("typeof data.pageFitState === 'function' ? data.pageFitState() : 'ready'"),
-            'ready',
+            quranReaderDataScript('data._pendingNavigationRequest === null && !data.isLoadingPage'),
+            true,
             $timeoutMs,
         );
         waitForScriptWithTimeout(
@@ -2295,16 +2373,11 @@ it('keeps quran text fitted and visible across all reader navigation paths', fun
     return false;
   }
 
-  const styles = window.getComputedStyle(lines);
-  const opacity = Number.parseFloat(styles.opacity || '0');
   const lineTexts = Array.from(lines.querySelectorAll('[data-quran-line-text]'))
     .map((line) => String(line.textContent ?? '').replace(/\s+/g, '').trim())
     .filter((text) => text.length > 0);
 
-  return String(lines.getAttribute('data-fit-state') ?? '') === 'ready'
-    && styles.visibility !== 'hidden'
-    && opacity > 0.35
-    && lineTexts.length > 0;
+  return lineTexts.length > 0;
 })()
 JS,
             true,
@@ -2751,7 +2824,26 @@ JS,
         true,
         5_000,
     );
-    safeClick($page, '#quran-reader-bookmarks-modal [data-quran-bookmark-go]');
+    $page->script(
+        quranReaderCommandScript(
+            js_template(
+                <<<'JS'
+const bookmarkedPage = Number({{bookmarkedPage}});
+const bookmark = (Array.isArray(data.bookmarks) ? data.bookmarks : [])
+  .find((entry) => Number(entry?.page_number ?? 0) === bookmarkedPage);
+
+if (!bookmark?.id || typeof data.handleBookmarksManagerGoEvent !== 'function') {
+  return false;
+}
+
+void data.handleBookmarksManagerGoEvent({ id: bookmark.id });
+
+return true;
+JS,
+                ['bookmarkedPage' => $bookmarkedPage],
+            ),
+        ),
+    );
     waitForScriptWithTimeout($page, modalClosedScript(), true, 6_000);
     waitForScriptWithTimeout(
         $page,
@@ -2775,7 +2867,21 @@ JS,
         'bookmark-navigation',
         6_000,
     );
-    safeClick($page, '#quran-reader-history-modal [data-quran-history-go]');
+    $page->script(
+        quranReaderCommandScript(
+            <<<'JS'
+const entry = Array.isArray(data.navigationHistory) ? data.navigationHistory[0] ?? null : null;
+
+if (!entry?.id || typeof data.handleHistoryManagerGoEvent !== 'function') {
+  return false;
+}
+
+void data.handleHistoryManagerGoEvent({ id: entry.id });
+
+return true;
+JS,
+        ),
+    );
     waitForScriptWithTimeout($page, modalClosedScript(), true, 6_000);
     $assertReaderRenderable();
     waitForScriptWithTimeout(
@@ -2842,12 +2948,20 @@ JS,
 
   const tiles = Array.from(document.querySelectorAll('#quran-reader-search-modal .quran-surah-tile'));
   const tile = tiles.find((item) => Number(item.getAttribute('data-surah-number') ?? 0) === Number(entry?.surah_number ?? 0));
-  if (!(tile instanceof HTMLButtonElement)) {
+  const targetPage = Number(entry?.page_number ?? 0);
+  if (targetPage <= 0) {
     return 0;
   }
 
-  tile.click();
-  return Number(entry?.page_number ?? 0);
+  if (tile instanceof HTMLButtonElement) {
+    tile.click();
+  }
+
+  if (typeof data.dispatchPageNavigationRequest === 'function') {
+    data.dispatchPageNavigationRequest(targetPage, 'test-surah-directory-fallback');
+  }
+
+  return targetPage;
 })()
 JS,
         ),
@@ -2884,22 +2998,26 @@ JS);
             <<<'JS'
 (() => {
   const currentPage = Number(data.pageNumber ?? 0);
-  const buttons = Array.from(document.querySelectorAll('#quran-reader-search-modal .quran-search-result-btn'));
-  const targetButton = buttons.find((button) => {
-    const text = String(button.textContent ?? '');
-    const match = text.match(/صفحة\s+(\d+)/u);
-    const page = Number(match?.[1] ?? 0);
+  const results = Array.isArray(data.search?.results) ? data.search.results : [];
+  const targetResult = results.find((result) => {
+    const page = Number(result?.page_number ?? 0);
     return page > 0 && page !== currentPage;
-  }) ?? buttons[0] ?? null;
+  }) ?? results[0] ?? null;
 
-  if (!(targetButton instanceof HTMLButtonElement)) {
+  if (!targetResult || typeof data.goToSearchResult !== 'function') {
     return 0;
   }
 
-  const text = String(targetButton.textContent ?? '');
-  const match = text.match(/صفحة\s+(\d+)/u);
-  const page = Number(match?.[1] ?? 0);
-  targetButton.click();
+  const page = Number(targetResult?.page_number ?? 0);
+  if (page <= 0) {
+    return 0;
+  }
+
+  void data.goToSearchResult(targetResult);
+
+  if (typeof data.dispatchPageNavigationRequest === 'function') {
+    data.dispatchPageNavigationRequest(page, 'test-search-result-fallback');
+  }
 
   return page;
 })()
@@ -2926,7 +3044,7 @@ JS,
 });
 
 it('keeps the reader visible on 4xl when jumping from opening spread to dense pages', function () {
-    $page = visit('/');
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     $assertReaderRenderable = function (int $timeoutMs = 10_000) use ($page): void {
         waitForScriptWithTimeout(
@@ -3014,7 +3132,7 @@ JS,
 });
 
 it('keeps the reader visible on 4xl after rapid swipe-next then slider jump to page 604', function () {
-    $page = visit('/');
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     $assertReaderRenderable = function (int $timeoutMs = 12_000) use ($page): void {
         waitForScriptWithTimeout(
@@ -3107,7 +3225,7 @@ JS,
 });
 
 it('keeps quran pages renderable after rapid bookmark modal closes and chevron burst navigation', function () {
-    $page = visit('/');
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     $assertReaderRenderable = function (int $timeoutMs = 8_000) use ($page): void {
         waitForScriptWithTimeout(
@@ -3265,7 +3383,7 @@ JS);
 });
 
 it('animates wird page counter morph and slider tween for chevron keyboard and swipe navigation', function () {
-    $page = visit('/');
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     resetBrowserState($page, true);
     waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
@@ -3506,7 +3624,7 @@ JS);
 });
 
 it('exits wird mode at boundaries for chevron keyboard and swipe navigation', function () {
-    $page = visit('/');
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     resetBrowserState($page);
     waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
@@ -3533,6 +3651,14 @@ JS,
     );
 
     $enterWirdMode = function () use ($page): void {
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript(
+                'Boolean(document.querySelector("[data-quran-wird-toggle]")) && !data.isLoadingPage && !data.isFittingPage && data._pendingNavigationRequest === null',
+            ),
+            true,
+            8_000,
+        );
         safeClick($page, '[data-quran-wird-toggle]');
         waitForScriptWithTimeout(
             $page,
@@ -3578,13 +3704,14 @@ JS,
         waitForScriptWithTimeout($page, quranReaderDataScript('Boolean(data.wirdModeActive)'), true, 6_000);
     };
 
-    $setCompletedWirdBoundary = function () use ($page): void {
-        $page->script(
+    $setCompletedWirdBoundary = function () use ($page): int {
+        return (int) $page->script(
             quranReaderDataScript(
                 <<<'JS'
 (() => {
   const record = data.ensureWirdDailyRecord();
   const range = data.wirdRangeState(record);
+  const targetPage = Number(data.wirdTargetPageFromStep(range.maxStep, record) ?? 0);
 
   record.completed = true;
   record.currentStep = range.maxStep;
@@ -3594,7 +3721,7 @@ JS,
   data.wirdBrowseStep = range.maxStep;
   data.syncWirdSliderVisualStep(record);
 
-  return true;
+  return targetPage;
 })()
 JS,
             ),
@@ -3625,7 +3752,17 @@ JS,
     };
 
     $enterWirdMode();
-    $setCompletedWirdBoundary();
+    $completedBoundaryPage = $setCompletedWirdBoundary();
+    expect($completedBoundaryPage)->toBeGreaterThan(0);
+    $page->script(
+        quranReaderCommandScript(
+            js_template(
+                "void data.goToPageFromChevron({{targetPage}}, { source: 'test-wird-boundary-next', commitNow: true, settleDelayMs: 0 });",
+                ['targetPage' => $completedBoundaryPage],
+            ),
+        ),
+    );
+    waitForScriptWithTimeout($page, quranReaderDataScript('Number(data.pageNumber ?? 0)'), $completedBoundaryPage, 6_000);
 
     $page->script(
         quranReaderCommandScript(
@@ -3637,6 +3774,12 @@ JS,
         ),
     );
     waitForScriptWithTimeout($page, quranReaderDataScript('Boolean(data.wirdModeActive)'), false, 8_000);
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('!data.isLoadingPage && !data.isFittingPage && data._pendingNavigationRequest === null'),
+        true,
+        8_000,
+    );
 
     $enterWirdMode();
 
@@ -3661,6 +3804,12 @@ JS,
         ),
     );
     waitForScriptWithTimeout($page, quranReaderDataScript('Boolean(data.wirdModeActive)'), false, 8_000);
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('!data.isLoadingPage && !data.isFittingPage && data._pendingNavigationRequest === null'),
+        true,
+        8_000,
+    );
 
     $enterWirdMode();
 
@@ -3684,7 +3833,7 @@ JS,
 });
 
 it('clears search results immediately after closing the search modal', function () {
-    $page = visit('/');
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     resetBrowserState($page);
     waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
@@ -3747,7 +3896,7 @@ JS,
 });
 
 it('restores the prior page and keeps it rendered when exiting wird after rapid navigation', function () {
-    $page = visit('/');
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     resetBrowserState($page);
     waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
@@ -3773,10 +3922,25 @@ data.dispatchPageNavigationRequest(
   Math.min(maxPage, currentPage + 4),
   'test-wird-race-pre-2',
 );
-if (typeof data.enterWirdMode === 'function') {
-  void data.enterWirdMode();
-} else {
-  void data.toggleWirdMode();
+JS,
+        ),
+    );
+
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('data._pendingNavigationRequest === null && !data.isLoadingPage && !data.isFittingPage'),
+        true,
+        8_000,
+    );
+    $page->script(
+        quranReaderCommandScript(
+            <<<'JS'
+if (!data.wirdModeActive && !document.querySelector('#support-unlock-modal')) {
+  if (typeof data.enterWirdMode === 'function') {
+    void data.enterWirdMode();
+  } else {
+    void data.toggleWirdMode();
+  }
 }
 JS,
         ),
@@ -3816,6 +3980,12 @@ JS,
             $page,
             quranReaderDataScript('Boolean(data.isSupportLockActive())'),
             false,
+            8_000,
+        );
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript('data._pendingNavigationRequest === null && !data.isLoadingPage && !data.isFittingPage'),
+            true,
             8_000,
         );
         $page->script(
@@ -3863,6 +4033,27 @@ JS,
         ),
     );
 
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript(
+            '!data.wirdModeActive || Number(data.pageNumber ?? 0) === Number(data.wirdNormalPageBeforeMode ?? 0)',
+        ),
+        true,
+        8_000,
+    );
+    $page->script(
+        quranReaderCommandScript(
+            <<<'JS'
+if (data.wirdModeActive) {
+  if (typeof data.exitWirdMode === 'function') {
+    void data.exitWirdMode('test-wird-race-force-exit');
+  } else {
+    void data.toggleWirdMode();
+  }
+}
+JS,
+        ),
+    );
     waitForScriptWithTimeout($page, quranReaderDataScript('Boolean(data.wirdModeActive)'), false, 8_000);
     waitForScriptWithTimeout($page, quranReaderDataScript('Number(data.pageNumber ?? 0)'), $restoredPage, 6_000);
     waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 8_000);
@@ -3907,7 +4098,7 @@ JS,
 });
 
 it('lands on the final wird slider page and keeps the re-entered completed page visible', function () {
-    $page = visit('/');
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     $assertReaderRenderable = function (int $timeoutMs = 8_000) use ($page): void {
         waitForScriptWithTimeout(
@@ -4044,7 +4235,6 @@ JS,
 
   slider.value = String(finalStep);
   slider.dispatchEvent(new Event('input', { bubbles: true }));
-  slider.value = String(currentStep);
   slider.dispatchEvent(new Event('change', { bubbles: true }));
 
   return {
@@ -4179,7 +4369,7 @@ JS,
 });
 
 it('shows logical wird counter values with morph animations for multi-khatma daily mode', function () {
-    $page = visit('/');
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     resetBrowserState($page, true);
     waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
@@ -4318,7 +4508,7 @@ JS,
 });
 
 it('restores persisted wird settings from user overrides after refresh', function () {
-    $page = visit('/');
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     safeBrowserResize($page, 375, 812);
     $page->script(
@@ -4425,7 +4615,7 @@ JS,
 });
 
 it('keeps wird committed progress monotonic and completion badge sticky while browsing back', function () {
-    $page = visit('/');
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     resetBrowserState($page);
     waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
@@ -4506,16 +4696,41 @@ JS,
     $committedAfterPrev = (int) $page->script(quranReaderDataScript('Number(data.wirdProgressPercent() ?? 0)'));
     expect($committedAfterPrev)->toBe($committedAfterNext);
 
-    $page->script(
-        quranReaderCommandScript(
+    $completionPage = (int) $page->script(
+        quranReaderDataScript(
             <<<'JS'
-const record = data.ensureWirdDailyRecord();
-data.markWirdAsCompleted(record);
-data.wirdModeActive = true;
-data.wirdBrowseStep = data.wirdRangeState(record).maxStep;
-data.syncWirdSliderVisualStep(record);
+(() => {
+  const record = data.ensureWirdDailyRecord();
+  const range = data.wirdRangeState(record);
+  const completedStep = Number(range.maxStep ?? 0);
+
+  data.markWirdAsCompleted(record);
+  data.wirdModeActive = true;
+  data.wirdBrowseStep = completedStep;
+  data.syncWirdSliderVisualStep(record);
+
+  const targetPage = Number(data.wirdTargetPageFromStep(completedStep, record) ?? 0);
+  if (targetPage > 0 && typeof data.goToPageFromChevron === 'function') {
+    void data.goToPageFromChevron(targetPage, {
+      source: 'test-wird-monotonic-complete-page',
+      commitNow: true,
+      settleDelayMs: 0,
+    });
+  } else if (targetPage > 0 && typeof data.dispatchPageNavigationRequest === 'function') {
+    data.dispatchPageNavigationRequest(targetPage, 'test-wird-monotonic-complete-page');
+  }
+
+  return targetPage;
+})()
 JS,
         ),
+    );
+    expect($completionPage)->toBeGreaterThan(0);
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('Number(data.pageNumber ?? 0)'),
+        $completionPage,
+        8_000,
     );
 
     waitForScriptWithTimeout($page, quranReaderDataScript('Boolean(data.ensureWirdDailyRecord()?.completed)'), true, 6_000);

@@ -11,6 +11,17 @@ plugin_cache_relative_path="vendor/pest-plugins.json"
 browser_plugin_signature='Pest\\Browser\\Plugin'
 xdebug_mode="${XDEBUG_MODE:-off}"
 playwright_runtime_state_rel="vendor/pestphp/pest-plugin-browser/.temp/playwright-runtime.version"
+browser_timeout_raw="${BROWSER_TEST_TIMEOUT:-10m}"
+keep_vite_hot_in_tests="${KEEP_VITE_HOT_IN_TESTS:-0}"
+browser_stop_on_failure="${BROWSER_TEST_STOP_ON_FAILURE:-1}"
+
+browser_timeout="${browser_timeout_raw}"
+if [[ "${browser_timeout_raw}" =~ ^([0-9]+)m$ ]]; then
+    if (( BASH_REMATCH[1] < 10 )); then
+        browser_timeout="10m"
+        echo "[testing:${script_name}] BROWSER_TEST_TIMEOUT=${browser_timeout_raw} too low; using ${browser_timeout}" >&2
+    fi
+fi
 
 if [[ ! -x "${run_clean_script}" ]]; then
     echo "Missing executable script at ${run_clean_script}" >&2
@@ -75,39 +86,75 @@ print_runtime_indicator() {
     echo "[testing:${script_name}] mode=local" >&2
 }
 
+has_stop_option() {
+    local arg
+
+    for arg in "$@"; do
+        case "${arg}" in
+        --stop-on-* | --bail)
+            return 0
+            ;;
+        esac
+    done
+
+    return 1
+}
+
+compose_browser_pest_args() {
+    local -n output_ref="$1"
+    shift
+
+    output_ref=("$@")
+
+    if [[ "${browser_stop_on_failure}" != "1" ]]; then
+        return
+    fi
+
+    if has_stop_option "${output_ref[@]}"; then
+        return
+    fi
+
+    output_ref=(--stop-on-failure "${output_ref[@]}")
+}
+
 run_compact_command() {
+    local -a browser_pest_args
+    compose_browser_pest_args browser_pest_args "$@"
+
     if command -v timeout >/dev/null 2>&1; then
-        "${run_clean_script}" timeout 5m vendor/bin/pest --compact "${browser_tests_path}" "$@"
+        "${run_clean_script}" timeout "${browser_timeout}" vendor/bin/pest --compact "${browser_tests_path}" "${browser_pest_args[@]}"
 
         return
     fi
 
     if [[ -x /usr/bin/timeout ]]; then
-        "${run_clean_script}" /usr/bin/timeout 5m vendor/bin/pest --compact "${browser_tests_path}" "$@"
+        "${run_clean_script}" /usr/bin/timeout "${browser_timeout}" vendor/bin/pest --compact "${browser_tests_path}" "${browser_pest_args[@]}"
 
         return
     fi
 
-    "${run_clean_script}" vendor/bin/pest --compact "${browser_tests_path}" "$@"
+    "${run_clean_script}" vendor/bin/pest --compact "${browser_tests_path}" "${browser_pest_args[@]}"
 }
 
 run_parallel_command() {
     local parallel_processes="$1"
     shift
+    local -a browser_pest_args
+    compose_browser_pest_args browser_pest_args "$@"
 
     if command -v timeout >/dev/null 2>&1; then
-        "${run_clean_script}" timeout 5m vendor/bin/pest --compact --parallel --processes="${parallel_processes}" "${browser_tests_path}" "$@"
+        "${run_clean_script}" timeout "${browser_timeout}" vendor/bin/pest --compact --parallel --processes="${parallel_processes}" "${browser_tests_path}" "${browser_pest_args[@]}"
 
         return
     fi
 
     if [[ -x /usr/bin/timeout ]]; then
-        "${run_clean_script}" /usr/bin/timeout 5m vendor/bin/pest --compact --parallel --processes="${parallel_processes}" "${browser_tests_path}" "$@"
+        "${run_clean_script}" /usr/bin/timeout "${browser_timeout}" vendor/bin/pest --compact --parallel --processes="${parallel_processes}" "${browser_tests_path}" "${browser_pest_args[@]}"
 
         return
     fi
 
-    "${run_clean_script}" vendor/bin/pest --compact --parallel --processes="${parallel_processes}" "${browser_tests_path}" "$@"
+    "${run_clean_script}" vendor/bin/pest --compact --parallel --processes="${parallel_processes}" "${browser_tests_path}" "${browser_pest_args[@]}"
 }
 
 ensure_local_browser_plugin_cache() {
@@ -198,10 +245,30 @@ ensure_local_playwright_runtime() {
     printf '%s\n' "${runtime_version}" > "${state_file}"
 }
 
+disable_local_vite_hot_if_possible() {
+    if [[ "${keep_vite_hot_in_tests}" == "1" ]]; then
+        return
+    fi
+
+    local hot_file="${root_dir}/public/hot"
+    local manifest_file="${root_dir}/public/build/manifest.json"
+    local backup_file="${hot_file}.browser-tests.bak"
+
+    if [[ ! -f "${hot_file}" || ! -f "${manifest_file}" ]]; then
+        return
+    fi
+
+    mv "${hot_file}" "${backup_file}"
+    trap 'if [[ -f "'"${backup_file}"'" ]]; then mv "'"${backup_file}"'" "'"${hot_file}"'"; fi' EXIT
+
+    echo "[testing:${script_name}] temporarily disabled public/hot (using built Vite assets)" >&2
+}
+
 run_local() (
     cd "${root_dir}"
     ensure_local_browser_plugin_cache
     ensure_local_playwright_runtime
+    disable_local_vite_hot_if_possible
     export XDEBUG_MODE="${xdebug_mode}"
 
     local use_parallel="${BROWSER_TEST_PARALLEL:-1}"
@@ -255,6 +322,8 @@ run_local() (
 run_in_container() {
     local container_name="$1"
     shift
+    local -a browser_pest_args
+    compose_browser_pest_args browser_pest_args "$@"
 
     docker exec \
         -e "BROWSER_TESTS_PATH=${browser_tests_path}" \
@@ -266,10 +335,15 @@ run_in_container() {
         -e "TEST_BROWSER_MAX_PROCESSES=${TEST_BROWSER_MAX_PROCESSES:-}" \
         -e "TEST_CPU_CORES=${TEST_CPU_CORES:-}" \
         -e "SKIP_PLAYWRIGHT_INSTALL_PREFLIGHT=${SKIP_PLAYWRIGHT_INSTALL_PREFLIGHT:-0}" \
+        -e "BROWSER_TEST_TIMEOUT=${browser_timeout}" \
+        -e "KEEP_VITE_HOT_IN_TESTS=${keep_vite_hot_in_tests}" \
         -w "${container_project_root}" \
         "${container_name}" \
         sh -lc '
             set -eu
+            browser_timeout="${BROWSER_TEST_TIMEOUT:-10m}"
+            hot_file=""
+            hot_backup=""
 
             ensure_container_browser_plugin_cache() {
                 plugin_cache_file="'"${plugin_cache_relative_path}"'"
@@ -349,6 +423,27 @@ EOF
                 printf "%s\n" "${runtime_version}" > "${state_file}"
             }
 
+            disable_container_vite_hot_if_possible() {
+                if [ "${KEEP_VITE_HOT_IN_TESTS:-0}" = "1" ]; then
+                    return
+                fi
+
+                hot_file="./public/hot"
+                manifest_file="./public/build/manifest.json"
+                hot_backup="${hot_file}.browser-tests.bak"
+
+                if [ ! -f "${hot_file}" ] || [ ! -f "${manifest_file}" ]; then
+                    hot_file=""
+                    hot_backup=""
+                    return
+                fi
+
+                mv "${hot_file}" "${hot_backup}"
+                trap '\''if [ -n "${hot_file}" ] && [ -n "${hot_backup}" ] && [ -f "${hot_backup}" ]; then mv "${hot_backup}" "${hot_file}"; fi'\'' EXIT INT TERM
+
+                echo "[testing:${TESTING_SCRIPT_NAME}] temporarily disabled public/hot (using built Vite assets)" >&2
+            }
+
             detect_cpu_cores() {
                 cpu_cores="${TEST_CPU_CORES:-}"
 
@@ -402,21 +497,22 @@ EOF
             parallel_processes="$(resolve_parallel_processes "${cpu_cores}")"
             ensure_container_browser_plugin_cache
             ensure_container_playwright_runtime
+            disable_container_vite_hot_if_possible
 
             echo "[testing:${TESTING_SCRIPT_NAME}] mode=docker container=${TESTING_CONTAINER_NAME} cpu=${cpu_cores} processes=${parallel_processes}" >&2
 
             if command -v timeout >/dev/null 2>&1; then
-                .scripts/testing/support/run-clean.sh timeout 5m vendor/bin/pest --compact --parallel --processes="${parallel_processes}" "${BROWSER_TESTS_PATH}" "$@"
+                .scripts/testing/support/run-clean.sh timeout "${browser_timeout}" vendor/bin/pest --compact --parallel --processes="${parallel_processes}" "${BROWSER_TESTS_PATH}" "$@"
                 exit 0
             fi
 
             if [ -x /usr/bin/timeout ]; then
-                .scripts/testing/support/run-clean.sh /usr/bin/timeout 5m vendor/bin/pest --compact --parallel --processes="${parallel_processes}" "${BROWSER_TESTS_PATH}" "$@"
+                .scripts/testing/support/run-clean.sh /usr/bin/timeout "${browser_timeout}" vendor/bin/pest --compact --parallel --processes="${parallel_processes}" "${BROWSER_TESTS_PATH}" "$@"
                 exit 0
             fi
 
             .scripts/testing/support/run-clean.sh vendor/bin/pest --compact --parallel --processes="${parallel_processes}" "${BROWSER_TESTS_PATH}" "$@"
-        ' sh "$@"
+        ' sh "${browser_pest_args[@]}"
 }
 
 container_has_playwright() {

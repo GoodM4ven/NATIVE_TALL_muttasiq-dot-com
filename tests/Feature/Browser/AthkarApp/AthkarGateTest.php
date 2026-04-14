@@ -5,7 +5,7 @@ declare(strict_types=1);
 use App\Models\Setting;
 
 it('navigates to the athkar gate, persists restored state, and handles native back to main menu then exit', function () {
-    $desktopPage = visit('/');
+    $desktopPage = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     resetBrowserState($desktopPage);
     openAthkarGate($desktopPage, false);
@@ -20,7 +20,7 @@ it('navigates to the athkar gate, persists restored state, and handles native ba
     waitForScript($desktopPage, homeDataScript('data.activeView'), 'athkar-app-gate');
     waitForGateVisible($desktopPage);
 
-    $mobilePage = visit('/');
+    $mobilePage = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     resetBrowserState($mobilePage, true);
     openAthkarGate($mobilePage, true);
@@ -46,7 +46,7 @@ it('navigates to the athkar gate, persists restored state, and handles native ba
 });
 
 it('handles athkar notice selection, confirmation/swipe transitions, and restored mobile back flow', function () {
-    $page = visit('/');
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     resetBrowserState($page);
     openAthkarGate($page, false);
@@ -78,7 +78,7 @@ it('handles athkar notice selection, confirmation/swipe transitions, and restore
 
     waitForReaderVisible($page);
 
-    $mobilePage = visit('/');
+    $mobilePage = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     resetBrowserState($mobilePage, true);
     openAthkarReader($mobilePage, 'sabah', true);

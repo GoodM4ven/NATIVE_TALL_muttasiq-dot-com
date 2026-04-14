@@ -542,25 +542,43 @@ function waitForAthkarSettings($page, array $settings): void
     waitForScript($page, athkarReaderDataScript(implode(' && ', $expressions)), true);
 }
 
-function clickModalAction($page, string $label): void
+function clickModalAction($page, string $label): bool
 {
-    $page->script(js_template(<<<'JS'
+    return (bool) $page->script(js_template(<<<'JS'
 (() => {
   const label = {{label}};
-  const modal = document.querySelector('.fi-modal-window');
-  if (!modal) {
+  const isVisible = (element) => {
+    if (!(element instanceof HTMLElement)) {
+      return false;
+    }
+
+    const style = window.getComputedStyle(element);
+
+    return style.display !== 'none' && style.visibility !== 'hidden' && element.getAttribute('aria-hidden') !== 'true';
+  };
+  const modals = Array.from(document.querySelectorAll('.fi-modal-window'))
+    .filter((element) => isVisible(element));
+
+  if (!modals.length) {
     return false;
   }
-  const submit = modal.querySelector('button[type="submit"]');
-  if (submit && submit.textContent?.trim().includes(label)) {
+
+  const modal = modals.find((element) => element.textContent?.includes(label)) ?? modals[0];
+  const submit = Array.from(modal.querySelectorAll('button[type="submit"]'))
+    .find((element) => element.textContent?.trim().includes(label));
+
+  if (submit) {
     submit.click();
     return true;
   }
+
   const button = Array.from(modal.querySelectorAll('button'))
     .find((el) => el.textContent?.trim().includes(label));
+
   if (!button) {
     return false;
   }
+
   if (button.type === 'submit') {
     const form = button.closest('form');
     if (form && typeof form.requestSubmit === 'function') {

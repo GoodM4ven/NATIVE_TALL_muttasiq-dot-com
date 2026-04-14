@@ -8,6 +8,7 @@
 /node_modules
 /public/build
 /public/hot
+/public/hot.browser-tests.bak
 /public/android-hot
 /public/storage
 /storage/*.key
