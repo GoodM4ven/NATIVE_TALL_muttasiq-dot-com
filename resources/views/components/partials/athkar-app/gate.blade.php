@@ -20,13 +20,6 @@
             --gate-glass-border-radius: calc(var(--radius) - 10px);
         }
 
-        /* .athkar-gate-wrap:not(.is-enhanced) {
-                --pane-split-duration: 250ms;
-                --spill-split-duration: 400ms;
-                --gate-blur: 0px !important;
-                --divider-glow-blur: 0px !important;
-                --spill-blur: 0px !important;
-            } */
         @media (max-width: 639px) {
             .athkar-gate-wrap {
                 --tilt: 5%;
@@ -43,37 +36,6 @@
             --edge-glow: rgba(56, 189, 248, 0.3);
         }
 
-        /* .athkar-gate-wrap:not(.is-enhanced) .athkar-gate {
-                box-shadow:
-                    0 20px 45px rgba(15, 23, 42, 0.22),
-                    inset 0 1px 0 rgba(255, 255, 255, 0.2);
-                backdrop-filter: none;
-                -webkit-backdrop-filter: none;
-            }
-
-            .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__glass {
-                backdrop-filter: none;
-                -webkit-backdrop-filter: none;
-                background: rgba(255, 255, 255, 0.08);
-            }
-
-            .dark .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__glass {
-                background: rgba(2, 6, 23, 0.45);
-            }
-
-            .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__spill {
-                filter: none;
-            }
-
-            .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__spill-image {
-                opacity: 0.5;
-                transform: scale(1.03);
-            }
-
-            .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__divider {
-                filter: none;
-                opacity: 0.85;
-            } */
         .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__divider,
         .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__veil {
             /* mix-blend-mode: normal; */
@@ -84,11 +46,6 @@
             /* display: none; */
         }
 
-        /* .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__label {
-                backdrop-filter: none;
-                -webkit-backdrop-filter: none;
-                text-shadow: 0 6px 12px rgba(2, 6, 23, 0.3);
-            } */
         .athkar-gate {
             position: relative;
             height: 100%;
@@ -287,9 +244,6 @@
             z-index: 5;
         }
 
-        /* .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__divider-glow {
-                opacity: 0.4;
-            } */
         .athkar-gate__label {
             position: absolute;
             z-index: 60;
@@ -302,9 +256,6 @@
             opacity: 0.72;
         }
 
-        /* .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__label {
-                opacity: 1;
-            } */
         .athkar-gate__label--night {
             background: color-mix(in srgb, var(--background) 72%, transparent);
             color: var(--foreground);
