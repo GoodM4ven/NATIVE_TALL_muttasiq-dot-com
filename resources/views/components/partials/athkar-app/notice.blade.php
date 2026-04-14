@@ -19,7 +19,6 @@
         .athkar-notice::before {
             content: "";
             position: absolute;
-            inset: 12px;
             border-radius: 20px;
             border: 1px solid color-mix(in srgb, var(--primary-400) 25%, transparent);
             background:
@@ -227,7 +226,7 @@
 @endassets
 
 <div
-    class="absolute inset-0 z-10 flex touch-pan-y select-none items-center justify-center px-4 py-6 sm:px-6"
+    class="absolute inset-0 z-10 flex touch-pan-y select-none items-center justify-center px-2 py-5 sm:px-6"
     x-cloak
     x-show="isNoticeVisible && !isCompletionVisible && !shouldSkipGuidancePanels()"
     x-transition:enter="transition-all ease-out duration-600 delay-150"
@@ -255,19 +254,19 @@
 
     <!-- Panel -->
     <section
-        class="athkar-notice max-w-[min(70vw,50rem)] md:max-w-[min(54vw,33rem)] lg:max-w-[min(50vw,33rem)] xl:max-w-[min(50vw,31rem)] 2xl:max-w-[min(65vw,37rem)] 3xl:max-w-[min(65vw,45rem)] 4xl:max-w-[min(70vw,50rem)] sm:max-h-[min(84svh,42rem)] md:max-h-[min(60svh,30rem)] lg:max-h-[min(50svh,30rem)] xl:max-h-[min(50svh,18.75rem)] 2xl:max-h-[min(60svh,24rem)] 3xl:max-h-[min(70svh,30rem)] 4xl:max-h-[min(84svh,42rem)] relative z-10 mt-4 flex w-full flex-col gap-4 overflow-hidden text-center sm:mt-0 sm:gap-5"
+        class="athkar-notice max-w-[min(92vw,36rem)] sm:max-w-[min(53vw,32rem)] md:max-w-[min(54vw,33rem)] lg:max-w-[min(50vw,33rem)] xl:max-w-[min(50vw,31rem)] 2xl:max-w-[min(65vw,37rem)] 3xl:max-w-[min(65vw,45rem)] 4xl:max-w-[min(70vw,50rem)] sm:max-h-[min(63svh,33rem)] md:max-h-[min(60svh,30rem)] lg:max-h-[min(50svh,30rem)] xl:max-h-[min(50svh,18.75rem)] 2xl:max-h-[min(60svh,24rem)] 3xl:max-h-[min(70svh,30rem)] 4xl:max-h-[min(84svh,42rem)] relative z-10 mt-4 flex w-full flex-col gap-4 overflow-hidden text-center sm:mt-0 sm:gap-5 before:inset-[12px] sm:before:inset-[6px] md:before:inset-[8px] lg:before:inset-[10px] xl:before:inset-[12px]"
         role="dialog"
         aria-live="polite"
     >
-        <div class="athkar-notice__paper pt-6 pb-12 px-7 md:pt-6 md:pb-7 md:px-5 lg:pt-8 lg:pb-7.5 lg:px-6 xl:pt-6 xl:pb-7 xl:px-5 2xl:pt-6 2xl:pb-12 2xl:px-7">
+        <div class="athkar-notice__paper pt-6 pb-9 px-4 sm:pt-6 sm:pb-6 sm:px-4 md:pt-6 md:pb-7 md:px-5 lg:pt-8 lg:pb-7.5 lg:px-6 xl:pt-6 xl:pb-7 xl:px-5 2xl:pt-6 2xl:pb-12 2xl:px-7">
             <div
-                class="athkar-notice__stack grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto_auto] gap-3 sm:gap-4 md:gap-2 lg:gap-2 xl:gap-2 2xl:gap-4">
+                class="athkar-notice__stack grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto_auto] gap-3 sm:gap-1.5 md:gap-2 lg:gap-2 xl:gap-2 2xl:gap-4">
                 <header class="flex flex-col items-center gap-1">
                     <span
-                        class="athkar-notice__title font-arabic-serif relative -top-2 text-[1.05rem] sm:text-[1.2rem] md:text-[0.75rem] lg:text-[0.75rem] xl:text-[0.85rem] 2xl:text-[1rem] 3xl:text-[1.3rem] 4xl:text-[1.45rem] 2xl:pt-2"
+                        class="athkar-notice__title font-arabic-serif relative -top-2 text-[0.9rem] sm:text-[0.7rem] md:text-[0.75rem] lg:text-[0.75rem] xl:text-[0.85rem] 2xl:text-[1rem] 3xl:text-[1.3rem] 4xl:text-[1.45rem] 2xl:pt-2"
                     >تنبيه</span>
                     <div
-                        class="athkar-notice__divider mx-auto mt-3 md:mt-0 lg:mt-0 xl:mt-0 2xl:mt-3"
+                        class="athkar-notice__divider mx-auto mt-1 sm:mt-0 md:mt-0 lg:mt-0 xl:mt-0 2xl:mt-3"
                         aria-hidden="true"
                     ></div>
                 </header>
@@ -277,7 +276,7 @@
                     data-fitty-box
                 >
                     <p
-                        class="athkar-notice__body-copy"
+                        class="athkar-notice__body-copy max-sm:text-[0.8rem]! sm:max-md:text-[0.61rem]! md:max-lg:text-[0.725rem]!"
                         data-fitty-target
                         data-fitty-enabled="false"
                         data-fitty-step="0.5"
@@ -293,23 +292,23 @@
 
                 <div class="flex justify-center">
                     <button
-                        class="athkar-notice__seal whitespace-nowrap gap-[0.85rem] md:gap-[0.2rem] lg:gap-[0.35rem] xl:gap-[0.85rem] px-[0.85rem] md:px-[0.3rem] lg:px-[0.4rem] xl:px-[0.65rem] 2xl:px-[0.85rem] py-[0.35rem] md:py-[0.225rem] lg:py-[0.15rem] xl:py-[0.35rem] 2xl:py-1 3xl:py-[0.35rem]"
+                        class="athkar-notice__seal whitespace-nowrap gap-[0.4rem] sm:gap-[0.225rem] md:gap-[0.2rem] lg:gap-[0.35rem] xl:gap-[0.85rem] px-[0.2rem] sm:px-[0.225rem] md:px-[0.3rem] lg:px-[0.4rem] xl:px-[0.65rem] 2xl:px-[0.85rem] py-[0.3rem] sm:py-[0.2rem] md:py-[0.225rem] lg:py-[0.15rem] xl:py-[0.35rem] 2xl:py-1 3xl:py-[0.35rem]"
                         type="button"
                         x-on:click="{{ open_link_native_aware('https://t.me/Ruqyah011/4730') }}"
                     >
                         <img
-                            class="h-[44px] md:h-[25px] lg:h-[27px] xl:h-[30px] 2xl:h-[36px] 3xl:h-[44px]"
+                            class="h-[28px] sm:h-[22px] md:h-[25px] lg:h-[27px] xl:h-[30px] 2xl:h-[36px] 3xl:h-[44px]"
                             src="{{ asset('images/references/alruqya-alshariyya.jpg') }}"
                             alt="قناة الرقية الشرعية"
                             loading="lazy"
                         />
                         <div class="text-start">
                             <p
-                                class="text-[0.72rem] font-semibold text-slate-900 sm:text-[0.8rem] md:text-[0.45rem] lg:text-[0.5rem] xl:text-[0.625rem] 2xl:text-[0.7rem] 3xl:text-[0.9rem] dark:text-white">
+                                class="text-[0.55rem] font-semibold text-slate-900 sm:text-[0.4rem] md:text-[0.45rem] lg:text-[0.5rem] xl:text-[0.625rem] 2xl:text-[0.7rem] 3xl:text-[0.9rem] dark:text-white">
                                 قناة الرقية الشرعية
                             </p>
                             <p
-                                class="text-[0.68rem] text-slate-500 sm:text-[0.75rem] md:text-[0.4rem] lg:text-[0.45rem] xl:text-[0.575rem] 2xl:text-[0.65rem] 3xl:text-[0.82rem] dark:text-slate-400">
+                                class="text-[0.45rem] text-slate-500 sm:text-[0.35rem] md:text-[0.4rem] lg:text-[0.45rem] xl:text-[0.575rem] 2xl:text-[0.65rem] 3xl:text-[0.82rem] dark:text-slate-400">
                                 t.me/Ruqyah011
                             </p>
                         </div>
@@ -322,9 +321,9 @@
                         type="button"
                         x-on:click="confirmNotice()"
                     >
-                        <span class="athkar-notice__cta-text text-[0.9rem] sm:text-[1rem] md:text-[0.5rem] lg:text-[0.55rem] xl:text-[0.65rem] 2xl:text-[0.7rem] 3xl:text-[0.9rem] 4xl:text-[1.08rem]">اضغط
+                        <span class="athkar-notice__cta-text text-[0.7rem] sm:text-[0.45rem] md:text-[0.5rem] lg:text-[0.55rem] xl:text-[0.65rem] 2xl:text-[0.7rem] 3xl:text-[0.9rem] 4xl:text-[1.08rem]">اضغط
                             للمتابعة</span>
-                        <span class="athkar-notice__cta-subtext text-[0.68rem] sm:text-[0.75rem] md:text-[0.45rem] lg:text-[0.45rem] xl:text-[0.55rem] 2xl:text-[0.65rem] 3xl:text-[0.7rem] 4xl:text-[0.82rem]">أو
+                        <span class="athkar-notice__cta-subtext text-[0.65rem] sm:text-[0.4rem] md:text-[0.45rem] lg:text-[0.45rem] xl:text-[0.55rem] 2xl:text-[0.65rem] 3xl:text-[0.7rem] 4xl:text-[0.82rem]">أو
                             اسحب
                             للأمام
                             للبدء</span>
