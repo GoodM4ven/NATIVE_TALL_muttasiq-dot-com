@@ -276,22 +276,20 @@
                     class="athkar-notice__body font-arabic-serif py-2"
                     data-fitty-box
                 >
+                    {{-- blade-formatter-disable --}}
                     <p
-                        class="athkar-notice__body-copy max-sm:text-[0.8rem]! sm:max-md:text-[0.61rem]! md:max-lg:text-[0.725rem]!"
+                        class="athkar-notice__body-copy max-sm:text-[0.8rem]! sm:max-md:text-[0.61rem]! md:max-lg:text-[0.725rem]! my-auto"
                         data-fitty-target
                         data-fitty-enabled="false"
                         data-fitty-step="0.5"
                         data-fitty-safe-padding-x="2"
                         data-fitty-safe-padding-y="2"
-                        x-bind:data-fitty-enabled="(isNoticeVisible && !isCompletionVisible && !shouldSkipGuidancePanels()).toString()"
-                        x-bind:data-fitty-min-size-override="$store.bp?.is?.('4xl') ? 23 : $store.bp?.is?.('3xl') ? 18 : $store.bp?.is?.('2xl') ? 15 : $store
-                            .bp?.is?.('xl') ? 4 : $store.bp?.is?.('lg') ? 9 : $store
-                            .bp?.is?.('md') ? 7 : $store.bp?.is?.('sm') ? 15 : 14"
-                        x-bind:data-fitty-max-size-override="$store.bp?.is?.('4xl') ? 27 : $store.bp?.is?.('3xl') ? 20 : $store.bp?.is?.('2xl') ? 19 : $store
-                            .bp?.is?.('xl') ? 11 : $store.bp?.is?.('lg') ? 18 : $store
-                            .bp?.is?.('md') ? 14 : $store.bp?.is?.('sm') ? 27 : 24"
-                    >{{ arabic_text('معظمُ الآياتِ هذه في البدايةِ لم يردْ عن النبيِّ صلى الله عليه وسلم أنه قالها — كأذكارٍ للصباحِ والمساء — ولكن ورد عنه أنه كان يستفتح الدعاءَ بالثناء، وخيرُ الثناءِ ثناءُ اللهِ على نفسه، ولذا جمعناه ووضعناه في المقدمة، لتُستجابَ أدعيةُ الأذكارِ أتمَّ الإجابة، وليقوى حصنك وتوفيقك وتيسيرُ أمورك بإذن الله...') }}
-                    </p>
+                        x-bind:data-fitty-enabled="(isNoticeVisible && !isCompletionVisible && !shouldSkipGuidancePanels() && $store.bp?.is?.('md+')).toString()"
+                        x-bind:data-fitty-safe-padding-y="$store.bp?.is?.('md+') ? 24 : 2"
+                        x-bind:data-fitty-min-size-override="$store.bp?.is?.('4xl') ? 23 : $store.bp?.is?.('3xl') ? 18 : $store.bp?.is?.('2xl') ? 15 : $store.bp?.is?.('xl') ? 4 : $store.bp?.is?.('lg') ? 9 : $store.bp?.is?.('md') ? 7 : $store.bp?.is?.('sm') ? 15 : 14"
+                        x-bind:data-fitty-max-size-override="$store.bp?.is?.('4xl') ? 27 : $store.bp?.is?.('3xl') ? 20 : $store.bp?.is?.('2xl') ? 19 : $store.bp?.is?.('xl') ? 11 : $store.bp?.is?.('lg') ? 18 : $store.bp?.is?.('md') ? 14 : $store.bp?.is?.('sm') ? 27 : 24"
+                    >{{ arabic_text('معظمُ الآياتِ هذه في البدايةِ لم يردْ عن النبيِّ صلى الله عليه وسلم أنه قالها — كأذكارٍ للصباحِ والمساء — ولكن ورد عنه أنه كان يستفتح الدعاءَ بالثناء، وخيرُ الثناءِ ثناءُ اللهِ على نفسه، ولذا جمعناه ووضعناه في المقدمة، لتُستجابَ أدعيةُ الأذكارِ أتمَّ الإجابة، وليقوى حصنك وتوفيقك وتيسيرُ أمورك بإذن الله...') }}</p>
+                    {{-- blade-formatter-enable --}}
                 </div>
 
                 <div class="flex justify-center">
