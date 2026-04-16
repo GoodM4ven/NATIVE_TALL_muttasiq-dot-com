@@ -992,7 +992,7 @@
 @endassets
 
 <div
-    class="absolute inset-0 z-10 flex select-none items-center justify-center px-4 py-5 sm:px-6 sm:py-12"
+    class="absolute inset-0 z-10 flex select-none items-center justify-center px-4 py-5 sm:px-6 sm:py-12 xl:px-5 xl:py-9 2xl:px-6 2xl:py-12"
     x-cloak
     x-show="views[`athkar-app-gate`].isReaderVisible && !isCompletionVisible"
     x-bind:class="hintIndex !== null && 'z-30!'"
@@ -1005,12 +1005,12 @@
     x-transition:leave-end="opacity-0! blur-[2px] athkar-shift-away"
 >
     <section
-        class="athkar-reader relative flex h-full min-h-0 w-full max-w-5xl 3xl:max-w-4xl 4xl:max-w-4xl flex-col justify-end gap-4 pb-5 pt-10 sm:h-auto sm:justify-center sm:gap-6 sm:py-10 md:py-5 lg:py-0"
+        class="athkar-reader relative flex h-full min-h-0 w-full max-w-5xl lg:max-w-165 xl:max-w-178 2xl:max-w-190 3xl:max-w-212 4xl:max-w-4xl flex-col justify-end gap-4 pb-5 pt-10 sm:h-auto sm:justify-center sm:gap-6 lg:gap-3 xl:gap-4 2xl:gap-5 3xl:gap-6 sm:py-10 md:py-5 lg:py-0"
     >
         <div
-            class="athkar-panel athkar-panel-actions flex flex-wrap items-center gap-2 px-3 py-2 sm:flex-nowrap sm:gap-4 sm:px-4 sm:py-3">
+            class="athkar-panel athkar-panel-actions flex flex-wrap items-center gap-2 px-3 py-2 sm:flex-nowrap sm:gap-4 sm:px-4 sm:py-3 lg:px-[0.5rem] lg:py-[0.3rem] xl:px-[0.58rem] xl:py-[0.34rem] 2xl:px-3 2xl:py-2 3xl:px-4 3xl:py-3">
             <button
-                class="athkar-chip athkar-chip--manager focus-visible:outline-primary-500 relative inline-flex cursor-pointer items-center justify-center px-3 py-2 text-xs font-semibold shadow-inner transition focus-visible:outline-2 focus-visible:outline-offset-2 sm:px-4 sm:py-3"
+                class="athkar-chip athkar-chip--manager focus-visible:outline-primary-500 relative inline-flex cursor-pointer items-center justify-center px-3 py-2 text-xs lg:text-[0.575rem] xl:text-[0.6rem] 2xl:text-[0.7rem] 3xl:text-xs font-semibold shadow-inner transition focus-visible:outline-2 focus-visible:outline-offset-2 sm:px-4 sm:py-3 lg:px-[0.6rem] lg:py-[0.5rem] xl:px-[0.7rem] xl:py-[0.580rem] 2xl:px-3 2xl:py-2 3xl:px-4 3xl:py-3"
                 data-athkar-open-manager
                 type="button"
                 x-on:click="$tippy.hide(); openGateAndManageAthkar()"
@@ -1020,9 +1020,9 @@
                 x-on:blur="$tippy.hide()"
             ><span x-text="activeLabel"></span></button>
 
-            <div class="flex flex-1 items-center gap-0.5 text-xs text-gray-600 sm:gap-3 dark:text-gray-300">
+            <div class="flex flex-1 items-center gap-0.5 text-[0.85rem] sm:text-[0.95rem] lg:text-[0.7rem] xl:text-[0.7rem] 2xl:text-[0.85rem] 3xl:text-[0.95rem] text-gray-600 sm:gap-3 dark:text-gray-300">
                 <span
-                    class="text-primary-700 dark:text-primary-200 inline-flex min-w-[4.3rem] items-center justify-center gap-1 text-center text-[0.85rem] tabular-nums sm:min-w-[4.6rem] sm:text-[0.95rem]"
+                    class="text-primary-700 dark:text-primary-200 inline-flex min-w-[4.3rem] items-center justify-center gap-1 text-center tabular-nums sm:min-w-[4.6rem] "
                     dir="ltr"
                 >
                     <span x-text="`${totalRequiredCount} /`"></span>
@@ -1081,14 +1081,14 @@
                     <livewire:athkar-app.hidden-completion-button />
                 </div>
                 <span
-                    class="text-primary-700 dark:text-primary-200 ms-2 text-[0.85rem] sm:text-[0.95rem]"
+                    class="text-primary-700 dark:text-primary-200 ms-2"
                     x-text="`${slideProgressPercent}%`"
                 ></span>
             </div>
         </div>
 
         <div
-            class="athkar-panel Xoutline-primary-500/80 dark:Xoutline-primary-200/25 Xoutline-offset-[-0.75rem] sm:Xoutline-4 Xmax-h-[70svh] relative flex min-h-0 flex-1 touch-pan-y flex-col overflow-hidden transition-all focus:outline-none active:outline-none sm:max-h-[55svh] md:max-h-[58svh] lg:max-h-[60svh] 2xl:max-h-[min(45svh,40rem)] 3xl:max-h-[min(39svh,33rem)] 4xl:max-h-[min(39svh,33rem)]"
+            class="athkar-panel Xoutline-primary-500/80 dark:Xoutline-primary-200/25 Xoutline-offset-[-0.75rem] sm:Xoutline-4 Xmax-h-[70svh] relative flex min-h-0 flex-1 touch-pan-y flex-col overflow-hidden transition-all focus:outline-none active:outline-none sm:max-h-[55svh] md:max-h-[58svh] lg:max-h-[55svh] xl:max-h-[75svh] 2xl:max-h-[min(53svh,48rem)] 3xl:max-h-[min(42svh,37rem)] 4xl:max-h-[min(39svh,33rem)]"
             role="region"
             aria-roledescription="carousel"
             tabindex="0"
@@ -1255,17 +1255,17 @@
             </div>
 
             <div
-                class="pointer-events-auto absolute top-7 z-40 hidden items-center justify-between gap-4 sm:flex"
+                class="pointer-events-auto absolute top-7 xl:top-6 2xl:top-7 z-40 hidden items-center justify-between gap-4 sm:flex"
                 data-athkar-desktop-counter-row
             >
                 <div class="w-16"></div>
 
                 <div
-                    class="pointer-events-auto flex items-center justify-center gap-3"
+                    class="pointer-events-auto flex items-center justify-center gap-3 text-sm sm:text-base lg:text-[0.65rem] xl:text-[0.7rem] 2xl:text-sm 3xl:text-base"
                     data-athkar-desktop-counter
                     x-bind:data-counter-pulse="shouldEnableVisualEnhancements() ? sharedCounterPulseState() : 'inactive'"
                 >
-                    <div class="group relative h-20 w-20 sm:h-24 sm:w-24">
+                    <div class="group relative h-20 w-20 sm:h-24 sm:w-24 lg:h-19 lg:w-19 xl:h-20 xl:w-19.5 2xl:h-22 2xl:w-22 3xl:h-24 3xl:w-24">
                         <div class="athkar-counter-repel"></div>
                         <div
                             class="athkar-counter-ring absolute inset-0 rounded-full"
@@ -1276,7 +1276,7 @@
                         </div>
 
                         <div
-                            class="text-primary-800 dark:text-primary-100 absolute inset-0 flex select-none items-center justify-center gap-1 text-xs font-semibold tabular-nums sm:text-base"
+                            class="text-primary-800 dark:text-primary-100 absolute inset-0 flex select-none items-center justify-center gap-1 font-semibold tabular-nums"
                             dir="ltr"
                         >
                             <span x-text="`${requiredCount(activeIndex)} /`"></span>
@@ -1344,7 +1344,7 @@
                         </template>
 
                         <span
-                            class="absolute -left-10 top-1/2 -translate-y-1/2 select-none text-sm text-gray-600 sm:-left-14 sm:text-base dark:text-gray-300"
+                            class="absolute -left-10 top-1/2 -translate-y-1/2 select-none text-gray-600 sm:-left-14 lg:-left-10 xl:-left-11 2xl:-left-12 3xl:-left-14 dark:text-gray-300"
                         >{{ arabic_text('العدد') }}</span>
                     </div>
                 </div>
@@ -1372,6 +1372,7 @@
                     </button>
                 </div>
             </div>
+
             <!-- Athkar -->
             <div
                 class="flex h-full min-h-0 w-full flex-1 transition-transform duration-700 ease-out"
@@ -1382,7 +1383,7 @@
                     x-bind:key="itemKey(item, index)"
                 >
                     <article
-                        class="pointer-events-none relative flex h-full min-h-0 w-full shrink-0 flex-col px-3.5 pb-4 pt-4 transition-opacity duration-700 sm:px-10 sm:pb-8 sm:pt-7"
+                        class="pointer-events-none relative flex h-full min-h-0 w-full shrink-0 flex-col px-3.5 pb-4 pt-4 transition-opacity duration-700 sm:px-10 sm:pb-8 sm:pt-7 xl:px-7 xl:pb-6 xl:pt-6 2xl:px-10 2xl:pb-8 2xl:pt-7"
                         data-athkar-slide
                         x-bind:class="index === activeIndex ? 'opacity-100' : 'opacity-0'"
                         x-bind:data-active="index === activeIndex ? 'true' : 'false'"
@@ -1391,13 +1392,13 @@
                             <div class="contents">
                                 <!-- Content -->
                                 <div
-                                    class="pointer-events-auto flex min-h-0 flex-1 flex-col gap-3 sm:gap-5 sm:pt-4"
+                                    class="pointer-events-auto flex min-h-0 flex-1 flex-col gap-3 sm:gap-5 sm:pt-4 xl:gap-4 xl:pt-3 2xl:gap-5 2xl:pt-4"
                                     x-bind:class="{ 'pointer-events-none!': isHintOpen(activeIndex) }"
                                 >
 
                                     <!-- Althikr -->
                                     <button
-                                        class="athkar-tap group relative flex min-h-0 w-full flex-1 touch-manipulation flex-col items-center justify-center gap-4 overflow-hidden rounded-sm border border-transparent px-2 py-1.5 text-center transition sm:px-4 sm:py-6"
+                                        class="athkar-tap group relative flex min-h-0 w-full flex-1 touch-manipulation flex-col items-center justify-center gap-4 overflow-hidden rounded-sm border border-transparent px-2 py-1.5 text-center transition sm:px-4 sm:py-6 xl:px-3 xl:py-5 2xl:px-3 2xl:py-5 3xl:px-4 3xl:py-6"
                                         data-athkar-tap
                                         type="button"
                                         x-on:click="handleTap()"
@@ -1408,7 +1409,7 @@
                                         }"
                                     >
                                         <div
-                                            class="{{ twMerge('relative Xmt-8 flex w-full min-h-0 flex-1 flex-col justify-center gap-3 overflow-hidden px-[0.3rem] Xsm:mt-0 sm:justify-center sm:gap-4 sm:px-4 md:px-10 transition-opacity') }}"
+                                            class="{{ twMerge('relative Xmt-8 flex w-full min-h-0 flex-1 flex-col justify-center gap-3 overflow-hidden px-[0.3rem] Xsm:mt-0 sm:justify-center sm:gap-4 sm:px-4 md:px-10 lg:px-0 xl:px-0 2xl:px-0 3xl:px-10 transition-opacity') }}"
                                             data-athkar-text-box
                                             data-fitty-box
                                             dir="rtl"
@@ -1420,20 +1421,12 @@
                                             x-on:touchmove.capture="moveHoldCopy($event)"
                                             x-on:touchend.capture="endHoldCopy($event)"
                                             x-on:touchcancel.capture="cancelHoldCopy()"
-                                            x-on:pointerdown="
-                                        beginTextScroll($event);
-                                    "
-                                            x-on:pointermove="
-                                        moveTextScroll($event);
-                                    "
+                                            x-on:pointerdown="beginTextScroll($event);"
+                                            x-on:pointermove="moveTextScroll($event);"
                                             x-on:pointerup="endTextScroll()"
                                             x-on:pointercancel="endTextScroll()"
-                                            x-on:touchstart="
-                                        beginTextScroll($event);
-                                    "
-                                            x-on:touchmove="
-                                        moveTextScroll($event);
-                                    "
+                                            x-on:touchstart="beginTextScroll($event);"
+                                            x-on:touchmove="moveTextScroll($event);"
                                             x-on:touchend="endTextScroll()"
                                             x-on:touchcancel="endTextScroll()"
                                         >
@@ -1496,7 +1489,7 @@
 
                                     <!-- Completion Indicator -->
                                     <div
-                                        class="relative flex items-center justify-between gap-3 text-sm text-gray-600 sm:text-base dark:text-gray-300">
+                                        class="relative flex items-center justify-between gap-3 text-gray-600 text-[0.65rem] sm:text-sm xl:text-[0.7rem] 2xl:text-[0.8rem] 3xl:text-sm dark:text-gray-300">
                                         <span
                                             class="text-primary-700 dark:text-primary-200 inline-flex min-w-[4.4rem] items-center justify-center gap-1 text-center tabular-nums opacity-0 transition-opacity duration-300"
                                             x-data="{
@@ -1569,11 +1562,11 @@
                                     "
                                         >
                                             <span
-                                                class="athkar-complete-badge px-2.5 py-1 text-[0.65rem] font-semibold opacity-0 transition-opacity duration-300 sm:px-3 sm:text-sm"
+                                                class="athkar-complete-badge px-2.5 py-1  font-semibold opacity-0 transition-opacity duration-300 sm:px-3 "
                                                 x-bind:class="isVisible && isItemComplete(index) && 'opacity-100!'"
                                             >{{ arabic_text('تم بحمد الله') }}</span>
                                             <span
-                                                class="rounded-bl-lg! rounded-sm border border-gray-300 bg-gray-100 px-2 py-1 text-[0.65rem] font-semibold text-gray-700 opacity-0 shadow-sm transition-opacity duration-300 sm:px-3 sm:text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                                                class="rounded-bl-lg! rounded-sm border border-gray-300 bg-gray-100 px-2 py-1  font-semibold text-gray-700 opacity-0 shadow-sm transition-opacity duration-300 sm:px-3  dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
                                                 x-bind:class="isVisible && 'opacity-100!'"
                                                 x-text="activeTypeLabel(index)"
                                             ></span>
@@ -1588,7 +1581,7 @@
 
         <div class="flex items-center gap-2">
             <button
-                class="athkar-nav__arrow inline-flex h-7 w-7 items-center justify-center rounded-sm transition disabled:cursor-not-allowed disabled:opacity-60"
+                class="athkar-nav__arrow inline-flex h-7 w-7 xl:h-6 xl:w-6 2xl:h-7 2xl:w-7 items-center justify-center rounded-sm transition disabled:cursor-not-allowed disabled:opacity-60"
                 type="button"
                 aria-label="{{ arabic_text('السابق') }}"
                 x-bind:disabled="activeIndex === 0"
@@ -1611,7 +1604,7 @@
 
             <div class="flex-1">
                 <div
-                    class="athkar-nav relative h-6 w-full touch-pan-y select-none rounded-sm"
+                    class="athkar-nav relative h-6 xl:h-5 2xl:h-6 w-full touch-pan-y select-none rounded-sm"
                     role="slider"
                     dir="rtl"
                     x-ref="athkarNav"
@@ -1656,7 +1649,7 @@
             </div>
 
             <button
-                class="athkar-nav__arrow inline-flex h-7 w-7 items-center justify-center rounded-sm transition disabled:cursor-not-allowed disabled:opacity-60"
+                class="athkar-nav__arrow inline-flex h-7 w-7 xl:h-6 xl:w-6 2xl:h-7 2xl:w-7 items-center justify-center rounded-sm transition disabled:cursor-not-allowed disabled:opacity-60"
                 type="button"
                 aria-label="{{ arabic_text('التالي') }}"
                 x-bind:disabled="!canAdvance()"
