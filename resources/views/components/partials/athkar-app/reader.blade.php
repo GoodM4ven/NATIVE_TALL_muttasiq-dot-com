@@ -1395,7 +1395,7 @@
                                 >
                                     <!-- Althikr -->
                                     <button
-                                        class="athkar-tap group relative flex min-h-0 w-full flex-1 touch-manipulation flex-col items-center justify-center gap-4 overflow-hidden rounded-sm border border-transparent px-2 py-1.5 text-center transition sm:px-4 sm:py-2.5 md:px-13 md:py-3 lg:px-12 xl:px-3 xl:py-5 2xl:px-3 2xl:py-5 3xl:px-4 4xl:px-5 3xl:py-6"
+                                        class="athkar-tap group relative flex min-h-0 w-full flex-1 touch-manipulation flex-col items-center justify-center gap-4 overflow-hidden rounded-sm border border-transparent px-2 py-1.5 text-center transition sm:px-10 sm:py-2.5 md:px-13 md:py-3 lg:px-12 xl:px-3 xl:py-5 2xl:px-3 2xl:py-5 3xl:px-4 4xl:px-5 3xl:py-6"
                                         data-athkar-tap
                                         type="button"
                                         x-on:click="handleTap()"

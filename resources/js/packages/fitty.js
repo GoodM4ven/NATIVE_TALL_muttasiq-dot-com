@@ -6,6 +6,7 @@
 const athkarSettingsStorageKey = 'athkar-settings-v1';
 const minimumMainTextSizeKey = 'minimum_main_text_size';
 const maximumMainTextSizeKey = 'maximum_main_text_size';
+const minimumMainTextDisplaySizePx = 6;
 const breakpointMainTextSizeReductions = Object.freeze({
     '4xl': 0,
     '3xl': 1,
@@ -167,6 +168,13 @@ const normalizeMainTextSize = (value, fallback, limits) => {
     return Math.min(limits.max, Math.max(limits.min, rounded));
 };
 
+const normalizeDisplayMainTextSize = (value, fallback, limits) => {
+    const numeric = Number.isFinite(Number(value)) ? Number(value) : Number(fallback);
+    const rounded = Number.isFinite(numeric) ? Math.trunc(numeric) : Number(fallback);
+
+    return Math.min(limits.max, Math.max(minimumMainTextDisplaySizePx, rounded));
+};
+
 const readStoredSettings = () => {
     if (typeof localStorage === 'undefined') {
         return {};
@@ -200,12 +208,12 @@ const resolveMainTextSizeSettings = () => {
         maximumLimits.default,
         maximumLimits,
     );
-    const breakpointAdjustedMinimum = normalizeMainTextSize(
+    const breakpointAdjustedMinimum = normalizeDisplayMainTextSize(
         minimum - breakpointReduction,
         minimumLimits.default,
         minimumLimits,
     );
-    const breakpointAdjustedMaximum = normalizeMainTextSize(
+    const breakpointAdjustedMaximum = normalizeDisplayMainTextSize(
         maximum - breakpointReduction,
         maximumLimits.default,
         maximumLimits,
