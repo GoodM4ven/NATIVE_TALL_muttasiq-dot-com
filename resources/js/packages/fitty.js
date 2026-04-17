@@ -6,6 +6,16 @@
 const athkarSettingsStorageKey = 'athkar-settings-v1';
 const minimumMainTextSizeKey = 'minimum_main_text_size';
 const maximumMainTextSizeKey = 'maximum_main_text_size';
+const breakpointMainTextSizeReductions = Object.freeze({
+    '4xl': 0,
+    '3xl': 1,
+    '2xl': 2,
+    xl: 3,
+    lg: 5,
+    md: 7,
+    sm: 10,
+    base: 9,
+});
 const fallbackMainTextSizeLimits = Object.freeze({
     [minimumMainTextSizeKey]: Object.freeze({
         min: 10,
@@ -93,6 +103,21 @@ const parseNumber = (value, fallback = null) => {
     return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const readBreakpoint = () => {
+    const raw = getComputedStyle(document.documentElement)
+        .getPropertyValue('--breakpoint')
+        .trim()
+        .replace(/['"]+/g, '');
+
+    return raw || 'base';
+};
+
+const resolveMainTextSizeBreakpointReduction = () => {
+    const breakpoint = readBreakpoint();
+
+    return breakpointMainTextSizeReductions[breakpoint] ?? 0;
+};
+
 const toFiniteInteger = (value, fallback) => {
     const numeric = Number(value);
 
@@ -159,6 +184,7 @@ const resolveMainTextSizeSettings = () => {
     const mainTextSizeLimits = resolveMainTextSizeLimits();
     const minimumLimits = mainTextSizeLimits[minimumMainTextSizeKey];
     const maximumLimits = mainTextSizeLimits[maximumMainTextSizeKey];
+    const breakpointReduction = resolveMainTextSizeBreakpointReduction();
     const stored = readStoredSettings();
     const source =
         latestSettingsOverride && typeof latestSettingsOverride === 'object'
@@ -174,10 +200,20 @@ const resolveMainTextSizeSettings = () => {
         maximumLimits.default,
         maximumLimits,
     );
+    const breakpointAdjustedMinimum = normalizeMainTextSize(
+        minimum - breakpointReduction,
+        minimumLimits.default,
+        minimumLimits,
+    );
+    const breakpointAdjustedMaximum = normalizeMainTextSize(
+        maximum - breakpointReduction,
+        maximumLimits.default,
+        maximumLimits,
+    );
 
     return {
-        minimum: Math.min(minimum, maximum),
-        maximum: Math.max(minimum, maximum),
+        minimum: Math.min(breakpointAdjustedMinimum, breakpointAdjustedMaximum),
+        maximum: Math.max(breakpointAdjustedMinimum, breakpointAdjustedMaximum),
         minimumLimits,
         maximumLimits,
     };
