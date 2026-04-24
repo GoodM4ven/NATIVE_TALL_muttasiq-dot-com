@@ -494,8 +494,7 @@
             touch-action: pan-y;
             scrollbar-width: thin;
             scrollbar-color: var(--athkar-scrollbar-thumb) var(--athkar-scrollbar-track);
-            scrollbar-gutter: stable;
-            padding-inline-end: 0.4rem;
+            scrollbar-gutter: stable both-edges;
             --athkar-edge-fade-size: 1rem;
             -webkit-mask-image: linear-gradient(180deg,
                     transparent 0,
