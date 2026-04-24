@@ -626,15 +626,10 @@
         }
 
         .athkar-origin-indicator {
-            --athkar-origin-size: 42px;
-            --athkar-origin-inset: 5px;
-            --athkar-origin-icon-size: 26px;
             --athkar-origin-corner-radius: 7px;
             position: relative;
             display: inline-grid;
             place-items: center;
-            inline-size: var(--athkar-origin-size);
-            block-size: var(--athkar-origin-size);
             padding: 0;
             border: none;
             background: transparent;
@@ -662,8 +657,6 @@
         .athkar-origin-indicator__icon {
             display: block;
             flex-shrink: 0;
-            inline-size: var(--athkar-origin-icon-size);
-            block-size: var(--athkar-origin-icon-size);
         }
 
         .athkar-origin-indicator:focus-visible {
@@ -674,20 +667,6 @@
             box-shadow:
                 0 0 0 1px color-mix(in srgb, var(--primary-400) 55%, transparent),
                 0 0 0 7px color-mix(in srgb, var(--primary-300) 18%, transparent);
-        }
-
-        .athkar-origin-indicator--mobile {
-            --athkar-origin-size: 40px;
-            --athkar-origin-inset: 4px;
-            --athkar-origin-icon-size: 24px;
-            --athkar-origin-corner-radius: 7px;
-        }
-
-        .athkar-origin-indicator--desktop {
-            --athkar-origin-size: 50px;
-            --athkar-origin-inset: 5px;
-            --athkar-origin-icon-size: 40px;
-            --athkar-origin-corner-radius: 8px;
         }
 
         .athkar-origin-indicator.is-active {
@@ -1138,7 +1117,7 @@
                     x-transition.opacity.duration.200ms
                 >
                     <button
-                        class="athkar-origin-indicator athkar-origin-indicator--mobile"
+                        class="athkar-origin-indicator size-10 [--athkar-origin-inset:4px]"
                         type="button"
                         x-bind:class="isOriginVisible(activeIndex) && 'is-active'"
                         x-bind:aria-pressed="isOriginVisible(activeIndex)"
@@ -1151,7 +1130,7 @@
                         x-on:blur="$tippy.hide()"
                     >
                         <x-icon
-                            class="athkar-origin-indicator__icon"
+                            class="athkar-origin-indicator__icon size-6"
                             name="bootstrap.exclamation-diamond"
                         />
                     </button>
@@ -1365,7 +1344,7 @@
 
                 <div class="pointer-events-auto w-16">
                     <button
-                        class="athkar-origin-indicator athkar-origin-indicator--desktop left-4"
+                        class="athkar-origin-indicator 3xl:size-13 3xl:[--athkar-origin-inset:7px] 4xl:size-13.5 4xl:[--athkar-origin-inset:8px] left-4 size-7 [--athkar-origin-inset:1px] sm:size-6 sm:[--athkar-origin-inset:1px] md:size-9.5 md:[--athkar-origin-inset:4.5px] lg:size-10 lg:[--athkar-origin-inset:5px] xl:size-12 xl:[--athkar-origin-inset:6px] 2xl:size-12.5 2xl:[--athkar-origin-inset:6px]"
                         type="button"
                         x-show="hasOrigin(activeIndex)"
                         x-transition.opacity.duration.300ms
@@ -1380,7 +1359,7 @@
                         x-on:blur="$tippy.hide()"
                     >
                         <x-icon
-                            class="athkar-origin-indicator__icon"
+                            class="athkar-origin-indicator__icon 3xl:size-9 4xl:size-10 size-6.5 md:size-7 lg:size-7 xl:size-8 2xl:size-8.5"
                             name="bootstrap.exclamation-diamond"
                         />
                     </button>
