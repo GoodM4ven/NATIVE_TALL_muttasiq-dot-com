@@ -558,6 +558,12 @@
             padding-block: 0;
         }
 
+        @media (min-width: 2560px) {
+            .athkar-text-box--touch-scroll.athkar-text-box--origin-scroll {
+                padding-inline: 0;
+            }
+        }
+
         .athkar-main-text {
             position: absolute;
             inset: 0;
@@ -591,7 +597,6 @@
             align-items: center;
             justify-content: center;
             padding-block: inherit;
-            padding-inline: inherit;
             opacity: 0;
             pointer-events: none;
             transition-property: opacity;
@@ -990,7 +995,7 @@
 @endassets
 
 <div
-    class="absolute inset-0 z-10 flex select-none items-center justify-center px-4 py-5 sm:px-3.5 sm:pt-0 sm:pb-0 md:px-5 md:py-0 lg:px-6 lg:py-12 xl:px-5 xl:py-9 2xl:px-6 2xl:py-12"
+    class="absolute inset-0 z-10 flex select-none items-center justify-center px-4 pt-5 sm:px-3.5 sm:pt-0 sm:pb-0 md:px-5 md:py-0 lg:px-6 lg:py-12 xl:px-5 xl:py-9 2xl:px-6 2xl:py-12"
     x-cloak
     x-show="views[`athkar-app-gate`].isReaderVisible && !isCompletionVisible"
     x-bind:class="hintIndex !== null && 'z-30!'"
@@ -1003,12 +1008,12 @@
     x-transition:leave-end="opacity-0! blur-[2px] athkar-shift-away"
 >
     <section
-        class="athkar-reader relative flex h-full min-h-0 w-full max-w-5xl sm:max-w-117 md:max-w-145 lg:max-w-165 xl:max-w-178 2xl:max-w-190 3xl:max-w-212 4xl:max-w-4xl flex-col justify-end gap-4 pb-5 pt-10 sm:h-auto sm:justify-center sm:gap-2 md:gap-[0.6rem] lg:gap-3 xl:gap-4 2xl:gap-5 3xl:gap-6 sm:py-0 md:py-5 lg:py-0"
+        class="athkar-reader relative flex h-full min-h-0 w-full max-w-[min(93svw,20rem)] sm:max-w-117 md:max-w-145 lg:max-w-165 xl:max-w-178 2xl:max-w-190 3xl:max-w-212 4xl:max-w-4xl flex-col gap-3 pb-3 pt-10 sm:h-auto sm:gap-2 md:gap-[0.6rem] lg:gap-3 xl:gap-4 2xl:gap-5 3xl:gap-6 sm:py-0 md:py-5 lg:py-0 justify-center"
     >
         <div
-            class="athkar-panel athkar-panel-actions rounded-[0.65rem] sm:rounded-[0.45rem] md:rounded-[0.65rem] flex flex-wrap items-center gap-2 px-3 py-2 sm:flex-nowrap sm:gap-4 sm:pe-2 sm:ps-1 sm:py-1 md:px-[0.45rem] md:py-[0.3rem] lg:px-[0.5rem] lg:py-[0.3rem] xl:px-[0.58rem] xl:py-[0.34rem] 2xl:px-3 2xl:py-2 3xl:px-4 3xl:py-3">
+            class="athkar-panel athkar-panel-actions rounded-[0.55rem] sm:rounded-[0.45rem] md:rounded-[0.65rem] flex flex-wrap items-center gap-2 ps-1.5 pe-2.5 py-1.5 sm:flex-nowrap sm:gap-4 sm:pe-2 sm:ps-1 sm:py-1 md:px-[0.45rem] md:py-[0.3rem] lg:px-2 lg:py-[0.3rem] xl:px-[0.58rem] xl:py-[0.34rem] 2xl:px-3 2xl:py-2 3xl:px-4 3xl:py-3">
             <button
-                class="athkar-chip athkar-chip--manager focus-visible:outline-primary-500 relative inline-flex cursor-pointer items-center justify-center px-3 py-2 text-xs sm:text-[0.425rem] md:text-[0.525rem] lg:text-[0.575rem] xl:text-[0.6rem] 2xl:text-[0.7rem] 3xl:text-xs font-semibold shadow-inner transition focus-visible:outline-2 focus-visible:outline-offset-2 sm:px-2 sm:py-1.5 md:px-[0.5rem] md:py-[0.4rem] lg:px-[0.6rem] lg:py-[0.5rem] xl:px-[0.7rem] xl:py-[0.580rem] 2xl:px-3 2xl:py-2 3xl:px-4 3xl:py-3"
+                class="athkar-chip athkar-chip--manager focus-visible:outline-primary-500 relative inline-flex cursor-pointer items-center justify-center px-2.5 py-1.5 text-[0.65rem] sm:text-[0.425rem] md:text-[0.525rem] lg:text-[0.575rem] xl:text-[0.6rem] 2xl:text-[0.7rem] 3xl:text-xs font-semibold shadow-inner transition focus-visible:outline-2 focus-visible:outline-offset-2 sm:px-2 sm:py-1.5 md:px-2 md:py-[0.4rem] lg:px-[0.6rem] lg:py-2 xl:px-[0.7rem] xl:py-[0.580rem] 2xl:px-3 2xl:py-2 3xl:px-4 3xl:py-3"
                 data-athkar-open-manager
                 type="button"
                 x-on:click="$tippy.hide(); openGateAndManageAthkar()"
@@ -1018,7 +1023,7 @@
                 x-on:blur="$tippy.hide()"
             ><span x-text="activeLabel"></span></button>
 
-            <div class="flex flex-1 items-center gap-0.5 text-[0.85rem] sm:text-[0.6rem] md:text-[0.65rem] lg:text-[0.7rem] xl:text-[0.7rem] 2xl:text-[0.85rem] 3xl:text-[0.95rem] text-gray-600 sm:gap-3 dark:text-gray-300">
+            <div class="flex flex-1 items-center gap-0.5 text-[0.8rem] sm:text-[0.6rem] md:text-[0.65rem] lg:text-[0.7rem] xl:text-[0.7rem] 2xl:text-[0.85rem] 3xl:text-[0.95rem] text-gray-600 sm:gap-3 dark:text-gray-300">
                 <span
                     class="text-primary-700 dark:text-primary-200 inline-flex min-w-[4.3rem] items-center justify-center gap-1 text-center tabular-nums sm:min-w-[4.6rem] "
                     dir="ltr"
@@ -1086,7 +1091,7 @@
         </div>
 
         <div
-            class="athkar-panel Xoutline-primary-500/80 dark:Xoutline-primary-200/25 Xoutline-offset-[-0.75rem] sm:Xoutline-4 Xmax-h-[70svh] relative flex min-h-0 flex-1 touch-pan-y flex-col overflow-hidden transition-all focus:outline-none active:outline-none sm:max-h-[min(68svh,48rem)] md:max-h-[min(71svh,27rem)] lg:max-h-[min(65svh,25rem)] xl:max-h-[min(75svh,26rem)] 2xl:max-h-[min(53svh,48rem)] 3xl:max-h-[min(42svh,37rem)] 4xl:max-h-[min(39svh,33rem)] rounded-[2rem] sm:rounded-[1.2rem] md:rounded-[1.5rem] lg:rounded-[1.8rem] xl:rounded-[1.75rem] 2xl:rounded-[1.9rem] 3xl:rounded-[2rem]"
+            class="athkar-panel Xoutline-primary-500/80 dark:Xoutline-primary-200/25 Xoutline-offset-[-0.75rem] sm:Xoutline-4 max-h-[min(80svh,24.5rem)] relative flex min-h-0 flex-1 touch-pan-y flex-col overflow-hidden transition-all focus:outline-none active:outline-none sm:max-h-[min(68svh,17rem)] md:max-h-[min(71svh,23rem)] lg:max-h-[min(65svh,25rem)] xl:max-h-[min(75svh,26rem)] 2xl:max-h-[min(53svh,25rem)] 3xl:max-h-[min(42svh,37rem)] 4xl:max-h-[min(39svh,33rem)] rounded-[1.35rem] sm:rounded-[1.2rem] md:rounded-3xl lg:rounded-[1.8rem] xl:rounded-[1.75rem] 2xl:rounded-[1.9rem] 3xl:rounded-4xl"
             role="region"
             aria-roledescription="carousel"
             tabindex="0"
@@ -1381,7 +1386,7 @@
                     x-bind:key="itemKey(item, index)"
                 >
                     <article
-                        class="pointer-events-none relative flex h-full min-h-0 w-full shrink-0 flex-col px-3.5 pb-4 pt-4 transition-opacity duration-700 sm:px-4 sm:pb-2.5 sm:pt-5 md:px-4 md:py-3 lg:px-6 lg:pb-5 lg:pt-5 xl:px-7 xl:pb-6 xl:pt-6 2xl:px-10 2xl:pb-8 2xl:pt-7"
+                        class="pointer-events-none relative flex h-full min-h-0 w-full shrink-0 flex-col px-3.5 pb-3 pt-4 transition-opacity duration-700 sm:px-4 sm:pb-2.5 sm:pt-5 md:px-4 md:py-3 lg:px-6 lg:pb-5 lg:pt-5 xl:px-7 xl:pb-6 xl:pt-6 2xl:px-10 2xl:pb-8 2xl:pt-7"
                         data-athkar-slide
                         x-bind:class="index === activeIndex ? 'opacity-100' : 'opacity-0'"
                         x-bind:data-active="index === activeIndex ? 'true' : 'false'"
@@ -1395,7 +1400,7 @@
                                 >
                                     <!-- Althikr -->
                                     <button
-                                        class="athkar-tap group relative flex min-h-0 w-full flex-1 touch-manipulation flex-col items-center justify-center gap-4 overflow-hidden rounded-sm border border-transparent px-2 py-1.5 text-center transition sm:px-10 sm:py-2.5 md:px-13 md:py-3 lg:px-12 xl:px-3 xl:py-5 2xl:px-3 2xl:py-5 3xl:px-4 4xl:px-5 3xl:py-6"
+                                        class="athkar-tap group relative flex min-h-0 w-full flex-1 touch-manipulation flex-col items-center justify-center gap-4 overflow-hidden rounded-sm border border-transparent px-0 py-1.5 text-center transition sm:px-10 sm:py-2.5 md:px-13 md:py-3 lg:px-12 xl:px-3 xl:py-5 2xl:px-3 2xl:py-5 3xl:px-4 4xl:px-5 3xl:py-6"
                                         data-athkar-tap
                                         type="button"
                                         x-on:click="handleTap()"
@@ -1455,7 +1460,7 @@
                                                 ></p>
                                             </div>
                                             <div
-                                                class="athkar-origin-text"
+                                                class="athkar-origin-text px-0!"
                                                 x-bind:class="isOriginVisible(index) && 'is-origin-visible'"
                                             >
                                                 <p
@@ -1486,7 +1491,7 @@
 
                                     <!-- Completion Indicator -->
                                     <div
-                                        class="relative flex items-center justify-between gap-3 text-gray-600 text-[0.65rem] sm:text-[0.55rem] md:text-[0.6rem] lg:text-[0.685rem] xl:text-[0.7rem] 2xl:text-[0.8rem] 3xl:text-sm dark:text-gray-300">
+                                        class="relative flex items-center justify-between gap-3 text-gray-600 text-[0.675rem] sm:text-[0.55rem] md:text-[0.6rem] lg:text-[0.685rem] xl:text-[0.7rem] 2xl:text-[0.8rem] 3xl:text-sm dark:text-gray-300">
                                         <span
                                             class="text-primary-700 dark:text-primary-200 inline-flex min-w-[4.4rem] items-center justify-center gap-1 text-center tabular-nums opacity-0 transition-opacity duration-300"
                                             x-data="{
@@ -1563,7 +1568,7 @@
                                                 x-bind:class="isVisible && isItemComplete(index) && 'opacity-100!'"
                                             >{{ arabic_text('تم بحمد الله') }}</span>
                                             <span
-                                                class="rounded-bl-lg! rounded-sm border border-gray-300 bg-gray-100 px-2 py-1  font-semibold text-gray-700 opacity-0 shadow-sm transition-opacity duration-300 sm:px-1.5 sm:py-0.5 md:py-1 md:px-3 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                                                class="rounded-bl-lg! rounded-sm border border-gray-300 bg-gray-100 px-2 py-0.5  font-semibold text-gray-700 opacity-0 shadow-sm transition-opacity duration-300 sm:px-1.5 sm:py-0.5 md:py-1 md:px-3 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
                                                 x-bind:class="isVisible && 'opacity-100!'"
                                                 x-text="activeTypeLabel(index)"
                                             ></span>
@@ -1578,14 +1583,14 @@
 
         <div class="flex items-center gap-2">
             <button
-                class="athkar-nav__arrow inline-flex h-7 w-7 sm:h-4.5 sm:w-4.5 md:h-5 md:w-5 lg:h-5.5 lg:w-5.5 xl:h-6 xl:w-6 2xl:h-7 2xl:w-7 items-center justify-center rounded-sm transition disabled:cursor-not-allowed disabled:opacity-60"
+                class="athkar-nav__arrow inline-flex h-6 w-6 sm:h-4.5 sm:w-4.5 md:h-5 md:w-5 lg:h-5.5 lg:w-5.5 xl:h-6 xl:w-6 2xl:h-7 2xl:w-7 items-center justify-center rounded-sm transition disabled:cursor-not-allowed disabled:opacity-60"
                 type="button"
                 aria-label="{{ arabic_text('السابق') }}"
                 x-bind:disabled="activeIndex === 0"
                 x-on:click="prev()"
             >
                 <svg
-                    class="h-4 w-4 sm:h-2.5 sm:w-2.5 md:h-3 md:w-3 lg:h-3.5 lg:w-3.5 xl:h-4 xl:w-4"
+                    class="h-3 w-3 sm:h-2.5 sm:w-2.5 md:h-3 md:w-3 lg:h-3.5 lg:w-3.5 xl:h-4 xl:w-4"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -1601,7 +1606,7 @@
 
             <div class="flex-1">
                 <div
-                    class="athkar-nav relative h-6 sm:h-3 md:h-4 lg:h-5 xl:h-5 2xl:h-6 w-full touch-pan-y select-none rounded-sm"
+                    class="athkar-nav relative h-5 sm:h-3 md:h-4 lg:h-5 xl:h-5 2xl:h-6 w-full touch-pan-y select-none rounded-sm"
                     role="slider"
                     dir="rtl"
                     x-ref="athkarNav"
@@ -1646,14 +1651,14 @@
             </div>
 
             <button
-                class="athkar-nav__arrow inline-flex h-7 w-7 sm:h-4.5 sm:w-4.5 md:h-5 md:w-5 lg:h-5.5 lg:w-5.5 xl:h-6 xl:w-6 2xl:h-7 2xl:w-7 items-center justify-center rounded-sm transition disabled:cursor-not-allowed disabled:opacity-60"
+                class="athkar-nav__arrow inline-flex h-6 w-6 sm:h-4.5 sm:w-4.5 md:h-5 md:w-5 lg:h-5.5 lg:w-5.5 xl:h-6 xl:w-6 2xl:h-7 2xl:w-7 items-center justify-center rounded-sm transition disabled:cursor-not-allowed disabled:opacity-60"
                 type="button"
                 aria-label="{{ arabic_text('التالي') }}"
                 x-bind:disabled="!canAdvance()"
                 x-on:click="next()"
             >
                 <svg
-                    class="h-4 w-4 sm:h-2.5 sm:w-2.5 md:h-3 md:w-3 lg:h-3.5 lg:w-3.5 xl:h-4 xl:w-4"
+                    class="h-3 w-3 sm:h-2.5 sm:w-2.5 md:h-3 md:w-3 lg:h-3.5 lg:w-3.5 xl:h-4 xl:w-4"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"

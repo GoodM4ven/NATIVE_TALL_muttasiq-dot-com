@@ -15,7 +15,7 @@ const breakpointMainTextSizeReductions = Object.freeze({
     lg: 5,
     md: 7,
     sm: 10,
-    base: 9,
+    base: 7,
 });
 const fallbackMainTextSizeLimits = Object.freeze({
     [minimumMainTextSizeKey]: Object.freeze({

@@ -387,7 +387,7 @@
         <main @class([
             'fixed inset-0 grid place-items-center sm:mt-0 dark:text-white',
             'mt-22' => is_platform('ios'),
-            'mt-16' => !is_platform('ios'),
+            'mt-15' => !is_platform('ios'),
         ])>
             <x-partials.main-menu />
             <x-partials.athkar-app.index
