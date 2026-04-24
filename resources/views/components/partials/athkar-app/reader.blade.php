@@ -559,6 +559,14 @@
             padding-block: 0;
         }
 
+        .athkar-text-box--touch-scroll:not(.athkar-text-box--origin-scroll) .athkar-origin-text {
+            display: none;
+        }
+
+        .athkar-text-box--touch-scroll.athkar-text-box--origin-scroll .athkar-main-text {
+            display: none;
+        }
+
         @media (min-width: 2560px) {
 
             .athkar-text-box--touch-scroll .athkar-origin-text,
@@ -1461,7 +1469,7 @@
                                                     dir="rtl"
                                                     x-bind:data-fitty-enabled="(activeIndex === index).toString()"
                                                     x-bind:data-fitty-overflow-active="(activeIndex === index && !isOriginOverflowVisible(index)).toString
-                                                    ()"
+                                                        ()"
                                                     x-text="item.text"
                                                 ></p>
                                             </div>

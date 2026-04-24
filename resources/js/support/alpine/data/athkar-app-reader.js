@@ -312,6 +312,17 @@ document.addEventListener('alpine:init', () => {
             window.addEventListener('resize', handleReaderViewportChange);
             window.addEventListener('orientationchange', handleReaderViewportChange);
             window.addEventListener('focus', () => this.syncDay());
+            window.addEventListener('fitty-refit-complete', () => {
+                if (!this.activeMode) {
+                    return;
+                }
+
+                if (!this.views?.['athkar-app-gate']?.isReaderVisible || this.isNoticeVisible) {
+                    return;
+                }
+
+                this.$nextTick(() => this.syncVisibleTextBoxState(this.activeIndex));
+            });
             window.addEventListener('athkar-overrides-updated', (event) => {
                 this.applyAthkarOverrides(event?.detail?.overrides ?? [], { persist: true });
             });
@@ -1559,6 +1570,10 @@ document.addEventListener('alpine:init', () => {
 
             if (resolvedScrollTop !== box.scrollTop) {
                 box.scrollTop = resolvedScrollTop;
+            }
+
+            if (this.copyHold.active && this.copyHold.source !== 'touch') {
+                this.resetHoldCopyState();
             }
 
             this.rememberScrollOffset(index, target, resolvedScrollTop);
@@ -3206,6 +3221,55 @@ document.addEventListener('alpine:init', () => {
 
             return String(item?.text ?? '').trim();
         },
+        resolveScrollbarEdgeHitZone(box) {
+            if (!(box instanceof HTMLElement)) {
+                return 0;
+            }
+
+            if (!box.classList.contains('athkar-text-box--touch-scroll')) {
+                return 0;
+            }
+
+            const totalInlineGutter = Math.max(0, box.offsetWidth - box.clientWidth);
+
+            if (totalInlineGutter > 0) {
+                return Math.max(1, Math.ceil(totalInlineGutter / 2));
+            }
+
+            return 14;
+        },
+        didHoldCopyStartOnScrollbar(event) {
+            if (event?.type?.startsWith('touch')) {
+                return false;
+            }
+
+            const box = event?.currentTarget;
+
+            if (!(box instanceof HTMLElement)) {
+                return false;
+            }
+
+            if (!this.shouldAllowTouchScrollForBox(box)) {
+                return false;
+            }
+
+            const point = this.swipePoint(event);
+
+            if (!point) {
+                return false;
+            }
+
+            const rect = box.getBoundingClientRect();
+            const edgeZone = this.resolveScrollbarEdgeHitZone(box);
+
+            if (rect.width <= 0 || edgeZone <= 0) {
+                return false;
+            }
+
+            const x = point.x - rect.left;
+
+            return x <= edgeZone || x >= rect.width - edgeZone;
+        },
         resetHoldCopyState() {
             if (this._copyHoldTimer !== null) {
                 clearTimeout(this._copyHoldTimer);
@@ -3232,6 +3296,12 @@ document.addEventListener('alpine:init', () => {
             const normalizedIndex = Math.max(0, Math.trunc(Number(index ?? -1)));
 
             if (!Number.isFinite(normalizedIndex) || normalizedIndex !== this.activeIndex) {
+                this.resetHoldCopyState();
+
+                return;
+            }
+
+            if (this.didHoldCopyStartOnScrollbar(event)) {
                 this.resetHoldCopyState();
 
                 return;
