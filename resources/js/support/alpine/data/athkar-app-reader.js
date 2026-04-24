@@ -304,8 +304,13 @@ document.addEventListener('alpine:init', () => {
             this.syncDay();
             this.ensureProgress('sabah');
             this.ensureProgress('masaa');
-            window.addEventListener('resize', () => this.refreshCompletionInputMode());
-            window.addEventListener('orientationchange', () => this.refreshCompletionInputMode());
+            const handleReaderViewportChange = () => {
+                this.refreshCompletionInputMode();
+                this.resetLayerScrollOffsets();
+                this.queueReaderTextFit();
+            };
+            window.addEventListener('resize', handleReaderViewportChange);
+            window.addEventListener('orientationchange', handleReaderViewportChange);
             window.addEventListener('focus', () => this.syncDay());
             window.addEventListener('athkar-overrides-updated', (event) => {
                 this.applyAthkarOverrides(event?.detail?.overrides ?? [], { persist: true });
@@ -1410,6 +1415,23 @@ document.addEventListener('alpine:init', () => {
 
             return Math.max(0, Number(this.layerScrollOffsets?.[key]) || 0);
         },
+        resetLayerScrollOffsets({ syncActiveBox = true } = {}) {
+            this.layerScrollOffsets = {};
+
+            if (!syncActiveBox) {
+                return;
+            }
+
+            const activeSlide = this.$el?.querySelector('[data-athkar-slide][data-active="true"]');
+            const box = activeSlide?.querySelector('[data-athkar-text-box]');
+
+            if (!box) {
+                return;
+            }
+
+            box.scrollTop = 0;
+            this.syncTextBoxEdgeFade(box);
+        },
         rememberVisibleTextBoxScroll(index = this.activeIndex) {
             const activeSlide = this.$el?.querySelector('[data-athkar-slide][data-active="true"]');
             const box = activeSlide?.querySelector('[data-athkar-text-box]');
@@ -1468,6 +1490,80 @@ document.addEventListener('alpine:init', () => {
                 box.classList.toggle(className, className === activePaddingClass);
             });
         },
+        resolveTextBoxEdgeFadeSize(box) {
+            if (!box) {
+                return '1rem';
+            }
+
+            const computedSize = getComputedStyle(box)
+                .getPropertyValue('--athkar-edge-fade-size')
+                .trim();
+
+            if (computedSize !== '') {
+                return computedSize;
+            }
+
+            return '1rem';
+        },
+        syncTextBoxEdgeFade(box) {
+            if (!box) {
+                return;
+            }
+
+            const isTouchScrollEnabled =
+                box.dataset.athkarTouchScroll === 'true' &&
+                box.classList.contains('athkar-text-box--touch-scroll');
+
+            if (!isTouchScrollEnabled) {
+                box.style.setProperty('--athkar-edge-fade-top-size', '0px');
+                box.style.setProperty('--athkar-edge-fade-bottom-size', '0px');
+                return;
+            }
+
+            const maxScrollTop = Math.max(0, box.scrollHeight - box.clientHeight);
+            const edgeTolerance = 1;
+
+            if (maxScrollTop <= edgeTolerance) {
+                box.style.setProperty('--athkar-edge-fade-top-size', '0px');
+                box.style.setProperty('--athkar-edge-fade-bottom-size', '0px');
+                return;
+            }
+
+            const fadeSize = this.resolveTextBoxEdgeFadeSize(box);
+            const scrollTop = Math.max(0, Number(box.scrollTop) || 0);
+            const isAtTop = scrollTop <= edgeTolerance;
+            const isAtBottom = scrollTop >= maxScrollTop - edgeTolerance;
+
+            box.style.setProperty('--athkar-edge-fade-top-size', isAtTop ? '0px' : fadeSize);
+            box.style.setProperty('--athkar-edge-fade-bottom-size', isAtBottom ? '0px' : fadeSize);
+        },
+        syncTextBoxEdgeFadeFromEvent(event) {
+            const box = event?.currentTarget;
+
+            if (!(box instanceof HTMLElement)) {
+                return;
+            }
+
+            const slide = box.closest?.('[data-athkar-slide]');
+            const parsedIndex = Number(slide?.dataset?.index ?? this.activeIndex);
+            const index = Number.isFinite(parsedIndex) ? Math.max(0, Math.trunc(parsedIndex)) : 0;
+            const target = box.dataset.athkarScrollTarget === 'origin' ? 'origin' : 'text';
+            const maxScrollTop = Math.max(0, box.scrollHeight - box.clientHeight);
+            const edgeTolerance = 1;
+            const normalizedScrollTop = Math.max(
+                0,
+                Math.min(maxScrollTop, Number(box.scrollTop) || 0),
+            );
+            const resolvedScrollTop =
+                normalizedScrollTop <= edgeTolerance ? 0 : normalizedScrollTop;
+
+            if (resolvedScrollTop !== box.scrollTop) {
+                box.scrollTop = resolvedScrollTop;
+            }
+
+            this.rememberScrollOffset(index, target, resolvedScrollTop);
+            this.syncTextBoxEdgeFade(box);
+        },
         applyVisibleTextBoxScrollState({ box, index, target, isOverflowing }) {
             if (!box) {
                 return;
@@ -1479,18 +1575,24 @@ document.addEventListener('alpine:init', () => {
                 window.requestAnimationFrame(() => {
                     if (document.contains(box) && box.dataset.athkarTouchScroll !== 'true') {
                         box.scrollTop = 0;
+                        this.syncTextBoxEdgeFade(box);
                     }
                 });
+                this.syncTextBoxEdgeFade(box);
 
                 return;
             }
 
             const maxScrollTop = Math.max(0, box.scrollHeight - box.clientHeight);
             const remembered = this.resolveRememberedScrollOffset(index, target);
-            const resolvedScrollTop = Math.min(maxScrollTop, remembered);
+            const edgeTolerance = 1;
+            const normalizedRemembered = Math.max(0, Math.min(maxScrollTop, remembered));
+            const resolvedScrollTop =
+                normalizedRemembered <= edgeTolerance ? 0 : normalizedRemembered;
 
             box.scrollTop = resolvedScrollTop;
             this.rememberScrollOffset(index, target, resolvedScrollTop);
+            this.syncTextBoxEdgeFade(box);
         },
         hasOrigin(index) {
             const item = this.activeList?.[index];
@@ -1677,6 +1779,7 @@ document.addEventListener('alpine:init', () => {
             this.syncOverflowPaddingClass({ box, target, isOverflowing });
 
             this.applyVisibleTextBoxScrollState({ box, index, target, isOverflowing });
+            this.syncTextBoxEdgeFade(box);
         },
         hideOrigin() {
             this.clearOriginTransitionTimer();
@@ -2904,6 +3007,7 @@ document.addEventListener('alpine:init', () => {
 
             const deltaY = point.y - this.textScroll.startY;
             this.textScroll.element.scrollTop = this.textScroll.startScrollTop - deltaY;
+            this.syncTextBoxEdgeFade(this.textScroll.element);
 
             event.stopPropagation();
             if (event.cancelable) {
@@ -2921,6 +3025,7 @@ document.addEventListener('alpine:init', () => {
                     target,
                     this.textScroll.element.scrollTop,
                 );
+                this.syncTextBoxEdgeFade(this.textScroll.element);
             }
 
             this.textScroll.active = false;
