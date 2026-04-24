@@ -559,8 +559,9 @@
         }
 
         @media (min-width: 2560px) {
-            .athkar-text-box--touch-scroll.athkar-text-box--origin-scroll {
-                padding-inline: 0;
+            .athkar-text-box--touch-scroll .athkar-origin-text,
+            .athkar-text-box--origin-scroll .athkar-origin-text {
+                padding-inline: 0.25rem;
             }
         }
 
@@ -573,13 +574,12 @@
             padding-block: inherit;
             padding-inline: inherit;
             opacity: 1;
-            transition: opacity 260ms ease;
+            transition: opacity 200ms ease;
         }
 
         .athkar-main-text.is-main-hidden {
             opacity: 0 !important;
             pointer-events: none;
-            transition-duration: 0ms !important;
         }
 
         .athkar-text-box--touch-scroll:not(.athkar-text-box--origin-scroll) .athkar-main-text {
@@ -601,7 +601,7 @@
             pointer-events: none;
             transition-property: opacity;
             transition-timing-function: ease;
-            transition-duration: 0ms;
+            transition-duration: 200ms;
         }
 
         .athkar-origin-text__content {
@@ -613,7 +613,6 @@
         .athkar-origin-text.is-origin-visible {
             opacity: 1 !important;
             pointer-events: auto;
-            transition-duration: 260ms;
         }
 
         .athkar-origin-indicator {
@@ -1411,7 +1410,7 @@
                                         }"
                                     >
                                         <div
-                                            class="{{ twMerge('relative Xmt-8 flex w-full min-h-0 flex-1 flex-col justify-center gap-3 overflow-hidden px-[0.3rem] Xsm:mt-0 sm:justify-center sm:gap-4 sm:px-0 md:px-0 lg:px-0 xl:px-6 2xl:px-6 3xl:px-14 4xl:px-14.5 transition-opacity') }}"
+                                            class="{{ twMerge('relative Xmt-8 flex flex-row w-full min-h-0 flex-1 justify-center gap-3 overflow-hidden px-[0.3rem] Xsm:mt-0 sm:justify-center sm:gap-4 sm:px-0 md:px-0 lg:px-0 xl:px-6 2xl:px-6 3xl:px-14 4xl:px-14.5 transition-opacity') }}"
                                             data-athkar-text-box
                                             data-fitty-box
                                             dir="rtl"
@@ -1434,7 +1433,7 @@
                                         >
                                             <div
                                                 class="athkar-main-text"
-                                                x-bind:class="isOriginVisible(index) && 'is-main-hidden'"
+                                                x-bind:class="shouldHideMainTextLayer(index) && 'is-main-hidden'"
                                             >
                                                 <p
                                                     class="athkar-text athkar-shimmer font-arabic-serif text-primary-950 dark:text-primary-50 whitespace-break-spaces!"
@@ -1455,13 +1454,13 @@
                                                     data-shimmer-pause="4000"
                                                     dir="rtl"
                                                     x-bind:data-fitty-enabled="(activeIndex === index).toString()"
-                                                    x-bind:data-fitty-overflow-active="(activeIndex === index && !isOriginVisible(index)).toString()"
+                                                    x-bind:data-fitty-overflow-active="(activeIndex === index && !isOriginOverflowVisible(index)).toString()"
                                                     x-text="item.text"
                                                 ></p>
                                             </div>
                                             <div
-                                                class="athkar-origin-text px-0!"
-                                                x-bind:class="isOriginVisible(index) && 'is-origin-visible'"
+                                                class="athkar-origin-text"
+                                                x-bind:class="shouldShowOriginTextLayer(index) && 'is-origin-visible'"
                                             >
                                                 <p
                                                     class="athkar-text athkar-shimmer athkar-origin-text__content font-arabic-serif text-primary-950 dark:text-primary-50 whitespace-break-spaces!"
@@ -1482,7 +1481,7 @@
                                                     data-fitty-overflow-target="origin"
                                                     dir="rtl"
                                                     x-bind:data-fitty-enabled="(activeIndex === index).toString()"
-                                                    x-bind:data-fitty-overflow-active="(activeIndex === index && isOriginVisible(index)).toString()"
+                                                    x-bind:data-fitty-overflow-active="(activeIndex === index && isOriginOverflowVisible(index)).toString()"
                                                     x-text="item.origin"
                                                 ></p>
                                             </div>

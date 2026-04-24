@@ -170,6 +170,17 @@ document.addEventListener('alpine:init', () => {
             mode: null,
             index: null,
         },
+        originOverflowToggle: {
+            mode: null,
+            index: null,
+        },
+        originTransition: {
+            mode: null,
+            index: null,
+            fromIsOrigin: null,
+            toIsOrigin: null,
+            phase: 'idle',
+        },
         copyFeedback: {
             visible: false,
             x: 0,
@@ -228,7 +239,8 @@ document.addEventListener('alpine:init', () => {
         pulseDurationMs: 520,
         topUiCompletionLingerMs: 1000,
         topUiPulseDurationMs: 360,
-        originResyncDelayMs: 180,
+        originFadeDurationMs: 200,
+        originResyncDelayMs: 200,
         completionVisibleMs: 3000,
         textFitSettleMs: 96,
         renderWindowRadius: 1,
@@ -259,6 +271,7 @@ document.addEventListener('alpine:init', () => {
         _athkarVersion: 0,
         _persistTimer: null,
         _copyHoldTimer: null,
+        _originTransitionTimer: null,
         _onWindowNativeVolumeButton: null,
         lastSeenDay: window.Alpine.$persist(null).as('athkar-last-day'),
         progress: defaultProgressState(),
@@ -273,6 +286,7 @@ document.addEventListener('alpine:init', () => {
                 this.pulseDurationMs = 80;
                 this.topUiCompletionLingerMs = 80;
                 this.topUiPulseDurationMs = 120;
+                this.originFadeDurationMs = 0;
                 this.originResyncDelayMs = 0;
                 this.completionVisibleMs = 250;
                 this.textFitSettleMs = 0;
@@ -387,6 +401,7 @@ document.addEventListener('alpine:init', () => {
                 this.hideCopyFeedback();
                 this.cancelHoldCopy();
                 this.unregisterNativeVolumeNavigation();
+                this.clearOriginTransitionTimer();
             });
 
             this.setupTextFit();
@@ -1486,6 +1501,151 @@ document.addEventListener('alpine:init', () => {
         isOriginVisible(index) {
             return this.originToggle.mode === this.activeMode && this.originToggle.index === index;
         },
+        isOriginOverflowVisible(index) {
+            const hasExplicitOriginOverflow =
+                this.originOverflowToggle.mode === this.activeMode &&
+                this.originOverflowToggle.index === index;
+
+            if (hasExplicitOriginOverflow) {
+                return true;
+            }
+
+            if (
+                this.originOverflowToggle.mode === null &&
+                this.originOverflowToggle.index === null
+            ) {
+                return this.isOriginVisible(index);
+            }
+
+            return false;
+        },
+        clearOriginTransitionTimer() {
+            if (this._originTransitionTimer !== null) {
+                clearTimeout(this._originTransitionTimer);
+                this._originTransitionTimer = null;
+            }
+        },
+        isOriginTransitionFor(index) {
+            return (
+                this.originTransition.mode === this.activeMode &&
+                this.originTransition.index === index &&
+                this.originTransition.phase !== 'idle'
+            );
+        },
+        shouldHideMainTextLayer(index) {
+            if (this.isOriginTransitionFor(index)) {
+                if (
+                    this.originTransition.phase === 'out' ||
+                    this.originTransition.phase === 'prep'
+                ) {
+                    return true;
+                }
+
+                if (this.originTransition.phase === 'in') {
+                    return this.originTransition.toIsOrigin === true;
+                }
+            }
+
+            return this.isOriginVisible(index);
+        },
+        shouldShowOriginTextLayer(index) {
+            if (this.isOriginTransitionFor(index)) {
+                if (
+                    this.originTransition.phase === 'out' ||
+                    this.originTransition.phase === 'prep'
+                ) {
+                    return false;
+                }
+
+                if (this.originTransition.phase === 'in') {
+                    return this.originTransition.toIsOrigin === true;
+                }
+            }
+
+            return this.isOriginVisible(index);
+        },
+        startOriginTransition(index, toIsOrigin) {
+            const parsedIndex = Number(index ?? this.activeIndex ?? 0);
+            const normalizedIndex = Number.isFinite(parsedIndex)
+                ? Math.max(0, Math.trunc(parsedIndex))
+                : 0;
+            const fromIsOrigin = this.isOriginVisible(normalizedIndex);
+            const fadeOutDuration = Math.max(0, Number(this.originFadeDurationMs) || 0);
+            const prepDuration = Math.max(0, Number(this.originResyncDelayMs) || 0);
+
+            this.clearOriginTransitionTimer();
+            this.originTransition = {
+                mode: this.activeMode,
+                index: normalizedIndex,
+                fromIsOrigin,
+                toIsOrigin,
+                phase: 'out',
+            };
+
+            const beginPreparePhase = () => {
+                if (!this.isOriginTransitionFor(normalizedIndex)) {
+                    return;
+                }
+
+                this.originTransition = {
+                    ...this.originTransition,
+                    phase: 'prep',
+                };
+
+                this.originToggle = toIsOrigin
+                    ? {
+                          mode: this.activeMode,
+                          index: normalizedIndex,
+                      }
+                    : {
+                          mode: null,
+                          index: null,
+                      };
+                this.originOverflowToggle = toIsOrigin
+                    ? {
+                          mode: this.activeMode,
+                          index: normalizedIndex,
+                      }
+                    : {
+                          mode: null,
+                          index: null,
+                      };
+
+                this.$nextTick(() => {
+                    this.syncVisibleTextBoxState(normalizedIndex);
+                    this.stopTextShimmer();
+                    this.queueReaderTextFit();
+                    this.setupTextShimmer(null, { immediate: true });
+                });
+
+                const beginFadeInPhase = () => {
+                    if (!this.isOriginTransitionFor(normalizedIndex)) {
+                        return;
+                    }
+
+                    this.originTransition = {
+                        ...this.originTransition,
+                        phase: 'in',
+                    };
+
+                    this.$nextTick(() => this.setupTextShimmer(null, { immediate: true }));
+                    this._originTransitionTimer = window.setTimeout(() => {
+                        this.clearOriginTransitionTimer();
+                        this.originTransition = {
+                            mode: null,
+                            index: null,
+                            fromIsOrigin: null,
+                            toIsOrigin: null,
+                            phase: 'idle',
+                        };
+                    }, fadeOutDuration);
+                };
+
+                this._originTransitionTimer = window.setTimeout(beginFadeInPhase, prepDuration);
+            };
+
+            this._originTransitionTimer = window.setTimeout(beginPreparePhase, fadeOutDuration);
+        },
         toggleOrigin(index) {
             if (!this.hasOrigin(index)) {
                 return;
@@ -1493,25 +1653,7 @@ document.addEventListener('alpine:init', () => {
 
             this.rememberVisibleTextBoxScroll(index);
 
-            if (this.isOriginVisible(index)) {
-                this.hideOrigin();
-            } else {
-                this.originToggle = {
-                    mode: this.activeMode,
-                    index,
-                };
-            }
-
-            this.$nextTick(() => {
-                this.syncVisibleTextBoxState(index);
-                this.stopTextShimmer();
-                this.queueReaderTextFit();
-                this.setupTextShimmer(null, { immediate: true });
-                window.setTimeout(() => {
-                    this.syncVisibleTextBoxState(index);
-                    this.setupTextShimmer(null, { immediate: true });
-                }, this.originResyncDelayMs);
-            });
+            this.startOriginTransition(index, !this.isOriginVisible(index));
         },
         syncVisibleTextBoxState(index = this.activeIndex) {
             const activeSlide = this.$el?.querySelector('[data-athkar-slide][data-active="true"]');
@@ -1521,7 +1663,7 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            const isOriginTarget = this.isOriginVisible(index);
+            const isOriginTarget = this.isOriginOverflowVisible(index);
             const target = isOriginTarget ? 'origin' : 'text';
             const isOverflowing = isOriginTarget
                 ? box.dataset.athkarOriginOverflow === 'true'
@@ -1537,9 +1679,22 @@ document.addEventListener('alpine:init', () => {
             this.applyVisibleTextBoxScrollState({ box, index, target, isOverflowing });
         },
         hideOrigin() {
+            this.clearOriginTransitionTimer();
+
             this.originToggle = {
                 mode: null,
                 index: null,
+            };
+            this.originOverflowToggle = {
+                mode: null,
+                index: null,
+            };
+            this.originTransition = {
+                mode: null,
+                index: null,
+                fromIsOrigin: null,
+                toIsOrigin: null,
+                phase: 'idle',
             };
         },
         requestSingleThikrCompletion(index) {
@@ -2670,7 +2825,7 @@ document.addEventListener('alpine:init', () => {
                 return false;
             }
 
-            const isOriginActive = this.isOriginVisible(this.activeIndex);
+            const isOriginActive = this.isOriginOverflowVisible(this.activeIndex);
             const hasTextOverflow = box.dataset.athkarTextOverflow === 'true';
             const hasOriginOverflow = box.dataset.athkarOriginOverflow === 'true';
             const hasTouchScrollClass = box.classList.contains('athkar-text-box--touch-scroll');
