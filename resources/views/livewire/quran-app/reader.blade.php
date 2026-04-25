@@ -272,6 +272,10 @@
             text-wrap: nowrap;
         }
 
+        .dark .quran-surah-header-line {
+            color: color-mix(in srgb, var(--primary-100) 88%, var(--quran-ink));
+        }
+
         .quran-surah-header-line--fatiha {
             margin-block-end: 1rem;
         }
@@ -958,6 +962,10 @@
             color: #fff;
         }
 
+        .dark #quran-reader-history-toggle.quran-history-toggle-button {
+            background-color: color-mix(in srgb, var(--gray-200) 80%, var(--gray-300));
+        }
+
         #quran-reader-history-toggle .quran-history-toggle-icon {
             transform: rotate(0deg);
             transition: transform 460ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -968,8 +976,20 @@
             fill: transparent;
         }
 
+        .dark #quran-reader-history-toggle .quran-history-toggle-icon path {
+            stroke: var(--gray-900);
+        }
+
+        .dark #quran-reader-history-toggle.quran-history-toggle-button:hover .quran-history-toggle-icon path {
+            stroke: var(--gray-900);
+        }
+
         #quran-reader-history-toggle.quran-history-toggle-button:hover {
             background-color: color-mix(in srgb, var(--primary-500) 68%, var(--primary-400));
+        }
+
+        .dark #quran-reader-history-toggle.quran-history-toggle-button:hover {
+            background-color: color-mix(in srgb, var(--gray-100) 90%, var(--gray-300));
         }
 
         #quran-reader-history-toggle.quran-history-toggle-button:hover .quran-history-toggle-icon {
@@ -995,6 +1015,10 @@
                 transform 160ms ease,
                 background-color 220ms ease,
                 box-shadow 220ms ease;
+        }
+
+        .dark #quran-reader-bookmark-toggle.quran-bookmark-toggle-button {
+            background-color: color-mix(in srgb, var(--warning-400) 10%, var(--warning-600));
         }
 
         #quran-reader-bookmark-toggle.quran-bookmark-toggle-button:hover {
@@ -1151,16 +1175,18 @@
             cursor: pointer;
             overflow: hidden;
             direction: rtl;
-            transition:
-                box-shadow 0.6s cubic-bezier(0.23, 1, 0.32, 1),
-                color 0.6s cubic-bezier(0.23, 1, 0.32, 1),
-                transform 0.22s ease;
+            transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
             box-shadow: 0 0 0 1.6px color-mix(in srgb, var(--primary-500) 72%, transparent);
             font-family: 'Readex Pro', 'IBM Plex Sans Arabic', 'Noto Naskh Arabic', ui-sans-serif, system-ui, sans-serif;
             font-weight: 700;
             line-height: 1;
             user-select: none;
             -webkit-user-select: none;
+        }
+
+        .dark .quran-soorah-trigger {
+            color: color-mix(in srgb, var(--primary-200) 86%, var(--quran-panel-text));
+            box-shadow: 0 0 0 1.6px color-mix(in srgb, var(--primary-200) 72%, transparent);
         }
 
         .quran-soorah-trigger.quran-soorah-trigger--disabled {
@@ -1203,9 +1229,11 @@
             opacity: 0.25;
             z-index: 1;
             background: color-mix(in srgb, var(--primary-600) 92%, var(--primary-400));
-            transition:
-                transform 0.7s cubic-bezier(0.23, 1, 0.32, 1),
-                opacity 0.7s cubic-bezier(0.23, 1, 0.32, 1);
+            transition: all 0.7s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .dark .quran-soorah-trigger-circle {
+            background: color-mix(in srgb, var(--primary-400) 92%, var(--primary-300));
         }
 
         .quran-soorah-trigger-text {
@@ -1335,9 +1363,7 @@
             opacity: 0;
             visibility: hidden;
             pointer-events: none;
-            transition:
-                opacity 180ms ease,
-                visibility 0ms linear 180ms;
+            transition: all 180ms ease;
         }
 
         .quran-bottom-strip {
@@ -1358,11 +1384,7 @@
             content: '';
             position: absolute;
             inset: 0;
-            background: linear-gradient(to top,
-                    rgb(255 255 255 / 0.98) 0%,
-                    rgb(255 255 255 / 0.84) 48%,
-                    rgb(255 255 255 / 0.15) 74%,
-                    transparent 100%);
+            /* background: linear-gradient(to top,rgb(255 255 255 / 0.98) 0%,rgb(255 255 255 / 0.84) 48%,rgb(255 255 255 / 0.15) 74%,transparent 100%); */
             opacity: 0;
             transition: opacity 200ms ease;
             pointer-events: none;
@@ -1372,7 +1394,7 @@
         .quran-bottom-strip>* {
             position: relative;
             z-index: 1;
-            transition: opacity 180ms ease, filter 180ms ease;
+            transition: all 180ms ease;
         }
 
         .quran-reader-panel--calibrating .quran-bottom-strip::before {
@@ -1439,6 +1461,10 @@
             cursor: pointer;
         }
 
+        .dark .quran-page-slider {
+            background: linear-gradient(90deg, color-mix(in srgb, var(--primary-200) 50%, transparent), color-mix(in srgb, var(--primary-300) 50%, transparent));
+        }
+
         .quran-page-slider:disabled {
             cursor: not-allowed;
             filter: saturate(0.2);
@@ -1503,6 +1529,10 @@
                 transform 140ms ease,
                 box-shadow 180ms ease,
                 color 180ms ease;
+        }
+
+        .dark .quran-page-slider-chip {
+            background: linear-gradient(176deg, color-mix(in srgb, var(--gray-100) 30%, transparent), color-mix(in srgb, var(--gray-200) 40%, transparent));
         }
 
         .quran-page-slider-chip:hover {
@@ -1937,7 +1967,7 @@
                                 <l-jelly-triangle
                                     size="34"
                                     speed="1.75"
-                                    color="#0a6571"
+                                    x-bind:color="window.Alpine.store('colorScheme').isDark ? '#BFD4D7' : '#0a6571'"
                                 ></l-jelly-triangle>
                             </div>
                             <span

@@ -279,7 +279,7 @@
         data-testid="copyright-version-panel"
         x-bind:class="{
             'opacity-100!': isVisible,
-            'pointer-events-auto!': isHoverRevealEnabled() || isVisible || isTouching,
+            'pointer-events-auto!': (isHoverRevealEnabled() || isVisible || isTouching) && (views['main-menu'].isOpen || views['athkar-app-gate'].isOpen || views['quran-app-gate'].isOpen),
             'bg-gray-100/70! text-gray-800!': views['quran-app-gate'].isOpen,
         }"
         x-on:mouseenter="handleMouseEnter()"
