@@ -149,7 +149,7 @@
             display: inline-flex;
             align-items: baseline;
             gap: var(--quran-word-gap-extra, 0em);
-            border-radius: 0.56em;
+            border-radius: 0.38em;
             padding-inline: 0.14em;
             margin-inline: -0.02em;
             transition:
@@ -224,6 +224,33 @@
                 0 2px 12px color-mix(in srgb, var(--warning-700) 16%, transparent);
             border-radius: 0.52em;
             animation: quran-copy-highlight-enter 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        .dark .quran-segment-cluster.quran-segment-cluster-hovered {
+            background-color: color-mix(in srgb, var(--gray-400) 12%, transparent);
+            box-shadow:
+                inset 0 0 0 1px color-mix(in srgb, var(--gray-400) 14%, transparent),
+                0 2px 10px color-mix(in srgb, white 6%, transparent);
+        }
+
+        .dark .quran-word-button.quran-segment-hovered {
+            background-color: color-mix(in srgb, var(--gray-400) 12%, transparent);
+            box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gray-400) 12%, transparent);
+        }
+
+        .dark .quran-segment-cluster.quran-segment-cluster-copied {
+            background: color-mix(in srgb, var(--warning-300) 34%, transparent);
+            box-shadow:
+                inset 0 0 0 1px color-mix(in srgb, var(--warning-300) 22%, transparent),
+                0 2px 10px color-mix(in srgb, var(--warning-700) 10%, transparent);
+        }
+
+        .dark .quran-word-button.quran-segment-copied {
+            background: color-mix(in srgb, var(--warning-300) 36%, transparent);
+            color: color-mix(in srgb, var(--warning-100) 60%, var(--quran-ink));
+            box-shadow:
+                inset 0 0 0 1px color-mix(in srgb, var(--warning-300) 24%, transparent),
+                0 2px 10px color-mix(in srgb, var(--warning-700) 10%, transparent);
         }
 
         @keyframes quran-copy-highlight-enter {
@@ -336,7 +363,7 @@
             transform: translateZ(0);
             will-change: opacity;
             isolation: isolate;
-            overflow: hidden;
+            /* overflow: hidden; */
         }
 
         .quran-calibration-overlay::before {
@@ -1347,7 +1374,7 @@
             transform: scale(0.97);
             box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--primary-500) 58%, transparent);
         }
-        
+
         .dark .quran-top-strip:not(.quran-top-strip--wird-active) .quran-soorah-trigger:active {
             box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--primary-300) 58%, transparent);
         }
@@ -1928,7 +1955,7 @@
             </section>
         @else
             <section
-                class="quran-reader-panel min-w-75 3xl:h-196 3xl:w-140 4xl:h-240 4xl:w-176 relative flex h-[min(82svh,38rem)] w-[min(92vw,22rem)] flex-col overflow-hidden rounded-[1.75rem] border sm:w-[min(84vw,37rem)] xl:h-[min(73.5svh,46.75rem)] xl:w-[min(84vw,34rem)] 2xl:h-[min(73.5svh,55rem)] 2xl:w-[min(84vw,40rem)]"
+                class="quran-reader-panel min-w-75 3xl:h-196 3xl:w-140 4xl:h-240 4xl:w-176 relative flex h-[min(82svh,38rem)] w-[min(92vw,22rem)] flex-col Xoverflow-hidden rounded-[1.75rem] border sm:w-[min(84vw,37rem)] xl:h-[min(73.5svh,46.75rem)] xl:w-[min(84vw,34rem)] 2xl:h-[min(73.5svh,55rem)] 2xl:w-[min(84vw,40rem)]"
                 x-bind:style="readerPanelStyle()"
                 x-bind:class="{ 'quran-reader-panel--calibrating': isCalibrating || _startupCalibrationPending }"
                 x-on:pointerdown.passive="onSwipeStart($event)"
@@ -2146,7 +2173,7 @@
                 </header>
 
                 <div
-                    class="3xl:my-1 4xl:my-3 3xl:px-0 4xl:px-4 relative my-2 min-h-0 flex-1 overflow-hidden px-3 sm:my-3 sm:px-4 xl:my-1.5 xl:px-12 2xl:my-3 2xl:px-4"
+                    class="3xl:my-1 4xl:my-3 3xl:px-0 4xl:px-4 relative my-2 min-h-0 flex-1 Xoverflow-hidden px-3 sm:my-3 sm:px-4 xl:my-1.5 xl:px-12 2xl:my-3 2xl:px-4"
                     x-ref="pageViewport"
                 >
                     <div
@@ -2186,7 +2213,7 @@
                         @endif
 
                         <div
-                            class="mx-auto grid h-full w-fit max-w-full place-items-center items-center overflow-hidden"
+                            class="mx-auto grid h-full w-fit max-w-full place-items-center items-center Xoverflow-hidden"
                             x-ref="pageFrame"
                         >
                             <div
