@@ -341,6 +341,16 @@
             animation: main-menu-insights-trigger-power 0.98s ease-in-out infinite alternate;
         }
 
+        .dark .main-menu-insights-trigger[data-expanded='true'] {
+            box-shadow:
+                0 0 0 1px color-mix(in srgb, white 90%, transparent),
+                0 0 34px color-mix(in srgb, white 85%, transparent),
+                0 0 62px color-mix(in srgb, white 64%, transparent),
+                0 0 96px color-mix(in srgb, var(--primary-300) 43%, transparent),
+                0 0 138px color-mix(in srgb, var(--primary-400) 24%, transparent);
+            animation: main-menu-insights-trigger-power-dark 0.98s ease-in-out infinite alternate;
+        }
+
         .main-menu-insights-trigger:hover::before,
         .main-menu-insights-trigger:focus-visible::before {
             opacity: 1;
@@ -405,23 +415,28 @@
             backdrop-filter: blur(28px) saturate(180%);
             box-shadow:
                 0 20px 52px color-mix(in srgb, var(--primary-900) 16%, transparent),
-                0 8px 20px color-mix(in srgb, var(--primary-400) 14%, transparent),
-                0 0 46px color-mix(in srgb, white 32%, transparent);
+                0 8px 20px color-mix(in srgb, var(--primary-400) 30%, transparent),
+                0 0 46px color-mix(in srgb, white 17%, transparent);
             padding: 1.05rem 0.92rem 0.95rem;
             transform: scale(0.972);
             transform-origin: top center;
             opacity: 0;
-            transition:
-                top 315ms cubic-bezier(0.22, 1, 0.36, 1),
-                transform 315ms cubic-bezier(0.22, 1, 0.36, 1),
-                opacity 315ms ease;
+            transition: all 315ms cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .dark .main-menu-insights-panel {
+            border: 1px solid color-mix(in srgb, white 76%, var(--primary-200) 14%);
+            background: linear-gradient(160deg,
+                    color-mix(in srgb, var(--background-dark) 65%, transparent) 0%,
+                    color-mix(in srgb, var(--primary-300) 70%, transparent) 100%);
+            box-shadow:
+                0 20px 52px color-mix(in srgb, var(--primary-700) 46%, transparent),
+                0 8px 20px color-mix(in srgb, var(--primary-200) 34%, transparent),
+                0 0 46px color-mix(in srgb, white 22%, transparent);
         }
 
         .main-menu-insights-panel[data-fast-close='true'] {
-            transition:
-                top var(--main-menu-insights-fast-close-duration, 450ms) cubic-bezier(0.4, 0, 1, 1),
-                transform var(--main-menu-insights-fast-close-duration, 450ms) cubic-bezier(0.4, 0, 1, 1),
-                opacity var(--main-menu-insights-fast-close-opacity-duration, 360ms) ease;
+            transition: all var(--main-menu-insights-fast-close-duration, 450ms) cubic-bezier(0.4, 0, 1, 1);
         }
 
         .main-menu-insights-panel::before {
@@ -436,6 +451,10 @@
             filter: blur(22px);
             opacity: 0.78;
             pointer-events: none;
+        }
+
+        .dark .main-menu-insights-panel::before {
+            background: none;
         }
 
         .main-menu-insights-panel::after {
@@ -461,11 +480,11 @@
             opacity: 1;
         }
 
-        .dark .main-menu-insights-panel {
+        .dark .main-menu-insights-reveal[data-expanded='true'] .main-menu-insights-panel {
             border-color: color-mix(in srgb, var(--primary-100) 32%, transparent);
             background: linear-gradient(160deg,
-                    color-mix(in srgb, var(--background-dark) 22%, transparent) 0%,
-                    color-mix(in srgb, var(--primary-900) 24%, transparent) 100%);
+                    color-mix(in srgb, var(--background-dark) 65%, transparent) 0%,
+                    color-mix(in srgb, var(--primary-300) 70%, transparent) 100%);
             box-shadow:
                 0 24px 58px color-mix(in srgb, black 38%, transparent),
                 0 10px 24px color-mix(in srgb, var(--primary-500) 22%, transparent),
@@ -825,6 +844,24 @@
                     0 0 40px color-mix(in srgb, white 94%, transparent),
                     0 0 72px color-mix(in srgb, var(--primary-400) 58%, transparent),
                     0 0 126px color-mix(in srgb, var(--primary-500) 42%, transparent);
+            }
+        }
+
+        @keyframes main-menu-insights-trigger-power-dark {
+            0% {
+                box-shadow:
+                    0 0 0 1px color-mix(in srgb, white 17%, transparent),
+                    0 0 5px color-mix(in srgb, white 24%, transparent),
+                    0 0 10px color-mix(in srgb, var(--primary-200) 12%, transparent),
+                    0 0 50px color-mix(in srgb, var(--primary-300) 5%, transparent);
+            }
+
+            100% {
+                box-shadow:
+                    0 0 0 1px color-mix(in srgb, white 27%, transparent),
+                    0 0 10px color-mix(in srgb, white 28%, transparent),
+                    0 0 20px color-mix(in srgb, var(--primary-200) 12%, transparent),
+                    0 0 90px color-mix(in srgb, var(--primary-300) 5%, transparent);
             }
         }
 
