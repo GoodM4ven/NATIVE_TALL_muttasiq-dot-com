@@ -1347,6 +1347,10 @@
             transform: scale(0.97);
             box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--primary-500) 58%, transparent);
         }
+        
+        .dark .quran-top-strip:not(.quran-top-strip--wird-active) .quran-soorah-trigger:active {
+            box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--primary-300) 58%, transparent);
+        }
 
         .quran-reader-panel--calibrating .quran-top-strip {
             filter: none;
