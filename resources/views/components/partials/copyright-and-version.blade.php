@@ -21,14 +21,32 @@
         appVersion: @js(\App\Models\Setting::appVersion()),
         waitDuration: 3000,
         visibleDuration: 3000,
+        touchHoldIncrementDuration: 2000,
         waitTimeoutId: null,
         hideTimeoutId: null,
+        touchHoldTimeoutId: null,
+        touchHoldExpiresAt: 0,
         isRevealEligible() {
             return Boolean(
                 this.views?.['main-menu']?.isOpen ||
                 this.views?.['athkar-app-gate']?.isOpen ||
                 this.views?.['quran-app-gate']?.isOpen,
             );
+        },
+        isQuranReaderOpen() {
+            return Boolean(
+                this.views?.['quran-app-gate']?.isOpen ||
+                this.views?.['quran-app-tilawa']?.isOpen ||
+                this.views?.['quran-app-hifth']?.isOpen ||
+                this.views?.['quran-app-tadabbur']?.isOpen,
+            );
+        },
+        isQuranReaderDarkModeOpen() {
+            const darkModeStore =
+                this.$store?.colorScheme ??
+                window.Alpine?.store?.('colorScheme');
+    
+            return Boolean(darkModeStore?.isDarkModeOn && this.isQuranReaderOpen());
         },
         isRevealLoopReady() {
             return this.isStartupReady && this.isRevealEligible();
@@ -39,7 +57,10 @@
             if (!isEligible) {
                 if (this.lastRevealEligibility !== false) {
                     this.clearLoopTimers();
+                    this.clearTouchHoldTimer();
                     this.isVisible = false;
+                    this.isHovering = false;
+                    this.isTouching = false;
                 }
     
                 this.lastRevealEligibility = false;
@@ -93,6 +114,49 @@
                 this.hideTimeoutId = null;
             }
         },
+        clearTouchHoldTimer() {
+            if (this.touchHoldTimeoutId) {
+                clearTimeout(this.touchHoldTimeoutId);
+                this.touchHoldTimeoutId = null;
+            }
+        },
+        scheduleTouchHoldRelease() {
+            this.clearTouchHoldTimer();
+    
+            if (!this.isTouching) {
+                this.touchHoldExpiresAt = 0;
+                return;
+            }
+    
+            const remainingMs = Math.max(0, this.touchHoldExpiresAt - Date.now());
+    
+            if (remainingMs === 0) {
+                this.finishTouchHold();
+                return;
+            }
+    
+            this.touchHoldTimeoutId = setTimeout(() => {
+                this.finishTouchHold();
+            }, remainingMs);
+        },
+        extendTouchHoldTimer() {
+            const now = Date.now();
+            const nextBase = Math.max(this.touchHoldExpiresAt, now);
+    
+            this.touchHoldExpiresAt = nextBase + this.touchHoldIncrementDuration;
+            this.scheduleTouchHoldRelease();
+        },
+        finishTouchHold() {
+            this.clearTouchHoldTimer();
+            this.touchHoldExpiresAt = 0;
+    
+            if (!this.isTouching) {
+                return;
+            }
+    
+            this.isTouching = false;
+            this.releaseVisible();
+        },
         queueNextReveal(delay = this.waitDuration) {
             this.clearLoopTimers();
     
@@ -144,38 +208,11 @@
             this.isVisible = false;
             this.queueNextReveal();
         },
-        releaseVisibleAfter(delay) {
-            if (!this.isRevealLoopReady()) {
-                this.clearLoopTimers();
-                this.isVisible = false;
-                return;
-            }
-    
-            this.clearLoopTimers();
-            this.isVisible = true;
-            this.hideTimeoutId = setTimeout(() => {
-                if (!this.isRevealLoopReady()) {
-                    this.isVisible = false;
-                    return;
-                }
-    
-                if (this.isHovering || this.isTouching) {
-                    return;
-                }
-                this.releaseVisible();
-            }, delay);
-        },
         handleMouseEnter() {
-            if (this.isTouchDevice()) {
-                return;
-            }
             this.isHovering = true;
             this.holdVisible();
         },
         handleMouseLeave() {
-            if (this.isTouchDevice()) {
-                return;
-            }
             this.isHovering = false;
             this.releaseVisible();
         },
@@ -183,15 +220,10 @@
             if (!this.isTouchDevice()) {
                 return;
             }
+    
             this.isTouching = true;
             this.holdVisible();
-        },
-        handleTouchEnd() {
-            if (!this.isTouchDevice()) {
-                return;
-            }
-            this.isTouching = false;
-            this.releaseVisibleAfter(this.visibleDuration);
+            this.extendTouchHoldTimer();
         },
         init() {
             if (!this.shouldWaitForStartupSync || window.__startupSyncResolved === true) {
@@ -212,6 +244,7 @@
         },
         destroy() {
             this.clearLoopTimers();
+            this.clearTouchHoldTimer();
     
             if (this.startupSyncResolvedListener) {
                 window.removeEventListener('startup-sync-resolved', this.startupSyncResolvedListener);
@@ -222,8 +255,6 @@
     x-on:mouseenter="handleMouseEnter()"
     x-on:mouseleave="handleMouseLeave()"
     x-on:touchstart.passive="handleTouchStart()"
-    x-on:touchend.passive="handleTouchEnd()"
-    x-on:touchcancel.passive="handleTouchEnd()"
     x-on:app-version-updated.window="setAppVersion($event.detail?.version)"
     x-effect="syncRevealLoop()"
 >
@@ -244,8 +275,11 @@
                 class="inline whitespace-nowrap rounded-sm font-semibold text-gray-800 underline decoration-gray-400/80 underline-offset-4 transition-colors hover:text-gray-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400/60 dark:text-gray-100 dark:decoration-gray-400/60 dark:hover:text-white dark:focus-visible:ring-gray-200/40"
                 data-testid="copyright-version-button"
                 type="button"
-                x-bind:class="isVisible && (views['main-menu'].isOpen || views['athkar-app-gate'].isOpen || views['quran-app-gate']
-                    .isOpen) && 'pointer-events-auto!'"
+                x-bind:class="{
+                    'pointer-events-auto!': isVisible && (views['main-menu'].isOpen || views['athkar-app-gate']
+                        .isOpen || views['quran-app-gate'].isOpen),
+                    'text-primary-700! decoration-primary-500/70! hover:text-primary-900! focus-visible:ring-primary-500/35!': isQuranReaderDarkModeOpen(),
+                }"
                 x-on:click="$dispatch('open-control-panel-modal', { tab: 'updates' })"
             >
                 <span x-text="`v${appVersion}`">v{{ \App\Models\Setting::appVersion() }}</span>
