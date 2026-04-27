@@ -1,3 +1,4 @@
+import './support/livewire-vite-hot-refresh-runtime';
 import './support/dispatch';
 import './support/css-variables';
 import './support/animate-scroll';
