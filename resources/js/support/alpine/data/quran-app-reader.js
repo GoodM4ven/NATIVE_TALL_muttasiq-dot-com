@@ -13272,10 +13272,12 @@ document.addEventListener('alpine:init', () => {
             }
 
             const surahHeaderCount = lines.filter(
-                (line) => String(line?.line_type ?? '') === 'surah_name',
+                (line) =>
+                    String(line?.line_type ?? '') === 'surah_name' && this.shouldRenderLine(line),
             ).length;
             const basmallahCount = lines.filter(
-                (line) => String(line?.line_type ?? '') === 'basmallah',
+                (line) =>
+                    String(line?.line_type ?? '') === 'basmallah' && this.shouldRenderLine(line),
             ).length;
 
             if (surahHeaderCount > 0 || basmallahCount > 0) {
@@ -13283,6 +13285,30 @@ document.addEventListener('alpine:init', () => {
             }
 
             return true;
+        },
+
+        isMultiSurahSegmentedPage() {
+            const lines = Array.isArray(this.mushafLines) ? this.mushafLines : [];
+
+            if (lines.length < 1) {
+                return false;
+            }
+
+            const renderedSurahHeaderCount = lines.filter(
+                (line) =>
+                    String(line?.line_type ?? '') === 'surah_name' && this.shouldRenderLine(line),
+            ).length;
+            const renderedBasmallahCount = lines.filter(
+                (line) =>
+                    String(line?.line_type ?? '') === 'basmallah' && this.shouldRenderLine(line),
+            ).length;
+            const ayahLineCount = lines.filter(
+                (line) => String(line?.line_type ?? '') === 'ayah',
+            ).length;
+
+            return (
+                renderedSurahHeaderCount >= 2 && renderedBasmallahCount >= 2 && ayahLineCount >= 6
+            );
         },
 
         isAyahLineWithWords(line) {
