@@ -13336,6 +13336,52 @@ document.addEventListener('alpine:init', () => {
             return this.lineByNumber(lineNumber - 1);
         },
 
+        previousRenderableLine(line) {
+            const lineNumber = Math.max(0, Math.trunc(Number(line?.line_number ?? 0)));
+            const maxIterations = Math.max(0, this.mushafLines.length + 4);
+            let candidateLineNumber = lineNumber - 1;
+            let iterations = 0;
+
+            while (candidateLineNumber >= 1 && iterations < maxIterations) {
+                const candidateLine = this.lineByNumber(candidateLineNumber);
+
+                if (candidateLine && this.shouldRenderLine(candidateLine)) {
+                    return candidateLine;
+                }
+
+                candidateLineNumber -= 1;
+                iterations += 1;
+            }
+
+            return null;
+        },
+
+        nextRenderableLine(line) {
+            const lineNumber = Math.max(0, Math.trunc(Number(line?.line_number ?? 0)));
+            const maxLineNumber = Math.max(
+                0,
+                ...this.mushafLines.map((entry) =>
+                    Math.max(0, Math.trunc(Number(entry?.line_number ?? 0))),
+                ),
+            );
+            const maxIterations = Math.max(0, this.mushafLines.length + 4);
+            let candidateLineNumber = lineNumber + 1;
+            let iterations = 0;
+
+            while (candidateLineNumber <= maxLineNumber && iterations < maxIterations) {
+                const candidateLine = this.lineByNumber(candidateLineNumber);
+
+                if (candidateLine && this.shouldRenderLine(candidateLine)) {
+                    return candidateLine;
+                }
+
+                candidateLineNumber += 1;
+                iterations += 1;
+            }
+
+            return null;
+        },
+
         resolvedLineSurahNumber(line) {
             const lineSurahNumber = Math.max(0, Math.trunc(Number(line?.surah_number ?? 0)));
 
@@ -13392,7 +13438,7 @@ document.addEventListener('alpine:init', () => {
                 return false;
             }
 
-            const previousLine = this.previousLine(line);
+            const previousLine = this.previousRenderableLine(line);
 
             if (String(previousLine?.line_type ?? '') !== 'ayah') {
                 return false;
@@ -13421,23 +13467,26 @@ document.addEventListener('alpine:init', () => {
                 return configuredPadding;
             }
 
-            return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * 0.28)';
+            return 'var(--quran-surah-section-gap, calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * 0.56))';
         },
 
         lineMarginBlockStart(line) {
             if (this.isSurahHeaderLine(line)) {
-                const baseSurahHeaderSpacing =
-                    'calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * 0.28)';
-
                 if (this.isSurahHeaderFollowingPreviousSurahAyahOnSamePage(line)) {
-                    return `calc(${baseSurahHeaderSpacing} + ${this.surahHeaderTopPaddingWhenFollowingPreviousSurahAyahValue()})`;
+                    return this.surahHeaderTopPaddingWhenFollowingPreviousSurahAyahValue();
                 }
 
-                return baseSurahHeaderSpacing;
+                return '0px';
             }
 
             if (this.isBasmallahLine(line)) {
-                return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * 0.12)';
+                const previousLine = this.previousRenderableLine(line);
+
+                if (this.isSurahHeaderLine(previousLine)) {
+                    return 'var(--quran-basmallah-top-gap, calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * 0.12))';
+                }
+
+                return '0px';
             }
 
             return '0px';
@@ -13446,13 +13495,19 @@ document.addEventListener('alpine:init', () => {
         lineMarginBlockEnd(line) {
             if (this.isSurahHeaderLine(line)) {
                 if (this.nextLineType(line) === 'basmallah') {
-                    return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * -0.44)';
+                    return 'var(--quran-surah-header-basmallah-overlap, calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * -0.44))';
                 }
 
-                return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * -0.1)';
+                return 'var(--quran-surah-header-bottom-trim, calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * -0.1))';
             }
 
             if (this.isBasmallahLine(line)) {
+                const nextLine = this.nextRenderableLine(line);
+
+                if (String(nextLine?.line_type ?? '') !== 'ayah') {
+                    return '0px';
+                }
+
                 return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * var(--quran-basmallah-bottom-gap-scale, 0.04))';
             }
 
