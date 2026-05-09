@@ -13311,6 +13311,30 @@ document.addEventListener('alpine:init', () => {
             );
         },
 
+        isSingleHeaderLongContentPage() {
+            const lines = Array.isArray(this.mushafLines) ? this.mushafLines : [];
+
+            if (lines.length < 1) {
+                return false;
+            }
+
+            const renderedSurahHeaderCount = lines.filter(
+                (line) =>
+                    String(line?.line_type ?? '') === 'surah_name' && this.shouldRenderLine(line),
+            ).length;
+            const renderedBasmallahCount = lines.filter(
+                (line) =>
+                    String(line?.line_type ?? '') === 'basmallah' && this.shouldRenderLine(line),
+            ).length;
+            const ayahLineCount = lines.filter(
+                (line) => String(line?.line_type ?? '') === 'ayah',
+            ).length;
+
+            return (
+                renderedSurahHeaderCount === 1 && renderedBasmallahCount >= 1 && ayahLineCount >= 10
+            );
+        },
+
         isAyahLineWithWords(line) {
             return (
                 String(line?.line_type ?? '') === 'ayah' &&
