@@ -508,7 +508,7 @@
             direction: rtl;
             display: flex;
             flex-direction: column;
-            gap: calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier) * var(--quran-page-scale));
+            gap: calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier) * var(--quran-page-scale) * var(--quran-page-dense-gap-multiplier, 1));
         }
 
         .quran-page-lines * {
@@ -674,17 +674,17 @@
 
         .quran-ayah-line-run-rect {
             font-size: calc(var(--quran-font-size-rect) * var(--quran-type-scale) * var(--quran-page-type-scale) * var(--quran-page-scale));
-            line-height: calc(var(--quran-line-height-rect) * var(--quran-leading-scale) * var(--quran-page-leading-multiplier));
+            line-height: calc(var(--quran-line-height-rect) * var(--quran-leading-scale) * var(--quran-page-leading-multiplier) * var(--quran-page-dense-leading-multiplier, 1));
         }
 
         .quran-ayah-line-run-centered {
             font-size: calc(var(--quran-font-size-center) * var(--quran-type-scale) * var(--quran-page-type-scale) * var(--quran-page-scale));
-            line-height: calc(var(--quran-line-height-center) * var(--quran-leading-scale) * var(--quran-page-leading-multiplier));
+            line-height: calc(var(--quran-line-height-center) * var(--quran-leading-scale) * var(--quran-page-leading-multiplier) * var(--quran-page-dense-leading-multiplier, 1));
         }
 
         .quran-meta-line {
             font-size: calc(var(--quran-font-size-meta) * var(--quran-type-scale) * var(--quran-page-type-scale) * var(--quran-page-scale));
-            line-height: calc(var(--quran-line-height-meta) * var(--quran-leading-scale) * var(--quran-page-leading-multiplier));
+            line-height: calc(var(--quran-line-height-meta) * var(--quran-leading-scale) * var(--quran-page-leading-multiplier) * var(--quran-page-dense-leading-multiplier, 1));
         }
 
         .quran-basmallah-line {
@@ -694,7 +694,40 @@
             gap: 0.22ch;
             white-space: nowrap;
             font-size: calc(var(--quran-font-size-center) * var(--quran-type-scale) * var(--quran-page-type-scale) * var(--quran-page-scale));
-            line-height: calc(var(--quran-line-height-center) * var(--quran-leading-scale) * var(--quran-page-leading-multiplier));
+            line-height: calc(var(--quran-line-height-center) * var(--quran-leading-scale) * var(--quran-page-leading-multiplier) * var(--quran-page-dense-leading-multiplier, 1));
+        }
+
+        .quran-page-lines--dense {
+            --quran-page-dense-leading-multiplier: 1;
+            --quran-page-dense-gap-multiplier: 1;
+        }
+
+        @media (min-width: 1280px) and (max-width: 1535px) {
+            .quran-page-lines--dense {
+                --quran-page-dense-leading-multiplier: 1.11;
+                --quran-page-dense-gap-multiplier: 1.22;
+            }
+        }
+
+        @media (min-width: 1536px) and (max-width: 1919px) {
+            .quran-page-lines--dense {
+                --quran-page-dense-leading-multiplier: 1.07;
+                --quran-page-dense-gap-multiplier: 1.14;
+            }
+        }
+
+        @media (min-width: 1920px) and (max-width: 2559px) {
+            .quran-page-lines--dense {
+                --quran-page-dense-leading-multiplier: 1.04;
+                --quran-page-dense-gap-multiplier: 1.08;
+            }
+        }
+
+        @media (min-width: 2560px) {
+            .quran-page-lines--dense {
+                --quran-page-dense-leading-multiplier: 1.1;
+                --quran-page-dense-gap-multiplier: 1.24;
+            }
         }
 
         .quran-basmallah-word {
@@ -2413,6 +2446,7 @@
                         >
                             <div
                                 class="quran-page-lines mx-auto pb-4"
+                                x-bind:class="{ 'quran-page-lines--dense': isDenseFullLinePage() }"
                                 x-bind:data-fit-state="typeof pageFitState === 'function' ? pageFitState() : (isFittingPage ? 'fitting' :
                                     'ready')"
                                 x-bind:style="pageContentStyle()"

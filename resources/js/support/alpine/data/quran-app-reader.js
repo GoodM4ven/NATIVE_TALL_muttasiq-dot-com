@@ -13257,6 +13257,34 @@ document.addEventListener('alpine:init', () => {
             return `--quran-line-index: ${lineNumber}; --quran-word-gap-extra: ${wordGapExtra}em; margin-block-start: ${marginBlockStart}; margin-block-end: ${marginBlockEnd};`;
         },
 
+        isDenseFullLinePage() {
+            const lines = Array.isArray(this.mushafLines) ? this.mushafLines : [];
+
+            if (lines.length < 1) {
+                return false;
+            }
+
+            const ayahLines = lines.filter((line) => String(line?.line_type ?? '') === 'ayah');
+            const ayahLineCount = ayahLines.length;
+
+            if (ayahLineCount < 14) {
+                return false;
+            }
+
+            const surahHeaderCount = lines.filter(
+                (line) => String(line?.line_type ?? '') === 'surah_name',
+            ).length;
+            const basmallahCount = lines.filter(
+                (line) => String(line?.line_type ?? '') === 'basmallah',
+            ).length;
+
+            if (surahHeaderCount > 0 || basmallahCount > 0) {
+                return false;
+            }
+
+            return true;
+        },
+
         isAyahLineWithWords(line) {
             return (
                 String(line?.line_type ?? '') === 'ayah' &&
