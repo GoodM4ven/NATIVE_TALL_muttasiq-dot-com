@@ -1344,7 +1344,7 @@
 
                 <div class="pointer-events-auto w-16">
                     <button
-                        class="athkar-origin-indicator 3xl:size-13 3xl:[--athkar-origin-inset:7px] 4xl:size-13.5 4xl:[--athkar-origin-inset:8px] left-4 size-7 [--athkar-origin-inset:1px] sm:size-6 sm:[--athkar-origin-inset:1px] md:size-9.5 md:[--athkar-origin-inset:4.5px] lg:size-10 lg:[--athkar-origin-inset:5px] xl:size-12 xl:[--athkar-origin-inset:6px] 2xl:size-12.5 2xl:[--athkar-origin-inset:6px]"
+                        class="athkar-origin-indicator 3xl:size-13 3xl:[--athkar-origin-inset:7px] 4xl:size-13.5 4xl:[--athkar-origin-inset:8px] md:size-9.5 2xl:size-12.5 left-4 size-7 [--athkar-origin-inset:1px] sm:size-6 sm:[--athkar-origin-inset:1px] md:[--athkar-origin-inset:4.5px] lg:size-10 lg:[--athkar-origin-inset:5px] xl:size-12 xl:[--athkar-origin-inset:6px] 2xl:[--athkar-origin-inset:6px]"
                         type="button"
                         x-show="hasOrigin(activeIndex)"
                         x-transition.opacity.duration.300ms
@@ -1359,7 +1359,7 @@
                         x-on:blur="$tippy.hide()"
                     >
                         <x-icon
-                            class="athkar-origin-indicator__icon 3xl:size-9 4xl:size-10 size-6.5 md:size-7 lg:size-7 xl:size-8 2xl:size-8.5"
+                            class="athkar-origin-indicator__icon 3xl:size-9 4xl:size-10 size-6.5 2xl:size-8.5 md:size-7 lg:size-7 xl:size-8"
                             name="bootstrap.exclamation-diamond"
                         />
                     </button>

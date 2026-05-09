@@ -27,6 +27,8 @@ This shared source code base is representing the web version primarily, the one 
   - Prefer passing full final strings through this helper instead of ad-hoc numeral/harakat conversions in Blade, Livewire actions, or model label builders.
 - Place reusable cross-feature utilities in `Support`/`support` namespaces and folders, put inside their standradized main folders first of course.
 - The layout manager [resources/js/support/alpine/data/layout-manager.js] tracks action/modal events (`open-modal`, `close-modal`, etc.) and should stay in sync with Filament modal behavior.
+- When designing front-end code, and writing pure CSS at the top in the Blade file, never use the following properties unresponsively: font sizing (font-size, line-height, etc.), element sizing (width, height, padding, etc.), and positioning (top, bottom, inset-inline-start, etc.).
+  - These properties must be added as inlined TailwindCSS classes on their HTML elements and having counterparts for all the breakpoints in defined in [resources/css/support/breakpointer.css].
 
 ## Preferences
 - Do not ever consider using reduced-motion CSS feature.

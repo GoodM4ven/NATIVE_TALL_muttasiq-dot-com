@@ -4,7 +4,7 @@
             'mobile',
         ),
         'bottom-7' => is_platform('mobile'),
-        'fixed inset-x-0 z-30 flex w-full max-w-full justify-center px-4 opacity-0 transition-opacity sm:w-auto sm:max-w-none sm:px-5 md:px-5 lg:px-6 pointer-events-none sm:[zoom:0.5] md:[zoom:0.5] lg:[zoom:0.675] xl:[zoom:0.8] 2xl:[zoom:0.95] 3xl:[zoom:1.05] 4xl:[zoom:1.25]',
+        'fixed inset-x-0 z-30 flex w-full max-w-full justify-center px-4 opacity-0 transition-opacity sm:w-auto sm:max-w-none sm:px-5 md:px-5 lg:px-6 pointer-events-none sm:[zoom:0.95] md:[zoom:0.95] lg:[zoom:1] xl:[zoom:0.8] 2xl:[zoom:0.95] 3xl:[zoom:1.05] 4xl:[zoom:1.25]',
     ]) }}"
     data-testid="copyright-version-shell"
     x-bind:class="{
@@ -279,7 +279,8 @@
         data-testid="copyright-version-panel"
         x-bind:class="{
             'opacity-100!': isVisible,
-            'pointer-events-auto!': (isHoverRevealEnabled() || isVisible || isTouching) && (views['main-menu'].isOpen || views['athkar-app-gate'].isOpen || views['quran-app-gate'].isOpen),
+            'pointer-events-auto!': (isHoverRevealEnabled() || isVisible || isTouching) && (views['main-menu'].isOpen ||
+                views['athkar-app-gate'].isOpen || views['quran-app-gate'].isOpen),
             'bg-gray-100/70! text-gray-800!': views['quran-app-gate'].isOpen,
         }"
         x-on:mouseenter="handleMouseEnter()"

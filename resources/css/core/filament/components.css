@@ -1111,7 +1111,7 @@
 
     @media (min-width: 1280px) and (max-width: 1535px) {
         .quran-support-lock-target--locked.quran-wird-progress-button
-        .quran-support-lock-badge__icon-svg {
+            .quran-support-lock-badge__icon-svg {
             inline-size: 1.05rem;
             block-size: 1.05rem;
         }
@@ -1119,7 +1119,7 @@
 
     @media (min-width: 1536px) and (max-width: 1919px) {
         .quran-support-lock-target--locked.quran-wird-progress-button
-        .quran-support-lock-badge__icon-svg {
+            .quran-support-lock-badge__icon-svg {
             inline-size: 1.15rem;
             block-size: 1.15rem;
         }

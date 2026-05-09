@@ -14,6 +14,7 @@ const defaultPagePayload = Object.freeze({
     surahHeaderFontFamily: null,
     surahHeaderFontUrl: null,
     surahHeaderFontFormat: null,
+    surahHeaderTopPaddingWhenFollowingPreviousSurahAyah: null,
     surahNames: null,
     surahDirectory: null,
     useCenteredAyahLayout: true,
@@ -48,6 +49,8 @@ const normalizePayload = (payload = {}) => ({
     surahHeaderFontFamily: payload?.surahHeaderFontFamily ?? null,
     surahHeaderFontUrl: payload?.surahHeaderFontUrl ?? null,
     surahHeaderFontFormat: payload?.surahHeaderFontFormat ?? null,
+    surahHeaderTopPaddingWhenFollowingPreviousSurahAyah:
+        payload?.surahHeaderTopPaddingWhenFollowingPreviousSurahAyah ?? null,
     surahNames:
         payload?.surahNames && typeof payload.surahNames === 'object' ? payload.surahNames : null,
     surahDirectory: Array.isArray(payload?.surahDirectory) ? payload.surahDirectory : null,
@@ -805,6 +808,7 @@ document.addEventListener('alpine:init', () => {
         surahHeaderFontFamily: null,
         surahHeaderFontUrl: null,
         surahHeaderFontFormat: null,
+        surahHeaderTopPaddingWhenFollowingPreviousSurahAyah: null,
         useCenteredAyahLayout: true,
         hoveredAyahIndex: 0,
         hoveredWordIndex: 0,
@@ -7595,6 +7599,9 @@ document.addEventListener('alpine:init', () => {
                 normalizedPayload.surahHeaderFontUrl ?? this.surahHeaderFontUrl;
             this.surahHeaderFontFormat =
                 normalizedPayload.surahHeaderFontFormat ?? this.surahHeaderFontFormat;
+            this.surahHeaderTopPaddingWhenFollowingPreviousSurahAyah =
+                normalizedPayload.surahHeaderTopPaddingWhenFollowingPreviousSurahAyah ??
+                this.surahHeaderTopPaddingWhenFollowingPreviousSurahAyah;
 
             if (
                 normalizedPayload.surahNames &&
@@ -13319,9 +13326,114 @@ document.addEventListener('alpine:init', () => {
             return String(nextLine?.line_type ?? '');
         },
 
+        previousLine(line) {
+            const lineNumber = Math.max(0, Math.trunc(Number(line?.line_number ?? 0)));
+
+            if (lineNumber <= 1) {
+                return null;
+            }
+
+            return this.lineByNumber(lineNumber - 1);
+        },
+
+        resolvedLineSurahNumber(line) {
+            const lineSurahNumber = Math.max(0, Math.trunc(Number(line?.surah_number ?? 0)));
+
+            if (lineSurahNumber > 0) {
+                return lineSurahNumber;
+            }
+
+            if (!Array.isArray(line?.words) || line.words.length < 1) {
+                return 0;
+            }
+
+            const firstWordWithSurah = line.words.find((word) => {
+                const wordSurahNumber = Math.max(0, Math.trunc(Number(word?.surah_number ?? 0)));
+
+                return wordSurahNumber > 0;
+            });
+
+            return Math.max(0, Math.trunc(Number(firstWordWithSurah?.surah_number ?? 0)));
+        },
+
+        nearestPreviousSurahHeaderNumber(line) {
+            const lineNumber = Math.max(0, Math.trunc(Number(line?.line_number ?? 0)));
+
+            if (
+                lineNumber <= 1 ||
+                !Array.isArray(this.mushafLines) ||
+                this.mushafLines.length < 1
+            ) {
+                return 0;
+            }
+
+            const previousSurahHeaderLine = this.mushafLines
+                .filter((entry) => {
+                    const entryLineNumber = Math.max(
+                        0,
+                        Math.trunc(Number(entry?.line_number ?? 0)),
+                    );
+
+                    return entryLineNumber > 0 && entryLineNumber < lineNumber;
+                })
+                .filter((entry) => String(entry?.line_type ?? '') === 'surah_name')
+                .sort((left, right) => {
+                    const leftNumber = Math.max(0, Math.trunc(Number(left?.line_number ?? 0)));
+                    const rightNumber = Math.max(0, Math.trunc(Number(right?.line_number ?? 0)));
+
+                    return rightNumber - leftNumber;
+                })[0];
+
+            return this.resolvedLineSurahNumber(previousSurahHeaderLine);
+        },
+
+        isSurahHeaderFollowingPreviousSurahAyahOnSamePage(line) {
+            if (!this.isSurahHeaderLine(line)) {
+                return false;
+            }
+
+            const previousLine = this.previousLine(line);
+
+            if (String(previousLine?.line_type ?? '') !== 'ayah') {
+                return false;
+            }
+
+            const previousSurahNumberFromAyah = this.resolvedLineSurahNumber(previousLine);
+            const previousSurahNumber =
+                previousSurahNumberFromAyah > 0
+                    ? previousSurahNumberFromAyah
+                    : this.nearestPreviousSurahHeaderNumber(line);
+            const currentSurahNumber = this.resolvedLineSurahNumber(line);
+
+            return (
+                previousSurahNumber > 0 &&
+                currentSurahNumber > 0 &&
+                previousSurahNumber !== currentSurahNumber
+            );
+        },
+
+        surahHeaderTopPaddingWhenFollowingPreviousSurahAyahValue() {
+            const configuredPadding = String(
+                this.surahHeaderTopPaddingWhenFollowingPreviousSurahAyah ?? '',
+            ).trim();
+
+            if (configuredPadding !== '') {
+                return configuredPadding;
+            }
+
+            return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * 0.28)';
+        },
+
         lineMarginBlockStart(line) {
             if (this.isSurahHeaderLine(line)) {
-                return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * 0.28)';
+                const baseSurahHeaderSpacing =
+                    'calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * 0.28)';
+
+                if (this.isSurahHeaderFollowingPreviousSurahAyahOnSamePage(line)) {
+                    return `calc(${baseSurahHeaderSpacing} + ${this.surahHeaderTopPaddingWhenFollowingPreviousSurahAyahValue()})`;
+                }
+
+                return baseSurahHeaderSpacing;
             }
 
             if (this.isBasmallahLine(line)) {
@@ -13477,12 +13589,15 @@ document.addEventListener('alpine:init', () => {
 
         surahHeaderLineStyle() {
             const family = String(this.surahHeaderFontFamily ?? '').trim();
+            const styles = [];
 
-            if (!family) {
-                return '';
+            if (family) {
+                styles.push(
+                    `font-family: '${family}', 'MadinaQuran', 'Amiri', 'Traditional Arabic', serif;`,
+                );
             }
 
-            return `font-family: '${family}', 'MadinaQuran', 'Amiri', 'Traditional Arabic', serif;`;
+            return styles.join(' ');
         },
 
         isWordActive(word) {

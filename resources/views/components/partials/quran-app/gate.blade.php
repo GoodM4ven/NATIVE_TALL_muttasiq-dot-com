@@ -23,19 +23,16 @@
         .quran-app-gate-caption {
             position: absolute;
             left: 50%;
-            top: clamp(0.85rem, 4.2vw, 2.5rem);
             transform: translateX(-50%);
             z-index: 250;
             pointer-events: none;
             border-radius: 999px;
             border: 1px solid rgba(253, 232, 171, 0.42);
-            padding: 0.36rem 1.05rem;
             background: linear-gradient(160deg,
                     rgba(24, 14, 7, 0.68) 0%,
                     rgba(11, 6, 3, 0.54) 100%);
             color: rgba(255, 245, 208, 0.96);
             font-family: 'Readex Pro', 'IBM Plex Sans Arabic', ui-sans-serif, system-ui, sans-serif;
-            font-size: clamp(0.72rem, 1.45vw, 0.9rem);
             font-weight: 700;
             letter-spacing: 0.02em;
             line-height: 1;
@@ -182,16 +179,13 @@
             align-items: center;
             justify-content: center;
             overflow: visible;
-            min-width: clamp(5.6rem, 11vw, 8rem);
             border-radius: 999px;
             border: 1px solid rgba(253, 232, 171, 0.52);
             background: linear-gradient(165deg,
                     rgba(73, 47, 17, 0.52) 0%,
                     rgba(26, 15, 6, 0.38) 48%,
                     rgba(12, 7, 3, 0.56) 100%);
-            padding: clamp(0.42rem, 1vw, 0.66rem) clamp(0.96rem, 2.4vw, 1.6rem);
             color: rgba(255, 249, 225, 0.96);
-            font-size: clamp(1.5rem, 3.2vw, 2.4rem);
             font-weight: 700;
             line-height: 1.2;
             letter-spacing: 0.04em;
@@ -257,8 +251,6 @@
             top: 50%;
             display: inline-flex;
             align-items: center;
-            gap: 0.46rem;
-            padding: 0.38rem 0.72rem;
             border-radius: 999px;
             border: 1px solid color-mix(in srgb, var(--quran-gold-2) 76%, transparent);
             background: linear-gradient(165deg,
@@ -279,15 +271,12 @@
         }
 
         .quran-app-sector__chip-lock-icon {
-            width: clamp(1rem, 2vw, 1.7rem);
-            height: clamp(1rem, 2vw, 1.7rem);
             color: color-mix(in srgb, var(--quran-gold-1) 92%, white);
             filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.44));
         }
 
         .quran-app-sector__chip-lock-caption {
             color: color-mix(in srgb, var(--quran-gold-1) 90%, white);
-            font-size: 1.38rem;
             font-weight: 700;
             line-height: 1;
             white-space: nowrap;
@@ -544,25 +533,6 @@
             }
         }
 
-        @media (min-width: 1024px) and (max-width: 1279px) {
-            .quran-app-gate-caption {
-                top: clamp(0.85rem, 4.2vw, 1.5rem);
-            }
-
-            .quran-app-sector__chip {
-                font-size: clamp(1.28rem, 2.7vw, 2.05rem);
-            }
-
-            .quran-app-sector__chip-lock-icon {
-                width: clamp(0.92rem, 1.45vw, 1.3rem);
-                height: clamp(0.92rem, 1.45vw, 1.3rem);
-            }
-
-            .quran-app-sector__chip-lock-caption {
-                font-size: 1.16rem;
-            }
-        }
-
         @media (max-width: 639px) {
             .quran-app-gate-shell {
                 --gate-cy: 58%;
@@ -577,13 +547,9 @@
             }
 
             .quran-app-gate-caption {
-                top: 1.76rem;
                 left: auto;
                 right: 0.7rem;
                 transform: none;
-                max-width: min(72vw, 14.5rem);
-                padding: 0.26rem 0.72rem;
-                font-size: 0.62rem;
                 line-height: 1.2;
                 text-align: right;
             }
@@ -614,12 +580,6 @@
                 filter: blur(1.2px) brightness(0.62) saturate(0.82);
             }
 
-            .quran-app-sector__chip {
-                min-width: clamp(4.3rem, 20vw, 6rem);
-                padding: 0.35rem 0.9rem;
-                font-size: clamp(1.12rem, 5vw, 1.52rem);
-            }
-
             .quran-app-sector__chip--tilawa {
                 top: 37.5%;
             }
@@ -627,20 +587,6 @@
             .quran-app-sector__chip--tadabbur,
             .quran-app-sector__chip--hifth {
                 top: 72%;
-            }
-
-            .quran-app-sector__chip-lock {
-                gap: 0.3rem;
-                padding: 0.28rem 0.52rem;
-            }
-
-            .quran-app-sector__chip-lock-icon {
-                width: 1.2rem;
-                height: 1.2rem;
-            }
-
-            .quran-app-sector__chip-lock-caption {
-                font-size: 0.9rem;
             }
 
             .quran-app-gate-geometry path {
@@ -728,7 +674,9 @@
         x-on:touchend="handleTouchEnd($event)"
         x-on:touchcancel="handleTouchEnd($event)"
     >
-        <p class="quran-app-gate-caption">{{ arabic_text('اختر نمط القراءة الذي يناسب مقصدك') }}</p>
+        <p
+            class="quran-app-gate-caption 3xl:top-8 3xl:px-[1.05rem] 3xl:py-[0.6rem] 3xl:text-[1rem] 4xl:top-10 4xl:px-[1.05rem] 4xl:py-[0.65rem] 4xl:text-[1.3rem] xl:top-6.5 top-[1.76rem] px-[0.72rem] py-[0.26rem] text-[0.62rem] sm:top-[1.85rem] sm:px-[1.05rem] sm:py-[0.6rem] sm:text-[0.82rem] md:top-8 md:px-4 md:py-2 md:text-[0.9rem] lg:top-6 lg:px-[1.05rem] lg:py-[0.6rem] lg:text-[1rem] xl:px-[0.85rem] xl:py-[0.45rem] xl:text-[0.75rem] 2xl:top-[1.9rem] 2xl:px-3 2xl:py-2 2xl:text-[0.75rem]">
+            {{ arabic_text('اختر نمط القراءة الذي يناسب مقصدك') }}</p>
 
         <button
             class="quran-app-sector quran-app-sector--tilawa"
@@ -773,7 +721,9 @@
             </span>
 
             <span class="quran-app-sector__veil"></span>
-            <span class="quran-app-sector__chip quran-app-sector__chip--tilawa font-arabic-serif">
+            <span
+                class="quran-app-sector__chip quran-app-sector__chip--tilawa font-arabic-serif 3xl:text-[2.2rem] 4xl:text-[2.6rem] 3xl:py-3 3xl:px-7 4xl:py-[0.9rem] 4xl:px-8 px-[0.9rem] py-[0.35rem] text-[1.25rem] sm:px-[1.15rem] sm:py-[0.52rem] sm:text-[1.5rem] md:px-[1.35rem] md:py-[0.6rem] md:text-[1.9rem] lg:px-[1.6rem] lg:py-[0.7rem] lg:text-[2.15rem] xl:px-[1.525rem] xl:py-[0.6rem] xl:text-[1.7rem] 2xl:px-[1.35rem] 2xl:py-[0.72rem] 2xl:text-[1.65rem]"
+            >
                 <span class="quran-app-sector__chip-text">{{ arabic_text('تلاوة') }}</span>
             </span>
         </button>
@@ -822,14 +772,20 @@
             </span>
 
             <span class="quran-app-sector__veil"></span>
-            <span class="quran-app-sector__chip quran-app-sector__chip--tadabbur font-arabic-serif">
+            <span
+                class="quran-app-sector__chip quran-app-sector__chip--tadabbur font-arabic-serif 3xl:text-[2.2rem] 4xl:text-[2.6rem] 3xl:py-3 3xl:px-7 4xl:py-[0.9rem] 4xl:px-8 px-[0.9rem] py-[0.35rem] text-[1.25rem] sm:px-[1.15rem] sm:py-[0.52rem] sm:text-[1.5rem] md:px-[1.35rem] md:py-[0.6rem] md:text-[1.9rem] lg:px-[1.6rem] lg:py-[0.7rem] lg:text-[2.15rem] xl:px-[1.525rem] xl:py-[0.6rem] xl:text-[1.7rem] 2xl:px-[1.35rem] 2xl:py-[0.72rem] 2xl:text-[1.65rem]"
+            >
                 <span class="quran-app-sector__chip-text">{{ arabic_text('تدبّر') }}</span>
-                <span class="quran-app-sector__chip-lock">
+                <span
+                    class="quran-app-sector__chip-lock 3xl:gap-[0.46rem] 3xl:px-[0.72rem] 3xl:py-[0.38rem] 4xl:gap-[0.46rem] 4xl:px-[0.72rem] 4xl:py-[0.38rem] gap-[0.3rem] px-[0.52rem] py-[0.28rem] sm:gap-[0.46rem] sm:px-[0.72rem] sm:py-[0.38rem] md:gap-[0.46rem] md:px-[0.72rem] md:py-[0.38rem] lg:gap-[0.46rem] lg:px-[0.72rem] lg:py-[0.38rem] xl:gap-[0.46rem] xl:px-[0.72rem] xl:py-[0.38rem] 2xl:gap-[0.46rem] 2xl:px-[0.72rem] 2xl:py-[0.38rem]"
+                >
                     <x-icon
-                        class="quran-app-sector__chip-lock-icon"
+                        class="quran-app-sector__chip-lock-icon 3xl:w-[1.55rem] 3xl:h-[1.55rem] 4xl:w-[1.7rem] 4xl:h-[1.7rem] h-[1.2rem] w-[1.2rem] sm:h-[1rem] sm:w-[1rem] md:h-[1rem] md:w-[1rem] lg:h-[0.93rem] lg:w-[0.93rem] xl:h-[1.1rem] xl:w-[1.1rem] 2xl:h-[1.05rem] 2xl:w-[1.05rem]"
                         :name="'heroicon-o-lock-closed'"
                     />
-                    <span class="quran-app-sector__chip-lock-caption">{{ arabic_text('قريبًا') }}</span>
+                    <span
+                        class="quran-app-sector__chip-lock-caption 3xl:text-[1.2rem] 4xl:text-[1.38rem] text-[0.9rem] sm:text-[1rem] md:text-[1.12rem] lg:text-[1.16rem] xl:text-[0.9rem] 2xl:text-[1rem]"
+                    >{{ arabic_text('قريبًا') }}</span>
                 </span>
             </span>
         </button>
@@ -878,14 +834,20 @@
             </span>
 
             <span class="quran-app-sector__veil"></span>
-            <span class="quran-app-sector__chip quran-app-sector__chip--hifth font-arabic-serif">
+            <span
+                class="quran-app-sector__chip quran-app-sector__chip--hifth font-arabic-serif 3xl:text-[2.2rem] 4xl:text-[2.6rem] 3xl:py-3 3xl:px-7 4xl:py-[0.9rem] 4xl:px-8 px-[0.9rem] py-[0.35rem] text-[1.25rem] sm:px-[1.15rem] sm:py-[0.52rem] sm:text-[1.5rem] md:px-[1.35rem] md:py-[0.6rem] md:text-[1.9rem] lg:px-[1.6rem] lg:py-[0.7rem] lg:text-[2.15rem] xl:px-[1.525rem] xl:py-[0.6rem] xl:text-[1.7rem] 2xl:px-[1.35rem] 2xl:py-[0.72rem] 2xl:text-[1.65rem]"
+            >
                 <span class="quran-app-sector__chip-text">{{ arabic_text('حفظ') }}</span>
-                <span class="quran-app-sector__chip-lock">
+                <span
+                    class="quran-app-sector__chip-lock 3xl:gap-[0.46rem] 3xl:px-[0.72rem] 3xl:py-[0.38rem] 4xl:gap-[0.46rem] 4xl:px-[0.72rem] 4xl:py-[0.38rem] gap-[0.3rem] px-[0.52rem] py-[0.28rem] sm:gap-[0.46rem] sm:px-[0.72rem] sm:py-[0.38rem] md:gap-[0.46rem] md:px-[0.72rem] md:py-[0.38rem] lg:gap-[0.46rem] lg:px-[0.72rem] lg:py-[0.38rem] xl:gap-[0.46rem] xl:px-[0.72rem] xl:py-[0.38rem] 2xl:gap-[0.46rem] 2xl:px-[0.72rem] 2xl:py-[0.38rem]"
+                >
                     <x-icon
-                        class="quran-app-sector__chip-lock-icon"
+                        class="quran-app-sector__chip-lock-icon 3xl:w-[1.7rem] 3xl:h-[1.7rem] 4xl:w-[1.7rem] 4xl:h-[1.7rem] h-[1.2rem] w-[1.2rem] sm:h-[1rem] sm:w-[1rem] md:h-[1rem] md:w-[1rem] lg:h-[0.93rem] lg:w-[0.93rem] xl:h-[1.6rem] xl:w-[1.6rem] 2xl:h-[1.7rem] 2xl:w-[1.7rem]"
                         :name="'heroicon-o-lock-closed'"
                     />
-                    <span class="quran-app-sector__chip-lock-caption">{{ arabic_text('قريبًا') }}</span>
+                    <span
+                        class="quran-app-sector__chip-lock-caption 3xl:text-[1.38rem] 4xl:text-[1.38rem] text-[0.9rem] sm:text-[1rem] md:text-[1.12rem] lg:text-[1.16rem] xl:text-[1.38rem] 2xl:text-[1.38rem]"
+                    >{{ arabic_text('قريبًا') }}</span>
                 </span>
             </span>
         </button>
