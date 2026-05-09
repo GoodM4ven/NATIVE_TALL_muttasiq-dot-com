@@ -157,12 +157,12 @@
                 --quran-type-scale: 1;
                 --quran-page-type-scale: 1;
                 --quran-min-page-scale: 0.5;
-                --quran-max-page-scale: 1.3;
-                --quran-page-scale: 1;
+                --quran-max-page-scale: 1.2;
+                --quran-page-scale: 0.94;
                 --quran-fit-area-pad-x: 0.7rem;
                 --quran-fit-area-pad-y: 0.35rem;
-                --quran-fit-target-width-ratio: 0.85;
-                --quran-fit-height-ratio: 0.95;
+                --quran-fit-target-width-ratio: 0.82;
+                --quran-fit-height-ratio: 0.94;
                 --quran-min-page-gap-multiplier: 0.5;
                 --quran-line-gap: 1rem;
                 --quran-gap-scale: 1;
