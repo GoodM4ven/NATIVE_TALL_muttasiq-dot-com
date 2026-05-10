@@ -1027,6 +1027,8 @@
         }
 
         .quran-top-strip {
+            position: relative;
+            z-index: 140;
             display: flex;
             align-items: center;
             gap: 0.65rem;
@@ -1708,6 +1710,7 @@
         .quran-soorah-trigger-shell {
             position: relative;
             isolation: isolate;
+            z-index: 160;
         }
 
         .quran-soorah-quick-nav {
@@ -1725,7 +1728,7 @@
                 opacity 200ms cubic-bezier(0.22, 1, 0.36, 1),
                 transform 240ms cubic-bezier(0.22, 1, 0.36, 1),
                 visibility 0ms linear 240ms;
-            z-index: 30;
+            z-index: 200;
         }
 
         .quran-soorah-quick-nav.quran-soorah-quick-nav--visible {
