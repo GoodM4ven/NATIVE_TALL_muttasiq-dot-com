@@ -177,12 +177,12 @@
                 --quran-page-headered-type-multiplier: 0.88;
                 --quran-page-headered-leading-multiplier: 1.32;
                 --quran-page-headered-gap-multiplier: 1.56;
-                --quran-page-scale: 0.855;
-                --quran-page-type-scale: 0.84;
-                --quran-page-leading-multiplier: 1.08;
-                --quran-page-gap-multiplier: 0.92;
-                --quran-page-surah-header-scale: 0.95;
-                --quran-basmallah-bottom-gap-scale: -0.375;
+                --quran-page-scale: 0.99;
+                --quran-page-type-scale: 0.83;
+                --quran-page-leading-multiplier: 0.18;
+                --quran-page-gap-multiplier: 0.58;
+                --quran-page-surah-header-scale: 0.85;
+                --quran-basmallah-bottom-gap-scale: -0.675;
             }
 
             .quran-page-lines--segmented {
@@ -1725,7 +1725,7 @@
                 opacity 200ms cubic-bezier(0.22, 1, 0.36, 1),
                 transform 240ms cubic-bezier(0.22, 1, 0.36, 1),
                 visibility 0ms linear 240ms;
-            z-index: 14;
+            z-index: 30;
         }
 
         .quran-soorah-quick-nav.quran-soorah-quick-nav--visible {

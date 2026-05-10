@@ -10362,12 +10362,21 @@ document.addEventListener('alpine:init', () => {
             const frameRect = frameElement.getBoundingClientRect();
             const frameParentRect = frameElement.parentElement?.getBoundingClientRect?.() ?? null;
             const computedRootStyles = window.getComputedStyle(rootElement);
+            const computedContentStyles = window.getComputedStyle(contentElement);
             const readCssNumber = (propertyName, fallback) => {
-                const rawValue = Number.parseFloat(
+                const contentRawValue = Number.parseFloat(
+                    computedContentStyles.getPropertyValue(propertyName),
+                );
+
+                if (Number.isFinite(contentRawValue)) {
+                    return contentRawValue;
+                }
+
+                const rootRawValue = Number.parseFloat(
                     computedRootStyles.getPropertyValue(propertyName),
                 );
 
-                return Number.isFinite(rawValue) ? rawValue : fallback;
+                return Number.isFinite(rootRawValue) ? rootRawValue : fallback;
             };
             const breakpointName = this.resolveCurrentBreakpointName();
             const isTabletBreakpoint = ['sm', 'md', 'lg'].includes(breakpointName);
