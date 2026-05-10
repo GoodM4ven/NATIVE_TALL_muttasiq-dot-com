@@ -1705,6 +1705,97 @@
             -webkit-user-select: none;
         }
 
+        .quran-soorah-trigger-shell {
+            position: relative;
+            isolation: isolate;
+        }
+
+        .quran-soorah-quick-nav {
+            position: absolute;
+            inset-inline-start: 50%;
+            inset-block-start: 50%;
+            inline-size: 0;
+            block-size: 0;
+            transform: translate(-50%, -50%) scale(0.9);
+            transform-origin: 50% 50%;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition:
+                opacity 200ms cubic-bezier(0.22, 1, 0.36, 1),
+                transform 240ms cubic-bezier(0.22, 1, 0.36, 1),
+                visibility 0ms linear 240ms;
+            z-index: 14;
+        }
+
+        .quran-soorah-quick-nav.quran-soorah-quick-nav--visible {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+            transform: translate(-50%, -50%) scale(1);
+            transition-delay: 0ms;
+        }
+
+        .quran-soorah-quick-nav-button {
+            position: absolute;
+            inset-inline-start: 50%;
+            inline-size: 2.1rem;
+            block-size: 1.72rem;
+            border-radius: 999px;
+            border: 0.08rem solid color-mix(in srgb, var(--primary-300) 72%, transparent);
+            background:
+                radial-gradient(110% 130% at 50% 0%,
+                    color-mix(in srgb, var(--primary-50) 90%, white) 0%,
+                    color-mix(in srgb, var(--primary-200) 34%, white) 65%,
+                    color-mix(in srgb, var(--primary-300) 24%, white) 100%);
+            box-shadow:
+                0 0.2rem 0.68rem color-mix(in srgb, var(--primary-700) 24%, transparent),
+                inset 0 0.04rem 0.22rem color-mix(in srgb, white 68%, transparent);
+            color: color-mix(in srgb, var(--primary-700) 85%, var(--quran-panel-text));
+            display: grid;
+            place-items: center;
+            outline: none;
+            transition:
+                transform 160ms ease,
+                box-shadow 160ms ease,
+                color 160ms ease,
+                opacity 160ms ease;
+        }
+
+        .dark .quran-soorah-quick-nav-button {
+            border-color: color-mix(in srgb, var(--primary-200) 48%, transparent);
+            background:
+                radial-gradient(120% 130% at 50% 0%,
+                    color-mix(in srgb, var(--primary-900) 46%, var(--gray-900)) 0%,
+                    color-mix(in srgb, var(--primary-800) 65%, var(--gray-900)) 65%,
+                    color-mix(in srgb, var(--primary-700) 68%, var(--gray-900)) 100%);
+            color: color-mix(in srgb, var(--primary-100) 85%, white);
+            box-shadow:
+                0 0.24rem 0.72rem color-mix(in srgb, black 40%, transparent),
+                inset 0 0.03rem 0.26rem color-mix(in srgb, white 14%, transparent);
+        }
+
+        .quran-soorah-quick-nav-button:not(:disabled):hover,
+        .quran-soorah-quick-nav-button:not(:disabled):focus-visible {
+            box-shadow:
+                0 0.36rem 0.84rem color-mix(in srgb, var(--primary-700) 28%, transparent),
+                inset 0 0.05rem 0.24rem color-mix(in srgb, white 74%, transparent);
+        }
+
+        .quran-soorah-quick-nav-button:disabled {
+            opacity: 0.46;
+            cursor: not-allowed;
+            box-shadow:
+                0 0.1rem 0.38rem color-mix(in srgb, var(--gray-900) 14%, transparent),
+                inset 0 0 0 0.06rem color-mix(in srgb, var(--gray-500) 32%, transparent);
+        }
+
+        .quran-soorah-quick-nav-arrow {
+            inline-size: 1.05rem;
+            block-size: 1.05rem;
+            fill: currentColor;
+        }
+
         .dark .quran-soorah-trigger {
             color: color-mix(in srgb, var(--primary-200) 86%, var(--quran-panel-text));
             box-shadow: 0 0 0 1.6px color-mix(in srgb, var(--primary-200) 72%, transparent);
@@ -1794,6 +1885,12 @@
         .quran-reader--wird-active .quran-soorah-trigger-text-inner {
             transition: none;
             animation: none;
+        }
+
+        .quran-reader--wird-active .quran-soorah-quick-nav {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
         }
 
         @keyframes quran-caption-leave-forward {
@@ -2531,37 +2628,73 @@
                     }"
                 >
                     <!-- Credits: uiverse.io/gharsh11032000/loud-chicken-53 -->
-                    <button
-                        class="quran-soorah-trigger 3xl:w-[12.4rem] 4xl:w-[13.4rem] 4xl:px-[2.35rem] 4xl:py-[0.42rem] 4xl:text-[0.95rem] 4xl:min-h-[2.2rem] w-41 md:w-47 3xl:min-h-[2.15rem] 3xl:px-[2.28rem] 2xl:w-31 3xl:text-[0.93rem] min-h-[1.95rem] shrink-0 px-[1.7rem] py-[0.34rem] text-[0.8rem] outline-none sm:min-h-8 sm:w-44 sm:px-[1.95rem] sm:py-[0.36rem] sm:text-[0.84rem] md:min-h-[2.05rem] md:px-[2.1rem] md:py-[0.38rem] md:text-[0.88rem] lg:min-h-[2.1rem] lg:w-[12.35rem] lg:px-[2.2rem] lg:py-[0.4rem] lg:text-[0.9rem] xl:min-h-[1.8rem] xl:w-32 xl:px-[1.9rem] xl:text-[0.66rem] 2xl:min-h-[1.85rem] 2xl:px-[1.95rem] 2xl:text-[0.6rem]"
-                        type="button"
-                        dir="rtl"
-                        x-bind:disabled="wirdModeActive"
-                        x-bind:class="{ 'quran-soorah-trigger--disabled': wirdModeActive }"
-                        x-on:click="
-                            if (wirdModeActive) {
-                                return;
-                            }
-                            warmSearchIndex();
-                            $wire.mountAction('searchQuran');
-                            queueSurahDirectoryAutoFocus();
-                        "
-                        x-bind:aria-label="@js(arabic_text('ابحث في ')) + currentSurahTitle()"
-                    >
-                        <x-icon
-                            class="quran-soorah-trigger-icon 4xl:size-4 4xl:inset-s-[0.82rem] inset-s-[0.62rem] sm:inset-s-[0.68rem] md:inset-s-[0.72rem] lg:inset-s-[0.76rem] xl:inset-s-[0.8rem] 2xl:inset-s-[0.85rem] 3xl:inset-s-[0.8rem] size-[0.8rem] sm:size-[0.84rem] md:size-[0.88rem] lg:size-[0.92rem] xl:size-[0.96rem]"
-                            :name="'heroicon-o-magnifying-glass'"
-                        />
-                        <span class="quran-soorah-trigger-text">
+                    <div class="quran-soorah-trigger-shell">
+                        <button
+                            class="quran-soorah-trigger 3xl:w-[12.4rem] 4xl:w-[13.4rem] 4xl:px-[2.35rem] 4xl:py-[0.42rem] 4xl:text-[0.95rem] 4xl:min-h-[2.2rem] w-41 md:w-47 3xl:min-h-[2.15rem] 3xl:px-[2.28rem] 2xl:w-31 3xl:text-[0.93rem] min-h-[1.95rem] shrink-0 px-[1.7rem] py-[0.34rem] text-[0.8rem] outline-none sm:min-h-8 sm:w-44 sm:px-[1.95rem] sm:py-[0.36rem] sm:text-[0.84rem] md:min-h-[2.05rem] md:px-[2.1rem] md:py-[0.38rem] md:text-[0.88rem] lg:min-h-[2.1rem] lg:w-[12.35rem] lg:px-[2.2rem] lg:py-[0.4rem] lg:text-[0.9rem] xl:min-h-[1.8rem] xl:w-32 xl:px-[1.9rem] xl:text-[0.66rem] 2xl:min-h-[1.85rem] 2xl:px-[1.95rem] 2xl:text-[0.6rem]"
+                            type="button"
+                            dir="rtl"
+                            x-bind:disabled="wirdModeActive"
+                            x-bind:class="{ 'quran-soorah-trigger--disabled': wirdModeActive }"
+                            x-on:pointerdown="onSurahTriggerPointerDown($event)"
+                            x-on:pointerup="onSurahTriggerPointerUp($event)"
+                            x-on:pointercancel="onSurahTriggerPointerCancel()"
+                            x-on:pointerleave="onSurahTriggerPointerCancel()"
+                            x-on:click="onSurahTriggerClick()"
+                            x-bind:aria-label="@js(arabic_text('ابحث في ')) + currentSurahTitle()"
+                        >
+                            <x-icon
+                                class="quran-soorah-trigger-icon 4xl:size-4 4xl:inset-s-[0.82rem] inset-s-[0.62rem] sm:inset-s-[0.68rem] md:inset-s-[0.72rem] lg:inset-s-[0.76rem] xl:inset-s-[0.8rem] 2xl:inset-s-[0.85rem] 3xl:inset-s-[0.8rem] size-[0.8rem] sm:size-[0.84rem] md:size-[0.88rem] lg:size-[0.92rem] xl:size-[0.96rem]"
+                                :name="'heroicon-o-magnifying-glass'"
+                            />
+                            <span class="quran-soorah-trigger-text">
+                                <span
+                                    class="quran-soorah-trigger-text-inner"
+                                    x-bind:class="surahTriggerCaptionAnimClass"
+                                    x-text="currentSurahTriggerLabel()"
+                                ></span>
+                            </span>
                             <span
-                                class="quran-soorah-trigger-text-inner"
-                                x-bind:class="surahTriggerCaptionAnimClass"
-                                x-text="currentSurahTriggerLabel()"
+                                class="quran-soorah-trigger-circle 4xl:size-4 size-[0.8rem] sm:size-[0.84rem] md:size-[0.88rem] lg:size-[0.92rem] xl:size-[0.96rem]"
                             ></span>
-                        </span>
-                        <span
-                            class="quran-soorah-trigger-circle 4xl:size-4 size-[0.8rem] sm:size-[0.84rem] md:size-[0.88rem] lg:size-[0.92rem] xl:size-[0.96rem]"
-                        ></span>
-                    </button>
+                        </button>
+                        <div
+                            class="quran-soorah-quick-nav"
+                            x-cloak
+                            x-bind:class="{ 'quran-soorah-quick-nav--visible': surahQuickNavigator.visible && !wirdModeActive }"
+                            x-bind:aria-hidden="surahQuickNavigator.visible && !wirdModeActive ? 'false' : 'true'"
+                        >
+                            <button
+                                class="quran-soorah-quick-nav-button quran-soorah-quick-nav-button--top 3xl:inset-be-[calc(100%+1.2rem)] 3xl:transform-[translateX(-50%)] 4xl:inset-be-[calc(100%+1.2rem)] 4xl:transform-[translateX(-50%)] inset-be-[calc(100%+1.2rem)] transform-[translateX(-50%)] sm:inset-be-[calc(100%+1.2rem)] sm:transform-[translateX(-50%)] md:inset-be-[calc(100%+1.2rem)] md:transform-[translateX(-50%)] lg:inset-be-[calc(100%+1.2rem)] lg:transform-[translateX(-50%)] xl:inset-be-[calc(100%+1.2rem)] xl:transform-[translateX(-50%)] 2xl:inset-be-[calc(100%+1.2rem)] 2xl:transform-[translateX(-50%)]"
+                                type="button"
+                                aria-label="{{ arabic_text('السورة السابقة') }}"
+                                x-bind:disabled="isSurahQuickNavigatorPreviousDisabled()"
+                                x-on:click.stop.prevent="void navigateToAdjacentSurah('prev')"
+                            >
+                                <svg
+                                    class="quran-soorah-quick-nav-arrow"
+                                    aria-hidden="true"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path d="M12 5.25l-8.5 8.5 2.12 2.12L12 9.49l6.38 6.38 2.12-2.12L12 5.25z"></path>
+                                </svg>
+                            </button>
+                            <button
+                                class="quran-soorah-quick-nav-button quran-soorah-quick-nav-button--bottom 3xl:inset-bs-[calc(100%+1.15rem)] 3xl:transform-[translateX(-50%)] 4xl:inset-bs-[calc(100%+1.15rem)] 4xl:transform-[translateX(-50%)] inset-bs-[calc(100%+1.15rem)] transform-[translateX(-50%)] sm:inset-bs-[calc(100%+1.15rem)] sm:transform-[translateX(-50%)] md:inset-bs-[calc(100%+1.15rem)] md:transform-[translateX(-50%)] lg:inset-bs-[calc(100%+1.15rem)] lg:transform-[translateX(-50%)] xl:inset-bs-[calc(100%+1.15rem)] xl:transform-[translateX(-50%)] 2xl:inset-bs-[calc(100%+1.15rem)] 2xl:transform-[translateX(-50%)]"
+                                type="button"
+                                aria-label="{{ arabic_text('السورة التالية') }}"
+                                x-bind:disabled="isSurahQuickNavigatorNextDisabled()"
+                                x-on:click.stop.prevent="void navigateToAdjacentSurah('next')"
+                            >
+                                <svg
+                                    class="quran-soorah-quick-nav-arrow"
+                                    aria-hidden="true"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path d="M12 18.75l8.5-8.5-2.12-2.12L12 14.51 5.62 8.13 3.5 10.25l8.5 8.5z"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
                     <div
                         class="quran-top-actions"
                         x-bind:class="{ 'quran-top-actions--wird-active': wirdModeActive }"

@@ -96,6 +96,8 @@ const wait = async (durationMs) => {
 const wordPressHoldDelayMs = 750;
 const wordPressDragThresholdPx = 14;
 const bookmarkHoldDelayMs = 680;
+const surahQuickNavigatorHoldDelayMs = 620;
+const surahQuickNavigatorLastPage = 604;
 const managerRowRemoveAnimationDurationMs = 220;
 const managerRowUpdateAnimationDurationMs = 520;
 const managerRowReplaceAnimationDurationMs = 560;
@@ -909,6 +911,13 @@ document.addEventListener('alpine:init', () => {
             ayahIndexes: [],
         },
         bookmarkButtonPress: {
+            pointerId: null,
+            holdTriggered: false,
+            suppressClick: false,
+            timer: null,
+        },
+        surahQuickNavigator: {
+            visible: false,
             pointerId: null,
             holdTriggered: false,
             suppressClick: false,
@@ -2126,6 +2135,7 @@ document.addEventListener('alpine:init', () => {
             this.hideCopyFeedback();
             this.clearCopiedHighlights();
             this.clearBookmarkButtonPressState();
+            this.closeSurahQuickNavigator();
 
             if (this.pageCounterPulse.timer !== null) {
                 clearTimeout(this.pageCounterPulse.timer);
@@ -4235,6 +4245,7 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            this.closeSurahQuickNavigator();
             const record = this.ensureWirdDailyRecord();
 
             if (!record || typeof record !== 'object') {
@@ -6056,6 +6067,273 @@ document.addEventListener('alpine:init', () => {
 
             this.toggleCurrentPageBookmark();
             this.clearBookmarkButtonPressState();
+        },
+
+        clearSurahQuickNavigatorPressState({ resetSuppressClick = true } = {}) {
+            if (this.surahQuickNavigator.timer !== null) {
+                clearTimeout(this.surahQuickNavigator.timer);
+                this.surahQuickNavigator.timer = null;
+            }
+
+            this.surahQuickNavigator.pointerId = null;
+            this.surahQuickNavigator.holdTriggered = false;
+
+            if (resetSuppressClick) {
+                this.surahQuickNavigator.suppressClick = false;
+            }
+        },
+
+        openSurahQuickNavigator() {
+            if (this.wirdModeActive) {
+                return;
+            }
+
+            this.surahQuickNavigator.visible = true;
+            this.surahQuickNavigator.holdTriggered = true;
+            this.surahQuickNavigator.suppressClick = true;
+        },
+
+        closeSurahQuickNavigator({ resetSuppressClick = true } = {}) {
+            this.surahQuickNavigator.visible = false;
+            this.clearSurahQuickNavigatorPressState({ resetSuppressClick });
+        },
+
+        onSurahTriggerPointerDown(event) {
+            if (this.wirdModeActive) {
+                return;
+            }
+
+            this.clearSurahQuickNavigatorPressState();
+            this.surahQuickNavigator.pointerId = Number(event?.pointerId ?? 0) || null;
+            this.surahQuickNavigator.holdTriggered = false;
+            this.surahQuickNavigator.suppressClick = false;
+            this.surahQuickNavigator.timer = window.setTimeout(() => {
+                this.surahQuickNavigator.timer = null;
+                this.openSurahQuickNavigator();
+            }, surahQuickNavigatorHoldDelayMs);
+        },
+
+        onSurahTriggerPointerUp(event) {
+            const pointerId = Number(event?.pointerId ?? 0) || null;
+
+            if (
+                this.surahQuickNavigator.pointerId !== null &&
+                pointerId !== null &&
+                this.surahQuickNavigator.pointerId !== pointerId
+            ) {
+                return;
+            }
+
+            if (this.surahQuickNavigator.timer !== null) {
+                clearTimeout(this.surahQuickNavigator.timer);
+                this.surahQuickNavigator.timer = null;
+            }
+        },
+
+        onSurahTriggerPointerCancel() {
+            this.clearSurahQuickNavigatorPressState();
+        },
+
+        onSurahTriggerClick() {
+            const shouldSuppressClick = this.surahQuickNavigator.suppressClick;
+
+            this.closeSurahQuickNavigator({ resetSuppressClick: false });
+
+            if (shouldSuppressClick || this.wirdModeActive) {
+                this.clearSurahQuickNavigatorPressState();
+
+                return;
+            }
+
+            this.warmSearchIndex();
+            this.$wire.mountAction('searchQuran');
+            this.queueSurahDirectoryAutoFocus();
+            this.clearSurahQuickNavigatorPressState();
+        },
+
+        pageSurahHeaderNumbers() {
+            const uniqueSurahNumbers = new Set();
+
+            this.mushafLines.forEach((line) => {
+                if (String(line?.line_type ?? '') !== 'surah_name') {
+                    return;
+                }
+
+                const lineSurahNumber = Math.max(0, Math.trunc(Number(line?.surah_number ?? 0)));
+
+                if (lineSurahNumber > 0) {
+                    uniqueSurahNumbers.add(lineSurahNumber);
+                }
+            });
+
+            return [...uniqueSurahNumbers].sort((firstNumber, secondNumber) => {
+                return firstNumber - secondNumber;
+            });
+        },
+
+        surahQuickNavigatorBaseSurahNumber(direction = 'next') {
+            const surahHeaderNumbers = this.pageSurahHeaderNumbers();
+
+            if (surahHeaderNumbers.length === 0) {
+                return Math.max(1, Math.trunc(Number(this.currentSurahNumber() ?? 1)));
+            }
+
+            if (direction === 'prev') {
+                return surahHeaderNumbers[0];
+            }
+
+            return surahHeaderNumbers[surahHeaderNumbers.length - 1];
+        },
+
+        surahQuickNavigatorTargetSurahNumber(direction = 'next') {
+            const baseSurahNumber = this.surahQuickNavigatorBaseSurahNumber(direction);
+
+            if (direction === 'prev') {
+                if (baseSurahNumber <= 1) {
+                    return null;
+                }
+
+                return baseSurahNumber - 1;
+            }
+
+            if (baseSurahNumber >= 114) {
+                return null;
+            }
+
+            return baseSurahNumber + 1;
+        },
+
+        surahDirectoryEntryBySurahNumber(surahNumber) {
+            const normalizedSurahNumber = Math.max(1, Math.trunc(Number(surahNumber ?? 1)));
+            const surahDirectoryEntries = Array.isArray(this.search.surahDirectory)
+                ? this.search.surahDirectory
+                : [];
+
+            return (
+                surahDirectoryEntries.find((entry) => {
+                    return (
+                        Math.max(1, Math.trunc(Number(entry?.surah_number ?? 1))) ===
+                        normalizedSurahNumber
+                    );
+                }) ?? null
+            );
+        },
+
+        firstAyahIndexForSurahInCurrentPage(surahNumber) {
+            const normalizedSurahNumber = Math.max(1, Math.trunc(Number(surahNumber ?? 1)));
+            let fallbackAyahIndex = 0;
+
+            for (const line of this.mushafLines) {
+                if (String(line?.line_type ?? '') !== 'ayah') {
+                    continue;
+                }
+
+                const lineSurahNumber = Math.max(0, Math.trunc(Number(line?.surah_number ?? 0)));
+
+                if (lineSurahNumber !== normalizedSurahNumber) {
+                    continue;
+                }
+
+                const lineAyahIndex = Math.max(0, Math.trunc(Number(line?.ayah_index ?? 0)));
+
+                if (lineAyahIndex > 0) {
+                    return lineAyahIndex;
+                }
+
+                if (!Array.isArray(line?.words)) {
+                    continue;
+                }
+
+                for (const word of line.words) {
+                    const wordAyahIndex = Math.max(0, Math.trunc(Number(word?.ayah_index ?? 0)));
+                    const wordSurahNumber = Math.max(
+                        0,
+                        Math.trunc(Number(word?.surah_number ?? 0)),
+                    );
+
+                    if (
+                        wordSurahNumber === normalizedSurahNumber &&
+                        wordAyahIndex > 0 &&
+                        (fallbackAyahIndex === 0 || wordAyahIndex < fallbackAyahIndex)
+                    ) {
+                        fallbackAyahIndex = wordAyahIndex;
+                    }
+                }
+            }
+
+            return fallbackAyahIndex;
+        },
+
+        isSurahQuickNavigatorPreviousDisabled() {
+            const currentPage = Math.max(1, Math.trunc(Number(this.pageNumber ?? 1)));
+            const targetSurahNumber = this.surahQuickNavigatorTargetSurahNumber('prev');
+
+            return currentPage <= 1 || targetSurahNumber === null;
+        },
+
+        isSurahQuickNavigatorNextDisabled() {
+            const currentPage = Math.max(1, Math.trunc(Number(this.pageNumber ?? 1)));
+            const targetSurahNumber = this.surahQuickNavigatorTargetSurahNumber('next');
+
+            return currentPage >= surahQuickNavigatorLastPage || targetSurahNumber === null;
+        },
+
+        async navigateToAdjacentSurah(direction = 'next') {
+            const normalizedDirection = direction === 'prev' ? 'prev' : 'next';
+            const isDisabled =
+                normalizedDirection === 'prev'
+                    ? this.isSurahQuickNavigatorPreviousDisabled()
+                    : this.isSurahQuickNavigatorNextDisabled();
+
+            if (isDisabled) {
+                return;
+            }
+
+            const targetSurahNumber =
+                this.surahQuickNavigatorTargetSurahNumber(normalizedDirection);
+
+            if (targetSurahNumber === null) {
+                return;
+            }
+
+            const targetSurahEntry = this.surahDirectoryEntryBySurahNumber(targetSurahNumber);
+            const targetPage = clampPage(Number(targetSurahEntry?.page_number ?? 1), this.maxPage);
+            const currentPage = Math.max(1, Math.trunc(Number(this.pageNumber ?? 1)));
+            const activeAyahIndex =
+                targetPage === currentPage
+                    ? this.firstAyahIndexForSurahInCurrentPage(targetSurahNumber)
+                    : 0;
+
+            this.resetNavigationQueueForPriorityJump();
+            this.clearPendingPostModalTargetFit();
+            this.activeWordIndex = 0;
+            this._bypassNextFitCache = true;
+
+            await this.goToPageFromChevron(targetPage, {
+                source: 'surah-directory',
+                activeAyahIndex,
+                commitNow: true,
+                settleDelayMs: 0,
+            });
+
+            if (this._lastFittedPageNumber !== this.pageNumber) {
+                this._bypassNextFitCache = true;
+                await this.layoutPageGuaranteed({
+                    revealDelayMs: 160,
+                    maxAttempts: 3,
+                    useIdleFit: false,
+                });
+            }
+
+            this.search.activeSurahNumber = targetSurahNumber;
+            this.activeAyahIndex = activeAyahIndex;
+            this.activeWordIndex = 0;
+            this.recordNavigationHistory({
+                source: 'surah-directory',
+                pageNumber: targetPage,
+                surahNumber: targetSurahNumber,
+                ayahIndex: activeAyahIndex,
+            });
         },
 
         openBookmarksManager() {
