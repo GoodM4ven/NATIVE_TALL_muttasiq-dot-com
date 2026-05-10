@@ -9473,6 +9473,8 @@ document.addEventListener('alpine:init', () => {
         resolveFitProfile() {
             const lines = Array.isArray(this.mushafLines) ? this.mushafLines : [];
             const pageNumber = Math.max(1, Math.trunc(Number(this.pageNumber ?? 1)));
+            const breakpointName = String(this.resolveCurrentBreakpointName() ?? '').trim();
+            const isTabletBreakpoint = ['sm', 'md', 'lg'].includes(breakpointName);
             const ayahLines = lines.filter((line) => String(line?.line_type ?? '') === 'ayah');
             const ayahLineCount = ayahLines.length;
             const centeredAyahLineCount = ayahLines.filter((line) =>
@@ -9501,9 +9503,14 @@ document.addEventListener('alpine:init', () => {
                 centeredAyahRatio >= 0.85;
             const isMultiSurahSegmentedPage =
                 !isOpeningSpread && surahHeaderCount >= 2 && basmallahCount >= 2;
+            const isSingleHeaderLongContentPage =
+                !isOpeningSpread &&
+                surahHeaderCount === 1 &&
+                basmallahCount >= 1 &&
+                ayahLineCount >= 10;
 
             if (isOpeningSpread) {
-                return {
+                const openingSpreadProfile = {
                     ...fitDefaultProfile,
                     compressionLeadingFloor: 0.92,
                     compressionGapFloor: 0.34,
@@ -9532,10 +9539,29 @@ document.addEventListener('alpine:init', () => {
                     candidateSteps: 24,
                     maxScaleMultiplier: 0.56,
                 };
+
+                if (!isTabletBreakpoint) {
+                    return openingSpreadProfile;
+                }
+
+                return {
+                    ...openingSpreadProfile,
+                    compressionTypeScaleCeiling: 0.53,
+                    layoutTypeScaleBase: 0.5,
+                    layoutTypeScaleGain: 0.02,
+                    layoutLeadingBase: 1.08,
+                    layoutLeadingDrop: 0.03,
+                    layoutGapBase: 0.62,
+                    layoutGapDrop: 0.08,
+                    minimumCompressionLevel: 0,
+                    targetWidthRatio: 0.62,
+                    targetHeightRatio: 0.72,
+                    maxScaleMultiplier: 0.44,
+                };
             }
 
             if (isLineHeavyCenteredPage) {
-                return {
+                const lineHeavyProfile = {
                     ...fitDefaultProfile,
                     compressionLeadingFloor: 0.52,
                     compressionGapFloor: 0.1,
@@ -9564,10 +9590,32 @@ document.addEventListener('alpine:init', () => {
                     candidateSteps: 36,
                     maxScaleMultiplier: 1.08,
                 };
+
+                if (!isTabletBreakpoint) {
+                    return lineHeavyProfile;
+                }
+
+                return {
+                    ...lineHeavyProfile,
+                    compressionTypeScaleCeiling: 1.56,
+                    layoutTypeScaleBase: 1.42,
+                    layoutTypeScaleGain: 0.09,
+                    layoutLeadingBase: 1.02,
+                    layoutLeadingDrop: 0.12,
+                    layoutGapBase: 0.66,
+                    layoutGapDrop: 0.18,
+                    minimumCompressionLevel: 0.06,
+                    targetWidthRatio: 0.88,
+                    targetHeightRatio: 0.86,
+                    widthDeficitWeight: 0.72,
+                    heightDeficitWeight: 0.07,
+                    compressionPenaltyWeight: 0,
+                    maxScaleMultiplier: 0.9,
+                };
             }
 
             if (isMultiSurahSegmentedPage) {
-                return {
+                const segmentedProfile = {
                     ...fitDefaultProfile,
                     compressionLeadingFloor: 0.66,
                     compressionGapFloor: 0.34,
@@ -9591,6 +9639,60 @@ document.addEventListener('alpine:init', () => {
                     compressionPenaltyWeight: 0.008,
                     candidateSteps: 30,
                     maxScaleMultiplier: 1,
+                };
+
+                if (!isTabletBreakpoint) {
+                    return segmentedProfile;
+                }
+
+                return {
+                    ...segmentedProfile,
+                    compressionTypeScaleCeiling: 1.12,
+                    layoutTypeScaleBase: 0.98,
+                    layoutTypeScaleGain: 0.08,
+                    layoutLeadingBase: 0.96,
+                    layoutLeadingDrop: 0.06,
+                    layoutGapBase: 0.74,
+                    layoutGapDrop: 0.1,
+                    layoutSurahHeaderBase: 0.92,
+                    layoutSurahHeaderDrop: 0.05,
+                    layoutBasmallahBase: -0.24,
+                    layoutBasmallahDrop: 0.07,
+                    minimumCompressionLevel: 0,
+                    targetWidthRatio: 0.84,
+                    targetHeightRatio: 0.9,
+                    widthDeficitWeight: 0.36,
+                    heightDeficitWeight: 0.16,
+                    compressionPenaltyWeight: 0.014,
+                    maxScaleMultiplier: 0.84,
+                };
+            }
+
+            if (isSingleHeaderLongContentPage && isTabletBreakpoint) {
+                return {
+                    ...fitDefaultProfile,
+                    compressionLeadingFloor: 0.7,
+                    compressionGapFloor: 0.34,
+                    compressionSurahHeaderFloor: 0.78,
+                    compressionTypeScaleCeiling: 1.12,
+                    layoutTypeScaleBase: 0.98,
+                    layoutTypeScaleGain: 0.08,
+                    layoutLeadingBase: 0.97,
+                    layoutLeadingDrop: 0.07,
+                    layoutGapBase: 0.72,
+                    layoutGapDrop: 0.11,
+                    layoutSurahHeaderBase: 0.9,
+                    layoutSurahHeaderDrop: 0.05,
+                    layoutBasmallahBase: -0.24,
+                    layoutBasmallahDrop: 0.07,
+                    minimumCompressionLevel: 0.02,
+                    targetWidthRatio: 0.84,
+                    targetHeightRatio: 0.9,
+                    widthDeficitWeight: 0.38,
+                    heightDeficitWeight: 0.14,
+                    compressionPenaltyWeight: 0.01,
+                    candidateSteps: 30,
+                    maxScaleMultiplier: 0.86,
                 };
             }
 
@@ -9989,6 +10091,8 @@ document.addEventListener('alpine:init', () => {
 
                 return Number.isFinite(rawValue) ? rawValue : fallback;
             };
+            const breakpointName = this.resolveCurrentBreakpointName();
+            const isTabletBreakpoint = ['sm', 'md', 'lg'].includes(breakpointName);
             const cssBaselineLayout = {
                 pageTypeScale: Math.max(0.2, readCssNumber('--quran-page-type-scale', 1)),
                 pageLeadingMultiplier: Math.max(
@@ -10006,6 +10110,7 @@ document.addEventListener('alpine:init', () => {
                 ),
             };
             const calibrationLayout =
+                !isTabletBreakpoint &&
                 this._globalFitCalibrationLayout &&
                 typeof this._globalFitCalibrationLayout === 'object'
                     ? this._globalFitCalibrationLayout
@@ -10106,12 +10211,19 @@ document.addEventListener('alpine:init', () => {
                 Number.parseFloat(computedRootStyles.getPropertyValue('--quran-min-page-scale')) ||
                     0.1,
             );
-            const maxScale = Math.max(
+            let maxScale = Math.max(
                 minScale,
                 Number.parseFloat(computedRootStyles.getPropertyValue('--quran-max-page-scale')) ||
                     1,
             );
+            const activeFitProfile = this.resolveFitProfile();
+            const profileMaxScaleMultiplier = Math.max(
+                0.1,
+                Number(activeFitProfile?.maxScaleMultiplier ?? 1),
+            );
+            maxScale = Math.max(minScale, maxScale * profileMaxScaleMultiplier);
             const hasGlobalCalibrationProfile =
+                !isTabletBreakpoint &&
                 this._globalFitCalibrationLayout &&
                 typeof this._globalFitCalibrationLayout === 'object' &&
                 Number.isFinite(Number(this._globalFitCalibrationScale)) &&
@@ -10126,6 +10238,8 @@ document.addEventListener('alpine:init', () => {
                 frameRect?.width,
                 'frameH:',
                 frameRect?.height,
+                'bp:',
+                breakpointName,
                 'page:',
                 this.pageNumber,
                 'visible:',
@@ -10207,7 +10321,6 @@ document.addEventListener('alpine:init', () => {
                 ),
             );
             const normalizedPageNumber = Math.max(1, Math.trunc(Number(this.pageNumber ?? 1)));
-            const breakpointName = this.resolveCurrentBreakpointName();
             const isModalLayoutContext =
                 this._bypassNextFitCache ||
                 this._isModalLifecycleSettling ||
