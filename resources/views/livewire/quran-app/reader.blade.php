@@ -732,7 +732,7 @@
             }
 
             .quran-page-lines--headered-long {
-                --quran-page-headered-type-multiplier: 0.998;
+                --quran-page-headered-type-multiplier: 0.98;
                 --quran-page-headered-leading-multiplier: 1.24;
                 --quran-page-headered-gap-multiplier: 1.54;
             }
@@ -2255,7 +2255,7 @@
             </section>
         @else
             <section
-                class="quran-reader-panel min-w-75 3xl:h-196 3xl:w-134 4xl:h-240 4xl:w-176 Xoverflow-hidden 2xl:w-120 relative flex h-[min(82svh,38rem)] w-[min(92vw,22rem)] flex-col rounded-[1.75rem] border sm:w-[min(84vw,37rem)] xl:h-[min(73.5svh,37rem)] xl:w-[min(65vw,28rem)] 2xl:h-[min(73.5svh,40rem)]"
+                class="quran-reader-panel min-w-75 3xl:h-196 3xl:w-134 4xl:h-240 4xl:w-176 Xoverflow-hidden 2xl:w-120 relative flex h-[min(82svh,38rem)] sm:h-[min(82svh,50rem)] md:h-[min(82svh,55rem)] lg:h-[min(82svh,55rem)] w-[min(92vw,22rem)] flex-col rounded-[1.75rem] border sm:w-[min(82vw,36rem)] md:w-[min(92vw,40rem)] lg:w-[min(92vw,40rem)] xl:h-[min(73.5svh,37rem)] xl:w-[min(65vw,28rem)] 2xl:h-[min(73.5svh,40rem)]"
                 x-bind:style="readerPanelStyle()"
                 x-bind:class="{ 'quran-reader-panel--calibrating': isCalibrating || _startupCalibrationPending }"
                 x-on:pointerdown.passive="onSwipeStart($event)"
