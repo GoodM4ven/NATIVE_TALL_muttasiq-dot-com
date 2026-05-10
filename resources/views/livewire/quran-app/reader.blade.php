@@ -2628,7 +2628,10 @@
                     }"
                 >
                     <!-- Credits: uiverse.io/gharsh11032000/loud-chicken-53 -->
-                    <div class="quran-soorah-trigger-shell">
+                    <div
+                        class="quran-soorah-trigger-shell"
+                        x-on:pointerdown.outside="closeSurahQuickNavigator()"
+                    >
                         <button
                             class="quran-soorah-trigger 3xl:w-[12.4rem] 4xl:w-[13.4rem] 4xl:px-[2.35rem] 4xl:py-[0.42rem] 4xl:text-[0.95rem] 4xl:min-h-[2.2rem] w-41 md:w-47 3xl:min-h-[2.15rem] 3xl:px-[2.28rem] 2xl:w-31 3xl:text-[0.93rem] min-h-[1.95rem] shrink-0 px-[1.7rem] py-[0.34rem] text-[0.8rem] outline-none sm:min-h-8 sm:w-44 sm:px-[1.95rem] sm:py-[0.36rem] sm:text-[0.84rem] md:min-h-[2.05rem] md:px-[2.1rem] md:py-[0.38rem] md:text-[0.88rem] lg:min-h-[2.1rem] lg:w-[12.35rem] lg:px-[2.2rem] lg:py-[0.4rem] lg:text-[0.9rem] xl:min-h-[1.8rem] xl:w-32 xl:px-[1.9rem] xl:text-[0.66rem] 2xl:min-h-[1.85rem] 2xl:px-[1.95rem] 2xl:text-[0.6rem]"
                             type="button"
@@ -2664,7 +2667,7 @@
                             x-bind:aria-hidden="surahQuickNavigator.visible && !wirdModeActive ? 'false' : 'true'"
                         >
                             <button
-                                class="quran-soorah-quick-nav-button quran-soorah-quick-nav-button--top 3xl:inset-be-[calc(100%+1.2rem)] 3xl:transform-[translateX(-50%)] 4xl:inset-be-[calc(100%+1.2rem)] 4xl:transform-[translateX(-50%)] inset-be-[calc(100%+1.2rem)] transform-[translateX(-50%)] sm:inset-be-[calc(100%+1.2rem)] sm:transform-[translateX(-50%)] md:inset-be-[calc(100%+1.2rem)] md:transform-[translateX(-50%)] lg:inset-be-[calc(100%+1.2rem)] lg:transform-[translateX(-50%)] xl:inset-be-[calc(100%+1.2rem)] xl:transform-[translateX(-50%)] 2xl:inset-be-[calc(100%+1.2rem)] 2xl:transform-[translateX(-50%)]"
+                                class="quran-soorah-quick-nav-button quran-soorah-quick-nav-button--top 3xl:inset-be-[calc(100%+1.4rem)] 3xl:transform-[translateX(-50%)] 4xl:inset-be-[calc(100%+1.4rem)] 4xl:transform-[translateX(-50%)] inset-be-[calc(100%+1.4rem)] transform-[translateX(-50%)] sm:inset-be-[calc(100%+1.4rem)] sm:transform-[translateX(-50%)] md:inset-be-[calc(100%+1.4rem)] md:transform-[translateX(-50%)] lg:inset-be-[calc(100%+1.4rem)] lg:transform-[translateX(-50%)] xl:inset-be-[calc(100%+1.4rem)] xl:transform-[translateX(-50%)] 2xl:inset-be-[calc(100%+1.4rem)] 2xl:transform-[translateX(-50%)]"
                                 type="button"
                                 aria-label="{{ arabic_text('السورة السابقة') }}"
                                 x-bind:disabled="isSurahQuickNavigatorPreviousDisabled()"
@@ -2679,7 +2682,7 @@
                                 </svg>
                             </button>
                             <button
-                                class="quran-soorah-quick-nav-button quran-soorah-quick-nav-button--bottom 3xl:inset-bs-[calc(100%+1.15rem)] 3xl:transform-[translateX(-50%)] 4xl:inset-bs-[calc(100%+1.15rem)] 4xl:transform-[translateX(-50%)] inset-bs-[calc(100%+1.15rem)] transform-[translateX(-50%)] sm:inset-bs-[calc(100%+1.15rem)] sm:transform-[translateX(-50%)] md:inset-bs-[calc(100%+1.15rem)] md:transform-[translateX(-50%)] lg:inset-bs-[calc(100%+1.15rem)] lg:transform-[translateX(-50%)] xl:inset-bs-[calc(100%+1.15rem)] xl:transform-[translateX(-50%)] 2xl:inset-bs-[calc(100%+1.15rem)] 2xl:transform-[translateX(-50%)]"
+                                class="quran-soorah-quick-nav-button quran-soorah-quick-nav-button--bottom 3xl:inset-bs-[calc(100%+1.35rem)] 3xl:transform-[translateX(-50%)] 4xl:inset-bs-[calc(100%+1.35rem)] 4xl:transform-[translateX(-50%)] inset-bs-[calc(100%+1.35rem)] transform-[translateX(-50%)] sm:inset-bs-[calc(100%+1.35rem)] sm:transform-[translateX(-50%)] md:inset-bs-[calc(100%+1.35rem)] md:transform-[translateX(-50%)] lg:inset-bs-[calc(100%+1.35rem)] lg:transform-[translateX(-50%)] xl:inset-bs-[calc(100%+1.35rem)] xl:transform-[translateX(-50%)] 2xl:inset-bs-[calc(100%+1.35rem)] 2xl:transform-[translateX(-50%)]"
                                 type="button"
                                 aria-label="{{ arabic_text('السورة التالية') }}"
                                 x-bind:disabled="isSurahQuickNavigatorNextDisabled()"
