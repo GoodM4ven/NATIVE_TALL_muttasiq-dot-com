@@ -86,7 +86,7 @@
 
     #quran-reader-search-modal .quran-search-field-wrapper {
         margin: 0 auto;
-        width: min(94vw, 42rem);
+        width: min(88vw, 42rem);
         max-width: 100%;
     }
 
@@ -147,7 +147,7 @@
 
     .quran-search-results-shell {
         margin-inline: auto;
-        width: min(94vw, 42rem);
+        width: min(88vw, 42rem);
         max-width: 100%;
         display: grid;
         gap: 0.42rem;
@@ -347,7 +347,7 @@
 
     .quran-surah-grid {
         margin-inline: auto;
-        width: min(94vw, 56rem);
+        width: min(88vw, 56rem);
         max-width: 100%;
         --quran-surah-edge-fade-size: 1rem;
         --quran-surah-grid-scroll-inset: calc(var(--quran-surah-edge-fade-size) + 0.35rem);

@@ -1028,7 +1028,7 @@
 
         .quran-top-strip {
             position: relative;
-            z-index: 140;
+            z-index: 40;
             display: flex;
             align-items: center;
             gap: 0.65rem;
