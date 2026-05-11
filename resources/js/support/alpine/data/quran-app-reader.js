@@ -13731,7 +13731,7 @@ document.addEventListener('alpine:init', () => {
             ).length;
 
             return (
-                renderedSurahHeaderCount === 1 && renderedBasmallahCount >= 1 && ayahLineCount >= 10
+                renderedSurahHeaderCount === 1 && renderedBasmallahCount <= 1 && ayahLineCount >= 10
             );
         },
 

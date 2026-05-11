@@ -40,7 +40,7 @@
 @endassets
 
 <div
-    class="quran-app-reader-stage 3xl:py-8 4xl:pb-8 4xl:pt-7 2xl:pb-6.5 absolute inset-0 z-10 grid place-items-center px-4 py-5 sm:px-6 sm:py-8 xl:pb-6 xl:pt-5 2xl:pt-6"
+    class="quran-app-reader-stage 3xl:3xl:pt-[1.1rem] 3xl:pb-[1.6rem] 4xl:pb-8 4xl:pt-7 2xl:pb-6.5 absolute inset-0 z-10 grid place-items-center px-4 py-5 sm:px-6 sm:py-8 xl:pb-6 xl:pt-5 2xl:pt-6"
     x-cloak
     x-show="views['quran-app-tilawa'].isOpen || views['quran-app-hifth'].isOpen || views['quran-app-tadabbur'].isOpen"
     x-transition:enter="transition-[opacity,transform] ease-out duration-220"
