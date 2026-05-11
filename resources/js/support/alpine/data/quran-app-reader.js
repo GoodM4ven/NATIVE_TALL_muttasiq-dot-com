@@ -14009,10 +14009,6 @@ document.addEventListener('alpine:init', () => {
                 return false;
             }
 
-            if (this.firstAyahIndexForSurahInCurrentPage(9) !== 1) {
-                return false;
-            }
-
             const currentPage = Math.max(1, Math.trunc(Number(this.pageNumber ?? 1)));
             const surahDirectoryEntry = this.surahDirectoryEntryBySurahNumber(9);
             const configuredFirstPage = Number(surahDirectoryEntry?.page_number ?? 0);
