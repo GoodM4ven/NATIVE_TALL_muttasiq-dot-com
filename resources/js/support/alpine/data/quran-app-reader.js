@@ -13972,8 +13972,14 @@ document.addEventListener('alpine:init', () => {
 
         lineMarginBlockEnd(line) {
             if (this.isSurahHeaderLine(line)) {
-                if (this.nextLineType(line) === 'basmallah') {
+                const nextLineType = this.nextLineType(line);
+
+                if (nextLineType === 'basmallah') {
                     return 'var(--quran-surah-header-basmallah-overlap, calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * -0.44))';
+                }
+
+                if (nextLineType === 'ayah' && this.isTawbahFirstPageSurahHeaderLine(line)) {
+                    return 'calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * var(--quran-surah-header-no-basmallah-first-ayah-gap-scale, -0.1))';
                 }
 
                 return 'var(--quran-surah-header-bottom-trim, calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * -0.1))';
@@ -13990,6 +13996,32 @@ document.addEventListener('alpine:init', () => {
             }
 
             return '0px';
+        },
+
+        isTawbahFirstPageSurahHeaderLine(line) {
+            if (!this.isSurahHeaderLine(line)) {
+                return false;
+            }
+
+            const surahNumber = this.resolvedLineSurahNumber(line);
+
+            if (surahNumber !== 9) {
+                return false;
+            }
+
+            if (this.firstAyahIndexForSurahInCurrentPage(9) !== 1) {
+                return false;
+            }
+
+            const currentPage = Math.max(1, Math.trunc(Number(this.pageNumber ?? 1)));
+            const surahDirectoryEntry = this.surahDirectoryEntryBySurahNumber(9);
+            const configuredFirstPage = Number(surahDirectoryEntry?.page_number ?? 0);
+
+            if (configuredFirstPage > 0) {
+                return currentPage === Math.max(1, Math.trunc(configuredFirstPage));
+            }
+
+            return true;
         },
 
         shouldRenderLine(line) {
