@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
 import tailwindcss from '@tailwindcss/vite';
-import livewireHotRefresh from './resources/js/support/livewire-vite-hot-refresh-runtime.js';
+import laravelHotRefresh from 'laravel-hot-refresh';
 import {
     nativephpMobile,
     nativephpHotFile,
@@ -22,7 +22,7 @@ export default defineConfig({
         emptyOutDir: false,
     },
     plugins: [
-        livewireHotRefresh({
+        laravelHotRefresh({
             refresh: [
                 'resources/css/app.css',
                 'resources/css/app-lazy.css',

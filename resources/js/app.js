@@ -1,4 +1,4 @@
-import './support/livewire-vite-hot-refresh-runtime';
+import 'laravel-hot-refresh';
 import './support/dispatch';
 import './support/css-variables';
 import './support/animate-scroll';
