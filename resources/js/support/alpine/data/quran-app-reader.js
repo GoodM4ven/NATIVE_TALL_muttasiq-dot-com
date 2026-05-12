@@ -6128,10 +6128,19 @@ document.addEventListener('alpine:init', () => {
                 clearTimeout(this.surahQuickNavigator.timer);
                 this.surahQuickNavigator.timer = null;
             }
+
+            if (this.surahQuickNavigator.holdTriggered) {
+                this.surahQuickNavigator.suppressClick = true;
+            }
         },
 
         onSurahTriggerPointerCancel() {
-            this.clearSurahQuickNavigatorPressState();
+            const shouldKeepSuppression =
+                this.surahQuickNavigator.holdTriggered || this.surahQuickNavigator.suppressClick;
+
+            this.clearSurahQuickNavigatorPressState({
+                resetSuppressClick: !shouldKeepSuppression,
+            });
         },
 
         onSurahTriggerClick() {

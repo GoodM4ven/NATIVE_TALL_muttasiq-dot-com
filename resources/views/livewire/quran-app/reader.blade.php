@@ -460,10 +460,10 @@
                 --quran-page-opening-type-multiplier: 1.02;
                 --quran-page-opening-leading-multiplier: 1.01;
                 --quran-page-opening-gap-multiplier: 1.02;
-                --quran-page-scale: 0.94;
-                --quran-page-type-scale: 1;
-                --quran-page-leading-multiplier: 1;
-                --quran-page-gap-multiplier: 0.5;
+                --quran-page-scale: 0.7;
+                --quran-page-type-scale: 0.95;
+                --quran-page-leading-multiplier: 1.1;
+                --quran-page-gap-multiplier: 1.2;
                 --quran-page-surah-header-scale: 1;
                 --quran-basmallah-bottom-gap-scale: -0.295;
                 --quran-page-y-offset: 0rem;
@@ -474,11 +474,11 @@
                 --quran-page-dense-gap-multiplier: 1.72;
                 --quran-page-dense-type-multiplier: 0.97;
                 --quran-page-dense-y-offset: -0.02rem;
-                --quran-page-y-offset: -0.02rem;
-                --quran-page-scale: 0.94;
-                --quran-page-type-scale: 1;
+                --quran-page-y-offset: -0.62rem;
+                --quran-page-scale: 0.385;
+                --quran-page-type-scale: 1.4;
                 --quran-page-leading-multiplier: 1;
-                --quran-page-gap-multiplier: 0.5;
+                --quran-page-gap-multiplier: 0.7;
                 --quran-page-surah-header-scale: 1;
                 --quran-basmallah-bottom-gap-scale: -0.295;
             }
@@ -488,26 +488,26 @@
                 --quran-page-headered-leading-multiplier: 1.24;
                 --quran-page-headered-gap-multiplier: 1.54;
                 --quran-surah-header-no-basmallah-first-ayah-gap-scale: -0.1;
-                --quran-page-scale: 0.94;
-                --quran-page-type-scale: 1;
-                --quran-page-leading-multiplier: 1;
-                --quran-page-gap-multiplier: 0.5;
-                --quran-page-surah-header-scale: 1;
-                --quran-basmallah-bottom-gap-scale: -0.295;
-                --quran-page-y-offset: 0rem;
+                --quran-page-scale: 0.41;
+                --quran-page-type-scale: 1.2;
+                --quran-page-leading-multiplier: 0.6;
+                --quran-page-gap-multiplier: 0.62;
+                --quran-page-surah-header-scale: 0.8;
+                --quran-basmallah-bottom-gap-scale: -0.695;
+                --quran-page-y-offset: -0.8rem;
             }
 
             .quran-page-lines--segmented {
                 --quran-page-segmented-type-multiplier: 0.965;
                 --quran-page-segmented-leading-multiplier: 1.01;
                 --quran-page-segmented-gap-multiplier: 1.08;
-                --quran-page-scale: 0.94;
-                --quran-page-type-scale: 1;
-                --quran-page-leading-multiplier: 1;
+                --quran-page-scale: 0.56;
+                --quran-page-type-scale: 0.99;
+                --quran-page-leading-multiplier: 1.3;
                 --quran-page-gap-multiplier: 0.5;
-                --quran-page-surah-header-scale: 1;
-                --quran-basmallah-bottom-gap-scale: -0.295;
-                --quran-page-y-offset: 0rem;
+                --quran-page-surah-header-scale: 0.8;
+                --quran-basmallah-bottom-gap-scale: -0.595;
+                --quran-page-y-offset: -0.2rem;
             }
         }
 
@@ -580,7 +580,7 @@
                 --quran-page-gap-multiplier: 0.58;
                 --quran-page-surah-header-scale: 0.8;
                 --quran-basmallah-bottom-gap-scale: -0.5;
-                --quran-page-y-offset: -0.4rem;
+                --quran-page-y-offset: -0.6rem;
             }
 
             .quran-page-lines--segmented {
@@ -2746,7 +2746,7 @@
             </section>
         @else
             <section
-                class="quran-reader-panel min-w-75 3xl:h-204 3xl:w-148 4xl:h-202 4xl:w-160 Xoverflow-hidden 2xl:w-124 2xl:h-166 relative flex h-[min(82svh,38rem)] w-[min(92vw,22rem)] flex-col rounded-[1.75rem] border sm:h-[min(82svh,50rem)] sm:w-[min(82vw,36rem)] md:h-[min(82svh,55rem)] md:w-[min(92vw,40rem)] lg:h-[min(82svh,55rem)] lg:w-[min(92vw,40rem)] xl:h-[min(73.5svh,37rem)] xl:w-[min(65vw,28rem)]"
+                class="quran-reader-panel min-w-75 3xl:h-204 3xl:w-148 4xl:h-202 4xl:w-160 Xoverflow-hidden 2xl:w-124 2xl:h-166 relative flex h-[min(82svh,38rem)] w-[min(92vw,22rem)] flex-col rounded-[1.75rem] border sm:h-[min(82svh,50rem)] sm:w-[min(82vw,36rem)] md:h-[min(82svh,55rem)] md:w-[min(92vw,40rem)] lg:h-[min(82svh,55rem)] lg:w-[min(92vw,40rem)] xl:h-148 xl:w-108"
                 x-bind:style="readerPanelStyle()"
                 x-bind:class="{ 'quran-reader-panel--calibrating': isCalibrating || _startupCalibrationPending }"
                 x-on:pointerdown.passive="onSwipeStart($event)"
@@ -2899,7 +2899,7 @@
                         </button>
 
                         <button
-                            class="quran-support-lock-target quran-wird-progress-button 4xl:min-h-10 4xl:min-w-[min(13rem,50vw)] 3xl:min-h-[2.44rem] min-h-[2.1rem] min-w-[min(10.8rem,50vw)] outline-none sm:min-h-[2.2rem] sm:min-w-[min(11.4rem,50vw)] md:min-h-[2.3rem] md:min-w-[min(11.9rem,50vw)] lg:min-h-[2.38rem] lg:min-w-[min(12.3rem,50vw)] xl:min-h-[2.1rem] xl:min-w-[min(12.6rem,50vw)] 2xl:min-h-[2.15rem] 2xl:min-w-[min(12.8rem,50vw)]"
+                            class="quran-support-lock-target quran-wird-progress-button 4xl:min-h-10 4xl:min-w-[min(13rem,50vw)] 3xl:min-h-[2.44rem] min-h-[2.1rem] min-w-[min(10.8rem,50vw)] outline-none sm:min-h-[2.2rem] sm:min-w-[min(11.4rem,50vw)] md:min-h-[2.3rem] md:min-w-[min(11.9rem,50vw)] lg:min-h-[2.38rem] lg:min-w-[min(12.3rem,50vw)] xl:min-h-[2.1rem] xl:min-w-[min(11.6rem,50vw)] 2xl:min-h-[2.15rem] 2xl:min-w-[min(12.8rem,50vw)]"
                             data-quran-wird-toggle
                             data-support-lock-target="wird-progress"
                             type="button"
