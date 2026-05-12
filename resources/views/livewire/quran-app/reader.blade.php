@@ -230,26 +230,26 @@
                 --quran-page-headered-leading-multiplier: 1.32;
                 --quran-page-headered-gap-multiplier: 1.56;
                 --quran-surah-header-no-basmallah-first-ayah-gap-scale: -0.1;
-                --quran-page-scale: 0.99;
-                --quran-page-type-scale: 0.83;
+                --quran-page-scale: 0.97;
+                --quran-page-type-scale: 0.85;
                 --quran-page-leading-multiplier: 0.18;
-                --quran-page-gap-multiplier: 0.58;
-                --quran-page-surah-header-scale: 0.85;
-                --quran-basmallah-bottom-gap-scale: -0.675;
-                --quran-page-y-offset: 0rem;
+                --quran-page-gap-multiplier: 0.56;
+                --quran-page-surah-header-scale: 0.65;
+                --quran-basmallah-bottom-gap-scale: -0.575;
+                --quran-page-y-offset: -0.9rem;
             }
 
             .quran-page-lines--segmented {
                 --quran-page-segmented-type-multiplier: 0.82;
                 --quran-page-segmented-leading-multiplier: 1.32;
                 --quran-page-segmented-gap-multiplier: 1.52;
-                --quran-page-scale: 0.8;
+                --quran-page-scale: 0.85;
                 --quran-page-type-scale: 1.02;
                 --quran-page-leading-multiplier: 0.54;
                 --quran-page-gap-multiplier: 0.65;
                 --quran-page-surah-header-scale: 0.812;
                 --quran-basmallah-bottom-gap-scale: -0.285;
-                --quran-page-y-offset: 0rem;
+                --quran-page-y-offset: -0.6rem;
             }
         }
 
@@ -288,11 +288,11 @@
                 --quran-page-opening-type-multiplier: 1.05;
                 --quran-page-opening-leading-multiplier: 1.01;
                 --quran-page-opening-gap-multiplier: 0.94;
-                --quran-page-scale: 1;
-                --quran-page-type-scale: 1.08;
+                --quran-page-scale: 0.8;
+                --quran-page-type-scale: 1.18;
                 --quran-page-leading-multiplier: 1.06;
-                --quran-page-gap-multiplier: 0.82;
-                --quran-page-surah-header-scale: 1.03;
+                --quran-page-gap-multiplier: 1.12;
+                --quran-page-surah-header-scale: 1.13;
                 --quran-basmallah-bottom-gap-scale: -0.242;
                 --quran-page-y-offset: 0rem;
             }
@@ -303,10 +303,10 @@
                 --quran-page-dense-type-multiplier: 0.94;
                 --quran-page-dense-y-offset: -0.01rem;
                 --quran-page-y-offset: -0.01rem;
-                --quran-page-scale: 0.9;
-                --quran-page-type-scale: 0.83;
+                --quran-page-scale: 0.8;
+                --quran-page-type-scale: 0.99;
                 --quran-page-leading-multiplier: 1.01;
-                --quran-page-gap-multiplier: 0.99;
+                --quran-page-gap-multiplier: 0.81;
                 --quran-page-surah-header-scale: 0.98;
                 --quran-basmallah-bottom-gap-scale: -0.39;
             }
@@ -316,26 +316,26 @@
                 --quran-page-headered-leading-multiplier: 1.28;
                 --quran-page-headered-gap-multiplier: 1.5;
                 --quran-surah-header-no-basmallah-first-ayah-gap-scale: -0.1;
-                --quran-page-scale: 0.902912;
-                --quran-page-type-scale: 0.83;
-                --quran-page-leading-multiplier: 1.01;
-                --quran-page-gap-multiplier: 0.98;
-                --quran-page-surah-header-scale: 0.98;
+                --quran-page-scale: 0.8;
+                --quran-page-type-scale: 1.02;
+                --quran-page-leading-multiplier: 0.31;
+                --quran-page-gap-multiplier: 0.82;
+                --quran-page-surah-header-scale: 0.68;
                 --quran-basmallah-bottom-gap-scale: -0.39;
-                --quran-page-y-offset: 0rem;
+                --quran-page-y-offset: -0.5rem;
             }
 
             .quran-page-lines--segmented {
                 --quran-page-segmented-type-multiplier: 0.84;
                 --quran-page-segmented-leading-multiplier: 1.28;
                 --quran-page-segmented-gap-multiplier: 1.48;
-                --quran-page-scale: 0.85;
-                --quran-page-type-scale: 0.83;
-                --quran-page-leading-multiplier: 1.01;
-                --quran-page-gap-multiplier: 0.98;
-                --quran-page-surah-header-scale: 0.98;
-                --quran-basmallah-bottom-gap-scale: -0.39;
-                --quran-page-y-offset: 0rem;
+                --quran-page-scale: 0.79;
+                --quran-page-type-scale: 1.11;
+                --quran-page-leading-multiplier: 0.31;
+                --quran-page-gap-multiplier: 0.88;
+                --quran-page-surah-header-scale: 0.68;
+                --quran-basmallah-bottom-gap-scale: -0.29;
+                --quran-page-y-offset: -0.2rem;
             }
         }
 
@@ -374,10 +374,10 @@
                 --quran-page-opening-type-multiplier: 1.04;
                 --quran-page-opening-leading-multiplier: 1.01;
                 --quran-page-opening-gap-multiplier: 1.02;
-                --quran-page-scale: 1.01;
-                --quran-page-type-scale: 1.09;
-                --quran-page-leading-multiplier: 1.1;
-                --quran-page-gap-multiplier: 0.96;
+                --quran-page-scale: 0.71;
+                --quran-page-type-scale: 1.05;
+                --quran-page-leading-multiplier: 0.8;
+                --quran-page-gap-multiplier: 0.99;
                 --quran-page-surah-header-scale: 1.03;
                 --quran-basmallah-bottom-gap-scale: -0.24;
                 --quran-page-y-offset: 0rem;
@@ -388,11 +388,11 @@
                 --quran-page-dense-gap-multiplier: 1.6;
                 --quran-page-dense-type-multiplier: 0.92;
                 --quran-page-dense-y-offset: 0.1rem;
-                --quran-page-y-offset: 0.1rem;
-                --quran-page-scale: 0.891356;
-                --quran-page-type-scale: 0.87;
+                --quran-page-y-offset: -0.8rem;
+                --quran-page-scale: 0.578;
+                --quran-page-type-scale: 1.1;
                 --quran-page-leading-multiplier: 1.2;
-                --quran-page-gap-multiplier: 0.98;
+                --quran-page-gap-multiplier: 0.68;
                 --quran-page-surah-header-scale: 1.02;
                 --quran-basmallah-bottom-gap-scale: -0.295;
             }
@@ -402,13 +402,13 @@
                 --quran-page-headered-leading-multiplier: 1.24;
                 --quran-page-headered-gap-multiplier: 1.44;
                 --quran-surah-header-no-basmallah-first-ayah-gap-scale: -0.1;
-                --quran-page-scale: 0.7;
-                --quran-page-type-scale: 1.07;
-                --quran-page-leading-multiplier: 1;
-                --quran-page-gap-multiplier: 1.28;
-                --quran-page-surah-header-scale: 1.02;
-                --quran-basmallah-bottom-gap-scale: -0.295;
-                --quran-page-y-offset: 0rem;
+                --quran-page-scale: 0.52;
+                --quran-page-type-scale: 1.17;
+                --quran-page-leading-multiplier: 0.6;
+                --quran-page-gap-multiplier: 0.78;
+                --quran-page-surah-header-scale: 0.72;
+                --quran-basmallah-bottom-gap-scale: -0.595;
+                --quran-page-y-offset: -1.1rem;
             }
 
             .quran-page-lines--segmented {
@@ -416,12 +416,12 @@
                 --quran-page-segmented-leading-multiplier: 1.24;
                 --quran-page-segmented-gap-multiplier: 1.42;
                 --quran-page-scale: 0.66667;
-                --quran-page-type-scale: 1.07;
-                --quran-page-leading-multiplier: 1.2;
-                --quran-page-gap-multiplier: 1.08;
-                --quran-page-surah-header-scale: 1.02;
-                --quran-basmallah-bottom-gap-scale: -0.495;
-                --quran-page-y-offset: 0rem;
+                --quran-page-type-scale: 1.06;
+                --quran-page-leading-multiplier: 0.8;
+                --quran-page-gap-multiplier: 0.58;
+                --quran-page-surah-header-scale: 0.68;
+                --quran-basmallah-bottom-gap-scale: -0.595;
+                --quran-page-y-offset: -0.4rem;
             }
         }
 
@@ -1101,13 +1101,10 @@
 
         /* Credits: https://uiball.com/ldrs/ (jelly triangle) */
         .quran-calibration-spinner {
-            --uib-size: 34px;
-            --uib-color: color-mix(in srgb, var(--primary-500) 74%, #0a6571);
             position: relative;
             display: grid;
+            align-items: center;
             place-items: center;
-            inline-size: var(--uib-size);
-            block-size: var(--uib-size);
             transform: translate3d(0, 0, 0);
             backface-visibility: hidden;
             contain: layout style;
@@ -1116,28 +1113,71 @@
             filter: drop-shadow(0 0 0.35rem color-mix(in srgb, var(--primary-400) 34%, transparent));
         }
 
-        @media (min-width: 1024px) and (max-width: 1279px) {
-            .quran-calibration-spinner {
-                --uib-size: 15px;
-            }
+        .quran-calibration-jelly-svg {
+            --uib-color: #0a6571;
+            --uib-speed: 1.75s;
+            display: block;
+            inline-size: 100%;
+            block-size: 100%;
+            overflow: visible;
         }
-        
-        @media (min-width: 1280px) and (max-width: 1535px) {
-            .quran-calibration-spinner {
-                --uib-size: 20px;
-            }
+
+        .quran-calibration-jelly-group {
+            filter: url('#quran-calibration-jelly-ooze');
         }
-        
-        @media (min-width: 1536px) and (max-width: 1919px) {
-            .quran-calibration-spinner {
-                --uib-size: 26px;
+
+        .quran-calibration-jelly-node {
+            fill: var(--uib-color);
+            transform-box: fill-box;
+            transform-origin: center;
+            will-change: transform;
+            transition: fill 300ms ease;
+        }
+
+        .quran-calibration-jelly-dot-top {
+            animation: quran-calibration-jelly-grow var(--uib-speed) ease infinite;
+        }
+
+        .quran-calibration-jelly-dot-right {
+            animation: quran-calibration-jelly-grow var(--uib-speed) ease calc(var(--uib-speed) * -0.666) infinite;
+        }
+
+        .quran-calibration-jelly-dot-left {
+            animation: quran-calibration-jelly-grow var(--uib-speed) ease calc(var(--uib-speed) * -0.333) infinite;
+        }
+
+        .quran-calibration-jelly-traveler {
+            animation: quran-calibration-jelly-triangulate var(--uib-speed) ease infinite;
+        }
+
+        @keyframes quran-calibration-jelly-triangulate {
+
+            0%,
+            100% {
+                transform: none;
+            }
+
+            33.333% {
+                transform: translate(10px, 20px);
+            }
+
+            66.666% {
+                transform: translate(-10px, 20px);
             }
         }
 
-        .quran-calibration-spinner l-jelly-triangle {
-            inline-size: var(--uib-size);
-            block-size: var(--uib-size);
-            color: var(--uib-color);
+        @keyframes quran-calibration-jelly-grow {
+
+            0%,
+            85%,
+            100% {
+                transform: scale(1.5);
+            }
+
+            50%,
+            60% {
+                transform: scale(0);
+            }
         }
 
         .quran-page-lines[data-fit-state='fading-out'] {
@@ -2758,7 +2798,7 @@
             </section>
         @else
             <section
-                class="quran-reader-panel min-w-75 3xl:h-204 3xl:w-148 4xl:h-202 4xl:w-160 Xoverflow-hidden 2xl:w-124 2xl:h-166 xl:h-148 xl:w-108 relative flex h-[min(82svh,38rem)] w-[min(92vw,22rem)] flex-col rounded-[1.75rem] border sm:h-[min(82svh,50rem)] sm:w-[min(82vw,36rem)] md:h-[min(82svh,55rem)] md:w-[min(92vw,40rem)] lg:h-[min(92svh,44rem)] lg:w-[min(92vw,31rem)]"
+                class="quran-reader-panel min-w-75 3xl:h-204 3xl:w-148 4xl:h-202 4xl:w-160 Xoverflow-hidden 2xl:w-124 2xl:h-166 xl:h-148 xl:w-108 relative flex h-[min(82svh,38rem)] w-[min(92vw,22rem)] flex-col rounded-[1.75rem] border sm:h-[min(82svh,50rem)] sm:w-[min(82vw,33rem)] md:h-[min(84svh,54rem)] md:w-[min(92vw,36rem)] lg:h-[min(92svh,44rem)] lg:w-[min(92vw,31rem)]"
                 x-bind:style="readerPanelStyle()"
                 x-bind:class="{ 'quran-reader-panel--calibrating': isCalibrating || _startupCalibrationPending }"
                 x-on:pointerdown.passive="onSwipeStart($event)"
@@ -2796,15 +2836,73 @@
                         x-bind:style="calibrationHudStyle()"
                         x-bind:aria-hidden="shouldShowCalibrationHud() ? 'false' : 'true'"
                     >
-                        <div class="quran-calibration-loader flex flex-col items-center gap-3">
-                            <div class="quran-calibration-spinner">
-                                <l-jelly-triangle
-                                    speed="1.75"
-                                    x-bind:color="window.Alpine.store('colorScheme').isDark ? '#BFD4D7' : '#0a6571'"
-                                ></l-jelly-triangle>
+                        <div class="quran-calibration-loader flex flex-col items-center gap-2 sm:gap-3.5 md:gap-[0.85rem] lg:gap-3.5 xl:gap-4 2xl:gap-4.5">
+                            <div
+                                class="quran-calibration-spinner size-6 sm:size-7 lg:size-5 xl:size-7 2xl:size-7.5 3xl:size-9">
+                                <svg
+                                    class="quran-calibration-jelly-svg"
+                                    aria-hidden="true"
+                                    viewBox="0 0 30 30"
+                                    preserveAspectRatio="xMidYMid meet"
+                                    x-bind:style="`--uib-color: ${window.Alpine.store('colorScheme').isDark ? '#BFD4D7' : '#0a6571'}`"
+                                >
+                                    <defs>
+                                        <filter
+                                            id="quran-calibration-jelly-ooze"
+                                            filterUnits="userSpaceOnUse"
+                                            primitiveUnits="userSpaceOnUse"
+                                            x="-8"
+                                            y="-8"
+                                            width="46"
+                                            height="46"
+                                        >
+                                            <feGaussianBlur
+                                                in="SourceGraphic"
+                                                stdDeviation="3.333"
+                                                result="blur"
+                                            />
+                                            <feColorMatrix
+                                                values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7"
+                                                in="blur"
+                                                mode="matrix"
+                                                result="ooze"
+                                            />
+                                            <feBlend
+                                                in="SourceGraphic"
+                                                in2="ooze"
+                                            />
+                                        </filter>
+                                    </defs>
+                                    <g class="quran-calibration-jelly-group">
+                                        <circle
+                                            class="quran-calibration-jelly-node quran-calibration-jelly-dot-top"
+                                            cx="15"
+                                            cy="5"
+                                            r="5"
+                                        />
+                                        <circle
+                                            class="quran-calibration-jelly-node quran-calibration-jelly-dot-right"
+                                            cx="25"
+                                            cy="25"
+                                            r="5"
+                                        />
+                                        <circle
+                                            class="quran-calibration-jelly-node quran-calibration-jelly-dot-left"
+                                            cx="5"
+                                            cy="25"
+                                            r="5"
+                                        />
+                                        <circle
+                                            class="quran-calibration-jelly-node quran-calibration-jelly-traveler"
+                                            cx="15"
+                                            cy="5"
+                                            r="5"
+                                        />
+                                    </g>
+                                </svg>
                             </div>
                             <span
-                                class="font-arabic-sans 3xl:text-lg mt-2 text-sm tracking-wide opacity-60 sm:text-lg lg:text-[0.8rem] xl:text-[0.9rem] 2xl:text-[1.05rem]"
+                                class="font-arabic-sans 3xl:text-[1.2rem] text-[0.68rem] tracking-wide opacity-60 sm:text-[0.8rem] md:text-[0.8rem] lg:text-[0.82rem] xl:text-[0.87rem] 2xl:text-[0.94rem]"
                                 dir="rtl"
                             >{{ arabic_text('تجهيز المصحف...') }}</span>
                         </div>
@@ -3327,7 +3425,7 @@
                     </div>
                     <div class="quran-bottom-strip-slider">
                         <input
-                            class="quran-page-slider w-[min(42vw, 13.2rem)] 2xl:w-[min(42vw, 13.2rem)] 3xl:w-[min(42vw, 13.2rem)] 3xl:min-w-48 4xl:min-w-54 h-[0.56rem] min-w-32 outline-none xl:h-[0.46rem] xl:min-w-40 2xl:h-[0.56rem] 2xl:min-w-40"
+                            class="quran-page-slider w-[min(42vw, 13.2rem)] 2xl:w-[min(42vw, 13.2rem)] 3xl:w-[min(42vw, 13.2rem)] 3xl:min-w-48 4xl:min-w-54 h-[0.56rem] min-w-32 outline-none xl:h-[0.46rem] sm:min-w-40 2xl:h-[0.56rem] 2xl:min-w-40"
                             type="range"
                             aria-label="{{ arabic_text('التنقل بين صفحات المصحف') }}"
                             x-bind:min="sliderMin()"
