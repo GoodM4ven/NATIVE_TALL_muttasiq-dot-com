@@ -6146,14 +6146,13 @@ document.addEventListener('alpine:init', () => {
         onSurahTriggerClick() {
             const shouldSuppressClick = this.surahQuickNavigator.suppressClick;
 
-            this.closeSurahQuickNavigator({ resetSuppressClick: false });
-
             if (shouldSuppressClick || this.wirdModeActive) {
                 this.clearSurahQuickNavigatorPressState();
 
                 return;
             }
 
+            this.closeSurahQuickNavigator({ resetSuppressClick: false });
             this.warmSearchIndex();
             this.$wire.mountAction('searchQuran');
             this.queueSurahDirectoryAutoFocus();

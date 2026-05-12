@@ -476,7 +476,7 @@
                 --quran-page-dense-y-offset: -0.02rem;
                 --quran-page-y-offset: -0.62rem;
                 --quran-page-scale: 0.385;
-                --quran-page-type-scale: 1.4;
+                --quran-page-type-scale: 1.5;
                 --quran-page-leading-multiplier: 1;
                 --quran-page-gap-multiplier: 0.7;
                 --quran-page-surah-header-scale: 1;
@@ -489,7 +489,7 @@
                 --quran-page-headered-gap-multiplier: 1.54;
                 --quran-surah-header-no-basmallah-first-ayah-gap-scale: -0.1;
                 --quran-page-scale: 0.41;
-                --quran-page-type-scale: 1.2;
+                --quran-page-type-scale: 1.35;
                 --quran-page-leading-multiplier: 0.6;
                 --quran-page-gap-multiplier: 0.62;
                 --quran-page-surah-header-scale: 0.8;
@@ -1116,6 +1116,18 @@
             filter: drop-shadow(0 0 0.35rem color-mix(in srgb, var(--primary-400) 34%, transparent));
         }
 
+        @media (min-width: 1024px) and (max-width: 1279px) {
+            .quran-calibration-spinner {
+                --uib-size: 15px;
+            }
+        }
+        
+        @media (min-width: 1280px) and (max-width: 1535px) {
+            .quran-calibration-spinner {
+                --uib-size: 20px;
+            }
+        }
+        
         @media (min-width: 1536px) and (max-width: 1919px) {
             .quran-calibration-spinner {
                 --uib-size: 26px;
@@ -2746,7 +2758,7 @@
             </section>
         @else
             <section
-                class="quran-reader-panel min-w-75 3xl:h-204 3xl:w-148 4xl:h-202 4xl:w-160 Xoverflow-hidden 2xl:w-124 2xl:h-166 relative flex h-[min(82svh,38rem)] w-[min(92vw,22rem)] flex-col rounded-[1.75rem] border sm:h-[min(82svh,50rem)] sm:w-[min(82vw,36rem)] md:h-[min(82svh,55rem)] md:w-[min(92vw,40rem)] lg:h-[min(82svh,55rem)] lg:w-[min(92vw,40rem)] xl:h-148 xl:w-108"
+                class="quran-reader-panel min-w-75 3xl:h-204 3xl:w-148 4xl:h-202 4xl:w-160 Xoverflow-hidden 2xl:w-124 2xl:h-166 xl:h-148 xl:w-108 relative flex h-[min(82svh,38rem)] w-[min(92vw,22rem)] flex-col rounded-[1.75rem] border sm:h-[min(82svh,50rem)] sm:w-[min(82vw,36rem)] md:h-[min(82svh,55rem)] md:w-[min(92vw,40rem)] lg:h-[min(92svh,44rem)] lg:w-[min(92vw,31rem)]"
                 x-bind:style="readerPanelStyle()"
                 x-bind:class="{ 'quran-reader-panel--calibrating': isCalibrating || _startupCalibrationPending }"
                 x-on:pointerdown.passive="onSwipeStart($event)"
@@ -2792,7 +2804,7 @@
                                 ></l-jelly-triangle>
                             </div>
                             <span
-                                class="font-arabic-sans 3xl:text-lg mt-2 text-sm tracking-wide opacity-60 sm:text-lg 2xl:text-[1.05rem]"
+                                class="font-arabic-sans 3xl:text-lg mt-2 text-sm tracking-wide opacity-60 sm:text-lg lg:text-[0.8rem] xl:text-[0.9rem] 2xl:text-[1.05rem]"
                                 dir="rtl"
                             >{{ arabic_text('تجهيز المصحف...') }}</span>
                         </div>
@@ -2811,10 +2823,11 @@
                     <!-- Credits: uiverse.io/gharsh11032000/loud-chicken-53 -->
                     <div
                         class="quran-soorah-trigger-shell"
+                        data-no-swipe
                         x-on:pointerdown.outside="closeSurahQuickNavigator()"
                     >
                         <button
-                            class="quran-soorah-trigger 3xl:w-[12.4rem] 4xl:w-[13.4rem] 4xl:px-[2.35rem] 4xl:py-[0.42rem] 4xl:text-[0.95rem] 4xl:min-h-[2.2rem] w-41 md:w-47 3xl:min-h-[2.15rem] 3xl:px-[2.28rem] 2xl:w-31 3xl:text-[0.93rem] min-h-[1.95rem] shrink-0 px-[1.7rem] py-[0.34rem] text-[0.8rem] outline-none sm:min-h-8 sm:w-44 sm:px-[1.95rem] sm:py-[0.36rem] sm:text-[0.84rem] md:min-h-[2.05rem] md:px-[2.1rem] md:py-[0.38rem] md:text-[0.88rem] lg:min-h-[2.1rem] lg:w-[12.35rem] lg:px-[2.2rem] lg:py-[0.4rem] lg:text-[0.9rem] xl:min-h-[1.8rem] xl:w-32 xl:px-[1.9rem] xl:text-[0.66rem] 2xl:min-h-[1.85rem] 2xl:px-[1.95rem] 2xl:text-[0.6rem]"
+                            class="quran-soorah-trigger 3xl:w-[12.4rem] 4xl:w-[13.4rem] 4xl:px-[2.35rem] 4xl:py-[0.42rem] 4xl:text-[0.95rem] 4xl:min-h-[2.2rem] w-41 md:w-47 3xl:min-h-[2.15rem] 3xl:px-[2.28rem] 2xl:w-31 3xl:text-[0.93rem] min-h-[1.95rem] shrink-0 px-[1.7rem] py-[0.34rem] text-[0.8rem] outline-none sm:min-h-8 sm:w-44 sm:px-[1.95rem] sm:py-[0.36rem] sm:text-[0.84rem] md:min-h-[2.05rem] md:px-[2.1rem] md:py-[0.38rem] md:text-[0.88rem] lg:min-h-[2.1rem] lg:w-42 lg:px-[2.2rem] lg:py-[0.4rem] lg:text-[0.8rem] xl:min-h-[1.8rem] xl:w-32 xl:px-[1.9rem] xl:text-[0.66rem] 2xl:min-h-[1.85rem] 2xl:px-[1.95rem] 2xl:text-[0.6rem]"
                             type="button"
                             dir="rtl"
                             x-bind:disabled="wirdModeActive"
