@@ -1080,13 +1080,25 @@
         -webkit-backdrop-filter: blur(4px) saturate(1.04);
     }
 
+    /* lg */
+    @media (min-width: 1024px) and (max-width: 1279px) {
+        .quran-support-lock-target--locked.quran-wird-progress-button .quran-support-lock-badge {
+            inline-size: 2.2rem;
+            block-size: 2.2rem;
+            inset-inline-start: 35%;
+        }
+    }
+
+    /* xl */
     @media (min-width: 1280px) and (max-width: 1535px) {
         .quran-support-lock-target--locked.quran-wird-progress-button .quran-support-lock-badge {
             inline-size: 1.75rem;
             block-size: 1.75rem;
+            inset-inline-start: 35%;
         }
     }
 
+    /* 2xl */
     @media (min-width: 1536px) and (max-width: 1919px) {
         .quran-support-lock-target--locked.quran-wird-progress-button .quran-support-lock-badge {
             inline-size: 2rem;
@@ -1109,6 +1121,15 @@
         block-size: 1.45rem;
     }
 
+    @media (min-width: 1024px) and (max-width: 1279px) {
+        .quran-support-lock-target--locked.quran-wird-progress-button
+            .quran-support-lock-badge__icon-svg {
+            inline-size: 1.25rem;
+            block-size: 1.25rem;
+        }
+    }
+
+    /* xl */
     @media (min-width: 1280px) and (max-width: 1535px) {
         .quran-support-lock-target--locked.quran-wird-progress-button
             .quran-support-lock-badge__icon-svg {
@@ -1117,6 +1138,7 @@
         }
     }
 
+    /* 2xl */
     @media (min-width: 1536px) and (max-width: 1919px) {
         .quran-support-lock-target--locked.quran-wird-progress-button
             .quran-support-lock-badge__icon-svg {

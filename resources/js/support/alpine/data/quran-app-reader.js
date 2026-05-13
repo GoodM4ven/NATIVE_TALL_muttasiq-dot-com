@@ -4222,6 +4222,8 @@ document.addEventListener('alpine:init', () => {
         },
 
         async toggleWirdMode() {
+            this.$el.blur();
+
             if (this.isSupportLockActive()) {
                 this.openSupportUnlockModal();
 
