@@ -40,7 +40,7 @@
 @endassets
 
 <div
-    class="quran-app-reader-stage 3xl:pt-[1.1rem] 3xl:pb-[1.6rem] 4xl:pb-8 4xl:pt-7 2xl:pb-6.5 absolute inset-0 z-10 grid place-items-center px-4 pb-0 pt-3 sm:px-6 sm:py-8 xl:pb-[0.6rem] xl:pt-[0.6rem] 2xl:pt-6"
+    class="quran-app-reader-stage 3xl:pt-[1.1rem] 3xl:pb-[1.6rem] 4xl:pb-8 4xl:pt-7 2xl:pb-6.5 absolute inset-0 z-10 grid place-items-center px-4 pb-0 pt-3 max-sm:items-end sm:px-6 sm:py-8 xl:pb-[0.6rem] xl:pt-[0.6rem] 2xl:pt-6"
     x-cloak
     x-show="views['quran-app-tilawa'].isOpen || views['quran-app-hifth'].isOpen || views['quran-app-tadabbur'].isOpen"
     x-transition:enter="transition-[opacity,transform] ease-out duration-220"
@@ -50,7 +50,7 @@
     x-transition:leave-start="opacity-100 translate-y-0 scale-100"
     x-transition:leave-end="opacity-0! translate-y-1 scale-[0.995]"
 >
-    <div class="relative grid h-full w-full place-items-center">
+    <div class="relative grid h-full w-full place-items-center max-sm:items-end">
         <livewire:quran-app.reader />
 
         <div

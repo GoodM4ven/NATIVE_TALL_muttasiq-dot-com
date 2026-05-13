@@ -132,7 +132,7 @@
                 --quran-page-dense-y-offset: 0rem;
                 --quran-page-y-offset: -0.7rem;
                 --quran-page-scale: 0.39;
-                --quran-page-type-scale: 1.25;
+                --quran-page-type-scale: 1.35;
                 --quran-page-leading-multiplier: 1.1;
                 --quran-page-gap-multiplier: 0.95;
                 --quran-page-surah-header-scale: 1.01;
@@ -145,9 +145,9 @@
                 --quran-page-headered-gap-multiplier: 1;
                 --quran-surah-header-no-basmallah-first-ayah-gap-scale: -0.1;
                 --quran-page-scale: 0.315;
-                --quran-page-type-scale: 1.5;
+                --quran-page-type-scale: 1.65;
                 --quran-page-leading-multiplier: 0.8;
-                --quran-page-gap-multiplier: 1.12;
+                --quran-page-gap-multiplier: 1.04;
                 --quran-page-surah-header-scale: 0.73;
                 --quran-basmallah-bottom-gap-scale: -0.28;
                 --quran-page-y-offset: -1rem;
@@ -157,8 +157,8 @@
                 --quran-page-segmented-type-multiplier: 1;
                 --quran-page-segmented-leading-multiplier: 1;
                 --quran-page-segmented-gap-multiplier: 1;
-                --quran-page-scale: 0.45;
-                --quran-page-type-scale: 1.16;
+                --quran-page-scale: 0.445;
+                --quran-page-type-scale: 1.2;
                 --quran-page-leading-multiplier: 1.2;
                 --quran-page-gap-multiplier: 0.72;
                 --quran-page-surah-header-scale: 0.81;
@@ -1942,7 +1942,6 @@
 
         .quran-soorah-quick-nav {
             position: absolute;
-            inset-inline-start: 50%;
             inset-block-start: 50%;
             inline-size: 0;
             block-size: 0;
@@ -1969,8 +1968,6 @@
         .quran-soorah-quick-nav-button {
             position: absolute;
             inset-inline-start: 50%;
-            inline-size: 2.1rem;
-            block-size: 1.72rem;
             border-radius: 999px;
             border: 0.08rem solid color-mix(in srgb, var(--primary-300) 72%, transparent);
             background:
@@ -2021,8 +2018,6 @@
         }
 
         .quran-soorah-quick-nav-arrow {
-            inline-size: 1.05rem;
-            block-size: 1.05rem;
             fill: currentColor;
         }
 
@@ -2795,7 +2790,7 @@
             </section>
         @else
             <section
-                class="quran-reader-panel min-w-75 3xl:h-204 3xl:w-148 4xl:h-202 4xl:w-160 Xoverflow-hidden 2xl:w-124 2xl:h-166 xl:h-148 xl:w-108 relative flex h-[min(88svh,38rem)] w-[min(91vw,22rem)] flex-col rounded-t-2xl sm:rounded-[1.75rem] border sm:h-[min(82svh,50rem)] sm:w-[min(82vw,33rem)] md:h-[min(84svh,54rem)] md:w-[min(92vw,36rem)] lg:h-[min(92svh,44rem)] lg:w-[min(92vw,31rem)]"
+                class="quran-reader-panel min-w-75 3xl:h-204 3xl:w-148 4xl:h-202 4xl:w-160 Xoverflow-hidden 2xl:w-124 2xl:h-166 xl:h-148 xl:w-108 relative flex h-[min(88svh,38rem)] w-[min(91vw,22rem)] flex-col rounded-t-2xl border sm:h-[min(82svh,50rem)] sm:w-[min(82vw,33rem)] sm:rounded-[1.75rem] md:h-[min(84svh,54rem)] md:w-[min(92vw,36rem)] lg:h-[min(92svh,44rem)] lg:w-[min(92vw,31rem)]"
                 x-bind:style="readerPanelStyle()"
                 x-bind:class="{ 'quran-reader-panel--calibrating': isCalibrating || _startupCalibrationPending }"
                 x-on:pointerdown.passive="onSwipeStart($event)"
@@ -2833,9 +2828,10 @@
                         x-bind:style="calibrationHudStyle()"
                         x-bind:aria-hidden="shouldShowCalibrationHud() ? 'false' : 'true'"
                     >
-                        <div class="quran-calibration-loader flex flex-col items-center gap-3 sm:gap-3.5 md:gap-[0.85rem] lg:gap-3.5 xl:gap-4 2xl:gap-4.5">
+                        <div
+                            class="quran-calibration-loader 2xl:gap-4.5 flex flex-col items-center gap-3 sm:gap-3.5 md:gap-[0.85rem] lg:gap-3.5 xl:gap-4">
                             <div
-                                class="quran-calibration-spinner size-6 sm:size-7 lg:size-5 xl:size-7 2xl:size-7.5 3xl:size-9">
+                                class="quran-calibration-spinner 2xl:size-7.5 3xl:size-9 size-6 sm:size-7 lg:size-5 xl:size-7">
                                 <svg
                                     class="quran-calibration-jelly-svg"
                                     aria-hidden="true"
@@ -2859,6 +2855,7 @@
                                                 result="blur"
                                             />
                                             <feColorMatrix
+                                                values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7"
                                                 values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7"
                                                 in="blur"
                                                 mode="matrix"
@@ -2906,7 +2903,7 @@
                     </div>
                 </template>
                 <header
-                    class="quran-top-strip gap-[0.4rem] sm:gap-[0.65rem] pt-[0.45rem] px-[0.6rem] pb-2 sm:pt-[0.8rem] sm:px-4 sm:pb-2"
+                    class="quran-top-strip gap-[0.4rem] px-[0.6rem] pb-2 pt-[0.45rem] sm:gap-[0.65rem] sm:px-4 sm:pb-2 sm:pt-[0.8rem]"
                     x-bind:class="{
                         'quran-top-strip--wird-active': wirdModeActive,
                         'quran-top-strip--initial-loading': isCalibrating || _startupCalibrationPending || !
@@ -2922,7 +2919,7 @@
                         x-on:pointerdown.outside="closeSurahQuickNavigator()"
                     >
                         <button
-                            class="quran-soorah-trigger 3xl:w-[12.4rem] 4xl:w-[13.4rem] 4xl:px-[2.35rem] 4xl:py-[0.42rem] 4xl:text-[0.95rem] 4xl:min-h-[2.2rem] w-31 md:w-47 3xl:min-h-[2.15rem] 3xl:px-[2.28rem] 2xl:w-31 3xl:text-[0.93rem] min-h-[1.95rem] shrink-0 px-[1.7rem] py-[0.34rem] text-[0.7rem] outline-none sm:min-h-8 sm:w-44 sm:px-[1.95rem] sm:py-[0.36rem] sm:text-[0.84rem] md:min-h-[2.05rem] md:px-[2.1rem] md:py-[0.38rem] md:text-[0.88rem] lg:min-h-[2.1rem] lg:w-42 lg:px-[2.2rem] lg:py-[0.4rem] lg:text-[0.8rem] xl:min-h-[1.8rem] xl:w-32 xl:px-[1.9rem] xl:text-[0.66rem] 2xl:min-h-[1.85rem] 2xl:px-[1.95rem] 2xl:text-[0.6rem]"
+                            class="quran-soorah-trigger 3xl:w-[12.4rem] 4xl:w-[13.4rem] 4xl:px-[2.35rem] 4xl:py-[0.42rem] 4xl:text-[0.95rem] 4xl:min-h-[2.2rem] w-31 md:w-47 3xl:min-h-[2.15rem] 3xl:px-[2.28rem] 2xl:w-35 3xl:text-[0.93rem] lg:w-42 min-h-[1.95rem] shrink-0 px-[1.7rem] py-[0.34rem] text-[0.7rem] outline-none sm:min-h-8 sm:w-44 sm:px-[1.95rem] sm:py-[0.36rem] sm:text-[0.84rem] md:min-h-[2.05rem] md:px-[2.1rem] md:py-[0.38rem] md:text-[0.88rem] lg:min-h-[2.1rem] lg:px-[2.2rem] lg:py-[0.4rem] lg:text-[0.8rem] xl:min-h-[1.8rem] xl:w-32 xl:px-[1.9rem] xl:text-[0.66rem] 2xl:min-h-[1.85rem] 2xl:px-[1.95rem] 2xl:text-[0.7rem]"
                             type="button"
                             dir="rtl"
                             x-bind:disabled="wirdModeActive"
@@ -2935,7 +2932,7 @@
                             x-bind:aria-label="@js(arabic_text('ابحث في ')) + currentSurahTitle()"
                         >
                             <x-icon
-                                class="quran-soorah-trigger-icon 4xl:size-4 4xl:inset-s-[0.82rem] inset-s-[0.62rem] sm:inset-s-[0.68rem] md:inset-s-[0.72rem] lg:inset-s-[0.76rem] xl:inset-s-[0.8rem] 2xl:inset-s-[0.85rem] 3xl:inset-s-[0.8rem] size-[0.8rem] sm:size-[0.84rem] md:size-[0.88rem] lg:size-[0.92rem] xl:size-[0.96rem]"
+                                class="quran-soorah-trigger-icon 4xl:size-4 3xl:size-4 4xl:inset-s-[0.82rem] inset-s-[0.62rem] sm:inset-s-[0.68rem] md:inset-s-[0.72rem] lg:inset-s-[0.76rem] xl:inset-s-[0.8rem] 2xl:inset-s-[0.85rem] 3xl:inset-s-[0.8rem] size-[0.8rem] sm:size-[0.84rem] md:size-[0.88rem] lg:size-[0.92rem] xl:size-[0.96rem] 2xl:size-3.5"
                                 :name="'heroicon-o-magnifying-glass'"
                             />
                             <span class="quran-soorah-trigger-text">
@@ -2950,20 +2947,20 @@
                             ></span>
                         </button>
                         <div
-                            class="quran-soorah-quick-nav"
+                            class="quran-soorah-quick-nav inset-s-[48%] 2xl:inset-s-[48%] 3xl:inset-s-[50%]"
                             x-cloak
                             x-bind:class="{ 'quran-soorah-quick-nav--visible': surahQuickNavigator.visible && !wirdModeActive }"
                             x-bind:aria-hidden="surahQuickNavigator.visible && !wirdModeActive ? 'false' : 'true'"
                         >
                             <button
-                                class="quran-soorah-quick-nav-button quran-soorah-quick-nav-button--top 3xl:inset-be-[calc(100%+1.4rem)] 3xl:transform-[translateX(-50%)] 4xl:inset-be-[calc(100%+1.4rem)] 4xl:transform-[translateX(-50%)] inset-be-[calc(100%+1.4rem)] transform-[translateX(-50%)] sm:inset-be-[calc(100%+1.4rem)] sm:transform-[translateX(-50%)] md:inset-be-[calc(100%+1.4rem)] md:transform-[translateX(-50%)] lg:inset-be-[calc(100%+1.4rem)] lg:transform-[translateX(-50%)] xl:inset-be-[calc(100%+1.4rem)] xl:transform-[translateX(-50%)] 2xl:inset-be-[calc(100%+1.4rem)] 2xl:transform-[translateX(-50%)]"
+                                class="quran-soorah-quick-nav-button quran-soorah-quick-nav-button--top inline-[2.1rem] block-[1.72rem] 3xl:inline-[2.1rem] 3xl:block-[1.72rem] 2xl:inline-8 2xl:block-[1.55rem] 3xl:inset-be-[calc(100%+1.4rem)] 3xl:transform-[translateX(-50%)] 4xl:inset-be-[calc(100%+1.4rem)] 4xl:transform-[translateX(-50%)] inset-be-[calc(100%+1.4rem)] transform-[translateX(-50%)] sm:inset-be-[calc(100%+1.4rem)] sm:transform-[translateX(-50%)] md:inset-be-[calc(100%+1.4rem)] md:transform-[translateX(-50%)] lg:inset-be-[calc(100%+1.4rem)] lg:transform-[translateX(-50%)] xl:inset-be-[calc(100%+1.4rem)] xl:transform-[translateX(-50%)] 2xl:inset-be-[calc(100%+1.3rem)] 2xl:transform-[translateX(-50%)]"
                                 type="button"
                                 aria-label="{{ arabic_text('السورة السابقة') }}"
                                 x-bind:disabled="isSurahQuickNavigatorPreviousDisabled()"
                                 x-on:click.stop.prevent="void navigateToAdjacentSurah('prev')"
                             >
                                 <svg
-                                    class="quran-soorah-quick-nav-arrow"
+                                    class="quran-soorah-quick-nav-arrow inline-[1.05rem] block-[1.05rem]"
                                     aria-hidden="true"
                                     viewBox="0 0 24 24"
                                 >
@@ -2971,14 +2968,14 @@
                                 </svg>
                             </button>
                             <button
-                                class="quran-soorah-quick-nav-button quran-soorah-quick-nav-button--bottom 3xl:inset-bs-[calc(100%+1.35rem)] 3xl:transform-[translateX(-50%)] 4xl:inset-bs-[calc(100%+1.35rem)] 4xl:transform-[translateX(-50%)] inset-bs-[calc(100%+1.35rem)] transform-[translateX(-50%)] sm:inset-bs-[calc(100%+1.35rem)] sm:transform-[translateX(-50%)] md:inset-bs-[calc(100%+1.35rem)] md:transform-[translateX(-50%)] lg:inset-bs-[calc(100%+1.35rem)] lg:transform-[translateX(-50%)] xl:inset-bs-[calc(100%+1.35rem)] xl:transform-[translateX(-50%)] 2xl:inset-bs-[calc(100%+1.35rem)] 2xl:transform-[translateX(-50%)]"
+                                class="quran-soorah-quick-nav-button quran-soorah-quick-nav-button--bottom inline-[2.1rem] block-[1.72rem] 3xl:inline-[2.1rem] 3xl:block-[1.72rem] 2xl:inline-8 2xl:block-[1.55rem] 3xl:inset-bs-[calc(100%+1.35rem)] 3xl:transform-[translateX(-50%)] 4xl:inset-bs-[calc(100%+1.35rem)] 4xl:transform-[translateX(-50%)] inset-bs-[calc(100%+1.35rem)] transform-[translateX(-50%)] sm:inset-bs-[calc(100%+1.35rem)] sm:transform-[translateX(-50%)] md:inset-bs-[calc(100%+1.35rem)] md:transform-[translateX(-50%)] lg:inset-bs-[calc(100%+1.35rem)] lg:transform-[translateX(-50%)] xl:inset-bs-[calc(100%+1.35rem)] xl:transform-[translateX(-50%)] 2xl:inset-bs-[calc(100%+1.35rem)] 2xl:transform-[translateX(-50%)]"
                                 type="button"
                                 aria-label="{{ arabic_text('السورة التالية') }}"
                                 x-bind:disabled="isSurahQuickNavigatorNextDisabled()"
                                 x-on:click.stop.prevent="void navigateToAdjacentSurah('next')"
                             >
                                 <svg
-                                    class="quran-soorah-quick-nav-arrow"
+                                    class="quran-soorah-quick-nav-arrow inline-[1.05rem] block-[1.05rem]"
                                     aria-hidden="true"
                                     viewBox="0 0 24 24"
                                 >
@@ -3001,7 +2998,7 @@
                             x-on:click="if (!wirdModeActive) { $wire.mountAction('navigationHistory') }"
                         >
                             <x-icon
-                                class="quran-history-toggle-icon 4xl:size-6 3xl:size-[1.45rem] size-5 sm:size-[1.26rem] md:size-[1.34rem] lg:size-[1.4rem] xl:size-[1.3rem] 2xl:size-[1.3rem]"
+                                class="quran-history-toggle-icon 4xl:size-6 3xl:size-[1.45rem] size-[1.2rem] sm:size-[1.26rem] md:size-[1.34rem] lg:size-[1.4rem] xl:size-[1.3rem] 2xl:size-[1.3rem]"
                                 :name="'heroicon-o-clock'"
                             />
                         </button>
@@ -3067,7 +3064,7 @@
                                     }"
                                 >{{ arabic_text('الورد اليومي') }}</span>
                                 <span
-                                    class="quran-wird-progress-count hidden sm:block 4xl:text-[0.78rem] 3xl:text-[0.75rem] text-[0.62rem] sm:text-[0.7rem] md:text-[0.73rem] lg:text-[0.75rem] xl:text-[0.71rem] 2xl:text-[0.7rem]"
+                                    class="quran-wird-progress-count 4xl:text-[0.78rem] 3xl:text-[0.75rem] hidden text-[0.62rem] sm:block sm:text-[0.7rem] md:text-[0.73rem] lg:text-[0.75rem] xl:text-[0.71rem] 2xl:text-[0.7rem]"
                                     x-text="wirdProgressCounterLabel()"
                                 ></span>
                             </span>
@@ -3075,7 +3072,7 @@
 
                         <!-- Credits: https://uiverse.io/vinodjangid07/breezy-goose-71 -->
                         <button
-                            class="quran-bookmark-toggle-button quran-top-actions-secondary 4xl:basis-[2.35rem] 4xl:inline-[2.35rem] 4xl:block-[2.35rem] 4xl:max-w-[2.35rem] block-[1.68rem] inline-[1.68rem] sm:block-[2.05rem] sm:inline-[2.05rem] md:block-[2.12rem] md:inline-[2.12rem] lg:block-[2.2rem] lg:inline-[2.2rem] xl:block-[1.97rem] xl:inline-8.5 2xl:block-[1.9rem] 3xl:block-[2.3rem] 2xl:inline-[2.3rem] 3xl:basis-[2.3rem] 3xl:rounded-[0.625rem] max-w-[1.68rem] shrink-0 basis-[1.68rem] rounded-lg sm:rounded-[0.625rem] outline-none sm:max-w-[2.05rem] sm:basis-[2.05rem] md:max-w-[2.12rem] md:basis-[2.12rem] lg:max-w-[2.2rem] lg:basis-[2.2rem] xl:max-w-10 xl:basis-10 xl:rounded-lg 2xl:max-w-[2.3rem] 2xl:basis-[2.2rem] 2xl:rounded-[0.6rem]"
+                            class="quran-bookmark-toggle-button quran-top-actions-secondary 4xl:basis-[2.35rem] 4xl:inline-[2.35rem] 4xl:block-[2.35rem] 4xl:max-w-[2.35rem] block-[1.68rem] inline-[1.68rem] sm:block-[2.05rem] sm:inline-[2.05rem] md:block-[2.12rem] md:inline-[2.12rem] lg:block-[2.2rem] lg:inline-[2.2rem] xl:block-[1.97rem] xl:inline-8.5 2xl:block-[2.1rem] 3xl:block-[2.3rem] 2xl:inline-[2.3rem] 3xl:basis-[2.3rem] 3xl:rounded-[0.625rem] max-w-[1.68rem] shrink-0 basis-[1.68rem] rounded-lg outline-none sm:max-w-[2.05rem] sm:basis-[2.05rem] sm:rounded-[0.625rem] md:max-w-[2.12rem] md:basis-[2.12rem] lg:max-w-[2.2rem] lg:basis-[2.2rem] xl:max-w-10 xl:basis-10 xl:rounded-lg 2xl:max-w-[2.3rem] 2xl:basis-[2.2rem] 2xl:rounded-[0.6rem]"
                             id="quran-reader-bookmark-toggle"
                             data-quran-bookmark-toggle
                             type="button"
@@ -3423,7 +3420,7 @@
                     </div>
                     <div class="quran-bottom-strip-slider">
                         <input
-                            class="quran-page-slider w-[min(42vw, 13.2rem)] 2xl:w-[min(42vw, 13.2rem)] 3xl:w-[min(42vw, 13.2rem)] 3xl:min-w-48 4xl:min-w-54 h-[0.56rem] min-w-32 outline-none xl:h-[0.46rem] sm:min-w-40 2xl:h-[0.56rem] 2xl:min-w-40"
+                            class="quran-page-slider w-[min(42vw, 13.2rem)] 2xl:w-[min(42vw, 13.2rem)] 3xl:w-[min(42vw, 13.2rem)] 3xl:min-w-48 4xl:min-w-54 h-[0.56rem] min-w-32 outline-none sm:min-w-40 xl:h-[0.46rem] 2xl:h-[0.56rem] 2xl:min-w-40"
                             type="range"
                             aria-label="{{ arabic_text('التنقل بين صفحات المصحف') }}"
                             x-bind:min="sliderMin()"
