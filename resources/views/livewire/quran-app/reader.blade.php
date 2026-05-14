@@ -3320,13 +3320,18 @@
                                 <span
                                     class="text-primary-700 4xl:text-xs translate-y-1.5 text-[0.56rem] font-bold opacity-0 transition-all duration-500 sm:text-[0.68rem] md:text-[0.8rem] lg:text-[0.72rem] xl:text-[0.74rem]"
                                     x-bind:class="{
-                                        'opacity-100! -translate-y-0.25!': ($store.bp.is('base') || (hovered ||
-                                            wirdModeActive) && !isSupportLockActive()),
+                                        'opacity-100! -translate-y-0.25!': (
+                                            $store.bp.is('base')
+                                            || (hovered || wirdModeActive)
+                                            && !isSupportLockActive()
+                                        ),
                                         'font-normal!': wirdModeActive,
                                     }"
                                 >{{ arabic_text('الورد اليومي') }}</span>
                                 <span
-                                    class="quran-wird-progress-count 4xl:text-[0.78rem] 3xl:text-[0.75rem] hidden text-[0.62rem] sm:block sm:text-[0.7rem] md:text-[0.85rem] lg:text-[0.75rem] xl:text-[0.71rem] 2xl:text-[0.7rem]"
+                                    class="quran-wird-progress-count 4xl:text-[0.78rem] 3xl:text-[0.75rem] text-[0.62rem] sm:text-[0.7rem] md:text-[0.85rem] lg:text-[0.75rem] xl:text-[0.71rem] 2xl:text-[0.7rem]"
+                                    x-transition
+                                    x-show="($store.bp.is('base') && wirdModeActive) || $store.bp.is('sm+')"
                                     x-text="wirdProgressCounterLabel()"
                                 ></span>
                             </span>
