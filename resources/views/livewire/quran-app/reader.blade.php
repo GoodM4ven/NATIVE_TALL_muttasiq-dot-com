@@ -130,11 +130,11 @@
                 --quran-page-dense-gap-multiplier: 1;
                 --quran-page-dense-type-multiplier: 1;
                 --quran-page-dense-y-offset: 0rem;
-                --quran-page-y-offset: -0.7rem;
-                --quran-page-scale: 0.39;
+                --quran-page-y-offset: -0.5rem;
+                --quran-page-scale: 0.355;
                 --quran-page-type-scale: 1.35;
                 --quran-page-leading-multiplier: 1.1;
-                --quran-page-gap-multiplier: 0.95;
+                --quran-page-gap-multiplier: 0.96;
                 --quran-page-surah-header-scale: 1.01;
                 --quran-basmallah-bottom-gap-scale: -0.28;
             }
@@ -144,26 +144,26 @@
                 --quran-page-headered-leading-multiplier: 1;
                 --quran-page-headered-gap-multiplier: 1;
                 --quran-surah-header-no-basmallah-first-ayah-gap-scale: -0.1;
-                --quran-page-scale: 0.315;
-                --quran-page-type-scale: 1.65;
+                --quran-page-scale: 0.285;
+                --quran-page-type-scale: 1.66;
                 --quran-page-leading-multiplier: 0.8;
                 --quran-page-gap-multiplier: 1.04;
                 --quran-page-surah-header-scale: 0.73;
                 --quran-basmallah-bottom-gap-scale: -0.28;
-                --quran-page-y-offset: -1rem;
+                --quran-page-y-offset: -0.5rem;
             }
 
             .quran-page-lines--segmented {
                 --quran-page-segmented-type-multiplier: 1;
                 --quran-page-segmented-leading-multiplier: 1;
                 --quran-page-segmented-gap-multiplier: 1;
-                --quran-page-scale: 0.445;
-                --quran-page-type-scale: 1.2;
+                --quran-page-scale: 0.412;
+                --quran-page-type-scale: 1.25;
                 --quran-page-leading-multiplier: 1.2;
                 --quran-page-gap-multiplier: 0.72;
                 --quran-page-surah-header-scale: 0.81;
                 --quran-basmallah-bottom-gap-scale: -0.28;
-                --quran-page-y-offset: -0.9rem;
+                --quran-page-y-offset: -0.5rem;
             }
         }
 
@@ -230,26 +230,26 @@
                 --quran-page-headered-leading-multiplier: 1.32;
                 --quran-page-headered-gap-multiplier: 1.56;
                 --quran-surah-header-no-basmallah-first-ayah-gap-scale: -0.1;
-                --quran-page-scale: 0.97;
-                --quran-page-type-scale: 0.85;
+                --quran-page-scale: 0.96;
+                --quran-page-type-scale: 0.855;
                 --quran-page-leading-multiplier: 0.18;
-                --quran-page-gap-multiplier: 0.56;
+                --quran-page-gap-multiplier: 0.54;
                 --quran-page-surah-header-scale: 0.65;
                 --quran-basmallah-bottom-gap-scale: -0.575;
-                --quran-page-y-offset: -0.9rem;
+                --quran-page-y-offset: -0.5rem;
             }
 
             .quran-page-lines--segmented {
                 --quran-page-segmented-type-multiplier: 0.82;
                 --quran-page-segmented-leading-multiplier: 1.32;
                 --quran-page-segmented-gap-multiplier: 1.52;
-                --quran-page-scale: 0.85;
+                --quran-page-scale: 0.84;
                 --quran-page-type-scale: 1.02;
                 --quran-page-leading-multiplier: 0.54;
                 --quran-page-gap-multiplier: 0.65;
                 --quran-page-surah-header-scale: 0.812;
                 --quran-basmallah-bottom-gap-scale: -0.285;
-                --quran-page-y-offset: -0.6rem;
+                --quran-page-y-offset: -0.5rem;
             }
         }
 
@@ -2790,7 +2790,7 @@
             </section>
         @else
             <section
-                class="quran-reader-panel min-w-75 3xl:h-204 3xl:w-148 4xl:h-202 4xl:w-160 Xoverflow-hidden 2xl:w-124 2xl:h-166 xl:h-148 xl:w-108 relative flex h-[min(88svh,38rem)] w-[min(91vw,22rem)] flex-col rounded-t-2xl border sm:h-[min(82svh,50rem)] sm:w-[min(82vw,33rem)] sm:rounded-[1.75rem] md:h-[min(84svh,54rem)] md:w-[min(92vw,35rem)] lg:h-[min(92svh,44rem)] lg:w-[min(92vw,31rem)]"
+                class="quran-reader-panel min-w-75 3xl:h-204 3xl:w-148 4xl:h-202 4xl:w-160 Xoverflow-hidden 2xl:w-124 2xl:h-166 xl:h-148 xl:w-108 relative flex h-[min(88svh,38rem)] w-[min(91vw,22rem)] flex-col rounded-t-2xl border sm:h-[min(82svh,50rem)] sm:w-[min(82vw,32rem)] sm:rounded-[1.75rem] md:h-[min(84svh,54rem)] md:w-[min(92vw,35rem)] lg:h-[min(92svh,44rem)] lg:w-[min(92vw,31rem)]"
                 x-bind:style="readerPanelStyle()"
                 x-bind:class="{ 'quran-reader-panel--calibrating': isCalibrating || _startupCalibrationPending }"
                 x-on:pointerdown.passive="onSwipeStart($event)"
@@ -2898,7 +2898,7 @@
                                 </svg>
                             </div>
                             <span
-                                class="font-arabic-sans 3xl:text-[1.2rem] text-[0.815rem] tracking-wide opacity-60 sm:text-[0.8rem] md:text-[0.8rem] lg:text-[0.82rem] xl:text-[0.87rem] 2xl:text-[0.94rem]"
+                                class="font-arabic-sans 3xl:text-[1.2rem] text-[0.815rem] tracking-wide opacity-60 sm:text-[0.85rem] md:text-[0.8rem] lg:text-[0.82rem] xl:text-[0.87rem] 2xl:text-[0.94rem]"
                                 dir="rtl"
                             >{{ arabic_text('تجهيز المصحف...') }}</span>
                         </div>
@@ -2924,6 +2924,13 @@
                             class="quran-soorah-trigger 3xl:w-[12.4rem] 4xl:w-[13.4rem] 4xl:px-[2.35rem] 4xl:py-[0.42rem] 4xl:text-[0.95rem] 4xl:min-h-[2.2rem] w-31 md:w-47 3xl:min-h-[2.15rem] 3xl:px-[2.28rem] 2xl:w-35 3xl:text-[0.93rem] lg:w-42 min-h-[1.95rem] shrink-0 px-[1.7rem] py-[0.34rem] text-[0.7rem] outline-none sm:min-h-8 sm:w-44 sm:px-[1.95rem] sm:py-[0.36rem] sm:text-[0.84rem] md:min-h-9 md:px-[2.1rem] md:py-[0.38rem] md:text-[0.95rem] lg:min-h-[2.1rem] lg:px-[2.2rem] lg:py-[0.4rem] lg:text-[0.8rem] xl:min-h-[1.8rem] xl:w-32 xl:px-[1.9rem] xl:text-[0.66rem] 2xl:min-h-[1.85rem] 2xl:px-[1.95rem] 2xl:text-[0.7rem]"
                             type="button"
                             dir="rtl"
+                            x-show="($store.bp.is('base') && !wirdModeActive) || $store.bp.is('sm+')"
+                            x-transition:enter="transition ease-out duration-200"
+                            x-transition:enter-start="opacity-0 scale-x-0 translate-x-6"
+                            x-transition:enter-end="opacity-100 scale-x-100 translate-x-0"
+                            x-transition:leave="transition ease-in duration-200"
+                            x-transition:leave-start="opacity-100 scale-x-100 translate-x-0"
+                            x-transition:leave-end="opacity-0 scale-x-0 translate-x-6"
                             x-bind:disabled="wirdModeActive"
                             x-bind:class="{ 'quran-soorah-trigger--disabled': wirdModeActive }"
                             x-on:pointerdown="onSurahTriggerPointerDown($event)"
@@ -3319,15 +3326,15 @@
                         x-on:click.stop.prevent="goPreviousFromChevron()"
                     >
                         <span
-                            class="quran-swipe-hint-chev 4xl:text-[2rem] text-[1.5rem] sm:text-[1.62rem] md:text-[2.5rem] lg:text-[1.84rem] xl:text-[1.8rem] 2xl:text-[1.92rem]"
+                            class="quran-swipe-hint-chev 4xl:text-[2rem] text-[1.5rem] sm:text-[2rem] md:text-[2.5rem] lg:text-[1.84rem] xl:text-[1.8rem] 2xl:text-[1.92rem]"
                             x-bind:class="{ 'quran-swipe-hint-chev-static': isFirstNavigationPage() }"
                         >‹</span>
                         <span
-                            class="quran-swipe-hint-chev 4xl:text-[2rem] text-[1.5rem] sm:text-[1.62rem] md:text-[2.5rem] lg:text-[1.84rem] xl:text-[1.8rem] 2xl:text-[1.92rem]"
+                            class="quran-swipe-hint-chev 4xl:text-[2rem] text-[1.5rem] sm:text-[2rem] md:text-[2.5rem] lg:text-[1.84rem] xl:text-[1.8rem] 2xl:text-[1.92rem]"
                             x-bind:class="{ 'quran-swipe-hint-chev-static': isFirstNavigationPage() }"
                         >‹</span>
                         <span
-                            class="quran-swipe-hint-chev 4xl:text-[2rem] text-[1.5rem] sm:text-[1.62rem] md:text-[2.5rem] lg:text-[1.84rem] xl:text-[1.8rem] 2xl:text-[1.92rem]"
+                            class="quran-swipe-hint-chev 4xl:text-[2rem] text-[1.5rem] sm:text-[2rem] md:text-[2.5rem] lg:text-[1.84rem] xl:text-[1.8rem] 2xl:text-[1.92rem]"
                             x-bind:class="{ 'quran-swipe-hint-chev-static': isFirstNavigationPage() }"
                         >‹</span>
                     </button>
@@ -3337,7 +3344,7 @@
                             x-bind:class="{ 'quran-page-counter--morphing': pageCounterPulse.isActive && pageCounterPulse.hasChanges }"
                         >
                             <button
-                                class="quran-page-slider-chip 3xl:min-w-[5.8rem] 4xl:min-w-[5.8rem] 4xl:px-[0.56rem] 4xl:py-[0.28rem] 4xl:text-[0.84rem] 3xl:px-[0.52rem] 3xl:py-[0.26rem] 3xl:text-[0.82rem] min-w-[4.8rem] select-none rounded-full px-[0.42rem] py-[0.2rem] text-[0.69rem] outline-none sm:min-w-20 sm:px-[0.46rem] sm:py-[0.24rem] sm:text-[0.76rem] md:min-w-[5.2rem] md:px-3 md:py-[0.3rem] md:text-[1rem] lg:min-w-[5.4rem] lg:px-[0.52rem] lg:py-[0.26rem] lg:text-[0.77rem] xl:min-w-20 xl:rounded-lg xl:text-[0.68rem] 2xl:min-w-[4.4rem] 2xl:rounded-full 2xl:px-[0.52rem] 2xl:py-[0.26rem] 2xl:text-[0.7rem]"
+                                class="quran-page-slider-chip 3xl:min-w-[5.8rem] 4xl:min-w-[5.8rem] 4xl:px-[0.56rem] 4xl:py-[0.28rem] 4xl:text-[0.84rem] 3xl:px-[0.52rem] 3xl:py-[0.26rem] 3xl:text-[0.82rem] min-w-[4.8rem] select-none rounded-full px-[0.42rem] py-[0.2rem] text-[0.69rem] outline-none sm:min-w-21 sm:px-2 sm:pt-[0.16rem] sm:pb-[0.24rem] sm:text-[0.85rem] md:min-w-[5.2rem] md:px-3 md:py-[0.3rem] md:text-[1rem] lg:min-w-[5.4rem] lg:px-[0.52rem] lg:py-[0.26rem] lg:text-[0.77rem] xl:min-w-20 xl:rounded-lg xl:text-[0.68rem] 2xl:min-w-[4.4rem] 2xl:rounded-full 2xl:px-[0.52rem] 2xl:py-[0.26rem] 2xl:text-[0.7rem]"
                                 type="button"
                                 x-bind:aria-label="wirdModeActive ? @js(arabic_text('وضع الوِرد اليومي مفعل')) : @js(arabic_text('إدخال رقم صفحة'))"
                                 x-bind:style="`--quran-counter-digit-count: ${pageCounterDigitLength()};`"
@@ -3445,15 +3452,15 @@
                         x-on:click.stop.prevent="goNextFromChevron()"
                     >
                         <span
-                            class="quran-swipe-hint-chev-opposite quran-swipe-hint-chev 4xl:text-[2rem] text-[1.5rem] sm:text-[1.62rem] md:text-[2.5rem] lg:text-[1.84rem] xl:text-[1.8rem] 2xl:text-[1.92rem]"
+                            class="quran-swipe-hint-chev-opposite quran-swipe-hint-chev 4xl:text-[2rem] text-[1.5rem] sm:text-[2rem] md:text-[2.5rem] lg:text-[1.84rem] xl:text-[1.8rem] 2xl:text-[1.92rem]"
                             x-bind:class="{ 'quran-swipe-hint-chev-static': !wirdModeActive && isLastNavigationPage() }"
                         >›</span>
                         <span
-                            class="quran-swipe-hint-chev-opposite quran-swipe-hint-chev 4xl:text-[2rem] text-[1.5rem] sm:text-[1.62rem] md:text-[2.5rem] lg:text-[1.84rem] xl:text-[1.8rem] 2xl:text-[1.92rem]"
+                            class="quran-swipe-hint-chev-opposite quran-swipe-hint-chev 4xl:text-[2rem] text-[1.5rem] sm:text-[2rem] md:text-[2.5rem] lg:text-[1.84rem] xl:text-[1.8rem] 2xl:text-[1.92rem]"
                             x-bind:class="{ 'quran-swipe-hint-chev-static': !wirdModeActive && isLastNavigationPage() }"
                         >›</span>
                         <span
-                            class="quran-swipe-hint-chev-opposite quran-swipe-hint-chev 4xl:text-[2rem] text-[1.5rem] sm:text-[1.62rem] md:text-[2.5rem] lg:text-[1.84rem] xl:text-[1.8rem] 2xl:text-[1.92rem]"
+                            class="quran-swipe-hint-chev-opposite quran-swipe-hint-chev 4xl:text-[2rem] text-[1.5rem] sm:text-[2rem] md:text-[2.5rem] lg:text-[1.84rem] xl:text-[1.8rem] 2xl:text-[1.92rem]"
                             x-bind:class="{ 'quran-swipe-hint-chev-static': !wirdModeActive && isLastNavigationPage() }"
                         >›</span>
                     </button>
