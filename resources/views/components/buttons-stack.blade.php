@@ -480,7 +480,7 @@
             }
     
             return [
-                'fixed',
+                'fixed app-action-buttons-stack',
                 'z-40',
                 this.horizontal === 'left' ? 'end-6 sm:end-10' : 'start-6 sm:start-10',
                 this.vertical === 'bottom' ? 'bottom-7' : 'top-5',

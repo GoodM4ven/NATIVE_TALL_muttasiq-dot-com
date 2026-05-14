@@ -290,6 +290,133 @@
             }
         }
 
+        /* Short mobile screens */
+        @media (max-width: 320px) {
+            main:has(.within-quran-app) {
+                margin-top: 0rem !important;
+            }
+
+            .quran-bottom-strip {
+                row-gap: 0rem !important;
+            }
+
+            .quran-app-reader-stage {
+                padding-top: 0 !important;
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+            }
+
+            .app-action-button {
+                width: 1.6rem !important;
+                height: 1.6rem !important;
+            }
+
+            .app-action-button svg {
+                width: 1.2rem !important;
+                height: 1.2rem !important;
+            }
+
+            .app-action-buttons-stack {
+                top: 1rem !important;
+                left: 1rem !important;
+            }
+
+            .quran-top-strip {
+                gap: 0.28rem;
+                padding-inline: 0.44rem !important;
+                padding-top: 0.34rem !important;
+                padding-bottom: 0.46rem !important;
+            }
+
+            .quran-top-actions {
+                gap: 0.14rem !important;
+            }
+
+            .quran-soorah-trigger {
+                min-height: 1.72rem !important;
+                inline-size: 6.95rem !important;
+                max-width: 6.95rem !important;
+                padding-inline: 1.24rem !important;
+                padding-top: 0.28rem !important;
+                padding-bottom: 0.28rem !important;
+                font-size: 0.62rem !important;
+            }
+
+            .quran-soorah-trigger-icon {
+                inset-inline-start: 0.5rem !important;
+                inline-size: 0.68rem !important;
+                block-size: 0.68rem !important;
+            }
+
+            .quran-soorah-trigger-circle {
+                inline-size: 0.68rem !important;
+                block-size: 0.68rem !important;
+            }
+
+            #quran-reader-history-toggle.quran-history-toggle-button,
+            #quran-reader-bookmark-toggle.quran-bookmark-toggle-button {
+                inline-size: 1.5rem !important;
+                block-size: 1.5rem !important;
+                max-width: 1.5rem !important;
+                flex-basis: 1.5rem !important;
+            }
+
+            #quran-reader-history-toggle .quran-history-toggle-icon {
+                inline-size: 1.02rem !important;
+                block-size: 1.02rem !important;
+            }
+
+            #quran-reader-bookmark-toggle .quran-bookmark-toggle-icon {
+                width: 0.62rem !important;
+            }
+
+            .quran-wird-progress-button {
+                min-height: 1.72rem !important;
+                min-width: min(6.25rem, 43vw) !important;
+            }
+
+            .quran-wird-progress-content {
+                gap: 0.32rem;
+                padding-inline: 0.58rem;
+            }
+
+            .quran-wird-progress-percent {
+                min-height: 1rem !important;
+                min-width: 1.58rem !important;
+                padding-inline: 0.26rem !important;
+                font-size: 0.47rem !important;
+            }
+
+            .quran-wird-progress-count {
+                font-size: 0.56rem !important;
+            }
+        }
+
+        /* base rare: thin tall cover displays (Fold cover class) */
+        @media (min-width: 321px) and (max-width: 350px) and (min-height: 780px) {
+            .quran-reader {
+                --quran-fit-target-width-ratio: 0.81;
+                --quran-fit-height-ratio: 0.89;
+                --quran-fit-area-pad-x: 0.34rem;
+            }
+
+            .quran-soorah-trigger {
+                inline-size: 7.3rem;
+                max-width: 7.3rem;
+                font-size: 0.66rem;
+                padding-inline: 1.34rem;
+            }
+        }
+
+        /* base modern: iPhone 12/13/14 Pro class */
+        @media (min-width: 390px) and (max-width: 393px) and (min-height: 820px) and (max-height: 900px) {
+            .quran-reader {
+                --quran-fit-target-width-ratio: 0.84;
+                --quran-fit-height-ratio: 0.92;
+                --quran-fit-area-pad-x: 0.24rem;
+            }
+        }
+
         /* sm */
         @media (min-width: 640px) and (max-width: 767px) {
             .quran-reader {
@@ -2876,6 +3003,11 @@
         x-bind:class="{
             'quran-reader--visual-enhancements-disabled': !doesEnableVisualEnhancements,
             'quran-reader--wird-active': wirdModeActive,
+            'within-quran-app': (
+                views['quran-app-tilawa'].isOpen ||
+                views['quran-app-tadabbur'].isOpen ||
+                views['quran-app-hifth'].isOpen
+            ),
         }"
         x-on:control-panel-updated.window="applyControlPanelSettings($event.detail?.controlPanel ?? {})"
         x-on:switch-view.window="$nextTick(() => syncNativeVolumeNavigation())"

@@ -25,6 +25,7 @@ import './support/alpine/data/quran-app-reader';
 import './support/alpine/storage/font-manager';
 import './support/alpine/storage/color-scheme';
 import './support/alpine/storage/breakpointer';
+import './support/alpine/storage/locator.js';
 import './support/alpine/directive/image-loaded';
 import './support/alpine/directive/top-scroller';
 import './support/alpine/magic/clipboard';
