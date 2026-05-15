@@ -87,8 +87,96 @@
             transform: translateY(var(--quran-page-y-offset, 0rem));
         }
 
-        /* baseV1 */
-        @media (max-width: 639px) {
+        /* baseShared */
+        @media (min-width: 320px) and (max-width: 639px) {
+            main:has(.within-quran-app) {
+                margin-top: 0rem !important;
+            }
+
+            .quran-bottom-strip {
+                row-gap: 0rem !important;
+            }
+
+            .quran-app-reader-stage {
+                padding-top: 0 !important;
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+            }
+
+            .quran-top-strip {
+                gap: 0.28rem;
+                padding-inline: 0.44rem !important;
+                padding-top: 0.34rem !important;
+                padding-bottom: 0.46rem !important;
+            }
+
+            .quran-top-actions {
+                gap: 0.14rem !important;
+            }
+
+            .quran-soorah-trigger {
+                min-height: 1.72rem !important;
+                inline-size: 6.95rem !important;
+                max-width: 6.95rem !important;
+                padding-inline: 1.24rem !important;
+                padding-top: 0.28rem !important;
+                padding-bottom: 0.28rem !important;
+                font-size: 0.6rem !important;
+            }
+
+            .quran-soorah-trigger-icon {
+                inset-inline-start: 0.5rem !important;
+                inline-size: 0.68rem !important;
+                block-size: 0.68rem !important;
+            }
+
+            .quran-soorah-trigger-circle {
+                inline-size: 0.68rem !important;
+                block-size: 0.68rem !important;
+            }
+
+            .quran-reader--wird-active .quran-soorah-trigger {
+                display: none !important;
+            }
+
+            #quran-reader-history-toggle.quran-history-toggle-button,
+            #quran-reader-bookmark-toggle.quran-bookmark-toggle-button {
+                inline-size: 1.5rem !important;
+                block-size: 1.5rem !important;
+                max-width: 1.5rem !important;
+                flex-basis: 1.5rem !important;
+            }
+
+            #quran-reader-history-toggle .quran-history-toggle-icon {
+                inline-size: 1.02rem !important;
+                block-size: 1.02rem !important;
+            }
+
+            #quran-reader-bookmark-toggle .quran-bookmark-toggle-icon {
+                width: 0.62rem !important;
+            }
+
+            .quran-wird-progress-button {
+                min-height: 1.72rem !important;
+                min-width: min(6.25rem, 43vw) !important;
+            }
+
+            .quran-wird-progress-content {
+                gap: 0.32rem;
+                padding-inline: 0.58rem;
+            }
+
+            .quran-wird-progress-percent {
+                min-height: 1rem !important;
+                min-width: 1.58rem !important;
+                padding-inline: 0.26rem !important;
+                font-size: 0.47rem !important;
+            }
+
+            .quran-wird-progress-count {
+                font-size: 0.56rem !important;
+            }
+
             .quran-reader {
                 --quran-min-page-scale: 0.2;
                 --quran-page-scale: 0.98;
@@ -167,10 +255,63 @@
             }
         }
 
-        /* BaseV2 */
-        @media (max-width: 639px) and (min-height: 705px) {
+        /* baseVariant1: legacy compact phones */
+        @media (min-width: 320px) and (max-width: 359px) and (max-height: 699px) {
+            .quran-reader {
+                --quran-fit-target-width-ratio: 0.82;
+                --quran-fit-height-ratio: 0.87;
+                --quran-fit-area-pad-x: 0.34rem;
+                --quran-line-gap: 1.34rem;
+                --quran-page-gap-multiplier: 0.52;
+                --quran-page-type-scale: 1.1;
+            }
+
+            .quran-reader-panel {
+                height: min(91svh, 35.5rem) !important;
+            }
+
+            .quran-page-lines--dense,
+            .quran-page-lines--headered-long,
+            .quran-page-lines--segmented {
+                --quran-page-y-offset: 0rem;
+            }
+        }
+
+        /* baseVariant2: legacy tall phones */
+        @media (min-width: 320px) and (max-width: 359px) and (min-height: 700px) {
+            .quran-reader {
+                --quran-fit-target-width-ratio: 0.82;
+                --quran-fit-height-ratio: 0.89;
+                --quran-fit-area-pad-x: 0.32rem;
+                --quran-line-gap: 1.4rem;
+                --quran-page-gap-multiplier: 0.66;
+                --quran-page-type-scale: 1.08;
+            }
+
             .quran-reader-panel {
                 height: min(92svh, 40rem) !important;
+            }
+
+            .quran-page-lines--dense,
+            .quran-page-lines--headered-long,
+            .quran-page-lines--segmented {
+                --quran-page-y-offset: 0rem;
+            }
+        }
+
+        /* baseVariant3: standard short phones */
+        @media (min-width: 360px) and (max-width: 389px) and (max-height: 640px) {
+            .quran-reader {
+                --quran-fit-target-width-ratio: 0.83;
+                --quran-fit-height-ratio: 0.9;
+                --quran-fit-area-pad-x: 0.3rem;
+                --quran-line-gap: 1.44rem;
+                --quran-page-gap-multiplier: 0.62;
+                --quran-page-type-scale: 1.12;
+            }
+
+            .quran-reader-panel {
+                height: min(92svh, 35.7rem) !important;
             }
 
             .quran-page-lines--opening {
@@ -178,69 +319,7 @@
                 --quran-page-opening-leading-multiplier: 1.02;
                 --quran-page-opening-gap-multiplier: 0.9;
                 --quran-page-scale: 0.47;
-                --quran-page-type-scale: 1.3;
-                --quran-page-leading-multiplier: 1.08;
-                --quran-page-gap-multiplier: 1.28;
-                --quran-page-surah-header-scale: 1.24;
-                --quran-basmallah-bottom-gap-scale: -0.235;
-                --quran-page-y-offset: 0rem;
-            }
-
-            .quran-page-lines--dense {
-                --quran-page-dense-leading-multiplier: 1;
-                --quran-page-dense-gap-multiplier: 1;
-                --quran-page-dense-type-multiplier: 1;
-                --quran-page-dense-y-offset: 0rem;
-                --quran-page-y-offset: 0rem;
-                --quran-page-scale: 0.38;
-                --quran-page-type-scale: 1.35;
-                --quran-page-leading-multiplier: 1.1;
-                --quran-page-gap-multiplier: 1.06;
-                --quran-page-surah-header-scale: 1.01;
-                --quran-basmallah-bottom-gap-scale: -0.28;
-            }
-
-            .quran-page-lines--headered-long {
-                --quran-page-headered-type-multiplier: 1;
-                --quran-page-headered-leading-multiplier: 1;
-                --quran-page-headered-gap-multiplier: 1;
-                --quran-surah-header-no-basmallah-first-ayah-gap-scale: -0.1;
-                --quran-page-scale: 0.3;
-                --quran-page-type-scale: 1.7;
-                --quran-page-leading-multiplier: 0.8;
-                --quran-page-gap-multiplier: 1.43;
-                --quran-page-surah-header-scale: 0.73;
-                --quran-basmallah-bottom-gap-scale: -0.28;
-                --quran-page-y-offset: 0rem;
-            }
-
-            .quran-page-lines--segmented {
-                --quran-page-segmented-type-multiplier: 1;
-                --quran-page-segmented-leading-multiplier: 1;
-                --quran-page-segmented-gap-multiplier: 1;
-                --quran-page-scale: 0.43;
-                --quran-page-type-scale: 1.27;
-                --quran-page-leading-multiplier: 1.2;
-                --quran-page-gap-multiplier: 0.92;
-                --quran-page-surah-header-scale: 0.81;
-                --quran-basmallah-bottom-gap-scale: -0.28;
-                --quran-page-y-offset: 0rem;
-            }
-        }
-
-        /* BaseV3 */
-        @media (max-width: 639px) and (min-height: 821px) {
-            .quran-reader-panel {
-                width: min(91vw, 25rem) !important;
-                height: min(92svh, 47rem) !important;
-            }
-
-            .quran-page-lines--opening {
-                --quran-page-opening-type-multiplier: 1.08;
-                --quran-page-opening-leading-multiplier: 1.02;
-                --quran-page-opening-gap-multiplier: 0.9;
-                --quran-page-scale: 0.57;
-                --quran-page-type-scale: 1.3;
+                --quran-page-type-scale: 1.4;
                 --quran-page-leading-multiplier: 1.08;
                 --quran-page-gap-multiplier: 1.48;
                 --quran-page-surah-header-scale: 1.24;
@@ -253,167 +332,144 @@
                 --quran-page-dense-gap-multiplier: 1;
                 --quran-page-dense-type-multiplier: 1;
                 --quran-page-dense-y-offset: 0rem;
-                --quran-page-y-offset: 0rem;
-                --quran-page-scale: 0.49;
-                --quran-page-type-scale: 1.3;
+                --quran-page-y-offset: -0.5rem;
+                --quran-page-scale: 0.34;
+                --quran-page-type-scale: 1.49;
                 --quran-page-leading-multiplier: 1.1;
-                --quran-page-gap-multiplier: 1.7;
+                --quran-page-gap-multiplier: 0.97;
                 --quran-page-surah-header-scale: 1.01;
                 --quran-basmallah-bottom-gap-scale: -0.28;
             }
-
+            
             .quran-page-lines--headered-long {
                 --quran-page-headered-type-multiplier: 1;
                 --quran-page-headered-leading-multiplier: 1;
                 --quran-page-headered-gap-multiplier: 1;
                 --quran-surah-header-no-basmallah-first-ayah-gap-scale: -0.1;
-                --quran-page-scale: 0.38;
-                --quran-page-type-scale: 1.66;
+                --quran-page-scale: 0.225;
+                --quran-page-type-scale: 2.2;
                 --quran-page-leading-multiplier: 0.8;
-                --quran-page-gap-multiplier: 1.97;
+                --quran-page-gap-multiplier: 1.3;
                 --quran-page-surah-header-scale: 0.73;
                 --quran-basmallah-bottom-gap-scale: -0.28;
-                --quran-page-y-offset: 0rem;
+                --quran-page-y-offset: -0.5rem;
             }
-
+            
             .quran-page-lines--segmented {
                 --quran-page-segmented-type-multiplier: 1;
                 --quran-page-segmented-leading-multiplier: 1;
                 --quran-page-segmented-gap-multiplier: 1;
-                --quran-page-scale: 0.512;
+                --quran-page-scale: 0.41;
                 --quran-page-type-scale: 1.25;
                 --quran-page-leading-multiplier: 1.2;
-                --quran-page-gap-multiplier: 1.37;
+                --quran-page-gap-multiplier: 0.65;
                 --quran-page-surah-header-scale: 0.81;
                 --quran-basmallah-bottom-gap-scale: -0.28;
+                --quran-page-y-offset: -0.2rem;
+            }
+        }
+
+        /* baseVariant4: standard tall phones */
+        @media (min-width: 360px) and (max-width: 389px) and (max-height: 800px) {
+            .quran-reader {
+                --quran-fit-target-width-ratio: 0.86;
+                --quran-fit-height-ratio: 0.95;
+                --quran-fit-area-pad-x: 0.28rem;
+                --quran-line-gap: 1.5rem;
+                --quran-page-gap-multiplier: 1;
+                --quran-page-type-scale: 1.04;
+            }
+
+            .quran-reader-panel {
+                height: min(90.5svh, 43rem) !important;
+            }
+
+            .quran-page-lines--opening {
+                --quran-page-opening-type-multiplier: 1.08;
+                --quran-page-opening-leading-multiplier: 1.02;
+                --quran-page-opening-gap-multiplier: 0.9;
+                --quran-page-scale: 0.49;
+                --quran-page-type-scale: 1.33;
+                --quran-page-leading-multiplier: 1.08;
+                --quran-page-gap-multiplier: 1.48;
+                --quran-page-surah-header-scale: 1.24;
+                --quran-basmallah-bottom-gap-scale: -0.235;
                 --quran-page-y-offset: 0rem;
             }
-        }
-
-        /* Short mobile screens */
-        @media (max-width: 320px) {
-            main:has(.within-quran-app) {
-                margin-top: 0rem !important;
+            
+            .quran-page-lines--dense {
+                --quran-page-dense-leading-multiplier: 1;
+                --quran-page-dense-gap-multiplier: 1;
+                --quran-page-dense-type-multiplier: 1;
+                --quran-page-dense-y-offset: 0rem;
+                --quran-page-y-offset: -0.5rem;
+                --quran-page-scale: 0.355;
+                --quran-page-type-scale: 1.47;
+                --quran-page-leading-multiplier: 1.1;
+                --quran-page-gap-multiplier: 1.75;
+                --quran-page-surah-header-scale: 1.01;
+                --quran-basmallah-bottom-gap-scale: -0.28;
             }
-
-            .quran-bottom-strip {
-                row-gap: 0rem !important;
+            
+            .quran-page-lines--headered-long {
+                --quran-page-headered-type-multiplier: 1;
+                --quran-page-headered-leading-multiplier: 1;
+                --quran-page-headered-gap-multiplier: 1;
+                --quran-surah-header-no-basmallah-first-ayah-gap-scale: -0.1;
+                --quran-page-scale: 0.29;
+                --quran-page-type-scale: 1.76;
+                --quran-page-leading-multiplier: 0.8;
+                --quran-page-gap-multiplier: 1.96;
+                --quran-page-surah-header-scale: 0.73;
+                --quran-basmallah-bottom-gap-scale: -0.28;
+                --quran-page-y-offset: -0.5rem;
             }
-
-            .quran-app-reader-stage {
-                padding-top: 0 !important;
-                padding-left: 0 !important;
-                padding-right: 0 !important;
-            }
-
-            .app-action-button {
-                width: 1.6rem !important;
-                height: 1.6rem !important;
-            }
-
-            .app-action-button svg {
-                width: 1.2rem !important;
-                height: 1.2rem !important;
-            }
-
-            .app-action-buttons-stack {
-                top: 1rem !important;
-                left: 1rem !important;
-            }
-
-            .quran-top-strip {
-                gap: 0.28rem;
-                padding-inline: 0.44rem !important;
-                padding-top: 0.34rem !important;
-                padding-bottom: 0.46rem !important;
-            }
-
-            .quran-top-actions {
-                gap: 0.14rem !important;
-            }
-
-            .quran-soorah-trigger {
-                min-height: 1.72rem !important;
-                inline-size: 6.95rem !important;
-                max-width: 6.95rem !important;
-                padding-inline: 1.24rem !important;
-                padding-top: 0.28rem !important;
-                padding-bottom: 0.28rem !important;
-                font-size: 0.62rem !important;
-            }
-
-            .quran-soorah-trigger-icon {
-                inset-inline-start: 0.5rem !important;
-                inline-size: 0.68rem !important;
-                block-size: 0.68rem !important;
-            }
-
-            .quran-soorah-trigger-circle {
-                inline-size: 0.68rem !important;
-                block-size: 0.68rem !important;
-            }
-
-            #quran-reader-history-toggle.quran-history-toggle-button,
-            #quran-reader-bookmark-toggle.quran-bookmark-toggle-button {
-                inline-size: 1.5rem !important;
-                block-size: 1.5rem !important;
-                max-width: 1.5rem !important;
-                flex-basis: 1.5rem !important;
-            }
-
-            #quran-reader-history-toggle .quran-history-toggle-icon {
-                inline-size: 1.02rem !important;
-                block-size: 1.02rem !important;
-            }
-
-            #quran-reader-bookmark-toggle .quran-bookmark-toggle-icon {
-                width: 0.62rem !important;
-            }
-
-            .quran-wird-progress-button {
-                min-height: 1.72rem !important;
-                min-width: min(6.25rem, 43vw) !important;
-            }
-
-            .quran-wird-progress-content {
-                gap: 0.32rem;
-                padding-inline: 0.58rem;
-            }
-
-            .quran-wird-progress-percent {
-                min-height: 1rem !important;
-                min-width: 1.58rem !important;
-                padding-inline: 0.26rem !important;
-                font-size: 0.47rem !important;
-            }
-
-            .quran-wird-progress-count {
-                font-size: 0.56rem !important;
+            
+            .quran-page-lines--segmented {
+                --quran-page-segmented-type-multiplier: 1;
+                --quran-page-segmented-leading-multiplier: 1;
+                --quran-page-segmented-gap-multiplier: 1;
+                --quran-page-scale: 0.412;
+                --quran-page-type-scale: 1.32;
+                --quran-page-leading-multiplier: 1.2;
+                --quran-page-gap-multiplier: 1.42;
+                --quran-page-surah-header-scale: 0.81;
+                --quran-basmallah-bottom-gap-scale: -0.28;
+                --quran-page-y-offset: -0.3rem;
             }
         }
 
-        /* base rare: thin tall cover displays (Fold cover class) */
-        @media (min-width: 321px) and (max-width: 350px) and (min-height: 780px) {
-            .quran-reader {
-                --quran-fit-target-width-ratio: 0.81;
-                --quran-fit-height-ratio: 0.89;
-                --quran-fit-area-pad-x: 0.34rem;
-            }
-
-            .quran-soorah-trigger {
-                inline-size: 7.3rem;
-                max-width: 7.3rem;
-                font-size: 0.66rem;
-                padding-inline: 1.34rem;
-            }
-        }
-
-        /* base modern: iPhone 12/13/14 Pro class */
-        @media (min-width: 390px) and (max-width: 393px) and (min-height: 820px) and (max-height: 900px) {
+        /* baseVariant5: wide short phones */
+        @media (min-width: 390px) and (max-width: 639px) and (max-height: 879px) {
             .quran-reader {
                 --quran-fit-target-width-ratio: 0.84;
-                --quran-fit-height-ratio: 0.92;
+                --quran-fit-height-ratio: 0.91;
+                --quran-fit-area-pad-x: 0.26rem;
+                --quran-line-gap: 1.46rem;
+                --quran-page-gap-multiplier: 0.72;
+                --quran-page-type-scale: 1.1;
+            }
+
+            .quran-reader-panel {
+                height: min(95svh, 51rem) !important;
+                width: min(91vw, 25rem) !important;
+            }
+        }
+
+        /* baseVariant6: wide tall phones */
+        @media (min-width: 390px) and (max-width: 639px) and (min-height: 880px) {
+            .quran-reader {
+                --quran-fit-target-width-ratio: 0.85;
+                --quran-fit-height-ratio: 0.93;
                 --quran-fit-area-pad-x: 0.24rem;
+                --quran-line-gap: 1.5rem;
+                --quran-page-gap-multiplier: 0.96;
+                --quran-page-type-scale: 1.05;
+            }
+
+            .quran-reader-panel {
+                width: min(91vw, 24.6rem) !important;
+                height: min(92svh, 46.5rem) !important;
             }
         }
 
@@ -3321,9 +3377,9 @@
                                     class="text-primary-700 4xl:text-xs translate-y-1.5 text-[0.56rem] font-bold opacity-0 transition-all duration-500 sm:text-[0.68rem] md:text-[0.8rem] lg:text-[0.72rem] xl:text-[0.74rem]"
                                     x-bind:class="{
                                         'opacity-100! -translate-y-0.25!': (
-                                            $store.bp.is('base')
-                                            || (hovered || wirdModeActive)
-                                            && !isSupportLockActive()
+                                            $store.bp.is('base') ||
+                                            (hovered || wirdModeActive) &&
+                                            !isSupportLockActive()
                                         ),
                                         'font-normal!': wirdModeActive,
                                     }"
