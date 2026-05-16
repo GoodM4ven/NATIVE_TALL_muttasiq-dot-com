@@ -3,7 +3,8 @@
     data-stack-item
     x-transition
     x-cloak
-    x-show="!isControlPanelOpen && !isAthkarManagerOpen && (
+    x-show="!isControlPanelOpen && !isAthkarManagerOpen &&
+        !document.body.classList.contains('quran-reader-font-scale-overlay-open') && (
         views['quran-app-tilawa'].isOpen ||
         views['quran-app-hifth'].isOpen ||
         views['quran-app-tadabbur'].isOpen

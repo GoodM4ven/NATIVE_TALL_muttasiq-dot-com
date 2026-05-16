@@ -161,6 +161,12 @@
                 border-top-right-radius: 1.15rem !important;
             }
 
+            body.quran-reader-immersive-active {
+                --quran-immersive-top-actions-row-top: 1.15rem;
+                --quran-immersive-stack-row-top: calc(var(--quran-immersive-top-actions-row-top) + 1.8rem);
+                --quran-immersive-stack-row-inline-start: 1.16rem;
+            }
+
             .quran-reader-panel--immersive .quran-top-strip,
             .quran-reader-panel--immersive .quran-bottom-strip {
                 position: absolute;
@@ -168,28 +174,24 @@
                 left: 0;
                 z-index: 55;
                 pointer-events: none;
-                visibility: hidden;
                 opacity: 0 !important;
                 transition:
                     opacity 220ms ease,
-                    transform 240ms cubic-bezier(0.16, 1, 0.3, 1),
-                    visibility 0ms linear 240ms;
+                    transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
             }
 
             .quran-reader-panel--immersive.quran-reader-panel--chrome-visible .quran-top-strip,
             .quran-reader-panel--immersive.quran-reader-panel--chrome-visible .quran-bottom-strip {
                 pointer-events: auto;
-                visibility: visible;
                 opacity: 1 !important;
                 transform: translate3d(0, 0, 0);
-                transition-delay: 0ms, 0ms, 0ms;
             }
 
             .quran-reader-panel--immersive .quran-top-strip {
                 top: 0;
-                padding-top: 0.4rem !important;
-                padding-bottom: 1.8rem !important;
-                background: linear-gradient(to bottom, rgb(255 255 255 / 0.985) 0%, rgb(255 255 255 / 0.96) 54%, rgb(255 255 255 / 0.72) 72%, rgb(255 255 255 / 0) 100%);
+                padding-top: 0.35rem !important;
+                padding-bottom: 5.35rem !important;
+                background: linear-gradient(to bottom, rgb(255 255 255 / 0.995) 0%, rgb(255 255 255 / 0.975) 46%, rgb(255 255 255 / 0.82) 72%, rgb(255 255 255 / 0) 100%);
                 transform: translate3d(0, -0.55rem, 0);
             }
 
@@ -226,16 +228,8 @@
                 pointer-events: auto;
                 opacity: 1;
                 transform: translate3d(0, 0, 0) scale(1);
-            }
-
-            body.quran-reader-immersive-active.quran-reader-immersive-chrome-visible .app-action-buttons-stack {
-                top: calc(1rem + var(--quran-immersive-stack-lane-offset, 2.7rem)) !important;
-            }
-
-            body.quran-reader-calibrating .app-action-buttons-stack {
-                pointer-events: none !important;
-                opacity: 0 !important;
-                transform: translate3d(-0.4rem, -0.35rem, 0) scale(0.92) !important;
+                top: var(--quran-immersive-stack-row-top, 2.95rem) !important;
+                left: var(--quran-immersive-stack-row-inline-start, 1.16rem) !important;
             }
 
             .quran-top-strip {
@@ -326,10 +320,6 @@
                 top: 1rem !important;
                 left: 1rem !important;
                 right: auto !important;
-                transition:
-                    top 240ms cubic-bezier(0.16, 1, 0.3, 1),
-                    opacity 190ms ease,
-                    transform 220ms cubic-bezier(0.16, 1, 0.3, 1) !important;
             }
 
             .quran-reader {
@@ -341,8 +331,6 @@
                 --quran-fit-bottom-clearance: 0.68rem;
                 --quran-fit-panel-stack-clearance: 0.62rem;
                 --quran-fit-panel-top-reserve: 4rem;
-                --quran-immersive-reader-row-offset: 2.35rem;
-                --quran-immersive-stack-lane-offset: 2.7rem;
                 --quran-fit-height-ratio: 0.93;
                 --quran-fit-target-width-ratio: 0.86;
                 --quran-min-page-gap-multiplier: 0.82;
@@ -3768,49 +3756,52 @@
                                 class="quran-page-slider-chip quran-font-scale-overlay__value select-none rounded-full px-[0.5rem] py-[0.18rem] text-[0.72rem] font-semibold"
                                 type="button"
                                 x-text="pageScaleAdjustDisplayValue()"
-                                x-on:click="applyPageScaleAdjustValue(0)"
+                                x-on:click="applyPageScaleAdjustValue(0); commitPageLayoutAdjustments()"
                             ></button>
                             <input
                                 class="quran-page-slider h-[0.56rem] w-[min(70vw,15rem)] min-w-[10.5rem] outline-none"
                                 type="range"
                                 aria-label="{{ arabic_text('التحكم في حجم خط المصحف') }}"
-                                min="-24"
-                                max="24"
+                                min="-48"
+                                max="48"
                                 step="1"
                                 x-bind:value="quranPageScaleAdjustValue"
                                 x-on:input="handlePageScaleAdjustInput($event)"
+                                x-on:change="commitPageLayoutAdjustments()"
                             />
                             <button
                                 class="quran-page-slider-chip quran-font-scale-overlay__value select-none rounded-full px-[0.5rem] py-[0.18rem] text-[0.72rem] font-semibold"
                                 type="button"
                                 x-text="pageGapAdjustDisplayValue()"
-                                x-on:click="applyPageGapAdjustValue(0)"
+                                x-on:click="applyPageGapAdjustValue(0); commitPageLayoutAdjustments()"
                             ></button>
                             <input
                                 class="quran-page-slider h-[0.56rem] w-[min(70vw,15rem)] min-w-[10.5rem] outline-none"
                                 type="range"
                                 aria-label="{{ arabic_text('التحكم في تباعد أسطر المصحف') }}"
-                                min="-24"
-                                max="24"
+                                min="-48"
+                                max="48"
                                 step="1"
                                 x-bind:value="quranPageGapAdjustValue"
                                 x-on:input="handlePageGapAdjustInput($event)"
+                                x-on:change="commitPageLayoutAdjustments()"
                             />
                             <button
                                 class="quran-page-slider-chip quran-font-scale-overlay__value select-none rounded-full px-[0.5rem] py-[0.18rem] text-[0.72rem] font-semibold"
                                 type="button"
                                 x-text="pageYOffsetAdjustDisplayValue()"
-                                x-on:click="applyPageYOffsetAdjustValue(0)"
+                                x-on:click="applyPageYOffsetAdjustValue(0); commitPageLayoutAdjustments()"
                             ></button>
                             <input
                                 class="quran-page-slider h-[0.56rem] w-[min(70vw,15rem)] min-w-[10.5rem] outline-none"
                                 type="range"
                                 aria-label="{{ arabic_text('التحكم في إزاحة الصفحة عموديًا') }}"
-                                min="-24"
-                                max="24"
+                                min="-48"
+                                max="48"
                                 step="1"
                                 x-bind:value="quranPageYOffsetAdjustValue"
                                 x-on:input="handlePageYOffsetAdjustInput($event)"
+                                x-on:change="commitPageLayoutAdjustments()"
                             />
                         </section>
                     </div>

@@ -9,6 +9,7 @@
             lock: null,
             isControlPanelOpen: false,
             isAthkarManagerOpen: false,
+            isQuranReaderCalibrating: false,
             isNativeRuntime: @js(is_platform('native')),
             activeView: $persist('main-menu').as('app-active-view'),
             actionStatePulseToken: 0,
@@ -293,12 +294,17 @@
             },
             applyViewState(nextView, { persist = true } = {}) {
                 const view = this.views?.[nextView] ? nextView : 'main-menu';
+                const isQuranReaderView = ['quran-app-tilawa', 'quran-app-hifth', 'quran-app-tadabbur'].includes(view);
         
                 Object.keys(this.views).forEach((key) => {
                     this.views[key].isOpen = key === view;
                 });
                 if (persist) {
                     this.activeView = view;
+                }
+        
+                if (!isQuranReaderView) {
+                    this.isQuranReaderCalibrating = false;
                 }
         
                 if (this.views[view]) {
@@ -348,6 +354,8 @@
         x-on:quran-bootstrap-progress.window="handleQuranBootstrapProgress($event.detail ?? {})"
         x-on:quran-bootstrap-finished.window="handleQuranBootstrapFinished($event.detail ?? {})"
         x-on:quran-bootstrap-failed.window="handleQuranBootstrapFailed($event.detail ?? {})"
+        x-on:quran-reader-calibration-started.window="isQuranReaderCalibrating = true"
+        x-on:quran-reader-calibration-finished.window="isQuranReaderCalibrating = false"
     >
         @php
             $quranReaderViewsCondition =
@@ -370,6 +378,21 @@
         @endphp
         <x-buttons-stack
             x-bind:data-respecting-stack="$store.bp.current === 'base'"
+            x-show="!({{ $quranReaderViewsCondition }})"
+            @class(['mt-8' => is_platform('ios')])
+        >
+            <livewire:athkar-manager />
+            <x-return-button
+                :jsShowCondition="$returnButtonShowCondition"
+                :jsClickCallback="$returnButtonClickCallback"
+            />
+            <x-partials.home-button :jsShowCondition="$homeButtonShowCondition" />
+            <livewire:color-scheme-switcher />
+            <livewire:control-panel />
+        </x-buttons-stack>
+        <x-buttons-stack
+            x-bind:data-respecting-stack="$store.bp.current === 'base'"
+            x-show="{{ $quranReaderViewsCondition }} && !isQuranReaderCalibrating"
             @class(['mt-8' => is_platform('ios')])
         >
             <livewire:athkar-manager />
