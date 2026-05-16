@@ -161,6 +161,14 @@
                 border-top-right-radius: 1.15rem !important;
             }
 
+            .quran-reader-panel--immersive .quran-top-actions {
+                overflow: visible;
+            }
+
+            .quran-reader--wird-active .quran-reader-panel--immersive {
+                overflow: visible;
+            }
+
             body.quran-reader-immersive-active {
                 --quran-immersive-top-actions-row-top: 1.15rem;
                 --quran-immersive-stack-row-top: calc(var(--quran-immersive-top-actions-row-top) + 1.8rem);
@@ -185,6 +193,12 @@
                 pointer-events: auto;
                 opacity: 1 !important;
                 transform: translate3d(0, 0, 0);
+            }
+
+            .quran-reader-panel--immersive.quran-reader-panel--font-overlay-open .quran-top-strip,
+            .quran-reader-panel--immersive.quran-reader-panel--font-overlay-open .quran-bottom-strip {
+                pointer-events: none;
+                opacity: 0 !important;
             }
 
             .quran-reader-panel--immersive .quran-top-strip {
@@ -230,6 +244,11 @@
                 transform: translate3d(0, 0, 0) scale(1);
                 top: var(--quran-immersive-stack-row-top, 2.95rem) !important;
                 left: var(--quran-immersive-stack-row-inline-start, 1.16rem) !important;
+            }
+
+            body.quran-reader-immersive-active.quran-reader-font-scale-overlay-open .app-action-buttons-stack {
+                pointer-events: none !important;
+                opacity: 0 !important;
             }
 
             .quran-top-strip {
@@ -3047,6 +3066,7 @@
                 x-bind:class="{
                     'quran-reader-panel--calibrating': isCalibrating || _startupCalibrationPending,
                     'quran-reader-panel--immersive': shouldUseImmersiveReaderChrome(),
+                    'quran-reader-panel--font-overlay-open': isFontScaleOverlayVisible,
                     'quran-reader-panel--chrome-visible': shouldUseImmersiveReaderChrome() &&
                         isReaderChromeVisible,
                 }"
@@ -3221,7 +3241,7 @@
                             x-bind:aria-hidden="surahQuickNavigator.visible && !wirdModeActive ? 'false' : 'true'"
                         >
                             <button
-                                class="quran-soorah-quick-nav-button quran-soorah-quick-nav-button--top inline-[2.1rem] md:inline-[2.3rem] lg:inline-[2.1rem] block-[1.72rem] md:block-[1.82rem] lg:block-[1.72rem] 3xl:inline-[2.1rem] 3xl:block-[1.72rem] 2xl:inline-8 2xl:block-[1.55rem] xl:block-[1.6rem] 3xl:inset-be-[calc(100%+1.4rem)] 3xl:transform-[translateX(-50%)] 4xl:inset-be-[calc(100%+1.5rem)] 4xl:transform-[translateX(-50%)] inset-be-[calc(100%+1.4rem)] transform-[translateX(-50%)] sm:inset-be-[calc(100%+1.4rem)] sm:transform-[translateX(-50%)] md:inset-be-[calc(100%+1.65rem)] md:transform-[translateX(-50%)] lg:inset-be-[calc(100%+1.4rem)] lg:transform-[translateX(-50%)] xl:inset-be-[calc(100%+1.3rem)] xl:transform-[translateX(-50%)] 2xl:inset-be-[calc(100%+1.3rem)] 2xl:transform-[translateX(-50%)]"
+                                class="quran-soorah-quick-nav-button quran-soorah-quick-nav-button--top inline-[2.1rem] md:inline-[2.3rem] lg:inline-[2.1rem] block-[1.72rem] md:block-[1.82rem] lg:block-[1.72rem] 3xl:inline-[2.1rem] 3xl:block-[1.72rem] 2xl:inline-8 2xl:block-[1.55rem] xl:block-[1.6rem] 3xl:inset-be-[calc(100%+1.4rem)] 3xl:transform-[translateX(-50%)] 4xl:inset-be-[calc(100%+1.5rem)] 4xl:transform-[translateX(-50%)] inset-bs-[calc(100%+1.35rem)] transform-[translateX(65%)] sm:inset-be-[calc(100%+1.4rem)] sm:transform-[translateX(-50%)] md:inset-be-[calc(100%+1.65rem)] md:transform-[translateX(-50%)] lg:inset-be-[calc(100%+1.4rem)] lg:transform-[translateX(-50%)] xl:inset-be-[calc(100%+1.3rem)] xl:transform-[translateX(-50%)] 2xl:inset-be-[calc(100%+1.3rem)] 2xl:transform-[translateX(-50%)]"
                                 type="button"
                                 aria-label="{{ arabic_text('السورة السابقة') }}"
                                 x-bind:disabled="isSurahQuickNavigatorPreviousDisabled()"

@@ -410,7 +410,8 @@
                 !isQuranReaderCalibrating &&
                 document.body.classList.contains('quran-reader-immersive-chrome-visible') &&
                 !document.body.classList.contains('quran-reader-calibrating') &&
-                !isQuranReaderFontScaleOverlayOpen"
+                !isQuranReaderFontScaleOverlayOpen &&
+                !document.body.classList.contains('quran-reader-font-scale-overlay-open')"
             x-transition.opacity.duration.220ms.delay.170ms
             @class(['mt-8' => is_platform('ios')])
         >

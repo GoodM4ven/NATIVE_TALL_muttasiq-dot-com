@@ -119,7 +119,7 @@ const postModalFitRevealSettleDelayMs = 280;
 const modalCloseTransitionDelayMs = 160;
 const modalLifecycleSuppressionDurationMs = 980;
 const historyNavigationModalLifecycleSuppressionDurationMs = 2600;
-const revealBlockedFailOpenDelayMs = 1100;
+const revealBlockedFailOpenDelayMs = 420;
 const swipeRevealWatchdogDelayMs = 760;
 const pageFontLoadTimeoutMs = 960;
 const pageFontReadyTimeoutMs = 1400;
@@ -1063,6 +1063,7 @@ document.addEventListener('alpine:init', () => {
         _quranPreparationRequestPromise: null,
         _startupRestoreInFlight: null,
         _startupCalibrationPending: true,
+        _lastDispatchedFontScaleOverlayVisible: null,
         _startupTargetPageNumber: 1,
         _bootstrapDeferred: false,
         calibrationHudTop: 0,
@@ -9081,7 +9082,7 @@ document.addEventListener('alpine:init', () => {
 
             this._bypassNextFitCache = true;
             await this.layoutPageGuaranteed({
-                revealDelayMs: 220,
+                revealDelayMs: 130,
                 maxAttempts: 4,
                 useIdleFit: false,
             });
@@ -9098,7 +9099,7 @@ document.addEventListener('alpine:init', () => {
             ) {
                 this._bypassNextFitCache = true;
                 await this.layoutPageGuaranteed({
-                    revealDelayMs: 180,
+                    revealDelayMs: 110,
                     maxAttempts: 3,
                     useIdleFit: false,
                 });
@@ -9741,16 +9742,24 @@ document.addEventListener('alpine:init', () => {
 
         async layoutPage({ revealDelayMs = 180, useIdleFit = true } = {}) {
             const layoutToken = this.beginLayoutCycle();
+            const shouldUseImmersiveChrome = this.shouldUseImmersiveReaderChrome();
+            const stableTextFrames = shouldUseImmersiveChrome ? 6 : 10;
+            const shouldRebalanceWordSpacing =
+                !shouldUseImmersiveChrome &&
+                !this._startupCalibrationPending &&
+                !this.isCalibrating;
 
             await this.nextTickAsync();
             await this.waitForPageFontReady();
             await nextAnimationFrame();
-            await this.waitForStableRenderedText(10);
+            await this.waitForStableRenderedText(stableTextFrames);
 
-            try {
-                this.rebalanceRectangularAyahLineWordSpacing();
-            } catch (_) {
-                this.lineWordGapAdjustments = {};
+            if (shouldRebalanceWordSpacing) {
+                try {
+                    this.rebalanceRectangularAyahLineWordSpacing();
+                } catch (_) {
+                    this.lineWordGapAdjustments = {};
+                }
             }
 
             await this.nextTickAsync();
@@ -11094,20 +11103,29 @@ document.addEventListener('alpine:init', () => {
             const strictHeightOverflowThreshold = targetHeight * strictHeightOverflowTolerance;
             const minimumHealthyFillWidth = Math.max(0.5, targetMinimumFillWidth - 0.1);
             const minimumHealthyFillHeight = Math.max(0.56, targetMinimumFillHeight - 0.08);
+            const measuredLineTargets = Array.from(
+                contentElement.querySelectorAll('[data-quran-line-text]'),
+            );
+            const measuredAyahLineTargets = Array.from(
+                contentElement.querySelectorAll(
+                    "[data-quran-line][data-quran-line-type='ayah'] [data-quran-line-text]",
+                ),
+            );
+            const measuredBoundsTargets =
+                measuredLineTargets.length > 0 ? measuredLineTargets : [contentElement];
+            const measuredWidthTargets =
+                measuredAyahLineTargets.length >= 3
+                    ? measuredAyahLineTargets
+                    : measuredBoundsTargets;
 
             const measureVisualBounds = () => {
-                const measured = this.measureRenderedBounds(contentElement, {
-                    useRobustWidth: false,
-                });
-                const lineTargets = Array.from(
-                    contentElement.querySelectorAll('[data-quran-line-text]'),
-                );
+                const widths = [];
                 let minLeft = Number.POSITIVE_INFINITY;
                 let minTop = Number.POSITIVE_INFINITY;
                 let maxRight = Number.NEGATIVE_INFINITY;
                 let maxBottom = Number.NEGATIVE_INFINITY;
 
-                lineTargets.forEach((target) => {
+                measuredBoundsTargets.forEach((target) => {
                     const rect = target.getBoundingClientRect();
 
                     if (rect.width <= 0 || rect.height <= 0) {
@@ -11120,12 +11138,22 @@ document.addEventListener('alpine:init', () => {
                     maxBottom = Math.max(maxBottom, rect.bottom);
                 });
 
+                measuredWidthTargets.forEach((target) => {
+                    const rect = target.getBoundingClientRect();
+
+                    if (rect.width <= 0 || rect.height <= 0) {
+                        return;
+                    }
+
+                    widths.push(rect.width);
+                });
+
                 if (!Number.isFinite(minLeft) || !Number.isFinite(maxRight)) {
                     const fallbackRect = contentElement.getBoundingClientRect();
 
                     return {
-                        width: Math.max(1, measured.width, Number(fallbackRect.width ?? 0)),
-                        height: Math.max(1, measured.height, Number(fallbackRect.height ?? 0)),
+                        width: Math.max(1, Number(fallbackRect.width ?? 0)),
+                        height: Math.max(1, Number(fallbackRect.height ?? 0)),
                         minLeft: Number(fallbackRect.left ?? 0),
                         minTop: Number(fallbackRect.top ?? 0),
                         maxRight: Number(fallbackRect.right ?? 0),
@@ -11133,9 +11161,12 @@ document.addEventListener('alpine:init', () => {
                     };
                 }
 
+                const measuredWidth =
+                    widths.length > 0 ? Math.max(...widths) : Math.max(1, maxRight - minLeft);
+
                 return {
-                    width: Math.max(1, measured.width, maxRight - minLeft),
-                    height: Math.max(1, measured.height, maxBottom - minTop),
+                    width: Math.max(1, measuredWidth),
+                    height: Math.max(1, maxBottom - minTop),
                     minLeft,
                     minTop,
                     maxRight,
@@ -11288,10 +11319,12 @@ document.addEventListener('alpine:init', () => {
                 ),
                 pageSurahHeaderScale: Math.min(baselineLayout.pageSurahHeaderScale * 1.1, 1.42),
             };
+            const shouldUseFastFitPath =
+                isBaseBreakpoint || this._startupCalibrationPending || this.isCalibrating;
             const profileCandidateCount = Math.max(
-                isBaseBreakpoint ? 6 : 8,
+                shouldUseFastFitPath ? 4 : isBaseBreakpoint ? 6 : 8,
                 Math.min(
-                    isBaseBreakpoint ? 12 : 18,
+                    shouldUseFastFitPath ? 7 : isBaseBreakpoint ? 12 : 18,
                     Math.trunc(Number(activeFitProfile?.candidateSteps ?? 24)),
                 ),
             );
@@ -11341,6 +11374,15 @@ document.addEventListener('alpine:init', () => {
                     }) === index
                 );
             });
+            const layoutCandidatesToEvaluate = shouldUseFastFitPath
+                ? layoutCandidates.filter((candidateLayout, index) => {
+                      if (index < 4) {
+                          return true;
+                      }
+
+                      return index % 2 === 0;
+                  })
+                : layoutCandidates;
             const solveBestScaleForCurrentLayout = () => {
                 let lower = minScale;
                 let upper = maxScale;
@@ -11350,7 +11392,7 @@ document.addEventListener('alpine:init', () => {
                     return best;
                 }
 
-                const binarySearchSteps = isBaseBreakpoint ? 12 : 16;
+                const binarySearchSteps = shouldUseFastFitPath ? 7 : isBaseBreakpoint ? 12 : 16;
 
                 for (let step = 0; step < binarySearchSteps; step += 1) {
                     const mid = (lower + upper) * 0.5;
@@ -11371,7 +11413,7 @@ document.addEventListener('alpine:init', () => {
             let finalEvaluation = evaluateScale(minScale);
             let bestScore = Number.NEGATIVE_INFINITY;
 
-            layoutCandidates.forEach((candidateLayout) => {
+            layoutCandidatesToEvaluate.forEach((candidateLayout) => {
                 this.applyFitLayoutVariables(rootElement, candidateLayout);
                 this.setCurrentPageScale(1, { forFitting: true });
                 const evaluation = solveBestScaleForCurrentLayout();
@@ -11429,7 +11471,7 @@ document.addEventListener('alpine:init', () => {
                 let relaxedBestEvaluation = evaluateScale(minScale);
                 let relaxedBestScore = Number.NEGATIVE_INFINITY;
 
-                layoutCandidates.forEach((candidateLayout) => {
+                layoutCandidatesToEvaluate.forEach((candidateLayout) => {
                     this.applyFitLayoutVariables(rootElement, candidateLayout);
                     this.setCurrentPageScale(1, { forFitting: true });
                     const natural = measureVisualBounds();
@@ -12492,13 +12534,19 @@ document.addEventListener('alpine:init', () => {
                 isActive && this.isFontScaleOverlayVisible,
             );
 
-            window.dispatchEvent(
-                new CustomEvent('quran-reader-font-scale-overlay-visibility', {
-                    detail: {
-                        open: isActive && this.isFontScaleOverlayVisible,
-                    },
-                }),
-            );
+            const isFontScaleOverlayOpen = isActive && this.isFontScaleOverlayVisible;
+
+            if (this._lastDispatchedFontScaleOverlayVisible !== isFontScaleOverlayOpen) {
+                this._lastDispatchedFontScaleOverlayVisible = isFontScaleOverlayOpen;
+
+                window.dispatchEvent(
+                    new CustomEvent('quran-reader-font-scale-overlay-visibility', {
+                        detail: {
+                            open: isFontScaleOverlayOpen,
+                        },
+                    }),
+                );
+            }
         },
 
         isReaderChromeToggleTarget(event = null) {
