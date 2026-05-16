@@ -3777,13 +3777,13 @@
                                 {{ arabic_text('تحكم في حجم خط المصحف') }}
                             </p>
                             <button
-                                class="quran-page-slider-chip quran-font-scale-overlay__value select-none rounded-full px-[0.5rem] py-[0.18rem] text-[0.72rem] font-semibold"
+                                class="quran-page-slider-chip quran-font-scale-overlay__value select-none rounded-full px-2 py-[0.18rem] text-[0.72rem] font-semibold"
                                 type="button"
                                 x-text="pageScaleAdjustDisplayValue()"
                                 x-on:click="applyPageScaleAdjustValue(0); commitPageLayoutAdjustments()"
                             ></button>
                             <input
-                                class="quran-page-slider h-[0.56rem] w-[min(70vw,15rem)] min-w-[10.5rem] outline-none"
+                                class="quran-page-slider h-[0.56rem] w-[min(70vw,15rem)] min-w-42 outline-none"
                                 type="range"
                                 aria-label="{{ arabic_text('التحكم في حجم خط المصحف') }}"
                                 min="-100"
@@ -3794,13 +3794,13 @@
                                 x-on:change="commitPageLayoutAdjustments()"
                             />
                             <button
-                                class="quran-page-slider-chip quran-font-scale-overlay__value select-none rounded-full px-[0.5rem] py-[0.18rem] text-[0.72rem] font-semibold"
+                                class="quran-page-slider-chip quran-font-scale-overlay__value select-none rounded-full px-2 py-[0.18rem] text-[0.72rem] font-semibold"
                                 type="button"
                                 x-text="pageGapAdjustDisplayValue()"
                                 x-on:click="applyPageGapAdjustValue(0); commitPageLayoutAdjustments()"
                             ></button>
                             <input
-                                class="quran-page-slider h-[0.56rem] w-[min(70vw,15rem)] min-w-[10.5rem] outline-none"
+                                class="quran-page-slider h-[0.56rem] w-[min(70vw,15rem)] min-w-42 outline-none"
                                 type="range"
                                 aria-label="{{ arabic_text('التحكم في تباعد أسطر المصحف') }}"
                                 min="-100"
@@ -3811,13 +3811,13 @@
                                 x-on:change="commitPageLayoutAdjustments()"
                             />
                             <button
-                                class="quran-page-slider-chip quran-font-scale-overlay__value select-none rounded-full px-[0.5rem] py-[0.18rem] text-[0.72rem] font-semibold"
+                                class="quran-page-slider-chip quran-font-scale-overlay__value select-none rounded-full px-2 py-[0.18rem] text-[0.72rem] font-semibold"
                                 type="button"
                                 x-text="pageYOffsetAdjustDisplayValue()"
                                 x-on:click="applyPageYOffsetAdjustValue(0); commitPageLayoutAdjustments()"
                             ></button>
                             <input
-                                class="quran-page-slider h-[0.56rem] w-[min(70vw,15rem)] min-w-[10.5rem] outline-none"
+                                class="quran-page-slider h-[0.56rem] w-[min(70vw,15rem)] min-w-42 outline-none"
                                 type="range"
                                 aria-label="{{ arabic_text('التحكم في إزاحة الصفحة عموديًا') }}"
                                 min="-100"
