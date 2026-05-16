@@ -3072,6 +3072,14 @@
                         isReaderChromeVisible,
                 }"
                 x-on:click="handleReaderChromeToggleTap($event)"
+                x-on:pointerdown.passive="onSwipeStart($event)"
+                x-on:pointermove.window.passive="onSwipeMove($event)"
+                x-on:pointerup.window.passive="onSwipeEnd($event)"
+                x-on:pointercancel.window.passive="onSwipeCancel()"
+                x-on:touchstart.passive="onSwipeStart($event)"
+                x-on:touchmove.window.passive="onSwipeMove($event)"
+                x-on:touchend.window.passive="onSwipeEnd($event)"
+                x-on:touchcancel.window.passive="onSwipeCancel()"
                 x-on:keydown.left.window="onGlobalArrowNavigate('left', $event)"
                 x-on:keydown.right.window="onGlobalArrowNavigate('right', $event)"
                 x-on:quran-go-prev.window="handleRequestedNavigation('prev', $event.detail)"
@@ -3176,7 +3184,6 @@
                 </template>
                 <header
                     class="quran-top-strip gap-[0.4rem] px-[0.6rem] pb-2 pt-[0.45rem] sm:gap-[0.65rem] sm:px-4 sm:pb-2 sm:pt-[0.8rem]"
-                    data-no-swipe
                     data-quran-reader-chrome
                     x-bind:class="{
                         'quran-top-strip--wird-active': wirdModeActive,
@@ -3594,7 +3601,6 @@
 
                 <footer
                     class="quran-bottom-strip gap-x-[0.65rem] gap-y-[0.175rem] sm:gap-y-[0.42rem] md:gap-y-2 lg:gap-y-[0.2rem] xl:gap-x-[0.65rem] xl:gap-y-[0.24rem] 2xl:gap-x-[0.65rem] 2xl:gap-y-[0.42rem]"
-                    data-no-swipe
                     data-quran-reader-chrome
                 >
                     <button

@@ -12654,7 +12654,6 @@ document.addEventListener('alpine:init', () => {
 
             return !target.closest(
                 [
-                    '[data-quran-reader-chrome]',
                     '[data-no-swipe]',
                     'button',
                     'a',
@@ -14655,18 +14654,20 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            const point = this.swipePoint(event);
+            const movedBeyondTapThreshold =
+                point !== null
+                    ? Math.abs(point.x - this.wordPress.startX) > wordPressDragThresholdPx ||
+                      Math.abs(point.y - this.wordPress.startY) > wordPressDragThresholdPx
+                    : false;
+
             if (
                 this.usesMobileDoubleTapCopyMode() &&
                 !this.wordPress.isSecondTap &&
                 !this.wordPress.holdTriggered
             ) {
                 void this.onSwipeEnd(event);
-                this.clearWordPressState();
-
-                return;
             }
-
-            const point = this.swipePoint(event);
 
             if (
                 this.wordPress.pointerId !== null &&
@@ -14749,6 +14750,7 @@ document.addEventListener('alpine:init', () => {
                     this._lastMobileCopyTapWordKey = null;
                 } else if (
                     !this.wordPress.isSecondTap &&
+                    !movedBeyondTapThreshold &&
                     typeof wordSelectionKey === 'string' &&
                     wordSelectionKey !== ''
                 ) {
