@@ -219,16 +219,16 @@ const supportUnlockModePermanent = 'permanent';
 const supportUnlockModeWeekly = 'weekly';
 const supportUnlockWeeklyDurationMs = 7 * 24 * 60 * 60 * 1000;
 const quranPageScaleAdjustStorageKey = 'quran-reader-page-scale-adjust-v1';
-const quranPageScaleAdjustMin = -48;
-const quranPageScaleAdjustMax = 48;
+const quranPageScaleAdjustMin = -100;
+const quranPageScaleAdjustMax = 100;
 const quranPageScaleAdjustMultiplierStep = 0.015;
 const quranPageGapAdjustStorageKey = 'quran-reader-page-gap-adjust-v1';
-const quranPageGapAdjustMin = -48;
-const quranPageGapAdjustMax = 48;
+const quranPageGapAdjustMin = -100;
+const quranPageGapAdjustMax = 100;
 const quranPageGapAdjustMultiplierStep = 0.025;
 const quranPageYOffsetAdjustStorageKey = 'quran-reader-page-y-offset-adjust-v1';
-const quranPageYOffsetAdjustMin = -48;
-const quranPageYOffsetAdjustMax = 48;
+const quranPageYOffsetAdjustMin = -100;
+const quranPageYOffsetAdjustMax = 100;
 const quranPageYOffsetAdjustRemStep = 0.06;
 const supportLockClosedOutlineIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" class="quran-support-lock-badge__icon-svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12 1.5a5.25 5.25 0 0 0-5.25 5.25v3a3 3 0 0 0-3 3v6.75a3 3 0 0 0 3 3h10.5a3 3 0 0 0 3-3v-6.75a3 3 0 0 0-3-3v-3c0-2.9-2.35-5.25-5.25-5.25Zm3.75 8.25v-3a3.75 3.75 0 1 0-7.5 0v3h7.5Z" clip-rule="evenodd" /></svg>`;
 const wirdFrequencyModeMonthly = 0;
@@ -1064,6 +1064,7 @@ document.addEventListener('alpine:init', () => {
         _startupRestoreInFlight: null,
         _startupCalibrationPending: true,
         _lastDispatchedFontScaleOverlayVisible: null,
+        _immersiveEntryAwaitingFirstReveal: true,
         _startupTargetPageNumber: 1,
         _bootstrapDeferred: false,
         calibrationHudTop: 0,
@@ -1268,6 +1269,7 @@ document.addEventListener('alpine:init', () => {
 
                 if (!isGoingToQuranReader) {
                     this.isFontScaleOverlayVisible = false;
+                    this._immersiveEntryAwaitingFirstReveal = true;
                     this.clearDeferredBootstrapCheckTimer();
                     this._deferredBootstrapCheckAttempts = 0;
 
@@ -1284,6 +1286,8 @@ document.addEventListener('alpine:init', () => {
                 }
 
                 this._lastQuranReaderView = to;
+                this._immersiveEntryAwaitingFirstReveal = true;
+                this.isReaderChromeVisible = false;
                 this.isFittingPage = true;
                 this.clearLayoutTimers();
                 this.scheduleReaderPanelLayoutRefresh();
@@ -1554,18 +1558,48 @@ document.addEventListener('alpine:init', () => {
                 void this.onSwipeMove(event);
             };
             this._onPanelPointerUp = (event) => {
+                if (this.wordPress?.active) {
+                    this.onWordPointerUp(event);
+
+                    return;
+                }
+
                 void this.onSwipeEnd(event);
             };
             this._onPanelPointerCancel = () => {
+                if (this.wordPress?.active) {
+                    this.onWordPointerCancel();
+                }
+
                 this.onSwipeCancel();
             };
             this._onWindowPointerMove = (event) => {
+                if (
+                    this.usesMobileDoubleTapCopyMode() &&
+                    this.wordPress?.active &&
+                    this.wordPress?.isSecondTap
+                ) {
+                    this.onWordPointerMove(event);
+
+                    return;
+                }
+
                 void this.onSwipeMove(event);
             };
             this._onWindowPointerUp = (event) => {
+                if (this.wordPress?.active) {
+                    this.onWordPointerUp(event);
+
+                    return;
+                }
+
                 void this.onSwipeEnd(event);
             };
             this._onWindowPointerCancel = () => {
+                if (this.wordPress?.active) {
+                    this.onWordPointerCancel();
+                }
+
                 this.onSwipeCancel();
             };
             this._onPanelTouchStart = (event) => {
@@ -1575,18 +1609,48 @@ document.addEventListener('alpine:init', () => {
                 void this.onSwipeMove(event);
             };
             this._onPanelTouchEnd = (event) => {
+                if (this.wordPress?.active) {
+                    this.onWordPointerUp(event);
+
+                    return;
+                }
+
                 void this.onSwipeEnd(event);
             };
             this._onPanelTouchCancel = () => {
+                if (this.wordPress?.active) {
+                    this.onWordPointerCancel();
+                }
+
                 this.onSwipeCancel();
             };
             this._onWindowTouchMove = (event) => {
+                if (
+                    this.usesMobileDoubleTapCopyMode() &&
+                    this.wordPress?.active &&
+                    this.wordPress?.isSecondTap
+                ) {
+                    this.onWordPointerMove(event);
+
+                    return;
+                }
+
                 void this.onSwipeMove(event);
             };
             this._onWindowTouchEnd = (event) => {
+                if (this.wordPress?.active) {
+                    this.onWordPointerUp(event);
+
+                    return;
+                }
+
                 void this.onSwipeEnd(event);
             };
             this._onWindowTouchCancel = () => {
+                if (this.wordPress?.active) {
+                    this.onWordPointerCancel();
+                }
+
                 this.onSwipeCancel();
             };
 
@@ -9614,6 +9678,17 @@ document.addEventListener('alpine:init', () => {
                 this.isFittingPage = false;
                 this._lastPageRevealAt = Date.now();
                 this.clearSwipeRevealWatchdog();
+
+                if (
+                    this.shouldUseImmersiveReaderChrome() &&
+                    this.isAnyQuranReaderViewOpen() &&
+                    this._immersiveEntryAwaitingFirstReveal
+                ) {
+                    this._immersiveEntryAwaitingFirstReveal = false;
+                    this.isReaderChromeVisible = true;
+                    this.syncReaderChromeDocumentClass();
+                }
+
                 this.traceReaderReveal('queue-page-reveal-ready');
             }, delayMs);
         },
@@ -12007,7 +12082,8 @@ document.addEventListener('alpine:init', () => {
             if (
                 event.target?.closest?.('[data-quran-word-button], [data-quran-line-text]') &&
                 source !== 'touch' &&
-                !isTouchPointer
+                !isTouchPointer &&
+                !this.usesMobileDoubleTapCopyMode()
             ) {
                 this.resetSwipeState();
 
@@ -12090,7 +12166,9 @@ document.addEventListener('alpine:init', () => {
 
             if (
                 this.wordPress?.active &&
-                String(point.pointerType ?? this.swipe.pointerType ?? '').toLowerCase() === 'mouse'
+                String(point.pointerType ?? this.swipe.pointerType ?? '').toLowerCase() ===
+                    'mouse' &&
+                (!this.usesMobileDoubleTapCopyMode() || this.wordPress?.isSecondTap)
             ) {
                 return;
             }
@@ -12169,7 +12247,9 @@ document.addEventListener('alpine:init', () => {
 
             if (
                 this.wordPress?.active &&
-                String(point.pointerType ?? this.swipe.pointerType ?? '').toLowerCase() === 'mouse'
+                String(point.pointerType ?? this.swipe.pointerType ?? '').toLowerCase() ===
+                    'mouse' &&
+                (!this.usesMobileDoubleTapCopyMode() || this.wordPress?.isSecondTap)
             ) {
                 this.resetSwipeState();
 
@@ -12485,6 +12565,18 @@ document.addEventListener('alpine:init', () => {
                 return false;
             }
 
+            if (!this.isAnyQuranReaderViewOpen()) {
+                return false;
+            }
+
+            if (this.hasBlockingModalLifecycleState({ recoverStaleState: true })) {
+                return false;
+            }
+
+            if (!this._immersiveEntryAwaitingFirstReveal) {
+                return true;
+            }
+
             if (
                 this.isCalibrating ||
                 this._startupCalibrationPending ||
@@ -12493,10 +12585,6 @@ document.addEventListener('alpine:init', () => {
                 this.isFittingPage ||
                 this._revealTimer !== null
             ) {
-                return false;
-            }
-
-            if (this.hasBlockingModalLifecycleState({ recoverStaleState: true })) {
                 return false;
             }
 
@@ -14413,6 +14501,10 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            if (this.usesMobileDoubleTapCopyMode()) {
+                this.onSwipeStart(event);
+            }
+
             this.setWordClickSuppression(false);
 
             const point = this.swipePoint(event);
@@ -14503,6 +14595,11 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            if (this.usesMobileDoubleTapCopyMode() && !this.wordPress.isSecondTap) {
+                void this.onSwipeMove(event);
+                return;
+            }
+
             const point = this.swipePoint(event);
 
             if (!point) {
@@ -14558,6 +14655,17 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            if (
+                this.usesMobileDoubleTapCopyMode() &&
+                !this.wordPress.isSecondTap &&
+                !this.wordPress.holdTriggered
+            ) {
+                void this.onSwipeEnd(event);
+                this.clearWordPressState();
+
+                return;
+            }
+
             const point = this.swipePoint(event);
 
             if (
@@ -14569,6 +14677,8 @@ document.addEventListener('alpine:init', () => {
             }
 
             if (this.wordPress.dragActive) {
+                const shouldCopyDraggedSelection =
+                    !this.usesMobileDoubleTapCopyMode() || this.wordPress.isSecondTap;
                 let activationAnchor = this.activationAnchorFromEvent(event);
                 let shouldSuppressNextWordClick = false;
 
@@ -14599,14 +14709,16 @@ document.addEventListener('alpine:init', () => {
                     shouldSuppressNextWordClick = true;
                 }
 
-                void this.copyDraggedSelection(
-                    activationAnchor ??
-                        this.wordPress.lastAnchor ?? {
-                            x: this.wordPress.startX,
-                            y: this.wordPress.startY,
-                            target: this.wordPress.target,
-                        },
-                );
+                if (shouldCopyDraggedSelection) {
+                    void this.copyDraggedSelection(
+                        activationAnchor ??
+                            this.wordPress.lastAnchor ?? {
+                                x: this.wordPress.startX,
+                                y: this.wordPress.startY,
+                                target: this.wordPress.target,
+                            },
+                    );
+                }
                 this.setWordClickSuppression(shouldSuppressNextWordClick);
             }
 

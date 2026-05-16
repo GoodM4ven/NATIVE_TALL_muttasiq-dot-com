@@ -156,7 +156,7 @@
             }
 
             .quran-reader-panel--immersive {
-                overflow: hidden;
+                overflow: visible;
                 border-top-left-radius: 1.15rem !important;
                 border-top-right-radius: 1.15rem !important;
             }
@@ -223,6 +223,7 @@
                 padding-block-start: var(--quran-immersive-page-pad-top, 1.08rem) !important;
                 padding-block-end: var(--quran-immersive-page-pad-bottom, 0.95rem) !important;
                 padding-inline: 0.34rem !important;
+                overflow: hidden;
             }
 
             .quran-reader-panel--immersive .quran-page-surface {
@@ -375,16 +376,16 @@
             }
 
             .quran-page-lines--opening {
+                --quran-page-type-scale: 2.5;
+                --quran-page-leading-multiplier: 1.28;
                 --quran-page-opening-type-multiplier: 1.08;
                 --quran-page-opening-leading-multiplier: 1.02;
                 --quran-page-opening-gap-multiplier: 0.9;
-                --quran-page-scale: 0.42;
-                --quran-page-type-scale: 1.3;
-                --quran-page-leading-multiplier: 1.08;
-                --quran-page-gap-multiplier: 1.28;
+                --quran-page-gap-multiplier: 3.1;
                 --quran-page-surah-header-scale: 1.24;
-                --quran-basmallah-bottom-gap-scale: -0.235;
+                --quran-basmallah-bottom-gap-scale: -0.135;
                 --quran-page-y-offset: 0rem;
+                --quran-page-scale: 0.48;
             }
 
             .quran-page-lines--dense {
@@ -394,38 +395,38 @@
                 --quran-page-dense-y-offset: 0rem;
                 --quran-page-y-offset: 0rem;
                 --quran-page-scale: 0.35;
-                --quran-page-type-scale: 1.35;
+                --quran-page-type-scale: 2.7;
                 --quran-page-leading-multiplier: 1.1;
-                --quran-page-gap-multiplier: 0.85;
+                --quran-page-gap-multiplier: 3.35;
                 --quran-page-surah-header-scale: 1.01;
                 --quran-basmallah-bottom-gap-scale: -0.28;
             }
 
             .quran-page-lines--headered-long {
+                --quran-page-scale: 0.4;
+                --quran-page-leading-multiplier: 1.1;
                 --quran-page-headered-type-multiplier: 1;
                 --quran-page-headered-leading-multiplier: 1;
                 --quran-page-headered-gap-multiplier: 1;
                 --quran-surah-header-no-basmallah-first-ayah-gap-scale: -0.1;
-                --quran-page-scale: 0.28;
-                --quran-page-type-scale: 1.66;
-                --quran-page-leading-multiplier: 0.8;
-                --quran-page-gap-multiplier: 0.9;
-                --quran-page-surah-header-scale: 0.73;
+                --quran-page-gap-multiplier: 2;
+                --quran-page-surah-header-scale: 0.93;
                 --quran-basmallah-bottom-gap-scale: -0.28;
                 --quran-page-y-offset: 0rem;
+                --quran-page-type-scale: 1.56;
             }
 
             .quran-page-lines--segmented {
+                --quran-page-scale: 0.4;
                 --quran-page-segmented-type-multiplier: 1;
                 --quran-page-segmented-leading-multiplier: 1;
                 --quran-page-segmented-gap-multiplier: 1;
-                --quran-page-scale: 0.4;
-                --quran-page-type-scale: 1.25;
-                --quran-page-leading-multiplier: 1.4;
-                --quran-page-gap-multiplier: 0.62;
-                --quran-page-surah-header-scale: 0.81;
-                --quran-basmallah-bottom-gap-scale: -0.58;
                 --quran-page-y-offset: 0rem;
+                --quran-page-type-scale: 2.7;
+                --quran-page-leading-multiplier: 1.4;
+                --quran-page-gap-multiplier: 3.12;
+                --quran-page-surah-header-scale: 0.91;
+                --quran-basmallah-bottom-gap-scale: -0.28;
             }
         }
 
@@ -3071,14 +3072,6 @@
                         isReaderChromeVisible,
                 }"
                 x-on:click="handleReaderChromeToggleTap($event)"
-                x-on:pointerdown.passive="onSwipeStart($event)"
-                x-on:pointermove.window.passive="onSwipeMove($event)"
-                x-on:pointerup.window.passive="onSwipeEnd($event)"
-                x-on:pointercancel.window.passive="onSwipeCancel()"
-                x-on:touchstart.passive="onSwipeStart($event)"
-                x-on:touchmove.window.passive="onSwipeMove($event)"
-                x-on:touchend.window.passive="onSwipeEnd($event)"
-                x-on:touchcancel.window.passive="onSwipeCancel()"
                 x-on:keydown.left.window="onGlobalArrowNavigate('left', $event)"
                 x-on:keydown.right.window="onGlobalArrowNavigate('right', $event)"
                 x-on:quran-go-prev.window="handleRequestedNavigation('prev', $event.detail)"
@@ -3782,8 +3775,8 @@
                                 class="quran-page-slider h-[0.56rem] w-[min(70vw,15rem)] min-w-[10.5rem] outline-none"
                                 type="range"
                                 aria-label="{{ arabic_text('التحكم في حجم خط المصحف') }}"
-                                min="-48"
-                                max="48"
+                                min="-100"
+                                max="100"
                                 step="1"
                                 x-bind:value="quranPageScaleAdjustValue"
                                 x-on:input="handlePageScaleAdjustInput($event)"
@@ -3799,8 +3792,8 @@
                                 class="quran-page-slider h-[0.56rem] w-[min(70vw,15rem)] min-w-[10.5rem] outline-none"
                                 type="range"
                                 aria-label="{{ arabic_text('التحكم في تباعد أسطر المصحف') }}"
-                                min="-48"
-                                max="48"
+                                min="-100"
+                                max="100"
                                 step="1"
                                 x-bind:value="quranPageGapAdjustValue"
                                 x-on:input="handlePageGapAdjustInput($event)"
@@ -3816,8 +3809,8 @@
                                 class="quran-page-slider h-[0.56rem] w-[min(70vw,15rem)] min-w-[10.5rem] outline-none"
                                 type="range"
                                 aria-label="{{ arabic_text('التحكم في إزاحة الصفحة عموديًا') }}"
-                                min="-48"
-                                max="48"
+                                min="-100"
+                                max="100"
                                 step="1"
                                 x-bind:value="quranPageYOffsetAdjustValue"
                                 x-on:input="handlePageYOffsetAdjustInput($event)"
