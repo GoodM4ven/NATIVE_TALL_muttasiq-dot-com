@@ -381,6 +381,39 @@
                     window.dispatchEvent(new CustomEvent('close-modal', { detail: closePayload }));
                 });
             },
+            isControlPanelEventReceiverVisible() {
+                if (!(this.$el instanceof HTMLElement)) {
+                    return false;
+                }
+        
+                const elementStyles = window.getComputedStyle(this.$el);
+        
+                if (
+                    elementStyles.display === 'none' ||
+                    elementStyles.visibility === 'hidden'
+                ) {
+                    return false;
+                }
+        
+                return this.$el.getClientRects().length > 0;
+            },
+            openControlPanelModalFromEvent(detail = {}) {
+                if (!this.isControlPanelEventReceiverVisible()) {
+                    return;
+                }
+        
+                $wire.openControlPanelModal(
+                    window.getAthkarSettingsFromStorage?.() ?? {},
+                    detail?.tab ?? null,
+                );
+            },
+            openSupportUnlockModalFromEvent() {
+                if (!this.isControlPanelEventReceiverVisible()) {
+                    return;
+                }
+        
+                this.openSupportUnlockModal();
+            },
             async openSupportUnlockModal() {
                 this.closeVisibleFilamentModals();
         
@@ -428,8 +461,8 @@
             },
         }"
         x-init="queueControlPanelSliderNumeralsSync(10)"
-        x-on:open-control-panel-modal.window="$wire.openControlPanelModal(window.getAthkarSettingsFromStorage?.() ?? {}, $event.detail?.tab ?? null)"
-        x-on:open-support-unlock-modal.window="openSupportUnlockModal()"
+        x-on:open-control-panel-modal.window="openControlPanelModalFromEvent($event.detail ?? {})"
+        x-on:open-support-unlock-modal.window="openSupportUnlockModalFromEvent()"
         x-on:athkar-reader-maintenance.window="runReaderMaintenancePulse()"
         x-on:control-panel-updated.window="queueControlPanelSliderNumeralsSync(0)"
         x-on:resize.window="if (isControlPanelOpen) { queueControlPanelSliderNumeralsSync(0); }"

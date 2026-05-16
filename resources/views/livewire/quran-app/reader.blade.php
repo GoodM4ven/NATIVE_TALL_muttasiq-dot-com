@@ -1557,6 +1557,11 @@
             gap: 0;
         }
 
+        .quran-reader--wird-active .quran-top-strip,
+        .quran-reader--wird-active .quran-top-actions {
+            overflow: visible;
+        }
+
         .quran-top-actions-secondary {
             opacity: 1;
             transform: translateX(0) scale(1);

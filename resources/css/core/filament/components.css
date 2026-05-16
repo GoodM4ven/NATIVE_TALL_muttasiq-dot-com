@@ -138,6 +138,48 @@
         opacity: 1;
     }
 
+    @media (max-width: 639px) {
+        .fi-modal:not(.fi-modal-slide-over):not(.fi-width-screen)>.fi-modal-window-ctn {
+            padding: 0.6em;
+        }
+
+        #quran-reader-search-modal .fi-modal-content {
+            padding-inline: 0.4em;
+            padding-top: 0.8rem;
+            padding-bottom: 0.95rem;
+        }
+
+        #quran-reader-search-modal .quran-search-field-wrapper,
+        .quran-search-results-shell,
+        .quran-surah-grid {
+            width: 100%;
+        }
+
+        .quran-surah-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.45rem;
+            padding: calc(var(--quran-surah-edge-fade-size) + 0.22rem) 0.24rem
+                calc(var(--quran-surah-edge-fade-size) + 0.22rem) 0.24rem;
+            scrollbar-gutter: stable;
+            -webkit-mask-image: none;
+            mask-image: none;
+        }
+
+        .quran-surah-tile {
+            min-height: 5.2rem;
+            padding: 0.46rem;
+        }
+
+        .quran-surah-tile-label {
+            font-size: 1.18rem;
+            line-height: 1.42;
+        }
+
+        .quran-surah-tile-label.quran-surah-tile-label--glyph {
+            font-size: 1.68rem;
+        }
+    }
+
     .quran-search-shell {
         display: flex;
         flex-direction: column;
@@ -931,6 +973,7 @@
     .quran-support-lock-target {
         position: relative;
         isolation: isolate;
+        overflow: visible;
     }
 
     .quran-support-lock-badge {
@@ -940,7 +983,7 @@
         margin-top: -0.8rem;
         inset-block-start: -0.75rem;
         inset-inline: 0.35rem;
-        z-index: 38;
+        z-index: 62;
         inline-size: 2rem;
         block-size: 2rem;
         border-radius: 999px;

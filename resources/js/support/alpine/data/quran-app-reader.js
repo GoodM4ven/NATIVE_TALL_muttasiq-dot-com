@@ -3261,6 +3261,14 @@ document.addEventListener('alpine:init', () => {
         },
 
         openSupportUnlockModal() {
+            const hasMountAction = this.$wire && typeof this.$wire.mountAction === 'function';
+
+            if (hasMountAction) {
+                this.$wire.mountAction('supportUnlock');
+
+                return;
+            }
+
             window.dispatchEvent(new CustomEvent('open-support-unlock-modal'));
         },
 
@@ -12010,10 +12018,10 @@ document.addEventListener('alpine:init', () => {
 
         async dispatchSwipeNavigation(direction) {
             this.resetSwipeState();
+            this.clearSwipeRevealWatchdog();
 
             if (direction === 'next') {
                 this.traceReaderReveal('dispatch-swipe-navigation', { direction: 'next' });
-                this.scheduleSwipeRevealWatchdog('swipe');
 
                 if (this.triggerChevronButtonClick('next', 'swipe')) {
                     return true;
@@ -12026,7 +12034,6 @@ document.addEventListener('alpine:init', () => {
 
             if (direction === 'prev') {
                 this.traceReaderReveal('dispatch-swipe-navigation', { direction: 'prev' });
-                this.scheduleSwipeRevealWatchdog('swipe');
 
                 if (this.triggerChevronButtonClick('prev', 'swipe')) {
                     return true;
