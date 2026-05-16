@@ -1579,6 +1579,10 @@ document.addEventListener('alpine:init', () => {
                     this.wordPress?.active &&
                     this.wordPress?.isSecondTap
                 ) {
+                    if (event && typeof event === 'object') {
+                        event.__quranReaderInputHandled = true;
+                    }
+
                     this.onWordPointerMove(event);
 
                     return;
@@ -1630,6 +1634,10 @@ document.addEventListener('alpine:init', () => {
                     this.wordPress?.active &&
                     this.wordPress?.isSecondTap
                 ) {
+                    if (event && typeof event === 'object') {
+                        event.__quranReaderInputHandled = true;
+                    }
+
                     this.onWordPointerMove(event);
 
                     return;
@@ -12137,27 +12145,23 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            if (
-                event?.target?.closest?.('[data-no-swipe]') ||
-                event?.target?.closest?.('input, textarea, select, [contenteditable="true"]')
-            ) {
-                this.resetSwipeState();
-
-                return;
-            }
-
             const source = this.swipeEventSource(event);
-
-            if (this.swipe.source && this.swipe.source !== source) {
-                this.resetSwipeState();
-
-                return;
-            }
+            const sourceMismatched = this.swipe.source && this.swipe.source !== source;
 
             const point = this.swipePoint(event);
 
             if (!point) {
                 return;
+            }
+
+            if (sourceMismatched) {
+                if (!this.usesMobileDoubleTapCopyMode()) {
+                    return;
+                }
+
+                this.swipe.source = source;
+                this.swipe.pointerId = point.pointerId;
+                this.swipe.pointerType = point.pointerType;
             }
 
             if (this.wordPress?.holdTriggered || this.wordPress?.dragActive) {
@@ -12211,25 +12215,8 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            if (event?.target?.closest?.('[data-no-swipe]')) {
-                this.resetSwipeState();
-
-                return;
-            }
-
-            if (event?.target?.closest?.('input, textarea, select, [contenteditable="true"]')) {
-                this.resetSwipeState();
-
-                return;
-            }
-
             const source = this.swipeEventSource(event);
-
-            if (this.swipe.source && this.swipe.source !== source) {
-                this.resetSwipeState();
-
-                return;
-            }
+            const sourceMismatched = this.swipe.source && this.swipe.source !== source;
 
             const point = this.swipePoint(event);
 
@@ -12237,6 +12224,18 @@ document.addEventListener('alpine:init', () => {
                 this.resetSwipeState();
 
                 return;
+            }
+
+            if (sourceMismatched) {
+                if (!this.usesMobileDoubleTapCopyMode()) {
+                    this.resetSwipeState();
+
+                    return;
+                }
+
+                this.swipe.source = source;
+                this.swipe.pointerId = point.pointerId;
+                this.swipe.pointerType = point.pointerType;
             }
 
             if (this.wordPress?.holdTriggered || this.wordPress?.dragActive) {
@@ -12718,7 +12717,9 @@ document.addEventListener('alpine:init', () => {
         readerPanelStyle() {
             void this._readerPanelLayoutSerial;
 
-            const styleEntries = ['touch-action: pan-y'];
+            const styleEntries = [
+                `touch-action: ${this.shouldUseImmersiveReaderChrome() ? 'none' : 'pan-y'}`,
+            ];
             const breakpointName = String(this.resolveCurrentBreakpointName() ?? '').trim();
 
             if (!['base', 'sm'].includes(breakpointName)) {
