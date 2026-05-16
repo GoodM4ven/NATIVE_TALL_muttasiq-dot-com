@@ -174,17 +174,21 @@
                 left: 0;
                 z-index: 55;
                 pointer-events: none;
+                visibility: hidden;
                 opacity: 0 !important;
                 transition:
                     opacity 220ms ease,
-                    transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
+                    transform 240ms cubic-bezier(0.16, 1, 0.3, 1),
+                    visibility 0ms linear 220ms;
             }
 
             .quran-reader-panel--immersive.quran-reader-panel--chrome-visible .quran-top-strip,
             .quran-reader-panel--immersive.quran-reader-panel--chrome-visible .quran-bottom-strip {
                 pointer-events: auto;
+                visibility: visible;
                 opacity: 1 !important;
                 transform: translate3d(0, 0, 0);
+                transition-delay: 0ms, 0ms, 0ms;
             }
 
             .quran-reader-panel--immersive .quran-top-strip {

@@ -12504,8 +12504,6 @@ document.addEventListener('alpine:init', () => {
             return !target.closest(
                 [
                     '[data-quran-reader-chrome]',
-                    '[data-quran-word-button]',
-                    '[data-quran-line-text]',
                     '[data-no-swipe]',
                     'button',
                     'a',

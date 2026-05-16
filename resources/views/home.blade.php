@@ -305,6 +305,15 @@
         
                 if (!isQuranReaderView) {
                     this.isQuranReaderCalibrating = false;
+        
+                    if (document?.body instanceof HTMLElement) {
+                        document.body.classList.remove(
+                            'quran-reader-immersive-active',
+                            'quran-reader-immersive-chrome-visible',
+                            'quran-reader-calibrating',
+                            'quran-reader-font-scale-overlay-open',
+                        );
+                    }
                 }
         
                 if (this.views[view]) {
