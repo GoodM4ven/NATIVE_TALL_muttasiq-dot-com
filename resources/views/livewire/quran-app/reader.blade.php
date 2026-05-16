@@ -1241,7 +1241,7 @@
             direction: rtl;
             display: flex;
             flex-direction: column;
-            gap: calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier) * var(--quran-page-scale) * var(--quran-page-dense-gap-multiplier, 1) * var(--quran-page-segmented-gap-multiplier, 1) * var(--quran-page-headered-gap-multiplier, 1) * var(--quran-page-opening-gap-multiplier, 1));
+            gap: calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier) * var(--quran-page-scale) * var(--quran-page-dense-gap-multiplier, 1) * var(--quran-page-segmented-gap-multiplier, 1) * var(--quran-page-headered-gap-multiplier, 1) * var(--quran-page-opening-gap-multiplier, 1) * var(--quran-page-gap-adjust-factor, 1));
         }
 
         .quran-page-lines * {
@@ -3759,6 +3759,22 @@
                                 step="1"
                                 x-bind:value="quranPageScaleAdjustValue"
                                 x-on:input="handlePageScaleAdjustInput($event)"
+                            />
+                            <button
+                                class="quran-page-slider-chip quran-font-scale-overlay__value select-none rounded-full px-[0.5rem] py-[0.18rem] text-[0.72rem] font-semibold"
+                                type="button"
+                                x-text="pageGapAdjustDisplayValue()"
+                                x-on:click="applyPageGapAdjustValue(0)"
+                            ></button>
+                            <input
+                                class="quran-page-slider h-[0.56rem] w-[min(70vw,15rem)] min-w-[10.5rem] outline-none"
+                                type="range"
+                                aria-label="{{ arabic_text('التحكم في تباعد أسطر المصحف') }}"
+                                min="-24"
+                                max="24"
+                                step="1"
+                                x-bind:value="quranPageGapAdjustValue"
+                                x-on:input="handlePageGapAdjustInput($event)"
                             />
                         </section>
                     </div>

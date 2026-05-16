@@ -220,6 +220,10 @@ const quranPageScaleAdjustStorageKey = 'quran-reader-page-scale-adjust-v1';
 const quranPageScaleAdjustMin = -24;
 const quranPageScaleAdjustMax = 24;
 const quranPageScaleAdjustMultiplierStep = 0.015;
+const quranPageGapAdjustStorageKey = 'quran-reader-page-gap-adjust-v1';
+const quranPageGapAdjustMin = -24;
+const quranPageGapAdjustMax = 24;
+const quranPageGapAdjustMultiplierStep = 0.025;
 const supportLockClosedOutlineIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" class="quran-support-lock-badge__icon-svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12 1.5a5.25 5.25 0 0 0-5.25 5.25v3a3 3 0 0 0-3 3v6.75a3 3 0 0 0 3 3h10.5a3 3 0 0 0 3-3v-6.75a3 3 0 0 0-3-3v-3c0-2.9-2.35-5.25-5.25-5.25Zm3.75 8.25v-3a3.75 3.75 0 1 0-7.5 0v3h7.5Z" clip-rule="evenodd" /></svg>`;
 const wirdFrequencyModeMonthly = 0;
 const wirdFrequencyModeDaily = 1;
@@ -912,6 +916,7 @@ document.addEventListener('alpine:init', () => {
         isReaderChromeVisible: false,
         isFontScaleOverlayVisible: false,
         quranPageScaleAdjustValue: 0,
+        quranPageGapAdjustValue: 0,
         hasCompletedInitialMushafPreparation: false,
         copiedHighlights: {
             wordKeys: [],
@@ -1130,6 +1135,7 @@ document.addEventListener('alpine:init', () => {
                     : (defaults = {}) => defaults;
             this.applyControlPanelSettings(resolveControlPanelSettings(this.initialSettings));
             this.quranPageScaleAdjustValue = this.readPersistedPageScaleAdjustValue();
+            this.quranPageGapAdjustValue = this.readPersistedPageGapAdjustValue();
             this.syncSupportUnlockState({ persist: false });
             this.buildSurahDirectory(
                 Array.isArray(this.initialPayload.surahDirectory) &&
@@ -12071,6 +12077,14 @@ document.addEventListener('alpine:init', () => {
             return Math.max(quranPageScaleAdjustMin, Math.min(quranPageScaleAdjustMax, candidate));
         },
 
+        normalizePageGapAdjustValue(value, fallback = 0) {
+            const parsedValue = Math.trunc(Number(value));
+            const normalizedFallback = Math.trunc(Number(fallback) || 0);
+            const candidate = Number.isFinite(parsedValue) ? parsedValue : normalizedFallback;
+
+            return Math.max(quranPageGapAdjustMin, Math.min(quranPageGapAdjustMax, candidate));
+        },
+
         readPersistedPageScaleAdjustValue() {
             return this.normalizePageScaleAdjustValue(
                 readLocalStorage(quranPageScaleAdjustStorageKey, 0),
@@ -12085,6 +12099,20 @@ document.addEventListener('alpine:init', () => {
             );
         },
 
+        readPersistedPageGapAdjustValue() {
+            return this.normalizePageGapAdjustValue(
+                readLocalStorage(quranPageGapAdjustStorageKey, 0),
+                0,
+            );
+        },
+
+        persistPageGapAdjustValue(value = this.quranPageGapAdjustValue) {
+            writeLocalStorage(
+                quranPageGapAdjustStorageKey,
+                this.normalizePageGapAdjustValue(value, 0),
+            );
+        },
+
         pageScaleAdjustFactor() {
             return Math.max(
                 0.2,
@@ -12096,6 +12124,21 @@ document.addEventListener('alpine:init', () => {
 
         pageScaleAdjustDisplayValue() {
             const value = this.normalizePageScaleAdjustValue(this.quranPageScaleAdjustValue, 0);
+
+            return value > 0 ? `+${value}` : String(value);
+        },
+
+        pageGapAdjustFactor() {
+            return Math.max(
+                0.2,
+                1 +
+                    this.normalizePageGapAdjustValue(this.quranPageGapAdjustValue, 0) *
+                        quranPageGapAdjustMultiplierStep,
+            );
+        },
+
+        pageGapAdjustDisplayValue() {
+            const value = this.normalizePageGapAdjustValue(this.quranPageGapAdjustValue, 0);
 
             return value > 0 ? `+${value}` : String(value);
         },
@@ -12127,6 +12170,10 @@ document.addEventListener('alpine:init', () => {
             );
 
             scaleElement.style.setProperty('--quran-page-scale', String(effectiveScale));
+            scaleElement.style.setProperty(
+                '--quran-page-gap-adjust-factor',
+                String(this.pageGapAdjustFactor()),
+            );
         },
 
         schedulePageScaleAdjustRefit() {
@@ -12174,6 +12221,24 @@ document.addEventListener('alpine:init', () => {
 
         handlePageScaleAdjustInput(event = null) {
             this.applyPageScaleAdjustValue(event?.target?.value ?? 0, { persist: true });
+        },
+
+        applyPageGapAdjustValue(value, { persist = true, refit = true } = {}) {
+            this.quranPageGapAdjustValue = this.normalizePageGapAdjustValue(value, 0);
+
+            if (persist) {
+                this.persistPageGapAdjustValue(this.quranPageGapAdjustValue);
+            }
+
+            this.setCurrentPageScale(this.pageScale);
+
+            if (refit) {
+                this.schedulePageScaleAdjustRefit();
+            }
+        },
+
+        handlePageGapAdjustInput(event = null) {
+            this.applyPageGapAdjustValue(event?.target?.value ?? 0, { persist: true });
         },
 
         toggleFontScaleOverlay() {
