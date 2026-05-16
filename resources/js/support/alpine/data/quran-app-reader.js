@@ -12592,10 +12592,7 @@ document.addEventListener('alpine:init', () => {
             if (
                 this.isCalibrating ||
                 this._startupCalibrationPending ||
-                !this.hasCompletedInitialMushafPreparation ||
-                this.isLoadingPage ||
-                this.isFittingPage ||
-                this._revealTimer !== null
+                !this.hasCompletedInitialMushafPreparation
             ) {
                 return false;
             }

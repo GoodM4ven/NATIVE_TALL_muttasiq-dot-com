@@ -1065,7 +1065,10 @@
             height: 0.2rem;
             max-width: none;
             flex: 0 0 5.6rem;
-            background: color-mix(in srgb, var(--gray-400) 72%, transparent);
+            background: linear-gradient(90deg,
+                    transparent 0%,
+                    color-mix(in srgb, var(--gray-400) 68%, transparent) 52%,
+                    transparent 100%);
         }
 
         .dark .quran-reader-edge-caption {
@@ -1074,7 +1077,10 @@
 
         .dark .quran-reader-edge-caption::before,
         .dark .quran-reader-edge-caption::after {
-            background: color-mix(in srgb, var(--gray-500) 70%, transparent);
+            background: linear-gradient(90deg,
+                    transparent 0%,
+                    color-mix(in srgb, var(--gray-500) 72%, transparent) 52%,
+                    transparent 100%);
         }
 
         .quran-page-surface {
