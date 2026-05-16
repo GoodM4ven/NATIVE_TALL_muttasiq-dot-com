@@ -4,6 +4,7 @@
     'inactiveGap' => 1.2,
     'activeGap' => 1.6,
     'activeNeighborGap' => 2.4,
+    'stackTopOffset' => null,
 ])
 
 <div
@@ -14,6 +15,7 @@
         inactiveGap: @js($inactiveGap),
         activeGap: @js($activeGap),
         activeNeighborGap: @js($activeNeighborGap),
+        stackTopOffset: @js($stackTopOffset),
         respectingStack: false,
         isQuickStackOpen: false,
         activeIndex: 0,
@@ -413,6 +415,15 @@
         rootClasses() {
             return this.anchorClasses();
         },
+        stackStyle() {
+            const normalizedOffset = String(this.stackTopOffset ?? '').trim();
+    
+            if (normalizedOffset === '') {
+                return '';
+            }
+    
+            return `top: ${normalizedOffset};`;
+        },
         bindClickHandler() {
             this.handleClick = (event) => {
                 if (!this.respectingStack) {
@@ -618,6 +629,7 @@
     <div
         class="relative"
         x-ref="stack"
+        x-bind:style="stackStyle()"
     >
         {{ $slot }}
     </div>

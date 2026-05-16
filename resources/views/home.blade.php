@@ -378,7 +378,9 @@
         @endphp
         <x-buttons-stack
             x-bind:data-respecting-stack="$store.bp.current === 'base'"
+            stack-top-offset="-1.6rem"
             x-show="!({{ $quranReaderViewsCondition }})"
+            x-transition.opacity.duration.220ms.delay.90ms
             @class(['mt-8' => is_platform('ios')])
         >
             <livewire:athkar-manager />
@@ -392,7 +394,13 @@
         </x-buttons-stack>
         <x-buttons-stack
             x-bind:data-respecting-stack="$store.bp.current === 'base'"
-            x-show="{{ $quranReaderViewsCondition }} && !isQuranReaderCalibrating"
+            stack-top-offset="0.4rem"
+            x-show="{{ $quranReaderViewsCondition }} &&
+                !isQuranReaderCalibrating &&
+                document.body.classList.contains('quran-reader-immersive-chrome-visible') &&
+                !document.body.classList.contains('quran-reader-calibrating') &&
+                !document.body.classList.contains('quran-reader-font-scale-overlay-open')"
+            x-transition.opacity.duration.220ms.delay.170ms
             @class(['mt-8' => is_platform('ios')])
         >
             <livewire:athkar-manager />

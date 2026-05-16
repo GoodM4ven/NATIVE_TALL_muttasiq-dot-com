@@ -12,6 +12,8 @@
             westernNumeralChars: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
             arabicIndicNumeralChars: ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'],
             arabicHarakatPattern: /[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED\u08D4-\u08FF]/g,
+            quranCopyHintDesktop: @js(arabic_text('عند التعطيل: الضغط المطوّل لمدة 0.75 ثانية يستهدف الكلمة بدل الآية.')),
+            quranCopyHintMobile: @js(arabic_text('عند التعطيل في الجوال: النقر المزدوج ينسخ الهدف الافتراضي، والنقر المزدوج مع التثبيت في النقرة الثانية يستهدف الهدف العكسي.')),
             sliderNumeralsObserver: null,
             sliderNumeralsSyncTimer: null,
             fieldTextOriginalValues: new WeakMap(),
@@ -250,6 +252,43 @@
             syncControlPanelNumerals() {
                 this.syncControlPanelSliderNumerals();
                 this.syncControlPanelFieldNumerals();
+                this.syncQuranCopyInteractionHint();
+            },
+            syncQuranCopyInteractionHint() {
+                const modalWindow = this.resolveControlPanelModalWindow();
+        
+                if (!(modalWindow instanceof Element)) {
+                    return;
+                }
+        
+                const copyTargetToggle = modalWindow.querySelector(
+                    `input[type='checkbox'][name*='does_quran_target_words_by_default'],input[type='checkbox'][wire\\:model*='does_quran_target_words_by_default']`,
+                );
+        
+                if (!(copyTargetToggle instanceof Element)) {
+                    return;
+                }
+        
+                const fieldWrapper = copyTargetToggle.closest(
+                    '.fi-fo-field-wrp, .fi-field-wrp, [data-field-wrapper]',
+                );
+        
+                if (!(fieldWrapper instanceof Element)) {
+                    return;
+                }
+        
+                const helperElement = fieldWrapper.querySelector(
+                    '.fi-fo-field-wrp-helper-text, .fi-fo-field-wrp-hint',
+                );
+        
+                if (!(helperElement instanceof HTMLElement)) {
+                    return;
+                }
+        
+                const isBaseBreakpoint = Boolean(this.$store?.bp?.is?.('base'));
+                helperElement.textContent = isBaseBreakpoint ?
+                    this.quranCopyHintMobile :
+                    this.quranCopyHintDesktop;
             },
             teardownControlPanelSliderNumeralsObserver() {
                 if (this.sliderNumeralsObserver) {
@@ -393,6 +432,7 @@
         x-on:open-support-unlock-modal.window="openSupportUnlockModal()"
         x-on:athkar-reader-maintenance.window="runReaderMaintenancePulse()"
         x-on:control-panel-updated.window="queueControlPanelSliderNumeralsSync(0)"
+        x-on:resize.window="if (isControlPanelOpen) { queueControlPanelSliderNumeralsSync(0); }"
         x-on:change.window="if (resolveControlPanelModalWindow()?.contains($event.target)) { queueControlPanelSliderNumeralsSync(0); }"
         x-on:input.window="if (resolveControlPanelModalWindow()?.contains($event.target)) { queueControlPanelSliderNumeralsSync(0); }"
         x-on:x-modal-opened.window="if ($event.detail?.id === controlPanelModalId) { isControlPanelOpen = true; setupControlPanelSliderNumeralsObserver(); queueControlPanelSliderNumeralsSync(40); }"

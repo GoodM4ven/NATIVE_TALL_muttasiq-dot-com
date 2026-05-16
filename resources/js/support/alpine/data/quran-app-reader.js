@@ -95,6 +95,8 @@ const wait = async (durationMs) => {
 
 const wordPressHoldDelayMs = 750;
 const wordPressDragThresholdPx = 14;
+const mobileDoubleTapCopyWindowMs = 320;
+const mobileDoubleTapHoldDelayMs = 340;
 const bookmarkHoldDelayMs = 680;
 const surahQuickNavigatorHoldDelayMs = 620;
 const surahQuickNavigatorLastPage = 604;
@@ -1100,6 +1102,8 @@ document.addEventListener('alpine:init', () => {
         _lastPageInputCommitAt: 0,
         _lastPageInputVisualValue: 1,
         _lastWordHoldAt: 0,
+        _lastMobileCopyTapAt: 0,
+        _lastMobileCopyTapWordKey: null,
         _lastWordGapRebalancedPageNumber: 0,
         _wirdStateStorageRawSnapshot: null,
         _wirdDayOffsetStorageRawSnapshot: null,
@@ -1122,6 +1126,7 @@ document.addEventListener('alpine:init', () => {
             startX: 0,
             startY: 0,
             holdTriggered: false,
+            isSecondTap: false,
             word: null,
             target: null,
             dragActive: false,
@@ -12433,22 +12438,50 @@ document.addEventListener('alpine:init', () => {
             return String(this.resolveCurrentBreakpointName() ?? '').trim() === 'base';
         },
 
+        canRevealReaderChrome() {
+            if (!this.shouldUseImmersiveReaderChrome()) {
+                return false;
+            }
+
+            if (
+                this.isCalibrating ||
+                this._startupCalibrationPending ||
+                !this.hasCompletedInitialMushafPreparation ||
+                this.isLoadingPage ||
+                this.isFittingPage ||
+                this._revealTimer !== null
+            ) {
+                return false;
+            }
+
+            if (this.hasBlockingModalLifecycleState({ recoverStaleState: true })) {
+                return false;
+            }
+
+            return this.isCurrentPageVisiblyReady();
+        },
+
         syncReaderChromeDocumentClass({ forceInactive = false } = {}) {
             if (typeof document === 'undefined' || !(document.body instanceof HTMLElement)) {
                 return;
             }
 
             const isActive = !forceInactive && this.shouldUseImmersiveReaderChrome();
+            const canRevealChrome = isActive && this.canRevealReaderChrome();
             const isCalibrating =
                 isActive &&
                 (this.isCalibrating ||
                     this._startupCalibrationPending ||
                     !this.hasCompletedInitialMushafPreparation);
 
+            if (!canRevealChrome && this.isReaderChromeVisible) {
+                this.isReaderChromeVisible = false;
+            }
+
             document.body.classList.toggle('quran-reader-immersive-active', isActive);
             document.body.classList.toggle(
                 'quran-reader-immersive-chrome-visible',
-                isActive && this.isReaderChromeVisible,
+                canRevealChrome && this.isReaderChromeVisible,
             );
             document.body.classList.toggle('quran-reader-calibrating', isCalibrating);
             document.body.classList.toggle(
@@ -12492,6 +12525,13 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            if (!this.canRevealReaderChrome()) {
+                this.isReaderChromeVisible = false;
+                this.syncReaderChromeDocumentClass();
+
+                return;
+            }
+
             this.isReaderChromeVisible = true;
             this.syncReaderChromeDocumentClass();
         },
@@ -12504,6 +12544,13 @@ document.addEventListener('alpine:init', () => {
         toggleReaderChrome() {
             if (!this.shouldUseImmersiveReaderChrome()) {
                 this.hideReaderChrome();
+
+                return;
+            }
+
+            if (!this.canRevealReaderChrome()) {
+                this.isReaderChromeVisible = false;
+                this.syncReaderChromeDocumentClass();
 
                 return;
             }
@@ -13015,6 +13062,10 @@ document.addEventListener('alpine:init', () => {
 
         interactionTargetsWords() {
             return Boolean(this.doesTargetWordsByDefault);
+        },
+
+        usesMobileDoubleTapCopyMode() {
+            return this.shouldUseImmersiveReaderChrome();
         },
 
         activeQuranReaderView() {
@@ -14284,6 +14335,7 @@ document.addEventListener('alpine:init', () => {
             this.wordPress.startX = 0;
             this.wordPress.startY = 0;
             this.wordPress.holdTriggered = false;
+            this.wordPress.isSecondTap = false;
             this.wordPress.word = null;
             this.wordPress.target = null;
             this.wordPress.dragActive = false;
@@ -14316,6 +14368,7 @@ document.addEventListener('alpine:init', () => {
             this.wordPress.startX = point.x;
             this.wordPress.startY = point.y;
             this.wordPress.holdTriggered = false;
+            this.wordPress.isSecondTap = false;
             this.wordPress.word = word;
             this.wordPress.target =
                 event?.currentTarget instanceof Element
@@ -14333,6 +14386,41 @@ document.addEventListener('alpine:init', () => {
                 y: point.y,
                 target: this.wordPress.target,
             });
+            const useMobileDoubleTapCopyMode = this.usesMobileDoubleTapCopyMode();
+            const wordSelectionKey = this.wordSelectionKeyFromMeta(
+                this.normalizeSelectableWordMeta(word),
+            );
+
+            if (useMobileDoubleTapCopyMode) {
+                const now = Date.now();
+                const isSecondTap =
+                    typeof wordSelectionKey === 'string' &&
+                    wordSelectionKey !== '' &&
+                    this._lastMobileCopyTapWordKey === wordSelectionKey &&
+                    now - this._lastMobileCopyTapAt <= mobileDoubleTapCopyWindowMs;
+
+                this.wordPress.isSecondTap = isSecondTap;
+
+                if (isSecondTap) {
+                    this._wordPressHoldTimer = window.setTimeout(() => {
+                        if (!this.wordPress.active || !this.wordPress.word) {
+                            return;
+                        }
+
+                        this.wordPress.holdTriggered = true;
+                        this.setWordClickSuppression(true);
+                        this._lastWordHoldAt = Date.now();
+                        this.selectHoldSegment(this.wordPress.word, {
+                            x: this.wordPress.startX,
+                            y: this.wordPress.startY,
+                            target: this.wordPress.target,
+                        });
+                    }, mobileDoubleTapHoldDelayMs);
+                }
+
+                return;
+            }
+
             this._wordPressHoldTimer = window.setTimeout(() => {
                 if (!this.wordPress.active || !this.wordPress.word) {
                     return;
@@ -14461,10 +14549,48 @@ document.addEventListener('alpine:init', () => {
                 this.setWordClickSuppression(shouldSuppressNextWordClick);
             }
 
+            if (!this.wordPress.dragActive && this.usesMobileDoubleTapCopyMode()) {
+                const currentWord = this.wordPress.word;
+                const wordSelectionKey =
+                    currentWord === null
+                        ? null
+                        : this.wordSelectionKeyFromMeta(
+                              this.normalizeSelectableWordMeta(currentWord),
+                          );
+
+                if (
+                    this.wordPress.isSecondTap &&
+                    !this.wordPress.holdTriggered &&
+                    this.wordPress.word
+                ) {
+                    this.selectDefaultSegment(
+                        this.wordPress.word,
+                        this.activationAnchorFromEvent(event) ?? {
+                            x: this.wordPress.startX,
+                            y: this.wordPress.startY,
+                            target: this.wordPress.target,
+                        },
+                    );
+                    this.setWordClickSuppression(true, { durationMs: 520 });
+                    this._lastMobileCopyTapAt = 0;
+                    this._lastMobileCopyTapWordKey = null;
+                } else if (
+                    !this.wordPress.isSecondTap &&
+                    typeof wordSelectionKey === 'string' &&
+                    wordSelectionKey !== ''
+                ) {
+                    this._lastMobileCopyTapAt = Date.now();
+                    this._lastMobileCopyTapWordKey = wordSelectionKey;
+                    this.setWordClickSuppression(true, { durationMs: 360 });
+                }
+            }
+
             if (this.wordPress.holdTriggered) {
                 this.setWordClickSuppression(true, {
                     durationMs: 520,
                 });
+                this._lastMobileCopyTapAt = 0;
+                this._lastMobileCopyTapWordKey = null;
             }
 
             this.clearWordPressState();
@@ -14479,6 +14605,13 @@ document.addEventListener('alpine:init', () => {
         },
 
         onWordClick(event, word) {
+            if (this.usesMobileDoubleTapCopyMode()) {
+                event?.preventDefault?.();
+                event?.stopPropagation?.();
+
+                return;
+            }
+
             if (this._suppressNextWordClick) {
                 event?.preventDefault?.();
                 this.setWordClickSuppression(false);
