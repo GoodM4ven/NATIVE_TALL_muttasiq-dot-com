@@ -10,6 +10,7 @@
             isControlPanelOpen: false,
             isAthkarManagerOpen: false,
             isQuranReaderCalibrating: false,
+            isQuranReaderFontScaleOverlayOpen: false,
             isNativeRuntime: @js(is_platform('native')),
             activeView: $persist('main-menu').as('app-active-view'),
             actionStatePulseToken: 0,
@@ -365,6 +366,7 @@
         x-on:quran-bootstrap-failed.window="handleQuranBootstrapFailed($event.detail ?? {})"
         x-on:quran-reader-calibration-started.window="isQuranReaderCalibrating = true"
         x-on:quran-reader-calibration-finished.window="isQuranReaderCalibrating = false"
+        x-on:quran-reader-font-scale-overlay-visibility.window="isQuranReaderFontScaleOverlayOpen = Boolean($event.detail?.open)"
     >
         @php
             $quranReaderViewsCondition =
@@ -387,7 +389,7 @@
         @endphp
         <x-buttons-stack
             x-bind:data-respecting-stack="$store.bp.current === 'base'"
-            stack-top-offset="-1.6rem"
+            stack-top-offset="0.4rem"
             x-show="!({{ $quranReaderViewsCondition }})"
             x-transition.opacity.duration.220ms.delay.90ms
             @class(['mt-8' => is_platform('ios')])
@@ -408,7 +410,7 @@
                 !isQuranReaderCalibrating &&
                 document.body.classList.contains('quran-reader-immersive-chrome-visible') &&
                 !document.body.classList.contains('quran-reader-calibrating') &&
-                !document.body.classList.contains('quran-reader-font-scale-overlay-open')"
+                !isQuranReaderFontScaleOverlayOpen"
             x-transition.opacity.duration.220ms.delay.170ms
             @class(['mt-8' => is_platform('ios')])
         >

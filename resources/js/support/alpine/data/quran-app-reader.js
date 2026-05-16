@@ -12466,7 +12466,10 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            const isActive = !forceInactive && this.shouldUseImmersiveReaderChrome();
+            const isActive =
+                !forceInactive &&
+                this.shouldUseImmersiveReaderChrome() &&
+                this.isAnyQuranReaderViewOpen();
             const canRevealChrome = isActive && this.canRevealReaderChrome();
             const isCalibrating =
                 isActive &&
@@ -12488,6 +12491,14 @@ document.addEventListener('alpine:init', () => {
                 'quran-reader-font-scale-overlay-open',
                 isActive && this.isFontScaleOverlayVisible,
             );
+
+            window.dispatchEvent(
+                new CustomEvent('quran-reader-font-scale-overlay-visibility', {
+                    detail: {
+                        open: isActive && this.isFontScaleOverlayVisible,
+                    },
+                }),
+            );
         },
 
         isReaderChromeToggleTarget(event = null) {
@@ -12499,6 +12510,10 @@ document.addEventListener('alpine:init', () => {
 
             if (!(target instanceof Element)) {
                 return false;
+            }
+
+            if (target.closest('[data-quran-word-button], [data-quran-line-text]')) {
+                return true;
             }
 
             return !target.closest(
@@ -14605,7 +14620,6 @@ document.addEventListener('alpine:init', () => {
         onWordClick(event, word) {
             if (this.usesMobileDoubleTapCopyMode()) {
                 event?.preventDefault?.();
-                event?.stopPropagation?.();
 
                 return;
             }
