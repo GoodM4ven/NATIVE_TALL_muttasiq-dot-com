@@ -1048,6 +1048,35 @@
             box-shadow: var(--quran-panel-shadow);
         }
 
+        .quran-reader-edge-caption {
+            margin: 0;
+            max-width: min(80vw, 15.5rem);
+            gap: 0.72rem;
+            padding: 0.04rem 0 0.08rem;
+            font-size: 0.62rem;
+            line-height: 1.12;
+            font-weight: 700;
+            color: color-mix(in srgb, var(--gray-700) 88%, var(--quran-panel-text));
+        }
+
+        .quran-reader-edge-caption::before,
+        .quran-reader-edge-caption::after {
+            width: 5.6rem;
+            height: 0.2rem;
+            max-width: none;
+            flex: 0 0 5.6rem;
+            background: color-mix(in srgb, var(--gray-400) 72%, transparent);
+        }
+
+        .dark .quran-reader-edge-caption {
+            color: color-mix(in srgb, var(--gray-300) 90%, var(--quran-panel-text));
+        }
+
+        .dark .quran-reader-edge-caption::before,
+        .dark .quran-reader-edge-caption::after {
+            background: color-mix(in srgb, var(--gray-500) 70%, transparent);
+        }
+
         .quran-page-surface {
             /* background: var(--quran-page-surface); */
             border-color: var(--quran-page-border);
@@ -3105,10 +3134,10 @@
                 >
                 </div>
                 <div
-                    class="z-54 pointer-events-none absolute inset-x-0 top-[0.44rem] flex justify-center px-3 sm:hidden"
+                    class="z-54 pointer-events-none absolute inset-x-0 top-2 flex justify-center px-3 sm:hidden"
                     x-cloak
                     x-show="shouldShowImmersiveMobileEdgeCaptions()"
-                    x-transition:enter="transition-opacity ease-out duration-280"
+                    x-transition:enter="transition-opacity ease-out duration-280 delay-1000"
                     x-transition:enter-start="opacity-0"
                     x-transition:enter-end="opacity-100"
                     x-transition:leave="transition-opacity ease-in duration-110"
@@ -3116,16 +3145,16 @@
                     x-transition:leave-end="opacity-0"
                 >
                     <p
-                        class="quran-surah-grid-caption !m-0 !max-w-[min(80vw,15.5rem)] !gap-2 !p-0 !text-[0.62rem] !font-semibold !leading-[1.12]"
+                        class="quran-surah-grid-caption quran-reader-edge-caption"
                         dir="rtl"
-                        x-text="currentSurahTriggerLabel()"
+                        x-text="mobileReaderSurahCaption()"
                     ></p>
                 </div>
                 <div
-                    class="z-54 pointer-events-none absolute inset-x-0 bottom-[0.4rem] flex justify-center px-3 sm:hidden"
+                    class="z-54 pointer-events-none absolute inset-x-0 bottom-[0.6rem] flex justify-center px-3 sm:hidden"
                     x-cloak
                     x-show="shouldShowImmersiveMobileEdgeCaptions()"
-                    x-transition:enter="transition-opacity ease-out duration-280"
+                    x-transition:enter="transition-opacity ease-out duration-280 delay-1000"
                     x-transition:enter-start="opacity-0"
                     x-transition:enter-end="opacity-100"
                     x-transition:leave="transition-opacity ease-in duration-110"
@@ -3133,7 +3162,7 @@
                     x-transition:leave-end="opacity-0"
                 >
                     <p
-                        class="quran-surah-grid-caption !m-0 !max-w-[min(75vw,14rem)] !gap-2 !p-0 !text-[0.62rem] !font-semibold !leading-[1.12]"
+                        class="quran-surah-grid-caption quran-reader-edge-caption"
                         dir="rtl"
                         x-text="mobileReaderPageCaption()"
                     ></p>

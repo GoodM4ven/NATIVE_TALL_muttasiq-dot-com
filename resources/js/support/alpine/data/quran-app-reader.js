@@ -12603,8 +12603,21 @@ document.addEventListener('alpine:init', () => {
             return this.isCurrentPageVisiblyReady();
         },
 
+        mobileReaderSurahCaption() {
+            const name = this.surahNameOnly(this.currentSurahNumber());
+
+            if (name !== '') {
+                return name;
+            }
+
+            return this.resolveCurrentSurahTriggerLabel()
+                .replace(/^\(\s*\d+\s*\)\s*-\s*/u, '')
+                .replace(/^\(\s*\d+\s*\)\s*/u, '')
+                .trim();
+        },
+
         mobileReaderPageCaption() {
-            return `صفحة ${this.formatReaderNumber(this.currentMushafPageDisplayValue())}`;
+            return this.formatReaderNumber(this.currentMushafPageDisplayValue());
         },
 
         canRevealReaderChrome() {
