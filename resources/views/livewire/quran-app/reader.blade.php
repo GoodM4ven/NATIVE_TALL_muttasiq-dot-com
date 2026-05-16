@@ -3015,7 +3015,7 @@
         jumpPageModalId: @js('quran-reader-jump-page-modal'),
         historyModalId: @js('quran-reader-history-modal'),
         bookmarksModalId: @js('quran-reader-bookmarks-modal'),
-        settings: @js($quranReaderSettings ?? ['enableVisualEnhancements' => false, 'targetWordsByDefault' => false, 'preserveHarakatOnCopy' => true, 'appendSurahAffixOnMultiCopy' => true, 'appendSurahAffixAlwaysOnCopy' => false, 'useVolumeButtonsNavigation' => false, 'useWesternNumerals' => true, 'wirdFrequencyMode' => 0, 'wirdKhatmatTarget' => 1]),
+        settings: @js($quranReaderSettings ?? ['enableVisualEnhancements' => false, 'targetWordsByDefault' => false, 'preserveHarakatOnCopy' => true, 'appendSurahAffixOnMultiCopy' => true, 'appendSurahAffixAlwaysOnCopy' => false, 'showImmersiveMobileEdgeCaptions' => true, 'useVolumeButtonsNavigation' => false, 'useWesternNumerals' => true, 'wirdFrequencyMode' => 0, 'wirdKhatmatTarget' => 1]),
     })"
     x-effect="syncReaderChromeDocumentClass()"
 >
@@ -3103,6 +3103,40 @@
                     }"
                     x-bind:aria-hidden="isCalibrating ? 'false' : 'true'"
                 >
+                </div>
+                <div
+                    class="z-54 pointer-events-none absolute inset-x-0 top-[0.44rem] flex justify-center px-3 sm:hidden"
+                    x-cloak
+                    x-show="shouldShowImmersiveMobileEdgeCaptions()"
+                    x-transition:enter="transition-opacity ease-out duration-280"
+                    x-transition:enter-start="opacity-0"
+                    x-transition:enter-end="opacity-100"
+                    x-transition:leave="transition-opacity ease-in duration-110"
+                    x-transition:leave-start="opacity-100"
+                    x-transition:leave-end="opacity-0"
+                >
+                    <p
+                        class="quran-surah-grid-caption !m-0 !max-w-[min(80vw,15.5rem)] !gap-2 !p-0 !text-[0.62rem] !font-semibold !leading-[1.12]"
+                        dir="rtl"
+                        x-text="currentSurahTriggerLabel()"
+                    ></p>
+                </div>
+                <div
+                    class="z-54 pointer-events-none absolute inset-x-0 bottom-[0.4rem] flex justify-center px-3 sm:hidden"
+                    x-cloak
+                    x-show="shouldShowImmersiveMobileEdgeCaptions()"
+                    x-transition:enter="transition-opacity ease-out duration-280"
+                    x-transition:enter-start="opacity-0"
+                    x-transition:enter-end="opacity-100"
+                    x-transition:leave="transition-opacity ease-in duration-110"
+                    x-transition:leave-start="opacity-100"
+                    x-transition:leave-end="opacity-0"
+                >
+                    <p
+                        class="quran-surah-grid-caption !m-0 !max-w-[min(75vw,14rem)] !gap-2 !p-0 !text-[0.62rem] !font-semibold !leading-[1.12]"
+                        dir="rtl"
+                        x-text="mobileReaderPageCaption()"
+                    ></p>
                 </div>
                 <template x-teleport="body">
                     <div
@@ -3783,7 +3817,7 @@
                                 x-on:click="applyPageScaleAdjustValue(0); commitPageLayoutAdjustments()"
                             ></button>
                             <input
-                                class="quran-page-slider h-[0.56rem] w-[min(70vw,15rem)] min-w-42 outline-none"
+                                class="quran-page-slider min-w-42 h-[0.56rem] w-[min(70vw,15rem)] outline-none"
                                 type="range"
                                 aria-label="{{ arabic_text('التحكم في حجم خط المصحف') }}"
                                 min="-100"
@@ -3800,7 +3834,7 @@
                                 x-on:click="applyPageGapAdjustValue(0); commitPageLayoutAdjustments()"
                             ></button>
                             <input
-                                class="quran-page-slider h-[0.56rem] w-[min(70vw,15rem)] min-w-42 outline-none"
+                                class="quran-page-slider min-w-42 h-[0.56rem] w-[min(70vw,15rem)] outline-none"
                                 type="range"
                                 aria-label="{{ arabic_text('التحكم في تباعد أسطر المصحف') }}"
                                 min="-100"
@@ -3817,7 +3851,7 @@
                                 x-on:click="applyPageYOffsetAdjustValue(0); commitPageLayoutAdjustments()"
                             ></button>
                             <input
-                                class="quran-page-slider h-[0.56rem] w-[min(70vw,15rem)] min-w-42 outline-none"
+                                class="quran-page-slider min-w-42 h-[0.56rem] w-[min(70vw,15rem)] outline-none"
                                 type="range"
                                 aria-label="{{ arabic_text('التحكم في إزاحة الصفحة عموديًا') }}"
                                 min="-100"

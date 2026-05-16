@@ -141,6 +141,13 @@ trait HasControlPanelSettingsTab
                                 Text::make((string) ($quranDefinitions[Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ALWAYS_ON_COPY]['help'] ?? ''))->size(TextSize::ExtraSmall),
                             ]),
 
+                        Components\Checkbox::make(Setting::DOES_QURAN_SHOW_IMMERSIVE_MOBILE_EDGE_CAPTIONS)
+                            ->default((bool) ($quranDefinitions[Setting::DOES_QURAN_SHOW_IMMERSIVE_MOBILE_EDGE_CAPTIONS]['default'] ?? true))
+                            ->label($quranDefinitions[Setting::DOES_QURAN_SHOW_IMMERSIVE_MOBILE_EDGE_CAPTIONS]['label'])
+                            ->belowContent([
+                                Text::make((string) ($quranDefinitions[Setting::DOES_QURAN_SHOW_IMMERSIVE_MOBILE_EDGE_CAPTIONS]['help'] ?? ''))->size(TextSize::ExtraSmall),
+                            ]),
+
                         FusedGroup::make([
                             Components\Radio::make(Setting::QURAN_WIRD_FREQUENCY_MODE)
                                 ->default((int) ($quranDefinitions[Setting::QURAN_WIRD_FREQUENCY_MODE]['default'] ?? Setting::QURAN_WIRD_FREQUENCY_MONTHLY))

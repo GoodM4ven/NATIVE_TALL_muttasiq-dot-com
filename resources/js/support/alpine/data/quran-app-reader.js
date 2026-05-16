@@ -26,6 +26,7 @@ const controlPanelSettingKeys = Object.freeze({
     preserveHarakatOnCopy: 'does_quran_preserve_harakat_on_copy',
     appendSurahAffixOnMultiCopy: 'does_quran_append_surah_affix_on_multi_copy',
     appendSurahAffixAlwaysOnCopy: 'does_quran_append_surah_affix_always_on_copy',
+    showImmersiveMobileEdgeCaptions: 'does_quran_show_immersive_mobile_edge_captions',
     useVolumeButtonsNavigation: 'does_quran_use_volume_buttons_navigation',
     useWesternNumerals: 'does_use_western_numerals',
     wirdFrequencyMode: 'quran_wird_frequency_mode',
@@ -833,6 +834,7 @@ document.addEventListener('alpine:init', () => {
         doesPreserveHarakatOnCopy: true,
         doesAppendSurahAffixOnMultiCopy: true,
         doesAppendSurahAffixAlwaysOnCopy: false,
+        doesShowImmersiveMobileEdgeCaptions: true,
         doesUseVolumeButtonsNavigation: true,
         doesUseWesternNumerals: true,
         wirdFrequencyMode: wirdFrequencyModeMonthly,
@@ -12566,6 +12568,45 @@ document.addEventListener('alpine:init', () => {
             return String(this.resolveCurrentBreakpointName() ?? '').trim() === 'base';
         },
 
+        shouldShowImmersiveMobileEdgeCaptions() {
+            if (!this.shouldUseImmersiveReaderChrome()) {
+                return false;
+            }
+
+            if (!this.doesShowImmersiveMobileEdgeCaptions) {
+                return false;
+            }
+
+            if (!this.isAnyQuranReaderViewOpen()) {
+                return false;
+            }
+
+            if (
+                this.isReaderChromeVisible ||
+                this.wirdModeActive ||
+                this.isFontScaleOverlayVisible
+            ) {
+                return false;
+            }
+
+            if (
+                this.isCalibrating ||
+                this._startupCalibrationPending ||
+                !this.hasCompletedInitialMushafPreparation ||
+                this.isLoadingPage ||
+                this.isFittingPage ||
+                this._revealTimer !== null
+            ) {
+                return false;
+            }
+
+            return this.isCurrentPageVisiblyReady();
+        },
+
+        mobileReaderPageCaption() {
+            return `صفحة ${this.formatReaderNumber(this.currentMushafPageDisplayValue())}`;
+        },
+
         canRevealReaderChrome() {
             if (!this.shouldUseImmersiveReaderChrome()) {
                 return false;
@@ -13072,6 +13113,10 @@ document.addEventListener('alpine:init', () => {
                 input,
                 controlPanelSettingKeys.appendSurahAffixAlwaysOnCopy,
             );
+            const hasShowImmersiveMobileEdgeCaptions = Object.prototype.hasOwnProperty.call(
+                input,
+                controlPanelSettingKeys.showImmersiveMobileEdgeCaptions,
+            );
             const hasUseVolumeButtonsNavigation = Object.prototype.hasOwnProperty.call(
                 input,
                 controlPanelSettingKeys.useVolumeButtonsNavigation,
@@ -13107,6 +13152,10 @@ document.addEventListener('alpine:init', () => {
             const defaultAppendSurahAffixAlwaysOnCopy = this.normalizeBooleanFlag(
                 this.initialSettings?.appendSurahAffixAlwaysOnCopy,
                 false,
+            );
+            const defaultShowImmersiveMobileEdgeCaptions = this.normalizeBooleanFlag(
+                this.initialSettings?.showImmersiveMobileEdgeCaptions,
+                true,
             );
             const defaultUseVolumeButtonsNavigation = this.normalizeBooleanFlag(
                 this.initialSettings?.useVolumeButtonsNavigation,
@@ -13166,6 +13215,12 @@ document.addEventListener('alpine:init', () => {
                     ? input[controlPanelSettingKeys.appendSurahAffixAlwaysOnCopy]
                     : defaultAppendSurahAffixAlwaysOnCopy,
                 false,
+            );
+            this.doesShowImmersiveMobileEdgeCaptions = this.normalizeBooleanFlag(
+                hasShowImmersiveMobileEdgeCaptions
+                    ? input[controlPanelSettingKeys.showImmersiveMobileEdgeCaptions]
+                    : defaultShowImmersiveMobileEdgeCaptions,
+                true,
             );
             this.doesUseVolumeButtonsNavigation = this.normalizeBooleanFlag(
                 hasUseVolumeButtonsNavigation

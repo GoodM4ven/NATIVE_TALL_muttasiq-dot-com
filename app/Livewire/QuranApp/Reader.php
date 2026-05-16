@@ -389,7 +389,7 @@ class Reader extends Component implements HasActions, HasSchemas
     {
         return Action::make('searchQuran')
             ->modalHeading(arabic_text('البحث الشامل للقرآن الكريم'))
-            ->modalDescription(arabic_text('ابحث عن الآيات وانتقل مباشرة، إلى السورة أو الموضع المقصود...'))
+            ->modalDescription(arabic_text('ابحث عن الآيات أو سورها بكفاءة لغويّة وانتقل إليها مباشرة بإذن الله...'))
             ->modalAutofocus(false)
             ->modalWidth(Width::FiveExtraLarge)
             ->modalSubmitAction(false)
@@ -401,7 +401,7 @@ class Reader extends Component implements HasActions, HasSchemas
                 TextInput::make('search')
                     ->hiddenLabel()
                     ->type('search')
-                    ->placeholder(arabic_text('يا بنيّ أقم الصلاة، وأمر بالمعروف، وانه عن المنكر...'))
+                    ->placeholder(arabic_text('اسم سورة أو جزء من آية...'))
                     ->extraFieldWrapperAttributes([
                         'class' => 'quran-search-field-wrapper',
                     ])
@@ -583,6 +583,7 @@ class Reader extends Component implements HasActions, HasSchemas
             'preserveHarakatOnCopy' => (bool) ($normalizedSettings[Setting::DOES_QURAN_PRESERVE_HARAKAT_ON_COPY] ?? true),
             'appendSurahAffixOnMultiCopy' => (bool) ($normalizedSettings[Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ON_MULTI_COPY] ?? true),
             'appendSurahAffixAlwaysOnCopy' => (bool) ($normalizedSettings[Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ALWAYS_ON_COPY] ?? false),
+            'showImmersiveMobileEdgeCaptions' => (bool) ($normalizedSettings[Setting::DOES_QURAN_SHOW_IMMERSIVE_MOBILE_EDGE_CAPTIONS] ?? true),
             'useVolumeButtonsNavigation' => (bool) ($normalizedSettings[Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION] ?? false),
             'useWesternNumerals' => (bool) ($normalizedSettings[Setting::DOES_USE_WESTERN_NUMERALS] ?? true),
             'wirdFrequencyMode' => (int) ($normalizedSettings[Setting::QURAN_WIRD_FREQUENCY_MODE] ?? Setting::QURAN_WIRD_FREQUENCY_MONTHLY),

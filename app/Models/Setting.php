@@ -39,6 +39,8 @@ class Setting extends Model
 
     public const DOES_QURAN_APPEND_SURAH_AFFIX_ALWAYS_ON_COPY = 'does_quran_append_surah_affix_always_on_copy';
 
+    public const DOES_QURAN_SHOW_IMMERSIVE_MOBILE_EDGE_CAPTIONS = 'does_quran_show_immersive_mobile_edge_captions';
+
     public const DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION = 'does_quran_use_volume_buttons_navigation';
 
     public const QURAN_WIRD_FREQUENCY_MODE = 'quran_wird_frequency_mode';
@@ -164,9 +166,16 @@ class Setting extends Model
                 'group' => self::GROUP_QURAN,
                 'type' => 'boolean',
             ],
+            self::DOES_QURAN_SHOW_IMMERSIVE_MOBILE_EDGE_CAPTIONS => [
+                'default' => true,
+                'label' => '5. إظهار اسم السورة ورقم الصفحة عند أطراف القارئ في وضع الجوال فقط.',
+                'help' => 'يظهر هذا العرض فقط في تطبيقات الجوال والشاشات الصغيرة (base).',
+                'group' => self::GROUP_QURAN,
+                'type' => 'boolean',
+            ],
             self::QURAN_WIRD_FREQUENCY_MODE => [
                 'default' => self::QURAN_WIRD_FREQUENCY_MONTHLY,
-                'label' => '5. إعداد الوِرد اليومي: ختمات موزعة على الشهر أو هدف يومي مباشر.',
+                'label' => '6. إعداد الوِرد اليومي: ختمات موزعة على الشهر أو هدف يومي مباشر.',
                 'group' => self::GROUP_QURAN,
                 'type' => 'integer',
                 'min' => self::QURAN_WIRD_FREQUENCY_MONTHLY,
@@ -183,7 +192,7 @@ class Setting extends Model
             ],
             self::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION => [
                 'default' => false,
-                'label' => '6. استخدام أزرار رفع وخفض الصوت للتنقل بين الأذكار أو صفحات القرآن.',
+                'label' => '7. استخدام أزرار رفع وخفض الصوت للتنقل بين الأذكار أو صفحات القرآن.',
                 'help' => 'زر رفع الصوت يعود للسابق، وزر خفض الصوت ينتقل للتالي.',
                 'group' => self::GROUP_QURAN,
                 'type' => 'boolean',

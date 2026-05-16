@@ -48,7 +48,7 @@
         >
             <template
                 x-for="(result, resultIndex) in search.results"
-                :key="result.__key ||
+                x-bind:key="result.__key ||
                     `quran-search-modal-${result.id || [result.surah_number, result.ayah_number, result.page_number, result.match_rank].join('-')}`"
             >
                 <button
@@ -82,7 +82,7 @@
     </div>
 
     <div class="quran-surah-grid-shell">
-        <p class="quran-surah-grid-caption">{{ arabic_text('الانتقال المباشر إلى السور') }}</p>
+        <p class="quran-surah-grid-caption">{{ arabic_text('فهرس السُّوَر') }}</p>
         <div
             class="quran-surah-grid"
             data-quran-surah-grid
@@ -91,7 +91,7 @@
         >
             <template
                 x-for="entry in search.surahDirectory"
-                :key="`quran-surah-tile-${entry.surah_number}`"
+                x-bind:key="`quran-surah-tile-${entry.surah_number}`"
             >
                 <button
                     class="quran-surah-tile"

@@ -139,7 +139,7 @@
     }
 
     @media (max-width: 639px) {
-        .fi-modal:not(.fi-modal-slide-over):not(.fi-width-screen)>.fi-modal-window-ctn {
+        .fi-modal:not(.fi-modal-slide-over):not(.fi-width-screen) > .fi-modal-window-ctn {
             padding: 0.6em;
         }
 

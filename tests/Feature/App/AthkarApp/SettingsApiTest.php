@@ -34,6 +34,7 @@ it('returns normalized settings payload with limits/version and migrates legacy 
         ->toHaveKey(Setting::DOES_PRESERVE_HARAKAT_IN_DISPLAY, true)
         ->toHaveKey(Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ON_MULTI_COPY, true)
         ->toHaveKey(Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ALWAYS_ON_COPY, false)
+        ->toHaveKey(Setting::DOES_QURAN_SHOW_IMMERSIVE_MOBILE_EDGE_CAPTIONS, true)
         ->toHaveKey(Setting::MINIMUM_MAIN_TEXT_SIZE)
         ->toHaveKey(Setting::MAXIMUM_MAIN_TEXT_SIZE);
 

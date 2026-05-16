@@ -20,7 +20,8 @@ it('composes and executes the control panel lifecycle without persisting runtime
     expect(Setting::definitionsForGroup(Setting::GROUP_QURAN))
         ->toHaveKey(Setting::DOES_QURAN_TARGET_WORDS_BY_DEFAULT)
         ->toHaveKey(Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ON_MULTI_COPY)
-        ->toHaveKey(Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ALWAYS_ON_COPY);
+        ->toHaveKey(Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ALWAYS_ON_COPY)
+        ->toHaveKey(Setting::DOES_QURAN_SHOW_IMMERSIVE_MOBILE_EDGE_CAPTIONS);
 
     Setting::query()->firstOrCreate(
         ['name' => Setting::DOES_SKIP_GUIDANCE_PANELS],
