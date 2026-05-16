@@ -95,6 +95,50 @@
             transform: translateY(var(--quran-page-y-offset, 0rem));
         }
 
+        .quran-font-scale-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 70;
+            display: grid;
+            place-items: center;
+            padding: 1rem;
+        }
+
+        .quran-font-scale-overlay__backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgb(255 255 255 / 0.2);
+        }
+
+        .quran-font-scale-overlay__panel {
+            position: relative;
+            display: grid;
+            width: min(92vw, 24rem);
+            gap: 0.9rem;
+            border-radius: 1.05rem;
+            border: 1px solid rgb(255 255 255 / 0.82);
+            padding: 0.9rem 0.85rem 0.8rem;
+            background: color-mix(in srgb, var(--background) 52%, transparent);
+            box-shadow: 0 0.85rem 2rem rgb(7 47 58 / 0.18);
+            justify-items: center;
+        }
+
+        .quran-font-scale-overlay__title {
+            border: 1px solid color-mix(in srgb, var(--primary-300) 62%, transparent);
+            border-radius: 9999px;
+            background: color-mix(in srgb, white 88%, transparent);
+            color: color-mix(in srgb, var(--primary-900) 84%, var(--gray-900));
+            font-weight: 700;
+            line-height: 1.2;
+            font-size: 0.88rem;
+            padding: 0.44rem 0.9rem;
+        }
+
+        .quran-font-scale-overlay__value {
+            min-width: 3.3rem;
+            text-align: center;
+        }
+
         /* baseShared */
         @media (min-width: 320px) and (max-width: 639px) {
             main:has(.within-quran-app) {
@@ -3679,6 +3723,46 @@
                         >›</span>
                     </button>
                 </footer>
+
+                <template x-teleport="body">
+                    <div
+                        class="quran-font-scale-overlay"
+                        data-no-swipe
+                        data-quran-reader-chrome
+                        x-cloak
+                        x-show="isFontScaleOverlayVisible"
+                        x-transition.opacity.duration.180ms
+                    >
+                        <div
+                            class="quran-font-scale-overlay__backdrop"
+                            x-on:click="closeFontScaleOverlay()"
+                        ></div>
+                        <section
+                            class="quran-font-scale-overlay__panel"
+                            x-on:click.stop
+                        >
+                            <p class="quran-font-scale-overlay__title font-arabic-sans">
+                                {{ arabic_text('تحكم في حجم خط المصحف') }}
+                            </p>
+                            <button
+                                class="quran-page-slider-chip quran-font-scale-overlay__value select-none rounded-full px-[0.5rem] py-[0.18rem] text-[0.72rem] font-semibold"
+                                type="button"
+                                x-text="pageScaleAdjustDisplayValue()"
+                                x-on:click="applyPageScaleAdjustValue(0)"
+                            ></button>
+                            <input
+                                class="quran-page-slider h-[0.56rem] w-[min(70vw,15rem)] min-w-[10.5rem] outline-none"
+                                type="range"
+                                aria-label="{{ arabic_text('التحكم في حجم خط المصحف') }}"
+                                min="-24"
+                                max="24"
+                                step="1"
+                                x-bind:value="quranPageScaleAdjustValue"
+                                x-on:input="handlePageScaleAdjustInput($event)"
+                            />
+                        </section>
+                    </div>
+                </template>
 
                 <template x-teleport="body">
                     <div

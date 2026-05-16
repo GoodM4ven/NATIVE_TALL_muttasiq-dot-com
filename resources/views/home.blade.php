@@ -380,6 +380,7 @@
             <x-partials.home-button :jsShowCondition="$homeButtonShowCondition" />
             <livewire:color-scheme-switcher />
             <livewire:control-panel />
+            <x-quran-reader-font-scale-button />
         </x-buttons-stack>
 
         <x-partials.colorful-background />
