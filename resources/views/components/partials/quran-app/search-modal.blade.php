@@ -24,14 +24,7 @@
         <div
             class="quran-search-feedback mt-2"
             x-cloak
-            x-show="normalizeSearchQuery(search.query).length >= search.minQueryLength && search.isLoading && search.results.length === 0"
-            x-transition.opacity.duration.220ms
-        >{{ arabic_text('جاري البحث...') }}</div>
-
-        <div
-            class="quran-search-feedback mt-2"
-            x-cloak
-            x-show="normalizeSearchQuery(search.query).length >= search.minQueryLength && !search.isLoading && search.results.length === 0"
+            x-show="normalizeSearchQuery(search.query).length >= search.minQueryLength && !search.isLoading && search.results.length === 0 && search.lastCompletedNormalizedQuery === normalizeSearchQuery(search.query)"
             x-transition.opacity.duration.220ms
         >
             {{ arabic_text('لا توجد نتائج مطابقة.') }}
@@ -78,6 +71,18 @@
                     ></span>
                 </button>
             </template>
+        </div>
+
+        <div
+            class="quran-search-feedback mt-2 flex items-center justify-center"
+            x-cloak
+            x-show="normalizeSearchQuery(search.query).length >= search.minQueryLength && search.isLoading"
+            x-transition.opacity.duration.220ms
+        >
+            <span
+                class="inline-block h-5 w-5 animate-spin rounded-full border-2 border-amber-300/80 border-t-transparent"
+                aria-hidden="true"
+            ></span>
         </div>
     </div>
 

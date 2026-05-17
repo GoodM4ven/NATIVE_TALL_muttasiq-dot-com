@@ -900,6 +900,7 @@ document.addEventListener('alpine:init', () => {
             streamHasUpdates: false,
             isReady: false,
             localIndexReady: false,
+            lastCompletedNormalizedQuery: '',
             isOpen: false,
             modalOpen: false,
             readyResult: null,
@@ -16629,6 +16630,24 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        prepareSearchUiForNextQuery(normalizedQuery = '') {
+            const normalized = String(normalizedQuery ?? '').trim();
+
+            if (normalized === '' || normalized.length < this.search.minQueryLength) {
+                return;
+            }
+
+            if (this._searchRequestInFlight) {
+                this._searchRequestSerial += 1;
+                this.clearSearchStreamTarget();
+            }
+
+            this.search.lastCompletedNormalizedQuery = '';
+            this.search.isLoading = true;
+            this.search.streamHasUpdates = false;
+            this.setSearchResults([], { immediate: true });
+        },
+
         queueSearchResultsUpdate(delayMs = null) {
             const fallbackDelayMs = Math.max(
                 120,
@@ -16640,6 +16659,7 @@ document.addEventListener('alpine:init', () => {
                     : Math.max(0, Math.trunc(Number(delayMs) || fallbackDelayMs));
 
             this.clearSearchResultsUpdateQueue();
+            this.prepareSearchUiForNextQuery(this.normalizeSearchQuery(this.search.query));
 
             if (normalizedDelayMs === 0) {
                 void this.updateSearchResults();
@@ -18370,6 +18390,7 @@ document.addEventListener('alpine:init', () => {
                 this.setSearchResults([], { immediate: true });
                 this.search.isLoading = false;
                 this.search.streamHasUpdates = false;
+                this.search.lastCompletedNormalizedQuery = '';
                 this._searchRequestSerial += 1;
                 this.clearSearchStreamTarget();
 
@@ -18381,6 +18402,7 @@ document.addEventListener('alpine:init', () => {
                 this.setSearchResults([], { immediate: true });
                 this.search.isLoading = false;
                 this.search.streamHasUpdates = false;
+                this.search.lastCompletedNormalizedQuery = '';
                 this._searchRequestSerial += 1;
                 this.clearSearchStreamTarget();
 
@@ -18396,6 +18418,7 @@ document.addEventListener('alpine:init', () => {
                 this.setSearchResults([], { immediate: true });
                 this.search.isLoading = false;
                 this.search.streamHasUpdates = false;
+                this.search.lastCompletedNormalizedQuery = '';
                 this._searchRequestSerial += 1;
                 this.clearSearchStreamTarget();
 
@@ -18426,6 +18449,7 @@ document.addEventListener('alpine:init', () => {
             const requestSerial = ++this._searchRequestSerial;
             this._searchRequestInFlight = true;
             this._searchQueuedNormalizedQuery = null;
+            this.setSearchResults([], { immediate: true });
             this.search.isLoading = true;
             this.search.streamHasUpdates = false;
             this.clearSearchStreamTarget();
@@ -18459,6 +18483,7 @@ document.addEventListener('alpine:init', () => {
             } finally {
                 if (requestSerial === this._searchRequestSerial) {
                     this.search.isLoading = false;
+                    this.search.lastCompletedNormalizedQuery = normalizedQuery;
                 }
 
                 this._searchRequestInFlight = false;
