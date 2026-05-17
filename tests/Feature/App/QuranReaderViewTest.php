@@ -639,6 +639,30 @@ it('keeps sacred divine name tokens out of stem and root search stages', functio
         ))->toBeFalse();
 });
 
+it('matches conjunction-attached aal tokens before falling back to root search', function () {
+    /** @var QuranReaderDataService $service */
+    $service = app(QuranReaderDataService::class);
+
+    if (! $service->isReady()) {
+        $this->markTestSkipped('Quran reader search dependencies are unavailable.');
+    }
+
+    $results = $service->searchProgressively('آل عمران', 20);
+    $firstResult = $results[0] ?? null;
+
+    $aliImranVerseMatch = collect($results)->first(
+        static fn (array $item): bool => (int) ($item['surah_number'] ?? 0) === 3
+            && (int) ($item['ayah_number'] ?? 0) === 33
+            && ! str_starts_with((string) ($item['match_strategy'] ?? ''), 'surah_'),
+    );
+
+    expect($results)->toBeArray()->not->toBeEmpty()
+        ->and($firstResult)->toBeArray()
+        ->and((string) ($firstResult['match_strategy'] ?? ''))->toBe('surah_exact')
+        ->and($aliImranVerseMatch)->toBeArray()
+        ->and((string) ($aliImranVerseMatch['match_strategy'] ?? ''))->toBe('exact_tokens');
+});
+
 it('guards mobile js error reporting against known benign runtime noise', function () {
     $mobileJsErrorsHandlerSource = file_get_contents(
         resource_path('views/components/partials/scripts/mobile-js-errors-handler.blade.php'),
@@ -659,6 +683,24 @@ it('guards mobile js error reporting against known benign runtime noise', functi
 
     expect($livewireTransitionConsistencySource)->not->toBeFalse()
         ->and($livewireTransitionConsistencySource)->toContain('window.isRecordSelected = () => false;');
+});
+
+it('suppresses immersive mobile edge captions while quran manager modals are open', function () {
+    $quranReaderScriptSource = file_get_contents(
+        resource_path('js/support/alpine/data/quran-app-reader.js'),
+    );
+
+    expect($quranReaderScriptSource)->not->toBeFalse()
+        ->and($quranReaderScriptSource)->toContain('shouldShowImmersiveMobileEdgeCaptions()')
+        ->and($quranReaderScriptSource)->toContain('const hasManagerModalOpen =')
+        ->and($quranReaderScriptSource)->toContain('this.search.modalOpen ||')
+        ->and($quranReaderScriptSource)->toContain('this.historyModalOpen ||')
+        ->and($quranReaderScriptSource)->toContain('this.bookmarksModalOpen ||')
+        ->and($quranReaderScriptSource)->toContain('this.jumpPageModalOpen ||')
+        ->and($quranReaderScriptSource)->toContain('this.isSearchModalWindowVisible();')
+        ->and($quranReaderScriptSource)->toContain(
+            'if (this.hasBlockingModalLifecycleState({ recoverStaleState: true })) {',
+        );
 });
 
 it('returns matches for legacy orthography phrases in quran search endpoint', function () {
@@ -779,6 +821,45 @@ it('caches repeated quran search queries while preserving complete progress emis
 
     expect($nonCompleteEvents)->not->toBeEmpty()
         ->and($eventCounts)->toEqual(collect($eventCounts)->sort()->values()->all());
+});
+
+it('emits uncached quran search progress in incremental result steps', function () {
+    /** @var QuranReaderDataService $service */
+    $service = app(QuranReaderDataService::class);
+
+    if (! $service->isReady()) {
+        $this->markTestSkipped('Quran reader search dependencies are unavailable.');
+    }
+
+    Cache::flush();
+    $progressEvents = [];
+
+    $service->searchProgressively(
+        'آل عمران',
+        24,
+        function (array $matches, string $stage, bool $isComplete) use (&$progressEvents): void {
+            if ($isComplete) {
+                return;
+            }
+
+            $progressEvents[] = [
+                'stage' => $stage,
+                'count' => count($matches),
+            ];
+        },
+    );
+
+    $counts = array_map(
+        static fn (array $event): int => max(0, (int) ($event['count'] ?? 0)),
+        $progressEvents,
+    );
+
+    expect($progressEvents)->not->toBeEmpty()
+        ->and($counts)->toEqual(collect($counts)->sort()->values()->all());
+
+    for ($index = 1; $index < count($counts); $index++) {
+        expect($counts[$index] - $counts[$index - 1])->toBeLessThanOrEqual(1);
+    }
 });
 
 it('injects visible basmallah lines under late-page surah headers', function () {

@@ -29,10 +29,6 @@ class Reader extends Component implements HasActions, HasSchemas
 
     private const SEARCH_STREAM_TARGET = 'quran-search-results-stream';
 
-    private const SEARCH_STREAM_BATCH_SIZE = 3;
-
-    private const SEARCH_STREAM_CHUNK_DELAY_MICROSECONDS = 10000;
-
     private const HISTORY_MODAL_ID = 'quran-reader-history-modal';
 
     private const BOOKMARKS_MODAL_ID = 'quran-reader-bookmarks-modal';
@@ -322,41 +318,52 @@ class Reader extends Component implements HasActions, HasSchemas
         $readerDataService = app(QuranReaderDataService::class);
         $normalizedRequestSerial = max(0, $requestSerial);
         $didStreamChunks = false;
+        $emittedMatchKeys = [];
         $results = $readerDataService->searchProgressively(
             $query,
             24,
             function (array $matches, string $stage, bool $isComplete) use (
                 $normalizedRequestSerial,
                 &$didStreamChunks,
+                &$emittedMatchKeys,
             ): void {
                 $didStreamChunks = true;
 
                 $normalizedMatches = array_values($matches);
-                $normalizedStage = trim($stage);
-                $stageMatches = $isComplete
-                    ? []
-                    : array_values(array_filter(
-                        $normalizedMatches,
-                        static function (array $match) use ($normalizedStage): bool {
-                            return trim((string) ($match['match_strategy'] ?? '')) === $normalizedStage;
-                        },
-                    ));
-
-                if (! $isComplete && $stageMatches === []) {
-                    $stageMatches = $normalizedMatches;
-                }
 
                 if (! $isComplete) {
-                    foreach (array_chunk($stageMatches, self::SEARCH_STREAM_BATCH_SIZE) as $stageChunk) {
+                    $normalizedStage = trim($stage);
+                    $newStageMatches = [];
+
+                    foreach ($normalizedMatches as $match) {
+                        $matchStage = trim((string) ($match['match_strategy'] ?? ''));
+
+                        if ($normalizedStage !== '' && $matchStage !== $normalizedStage) {
+                            continue;
+                        }
+
+                        $matchKey = $this->searchStreamMatchKey($match);
+
+                        if ($matchKey === null || isset($emittedMatchKeys[$matchKey])) {
+                            continue;
+                        }
+
+                        $emittedMatchKeys[$matchKey] = true;
+                        $newStageMatches[] = $match;
+                    }
+
+                    if ($newStageMatches === []) {
+                        return;
+                    }
+
+                    foreach ($newStageMatches as $stageMatch) {
                         $this->streamSearchPayload(
                             [],
-                            $stageChunk,
+                            [$stageMatch],
                             $normalizedRequestSerial,
                             $stage,
                             false,
                         );
-
-                        usleep(self::SEARCH_STREAM_CHUNK_DELAY_MICROSECONDS);
                     }
 
                     return;
@@ -383,6 +390,41 @@ class Reader extends Component implements HasActions, HasSchemas
         }
 
         return $results;
+    }
+
+    /**
+     * @param  array{
+     *     id?: int,
+     *     surah_number?: int,
+     *     ayah_number?: int,
+     *     page_number?: int,
+     *     match_rank?: int
+     * }  $match
+     */
+    private function searchStreamMatchKey(array $match): ?string
+    {
+        $id = max(0, (int) ($match['id'] ?? 0));
+
+        if ($id > 0) {
+            return 'id:'.$id;
+        }
+
+        $surahNumber = max(0, (int) ($match['surah_number'] ?? 0));
+        $ayahNumber = max(0, (int) ($match['ayah_number'] ?? 0));
+        $pageNumber = max(0, (int) ($match['page_number'] ?? 0));
+        $matchRank = max(0, (int) ($match['match_rank'] ?? 0));
+
+        if ($surahNumber < 1 || $pageNumber < 1) {
+            return null;
+        }
+
+        return sprintf(
+            'fallback:%d:%d:%d:%d',
+            $surahNumber,
+            $ayahNumber,
+            $pageNumber,
+            $matchRank,
+        );
     }
 
     public function searchQuranAction(): Action

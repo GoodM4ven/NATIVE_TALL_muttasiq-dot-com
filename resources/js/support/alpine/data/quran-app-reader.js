@@ -891,7 +891,7 @@ document.addEventListener('alpine:init', () => {
         },
         search: {
             query: '',
-            minQueryLength: 5,
+            minQueryLength: 3,
             inputDebounceMs: 600,
             results: [],
             isLoading: false,
@@ -12651,6 +12651,21 @@ document.addEventListener('alpine:init', () => {
             }
 
             if (!this.isAnyQuranReaderViewOpen()) {
+                return false;
+            }
+
+            const hasManagerModalOpen =
+                this.search.modalOpen ||
+                this.historyModalOpen ||
+                this.bookmarksModalOpen ||
+                this.jumpPageModalOpen ||
+                this.isSearchModalWindowVisible();
+
+            if (hasManagerModalOpen) {
+                return false;
+            }
+
+            if (this.hasBlockingModalLifecycleState({ recoverStaleState: true })) {
                 return false;
             }
 
