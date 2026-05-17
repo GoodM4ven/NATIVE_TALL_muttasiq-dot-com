@@ -1050,21 +1050,20 @@
 
         .quran-reader-edge-caption {
             margin: 0;
-            max-width: min(80vw, 15.5rem);
             gap: 0.72rem;
             padding: 0.04rem 0 0.08rem;
             font-size: 0.62rem;
             line-height: 1.12;
             font-weight: 700;
+            white-space: nowrap;
             color: color-mix(in srgb, var(--gray-700) 88%, var(--quran-panel-text));
         }
 
         .quran-reader-edge-caption::before,
         .quran-reader-edge-caption::after {
-            width: 5.6rem;
+            width: clamp(2.1rem, 13vw, 5.6rem);
             height: 0.2rem;
-            max-width: none;
-            flex: 0 0 5.6rem;
+            flex: 0 1 clamp(2.1rem, 13vw, 5.6rem);
             background: linear-gradient(90deg,
                     transparent 0%,
                     color-mix(in srgb, var(--gray-400) 68%, transparent) 52%,
@@ -2393,19 +2392,23 @@
             white-space: nowrap;
         }
 
-        .quran-soorah-trigger-text-inner.quran-caption-leave-forward {
+        .quran-soorah-trigger-text-inner.quran-caption-leave-forward,
+        .quran-reader-edge-caption.quran-caption-leave-forward {
             animation: quran-caption-leave-forward 140ms ease both;
         }
 
-        .quran-soorah-trigger-text-inner.quran-caption-leave-backward {
+        .quran-soorah-trigger-text-inner.quran-caption-leave-backward,
+        .quran-reader-edge-caption.quran-caption-leave-backward {
             animation: quran-caption-leave-backward 140ms ease both;
         }
 
-        .quran-soorah-trigger-text-inner.quran-caption-enter-forward {
+        .quran-soorah-trigger-text-inner.quran-caption-enter-forward,
+        .quran-reader-edge-caption.quran-caption-enter-forward {
             animation: quran-caption-enter-forward 180ms ease both;
         }
 
-        .quran-soorah-trigger-text-inner.quran-caption-enter-backward {
+        .quran-soorah-trigger-text-inner.quran-caption-enter-backward,
+        .quran-reader-edge-caption.quran-caption-enter-backward {
             animation: quran-caption-enter-backward 180ms ease both;
         }
 
@@ -3143,7 +3146,7 @@
                     class="z-54 pointer-events-none absolute inset-x-0 top-2 flex justify-center px-3 sm:hidden"
                     x-cloak
                     x-show="shouldShowImmersiveMobileEdgeCaptions()"
-                    x-transition:enter="transition-opacity ease-out duration-280 delay-1000"
+                    x-transition:enter="transition-opacity ease-out duration-280 delay-500"
                     x-transition:enter-start="opacity-0"
                     x-transition:enter-end="opacity-100"
                     x-transition:leave="transition-opacity ease-in duration-110"
@@ -3153,14 +3156,15 @@
                     <p
                         class="quran-surah-grid-caption quran-reader-edge-caption"
                         dir="rtl"
-                        x-text="mobileReaderSurahCaption()"
+                        x-text="mobileEdgeSurahCaptionText"
+                        x-bind:class="mobileEdgeSurahCaptionAnimClass"
                     ></p>
                 </div>
                 <div
                     class="z-54 pointer-events-none absolute inset-x-0 bottom-[0.6rem] flex justify-center px-3 sm:hidden"
                     x-cloak
                     x-show="shouldShowImmersiveMobileEdgeCaptions()"
-                    x-transition:enter="transition-opacity ease-out duration-280 delay-1000"
+                    x-transition:enter="transition-opacity ease-out duration-280 delay-500"
                     x-transition:enter-start="opacity-0"
                     x-transition:enter-end="opacity-100"
                     x-transition:leave="transition-opacity ease-in duration-110"
@@ -3170,7 +3174,8 @@
                     <p
                         class="quran-surah-grid-caption quran-reader-edge-caption"
                         dir="rtl"
-                        x-text="mobileReaderPageCaption()"
+                        x-text="mobileEdgePageCaptionText"
+                        x-bind:class="mobileEdgePageCaptionAnimClass"
                     ></p>
                 </div>
                 <template x-teleport="body">

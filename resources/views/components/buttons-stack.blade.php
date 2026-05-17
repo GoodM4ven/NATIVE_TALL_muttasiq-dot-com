@@ -28,6 +28,7 @@
         pendingLayoutPasses: 0,
         shouldWaitForNextTick: false,
         interactionUnlockId: null,
+        actionStateRecoveryId: null,
         isInteractionLocked: false,
         actionOpenState: false,
         isQuranManagerModalOpen: false,
@@ -84,6 +85,11 @@
     
             if (this.layoutFrameId !== null) {
                 window.cancelAnimationFrame(this.layoutFrameId);
+            }
+    
+            if (this.actionStateRecoveryId !== null) {
+                window.clearTimeout(this.actionStateRecoveryId);
+                this.actionStateRecoveryId = null;
             }
     
             this.releaseInteractionLock();
@@ -283,10 +289,30 @@
     
             this.isInteractionLocked = false;
         },
+        scheduleActionStateRecovery() {
+            if (this.actionStateRecoveryId !== null) {
+                window.clearTimeout(this.actionStateRecoveryId);
+            }
+    
+            this.actionStateRecoveryId = window.setTimeout(() => {
+                this.actionStateRecoveryId = null;
+    
+                if (!this.actionOpenState || this.hasAnyOpenFilamentModal()) {
+                    return;
+                }
+    
+                this.actionOpenState = false;
+                this.scheduleLayout(2);
+            }, 220);
+        },
         syncActionState(isActionOpen) {
             const nextState = isActionOpen === true;
     
             if (this.actionOpenState === nextState) {
+                if (nextState) {
+                    this.scheduleActionStateRecovery();
+                }
+    
                 return;
             }
     
@@ -295,6 +321,10 @@
             if (this.actionOpenState) {
                 this.closeQuickStack();
                 this.releaseInteractionLock();
+                this.scheduleActionStateRecovery();
+            } else if (this.actionStateRecoveryId !== null) {
+                window.clearTimeout(this.actionStateRecoveryId);
+                this.actionStateRecoveryId = null;
             }
     
             this.scheduleLayout(3);
@@ -316,7 +346,7 @@
             this.scheduleLayout(2);
         },
         shouldHideStackItems() {
-            return this.isQuranManagerModalOpen || this.actionOpenState;
+            return this.isQuranManagerModalOpen || (this.actionOpenState && this.hasAnyOpenFilamentModal());
         },
         applyStackItemVisibility(item) {
             if (!(item instanceof Element)) {
@@ -329,7 +359,12 @@
             item.style.pointerEvents = shouldHide ? 'none' : '';
         },
         hasAnyOpenFilamentModal() {
-            return document.querySelector('.fi-modal.fi-modal-open') !== null;
+            const modal = document.querySelector('.fi-modal.fi-modal-open');
+            if (!modal) return false;
+            const rect = modal.getBoundingClientRect();
+            if (rect.width === 0 && rect.height === 0) return false;
+            const styles = window.getComputedStyle(modal);
+            return styles.display !== 'none' && styles.visibility !== 'hidden';
         },
         scheduleQuranManagerModalStateSync() {
             [0, 24, 64, 140].forEach((delayMs) => {
@@ -443,19 +478,19 @@
                 }
     
                 if (!this.isQuickStackOpen) {
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
                     this.isQuickStackOpen = true;
                     this.activeIndex = index;
                     this.scheduleLayout(2);
-                    event.preventDefault();
-                    event.stopImmediatePropagation();
                     return;
                 }
     
                 if (this.activeIndex !== index) {
-                    this.activeIndex = index;
-                    this.scheduleLayout(2);
                     event.preventDefault();
                     event.stopImmediatePropagation();
+                    this.activeIndex = index;
+                    this.scheduleLayout(2);
                     return;
                 }
     
@@ -598,7 +633,7 @@
     x-init="init();
     return () => destroy();"
     x-effect="syncActionState($store?.layoutManager?.isActionOpen === true)"
-    x-on:switch-view.window="closeQuickStack(); releaseInteractionLock(); scheduleLayout(3)"
+    x-on:switch-view.window="closeQuickStack(); releaseInteractionLock(); scheduleLayout(3); scheduleQuranManagerModalStateSync()"
     x-on:hashchange.window="scheduleLayout(3)"
     x-on:resize.window="scheduleLayout(2, { afterDom: false })"
     x-on:orientationchange.window="scheduleLayout(2, { afterDom: false })"

@@ -674,6 +674,18 @@
         padding-top: 0.25rem;
     }
 
+    #quran-reader-history-modal .fi-pagination-records-per-page-select-ctn,
+    #quran-reader-bookmarks-modal .fi-pagination-records-per-page-select-ctn {
+        direction: ltr;
+    }
+
+    #quran-reader-history-modal .fi-pagination-records-per-page-select .fi-select-input,
+    #quran-reader-bookmarks-modal .fi-pagination-records-per-page-select .fi-select-input {
+        direction: ltr;
+        font-size: 1rem;
+        line-height: 1.25rem;
+    }
+
     .quran-manager-shell {
         display: grid;
         gap: 0.72rem;

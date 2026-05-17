@@ -857,6 +857,10 @@ document.addEventListener('alpine:init', () => {
         surahTriggerCaption: '',
         surahTriggerCaptionAnimClass: '',
         surahTriggerSurahNumber: 1,
+        mobileEdgeSurahCaptionText: '',
+        mobileEdgeSurahCaptionAnimClass: '',
+        mobileEdgePageCaptionText: '',
+        mobileEdgePageCaptionAnimClass: '',
         pageMotionTimer: null,
         pageScale: 1,
         lineWordGapAdjustments: {},
@@ -968,6 +972,7 @@ document.addEventListener('alpine:init', () => {
         _onVisualViewportChange: null,
         _onWindowScroll: null,
         _onSwitchView: null,
+        _onReaderGoGate: null,
         _onWirdSimulateDay: null,
         _onWirdCongratsPreview: null,
         _onFontScaleToggle: null,
@@ -997,6 +1002,9 @@ document.addEventListener('alpine:init', () => {
         _onWindowNativeVolumeButton: null,
         _surahTriggerTimer: null,
         _surahTriggerCleanupTimer: null,
+        _mobileEdgeCaptionTimer: null,
+        _mobileEdgeCaptionCleanupTimer: null,
+        _lastMobileEdgeSurahNumber: 1,
         _pendingNavigationRequest: null,
         _navigationDebounceTimer: null,
         _navigationRevealUnlockTimer: null,
@@ -1161,6 +1169,7 @@ document.addEventListener('alpine:init', () => {
                     : this.search.surahDirectory,
             );
             this.refreshSurahTriggerCaption(false);
+            this.refreshMobileEdgeCaptions(false);
             this.syncSearchActiveSurahNumber();
             this.navigationHistory = readNavigationHistory();
             this.syncHistoryTagDrafts();
@@ -1271,6 +1280,8 @@ document.addEventListener('alpine:init', () => {
 
                 if (!isGoingToQuranReader) {
                     this.isFontScaleOverlayVisible = false;
+                    this.isReaderChromeVisible = false;
+                    this.syncReaderChromeDocumentClass({ forceInactive: true });
                     this._immersiveEntryAwaitingFirstReveal = true;
                     this.clearDeferredBootstrapCheckTimer();
                     this._deferredBootstrapCheckAttempts = 0;
@@ -1321,6 +1332,12 @@ document.addEventListener('alpine:init', () => {
             };
 
             window.addEventListener('switch-view', this._onSwitchView);
+            this._onReaderGoGate = () => {
+                this.isReaderChromeVisible = false;
+                this.isFontScaleOverlayVisible = false;
+                this.syncReaderChromeDocumentClass({ forceInactive: true });
+            };
+            window.addEventListener('quran-reader-go-gate', this._onReaderGoGate);
             this.scheduleReaderPanelLayoutRefresh();
             this._onWirdSimulateDay = (event) => {
                 const deltaDays = normalizeDayOffsetDays(event?.detail?.days ?? 1, 1);
@@ -1953,6 +1970,7 @@ document.addEventListener('alpine:init', () => {
                 persistPageNumber: true,
             });
             this.refreshSurahTriggerCaption(false);
+            this.refreshMobileEdgeCaptions(false);
             this.syncSearchActiveSurahNumber();
             this.$nextTick(() => {
                 this.registerNativeInputListeners();
@@ -2094,6 +2112,11 @@ document.addEventListener('alpine:init', () => {
                 window.removeEventListener('switch-view', this._onSwitchView);
             }
 
+            if (this._onReaderGoGate) {
+                window.removeEventListener('quran-reader-go-gate', this._onReaderGoGate);
+                this._onReaderGoGate = null;
+            }
+
             if (this._onQrDebugLogsToggle) {
                 window.removeEventListener(
                     quranReaderDebugLogsToggleEventName,
@@ -2206,6 +2229,16 @@ document.addEventListener('alpine:init', () => {
             if (this._surahTriggerCleanupTimer !== null) {
                 clearTimeout(this._surahTriggerCleanupTimer);
                 this._surahTriggerCleanupTimer = null;
+            }
+
+            if (this._mobileEdgeCaptionTimer !== null) {
+                clearTimeout(this._mobileEdgeCaptionTimer);
+                this._mobileEdgeCaptionTimer = null;
+            }
+
+            if (this._mobileEdgeCaptionCleanupTimer !== null) {
+                clearTimeout(this._mobileEdgeCaptionCleanupTimer);
+                this._mobileEdgeCaptionCleanupTimer = null;
             }
 
             if (this._navigationDebounceTimer !== null) {
@@ -7796,6 +7829,11 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            if (this.shouldUseImmersiveReaderChrome()) {
+                this.isReaderChromeVisible = false;
+                this.syncReaderChromeDocumentClass();
+            }
+
             this.isLoadingPage = true;
             let didCompletePageTransition = false;
             let didAbortPageTransition = false;
@@ -7836,6 +7874,7 @@ document.addEventListener('alpine:init', () => {
                 this.applyPayload(payload, { setPageNumber: true });
                 this.persistLastPageNumber(this.pageNumber);
                 this.refreshSurahTriggerCaption(animate);
+                this.refreshMobileEdgeCaptions(animate);
                 this.syncSearchActiveSurahNumber();
                 this.activeAyahIndex =
                     this.shouldPersistActivationIndexes() &&
@@ -9076,6 +9115,40 @@ document.addEventListener('alpine:init', () => {
                 styles.visibility !== 'hidden' &&
                 opacity > 0.35 &&
                 visibleLineCount > 0
+            );
+        },
+
+        isCurrentPageContentVisible(minOpacity = 0.35) {
+            if (!this.hasRenderablePage()) {
+                return false;
+            }
+
+            const contentElement = this.$refs.pageContent;
+
+            if (!(contentElement instanceof HTMLElement)) {
+                return false;
+            }
+
+            const styles = window.getComputedStyle(contentElement);
+            const opacity = Number.parseFloat(styles.opacity || '0');
+            const normalizedMinOpacity = Math.max(0, Number(minOpacity) || 0);
+            const hasRenderableText = Array.from(
+                contentElement.querySelectorAll('[data-quran-line-text], [data-quran-word-button]'),
+            ).some(
+                (lineElement) =>
+                    String(lineElement.textContent ?? '')
+                        .replace(/\s+/g, '')
+                        .trim().length > 0,
+            );
+            const fallbackRenderableText =
+                String(contentElement.textContent ?? '')
+                    .replace(/\s+/g, '')
+                    .trim().length > 0;
+
+            return (
+                styles.visibility !== 'hidden' &&
+                opacity > normalizedMinOpacity &&
+                (hasRenderableText || fallbackRenderableText)
             );
         },
 
@@ -12581,11 +12654,7 @@ document.addEventListener('alpine:init', () => {
                 return false;
             }
 
-            if (
-                this.isReaderChromeVisible ||
-                this.wirdModeActive ||
-                this.isFontScaleOverlayVisible
-            ) {
+            if (this.isReaderChromeVisible || this.isFontScaleOverlayVisible) {
                 return false;
             }
 
@@ -12597,20 +12666,24 @@ document.addEventListener('alpine:init', () => {
                 return false;
             }
 
-            return this.isCurrentPageVisiblyReady();
+            return true;
         },
 
         mobileReaderSurahCaption() {
             const name = this.surahNameOnly(this.currentSurahNumber());
+            const caption =
+                name !== ''
+                    ? name
+                    : this.resolveCurrentSurahTriggerLabel()
+                          .replace(/^\(\s*\d+\s*\)\s*-\s*/u, '')
+                          .replace(/^\(\s*\d+\s*\)\s*/u, '')
+                          .trim();
 
-            if (name !== '') {
-                return name;
+            if (this.wirdModeActive && caption !== '') {
+                return `الورد اليومي - ${caption}`;
             }
 
-            return this.resolveCurrentSurahTriggerLabel()
-                .replace(/^\(\s*\d+\s*\)\s*-\s*/u, '')
-                .replace(/^\(\s*\d+\s*\)\s*/u, '')
-                .trim();
+            return caption;
         },
 
         mobileReaderPageCaption() {
@@ -15691,6 +15764,14 @@ document.addEventListener('alpine:init', () => {
                 return 'مطابقة تامة';
             }
 
+            if (strategy === 'surah_exact') {
+                return 'مطابقة اسم سورة';
+            }
+
+            if (strategy === 'surah_stem') {
+                return 'مطابقة صرفية لاسم سورة';
+            }
+
             if (strategy === 'exact_tokens') {
                 return 'مطابقة كلمات';
             }
@@ -15708,6 +15789,22 @@ document.addEventListener('alpine:init', () => {
             }
 
             return 'مطابقة';
+        },
+
+        searchResultMetaLabel(result) {
+            const surahNumber = Math.max(1, Math.trunc(Number(result?.surah_number ?? 1)));
+            const pageNumber = Math.max(1, Math.trunc(Number(result?.page_number ?? 1)));
+            const strategy = String(result?.match_strategy ?? '')
+                .trim()
+                .toLowerCase();
+
+            if (strategy.startsWith('surah_')) {
+                return `${this.surahLabel(surahNumber)} · صفحة ${pageNumber}`;
+            }
+
+            const ayahNumber = Math.max(1, Math.trunc(Number(result?.ayah_number ?? 1)));
+
+            return `${this.surahLabel(surahNumber)} · آية ${ayahNumber} · صفحة ${pageNumber}`;
         },
 
         isSurahHeaderLine(line) {
@@ -16349,6 +16446,83 @@ document.addEventListener('alpine:init', () => {
                 this._surahTriggerCleanupTimer = window.setTimeout(() => {
                     this.surahTriggerCaptionAnimClass = '';
                     this._surahTriggerCleanupTimer = null;
+                }, 180);
+            }, 140);
+        },
+
+        refreshMobileEdgeCaptions(animate = true) {
+            const nextSurahText = this.mobileReaderSurahCaption();
+            const nextPageText = this.mobileReaderPageCaption();
+            const nextSurahNumber = Math.max(1, Math.trunc(Number(this.currentSurahNumber() ?? 1)));
+
+            const surahChanged =
+                nextSurahText !== this.mobileEdgeSurahCaptionText ||
+                this.mobileEdgeSurahCaptionText === '';
+            const pageChanged =
+                nextPageText !== this.mobileEdgePageCaptionText ||
+                this.mobileEdgePageCaptionText === '';
+
+            if (!surahChanged && !pageChanged) {
+                return;
+            }
+
+            if (this._mobileEdgeCaptionTimer !== null) {
+                clearTimeout(this._mobileEdgeCaptionTimer);
+                this._mobileEdgeCaptionTimer = null;
+            }
+
+            if (this._mobileEdgeCaptionCleanupTimer !== null) {
+                clearTimeout(this._mobileEdgeCaptionCleanupTimer);
+                this._mobileEdgeCaptionCleanupTimer = null;
+            }
+
+            if (
+                !animate ||
+                (this.mobileEdgeSurahCaptionText === '' && this.mobileEdgePageCaptionText === '')
+            ) {
+                this.mobileEdgeSurahCaptionText = nextSurahText;
+                this.mobileEdgePageCaptionText = nextPageText;
+                this._lastMobileEdgeSurahNumber = nextSurahNumber;
+                this.mobileEdgeSurahCaptionAnimClass = '';
+                this.mobileEdgePageCaptionAnimClass = '';
+
+                return;
+            }
+
+            const isForward = nextSurahNumber >= this._lastMobileEdgeSurahNumber;
+            const leaveClass = isForward
+                ? 'quran-caption-leave-forward'
+                : 'quran-caption-leave-backward';
+            const enterClass = isForward
+                ? 'quran-caption-enter-forward'
+                : 'quran-caption-enter-backward';
+
+            if (surahChanged) {
+                this.mobileEdgeSurahCaptionAnimClass = leaveClass;
+            }
+
+            if (pageChanged) {
+                this.mobileEdgePageCaptionAnimClass = leaveClass;
+            }
+
+            this._mobileEdgeCaptionTimer = window.setTimeout(() => {
+                this._mobileEdgeCaptionTimer = null;
+                this._lastMobileEdgeSurahNumber = nextSurahNumber;
+
+                if (surahChanged) {
+                    this.mobileEdgeSurahCaptionText = nextSurahText;
+                    this.mobileEdgeSurahCaptionAnimClass = enterClass;
+                }
+
+                if (pageChanged) {
+                    this.mobileEdgePageCaptionText = nextPageText;
+                    this.mobileEdgePageCaptionAnimClass = enterClass;
+                }
+
+                this._mobileEdgeCaptionCleanupTimer = window.setTimeout(() => {
+                    this._mobileEdgeCaptionCleanupTimer = null;
+                    this.mobileEdgeSurahCaptionAnimClass = '';
+                    this.mobileEdgePageCaptionAnimClass = '';
                 }, 180);
             }, 140);
         },

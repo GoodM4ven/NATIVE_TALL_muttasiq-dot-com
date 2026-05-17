@@ -296,12 +296,17 @@
             applyViewState(nextView, { persist = true } = {}) {
                 const view = this.views?.[nextView] ? nextView : 'main-menu';
                 const isQuranReaderView = ['quran-app-tilawa', 'quran-app-hifth', 'quran-app-tadabbur'].includes(view);
+                const layoutManager = this.$store?.layoutManager;
         
                 Object.keys(this.views).forEach((key) => {
                     this.views[key].isOpen = key === view;
                 });
                 if (persist) {
                     this.activeView = view;
+                }
+        
+                if (layoutManager?.isActionOpen) {
+                    layoutManager.isActionOpen = false;
                 }
         
                 if (!isQuranReaderView) {

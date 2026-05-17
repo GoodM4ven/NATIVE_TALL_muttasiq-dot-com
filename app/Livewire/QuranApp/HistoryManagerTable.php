@@ -22,12 +22,14 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Livewire\WithoutUrlPagination;
 
 class HistoryManagerTable extends Component implements HasActions, HasSchemas, HasTable
 {
     use InteractsWithActions;
     use InteractsWithSchemas;
     use InteractsWithTable;
+    use WithoutUrlPagination;
 
     /**
      * @var array<int, array<string, mixed>>
@@ -56,8 +58,8 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
         return $table
             ->defaultSort('sort_order')
             ->selectable(false)
-            ->defaultPaginationPageOption(8)
-            ->paginationPageOptions([8, 10, 25, 50])
+            ->defaultPaginationPageOption(100)
+            ->paginationPageOptions([100])
             ->reorderable('sort_order')
             ->records(function (
                 ?string $sortColumn,

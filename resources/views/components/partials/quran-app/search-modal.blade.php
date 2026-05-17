@@ -65,7 +65,7 @@
                 >
                     <span
                         class="quran-search-result-meta"
-                        x-text="surahLabel(result.surah_number) + ' · {{ arabic_text('آية') }} ' + result.ayah_number + ' · {{ arabic_text('صفحة') }} ' + result.page_number"
+                        x-text="searchResultMetaLabel(result)"
                     ></span>
                     <span
                         class="quran-search-result-ayah font-quran"

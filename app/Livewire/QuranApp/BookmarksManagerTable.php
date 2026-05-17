@@ -22,12 +22,14 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Livewire\WithoutUrlPagination;
 
 class BookmarksManagerTable extends Component implements HasActions, HasSchemas, HasTable
 {
     use InteractsWithActions;
     use InteractsWithSchemas;
     use InteractsWithTable;
+    use WithoutUrlPagination;
 
     /**
      * @var array<int, array<string, mixed>>
@@ -50,6 +52,8 @@ class BookmarksManagerTable extends Component implements HasActions, HasSchemas,
         return $table
             ->defaultSort('sort_order')
             ->selectable(false)
+            ->defaultPaginationPageOption(100)
+            ->paginationPageOptions([100])
             ->reorderable('sort_order')
             ->records(function (
                 ?string $sortColumn,

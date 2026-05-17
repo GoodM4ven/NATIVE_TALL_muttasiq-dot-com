@@ -21,7 +21,7 @@ class QuranReaderDataService
 
     private const MAX_PAGE_CACHE_KEY = 'quran-reader-max-page-v2';
 
-    private const SEARCH_RESULTS_CACHE_PREFIX = 'quran-reader-search-results-v3';
+    private const SEARCH_RESULTS_CACHE_PREFIX = 'quran-reader-search-results-v4';
 
     private const DISPLAYED_PAGE_CACHE_PREFIX = 'quran-reader-display-page-v1';
 
@@ -46,6 +46,8 @@ class QuranReaderDataService
      * @var array<int, string>
      */
     private const SEARCH_PROGRESS_STAGE_ORDER = [
+        'surah_exact',
+        'surah_stem',
         'exact_phrase',
         'exact_tokens',
         'stem_tokens',
@@ -516,6 +518,44 @@ class QuranReaderDataService
 
         $matches = [];
         $seenAyahIndexes = [];
+        $seenSurahNumbers = [];
+
+        $surahExactMatches = $this->collectSurahMatchesByExactQuery($searchQuery, $tokens, $limit);
+        $this->appendSurahMatches(
+            $matches,
+            $seenAyahIndexes,
+            $seenSurahNumbers,
+            $surahExactMatches,
+            $limit,
+            $searchQuery,
+            'surah_exact',
+        );
+        $this->emitSearchProgress($onProgress, $matches, 'surah_exact');
+
+        if (count($matches) >= $limit) {
+            $this->emitSearchProgress($onProgress, $matches, 'complete', true);
+
+            return $matches;
+        }
+
+        $surahStemMatches = $this->collectSurahMatchesByStemQuery($searchQuery, $tokens, $limit);
+        $this->appendSurahMatches(
+            $matches,
+            $seenAyahIndexes,
+            $seenSurahNumbers,
+            $surahStemMatches,
+            $limit,
+            $searchQuery,
+            'surah_stem',
+        );
+        $this->emitSearchProgress($onProgress, $matches, 'surah_stem');
+
+        if (count($matches) >= $limit) {
+            $this->emitSearchProgress($onProgress, $matches, 'complete', true);
+
+            return $matches;
+        }
+
         $exactPhraseVerseIds = $this->collectVerseIdsByExactPhrase($searchQuery, $limit);
 
         $this->appendVerseMatches(
@@ -610,6 +650,440 @@ class QuranReaderDataService
         $this->emitSearchProgress($onProgress, $matches, 'complete', true);
 
         return $matches;
+    }
+
+    /**
+     * @param  array<int, string>  $tokens
+     * @return array<int, array{
+     *     surah_number: int,
+     *     ayah_index: int,
+     *     ayah_number: int,
+     *     page_number: int,
+     *     verse_id: int,
+     *     surah_name: string
+     * }>
+     */
+    private function collectSurahMatchesByExactQuery(string $searchQuery, array $tokens, int $limit): array
+    {
+        if ($limit < 1) {
+            return [];
+        }
+
+        $queryVariants = $this->exactPhraseQueryVariants($searchQuery);
+
+        if ($queryVariants === []) {
+            return [];
+        }
+
+        $entries = $this->surahSearchEntries();
+
+        if ($entries === []) {
+            return [];
+        }
+
+        $matches = [];
+
+        foreach ($entries as $entry) {
+            $nameSearchable = trim((string) $entry['name_searchable']);
+
+            if (! $this->isSurahNameExactMatch($nameSearchable, $queryVariants, $tokens)) {
+                continue;
+            }
+
+            $matches[] = [
+                'surah_number' => (int) $entry['surah_number'],
+                'ayah_index' => max(0, (int) $entry['ayah_index']),
+                'ayah_number' => max(1, (int) $entry['ayah_number']),
+                'page_number' => max(1, (int) $entry['page_number']),
+                'verse_id' => max(0, (int) $entry['verse_id']),
+                'surah_name' => trim((string) $entry['surah_name']),
+            ];
+
+            if (count($matches) >= $limit) {
+                break;
+            }
+        }
+
+        return $matches;
+    }
+
+    /**
+     * @param  array<int, string>  $tokens
+     * @return array<int, array{
+     *     surah_number: int,
+     *     ayah_index: int,
+     *     ayah_number: int,
+     *     page_number: int,
+     *     verse_id: int,
+     *     surah_name: string
+     * }>
+     */
+    private function collectSurahMatchesByStemQuery(string $searchQuery, array $tokens, int $limit): array
+    {
+        if ($limit < 1) {
+            return [];
+        }
+
+        $entries = $this->surahSearchEntries();
+
+        if ($entries === []) {
+            return [];
+        }
+
+        $queryStemCandidates = [];
+        $rawQueryStem = trim(ArabicFilter::forStem($searchQuery));
+
+        if ($rawQueryStem !== '') {
+            $queryStemCandidates[$rawQueryStem] = true;
+        }
+
+        if ($tokens !== []) {
+            $tokenStem = trim(ArabicFilter::forStem(implode(' ', $tokens)));
+
+            if ($tokenStem !== '') {
+                $queryStemCandidates[$tokenStem] = true;
+            }
+        }
+
+        if ($queryStemCandidates === []) {
+            return [];
+        }
+
+        $queryStems = array_keys($queryStemCandidates);
+        $matches = [];
+
+        foreach ($entries as $entry) {
+            $nameStem = trim((string) $entry['name_stem']);
+
+            if ($nameStem === '' || ! $this->isSurahNameStemMatch($nameStem, $queryStems)) {
+                continue;
+            }
+
+            $matches[] = [
+                'surah_number' => (int) $entry['surah_number'],
+                'ayah_index' => max(0, (int) $entry['ayah_index']),
+                'ayah_number' => max(1, (int) $entry['ayah_number']),
+                'page_number' => max(1, (int) $entry['page_number']),
+                'verse_id' => max(0, (int) $entry['verse_id']),
+                'surah_name' => trim((string) $entry['surah_name']),
+            ];
+
+            if (count($matches) >= $limit) {
+                break;
+            }
+        }
+
+        return $matches;
+    }
+
+    private function isSurahNameExactMatch(
+        string $nameSearchable,
+        array $queryVariants,
+        array $tokens,
+    ): bool {
+        if ($nameSearchable === '') {
+            return false;
+        }
+
+        foreach ($queryVariants as $variant) {
+            $normalizedVariant = trim((string) $variant);
+
+            if ($normalizedVariant === '') {
+                continue;
+            }
+
+            if ($nameSearchable === $normalizedVariant) {
+                return true;
+            }
+
+            if ($this->containsWholePhrase($nameSearchable, $normalizedVariant)) {
+                return true;
+            }
+        }
+
+        if ($tokens === []) {
+            return false;
+        }
+
+        $nameTokens = array_values(array_filter(
+            preg_split('/\s+/u', $nameSearchable) ?: [],
+            static fn (string $token): bool => $token !== '',
+        ));
+        $nameTokenLookup = array_fill_keys($nameTokens, true);
+
+        if ($nameTokenLookup === []) {
+            return false;
+        }
+
+        foreach ($tokens as $token) {
+            if (! isset($nameTokenLookup[$token])) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @param  array<int, string>  $queryStems
+     */
+    private function isSurahNameStemMatch(string $nameStem, array $queryStems): bool
+    {
+        if ($nameStem === '' || $queryStems === []) {
+            return false;
+        }
+
+        $nameStemTokens = array_values(array_filter(
+            preg_split('/\s+/u', $nameStem) ?: [],
+            static fn (string $token): bool => $token !== '',
+        ));
+        $nameStemLookup = array_fill_keys($nameStemTokens, true);
+
+        foreach ($queryStems as $queryStem) {
+            $normalizedQueryStem = trim($queryStem);
+
+            if ($normalizedQueryStem === '') {
+                continue;
+            }
+
+            if (
+                $nameStem === $normalizedQueryStem ||
+                $this->containsWholePhrase($nameStem, $normalizedQueryStem)
+            ) {
+                return true;
+            }
+
+            $queryStemTokens = array_values(array_filter(
+                preg_split('/\s+/u', $normalizedQueryStem) ?: [],
+                static fn (string $token): bool => $token !== '',
+            ));
+
+            if ($queryStemTokens === []) {
+                continue;
+            }
+
+            $allTokensExist = true;
+
+            foreach ($queryStemTokens as $queryStemToken) {
+                if (! isset($nameStemLookup[$queryStemToken])) {
+                    $allTokensExist = false;
+
+                    break;
+                }
+            }
+
+            if ($allTokensExist) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function containsWholePhrase(string $haystack, string $needle): bool
+    {
+        if ($haystack === '' || $needle === '') {
+            return false;
+        }
+
+        return $haystack === $needle
+            || str_starts_with($haystack, $needle.' ')
+            || str_ends_with($haystack, ' '.$needle)
+            || str_contains($haystack, ' '.$needle.' ');
+    }
+
+    /**
+     * @return array<int, array{
+     *     surah_number: int,
+     *     surah_name: string,
+     *     name_searchable: string,
+     *     name_stem: string,
+     *     ayah_index: int,
+     *     ayah_number: int,
+     *     page_number: int,
+     *     verse_id: int
+     * }>
+     */
+    private function surahSearchEntries(): array
+    {
+        /** @var array<int, array{
+         *     surah_number: int,
+         *     surah_name: string,
+         *     name_searchable: string,
+         *     name_stem: string,
+         *     ayah_index: int,
+         *     ayah_number: int,
+         *     page_number: int,
+         *     verse_id: int
+         * }> $entries
+         */
+        $entries = Cache::memo()->remember(
+            'quran-reader-surah-search-index-v1',
+            now()->addDays(30),
+            function (): array {
+                $surahNames = $this->surahNames();
+                $surahDirectory = $this->surahDirectory();
+                $firstVerseRows = DB::table('quran_verses')
+                    ->selectRaw(
+                        'surah_number, MIN(id) AS verse_id, MIN(ayah_index) AS ayah_index, MIN(ayah_number) AS ayah_number, MIN(mushaf_page) AS mushaf_page',
+                    )
+                    ->whereBetween('surah_number', [1, 114])
+                    ->groupBy('surah_number')
+                    ->orderBy('surah_number')
+                    ->get();
+
+                $firstVerseBySurah = [];
+
+                foreach ($firstVerseRows as $row) {
+                    $surahNumber = (int) ($row->surah_number ?? 0);
+
+                    if ($surahNumber < 1 || $surahNumber > 114) {
+                        continue;
+                    }
+
+                    $ayahNumber = max(1, (int) ($row->ayah_number ?? 1));
+                    $mushafPage = $row->mushaf_page !== null ? (int) $row->mushaf_page : null;
+                    $displayPage = $this->resolveDisplayedMushafPage($surahNumber, $ayahNumber, $mushafPage);
+
+                    $firstVerseBySurah[$surahNumber] = [
+                        'ayah_index' => max(0, (int) ($row->ayah_index ?? 0)),
+                        'ayah_number' => $ayahNumber,
+                        'page_number' => max(1, (int) ($displayPage ?? 1)),
+                        'verse_id' => max(0, (int) ($row->verse_id ?? 0)),
+                    ];
+                }
+
+                $directoryBySurah = [];
+
+                foreach ($surahDirectory as $entry) {
+                    $surahNumber = (int) $entry['surah_number'];
+                    $pageNumber = (int) $entry['page_number'];
+
+                    if ($surahNumber < 1 || $surahNumber > 114 || $pageNumber < 1) {
+                        continue;
+                    }
+
+                    $directoryBySurah[$surahNumber] = $pageNumber;
+                }
+
+                $resolved = [];
+
+                for ($surahNumber = 1; $surahNumber <= 114; $surahNumber++) {
+                    $surahName = trim((string) ($surahNames[$surahNumber] ?? ''));
+
+                    if ($surahName === '') {
+                        continue;
+                    }
+
+                    $nameSearchable = trim($this->normalizeQuranSearchQuery($surahName));
+
+                    if ($nameSearchable === '') {
+                        continue;
+                    }
+
+                    $verseMeta = $firstVerseBySurah[$surahNumber] ?? [];
+
+                    $resolved[] = [
+                        'surah_number' => $surahNumber,
+                        'surah_name' => $surahName,
+                        'name_searchable' => $nameSearchable,
+                        'name_stem' => trim(ArabicFilter::forStem($surahName)),
+                        'ayah_index' => max(0, (int) ($verseMeta['ayah_index'] ?? 0)),
+                        'ayah_number' => max(1, (int) ($verseMeta['ayah_number'] ?? 1)),
+                        'page_number' => max(
+                            1,
+                            (int) ($verseMeta['page_number'] ?? ($directoryBySurah[$surahNumber] ?? 1)),
+                        ),
+                        'verse_id' => max(0, (int) ($verseMeta['verse_id'] ?? 0)),
+                    ];
+                }
+
+                return $resolved;
+            },
+        );
+
+        return $entries;
+    }
+
+    /**
+     * @param  array<int, array{
+     *     id: int,
+     *     ayah_index: int,
+     *     surah_number: int,
+     *     ayah_number: int,
+     *     page_number: int,
+     *     text_uthmani: string,
+     *     text_searchable_typed: string,
+     *     search_snippet: string,
+     *     match_strategy: string,
+     *     match_tone: string,
+     *     match_shade: int,
+     *     match_label: string,
+     *     match_rank: int
+     * }>  $matches
+     * @param  array<int, true>  $seenAyahIndexes
+     * @param  array<int, true>  $seenSurahNumbers
+     * @param  array<int, array{
+     *     surah_number: int,
+     *     ayah_index: int,
+     *     ayah_number: int,
+     *     page_number: int,
+     *     verse_id: int,
+     *     surah_name: string
+     * }>  $surahMatches
+     */
+    private function appendSurahMatches(
+        array &$matches,
+        array &$seenAyahIndexes,
+        array &$seenSurahNumbers,
+        array $surahMatches,
+        int $limit,
+        string $searchQuery,
+        string $matchStrategy,
+    ): void {
+        if ($surahMatches === [] || count($matches) >= $limit) {
+            return;
+        }
+
+        $matchMeta = $this->resolveSearchMatchMeta($matchStrategy);
+
+        foreach ($surahMatches as $surahMatch) {
+            $surahNumber = max(1, (int) $surahMatch['surah_number']);
+
+            if (isset($seenSurahNumbers[$surahNumber])) {
+                continue;
+            }
+
+            $seenSurahNumbers[$surahNumber] = true;
+            $ayahIndex = max(0, (int) $surahMatch['ayah_index']);
+
+            if ($ayahIndex > 0) {
+                $seenAyahIndexes[$ayahIndex] = true;
+            }
+
+            $surahName = trim((string) $surahMatch['surah_name']);
+            $title = $surahName !== '' ? 'سورة '.$surahName : 'سورة '.$surahNumber;
+
+            $matches[] = [
+                'id' => max(0, (int) $surahMatch['verse_id']),
+                'ayah_index' => $ayahIndex,
+                'surah_number' => $surahNumber,
+                'ayah_number' => max(1, (int) $surahMatch['ayah_number']),
+                'page_number' => max(1, (int) $surahMatch['page_number']),
+                'text_uthmani' => $title,
+                'text_searchable_typed' => $surahName,
+                'search_snippet' => $this->buildSearchSnippet($surahName, $searchQuery),
+                'match_strategy' => $matchStrategy,
+                'match_tone' => $matchMeta['tone'],
+                'match_shade' => $matchMeta['shade'],
+                'match_label' => $matchMeta['label'],
+                'match_rank' => $matchMeta['rank'],
+            ];
+
+            if (count($matches) >= $limit) {
+                return;
+            }
+        }
     }
 
     /**
@@ -1250,41 +1724,53 @@ class QuranReaderDataService
     private function resolveSearchMatchMeta(string $matchStrategy): array
     {
         return match ($matchStrategy) {
+            'surah_exact' => [
+                'tone' => 'success',
+                'shade' => 500,
+                'label' => 'مطابقة اسم سورة',
+                'rank' => 1,
+            ],
+            'surah_stem' => [
+                'tone' => 'info',
+                'shade' => 500,
+                'label' => 'مطابقة صرفية لاسم سورة',
+                'rank' => 2,
+            ],
             'exact_phrase' => [
                 'tone' => 'success',
                 'shade' => 500,
                 'label' => 'مطابقة تامة',
-                'rank' => 1,
+                'rank' => 3,
             ],
             'exact_tokens' => [
                 'tone' => 'warning',
                 'shade' => 500,
                 'label' => 'مطابقة كلمات',
-                'rank' => 2,
+                'rank' => 4,
             ],
             'stem_tokens' => [
                 'tone' => 'info',
                 'shade' => 500,
                 'label' => 'مطابقة صرفية',
-                'rank' => 3,
+                'rank' => 5,
             ],
             'root_tokens' => [
                 'tone' => 'danger',
                 'shade' => 500,
                 'label' => 'مطابقة جذرية',
-                'rank' => 4,
+                'rank' => 6,
             ],
             'word_prefix' => [
                 'tone' => 'danger',
                 'shade' => 500,
                 'label' => 'مطابقة تقريبية',
-                'rank' => 5,
+                'rank' => 7,
             ],
             default => [
                 'tone' => 'warning',
                 'shade' => 500,
                 'label' => 'مطابقة',
-                'rank' => 6,
+                'rank' => 8,
             ],
         };
     }
