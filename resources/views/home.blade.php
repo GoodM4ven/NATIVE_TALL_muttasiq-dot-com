@@ -395,13 +395,7 @@
         <x-buttons-stack
             x-bind:data-respecting-stack="$store.bp.current === 'base'"
             stack-top-offset="0.4rem"
-            x-show="!({{ $quranReaderViewsCondition }}) || (
-                !isQuranReaderCalibrating &&
-                document.body.classList.contains('quran-reader-immersive-chrome-visible') &&
-                !document.body.classList.contains('quran-reader-calibrating') &&
-                !isQuranReaderFontScaleOverlayOpen &&
-                !document.body.classList.contains('quran-reader-font-scale-overlay-open')
-            )"
+            x-show="$store.bp.current === 'base'"
             x-transition.opacity.duration.220ms
             @class(['mt-8' => is_platform('ios')])
         >
