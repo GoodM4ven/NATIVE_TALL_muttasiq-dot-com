@@ -56,6 +56,18 @@ function buttonsStackClasses(string $content): string
     return $classMatches[1];
 }
 
+function buttonsStackCount(string $content): int
+{
+    $matched = preg_match_all(
+        '/<div\b[^>]*x-bind:data-respecting-stack=[^>]*>/',
+        $content,
+    );
+
+    expect($matched)->not->toBeFalse();
+
+    return (int) $matched;
+}
+
 it('uses local athkar payload and runtime-specific shell/layout classes without remote sync', function () {
     config([
         'nativephp-internal.running' => true,
@@ -141,6 +153,7 @@ it('uses local athkar payload and runtime-specific shell/layout classes without 
         ->toContain('mt-22')
         ->not->toContain('mt-16');
     expect(buttonsStackClasses($iosResponse->getContent()))->toContain('mt-8');
+    expect(buttonsStackCount($iosResponse->getContent()))->toBe(1);
 
     config([
         'nativephp-internal.platform' => 'android',
@@ -150,9 +163,10 @@ it('uses local athkar payload and runtime-specific shell/layout classes without 
     $androidResponse->assertSuccessful();
 
     expect(homeMainClasses($androidResponse->getContent()))
-        ->toContain('mt-16')
+        ->toContain('mt-15')
         ->not->toContain('mt-22');
     expect(buttonsStackClasses($androidResponse->getContent()))->not->toContain('mt-8');
+    expect(buttonsStackCount($androidResponse->getContent()))->toBe(1);
 });
 
 it('renders expected icon and markup contracts while resetting app version to configured runtime value', function () {

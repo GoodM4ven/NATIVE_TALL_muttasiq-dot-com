@@ -633,7 +633,7 @@
     x-init="init();
     return () => destroy();"
     x-effect="syncActionState($store?.layoutManager?.isActionOpen === true)"
-    x-on:switch-view.window="closeQuickStack(); releaseInteractionLock(); scheduleLayout(3); scheduleQuranManagerModalStateSync()"
+    x-on:switch-view.window="closeQuickStack(); releaseInteractionLock(); syncQuranManagerModalState(false); scheduleLayout(3)"
     x-on:hashchange.window="scheduleLayout(3)"
     x-on:resize.window="scheduleLayout(2, { afterDom: false })"
     x-on:orientationchange.window="scheduleLayout(2, { afterDom: false })"

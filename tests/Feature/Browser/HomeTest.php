@@ -413,6 +413,7 @@ JS);
     enableMobileContext($mobilePage);
     waitForGateVisible($mobilePage);
     waitForScriptWithTimeout($mobilePage, quickStackLayoutReadyScript(), true, 3_000);
+    $mobilePage->assertScript("document.querySelectorAll('[x-ref=\"stack\"]').length", 1);
 
     openAthkarReader($mobilePage, 'sabah', true);
 
@@ -500,4 +501,56 @@ JS);
 
     waitForScript($mobilePage, homeDataScript('data.activeView'), 'main-menu');
     waitForScript($mobilePage, 'window.location.hash', '#main-menu');
+
+    forceHomeView($mobilePage, 'quran-app-gate');
+    setHashOnly($mobilePage, '#quran-app-gate', true, true);
+    waitForScript($mobilePage, homeDataScript('data.activeView'), 'quran-app-gate');
+    waitForQuranGateVisible($mobilePage);
+    waitForScriptWithTimeout($mobilePage, quickStackLayoutReadyScript(), true, 3_000);
+    waitForScript($mobilePage, "Boolean(window.Alpine?.store?.('colorScheme'))", true);
+    $mobilePage->script('window.Alpine.store("colorScheme").isDark = false;');
+    waitForScript($mobilePage, "window.Alpine.store('colorScheme').isDarkModeOn", false);
+
+    $clicked = (bool) $mobilePage->script(<<<'JS'
+(() => {
+  const button = document.querySelector('[data-testid="color-scheme-switch-button"]');
+  if (!button) {
+    return false;
+  }
+
+  button.click();
+  button.click();
+
+  return true;
+})()
+JS);
+
+    expect($clicked)->toBeTrue();
+
+    waitForScript($mobilePage, "window.Alpine.store('colorScheme').isDarkModeOn", true);
+
+    forceHomeView($mobilePage, 'quran-app-tilawa');
+    setHashOnly($mobilePage, '#quran-app-tilawa', true, true);
+    waitForScript($mobilePage, homeDataScript('data.activeView'), 'quran-app-tilawa');
+    waitForQuranReaderVisible($mobilePage);
+    waitForScriptWithTimeout($mobilePage, quickStackLayoutReadyScript(), true, 3_000);
+
+    $clicked = (bool) $mobilePage->script(<<<'JS'
+(() => {
+  const button = document.querySelector('[data-testid="return-button"]');
+  if (!button) {
+    return false;
+  }
+
+  button.click();
+  button.click();
+
+  return true;
+})()
+JS);
+
+    expect($clicked)->toBeTrue();
+
+    waitForScript($mobilePage, homeDataScript('data.activeView'), 'quran-app-gate');
+    waitForScript($mobilePage, 'window.location.hash', '#quran-app-gate');
 });
