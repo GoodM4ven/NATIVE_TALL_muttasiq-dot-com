@@ -15743,9 +15743,24 @@ document.addEventListener('alpine:init', () => {
                 .replace(/ى/g, 'ي')
                 .replace(/ؤ/g, 'و')
                 .replace(/ئ/g, 'ي')
-                .trim()
+                .replace(/[^\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\s]+/g, ' ')
                 .replace(/\s+/g, ' ')
+                .trim()
                 .toLowerCase();
+        },
+
+        shouldShowSearchNoResults() {
+            const normalizedQuery = this.normalizeSearchQuery(this.search.query);
+            const rawQueryLength = String(this.search.query ?? '').trim().length;
+            const hasReachedRawMinimum = rawQueryLength >= this.search.minQueryLength;
+
+            return (
+                !this.search.isLoading &&
+                this.search.results.length === 0 &&
+                this.search.lastCompletedNormalizedQuery === normalizedQuery &&
+                (normalizedQuery.length >= this.search.minQueryLength ||
+                    (hasReachedRawMinimum && normalizedQuery.length === 0))
+            );
         },
 
         searchResultAyahText(result) {
@@ -16633,19 +16648,22 @@ document.addEventListener('alpine:init', () => {
         prepareSearchUiForNextQuery(normalizedQuery = '') {
             const normalized = String(normalizedQuery ?? '').trim();
 
-            if (normalized === '' || normalized.length < this.search.minQueryLength) {
-                return;
-            }
-
             if (this._searchRequestInFlight) {
                 this._searchRequestSerial += 1;
                 this.clearSearchStreamTarget();
             }
 
             this.search.lastCompletedNormalizedQuery = '';
-            this.search.isLoading = true;
             this.search.streamHasUpdates = false;
             this.setSearchResults([], { immediate: true });
+
+            if (normalized === '' || normalized.length < this.search.minQueryLength) {
+                this.search.isLoading = false;
+
+                return;
+            }
+
+            this.search.isLoading = true;
         },
 
         queueSearchResultsUpdate(delayMs = null) {
@@ -17813,7 +17831,23 @@ document.addEventListener('alpine:init', () => {
             );
 
             if (this.isSearchModalWindowVisible()) {
-                window.dispatchEvent(new CustomEvent('close-modal'));
+                const fallbackModalId = [
+                    this.searchActionModalId,
+                    this.searchModalId,
+                    this.searchModalDomId,
+                ]
+                    .map((value) => String(value ?? '').trim())
+                    .find((value) => value !== '');
+
+                window.dispatchEvent(
+                    new CustomEvent('close-modal', {
+                        detail: fallbackModalId
+                            ? {
+                                  id: fallbackModalId,
+                              }
+                            : {},
+                    }),
+                );
                 await wait(24);
             }
 

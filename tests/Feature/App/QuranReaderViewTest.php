@@ -1488,7 +1488,12 @@ it('pads quran search stream payloads so livewire can flush incremental updates 
 
     expect($quranSearchModalSource)->not->toBeFalse()
         ->and($quranSearchModalSource)->toContain('wire:stream="quran-search-results-stream"')
-        ->and($quranSearchModalSource)->not->toContain('wire:stream.replace="quran-search-results-stream"');
+        ->and($quranSearchModalSource)->not->toContain('wire:stream.replace="quran-search-results-stream"')
+        ->and($quranSearchModalSource)->toContain(
+            'search.lastCompletedNormalizedQuery === normalizeSearchQuery(search.query)',
+        )
+        ->and($quranSearchModalSource)->toContain('animate-spin rounded-full')
+        ->and($quranSearchModalSource)->not->toContain('جاري البحث...');
 
     expect($quranReaderScriptSource)->not->toBeFalse()
         ->and($quranReaderScriptSource)->toContain('quranSearchStreamFrameDelimiter')
@@ -1496,7 +1501,11 @@ it('pads quran search stream payloads so livewire can flush incremental updates 
         ->and($quranReaderScriptSource)->toContain('_searchStreamFrameRemainder')
         ->and($quranReaderScriptSource)->toContain('searchLocalIndexRequestUrl()')
         ->and($quranReaderScriptSource)->toContain('warmSearchLocalIndex()')
-        ->and($quranReaderScriptSource)->toContain('applyLocalSearchPreview(normalizedQuery, requestSerial)');
+        ->and($quranReaderScriptSource)->toContain('applyLocalSearchPreview(normalizedQuery, requestSerial)')
+        ->and($quranReaderScriptSource)->toContain('prepareSearchUiForNextQuery(normalizedQuery = \'\')')
+        ->and($quranReaderScriptSource)->toContain(
+            'this.prepareSearchUiForNextQuery(this.normalizeSearchQuery(this.search.query));',
+        );
 
     $searchIndexControllerSource = file_get_contents(
         app_path('Http/Controllers/Quran/ReaderSearchIndexController.php'),

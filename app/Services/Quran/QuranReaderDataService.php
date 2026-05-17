@@ -364,7 +364,7 @@ class QuranReaderDataService
             return [];
         }
 
-        $normalizedQuery = trim($this->normalizeQuranSearchQuery($query));
+        $normalizedQuery = $this->sanitizeQuranSearchQuery($query);
 
         if ($normalizedQuery === '' || mb_strlen($normalizedQuery) < 2) {
             return [];
@@ -1452,7 +1452,7 @@ class QuranReaderDataService
         $variants = [];
 
         foreach ($expandedVariants as $variant) {
-            $normalizedVariant = trim($variant);
+            $normalizedVariant = trim((string) $variant);
 
             if ($normalizedVariant === '') {
                 continue;
@@ -2508,12 +2508,38 @@ class QuranReaderDataService
         return QuranSearchText::normalizeQuery($text);
     }
 
+    private function sanitizeQuranSearchQuery(string $text): string
+    {
+        $normalized = trim($this->normalizeQuranSearchQuery($text));
+
+        if ($normalized === '') {
+            return '';
+        }
+
+        $arabicOnly = preg_replace('/[^\p{Arabic}\s]+/u', ' ', $normalized) ?? $normalized;
+        $collapsedSpaces = preg_replace('/\s+/u', ' ', trim($arabicOnly)) ?? trim($arabicOnly);
+
+        return trim($collapsedSpaces);
+    }
+
     /**
      * @return array<int, string>
      */
     private function expandSearchTextVariants(string $text): array
     {
-        return QuranSearchText::expandVariants($text);
+        $variants = [];
+
+        foreach (QuranSearchText::expandVariants($text) as $variant) {
+            $normalizedVariant = trim((string) $variant);
+
+            if ($normalizedVariant === '') {
+                continue;
+            }
+
+            $variants[$normalizedVariant] = true;
+        }
+
+        return array_keys($variants);
     }
 
     /**
