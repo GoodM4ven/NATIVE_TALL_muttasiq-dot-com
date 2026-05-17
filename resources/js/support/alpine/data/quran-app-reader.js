@@ -33,6 +33,7 @@ const controlPanelSettingKeys = Object.freeze({
     wirdKhatmatTarget: 'quran_wird_khatmat_target',
 });
 const athkarSettingsUserOverridesStorageKey = 'athkar-settings-user-overrides-v1';
+const quranSearchStreamFrameDelimiter = '\n<<<QURAN_SEARCH_STREAM_FRAME>>>\n';
 
 const normalizePayload = (payload = {}) => ({
     ready: Boolean(payload?.ready),
@@ -791,6 +792,7 @@ document.addEventListener('alpine:init', () => {
             pages: 'quran-reader-pages-v13',
             fonts: 'quran-reader-fonts-v4',
             search: 'quran-reader-search-v3',
+            searchLocalIndex: 'quran-reader-search-local-index-v1',
         },
         initialPayload: normalizePayload(config?.initialPayload),
         nativeRuntime: Boolean(config?.nativeRuntime ?? false),
@@ -897,6 +899,7 @@ document.addEventListener('alpine:init', () => {
             isLoading: false,
             streamHasUpdates: false,
             isReady: false,
+            localIndexReady: false,
             isOpen: false,
             modalOpen: false,
             readyResult: null,
@@ -1053,8 +1056,12 @@ document.addEventListener('alpine:init', () => {
         _searchRequestSerial: 0,
         _searchRequestInFlight: false,
         _searchQueuedNormalizedQuery: null,
+        _searchLocalIndexPromise: null,
+        _searchLocalRows: [],
         _searchStreamObserver: null,
         _lastSearchStreamPayloadRaw: '',
+        _lastSearchStreamPayloadOffset: 0,
+        _searchStreamFrameRemainder: '',
         _searchResultsLeaveTimer: null,
         _stopLivewireMorphedHook: null,
         _supportLockTargetsSyncRaf: null,
@@ -2390,6 +2397,8 @@ document.addEventListener('alpine:init', () => {
 
             this.teardownSearchStreamObserver();
             this._lastSearchStreamPayloadRaw = '';
+            this._lastSearchStreamPayloadOffset = 0;
+            this._searchStreamFrameRemainder = '';
             if (this._searchResultsLeaveTimer !== null) {
                 clearTimeout(this._searchResultsLeaveTimer);
                 this._searchResultsLeaveTimer = null;
@@ -16913,6 +16922,8 @@ document.addEventListener('alpine:init', () => {
 
             target.textContent = '';
             this._lastSearchStreamPayloadRaw = '';
+            this._lastSearchStreamPayloadOffset = 0;
+            this._searchStreamFrameRemainder = '';
         },
 
         teardownSearchStreamObserver() {
@@ -16949,27 +16960,42 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            const rawPayload = String(target.textContent ?? '').trim();
+            const streamText = String(target.textContent ?? '');
+            const unreadPayload = streamText.slice(this._lastSearchStreamPayloadOffset);
 
-            if (rawPayload === '' || rawPayload === this._lastSearchStreamPayloadRaw) {
+            if (unreadPayload === '') {
                 return;
             }
 
-            this._lastSearchStreamPayloadRaw = rawPayload;
+            this._lastSearchStreamPayloadOffset = streamText.length;
 
-            let payload = null;
+            const framedPayload = `${this._searchStreamFrameRemainder}${unreadPayload}`;
+            const frames = framedPayload.split(quranSearchStreamFrameDelimiter);
+            this._searchStreamFrameRemainder = frames.pop() ?? '';
 
-            try {
-                payload = JSON.parse(rawPayload);
-            } catch (_) {
-                try {
-                    payload = JSON.parse(this.decodeSearchStreamPayload(rawPayload));
-                } catch (__) {
+            frames.forEach((frame) => {
+                const rawPayload = String(frame ?? '').trim();
+
+                if (rawPayload === '' || rawPayload === this._lastSearchStreamPayloadRaw) {
                     return;
                 }
-            }
 
-            this.applySearchStreamPayload(payload);
+                this._lastSearchStreamPayloadRaw = rawPayload;
+
+                let payload = null;
+
+                try {
+                    payload = JSON.parse(rawPayload);
+                } catch (_) {
+                    try {
+                        payload = JSON.parse(this.decodeSearchStreamPayload(rawPayload));
+                    } catch (__) {
+                        return;
+                    }
+                }
+
+                this.applySearchStreamPayload(payload);
+            });
         },
 
         decodeSearchStreamPayload(rawPayload) {
@@ -18040,6 +18066,238 @@ document.addEventListener('alpine:init', () => {
             return url.toString();
         },
 
+        searchLocalIndexRequestUrl() {
+            const baseUrl = this.searchRequestUrl();
+
+            if (!baseUrl) {
+                return '';
+            }
+
+            const url = new URL(baseUrl, window.location.origin);
+            url.searchParams.set('local', '1');
+
+            return url.toString();
+        },
+
+        normalizeLocalSearchIndexRows(items = []) {
+            return (Array.isArray(items) ? items : [])
+                .map((item) => {
+                    if (!item || typeof item !== 'object') {
+                        return null;
+                    }
+
+                    const typedNormalized = this.normalizeSearchQuery(
+                        item.text_searchable_typed ?? '',
+                    );
+                    const searchableNormalized = this.normalizeSearchQuery(
+                        item.text_searchable ?? '',
+                    );
+                    const tokenLookup = {};
+
+                    `${typedNormalized} ${searchableNormalized}`
+                        .trim()
+                        .split(/\s+/)
+                        .filter(Boolean)
+                        .forEach((token) => {
+                            tokenLookup[token] = true;
+                        });
+
+                    return {
+                        id: Math.max(0, Math.trunc(Number(item.id ?? 0))),
+                        ayah_index: Math.max(0, Math.trunc(Number(item.ayah_index ?? 0))),
+                        surah_number: Math.max(1, Math.trunc(Number(item.surah_number ?? 1))),
+                        ayah_number: Math.max(1, Math.trunc(Number(item.ayah_number ?? 1))),
+                        page_number: Math.max(1, Math.trunc(Number(item.page_number ?? 1))),
+                        text_uthmani: String(item.text_uthmani ?? '').trim(),
+                        text_searchable_typed: String(item.text_searchable_typed ?? '').trim(),
+                        _typed: typedNormalized,
+                        _searchable: searchableNormalized,
+                        _tokens: tokenLookup,
+                    };
+                })
+                .filter((item) => item !== null && (item._typed !== '' || item._searchable !== ''));
+        },
+
+        localSearchContainsWholePhrase(text, phrase) {
+            const normalizedText = String(text ?? '').trim();
+            const normalizedPhrase = String(phrase ?? '').trim();
+
+            if (normalizedText === '' || normalizedPhrase === '') {
+                return false;
+            }
+
+            let phraseOffset = normalizedText.indexOf(normalizedPhrase);
+
+            while (phraseOffset !== -1) {
+                const beforeBoundary =
+                    phraseOffset === 0 || normalizedText[phraseOffset - 1] === ' ';
+                const afterIndex = phraseOffset + normalizedPhrase.length;
+                const afterBoundary =
+                    afterIndex === normalizedText.length || normalizedText[afterIndex] === ' ';
+
+                if (beforeBoundary && afterBoundary) {
+                    return true;
+                }
+
+                phraseOffset = normalizedText.indexOf(normalizedPhrase, phraseOffset + 1);
+            }
+
+            return false;
+        },
+
+        localSearchStrategyForRow(row, normalizedQuery, queryTokens) {
+            if (!row || typeof row !== 'object') {
+                return null;
+            }
+
+            const typedText = String(row._typed ?? '');
+            const searchableText = String(row._searchable ?? '');
+
+            if (
+                this.localSearchContainsWholePhrase(typedText, normalizedQuery) ||
+                this.localSearchContainsWholePhrase(searchableText, normalizedQuery)
+            ) {
+                return 'exact_phrase';
+            }
+
+            if (
+                queryTokens.length > 0 &&
+                queryTokens.every((token) => Boolean(row._tokens?.[token]))
+            ) {
+                return 'exact_tokens';
+            }
+
+            if (
+                (typedText !== '' && typedText.includes(normalizedQuery)) ||
+                (searchableText !== '' && searchableText.includes(normalizedQuery))
+            ) {
+                return 'word_prefix';
+            }
+
+            return null;
+        },
+
+        buildLocalSearchResultFromRow(row, strategy) {
+            const resolvedStrategy = String(strategy ?? '').trim() || 'exact_tokens';
+            const toneByStrategy = {
+                exact_phrase: 'success',
+                exact_tokens: 'success',
+                word_prefix: 'warning',
+            };
+            const shadeByStrategy = {
+                exact_phrase: 50,
+                exact_tokens: 50,
+                word_prefix: 100,
+            };
+
+            return {
+                id: Math.max(0, Math.trunc(Number(row?.id ?? 0))),
+                ayah_index: Math.max(0, Math.trunc(Number(row?.ayah_index ?? 0))),
+                surah_number: Math.max(1, Math.trunc(Number(row?.surah_number ?? 1))),
+                ayah_number: Math.max(1, Math.trunc(Number(row?.ayah_number ?? 1))),
+                page_number: Math.max(1, Math.trunc(Number(row?.page_number ?? 1))),
+                text_uthmani: String(row?.text_uthmani ?? '').trim(),
+                text_searchable_typed: String(row?.text_searchable_typed ?? '').trim(),
+                search_snippet: String(row?.text_searchable_typed ?? '').trim(),
+                match_strategy: resolvedStrategy,
+                match_tone: toneByStrategy[resolvedStrategy] ?? 'warning',
+                match_shade: shadeByStrategy[resolvedStrategy] ?? 100,
+                match_label: '',
+                match_rank: resolvedStrategy === 'exact_phrase' ? 30 : 40,
+            };
+        },
+
+        async warmSearchLocalIndex() {
+            if (this.search.localIndexReady || !this.api.searchIndexUrl) {
+                return;
+            }
+
+            if (this._searchLocalIndexPromise) {
+                await this._searchLocalIndexPromise;
+
+                return;
+            }
+
+            this._searchLocalIndexPromise = (async () => {
+                try {
+                    const payload = await fetchJsonWithCache({
+                        url: this.searchLocalIndexRequestUrl(),
+                        cacheName: this.cacheNames.searchLocalIndex,
+                        preferCache: true,
+                    });
+                    const localRows = this.normalizeLocalSearchIndexRows(payload?.items ?? []);
+                    this._searchLocalRows = localRows;
+                    this.search.localIndexReady = localRows.length > 0;
+                } catch (_) {
+                    this._searchLocalRows = [];
+                    this.search.localIndexReady = false;
+                } finally {
+                    this._searchLocalIndexPromise = null;
+                }
+            })();
+
+            await this._searchLocalIndexPromise;
+        },
+
+        async applyLocalSearchPreview(normalizedQuery, requestSerial) {
+            if (!this.search.localIndexReady || !Array.isArray(this._searchLocalRows)) {
+                return;
+            }
+
+            const queryTokens = normalizedQuery.split(/\s+/).filter(Boolean);
+
+            if (queryTokens.length === 0) {
+                return;
+            }
+
+            const localResults = [];
+            let lastRenderedCount = 0;
+
+            for (let rowIndex = 0; rowIndex < this._searchLocalRows.length; rowIndex += 1) {
+                if (requestSerial !== this._searchRequestSerial) {
+                    return;
+                }
+
+                const row = this._searchLocalRows[rowIndex];
+                const matchStrategy = this.localSearchStrategyForRow(
+                    row,
+                    normalizedQuery,
+                    queryTokens,
+                );
+
+                if (!matchStrategy) {
+                    continue;
+                }
+
+                localResults.push(this.buildLocalSearchResultFromRow(row, matchStrategy));
+
+                if (localResults.length >= 24) {
+                    break;
+                }
+
+                if (
+                    localResults.length > lastRenderedCount &&
+                    (localResults.length % 2 === 0 || rowIndex % 160 === 0)
+                ) {
+                    this.search.streamHasUpdates = true;
+                    this.setSearchResults(
+                        this.mergeSearchResults(this.activeSearchResults(), localResults),
+                    );
+                    lastRenderedCount = localResults.length;
+                    await this.nextTickAsync();
+                }
+            }
+
+            if (requestSerial !== this._searchRequestSerial || localResults.length === 0) {
+                return;
+            }
+
+            this.search.streamHasUpdates = true;
+            this.setSearchResults(
+                this.mergeSearchResults(this.activeSearchResults(), localResults),
+            );
+        },
+
         async warmSearchIndex() {
             if (this.search.isReady || this.search.isLoading || !this.api.searchIndexUrl) {
                 return;
@@ -18085,6 +18343,7 @@ document.addEventListener('alpine:init', () => {
                     this.buildSurahDirectory(surahDirectory);
                     this.refreshSurahTriggerCaption(false);
                     this.search.isReady = true;
+                    void this.warmSearchLocalIndex();
                 } catch (_) {
                     if (
                         !Array.isArray(this.search.surahDirectory) ||
@@ -18143,6 +18402,10 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            if (!this.search.localIndexReady) {
+                void this.warmSearchLocalIndex();
+            }
+
             if (this._searchRequestInFlight) {
                 this._searchQueuedNormalizedQuery = normalizedQuery;
 
@@ -18166,6 +18429,7 @@ document.addEventListener('alpine:init', () => {
             this.search.isLoading = true;
             this.search.streamHasUpdates = false;
             this.clearSearchStreamTarget();
+            await this.applyLocalSearchPreview(normalizedQuery, requestSerial);
 
             try {
                 const livewireResults = await this.$wire.streamSearch(

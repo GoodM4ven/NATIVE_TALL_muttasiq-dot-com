@@ -9,7 +9,7 @@
         <div
             class="sr-only hidden"
             data-quran-search-stream-target
-            wire:stream.replace="quran-search-results-stream"
+            wire:stream="quran-search-results-stream"
             x-ref="searchResultsStream"
         ></div>
 
@@ -24,7 +24,7 @@
         <div
             class="quran-search-feedback mt-2"
             x-cloak
-            x-show="normalizeSearchQuery(search.query).length >= search.minQueryLength && search.isLoading"
+            x-show="normalizeSearchQuery(search.query).length >= search.minQueryLength && search.isLoading && search.results.length === 0"
             x-transition.opacity.duration.220ms
         >{{ arabic_text('جاري البحث...') }}</div>
 

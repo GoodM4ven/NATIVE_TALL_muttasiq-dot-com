@@ -741,6 +741,46 @@ it('returns matches for legacy orthography phrases in quran search endpoint', fu
         ))->toBeTrue();
 });
 
+it('matches quran orthography variants when the query drops the ra from al-quran', function () {
+    if (! Schema::hasTable('quran_verses')) {
+        $this->markTestSkipped('Quran verses table is unavailable.');
+    }
+
+    $response = $this->getJson(route('quran-reader-search-index', [
+        'q' => 'والقآن المجيد',
+    ], false));
+
+    $response->assertSuccessful();
+
+    $items = $response->json('items', []);
+
+    expect($items)->toBeArray()->not->toBeEmpty()
+        ->and((int) ($items[0]['surah_number'] ?? 0))->toBe(50)
+        ->and((int) ($items[0]['ayah_number'] ?? 0))->toBe(1)
+        ->and((string) ($items[0]['match_strategy'] ?? ''))->toBe('exact_phrase');
+});
+
+it('exposes local quran search index payload for client-side instant preview', function () {
+    if (! Schema::hasTable('quran_verses')) {
+        $this->markTestSkipped('Quran verses table is unavailable.');
+    }
+
+    $response = $this->getJson(route('quran-reader-search-index', [
+        'local' => 1,
+    ], false));
+
+    $response->assertSuccessful();
+
+    $items = $response->json('items', []);
+
+    expect($items)->toBeArray()->not->toBeEmpty()
+        ->and((int) ($items[0]['id'] ?? 0))->toBeGreaterThan(0)
+        ->and((int) ($items[0]['surah_number'] ?? 0))->toBeGreaterThan(0)
+        ->and((int) ($items[0]['ayah_number'] ?? 0))->toBeGreaterThan(0)
+        ->and((int) ($items[0]['page_number'] ?? 0))->toBeGreaterThan(0)
+        ->and((string) ($items[0]['text_searchable_typed'] ?? ''))->not->toBe('');
+});
+
 it('normalizes invisible directional chars in quran search queries while preserving exact phrase ranking', function () {
     if (! Schema::hasTable('quran_verses')) {
         $this->markTestSkipped('Quran verses table is unavailable.');
@@ -1417,4 +1457,52 @@ it('reacts to quran search query changes through an alpine watcher', function ()
         ->and($quranReaderScriptSource)->toContain(
             'inputDebounceMs: 600',
         );
+});
+
+it('pads quran search stream payloads so livewire can flush incremental updates promptly', function () {
+    $quranReaderClassSource = file_get_contents(app_path('Livewire/QuranApp/Reader.php'));
+    $quranSearchModalSource = file_get_contents(
+        resource_path('views/components/partials/quran-app/search-modal.blade.php'),
+    );
+    $quranReaderScriptSource = file_get_contents(
+        resource_path('js/support/alpine/data/quran-app-reader.js'),
+    );
+
+    expect($quranReaderClassSource)->not->toBeFalse()
+        ->and($quranReaderClassSource)->toContain('private const SEARCH_STREAM_PADDING_BYTES = 65536;')
+        ->and($quranReaderClassSource)->toContain('private const SEARCH_STREAM_FRAME_DELIMITER =')
+        ->and($quranReaderClassSource)->toContain("'pad' => str_repeat(' ', self::SEARCH_STREAM_PADDING_BYTES),")
+        ->and($quranReaderClassSource)->toContain('replace: false,')
+        ->and($quranReaderClassSource)->toContain(
+            "\$this->streamSearchPayload(\n            [],\n            [],\n            \$normalizedRequestSerial,\n            'start',\n            false,\n        );",
+        );
+
+    $quranReaderDataServiceSource = file_get_contents(app_path('Services/Quran/QuranReaderDataService.php'));
+
+    expect($quranReaderDataServiceSource)->not->toBeFalse()
+        ->and($quranReaderDataServiceSource)->toContain('appendExactPhraseMatchesFromSearchIndex')
+        ->and($quranReaderDataServiceSource)->toContain('appendSemanticTokenMatchesFromQuranWords')
+        ->and($quranReaderDataServiceSource)->toContain('->lazy(512)')
+        ->and($quranReaderDataServiceSource)->not->toContain('collectVerseIdsByStemTokens')
+        ->and($quranReaderDataServiceSource)->not->toContain('collectVerseIdsByRootTokens');
+
+    expect($quranSearchModalSource)->not->toBeFalse()
+        ->and($quranSearchModalSource)->toContain('wire:stream="quran-search-results-stream"')
+        ->and($quranSearchModalSource)->not->toContain('wire:stream.replace="quran-search-results-stream"');
+
+    expect($quranReaderScriptSource)->not->toBeFalse()
+        ->and($quranReaderScriptSource)->toContain('quranSearchStreamFrameDelimiter')
+        ->and($quranReaderScriptSource)->toContain('_lastSearchStreamPayloadOffset')
+        ->and($quranReaderScriptSource)->toContain('_searchStreamFrameRemainder')
+        ->and($quranReaderScriptSource)->toContain('searchLocalIndexRequestUrl()')
+        ->and($quranReaderScriptSource)->toContain('warmSearchLocalIndex()')
+        ->and($quranReaderScriptSource)->toContain('applyLocalSearchPreview(normalizedQuery, requestSerial)');
+
+    $searchIndexControllerSource = file_get_contents(
+        app_path('Http/Controllers/Quran/ReaderSearchIndexController.php'),
+    );
+
+    expect($searchIndexControllerSource)->not->toBeFalse()
+        ->and($searchIndexControllerSource)->toContain("\$isLocalIndexRequest = \$request->boolean('local');")
+        ->and($searchIndexControllerSource)->toContain("'items' => \$readerDataService->searchIndex()");
 });

@@ -29,6 +29,10 @@ class Reader extends Component implements HasActions, HasSchemas
 
     private const SEARCH_STREAM_TARGET = 'quran-search-results-stream';
 
+    private const SEARCH_STREAM_PADDING_BYTES = 65536;
+
+    private const SEARCH_STREAM_FRAME_DELIMITER = "\n<<<QURAN_SEARCH_STREAM_FRAME>>>\n";
+
     private const HISTORY_MODAL_ID = 'quran-reader-history-modal';
 
     private const BOOKMARKS_MODAL_ID = 'quran-reader-bookmarks-modal';
@@ -314,9 +318,20 @@ class Reader extends Component implements HasActions, HasSchemas
      */
     public function streamSearch(string $query, int $requestSerial = 0): array
     {
+        $this->prepareSearchStreamingOutput();
+
         /** @var QuranReaderDataService $readerDataService */
         $readerDataService = app(QuranReaderDataService::class);
         $normalizedRequestSerial = max(0, $requestSerial);
+
+        $this->streamSearchPayload(
+            [],
+            [],
+            $normalizedRequestSerial,
+            'start',
+            false,
+        );
+
         $didStreamChunks = false;
         $emittedMatchKeys = [];
         $results = $readerDataService->searchProgressively(
@@ -332,16 +347,9 @@ class Reader extends Component implements HasActions, HasSchemas
                 $normalizedMatches = array_values($matches);
 
                 if (! $isComplete) {
-                    $normalizedStage = trim($stage);
                     $newStageMatches = [];
 
                     foreach ($normalizedMatches as $match) {
-                        $matchStage = trim((string) ($match['match_strategy'] ?? ''));
-
-                        if ($normalizedStage !== '' && $matchStage !== $normalizedStage) {
-                            continue;
-                        }
-
                         $matchKey = $this->searchStreamMatchKey($match);
 
                         if ($matchKey === null || isset($emittedMatchKeys[$matchKey])) {
@@ -711,6 +719,8 @@ class Reader extends Component implements HasActions, HasSchemas
             'is_loading' => ! $isComplete,
             'items' => array_values($matches),
             'stage_items' => array_values($stageMatches),
+            // Some server stacks buffer tiny stream frames until several KB accumulate.
+            'pad' => str_repeat(' ', self::SEARCH_STREAM_PADDING_BYTES),
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
         if (! is_string($encodedPayload)) {
@@ -718,10 +728,38 @@ class Reader extends Component implements HasActions, HasSchemas
         }
 
         $this->stream(
-            content: e($encodedPayload),
-            replace: true,
+            content: e($encodedPayload).self::SEARCH_STREAM_FRAME_DELIMITER,
+            replace: false,
             to: self::SEARCH_STREAM_TARGET,
         );
+        $this->flushSearchStreamingOutput();
+    }
+
+    private function prepareSearchStreamingOutput(): void
+    {
+        if (! headers_sent()) {
+            header('X-Accel-Buffering: no');
+            header('Cache-Control: no-cache, no-store, must-revalidate');
+        }
+
+        @ini_set('zlib.output_compression', '0');
+        @ini_set('output_buffering', '0');
+        @ini_set('implicit_flush', '1');
+    }
+
+    private function flushSearchStreamingOutput(): void
+    {
+        if (
+            function_exists('ob_get_level') &&
+            function_exists('ob_flush') &&
+            ob_get_level() > 0
+        ) {
+            @ob_flush();
+        }
+
+        if (function_exists('flush')) {
+            @flush();
+        }
     }
 
     private function supportUnlockModalContent(): HtmlString

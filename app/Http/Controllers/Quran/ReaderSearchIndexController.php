@@ -14,6 +14,16 @@ class ReaderSearchIndexController extends Controller
     public function __invoke(Request $request, QuranReaderDataService $readerDataService): JsonResponse
     {
         $query = trim((string) $request->query('q', ''));
+        $isLocalIndexRequest = $request->boolean('local');
+
+        if ($isLocalIndexRequest) {
+            return response()
+                ->json([
+                    'ready' => $readerDataService->isReady(),
+                    'items' => $readerDataService->searchIndex(),
+                ])
+                ->header('Cache-Control', 'public, max-age=604800, stale-while-revalidate=2592000');
+        }
 
         if ($query !== '') {
             return response()
