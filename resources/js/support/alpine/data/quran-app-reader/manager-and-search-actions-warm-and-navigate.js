@@ -1,0 +1,578 @@
+export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
+    const {
+        arabicHarakatPattern,
+        arabicPresentationFormsPattern,
+        athkarSettingsUserOverridesStorageKey,
+        bookmarkHoldDelayMs,
+        bookmarksStorageKey,
+        cacheAssetResponse,
+        clampPage,
+        controlPanelSettingKeys,
+        copiedHighlightVisibleDurationMs,
+        copyPopoverVisibleDurationMs,
+        currentDateKey,
+        defaultArabicNumerals,
+        defaultBasmallahBottomGapScale,
+        defaultPagePayload,
+        defaultWesternNumerals,
+        ensureSupportLockLivewireMorphBridge,
+        fetchJsonWithCache,
+        fitCacheStorageKey,
+        fitCacheStorageVersion,
+        fitCacheViewportBucketSizePx,
+        fitCalibrationReferencePage,
+        fitDefaultProfile,
+        fitResultCacheLimit,
+        fitRobustWidthOutlierThreshold,
+        fitRobustWidthQuantile,
+        hasArabicPresentationForms,
+        historyEntryHasPersistenceMeta,
+        historyNavigationModalLifecycleSuppressionDurationMs,
+        idleWarmupPauseOnHighFrequencyNavigationMs,
+        idleWarmupPauseOnStandardNavigationMs,
+        idleWarmupResumeDelayMs,
+        lastPageStorageKey,
+        managerRowRemoveAnimationDurationMs,
+        managerRowReplaceAnimationDurationMs,
+        managerRowUpdateAnimationDurationMs,
+        mobileDoubleTapCopyWindowMs,
+        mobileDoubleTapHoldDelayMs,
+        modalCloseTransitionDelayMs,
+        modalLifecycleSuppressionDurationMs,
+        navigationBurstInputThresholdMs,
+        navigationBurstSettleDelayMs,
+        navigationHistoryLimit,
+        navigationHistoryStorageKey,
+        navigationRevealLockDurationMs,
+        navigationSettleDelayMs,
+        nextAnimationFrame,
+        normalizeBookmarkEntry,
+        normalizeBookmarks,
+        normalizeDayOffsetDays,
+        normalizeHistoryEntry,
+        normalizeNavigationHistory,
+        normalizeNumerals,
+        normalizePayload,
+        normalizeSupportUnlockState,
+        normalizeTags,
+        normalizeTextValue,
+        openCacheSafely,
+        openingSpreadFinalScaleMultiplier,
+        pageCounterPulseDurationMs,
+        pageFontLoadTimeoutMs,
+        pageFontReadyRecoveryDelayMs,
+        pageFontReadyTimeoutMs,
+        postModalFitRevealSettleDelayMs,
+        pruneNavigationHistory,
+        quranPageGapAdjustMax,
+        quranPageGapAdjustMin,
+        quranPageGapAdjustMultiplierStep,
+        quranPageGapAdjustStorageKey,
+        quranPageScaleAdjustMax,
+        quranPageScaleAdjustMin,
+        quranPageScaleAdjustMultiplierStep,
+        quranPageScaleAdjustStorageKey,
+        quranPageYOffsetAdjustMax,
+        quranPageYOffsetAdjustMin,
+        quranPageYOffsetAdjustRemStep,
+        quranPageYOffsetAdjustStorageKey,
+        quranReaderDebugLogsEnabledByEnv,
+        quranReaderDebugLogsToggleEventName,
+        quranSearchStreamFrameDelimiter,
+        readBookmarks,
+        readLastPageNumber,
+        readLocalStorage,
+        readLocalStorageRaw,
+        readNavigationHistory,
+        readSupportUnlockState,
+        readWirdDayOffsetDays,
+        readerRevealDebugStorageKey,
+        revealBlockedFailOpenDelayMs,
+        shouldPersistFitCacheAcrossReloads,
+        stripArabicHarakat,
+        supportLockClosedOutlineIconSvg,
+        supportLockLivewireMorphedEventName,
+        supportUnlockModePermanent,
+        supportUnlockModeWeekly,
+        supportUnlockStorageKey,
+        supportUnlockStorageVersion,
+        supportUnlockWeeklyDurationMs,
+        supportedHistorySources,
+        surahQuickNavigatorHoldDelayMs,
+        surahQuickNavigatorLastPage,
+        swipeActivationThresholdPx,
+        swipeRevealWatchdogDelayMs,
+        uniqueLocalId,
+        wait,
+        wirdCompletionVisibleDurationMs,
+        wirdDailyKhatmatTargetMax,
+        wirdDayOffsetStorageKey,
+        wirdFrequencyModeDaily,
+        wirdFrequencyModeMonthly,
+        wirdHoverShimmerDurationMs,
+        wirdKhatmatTargetMin,
+        wirdModeEntryPageInputTweenDurationMs,
+        wirdMonthlyKhatmatTargetMax,
+        wirdProgressStorageKey,
+        wirdProgressStorageVersion,
+        wirdRecordRetentionDays,
+        wordClickSuppressionResetMs,
+        wordPressDragThresholdPx,
+        wordPressHoldDelayMs,
+        writeBookmarks,
+        writeLastPageNumber,
+        writeLocalStorage,
+        writeNavigationHistory,
+        writeSupportUnlockState,
+        writeWirdDayOffsetDays,
+    } = deps;
+
+    return {
+        localSearchContainsWholePhrase(text, phrase) {
+            const normalizedText = String(text ?? '').trim();
+            const normalizedPhrase = String(phrase ?? '').trim();
+
+            if (normalizedText === '' || normalizedPhrase === '') {
+                return false;
+            }
+
+            let phraseOffset = normalizedText.indexOf(normalizedPhrase);
+
+            while (phraseOffset !== -1) {
+                const beforeBoundary =
+                    phraseOffset === 0 || normalizedText[phraseOffset - 1] === ' ';
+                const afterIndex = phraseOffset + normalizedPhrase.length;
+                const afterBoundary =
+                    afterIndex === normalizedText.length || normalizedText[afterIndex] === ' ';
+
+                if (beforeBoundary && afterBoundary) {
+                    return true;
+                }
+
+                phraseOffset = normalizedText.indexOf(normalizedPhrase, phraseOffset + 1);
+            }
+
+            return false;
+        },
+
+        localSearchStrategyForRow(row, normalizedQuery, queryTokens) {
+            if (!row || typeof row !== 'object') {
+                return null;
+            }
+
+            const typedText = String(row._typed ?? '');
+            const searchableText = String(row._searchable ?? '');
+
+            if (
+                this.localSearchContainsWholePhrase(typedText, normalizedQuery) ||
+                this.localSearchContainsWholePhrase(searchableText, normalizedQuery)
+            ) {
+                return 'exact_phrase';
+            }
+
+            if (
+                queryTokens.length > 0 &&
+                queryTokens.every((token) => Boolean(row._tokens?.[token]))
+            ) {
+                return 'exact_tokens';
+            }
+
+            if (
+                (typedText !== '' && typedText.includes(normalizedQuery)) ||
+                (searchableText !== '' && searchableText.includes(normalizedQuery))
+            ) {
+                return 'word_prefix';
+            }
+
+            return null;
+        },
+
+        buildLocalSearchResultFromRow(row, strategy) {
+            const resolvedStrategy = String(strategy ?? '').trim() || 'exact_tokens';
+            const toneByStrategy = {
+                exact_phrase: 'success',
+                exact_tokens: 'success',
+                word_prefix: 'warning',
+            };
+            const shadeByStrategy = {
+                exact_phrase: 50,
+                exact_tokens: 50,
+                word_prefix: 100,
+            };
+
+            return {
+                id: Math.max(0, Math.trunc(Number(row?.id ?? 0))),
+                ayah_index: Math.max(0, Math.trunc(Number(row?.ayah_index ?? 0))),
+                surah_number: Math.max(1, Math.trunc(Number(row?.surah_number ?? 1))),
+                ayah_number: Math.max(1, Math.trunc(Number(row?.ayah_number ?? 1))),
+                page_number: Math.max(1, Math.trunc(Number(row?.page_number ?? 1))),
+                text_uthmani: String(row?.text_uthmani ?? '').trim(),
+                text_searchable_typed: String(row?.text_searchable_typed ?? '').trim(),
+                search_snippet: String(row?.text_searchable_typed ?? '').trim(),
+                match_strategy: resolvedStrategy,
+                match_tone: toneByStrategy[resolvedStrategy] ?? 'warning',
+                match_shade: shadeByStrategy[resolvedStrategy] ?? 100,
+                match_label: '',
+                match_rank: resolvedStrategy === 'exact_phrase' ? 30 : 40,
+            };
+        },
+
+        async warmSearchLocalIndex() {
+            if (this.search.localIndexReady || !this.api.searchIndexUrl) {
+                return;
+            }
+
+            if (this._searchLocalIndexPromise) {
+                await this._searchLocalIndexPromise;
+
+                return;
+            }
+
+            this._searchLocalIndexPromise = (async () => {
+                try {
+                    const payload = await fetchJsonWithCache({
+                        url: this.searchLocalIndexRequestUrl(),
+                        cacheName: this.cacheNames.searchLocalIndex,
+                        preferCache: true,
+                    });
+                    const localRows = this.normalizeLocalSearchIndexRows(payload?.items ?? []);
+                    this._searchLocalRows = localRows;
+                    this.search.localIndexReady = localRows.length > 0;
+                } catch (_) {
+                    this._searchLocalRows = [];
+                    this.search.localIndexReady = false;
+                } finally {
+                    this._searchLocalIndexPromise = null;
+                }
+            })();
+
+            await this._searchLocalIndexPromise;
+        },
+
+        async applyLocalSearchPreview(normalizedQuery, requestSerial) {
+            if (!this.search.localIndexReady || !Array.isArray(this._searchLocalRows)) {
+                return;
+            }
+
+            const queryTokens = normalizedQuery.split(/\s+/).filter(Boolean);
+
+            if (queryTokens.length === 0) {
+                return;
+            }
+
+            const localResults = [];
+            let lastRenderedCount = 0;
+
+            for (let rowIndex = 0; rowIndex < this._searchLocalRows.length; rowIndex += 1) {
+                if (requestSerial !== this._searchRequestSerial) {
+                    return;
+                }
+
+                const row = this._searchLocalRows[rowIndex];
+                const matchStrategy = this.localSearchStrategyForRow(
+                    row,
+                    normalizedQuery,
+                    queryTokens,
+                );
+
+                if (!matchStrategy) {
+                    continue;
+                }
+
+                localResults.push(this.buildLocalSearchResultFromRow(row, matchStrategy));
+
+                if (localResults.length >= 24) {
+                    break;
+                }
+
+                if (
+                    localResults.length > lastRenderedCount &&
+                    (localResults.length % 2 === 0 || rowIndex % 160 === 0)
+                ) {
+                    this.search.streamHasUpdates = true;
+                    this.setSearchResults(
+                        this.mergeSearchResults(this.activeSearchResults(), localResults),
+                    );
+                    lastRenderedCount = localResults.length;
+                    await this.nextTickAsync();
+                }
+            }
+
+            if (requestSerial !== this._searchRequestSerial || localResults.length === 0) {
+                return;
+            }
+
+            this.search.streamHasUpdates = true;
+            this.setSearchResults(
+                this.mergeSearchResults(this.activeSearchResults(), localResults),
+            );
+        },
+
+        async warmSearchIndex() {
+            if (this.search.isReady || this.search.isLoading || !this.api.searchIndexUrl) {
+                return;
+            }
+
+            if (this._searchIndexPromise) {
+                await this._searchIndexPromise;
+
+                return;
+            }
+
+            this.search.isLoading = true;
+
+            this._searchIndexPromise = (async () => {
+                try {
+                    const payload = await fetchJsonWithCache({
+                        url: this.searchRequestUrl(),
+                        cacheName: this.cacheNames.search,
+                        preferCache: true,
+                    });
+
+                    if (
+                        payload &&
+                        typeof payload === 'object' &&
+                        payload.surah_names &&
+                        Object.keys(payload.surah_names).length > 0
+                    ) {
+                        this.search.surahNames = payload.surah_names;
+                    }
+
+                    let surahDirectory = Array.isArray(payload?.surah_directory)
+                        ? payload.surah_directory
+                        : [];
+
+                    if (
+                        surahDirectory.length === 0 &&
+                        Array.isArray(payload?.items) &&
+                        payload.items.length > 0
+                    ) {
+                        surahDirectory = this.deriveSurahDirectoryFromItems(payload.items);
+                    }
+
+                    this.buildSurahDirectory(surahDirectory);
+                    this.refreshSurahTriggerCaption(false);
+                    this.search.isReady = true;
+                    void this.warmSearchLocalIndex();
+                } catch (_) {
+                    if (
+                        !Array.isArray(this.search.surahDirectory) ||
+                        this.search.surahDirectory.length === 0
+                    ) {
+                        this.buildSurahDirectory([]);
+                    }
+
+                    this.search.isReady = false;
+                } finally {
+                    this.search.isLoading = false;
+                    this._searchIndexPromise = null;
+                }
+            })();
+
+            await this._searchIndexPromise;
+        },
+
+        async updateSearchResults() {
+            if (this._searchNavigationInFlight) {
+                this._searchQueuedNormalizedQuery = null;
+                this.search.isLoading = false;
+                this.search.streamHasUpdates = false;
+                this._searchRequestSerial += 1;
+                this._searchRequestInFlight = false;
+                this.clearSearchStreamTarget();
+
+                return;
+            }
+
+            const normalizedQuery = this.normalizeSearchQuery(this.search.query);
+
+            if (!normalizedQuery) {
+                this._searchQueuedNormalizedQuery = null;
+                this.setSearchResults([], { immediate: true });
+                this.search.isLoading = false;
+                this.search.streamHasUpdates = false;
+                this.search.lastCompletedNormalizedQuery = '';
+                this._searchRequestSerial += 1;
+                this._searchRequestInFlight = false;
+                this.clearSearchStreamTarget();
+
+                return;
+            }
+
+            if (normalizedQuery.length < this.search.minQueryLength) {
+                this._searchQueuedNormalizedQuery = null;
+                this.setSearchResults([], { immediate: true });
+                this.search.isLoading = false;
+                this.search.streamHasUpdates = false;
+                this.search.lastCompletedNormalizedQuery = '';
+                this._searchRequestSerial += 1;
+                this._searchRequestInFlight = false;
+                this.clearSearchStreamTarget();
+
+                return;
+            }
+
+            if (!this.search.isReady) {
+                await this.warmSearchIndex();
+            }
+
+            if (!this.search.isReady) {
+                this._searchQueuedNormalizedQuery = null;
+                this.setSearchResults([], { immediate: true });
+                this.search.isLoading = false;
+                this.search.streamHasUpdates = false;
+                this.search.lastCompletedNormalizedQuery = '';
+                this._searchRequestSerial += 1;
+                this._searchRequestInFlight = false;
+                this.clearSearchStreamTarget();
+
+                return;
+            }
+
+            if (!this.search.localIndexReady) {
+                void this.warmSearchLocalIndex();
+            }
+
+            const isSearchModalVisible = this.search.modalOpen || this.isSearchModalWindowVisible();
+
+            if (!isSearchModalVisible) {
+                return;
+            }
+
+            if (!this.search.modalOpen) {
+                this.search.modalOpen = true;
+                this._lastKnownModalOpenState = true;
+            }
+
+            const requestSerial = ++this._searchRequestSerial;
+            this._searchRequestInFlight = true;
+            this._searchQueuedNormalizedQuery = null;
+            this.setSearchResults([], { immediate: true });
+            this.search.isLoading = true;
+            this.search.streamHasUpdates = false;
+            this.clearSearchStreamTarget();
+            await this.applyLocalSearchPreview(normalizedQuery, requestSerial);
+
+            try {
+                const livewireResults = await this.$wire.streamSearch(
+                    normalizedQuery,
+                    requestSerial,
+                );
+                const results = Array.isArray(livewireResults) ? livewireResults.slice(0, 24) : [];
+
+                if (requestSerial !== this._searchRequestSerial) {
+                    return;
+                }
+
+                this.setSearchResults(
+                    this.search.streamHasUpdates
+                        ? this.mergeSearchResults(this.activeSearchResults(), results)
+                        : results,
+                );
+                this.$nextTick(() => {
+                    this.ensureSearchResultAnimations();
+                });
+            } catch (error) {
+                if (requestSerial !== this._searchRequestSerial) {
+                    return;
+                }
+
+                this.setSearchResults([], { immediate: true });
+            } finally {
+                if (requestSerial === this._searchRequestSerial) {
+                    this.search.isLoading = false;
+                    this.search.lastCompletedNormalizedQuery = normalizedQuery;
+                    this._searchRequestInFlight = false;
+                }
+                this._searchQueuedNormalizedQuery = null;
+            }
+        },
+
+        async goToSearchResult(result) {
+            if (this._searchNavigationInFlight) {
+                return;
+            }
+
+            this._searchNavigationInFlight = true;
+            const targetPage = clampPage(Number(result?.page_number ?? 1), this.maxPage);
+            const ayahIndex = Math.max(0, Math.trunc(Number(result?.ayah_index ?? 0)));
+            const activeQuery = this.search.query;
+            const surahNumber = Math.max(1, Math.trunc(Number(result?.surah_number ?? 1)));
+            const ayahNumber = Math.max(0, Math.trunc(Number(result?.ayah_number ?? 0)));
+            const isSurahNameResult = this.isSurahNameSearchResult(result);
+            const highlightAyahIndex = isSurahNameResult
+                ? 0
+                : ayahIndex > 0
+                  ? ayahIndex
+                  : ayahNumber;
+            const searchModalLifecycleIds = [
+                this.resolveSearchModalCloseTargetId(),
+                this.searchActionModalId,
+                this.searchModalId,
+                this.searchModalDomId,
+            ]
+                .map((value) => String(value ?? '').trim())
+                .filter((value) => value !== '');
+
+            try {
+                this.resetNavigationQueueForPriorityJump();
+                this.clearPendingPostModalTargetFit();
+                this.cancelActiveSearchProcessing();
+                this.suppressModalLifecycleEffects(searchModalLifecycleIds);
+                await this.requestSearchModalClose();
+                await this.waitForModalLifecycleToSettle();
+                await wait(modalCloseTransitionDelayMs);
+
+                if (!this.isSearchModalWindowVisible() && this.search.modalOpen) {
+                    this.handleSearchModalClosed();
+                }
+
+                this._bypassNextFitCache = true;
+                await this.goToPageFromChevron(targetPage, {
+                    activeAyahIndex: highlightAyahIndex,
+                    searchHighlightAyahIndex: highlightAyahIndex,
+                    source: 'search-result',
+                    commitNow: true,
+                    settleDelayMs: 0,
+                });
+
+                const shouldQueuePostModalFit =
+                    !this.isCurrentPageVisiblyReady() ||
+                    this._lastFittedPageNumber !== this.pageNumber;
+
+                if (shouldQueuePostModalFit) {
+                    this._bypassNextFitCache = true;
+                    await this.layoutPageGuaranteed({
+                        revealDelayMs: 160,
+                        maxAttempts: 3,
+                        useIdleFit: false,
+                    });
+                } else if (this.hasRenderablePage()) {
+                    this._bypassNextFitCache = true;
+                    this.fitPageToViewport();
+                    this.applySafetyScaleForCurrentPageOverflow();
+                    this._lastPageRevealAt = Date.now();
+                }
+
+                if (highlightAyahIndex > 0) {
+                    this.activeAyahIndex = highlightAyahIndex;
+                    this.searchHighlightedAyahIndex = highlightAyahIndex;
+                } else {
+                    this.activeAyahIndex = 0;
+                    this.searchHighlightedAyahIndex = 0;
+                }
+                this.activeWordIndex = 0;
+                this.recordNavigationHistory({
+                    source: 'search-result',
+                    pageNumber: targetPage,
+                    surahNumber,
+                    ayahNumber,
+                    ayahIndex: highlightAyahIndex,
+                    query: activeQuery,
+                });
+            } finally {
+                this._searchNavigationInFlight = false;
+            }
+        },
+    };
+};
