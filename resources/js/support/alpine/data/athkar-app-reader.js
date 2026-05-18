@@ -942,7 +942,13 @@ document.addEventListener('alpine:init', () => {
                 this.resetProgress('masaa');
                 this.resetReaderState();
 
-                if (!this.views?.['main-menu']?.isOpen) {
+                const isInQuranView =
+                    Boolean(this.views?.['quran-app-gate']?.isOpen) ||
+                    Boolean(this.views?.['quran-app-tilawa']?.isOpen) ||
+                    Boolean(this.views?.['quran-app-hifth']?.isOpen) ||
+                    Boolean(this.views?.['quran-app-tadabbur']?.isOpen);
+
+                if (!this.views?.['main-menu']?.isOpen && !isInQuranView) {
                     if (this.views?.['athkar-app-gate']) {
                         this.views['athkar-app-gate'].isReaderVisible = false;
                     }
