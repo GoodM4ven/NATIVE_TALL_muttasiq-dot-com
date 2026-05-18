@@ -9368,7 +9368,8 @@ document.addEventListener('alpine:init', () => {
                 this.hasRenderablePage() &&
                 !this.isLoadingPage &&
                 this._pendingNavigationRequest === null &&
-                !this._navigationRevealLocked
+                !this._navigationRevealLocked &&
+                !(this.shouldUseImmersiveReaderChrome() && this._immersiveEntryAwaitingFirstReveal)
             ) {
                 this.forceRevealCurrentPage('startup-final-fit-pass-fail-open');
             }
