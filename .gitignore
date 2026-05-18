@@ -19,7 +19,7 @@
 /.codex
 /.claude
 /.agents
-/credentials
+/.credentials
 /build
 /public/css
 /public/fonts
