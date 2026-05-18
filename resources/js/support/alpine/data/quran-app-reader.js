@@ -7924,7 +7924,15 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            if (this.shouldUseImmersiveReaderChrome()) {
+            const isModalSourcedNavigation = [
+                'search-result',
+                'surah-directory',
+                'bookmark',
+                'history-navigation',
+                'page-jump',
+            ].includes(String(source ?? ''));
+
+            if (isModalSourcedNavigation && this.shouldUseImmersiveReaderChrome()) {
                 this.isReaderChromeVisible = false;
                 this.syncReaderChromeDocumentClass();
             }
@@ -9882,7 +9890,6 @@ document.addEventListener('alpine:init', () => {
                 this._revealBlockedLayoutToken = 0;
 
                 this.syncPageInputToCurrentPage();
-                this.isFittingPage = false;
                 this._lastPageRevealAt = Date.now();
                 this.clearSwipeRevealWatchdog();
 
@@ -9894,8 +9901,19 @@ document.addEventListener('alpine:init', () => {
                     this._immersiveEntryAwaitingFirstReveal = false;
                     this.isReaderChromeVisible = true;
                     this.syncReaderChromeDocumentClass();
+                    this.isFittingPage = true;
+                    this._bypassNextFitCache = true;
+                    void this.layoutPageGuaranteed({
+                        revealDelayMs: 80,
+                        maxAttempts: 3,
+                        useIdleFit: false,
+                    });
+                    this.traceReaderReveal('queue-page-reveal-deferred-for-chrome');
+
+                    return;
                 }
 
+                this.isFittingPage = false;
                 this.traceReaderReveal('queue-page-reveal-ready');
             }, delayMs);
         },
@@ -18389,7 +18407,6 @@ document.addEventListener('alpine:init', () => {
 
             this.search.activeSurahNumber = surahNumber;
             this.search.preserveActiveSurahOnNextOpen = true;
-            this.queuePendingPostModalTargetFit(pageNumber);
 
             this.resetNavigationQueueForPriorityJump();
             this.cancelActiveSearchProcessing();
@@ -18403,6 +18420,7 @@ document.addEventListener('alpine:init', () => {
                 const didCloseSearchModal = await this.requestSearchModalClose();
 
                 if (!didCloseSearchModal) {
+                    this.queuePendingPostModalTargetFit(pageNumber);
                     this.schedulePendingModalCloseFit(pageNumber, {
                         retries: 54,
                         delayMs: 96,
@@ -18417,7 +18435,8 @@ document.addEventListener('alpine:init', () => {
                     this.handleSearchModalClosed();
                 }
 
-                await this.nextTickAsync();
+                await this.waitForModalLifecycleToSettle(28, 28);
+                await wait(modalCloseTransitionDelayMs);
                 await this.handleRequestedNavigation('page', {
                     page: pageNumber,
                     source: 'surah-directory',
@@ -18946,7 +18965,6 @@ document.addEventListener('alpine:init', () => {
             ]
                 .map((value) => String(value ?? '').trim())
                 .filter((value) => value !== '');
-            this.queuePendingPostModalTargetFit(targetPage);
 
             this.resetNavigationQueueForPriorityJump();
             this.cancelActiveSearchProcessing();
@@ -18960,6 +18978,7 @@ document.addEventListener('alpine:init', () => {
                 const didCloseSearchModal = await this.requestSearchModalClose();
 
                 if (!didCloseSearchModal) {
+                    this.queuePendingPostModalTargetFit(targetPage);
                     this.schedulePendingModalCloseFit(targetPage, {
                         retries: 54,
                         delayMs: 96,
@@ -18974,7 +18993,8 @@ document.addEventListener('alpine:init', () => {
                     this.handleSearchModalClosed();
                 }
 
-                await this.nextTickAsync();
+                await this.waitForModalLifecycleToSettle(28, 28);
+                await wait(modalCloseTransitionDelayMs);
                 await this.handleRequestedNavigation('page', {
                     page: targetPage,
                     source: 'search-result',
