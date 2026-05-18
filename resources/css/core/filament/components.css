@@ -292,6 +292,19 @@
         --quran-search-accent-500: var(--danger-500);
     }
 
+    .quran-search-result-btn--surah-name {
+        --quran-search-accent-200: var(--primary-200);
+        --quran-search-accent-400: var(--primary-400);
+        --quran-search-accent-500: var(--primary-500);
+        border-color: color-mix(in srgb, var(--primary-400) 50%, transparent);
+        background: linear-gradient(
+            166deg,
+            color-mix(in srgb, var(--primary-50) 88%, white 12%),
+            color-mix(in srgb, var(--quran-page-surface) 72%, transparent)
+        );
+        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary-200) 58%, transparent);
+    }
+
     .quran-search-result-meta {
         display: block;
         font-size: 0.72rem;
@@ -339,6 +352,12 @@
         --quran-search-match-100: var(--danger-100);
         --quran-search-match-300: var(--danger-300);
         --quran-search-match-700: var(--danger-700);
+    }
+
+    .quran-search-result-match-badge--surah-name {
+        --quran-search-match-100: var(--primary-100);
+        --quran-search-match-300: var(--primary-300);
+        --quran-search-match-700: var(--primary-700);
     }
 
     @keyframes quran-search-result-enter {

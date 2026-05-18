@@ -693,11 +693,13 @@ it('suppresses immersive mobile edge captions while quran manager modals are ope
     expect($quranReaderScriptSource)->not->toBeFalse()
         ->and($quranReaderScriptSource)->toContain('shouldShowImmersiveMobileEdgeCaptions()')
         ->and($quranReaderScriptSource)->toContain('const hasManagerModalOpen =')
+        ->and($quranReaderScriptSource)->toContain('this.isSearchModalWindowVisible() ||')
+        ->and($quranReaderScriptSource)->toContain('this.isModalWindowVisibleById(this.historyModalId) ||')
+        ->and($quranReaderScriptSource)->toContain('this.isModalWindowVisibleById(this.bookmarksModalId) ||')
+        ->and($quranReaderScriptSource)->toContain('this.isModalWindowVisibleById(this.jumpPageModalId) ||')
         ->and($quranReaderScriptSource)->toContain('this.search.modalOpen ||')
         ->and($quranReaderScriptSource)->toContain('this.historyModalOpen ||')
         ->and($quranReaderScriptSource)->toContain('this.bookmarksModalOpen ||')
-        ->and($quranReaderScriptSource)->toContain('this.jumpPageModalOpen ||')
-        ->and($quranReaderScriptSource)->toContain('this.isSearchModalWindowVisible();')
         ->and($quranReaderScriptSource)->toContain(
             'if (this.hasBlockingModalLifecycleState({ recoverStaleState: true })) {',
         );

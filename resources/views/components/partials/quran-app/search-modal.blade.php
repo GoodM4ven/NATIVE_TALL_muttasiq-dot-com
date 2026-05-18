@@ -53,6 +53,7 @@
                     x-bind:class="{
                         'quran-search-result-btn--active': !searchResultIsLeaving(result),
                         'quran-search-result-btn--leaving': searchResultIsLeaving(result),
+                        'quran-search-result-btn--surah-name': isSurahNameSearchResult(result),
                     }"
                     x-on:click="if (!searchResultIsLeaving(result)) { goToSearchResult(result) }"
                 >
@@ -67,6 +68,7 @@
                     <span
                         class="quran-search-result-match-badge"
                         x-bind:data-match-tone="searchMatchTone(result)"
+                        x-bind:class="{ 'quran-search-result-match-badge--surah-name': isSurahNameSearchResult(result) }"
                         x-text="searchMatchLabel(result)"
                     ></span>
                 </button>

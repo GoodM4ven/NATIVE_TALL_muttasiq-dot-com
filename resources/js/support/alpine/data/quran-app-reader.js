@@ -1056,6 +1056,7 @@ document.addEventListener('alpine:init', () => {
         _lastPageSliderCommitAt: 0,
         _searchRequestSerial: 0,
         _searchRequestInFlight: false,
+        _searchNavigationInFlight: false,
         _searchQueuedNormalizedQuery: null,
         _searchLocalIndexPromise: null,
         _searchLocalRows: [],
@@ -1106,6 +1107,7 @@ document.addEventListener('alpine:init', () => {
         _postModalTargetFitTimer: null,
         _activeModalIds: new Set(),
         _isModalLifecycleSettling: false,
+        _managerModalVersion: 0,
         _lastModalLifecycleEventAt: 0,
         _suppressModalLifecycleEffectsUntil: 0,
         _suppressModalLifecycleModalIds: new Set(),
@@ -1393,6 +1395,10 @@ document.addEventListener('alpine:init', () => {
                         return;
                     }
 
+                    if (this._searchNavigationInFlight) {
+                        return;
+                    }
+
                     this.$nextTick(() => {
                         this.registerNativeInputListeners();
                         this.initializeLayoutObservers();
@@ -1418,6 +1424,10 @@ document.addEventListener('alpine:init', () => {
                 }
             });
             this._stopSearchQueryWatcher = this.$watch('search.query', () => {
+                if (this._searchNavigationInFlight) {
+                    return;
+                }
+
                 this.queueSearchResultsUpdate();
             });
             this.$nextTick(() => {
@@ -5664,10 +5674,17 @@ document.addEventListener('alpine:init', () => {
         },
 
         dispatchManagerModalsVisibilityState() {
+            const hasVisibleManagerModal =
+                this.isSearchModalWindowVisible() ||
+                this.isModalWindowVisibleById(this.historyModalId) ||
+                this.isModalWindowVisibleById(this.bookmarksModalId) ||
+                this.isModalWindowVisibleById(this.jumpPageModalId);
+
             window.dispatchEvent(
                 new CustomEvent('quran-manager-modals-visibility', {
                     detail: {
                         open:
+                            hasVisibleManagerModal ||
                             this.search.modalOpen ||
                             this.historyModalOpen ||
                             this.bookmarksModalOpen ||
@@ -7570,10 +7587,23 @@ document.addEventListener('alpine:init', () => {
 
             if (kind === 'page') {
                 const requestedPage = clampPage(detail?.page ?? this.pageInput, this.maxPage);
+                const requestedActiveAyahIndex = Math.max(
+                    0,
+                    Math.trunc(Number(detail?.activeAyahIndex ?? 0)),
+                );
+                const requestedSearchHighlightAyahIndex = Math.max(
+                    0,
+                    Math.trunc(Number(detail?.searchHighlightAyahIndex ?? 0)),
+                );
+                const isModalDrivenPriorityRequest =
+                    requestedSource === 'search-result' || requestedSource === 'surah-directory';
                 const isPriorityPageRequest =
-                    requestedSource === 'page-jump' || requestedSource === 'page-slider-commit';
+                    requestedSource === 'page-jump' ||
+                    requestedSource === 'page-slider-commit' ||
+                    isModalDrivenPriorityRequest;
                 const isSliderCommitRequest = requestedSource === 'page-slider-commit';
-                const shouldResetQueueForPriorityRequest = requestedSource === 'page-jump';
+                const shouldResetQueueForPriorityRequest =
+                    requestedSource === 'page-jump' || isModalDrivenPriorityRequest;
                 const shouldCommitImmediately = isPriorityPageRequest;
 
                 if (shouldResetQueueForPriorityRequest) {
@@ -7585,8 +7615,18 @@ document.addEventListener('alpine:init', () => {
                     this._bypassNextFitCache = true;
                 }
 
-                if (requestedSource === 'page-jump') {
-                    this.suppressModalLifecycleEffects([this.jumpPageModalId], {
+                if (requestedSource === 'page-jump' || isModalDrivenPriorityRequest) {
+                    const modalLifecycleIds =
+                        requestedSource === 'page-jump'
+                            ? [this.jumpPageModalId]
+                            : [
+                                  this.resolveSearchModalCloseTargetId(),
+                                  this.searchActionModalId,
+                                  this.searchModalId,
+                                  this.searchModalDomId,
+                              ];
+
+                    this.suppressModalLifecycleEffects(modalLifecycleIds, {
                         durationMs: Math.max(
                             modalLifecycleSuppressionDurationMs,
                             postModalFitRevealSettleDelayMs + 640,
@@ -7616,11 +7656,36 @@ document.addEventListener('alpine:init', () => {
                 } else {
                     await this.goToPageFromChevron(requestedPage, {
                         source: requestedSource || 'page-event',
+                        activeAyahIndex: requestedActiveAyahIndex,
+                        searchHighlightAyahIndex: requestedSearchHighlightAyahIndex,
                         commitNow: shouldCommitImmediately || undefined,
                     });
                 }
 
                 if (isPriorityPageRequest) {
+                    if (isModalDrivenPriorityRequest) {
+                        this._bypassNextFitCache = true;
+                        this._fitSanityContextKey = '';
+                        this._fitSanityContextAttemptCount = 0;
+                        this._fitSanityContextLastWidth = 0;
+                        this._fitSanityContextLastHeight = 0;
+                        this._fitSanityContextOutcome = '';
+                        this._fitSanitySuppressedUntil = 0;
+                        this._fitSanityDisabledContextKey = '';
+                        await this.waitForStablePageFrame({
+                            maxFrames: 14,
+                            requiredStableFrames: 2,
+                            tolerancePx: 0.8,
+                        });
+                        await this.layoutPageGuaranteed({
+                            revealDelayMs: 150,
+                            maxAttempts: 5,
+                            useIdleFit: false,
+                        });
+                        this.refreshMobileEdgeCaptions(false);
+                        this.syncReaderChromeDocumentClass();
+                    }
+
                     if (isSliderCommitRequest) {
                         this._bypassNextFitCache = true;
                         this._fitSanityContextKey = '';
@@ -7655,11 +7720,21 @@ document.addEventListener('alpine:init', () => {
                     }
                 }
 
-                if (requestedSource === 'page-jump' || requestedSource === 'page-slider-commit') {
+                if (
+                    requestedSource === 'page-jump' ||
+                    requestedSource === 'page-slider-commit' ||
+                    isModalDrivenPriorityRequest
+                ) {
                     this.recordNavigationHistory({
                         source: requestedSource,
                         pageNumber: requestedPage,
-                        surahNumber: this.currentSurahNumber(),
+                        surahNumber: Math.max(
+                            0,
+                            Math.trunc(Number(detail?.surahNumber ?? this.currentSurahNumber())),
+                        ),
+                        ayahNumber: Math.max(0, Math.trunc(Number(detail?.ayahNumber ?? 0))),
+                        ayahIndex: requestedActiveAyahIndex,
+                        query: detail?.query ?? null,
                     });
                 }
             }
@@ -7809,11 +7884,13 @@ document.addEventListener('alpine:init', () => {
                 this._lastPageInputVisualValue = normalizedPage;
                 this.persistLastPageNumber(normalizedPage);
                 this.searchHighlightedAyahIndex = nextSearchHighlightedAyahIndex;
+                this.refreshSurahTriggerCaption(Boolean(animate));
+                this.refreshMobileEdgeCaptions(Boolean(animate));
+                this.syncSearchActiveSurahNumber();
 
-                const hasOpenModals =
-                    this.openModalCount() > 0 ||
-                    this._isModalLifecycleSettling ||
-                    this._activeModalIds.size > 0;
+                const hasOpenModals = this.hasBlockingModalLifecycleState({
+                    recoverStaleState: true,
+                });
 
                 if (!hasOpenModals) {
                     this.recoverStaleModalLifecycleState();
@@ -7834,6 +7911,14 @@ document.addEventListener('alpine:init', () => {
                     if (this.hasRenderablePage()) {
                         this.isFittingPage = false;
                     }
+                } else {
+                    this.queuePendingPostModalTargetFit(normalizedPage);
+                    this.schedulePendingModalCloseFit(normalizedPage, {
+                        retries: 42,
+                        delayMs: 84,
+                        revealDelayMs: 220,
+                        maxAttempts: 5,
+                    });
                 }
 
                 return;
@@ -9319,6 +9404,17 @@ document.addEventListener('alpine:init', () => {
             );
         },
 
+        cancelActiveSearchProcessing() {
+            this.clearSearchResultsUpdateQueue();
+            this._searchRequestSerial += 1;
+            this._searchRequestInFlight = false;
+            this._searchQueuedNormalizedQuery = null;
+            this.search.isLoading = false;
+            this.search.streamHasUpdates = false;
+            this.search.lastCompletedNormalizedQuery = '';
+            this.clearSearchStreamTarget();
+        },
+
         clearPendingPostModalTargetFit() {
             if (this._postModalTargetFitTimer !== null) {
                 clearTimeout(this._postModalTargetFitTimer);
@@ -9623,6 +9719,8 @@ document.addEventListener('alpine:init', () => {
 
                 this._bypassNextFitCache = true;
                 this.holdPageHiddenForModalLifecycle();
+                this._managerModalVersion += 1;
+                this.syncReaderChromeDocumentClass();
 
                 return;
             }
@@ -9654,9 +9752,17 @@ document.addEventListener('alpine:init', () => {
                     this.holdPageHiddenForModalLifecycle();
                 }
 
+                this._managerModalVersion += 1;
+
                 window.setTimeout(() => {
                     this.resumeLayoutWhenNoOpenModals();
                 }, 24);
+
+                window.setTimeout(() => {
+                    this._managerModalVersion += 1;
+                    this.recoverStaleModalLifecycleState();
+                    this.syncReaderChromeDocumentClass();
+                }, 320);
             }
         },
 
@@ -12652,6 +12758,8 @@ document.addEventListener('alpine:init', () => {
         },
 
         shouldShowImmersiveMobileEdgeCaptions() {
+            void this._managerModalVersion;
+
             if (!this.shouldUseImmersiveReaderChrome()) {
                 return false;
             }
@@ -12665,11 +12773,14 @@ document.addEventListener('alpine:init', () => {
             }
 
             const hasManagerModalOpen =
+                this.isSearchModalWindowVisible() ||
+                this.isModalWindowVisibleById(this.historyModalId) ||
+                this.isModalWindowVisibleById(this.bookmarksModalId) ||
+                this.isModalWindowVisibleById(this.jumpPageModalId) ||
                 this.search.modalOpen ||
                 this.historyModalOpen ||
                 this.bookmarksModalOpen ||
-                this.jumpPageModalOpen ||
-                this.isSearchModalWindowVisible();
+                this.jumpPageModalOpen;
 
             if (hasManagerModalOpen) {
                 return false;
@@ -16650,6 +16761,7 @@ document.addEventListener('alpine:init', () => {
 
             if (this._searchRequestInFlight) {
                 this._searchRequestSerial += 1;
+                this._searchRequestInFlight = false;
                 this.clearSearchStreamTarget();
             }
 
@@ -16667,6 +16779,13 @@ document.addEventListener('alpine:init', () => {
         },
 
         queueSearchResultsUpdate(delayMs = null) {
+            if (this._searchNavigationInFlight) {
+                this.clearSearchResultsUpdateQueue();
+                this.search.isLoading = false;
+
+                return;
+            }
+
             const fallbackDelayMs = Math.max(
                 120,
                 Math.trunc(Number(this.search.inputDebounceMs ?? 600) || 600),
@@ -16935,6 +17054,46 @@ document.addEventListener('alpine:init', () => {
             return uniqueCandidates[0] ?? null;
         },
 
+        resolveSearchModalCloseTargetId() {
+            const modalWindowElement = this.searchModalWindowElement();
+
+            if (modalWindowElement instanceof Element) {
+                const modalElement = modalWindowElement.closest('.fi-modal');
+
+                if (modalElement instanceof HTMLElement) {
+                    const dataModalId = String(modalElement.dataset?.fiModalId ?? '').trim();
+
+                    if (dataModalId !== '') {
+                        this.searchActionModalId = dataModalId;
+
+                        return dataModalId;
+                    }
+
+                    const elementId = String(modalElement.id ?? '').trim();
+
+                    if (elementId !== '') {
+                        this.searchActionModalId = elementId;
+
+                        return elementId;
+                    }
+                }
+            }
+
+            const knownModalId = [
+                this.searchActionModalId,
+                this.searchModalId,
+                this.searchModalDomId,
+            ]
+                .map((value) => String(value ?? '').trim())
+                .find((value) => value !== '');
+
+            if (knownModalId) {
+                return knownModalId;
+            }
+
+            return '';
+        },
+
         searchStreamTargetElement() {
             if (this.$refs.searchResultsStream instanceof Element) {
                 return this.$refs.searchResultsStream;
@@ -17058,13 +17217,59 @@ document.addEventListener('alpine:init', () => {
         },
 
         searchResultIsLeaving(result) {
-            return Boolean(result?.__leaving);
+            return Boolean(result?.__leaving) || this._searchNavigationInFlight;
         },
 
         activeSearchResults() {
             return (Array.isArray(this.search.results) ? this.search.results : []).filter(
                 (result) => !this.searchResultIsLeaving(result),
             );
+        },
+
+        searchResultStrategy(result) {
+            return String(result?.match_strategy ?? '')
+                .trim()
+                .toLowerCase();
+        },
+
+        isSurahNameSearchResult(result) {
+            const strategy = this.searchResultStrategy(result);
+
+            return strategy === 'surah_exact' || strategy === 'surah_stem';
+        },
+
+        searchResultSortWeight(result) {
+            const strategy = this.searchResultStrategy(result);
+
+            if (strategy === 'surah_exact') {
+                return 0;
+            }
+
+            if (strategy === 'surah_stem') {
+                return 1;
+            }
+
+            if (strategy === 'exact_phrase') {
+                return 2;
+            }
+
+            if (strategy === 'exact_tokens') {
+                return 3;
+            }
+
+            if (strategy === 'stem_tokens') {
+                return 4;
+            }
+
+            if (strategy === 'root_tokens') {
+                return 5;
+            }
+
+            if (strategy === 'word_prefix') {
+                return 6;
+            }
+
+            return 7;
         },
 
         normalizeSearchResults(nextResults = []) {
@@ -17083,6 +17288,35 @@ document.addEventListener('alpine:init', () => {
                     };
                 })
                 .filter((result) => result !== null)
+                .sort((left, right) => {
+                    const weightDelta =
+                        this.searchResultSortWeight(left) - this.searchResultSortWeight(right);
+
+                    if (weightDelta !== 0) {
+                        return weightDelta;
+                    }
+
+                    const rankDelta =
+                        Math.max(0, Math.trunc(Number(left?.match_rank ?? 0))) -
+                        Math.max(0, Math.trunc(Number(right?.match_rank ?? 0)));
+
+                    if (rankDelta !== 0) {
+                        return rankDelta;
+                    }
+
+                    const surahDelta =
+                        Math.max(1, Math.trunc(Number(left?.surah_number ?? 1))) -
+                        Math.max(1, Math.trunc(Number(right?.surah_number ?? 1)));
+
+                    if (surahDelta !== 0) {
+                        return surahDelta;
+                    }
+
+                    return (
+                        Math.max(0, Math.trunc(Number(left?.ayah_number ?? 0))) -
+                        Math.max(0, Math.trunc(Number(right?.ayah_number ?? 0)))
+                    );
+                })
                 .slice(0, 24);
         },
 
@@ -17408,10 +17642,37 @@ document.addEventListener('alpine:init', () => {
             return this.jumpPageModalOpen;
         },
 
+        syncManagerModalFlagsFromVisibility() {
+            const searchVisible = this.isSearchModalWindowVisible();
+            const historyVisible = this.isModalWindowVisibleById(this.historyModalId);
+            const bookmarksVisible = this.isModalWindowVisibleById(this.bookmarksModalId);
+            const jumpVisible =
+                this.isModalWindowVisibleById(this.jumpPageModalId) ||
+                this.isJumpPageInputVisible();
+
+            this.historyModalOpen = historyVisible;
+            this.bookmarksModalOpen = bookmarksVisible;
+            this.jumpPageModalOpen = jumpVisible;
+
+            if (searchVisible) {
+                this.search.modalOpen = true;
+                this._lastKnownModalOpenState = true;
+            } else if (this.search.modalOpen) {
+                this.handleSearchModalClosed();
+            } else {
+                this._lastKnownModalOpenState = false;
+            }
+
+            this._managerModalVersion += 1;
+            this.dispatchManagerModalsVisibilityState();
+        },
+
         queueSearchModalCloseSync({ delayMs = 0 } = {}) {
             const normalizedDelayMs = Math.max(0, Math.trunc(Number(delayMs) || 0));
 
             window.setTimeout(() => {
+                this.syncManagerModalFlagsFromVisibility();
+
                 const hasStaleSearchState =
                     this.search.modalOpen ||
                     String(this.search.query ?? '').trim() !== '' ||
@@ -17492,6 +17753,22 @@ document.addEventListener('alpine:init', () => {
                 this.queueSearchModalCloseSync({
                     delayMs: kind === 'closed' ? 0 : 96,
                 });
+
+                window.setTimeout(
+                    () => {
+                        this.syncManagerModalFlagsFromVisibility();
+
+                        if (this.openModalCount() > 0) {
+                            return;
+                        }
+
+                        this.recoverStaleModalLifecycleState();
+                        this.pruneModalLifecycleSuppression();
+                        this.refreshMobileEdgeCaptions(false);
+                        this.syncReaderChromeDocumentClass();
+                    },
+                    kind === 'closed' ? 0 : 120,
+                );
             }
 
             if (isJumpPageModalEvent) {
@@ -17575,6 +17852,22 @@ document.addEventListener('alpine:init', () => {
                     this.handleSearchModalClosed();
                 }
 
+                if (kind === 'closed' && this.openModalCount() <= 0) {
+                    this.recoverStaleModalLifecycleState();
+                    this.pruneModalLifecycleSuppression();
+                    this.refreshMobileEdgeCaptions(false);
+                    this.syncReaderChromeDocumentClass();
+
+                    if (this._postModalTargetFitPage > 0) {
+                        this.schedulePendingModalCloseFit(this._postModalTargetFitPage, {
+                            retries: 42,
+                            delayMs: 90,
+                            revealDelayMs: 230,
+                            maxAttempts: 6,
+                        });
+                    }
+                }
+
                 return;
             }
 
@@ -17600,13 +17893,24 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            if (kind === 'closing' || kind === 'closed') {
+            if (kind === 'closing') {
+                return;
+            }
+
+            if (kind === 'closed') {
                 this.handleSearchModalClosed();
+
+                if (this.openModalCount() <= 0) {
+                    this.recoverStaleModalLifecycleState();
+                    this.pruneModalLifecycleSuppression();
+                    this.refreshMobileEdgeCaptions(false);
+                    this.syncReaderChromeDocumentClass();
+                }
 
                 if (this._postModalTargetFitPage > 0) {
                     this.schedulePendingModalCloseFit(this._postModalTargetFitPage, {
-                        retries: kind === 'closed' ? 42 : 18,
-                        delayMs: kind === 'closed' ? 90 : 110,
+                        retries: 42,
+                        delayMs: 90,
                         revealDelayMs: 230,
                         maxAttempts: 6,
                     });
@@ -17707,6 +18011,7 @@ document.addEventListener('alpine:init', () => {
         async handleSearchModalOpened() {
             await this.warmSearchIndex();
             this.search.modalOpen = true;
+            this._searchNavigationInFlight = false;
             this._lastKnownModalOpenState = true;
             this._skipNextSearchModalCloseLayout = false;
             this.refreshSurahTriggerCaption(false);
@@ -17752,6 +18057,7 @@ document.addEventListener('alpine:init', () => {
             this.teardownSearchResultAnimations();
             this._searchRequestSerial += 1;
             this._searchRequestInFlight = false;
+            this._searchNavigationInFlight = false;
             this._searchQueuedNormalizedQuery = null;
             this.search.modalOpen = false;
             this._lastKnownModalOpenState = false;
@@ -17774,37 +18080,58 @@ document.addEventListener('alpine:init', () => {
 
         async requestModalCloseByKnownIds(
             knownModalIds = [],
-            { onFallback = null, isModalStillVisible = null } = {},
+            {
+                onFallback = null,
+                isModalStillVisible = null,
+                quietly = false,
+                allowLivewireUnmount = true,
+            } = {},
         ) {
-            const modalId = knownModalIds
-                .map((value) => String(value ?? '').trim())
-                .find((value) => value !== '');
+            const normalizedModalIds = Array.from(
+                new Set(
+                    (Array.isArray(knownModalIds) ? knownModalIds : [knownModalIds])
+                        .map((value) => String(value ?? '').trim())
+                        .filter((value) => value !== ''),
+                ),
+            );
+            const resolveModalVisibleState = (modalId = '') => {
+                if (typeof isModalStillVisible === 'function') {
+                    return Boolean(isModalStillVisible());
+                }
 
-            if (modalId) {
+                const normalizedModalId = String(modalId ?? '').trim();
+
+                if (normalizedModalId === '') {
+                    return false;
+                }
+
+                return this.isModalWindowVisibleById(normalizedModalId);
+            };
+            const closeEventName = quietly ? 'close-modal-quietly' : 'close-modal';
+
+            for (const modalId of normalizedModalIds) {
                 window.dispatchEvent(
-                    new CustomEvent('close-modal', {
+                    new CustomEvent(closeEventName, {
                         detail: {
                             id: modalId,
                         },
                     }),
                 );
-                await wait(12);
+                await wait(16);
 
-                const modalRemainsVisible =
-                    typeof isModalStillVisible === 'function'
-                        ? Boolean(isModalStillVisible())
-                        : this.isModalWindowVisibleById(modalId);
-
-                if (!modalRemainsVisible) {
-                    return;
+                if (!resolveModalVisibleState(modalId)) {
+                    return true;
                 }
             }
 
-            if (typeof this.$wire?.unmountAction === 'function') {
+            if (allowLivewireUnmount && typeof this.$wire?.unmountAction === 'function') {
                 try {
                     await this.$wire.unmountAction(false);
+                    await wait(16);
 
-                    return;
+                    if (!resolveModalVisibleState(normalizedModalIds[0] ?? '')) {
+                        return true;
+                    }
                 } catch (_) {
                     //
                 }
@@ -17812,7 +18139,10 @@ document.addEventListener('alpine:init', () => {
 
             if (typeof onFallback === 'function') {
                 onFallback();
+                await wait(16);
             }
+
+            return !resolveModalVisibleState(normalizedModalIds[0] ?? '');
         },
 
         async requestSearchModalClose({ skipLayout = false } = {}) {
@@ -17820,40 +18150,73 @@ document.addEventListener('alpine:init', () => {
                 this._skipNextSearchModalCloseLayout = true;
             }
 
-            await this.requestModalCloseByKnownIds(
-                [this.searchActionModalId, this.searchModalId, this.searchModalDomId],
-                {
-                    onFallback: () => {
-                        this.handleSearchModalClosed();
-                    },
-                    isModalStillVisible: () => this.isSearchModalWindowVisible(),
-                },
-            );
-
-            if (this.isSearchModalWindowVisible()) {
-                const fallbackModalId = [
+            const searchModalCloseTargetId = this.resolveSearchModalCloseTargetId();
+            let didCloseSearchModal = await this.requestModalCloseByKnownIds(
+                [
+                    searchModalCloseTargetId,
                     this.searchActionModalId,
                     this.searchModalId,
                     this.searchModalDomId,
-                ]
-                    .map((value) => String(value ?? '').trim())
-                    .find((value) => value !== '');
+                ],
+                {
+                    onFallback: () => {},
+                    isModalStillVisible: () => this.isSearchModalWindowVisible(),
+                    quietly: true,
+                    allowLivewireUnmount: false,
+                },
+            );
 
-                window.dispatchEvent(
-                    new CustomEvent('close-modal', {
-                        detail: fallbackModalId
-                            ? {
-                                  id: fallbackModalId,
-                              }
-                            : {},
-                    }),
-                );
-                await wait(24);
+            if (!didCloseSearchModal && this.isSearchModalWindowVisible()) {
+                const fallbackModalId = this.resolveSearchModalCloseTargetId();
+
+                if (fallbackModalId !== '') {
+                    window.dispatchEvent(
+                        new CustomEvent('close-modal-quietly', {
+                            detail: {
+                                id: fallbackModalId,
+                            },
+                        }),
+                    );
+                }
+
+                didCloseSearchModal = await this.waitForSearchModalToClose();
             }
 
-            if (this.search.modalOpen && !this.isSearchModalWindowVisible()) {
+            this.syncManagerModalFlagsFromVisibility();
+            const modalStillVisible = this.isSearchModalWindowVisible();
+
+            if (this.search.modalOpen && modalStillVisible) {
+                this.queueSearchModalCloseSync({ delayMs: 120 });
+
+                return false;
+            }
+
+            if (this.search.modalOpen && !modalStillVisible) {
                 this.handleSearchModalClosed();
+
+                return true;
             }
+
+            return !modalStillVisible || didCloseSearchModal;
+        },
+
+        async waitForSearchModalToClose(maxAttempts = 18, delayMs = 24) {
+            const attempts = Math.max(1, Math.trunc(Number(maxAttempts) || 18));
+            const normalizedDelayMs = Math.max(12, Math.trunc(Number(delayMs) || 24));
+
+            for (let attempt = 0; attempt < attempts; attempt += 1) {
+                if (!this.isSearchModalWindowVisible()) {
+                    if (this.openModalCount() <= 0) {
+                        this.recoverStaleModalLifecycleState();
+                    }
+
+                    return true;
+                }
+
+                await wait(normalizedDelayMs);
+            }
+
+            return !this.isSearchModalWindowVisible();
         },
 
         async waitForModalLifecycleToSettle(maxAttempts = 14, delayMs = 24) {
@@ -18008,41 +18371,67 @@ document.addEventListener('alpine:init', () => {
         },
 
         async goToSurahFromDirectory(entry) {
+            if (this._searchNavigationInFlight) {
+                return;
+            }
+
+            this._searchNavigationInFlight = true;
             const pageNumber = clampPage(Number(entry?.page_number ?? 1), this.maxPage);
             const surahNumber = Math.max(1, Math.trunc(Number(entry?.surah_number ?? 1)));
+            const searchModalLifecycleIds = [
+                this.resolveSearchModalCloseTargetId(),
+                this.searchActionModalId,
+                this.searchModalId,
+                this.searchModalDomId,
+            ]
+                .map((value) => String(value ?? '').trim())
+                .filter((value) => value !== '');
 
             this.search.activeSurahNumber = surahNumber;
             this.search.preserveActiveSurahOnNextOpen = true;
+            this.queuePendingPostModalTargetFit(pageNumber);
 
             this.resetNavigationQueueForPriorityJump();
-            await this.requestSearchModalClose();
-            await this.waitForModalLifecycleToSettle();
-            await wait(modalCloseTransitionDelayMs);
-            this.activeAyahIndex = 0;
-            this.activeWordIndex = 0;
-            this._bypassNextFitCache = true;
-            await this.goToPageFromChevron(pageNumber, {
-                activeAyahIndex: 0,
-                source: 'surah-directory',
-                commitNow: true,
-                settleDelayMs: 0,
+            this.cancelActiveSearchProcessing();
+            this.suppressModalLifecycleEffects(searchModalLifecycleIds, {
+                durationMs: Math.max(
+                    modalLifecycleSuppressionDurationMs,
+                    postModalFitRevealSettleDelayMs + 640,
+                ),
             });
-            if (this._lastFittedPageNumber !== this.pageNumber) {
-                this._bypassNextFitCache = true;
-                await this.layoutPageGuaranteed({
-                    revealDelayMs: 160,
-                    maxAttempts: 3,
-                    useIdleFit: false,
+            try {
+                const didCloseSearchModal = await this.requestSearchModalClose();
+
+                if (!didCloseSearchModal) {
+                    this.schedulePendingModalCloseFit(pageNumber, {
+                        retries: 54,
+                        delayMs: 96,
+                        revealDelayMs: 220,
+                        maxAttempts: 6,
+                    });
+
+                    return;
+                }
+
+                if (!this.isSearchModalWindowVisible() && this.search.modalOpen) {
+                    this.handleSearchModalClosed();
+                }
+
+                await this.nextTickAsync();
+                await this.handleRequestedNavigation('page', {
+                    page: pageNumber,
+                    source: 'surah-directory',
+                    activeAyahIndex: 0,
+                    surahNumber,
                 });
+                this.search.activeSurahNumber = surahNumber;
+                this.activeAyahIndex = 0;
+                this.activeWordIndex = 0;
+                this.refreshMobileEdgeCaptions(false);
+                this.syncReaderChromeDocumentClass();
+            } finally {
+                this._searchNavigationInFlight = false;
             }
-            this.search.activeSurahNumber = surahNumber;
-            this.activeAyahIndex = 0;
-            this.activeWordIndex = 0;
-            this.recordNavigationHistory({
-                source: 'surah-directory',
-                pageNumber,
-                surahNumber,
-            });
         },
 
         scheduleManagerModalsPrewarm(delayMs = 220) {
@@ -18417,6 +18806,17 @@ document.addEventListener('alpine:init', () => {
         },
 
         async updateSearchResults() {
+            if (this._searchNavigationInFlight) {
+                this._searchQueuedNormalizedQuery = null;
+                this.search.isLoading = false;
+                this.search.streamHasUpdates = false;
+                this._searchRequestSerial += 1;
+                this._searchRequestInFlight = false;
+                this.clearSearchStreamTarget();
+
+                return;
+            }
+
             const normalizedQuery = this.normalizeSearchQuery(this.search.query);
 
             if (!normalizedQuery) {
@@ -18426,6 +18826,7 @@ document.addEventListener('alpine:init', () => {
                 this.search.streamHasUpdates = false;
                 this.search.lastCompletedNormalizedQuery = '';
                 this._searchRequestSerial += 1;
+                this._searchRequestInFlight = false;
                 this.clearSearchStreamTarget();
 
                 return;
@@ -18438,6 +18839,7 @@ document.addEventListener('alpine:init', () => {
                 this.search.streamHasUpdates = false;
                 this.search.lastCompletedNormalizedQuery = '';
                 this._searchRequestSerial += 1;
+                this._searchRequestInFlight = false;
                 this.clearSearchStreamTarget();
 
                 return;
@@ -18454,6 +18856,7 @@ document.addEventListener('alpine:init', () => {
                 this.search.streamHasUpdates = false;
                 this.search.lastCompletedNormalizedQuery = '';
                 this._searchRequestSerial += 1;
+                this._searchRequestInFlight = false;
                 this.clearSearchStreamTarget();
 
                 return;
@@ -18461,12 +18864,6 @@ document.addEventListener('alpine:init', () => {
 
             if (!this.search.localIndexReady) {
                 void this.warmSearchLocalIndex();
-            }
-
-            if (this._searchRequestInFlight) {
-                this._searchQueuedNormalizedQuery = normalizedQuery;
-
-                return;
             }
 
             const isSearchModalVisible = this.search.modalOpen || this.isSearchModalWindowVisible();
@@ -18518,63 +18915,83 @@ document.addEventListener('alpine:init', () => {
                 if (requestSerial === this._searchRequestSerial) {
                     this.search.isLoading = false;
                     this.search.lastCompletedNormalizedQuery = normalizedQuery;
+                    this._searchRequestInFlight = false;
                 }
-
-                this._searchRequestInFlight = false;
-
-                const normalizedCurrentQuery = this.normalizeSearchQuery(this.search.query);
-                const queuedQuery = String(this._searchQueuedNormalizedQuery ?? '').trim();
-                const nextQuery = queuedQuery !== '' ? queuedQuery : normalizedCurrentQuery;
-                const shouldQueueFollowUpSearch =
-                    (this.search.modalOpen || this.isSearchModalWindowVisible()) &&
-                    nextQuery !== '' &&
-                    nextQuery.length >= this.search.minQueryLength &&
-                    nextQuery !== normalizedQuery;
-
                 this._searchQueuedNormalizedQuery = null;
-
-                if (shouldQueueFollowUpSearch) {
-                    void this.updateSearchResults();
-                }
             }
         },
 
         async goToSearchResult(result) {
+            if (this._searchNavigationInFlight) {
+                return;
+            }
+
+            this._searchNavigationInFlight = true;
             const targetPage = clampPage(Number(result?.page_number ?? 1), this.maxPage);
             const ayahIndex = Math.max(0, Math.trunc(Number(result?.ayah_index ?? 0)));
             const activeQuery = this.search.query;
             const surahNumber = Math.max(1, Math.trunc(Number(result?.surah_number ?? 1)));
             const ayahNumber = Math.max(0, Math.trunc(Number(result?.ayah_number ?? 0)));
+            const isSurahNameResult = this.isSurahNameSearchResult(result);
+            const highlightAyahIndex = isSurahNameResult
+                ? 0
+                : ayahIndex > 0
+                  ? ayahIndex
+                  : ayahNumber;
+            const searchModalLifecycleIds = [
+                this.resolveSearchModalCloseTargetId(),
+                this.searchActionModalId,
+                this.searchModalId,
+                this.searchModalDomId,
+            ]
+                .map((value) => String(value ?? '').trim())
+                .filter((value) => value !== '');
+            this.queuePendingPostModalTargetFit(targetPage);
 
             this.resetNavigationQueueForPriorityJump();
-            await this.requestSearchModalClose();
-            await this.waitForModalLifecycleToSettle();
-            await wait(modalCloseTransitionDelayMs);
-            this._bypassNextFitCache = true;
-            await this.goToPageFromChevron(targetPage, {
-                activeAyahIndex: ayahIndex,
-                searchHighlightAyahIndex: ayahIndex,
-                source: 'search-result',
-                commitNow: true,
-                settleDelayMs: 0,
+            this.cancelActiveSearchProcessing();
+            this.suppressModalLifecycleEffects(searchModalLifecycleIds, {
+                durationMs: Math.max(
+                    modalLifecycleSuppressionDurationMs,
+                    postModalFitRevealSettleDelayMs + 640,
+                ),
             });
-            if (this._lastFittedPageNumber !== this.pageNumber) {
-                this._bypassNextFitCache = true;
-                await this.layoutPageGuaranteed({
-                    revealDelayMs: 160,
-                    maxAttempts: 3,
-                    useIdleFit: false,
+            try {
+                const didCloseSearchModal = await this.requestSearchModalClose();
+
+                if (!didCloseSearchModal) {
+                    this.schedulePendingModalCloseFit(targetPage, {
+                        retries: 54,
+                        delayMs: 96,
+                        revealDelayMs: 220,
+                        maxAttempts: 6,
+                    });
+
+                    return;
+                }
+
+                if (!this.isSearchModalWindowVisible() && this.search.modalOpen) {
+                    this.handleSearchModalClosed();
+                }
+
+                await this.nextTickAsync();
+                await this.handleRequestedNavigation('page', {
+                    page: targetPage,
+                    source: 'search-result',
+                    activeAyahIndex: highlightAyahIndex,
+                    searchHighlightAyahIndex: highlightAyahIndex,
+                    surahNumber,
+                    ayahNumber,
+                    query: activeQuery,
                 });
+                if (highlightAyahIndex > 0) {
+                    this.activeAyahIndex = highlightAyahIndex;
+                    this.searchHighlightedAyahIndex = highlightAyahIndex;
+                }
+                this.activeWordIndex = 0;
+            } finally {
+                this._searchNavigationInFlight = false;
             }
-            this.activeWordIndex = 0;
-            this.recordNavigationHistory({
-                source: 'search-result',
-                pageNumber: targetPage,
-                surahNumber,
-                ayahNumber,
-                ayahIndex,
-                query: activeQuery,
-            });
         },
     }));
 });

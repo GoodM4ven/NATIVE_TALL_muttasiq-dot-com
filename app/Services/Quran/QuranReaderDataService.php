@@ -597,6 +597,30 @@ class QuranReaderDataService
             return $matches;
         }
 
+        if ($hasTypedWordColumn) {
+            $wordLikeVerseIds = $this->collectVerseIdsByWordLikeFallback($searchQuery, $limit);
+            $wordPrefixStageMatches = $this->appendVerseMatches(
+                $matches,
+                $seenAyahIndexes,
+                $wordLikeVerseIds,
+                $limit,
+                $searchQuery,
+                'word_prefix',
+            );
+            $this->emitIncrementalSearchProgress(
+                $onProgress,
+                $matches,
+                'word_prefix',
+                $wordPrefixStageMatches,
+            );
+        }
+
+        if (count($matches) >= $limit) {
+            $this->emitSearchProgress($onProgress, $matches, 'complete', true);
+
+            return $matches;
+        }
+
         $rootAndStemTokens = array_values(array_filter(
             $tokens,
             fn (string $token): bool => ! $this->isSacredNameToken($token),
@@ -639,21 +663,6 @@ class QuranReaderDataService
             return $matches;
         }
 
-        $wordLikeVerseIds = $this->collectVerseIdsByWordLikeFallback($searchQuery, $limit);
-        $wordPrefixStageMatches = $this->appendVerseMatches(
-            $matches,
-            $seenAyahIndexes,
-            $wordLikeVerseIds,
-            $limit,
-            $searchQuery,
-            'word_prefix',
-        );
-        $this->emitIncrementalSearchProgress(
-            $onProgress,
-            $matches,
-            'word_prefix',
-            $wordPrefixStageMatches,
-        );
         $this->emitSearchProgress($onProgress, $matches, 'complete', true);
 
         return $matches;
@@ -1706,6 +1715,8 @@ class QuranReaderDataService
         }
 
         $tokenCandidateSets = [];
+        $allSemanticCandidates = [];
+        $allTextCandidates = [];
 
         foreach ($tokens as $token) {
             $semanticCandidates = $hasSemanticColumn
@@ -1723,6 +1734,30 @@ class QuranReaderDataService
                 'semantic' => array_fill_keys($semanticCandidates, true),
                 'text' => array_fill_keys($tokenVariants, true),
             ];
+
+            foreach ($semanticCandidates as $semanticCandidate) {
+                $normalizedSemanticCandidate = trim((string) $semanticCandidate);
+
+                if ($normalizedSemanticCandidate === '') {
+                    continue;
+                }
+
+                $allSemanticCandidates[$normalizedSemanticCandidate] = true;
+            }
+
+            foreach ($tokenVariants as $tokenVariant) {
+                $normalizedTokenVariant = trim((string) $tokenVariant);
+
+                if ($normalizedTokenVariant === '') {
+                    continue;
+                }
+
+                $allTextCandidates[$normalizedTokenVariant] = true;
+            }
+        }
+
+        if ($allSemanticCandidates === [] && $allTextCandidates === []) {
+            return [];
         }
 
         $addedMatches = [];
@@ -1736,8 +1771,49 @@ class QuranReaderDataService
             ...$searchColumns,
         ])));
         $verseRowsById = $this->searchIndexByVerseId();
+        $semanticCandidates = array_keys($allSemanticCandidates);
+        $textCandidates = array_keys($allTextCandidates);
+        $canFilterBySemantic = $hasSemanticColumn && $semanticCandidates !== [];
+        $canFilterByText = $searchColumns !== [] && $textCandidates !== [];
 
-        foreach (DB::table('quran_words')->select($selectColumns)->orderBy('ayah_index')->orderBy('word_position')->lazy(512) as $wordRow) {
+        if (! $canFilterBySemantic && ! $canFilterByText) {
+            return [];
+        }
+
+        $wordRowsQuery = DB::table('quran_words')
+            ->select($selectColumns)
+            ->where(function (Builder $builder) use (
+                $semanticColumn,
+                $semanticCandidates,
+                $textCandidates,
+                $searchColumns,
+                $canFilterBySemantic,
+                $canFilterByText,
+            ): void {
+                $hasSeedCondition = false;
+
+                if ($canFilterBySemantic) {
+                    $builder->whereIn($semanticColumn, $semanticCandidates);
+                    $hasSeedCondition = true;
+                }
+
+                if ($canFilterByText) {
+                    foreach ($searchColumns as $searchColumn) {
+                        if (! $hasSeedCondition) {
+                            $builder->whereIn($searchColumn, $textCandidates);
+                            $hasSeedCondition = true;
+
+                            continue;
+                        }
+
+                        $builder->orWhereIn($searchColumn, $textCandidates);
+                    }
+                }
+            })
+            ->orderBy('ayah_index')
+            ->orderBy('word_position');
+
+        foreach ($wordRowsQuery->lazy(512) as $wordRow) {
             if (count($matches) >= $limit) {
                 return $addedMatches;
             }
