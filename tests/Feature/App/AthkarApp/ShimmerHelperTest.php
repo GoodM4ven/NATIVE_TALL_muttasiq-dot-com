@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 it('uses the shared athkar-agnostic shimmer helper from the reader script', function () {
-    $source = file_get_contents(resource_path('js/support/alpine/data/athkar-app-reader.js'));
+    $source = file_get_contents(resource_path('js/support/alpine/data/athkar-app-reader/index.js'));
 
     expect($source)->not->toBeFalse()
         ->and($source)->toContain("import { createShimmerController } from '../shimmer';")
@@ -19,7 +19,7 @@ it('uses the shared athkar-agnostic shimmer helper from the reader script', func
 });
 
 it('guards progress stats getters when reader data is inspected without method bindings', function () {
-    $source = file_get_contents(resource_path('js/support/alpine/data/athkar-app-reader.js'));
+    $source = file_get_contents(resource_path('js/support/alpine/data/athkar-app-reader/index.js'));
 
     expect($source)->not->toBeFalse()
         ->and($source)->toContain('const resolveProgressStatsSafely = (context) => {')

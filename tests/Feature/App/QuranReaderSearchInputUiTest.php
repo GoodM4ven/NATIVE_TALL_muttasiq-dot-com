@@ -5,7 +5,7 @@ declare(strict_types=1);
 test('quran search input clears immediately when native search clear button is used', function () {
     $readerSource = file_get_contents(app_path('Livewire/QuranApp/Reader.php'));
     $searchModalSource = file_get_contents(resource_path('views/components/partials/quran-app/search-modal.blade.php'));
-    $readerScriptSource = file_get_contents(resource_path('js/support/alpine/data/quran-app-reader.js'));
+    $readerScriptSource = file_get_contents(resource_path('js/support/alpine/data/quran-app-reader/index.js'));
 
     expect($readerSource)->not->toBeFalse()
         ->and($readerSource)->toContain("'x-on:search' => 'search.query = String(\$event?.target?.value ?? \'\'); queueSearchResultsUpdate(0)'")
@@ -23,7 +23,7 @@ test('quran search input clears immediately when native search clear button is u
 });
 
 test('quran modal navigation keeps immersive captions and same-page refit paths ready', function () {
-    $readerScriptSource = file_get_contents(resource_path('js/support/alpine/data/quran-app-reader.js'));
+    $readerScriptSource = file_get_contents(resource_path('js/support/alpine/data/quran-app-reader/index.js'));
 
     expect($readerScriptSource)->not->toBeFalse()
         ->and($readerScriptSource)->toContain('resolveSearchModalCloseTargetId()')

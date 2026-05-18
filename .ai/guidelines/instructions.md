@@ -68,7 +68,7 @@ This shared source code base is representing the web version primarily, the one 
 - When have modified PHP files, run static analysis using `vendor/bin/phpstan analyse`.
 
 ## Workflow: Quran Reader Fitting and Cache
-- Main implementation is in [resources/js/support/alpine/data/quran-app-reader.js].
+- Main implementation is in [resources/js/support/alpine/data/quran-app-reader/index.js].
 - Treat reader rendering as one pipeline: queue navigation, load target page, fit text to viewport, then reveal.
 - Reveal is guarded. When loading, modal transitions, or navigation locks are active, the page should stay hidden until safe to reveal.
 - Fit cache is valid for normal navigation, but cache reads must be bypassed in unstable contexts (modal transitions, pending fonts, forced refits). Write suppression affects persistence only, not in-memory reuse.

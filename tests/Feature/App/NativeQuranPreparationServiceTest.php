@@ -208,7 +208,7 @@ it('reader returns quran payload once native preparation status is ready', funct
 it('shows native quran bootstrap progress through home and reader events', function () {
     $homeView = file_get_contents(resource_path('views/home.blade.php'));
     $readerView = file_get_contents(resource_path('views/livewire/quran-app/reader.blade.php'));
-    $readerScript = file_get_contents(resource_path('js/support/alpine/data/quran-app-reader.js'));
+    $readerScript = file_get_contents(resource_path('js/support/alpine/data/quran-app-reader/index.js'));
 
     expect($homeView)->toContain('quran-bootstrap-progress');
     expect($homeView)->toContain('quranBootstrap.progressPercent');

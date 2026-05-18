@@ -24,7 +24,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
     $quranHistoryModalViewSource = file_get_contents(resource_path('views/components/partials/quran-app/history-modal.blade.php'));
     $quranBookmarksModalViewSource = file_get_contents(resource_path('views/components/partials/quran-app/bookmarks-modal.blade.php'));
     $quranReaderScriptSource = file_get_contents(
-        resource_path('js/support/alpine/data/quran-app-reader.js'),
+        resource_path('js/support/alpine/data/quran-app-reader/index.js'),
     );
     $quranReaderClassSource = file_get_contents(app_path('Livewire/QuranApp/Reader.php'));
     $navigationHistoryActionSource = (string) Str::of($quranReaderClassSource)
@@ -544,7 +544,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
     expect($appJsSource)->not->toBeFalse()
         ->and($appJsSource)->toContain("import './support/alpine/data/quran-app-gate';")
         ->and($appJsSource)->toContain("import './packages/auto-animate';")
-        ->and($appJsSource)->toContain("import './support/alpine/data/quran-app-reader';");
+        ->and($appJsSource)->toContain("import './support/alpine/data/quran-app-reader/index';");
 
     expect($filamentComponentsCssSource)->not->toBeFalse()
         ->and($filamentComponentsCssSource)->toContain('#quran-reader-search-modal')
@@ -687,7 +687,7 @@ it('guards mobile js error reporting against known benign runtime noise', functi
 
 it('suppresses immersive mobile edge captions while quran manager modals are open', function () {
     $quranReaderScriptSource = file_get_contents(
-        resource_path('js/support/alpine/data/quran-app-reader.js'),
+        resource_path('js/support/alpine/data/quran-app-reader/index.js'),
     );
 
     expect($quranReaderScriptSource)->not->toBeFalse()
@@ -1441,7 +1441,7 @@ it('builds canonical copy payloads for every ayah in the quran dataset', functio
 
 it('reacts to quran search query changes through an alpine watcher', function () {
     $quranReaderScriptSource = file_get_contents(
-        resource_path('js/support/alpine/data/quran-app-reader.js'),
+        resource_path('js/support/alpine/data/quran-app-reader/index.js'),
     );
 
     expect($quranReaderScriptSource)->not->toBeFalse()
@@ -1467,7 +1467,7 @@ it('pads quran search stream payloads so livewire can flush incremental updates 
         resource_path('views/components/partials/quran-app/search-modal.blade.php'),
     );
     $quranReaderScriptSource = file_get_contents(
-        resource_path('js/support/alpine/data/quran-app-reader.js'),
+        resource_path('js/support/alpine/data/quran-app-reader/index.js'),
     );
 
     expect($quranReaderClassSource)->not->toBeFalse()
