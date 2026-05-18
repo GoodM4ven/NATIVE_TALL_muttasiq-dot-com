@@ -6714,7 +6714,7 @@ document.addEventListener('alpine:init', () => {
             this._bypassNextFitCache = true;
 
             await this.goToPageFromChevron(targetPage, {
-                source: 'surah-directory',
+                source: 'surah-quick-nav',
                 activeAyahIndex,
                 commitNow: true,
                 settleDelayMs: 0,
@@ -17449,6 +17449,17 @@ document.addEventListener('alpine:init', () => {
                 composedResults.push(result);
             });
 
+            composedResults.sort((left, right) => {
+                const leftLeaving = this.searchResultIsLeaving(left);
+                const rightLeaving = this.searchResultIsLeaving(right);
+
+                if (leftLeaving !== rightLeaving) {
+                    return leftLeaving ? 1 : -1;
+                }
+
+                return this.searchResultSortWeight(left) - this.searchResultSortWeight(right);
+            });
+
             this.search.results = composedResults;
             this.syncSearchResultMetadata(this.search.results);
             this.queueSearchLeaveCleanup();
@@ -18408,46 +18419,54 @@ document.addEventListener('alpine:init', () => {
             this.search.activeSurahNumber = surahNumber;
             this.search.preserveActiveSurahOnNextOpen = true;
 
-            this.resetNavigationQueueForPriorityJump();
-            this.cancelActiveSearchProcessing();
-            this.suppressModalLifecycleEffects(searchModalLifecycleIds, {
-                durationMs: Math.max(
-                    modalLifecycleSuppressionDurationMs,
-                    postModalFitRevealSettleDelayMs + 640,
-                ),
-            });
             try {
-                const didCloseSearchModal = await this.requestSearchModalClose();
-
-                if (!didCloseSearchModal) {
-                    this.queuePendingPostModalTargetFit(pageNumber);
-                    this.schedulePendingModalCloseFit(pageNumber, {
-                        retries: 54,
-                        delayMs: 96,
-                        revealDelayMs: 220,
-                        maxAttempts: 6,
-                    });
-
-                    return;
-                }
+                this.resetNavigationQueueForPriorityJump();
+                this.clearPendingPostModalTargetFit();
+                this.cancelActiveSearchProcessing();
+                this.suppressModalLifecycleEffects(searchModalLifecycleIds);
+                await this.requestSearchModalClose();
+                await this.waitForModalLifecycleToSettle();
+                await wait(modalCloseTransitionDelayMs);
 
                 if (!this.isSearchModalWindowVisible() && this.search.modalOpen) {
                     this.handleSearchModalClosed();
                 }
 
-                await this.waitForModalLifecycleToSettle(28, 28);
-                await wait(modalCloseTransitionDelayMs);
-                await this.handleRequestedNavigation('page', {
-                    page: pageNumber,
-                    source: 'surah-directory',
+                this._bypassNextFitCache = true;
+                await this.goToPageFromChevron(pageNumber, {
                     activeAyahIndex: 0,
-                    surahNumber,
+                    source: 'surah-directory',
+                    commitNow: true,
+                    settleDelayMs: 0,
                 });
+
+                const shouldQueuePostModalFit =
+                    !this.isCurrentPageVisiblyReady() ||
+                    this._lastFittedPageNumber !== this.pageNumber;
+
+                if (shouldQueuePostModalFit) {
+                    this._bypassNextFitCache = true;
+                    await this.layoutPageGuaranteed({
+                        revealDelayMs: 160,
+                        maxAttempts: 3,
+                        useIdleFit: false,
+                    });
+                } else if (this.hasRenderablePage()) {
+                    this._bypassNextFitCache = true;
+                    this.fitPageToViewport();
+                    this.applySafetyScaleForCurrentPageOverflow();
+                    this._lastPageRevealAt = Date.now();
+                }
+
                 this.search.activeSurahNumber = surahNumber;
                 this.activeAyahIndex = 0;
                 this.activeWordIndex = 0;
-                this.refreshMobileEdgeCaptions(false);
-                this.syncReaderChromeDocumentClass();
+                this.searchHighlightedAyahIndex = 0;
+                this.recordNavigationHistory({
+                    source: 'surah-directory',
+                    pageNumber,
+                    surahNumber,
+                });
             } finally {
                 this._searchNavigationInFlight = false;
             }
@@ -18966,49 +18985,62 @@ document.addEventListener('alpine:init', () => {
                 .map((value) => String(value ?? '').trim())
                 .filter((value) => value !== '');
 
-            this.resetNavigationQueueForPriorityJump();
-            this.cancelActiveSearchProcessing();
-            this.suppressModalLifecycleEffects(searchModalLifecycleIds, {
-                durationMs: Math.max(
-                    modalLifecycleSuppressionDurationMs,
-                    postModalFitRevealSettleDelayMs + 640,
-                ),
-            });
             try {
-                const didCloseSearchModal = await this.requestSearchModalClose();
-
-                if (!didCloseSearchModal) {
-                    this.queuePendingPostModalTargetFit(targetPage);
-                    this.schedulePendingModalCloseFit(targetPage, {
-                        retries: 54,
-                        delayMs: 96,
-                        revealDelayMs: 220,
-                        maxAttempts: 6,
-                    });
-
-                    return;
-                }
+                this.resetNavigationQueueForPriorityJump();
+                this.clearPendingPostModalTargetFit();
+                this.cancelActiveSearchProcessing();
+                this.suppressModalLifecycleEffects(searchModalLifecycleIds);
+                await this.requestSearchModalClose();
+                await this.waitForModalLifecycleToSettle();
+                await wait(modalCloseTransitionDelayMs);
 
                 if (!this.isSearchModalWindowVisible() && this.search.modalOpen) {
                     this.handleSearchModalClosed();
                 }
 
-                await this.waitForModalLifecycleToSettle(28, 28);
-                await wait(modalCloseTransitionDelayMs);
-                await this.handleRequestedNavigation('page', {
-                    page: targetPage,
-                    source: 'search-result',
+                this._bypassNextFitCache = true;
+                await this.goToPageFromChevron(targetPage, {
                     activeAyahIndex: highlightAyahIndex,
                     searchHighlightAyahIndex: highlightAyahIndex,
-                    surahNumber,
-                    ayahNumber,
-                    query: activeQuery,
+                    source: 'search-result',
+                    commitNow: true,
+                    settleDelayMs: 0,
                 });
+
+                const shouldQueuePostModalFit =
+                    !this.isCurrentPageVisiblyReady() ||
+                    this._lastFittedPageNumber !== this.pageNumber;
+
+                if (shouldQueuePostModalFit) {
+                    this._bypassNextFitCache = true;
+                    await this.layoutPageGuaranteed({
+                        revealDelayMs: 160,
+                        maxAttempts: 3,
+                        useIdleFit: false,
+                    });
+                } else if (this.hasRenderablePage()) {
+                    this._bypassNextFitCache = true;
+                    this.fitPageToViewport();
+                    this.applySafetyScaleForCurrentPageOverflow();
+                    this._lastPageRevealAt = Date.now();
+                }
+
                 if (highlightAyahIndex > 0) {
                     this.activeAyahIndex = highlightAyahIndex;
                     this.searchHighlightedAyahIndex = highlightAyahIndex;
+                } else {
+                    this.activeAyahIndex = 0;
+                    this.searchHighlightedAyahIndex = 0;
                 }
                 this.activeWordIndex = 0;
+                this.recordNavigationHistory({
+                    source: 'search-result',
+                    pageNumber: targetPage,
+                    surahNumber,
+                    ayahNumber,
+                    ayahIndex: highlightAyahIndex,
+                    query: activeQuery,
+                });
             } finally {
                 this._searchNavigationInFlight = false;
             }
