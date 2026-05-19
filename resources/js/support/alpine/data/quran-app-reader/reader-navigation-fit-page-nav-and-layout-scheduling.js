@@ -506,6 +506,46 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                     0,
                     Math.trunc(Number(detail?.searchHighlightAyahIndex ?? 0)),
                 );
+
+                if (
+                    requestedSource === 'page-jump' &&
+                    typeof this.navigateFromManagerModalRecord === 'function'
+                ) {
+                    this.resetNavigationQueueForPriorityJump();
+                    this.clearPendingPostModalTargetFit();
+                    this.suppressModalLifecycleEffects([this.jumpPageModalId]);
+
+                    if (typeof this.requestJumpPageModalClose === 'function') {
+                        await this.requestJumpPageModalClose();
+                    }
+
+                    await this.waitForModalLifecycleToSettle();
+                    await wait(modalCloseTransitionDelayMs);
+
+                    await this.navigateFromManagerModalRecord({
+                        targetPage: requestedPage,
+                        ayahIndex: requestedActiveAyahIndex,
+                        searchHighlightAyahIndex: requestedSearchHighlightAyahIndex,
+                        source: requestedSource,
+                        modalId: this.jumpPageModalId,
+                        suppressionDurationMs: historyNavigationModalLifecycleSuppressionDurationMs,
+                    });
+
+                    this.recordNavigationHistory({
+                        source: requestedSource,
+                        pageNumber: requestedPage,
+                        surahNumber: Math.max(
+                            0,
+                            Math.trunc(Number(detail?.surahNumber ?? this.currentSurahNumber())),
+                        ),
+                        ayahNumber: Math.max(0, Math.trunc(Number(detail?.ayahNumber ?? 0))),
+                        ayahIndex: requestedActiveAyahIndex,
+                        query: detail?.query ?? null,
+                    });
+
+                    return;
+                }
+
                 const isModalDrivenPriorityRequest =
                     requestedSource === 'search-result' || requestedSource === 'surah-directory';
                 const isPriorityPageRequest =

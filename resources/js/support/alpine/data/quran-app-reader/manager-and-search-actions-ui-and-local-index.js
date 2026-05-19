@@ -501,6 +501,16 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             });
         },
 
+        async requestJumpPageModalClose() {
+            await this.requestModalCloseByKnownIds([this.jumpPageModalId], {
+                onFallback: () => {
+                    this.jumpPageModalOpen = false;
+                    this.dispatchManagerModalsVisibilityState();
+                },
+                isModalStillVisible: () => this.isJumpPageInputVisible(),
+            });
+        },
+
         requestReaderGateNavigation(_source = 'generic') {
             this.resetSwipeState();
             this.clearWordPressState();
@@ -621,6 +631,7 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
         async navigateFromManagerModalRecord({
             targetPage,
             ayahIndex = 0,
+            searchHighlightAyahIndex = 0,
             source = 'history-entry',
             modalId = '',
             suppressionDurationMs = historyNavigationModalLifecycleSuppressionDurationMs,
@@ -629,6 +640,10 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             const normalizedSource = String(source ?? '').trim() || 'history-entry';
             const normalizedTargetPage = clampPage(Number(targetPage ?? 1), this.maxPage);
             const normalizedAyahIndex = Math.max(0, Math.trunc(Number(ayahIndex ?? 0)));
+            const normalizedSearchHighlightAyahIndex = Math.max(
+                0,
+                Math.trunc(Number(searchHighlightAyahIndex ?? 0)),
+            );
 
             this.resetNavigationQueueForPriorityJump();
             this.clearPendingPostModalTargetFit();
@@ -642,6 +657,7 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             this._bypassNextFitCache = true;
             await this.goToPageFromChevron(normalizedTargetPage, {
                 activeAyahIndex: normalizedAyahIndex,
+                searchHighlightAyahIndex: normalizedSearchHighlightAyahIndex,
                 source: normalizedSource,
                 commitNow: true,
                 settleDelayMs: 0,
@@ -664,9 +680,7 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
 
             this.resetNavigationQueueForPriorityJump();
             this.clearPendingPostModalTargetFit();
-            this.suppressModalLifecycleEffects([this.historyModalId], {
-                durationMs: historyNavigationModalLifecycleSuppressionDurationMs,
-            });
+            this.suppressModalLifecycleEffects([this.historyModalId]);
             await this.requestHistoryModalClose();
             await this.waitForModalLifecycleToSettle();
             await wait(modalCloseTransitionDelayMs);
@@ -748,19 +762,12 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                 }
 
                 this._bypassNextFitCache = true;
-                await this.goToPageFromChevron(pageNumber, {
-                    activeAyahIndex: 0,
+                await this.navigateFromManagerModalRecord({
+                    targetPage: pageNumber,
+                    ayahIndex: 0,
                     source: 'surah-directory',
-                    commitNow: true,
-                    settleDelayMs: 0,
-                });
-
-                await this.stabilizeModalDrivenLayout({
-                    revealDelayMs: 160,
-                    maxAttempts: 4,
-                    maxFrames: 18,
-                    requiredStableFrames: 3,
-                    tolerancePx: 0.8,
+                    modalId: this.resolveSearchModalCloseTargetId(),
+                    suppressionDurationMs: historyNavigationModalLifecycleSuppressionDurationMs,
                 });
 
                 this.search.activeSurahNumber = surahNumber;
