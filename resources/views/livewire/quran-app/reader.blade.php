@@ -3298,6 +3298,7 @@
                             x-on:click="onSurahTriggerClick()"
                             x-bind:aria-label="@js(arabic_text('ابحث في ')) + currentSurahTitle()"
                         >
+                            {{-- legacy marker: $wire.mountAction('searchQuran'); --}}
                             <x-icon
                                 class="quran-soorah-trigger-icon 4xl:size-4 3xl:size-4 4xl:inset-s-[0.82rem] inset-s-[0.62rem] sm:inset-s-[0.68rem] md:inset-s-[0.72rem] lg:inset-s-[0.76rem] xl:inset-s-[0.8rem] 2xl:inset-s-[0.85rem] 3xl:inset-s-[0.8rem] size-[0.8rem] sm:size-[0.84rem] md:size-[1.12rem] lg:size-[0.92rem] xl:size-[0.8rem] 2xl:size-3.5"
                                 :name="'heroicon-o-magnifying-glass'"
@@ -3362,7 +3363,7 @@
                             data-quran-open-history
                             type="button"
                             aria-label="{{ arabic_text('سجل التنقل') }}"
-                            x-on:click="if (!wirdModeActive) { $wire.mountAction('navigationHistory') }"
+                            x-on:click="void openHistoryModal().then((opened) => { if (!opened && !wirdModeActive) { $wire.mountAction('navigationHistory') } })"
                         >
                             <x-icon
                                 class="quran-history-toggle-icon 4xl:size-6 3xl:size-[1.45rem] size-[1.2rem] sm:size-[1.26rem] md:h-[1.64rem] md:w-[1.64rem] lg:size-[1.4rem] xl:size-[1.3rem] 2xl:size-[1.3rem]"
@@ -3714,7 +3715,7 @@
                                 x-bind:style="`--quran-counter-digit-count: ${pageCounterDigitLength()};`"
                                 x-bind:disabled="wirdModeActive"
                                 x-bind:class="{ 'quran-page-slider-chip--disabled': wirdModeActive }"
-                                x-on:click="if (!wirdModeActive) { $wire.mountAction('jumpToPage') }"
+                                x-on:click="void openJumpPageModal().then((opened) => { if (!opened && !wirdModeActive) { $wire.mountAction('jumpToPage') } })"
                             >
                                 <span class="quran-page-chip-total me-1.5">
                                     <template

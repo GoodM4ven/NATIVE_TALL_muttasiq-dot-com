@@ -128,6 +128,30 @@ export const createReaderNavigationFitSurahQuickNavAndBurstModule = (deps) => {
     } = deps;
 
     return {
+        async mountReaderAction(actionName) {
+            const normalizedActionName = String(actionName ?? '').trim();
+
+            if (normalizedActionName === '' || typeof this.$wire?.mountAction !== 'function') {
+                return false;
+            }
+
+            if (typeof this.$wire?.unmountAction === 'function') {
+                try {
+                    await this.$wire.unmountAction(false);
+                } catch (_) {
+                    //
+                }
+            }
+
+            try {
+                await this.$wire.mountAction(normalizedActionName);
+
+                return true;
+            } catch (_) {
+                return false;
+            }
+        },
+
         closeSurahQuickNavigator({ resetSuppressClick = true } = {}) {
             this.surahQuickNavigator.visible = false;
             this.clearSurahQuickNavigatorPressState({ resetSuppressClick });
@@ -189,7 +213,7 @@ export const createReaderNavigationFitSurahQuickNavAndBurstModule = (deps) => {
 
             this.closeSurahQuickNavigator({ resetSuppressClick: false });
             this.warmSearchIndex();
-            this.$wire.mountAction('searchQuran');
+            void this.mountReaderAction('searchQuran');
             this.queueSurahDirectoryAutoFocus();
             this.clearSurahQuickNavigatorPressState();
         },
@@ -380,7 +404,7 @@ export const createReaderNavigationFitSurahQuickNavAndBurstModule = (deps) => {
         },
 
         openBookmarksManager() {
-            this.$wire.mountAction('bookmarksManager');
+            void this.mountReaderAction('bookmarksManager');
         },
 
         readerRootStyle() {

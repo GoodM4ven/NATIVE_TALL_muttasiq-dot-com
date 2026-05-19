@@ -272,6 +272,7 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             this._searchQueuedNormalizedQuery = null;
             this.search.modalOpen = false;
             this._lastKnownModalOpenState = false;
+            this.searchActionModalId = '';
             this.search.query = '';
             this.setSearchResults([], { immediate: true });
             this.search.isLoading = false;
@@ -296,6 +297,7 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                 isModalStillVisible = null,
                 quietly = false,
                 allowLivewireUnmount = true,
+                forceLivewireUnmount = false,
             } = {},
         ) {
             const normalizedModalIds = Array.from(
@@ -331,6 +333,19 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                 await wait(16);
 
                 if (!resolveModalVisibleState(modalId)) {
+                    if (
+                        forceLivewireUnmount &&
+                        allowLivewireUnmount &&
+                        typeof this.$wire?.unmountAction === 'function'
+                    ) {
+                        try {
+                            await this.$wire.unmountAction(false);
+                            await wait(16);
+                        } catch (_) {
+                            //
+                        }
+                    }
+
                     return true;
                 }
             }
@@ -372,8 +387,9 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                 {
                     onFallback: () => {},
                     isModalStillVisible: () => this.isSearchModalWindowVisible(),
-                    quietly: true,
-                    allowLivewireUnmount: false,
+                    quietly: false,
+                    allowLivewireUnmount: true,
+                    forceLivewireUnmount: true,
                 },
             );
 
@@ -382,7 +398,7 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
 
                 if (fallbackModalId !== '') {
                     window.dispatchEvent(
-                        new CustomEvent('close-modal-quietly', {
+                        new CustomEvent('close-modal', {
                             detail: {
                                 id: fallbackModalId,
                             },
@@ -395,6 +411,10 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
 
             this.syncManagerModalFlagsFromVisibility();
             const modalStillVisible = this.isSearchModalWindowVisible();
+
+            if (!modalStillVisible) {
+                this.searchActionModalId = '';
+            }
 
             if (this.search.modalOpen && modalStillVisible) {
                 this.queueSearchModalCloseSync({ delayMs: 120 });
@@ -486,6 +506,48 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             this.clearWordPressState();
             void this.requestSearchModalClose({ skipLayout: true });
             window.dispatchEvent(new CustomEvent('quran-go-gate'));
+        },
+
+        async openHistoryModal() {
+            if (this.wirdModeActive) {
+                return false;
+            }
+
+            await this.requestSearchModalClose({ skipLayout: true });
+            await this.waitForModalLifecycleToSettle();
+
+            if (typeof this.mountReaderAction === 'function') {
+                return await this.mountReaderAction('navigationHistory');
+            }
+
+            if (typeof this.$wire?.mountAction === 'function') {
+                await this.$wire.mountAction('navigationHistory');
+
+                return true;
+            }
+
+            return false;
+        },
+
+        async openJumpPageModal() {
+            if (this.wirdModeActive) {
+                return false;
+            }
+
+            await this.requestSearchModalClose({ skipLayout: true });
+            await this.waitForModalLifecycleToSettle();
+
+            if (typeof this.mountReaderAction === 'function') {
+                return await this.mountReaderAction('jumpToPage');
+            }
+
+            if (typeof this.$wire?.mountAction === 'function') {
+                await this.$wire.mountAction('jumpToPage');
+
+                return true;
+            }
+
+            return false;
         },
 
         async goToHistoryEntry(entry) {
@@ -584,9 +646,9 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             this.search.preserveActiveSurahOnNextOpen = true;
 
             try {
+                this.cancelActiveSearchProcessing();
                 this.resetNavigationQueueForPriorityJump();
                 this.clearPendingPostModalTargetFit();
-                this.cancelActiveSearchProcessing();
                 this.suppressModalLifecycleEffects(searchModalLifecycleIds);
                 await this.requestSearchModalClose();
                 await this.waitForModalLifecycleToSettle();
