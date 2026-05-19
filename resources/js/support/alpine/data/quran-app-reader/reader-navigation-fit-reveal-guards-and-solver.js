@@ -229,6 +229,10 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
         },
 
         readerRevealDebugEnabled() {
+            if (this.normalizeBooleanFlag(this.isQrDebugLoggingEnabled, false)) {
+                return true;
+            }
+
             try {
                 return this.normalizeBooleanFlag(
                     window.localStorage?.getItem?.(readerRevealDebugStorageKey),
@@ -248,7 +252,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             const payload =
                 details && typeof details === 'object' && !Array.isArray(details) ? details : {};
 
-            console.debug('[quran-reader][reveal]', normalizedEventName, {
+            const tracePayload = {
                 pageNumber: this.pageNumber,
                 isFittingPage: this.isFittingPage,
                 isLoadingPage: this.isLoadingPage,
@@ -261,7 +265,134 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 activeModalCount: this._activeModalIds.size,
                 openModalCount: this.openModalCount(),
                 ...payload,
+            };
+
+            console.log('[quran-reader][reveal]', normalizedEventName, tracePayload);
+
+            const globalScope = window;
+            const traceStore = Array.isArray(globalScope.__quranReaderLayoutTrace)
+                ? globalScope.__quranReaderLayoutTrace
+                : [];
+            traceStore.push({
+                channel: 'reveal',
+                event: normalizedEventName,
+                payload: tracePayload,
+                at: Date.now(),
             });
+            globalScope.__quranReaderLayoutTrace = traceStore.slice(-500);
+        },
+
+        currentPageLayoutDebugSnapshot() {
+            const rootElement = this.$el?.firstElementChild;
+            const pageContent = this.$refs?.pageContent;
+            const pageLinesElement =
+                pageContent instanceof Element
+                    ? pageContent.classList.contains('quran-page-lines')
+                        ? pageContent
+                        : pageContent.querySelector('.quran-page-lines')
+                    : null;
+            const rootStyles =
+                rootElement instanceof HTMLElement ? window.getComputedStyle(rootElement) : null;
+            const pageLinesStyles =
+                pageLinesElement instanceof HTMLElement
+                    ? window.getComputedStyle(pageLinesElement)
+                    : null;
+            const firstSurahHeaderLine =
+                pageContent instanceof Element
+                    ? pageContent.querySelector(
+                          '[data-quran-line][data-quran-line-type="surah_name"]',
+                      )
+                    : null;
+            const firstBasmallahLine =
+                pageContent instanceof Element
+                    ? pageContent.querySelector(
+                          '[data-quran-line][data-quran-line-type="basmallah"]',
+                      )
+                    : null;
+            const firstSurahHeaderStyles =
+                firstSurahHeaderLine instanceof HTMLElement
+                    ? window.getComputedStyle(firstSurahHeaderLine)
+                    : null;
+            const firstBasmallahStyles =
+                firstBasmallahLine instanceof HTMLElement
+                    ? window.getComputedStyle(firstBasmallahLine)
+                    : null;
+
+            const readRootVar = (name, fallback = '') => {
+                if (!rootStyles) {
+                    return fallback;
+                }
+
+                const value = String(rootStyles.getPropertyValue(name) ?? '').trim();
+
+                return value === '' ? fallback : value;
+            };
+
+            return {
+                pageScale: this.pageScale,
+                cssVars: {
+                    pageScale: readRootVar('--quran-page-scale'),
+                    pageTypeScale: readRootVar('--quran-page-type-scale'),
+                    pageLeadingMultiplier: readRootVar('--quran-page-leading-multiplier'),
+                    pageGapMultiplier: readRootVar('--quran-page-gap-multiplier'),
+                    pageSurahHeaderScale: readRootVar('--quran-page-surah-header-scale'),
+                    basmallahBottomGapScale: readRootVar('--quran-basmallah-bottom-gap-scale'),
+                    surahHeaderBasmallahOverlap: readRootVar(
+                        '--quran-surah-header-basmallah-overlap',
+                    ),
+                    surahHeaderBottomTrim: readRootVar('--quran-surah-header-bottom-trim'),
+                    lineGap: readRootVar('--quran-line-gap'),
+                    gapScale: readRootVar('--quran-gap-scale'),
+                },
+                lines: {
+                    className: String(pageLinesElement?.className ?? ''),
+                    gap: String(pageLinesStyles?.gap ?? ''),
+                    transform: String(pageLinesStyles?.transform ?? ''),
+                },
+                firstSurahHeader: {
+                    marginBlockStart: String(firstSurahHeaderStyles?.marginBlockStart ?? ''),
+                    marginBlockEnd: String(firstSurahHeaderStyles?.marginBlockEnd ?? ''),
+                    lineHeight: String(firstSurahHeaderStyles?.lineHeight ?? ''),
+                    fontSize: String(firstSurahHeaderStyles?.fontSize ?? ''),
+                },
+                firstBasmallah: {
+                    marginBlockStart: String(firstBasmallahStyles?.marginBlockStart ?? ''),
+                    marginBlockEnd: String(firstBasmallahStyles?.marginBlockEnd ?? ''),
+                    lineHeight: String(firstBasmallahStyles?.lineHeight ?? ''),
+                    fontSize: String(firstBasmallahStyles?.fontSize ?? ''),
+                },
+            };
+        },
+
+        qrDebugLayoutSnapshot(eventName, details = {}) {
+            if (!this.readerRevealDebugEnabled()) {
+                return;
+            }
+
+            const normalizedEventName = String(eventName ?? '').trim() || 'event';
+            const payload =
+                details && typeof details === 'object' && !Array.isArray(details) ? details : {};
+
+            const tracePayload = {
+                pageNumber: this.pageNumber,
+                hasRenderablePage: this.hasRenderablePage(),
+                ...this.currentPageLayoutDebugSnapshot(),
+                ...payload,
+            };
+
+            console.log('[quran-reader][layout]', normalizedEventName, tracePayload);
+
+            const globalScope = window;
+            const traceStore = Array.isArray(globalScope.__quranReaderLayoutTrace)
+                ? globalScope.__quranReaderLayoutTrace
+                : [];
+            traceStore.push({
+                channel: 'layout',
+                event: normalizedEventName,
+                payload: tracePayload,
+                at: Date.now(),
+            });
+            globalScope.__quranReaderLayoutTrace = traceStore.slice(-500);
         },
 
         clearSwipeRevealWatchdog() {
@@ -271,6 +402,83 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
 
             clearTimeout(this._swipeRevealWatchdogTimer);
             this._swipeRevealWatchdogTimer = null;
+        },
+
+        scheduleModalDrivenFinalRecoveryFit(
+            pageNumber = this.pageNumber,
+            { source = 'modal-driven', delayMs = 360, retries = 6 } = {},
+        ) {
+            const normalizedPageNumber = clampPage(
+                Number(pageNumber ?? this.pageNumber),
+                this.maxPage,
+            );
+            const normalizedDelayMs = Math.max(160, Math.trunc(Number(delayMs) || 360));
+            const normalizedRetries = Math.max(0, Math.trunc(Number(retries) || 0));
+
+            if (normalizedPageNumber <= 0) {
+                return;
+            }
+
+            if (this._modalDrivenFinalRecoveryFitTimer !== null) {
+                clearTimeout(this._modalDrivenFinalRecoveryFitTimer);
+                this._modalDrivenFinalRecoveryFitTimer = null;
+            }
+
+            const attemptRecovery = (remainingRetries) => {
+                const canRunRecovery =
+                    this.pageNumber === normalizedPageNumber &&
+                    this.hasRenderablePage() &&
+                    !this.isLoadingPage &&
+                    this._pendingNavigationRequest === null &&
+                    !this._navigationRevealLocked &&
+                    !this._isModalLifecycleSettling &&
+                    this._activeModalIds.size <= 0 &&
+                    this.openModalCount() <= 0;
+
+                if (!canRunRecovery) {
+                    if (remainingRetries <= 0) {
+                        return;
+                    }
+
+                    this._modalDrivenFinalRecoveryFitTimer = window.setTimeout(() => {
+                        this._modalDrivenFinalRecoveryFitTimer = null;
+                        attemptRecovery(remainingRetries - 1);
+                    }, 120);
+
+                    return;
+                }
+
+                void (async () => {
+                    this.qrDebugLayoutSnapshot('modal-driven-final-recovery-before', {
+                        source,
+                        targetPage: normalizedPageNumber,
+                    });
+                    this._bypassNextFitCache = true;
+                    this.resetFitSanityRecoveryState();
+                    await this.nextTickAsync();
+                    await this.waitForStablePageFrame({
+                        maxFrames: 16,
+                        requiredStableFrames: 2,
+                        tolerancePx: 0.8,
+                    });
+                    await this.stabilizeModalDrivenLayout({
+                        revealDelayMs: 140,
+                        maxAttempts: 5,
+                        maxFrames: 16,
+                        requiredStableFrames: 3,
+                        tolerancePx: 0.8,
+                    });
+                    this.qrDebugLayoutSnapshot('modal-driven-final-recovery-after', {
+                        source,
+                        targetPage: normalizedPageNumber,
+                    });
+                })();
+            };
+
+            this._modalDrivenFinalRecoveryFitTimer = window.setTimeout(() => {
+                this._modalDrivenFinalRecoveryFitTimer = null;
+                attemptRecovery(normalizedRetries);
+            }, normalizedDelayMs);
         },
 
         forceRevealCurrentPage(reason = 'generic') {

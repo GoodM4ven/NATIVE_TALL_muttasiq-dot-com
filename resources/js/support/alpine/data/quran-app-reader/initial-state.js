@@ -697,6 +697,8 @@ export const createInitialState = (config, deps) => {
 
         _postModalTargetFitTimer: null,
 
+        _modalDrivenFinalRecoveryFitTimer: null,
+
         _activeModalIds: new Set(),
 
         _isModalLifecycleSettling: false,

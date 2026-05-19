@@ -528,14 +528,29 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                 }
 
                 this._bypassNextFitCache = true;
-                await this.navigateFromManagerModalRecord({
-                    targetPage,
-                    ayahIndex: highlightAyahIndex,
+                await this.goToPageFromChevron(targetPage, {
+                    activeAyahIndex: highlightAyahIndex,
                     searchHighlightAyahIndex: highlightAyahIndex,
                     source: 'search-result',
-                    modalId: this.resolveSearchModalCloseTargetId(),
-                    suppressionDurationMs: historyNavigationModalLifecycleSuppressionDurationMs,
+                    commitNow: true,
+                    settleDelayMs: 0,
                 });
+
+                await this.stabilizeModalDrivenLayout({
+                    revealDelayMs: 160,
+                    maxAttempts: 4,
+                    maxFrames: 18,
+                    requiredStableFrames: 3,
+                    tolerancePx: 0.8,
+                });
+
+                if (typeof this.scheduleModalDrivenFinalRecoveryFit === 'function') {
+                    this.scheduleModalDrivenFinalRecoveryFit(targetPage, {
+                        source: 'search-result',
+                        delayMs: 340,
+                        retries: 6,
+                    });
+                }
 
                 if (highlightAyahIndex > 0) {
                     this.activeAyahIndex = highlightAyahIndex;

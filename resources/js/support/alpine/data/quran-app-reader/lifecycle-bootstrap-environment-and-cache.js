@@ -1298,6 +1298,11 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
                 this._postModalTargetFitTimer = null;
             }
 
+            if (this._modalDrivenFinalRecoveryFitTimer !== null) {
+                clearTimeout(this._modalDrivenFinalRecoveryFitTimer);
+                this._modalDrivenFinalRecoveryFitTimer = null;
+            }
+
             this._activeModalIds.clear();
             this._isModalLifecycleSettling = false;
             this._postModalTargetFitPage = 0;

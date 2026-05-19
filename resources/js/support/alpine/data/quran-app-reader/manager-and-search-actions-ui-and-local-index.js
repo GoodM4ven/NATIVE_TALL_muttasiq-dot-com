@@ -501,16 +501,6 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             });
         },
 
-        async requestJumpPageModalClose() {
-            await this.requestModalCloseByKnownIds([this.jumpPageModalId], {
-                onFallback: () => {
-                    this.jumpPageModalOpen = false;
-                    this.dispatchManagerModalsVisibilityState();
-                },
-                isModalStillVisible: () => this.isJumpPageInputVisible(),
-            });
-        },
-
         requestReaderGateNavigation(_source = 'generic') {
             this.resetSwipeState();
             this.clearWordPressState();
@@ -645,6 +635,16 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                 Math.trunc(Number(searchHighlightAyahIndex ?? 0)),
             );
 
+            if (typeof this.qrDebugLayoutSnapshot === 'function') {
+                this.qrDebugLayoutSnapshot('manager-modal-nav-start', {
+                    source: normalizedSource,
+                    modalId: normalizedModalId,
+                    targetPage: normalizedTargetPage,
+                    ayahIndex: normalizedAyahIndex,
+                    searchHighlightAyahIndex: normalizedSearchHighlightAyahIndex,
+                });
+            }
+
             this.resetNavigationQueueForPriorityJump();
             this.clearPendingPostModalTargetFit();
 
@@ -663,6 +663,14 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                 settleDelayMs: 0,
             });
 
+            if (typeof this.qrDebugLayoutSnapshot === 'function') {
+                this.qrDebugLayoutSnapshot('manager-modal-nav-after-go', {
+                    source: normalizedSource,
+                    modalId: normalizedModalId,
+                    targetPage: normalizedTargetPage,
+                });
+            }
+
             await this.stabilizeModalDrivenLayout({
                 revealDelayMs: 160,
                 maxAttempts: 4,
@@ -671,7 +679,31 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                 tolerancePx: 0.8,
             });
 
+            if (typeof this.qrDebugLayoutSnapshot === 'function') {
+                this.qrDebugLayoutSnapshot('manager-modal-nav-after-stabilize', {
+                    source: normalizedSource,
+                    modalId: normalizedModalId,
+                    targetPage: normalizedTargetPage,
+                });
+            }
+
             await this.runSecondaryModalExitRecoveryPulse(normalizedModalId);
+
+            if (typeof this.qrDebugLayoutSnapshot === 'function') {
+                this.qrDebugLayoutSnapshot('manager-modal-nav-after-secondary-pulse', {
+                    source: normalizedSource,
+                    modalId: normalizedModalId,
+                    targetPage: normalizedTargetPage,
+                });
+            }
+
+            if (typeof this.scheduleModalDrivenFinalRecoveryFit === 'function') {
+                this.scheduleModalDrivenFinalRecoveryFit(normalizedTargetPage, {
+                    source: normalizedSource,
+                    delayMs: 360,
+                    retries: 6,
+                });
+            }
         },
 
         async goToHistoryEntry(entry) {
@@ -680,7 +712,9 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
 
             this.resetNavigationQueueForPriorityJump();
             this.clearPendingPostModalTargetFit();
-            this.suppressModalLifecycleEffects([this.historyModalId]);
+            this.suppressModalLifecycleEffects([this.historyModalId], {
+                durationMs: historyNavigationModalLifecycleSuppressionDurationMs,
+            });
             await this.requestHistoryModalClose();
             await this.waitForModalLifecycleToSettle();
             await wait(modalCloseTransitionDelayMs);
@@ -762,13 +796,28 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                 }
 
                 this._bypassNextFitCache = true;
-                await this.navigateFromManagerModalRecord({
-                    targetPage: pageNumber,
-                    ayahIndex: 0,
+                await this.goToPageFromChevron(pageNumber, {
+                    activeAyahIndex: 0,
                     source: 'surah-directory',
-                    modalId: this.resolveSearchModalCloseTargetId(),
-                    suppressionDurationMs: historyNavigationModalLifecycleSuppressionDurationMs,
+                    commitNow: true,
+                    settleDelayMs: 0,
                 });
+
+                await this.stabilizeModalDrivenLayout({
+                    revealDelayMs: 160,
+                    maxAttempts: 4,
+                    maxFrames: 18,
+                    requiredStableFrames: 3,
+                    tolerancePx: 0.8,
+                });
+
+                if (typeof this.scheduleModalDrivenFinalRecoveryFit === 'function') {
+                    this.scheduleModalDrivenFinalRecoveryFit(pageNumber, {
+                        source: 'surah-directory',
+                        delayMs: 340,
+                        retries: 6,
+                    });
+                }
 
                 this.search.activeSurahNumber = surahNumber;
                 this.activeAyahIndex = 0;
