@@ -560,6 +560,43 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             }
         },
 
+        resetFitSanityRecoveryState() {
+            this._fitSanityContextKey = '';
+            this._fitSanityContextAttemptCount = 0;
+            this._fitSanityContextLastWidth = 0;
+            this._fitSanityContextLastHeight = 0;
+            this._fitSanityContextOutcome = '';
+            this._fitSanitySuppressedUntil = 0;
+            this._fitSanityDisabledContextKey = '';
+        },
+
+        async stabilizeModalDrivenLayout({
+            revealDelayMs = 150,
+            maxAttempts = 5,
+            maxFrames = 18,
+            requiredStableFrames = 3,
+            tolerancePx = 0.8,
+        } = {}) {
+            if (!this.hasRenderablePage()) {
+                return;
+            }
+
+            this._bypassNextFitCache = true;
+            this.resetFitSanityRecoveryState();
+            await this.nextTickAsync();
+            await this.waitForStablePageFrame({
+                maxFrames,
+                requiredStableFrames,
+                tolerancePx,
+            });
+            this._bypassNextFitCache = true;
+            await this.layoutPageGuaranteed({
+                revealDelayMs,
+                maxAttempts,
+                useIdleFit: false,
+            });
+        },
+
         async runStartupFinalFitPass() {
             if (!this.hasRenderablePage()) {
                 return;

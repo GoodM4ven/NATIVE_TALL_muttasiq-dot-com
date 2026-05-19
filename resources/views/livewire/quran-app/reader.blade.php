@@ -495,7 +495,7 @@
                 --quran-page-headered-type-multiplier: 0.88;
                 --quran-page-headered-leading-multiplier: 1.32;
                 --quran-page-headered-gap-multiplier: 1.56;
-                --quran-surah-header-no-basmallah-first-ayah-gap-scale: -0.1;
+                --quran-surah-header-no-basmallah-first-ayah-gap-scale: 0.1;
                 --quran-page-scale: 0.96;
                 --quran-page-type-scale: 0.855;
                 --quran-page-leading-multiplier: 0.18;

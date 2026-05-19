@@ -536,23 +536,13 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                     settleDelayMs: 0,
                 });
 
-                const shouldQueuePostModalFit =
-                    !this.isCurrentPageVisiblyReady() ||
-                    this._lastFittedPageNumber !== this.pageNumber;
-
-                if (shouldQueuePostModalFit) {
-                    this._bypassNextFitCache = true;
-                    await this.layoutPageGuaranteed({
-                        revealDelayMs: 160,
-                        maxAttempts: 3,
-                        useIdleFit: false,
-                    });
-                } else if (this.hasRenderablePage()) {
-                    this._bypassNextFitCache = true;
-                    this.fitPageToViewport();
-                    this.applySafetyScaleForCurrentPageOverflow();
-                    this._lastPageRevealAt = Date.now();
-                }
+                await this.stabilizeModalDrivenLayout({
+                    revealDelayMs: 160,
+                    maxAttempts: 4,
+                    maxFrames: 18,
+                    requiredStableFrames: 3,
+                    tolerancePx: 0.8,
+                });
 
                 if (highlightAyahIndex > 0) {
                     this.activeAyahIndex = highlightAyahIndex;

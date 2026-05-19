@@ -200,9 +200,7 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                 searchHighlightAyahIndex: request.searchHighlightAyahIndex,
                 forceRefit: request.forceRefit,
                 source: request.source,
-                deferInitialReveal: ['search-result', 'surah-directory', 'page-jump'].includes(
-                    String(request.source ?? ''),
-                ),
+                deferInitialReveal: this.shouldDeferInitialRevealForSource(request.source),
             });
 
             if (request.animate && !isSamePageNavigation) {
@@ -576,24 +574,16 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                 }
 
                 if (isPriorityPageRequest) {
-                    if (isModalDrivenPriorityRequest) {
-                        this._bypassNextFitCache = true;
-                        this._fitSanityContextKey = '';
-                        this._fitSanityContextAttemptCount = 0;
-                        this._fitSanityContextLastWidth = 0;
-                        this._fitSanityContextLastHeight = 0;
-                        this._fitSanityContextOutcome = '';
-                        this._fitSanitySuppressedUntil = 0;
-                        this._fitSanityDisabledContextKey = '';
-                        await this.waitForStablePageFrame({
-                            maxFrames: 14,
-                            requiredStableFrames: 2,
-                            tolerancePx: 0.8,
-                        });
-                        await this.layoutPageGuaranteed({
+                    const shouldRunPostModalStableFit =
+                        requestedSource === 'page-jump' || isModalDrivenPriorityRequest;
+
+                    if (shouldRunPostModalStableFit) {
+                        await this.stabilizeModalDrivenLayout({
                             revealDelayMs: 150,
                             maxAttempts: 5,
-                            useIdleFit: false,
+                            maxFrames: 18,
+                            requiredStableFrames: 3,
+                            tolerancePx: 0.8,
                         });
                         this.refreshMobileEdgeCaptions(false);
                         this.syncReaderChromeDocumentClass();
@@ -601,13 +591,7 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
 
                     if (isSliderCommitRequest) {
                         this._bypassNextFitCache = true;
-                        this._fitSanityContextKey = '';
-                        this._fitSanityContextAttemptCount = 0;
-                        this._fitSanityContextLastWidth = 0;
-                        this._fitSanityContextLastHeight = 0;
-                        this._fitSanityContextOutcome = '';
-                        this._fitSanitySuppressedUntil = 0;
-                        this._fitSanityDisabledContextKey = '';
+                        this.resetFitSanityRecoveryState();
                         await this.layoutPageGuaranteed({
                             revealDelayMs: 140,
                             maxAttempts: 5,
@@ -786,6 +770,7 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
             this.clearWordPressState();
             this.hoveredAyahIndex = 0;
             this.hoveredWordIndex = 0;
+            const isModalSourcedNavigation = this.shouldDeferInitialRevealForSource(source);
 
             if (normalizedPage === this.pageNumber && this.mushafLines.length > 0) {
                 if (this.pageInput !== normalizedPage) {
@@ -810,7 +795,10 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                     this.recoverStaleModalLifecycleState();
 
                     if (forceRefit) {
-                        await this.layoutPageGuaranteed({ revealDelayMs: 200 });
+                        await this.layoutPageGuaranteed({
+                            revealDelayMs: 200,
+                            deferReveal: Boolean(isModalSourcedNavigation),
+                        });
                     } else if (
                         this.isFittingPage ||
                         this._lastFittedPageNumber !== normalizedPage
@@ -819,6 +807,7 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                             revealDelayMs: 140,
                             maxAttempts: 3,
                             useIdleFit: false,
+                            deferReveal: Boolean(isModalSourcedNavigation),
                         });
                     }
 
@@ -837,14 +826,6 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
 
                 return;
             }
-
-            const isModalSourcedNavigation = [
-                'search-result',
-                'surah-directory',
-                'bookmark',
-                'history-navigation',
-                'page-jump',
-            ].includes(String(source ?? ''));
 
             if (isModalSourcedNavigation && this.shouldUseImmersiveReaderChrome()) {
                 this.isReaderChromeVisible = false;
@@ -1786,6 +1767,18 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                 maxAttempts: Math.max(2, Math.trunc(Number(maxAttempts) || 4)),
                 deferReveal: Boolean(deferReveal),
             };
+        },
+
+        shouldDeferInitialRevealForSource(source = 'generic') {
+            return [
+                'search-result',
+                'surah-directory',
+                'bookmark',
+                'bookmark-navigation',
+                'history-entry',
+                'history-navigation',
+                'page-jump',
+            ].includes(String(source ?? ''));
         },
 
         queueLayoutRequest(request = {}) {

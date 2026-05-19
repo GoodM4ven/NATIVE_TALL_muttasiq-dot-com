@@ -3306,6 +3306,220 @@ JS,
     $page->assertNoJavaScriptErrors();
 });
 
+it('keeps modal jump-page header and basmallah geometry aligned with a subsequent regular render on mobile', function () {
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
+
+    $assertReaderRenderable = function (int $timeoutMs = 10_000) use ($page): void {
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript('data.ready && data.mushafLines.length > 0'),
+            true,
+            $timeoutMs,
+        );
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript('data._pendingNavigationRequest === null && !data._navigationRevealLocked && !data.isLoadingPage'),
+            true,
+            $timeoutMs,
+        );
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript('data.isFittingPage'),
+            false,
+            $timeoutMs,
+        );
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript("typeof data.pageFitState === 'function' ? data.pageFitState() : 'ready'"),
+            'ready',
+            $timeoutMs,
+        );
+    };
+
+    $measureHeaderedGeometry = function () use ($page): array {
+        $metrics = $page->script(
+            <<<'JS'
+(() => {
+  const frame = document.querySelector('[x-ref="pageFrame"]');
+  const lines = document.querySelector('.quran-page-lines');
+  const header = document.querySelector('.quran-surah-header-line');
+  const basmallah = document.querySelector('.quran-basmallah-line');
+
+  if (!(frame instanceof HTMLElement) || !(lines instanceof HTMLElement) || !(header instanceof HTMLElement) || !(basmallah instanceof HTMLElement)) {
+    return null;
+  }
+
+  const frameRect = frame.getBoundingClientRect();
+  const linesRect = lines.getBoundingClientRect();
+  const headerRect = header.getBoundingClientRect();
+  const basmallahRect = basmallah.getBoundingClientRect();
+
+  return {
+    fillRatio: Number((linesRect.height / frameRect.height).toFixed(4)),
+    gap: Number((basmallahRect.top - headerRect.bottom).toFixed(2)),
+  };
+})()
+JS,
+        );
+
+        expect($metrics)->toBeArray();
+
+        return $metrics;
+    };
+
+    resetBrowserState($page, true);
+    safeBrowserResize($page, 390, 844);
+    waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
+    waitForScriptWithTimeout($page, 'window.innerWidth <= 420', true, 5_000);
+    waitForScriptWithTimeout($page, 'window.innerHeight >= 820', true, 5_000);
+    hashAction($page, '#quran-app-tilawa', true);
+    waitForScript($page, homeDataScript('data.activeView'), 'quran-app-tilawa');
+    waitForScript($page, 'window.location.hash', '#quran-app-tilawa');
+    waitForQuranReaderVisible($page);
+    $assertReaderRenderable();
+
+    $page->script(quranReaderCommandScript("data.dispatchPageNavigationRequest(3, 'test-modal-jump-geometry-seed');"));
+    waitForScriptWithTimeout($page, quranReaderDataScript('Number(data.pageNumber ?? 0)'), 3, 8_000);
+    $assertReaderRenderable();
+
+    $page->script(quranReaderCommandScript("data.dispatchPageNavigationRequest(50, 'page-jump');"));
+    waitForScriptWithTimeout($page, quranReaderDataScript('Number(data.pageNumber ?? 0)'), 50, 10_000);
+    $assertReaderRenderable(10_000);
+    $modalMetrics = $measureHeaderedGeometry();
+
+    $page->script(
+        quranReaderCommandScript("data.dispatchPageNavigationRequest(51, 'test-modal-jump-geometry-next');"),
+    );
+    waitForScriptWithTimeout($page, quranReaderDataScript('Number(data.pageNumber ?? 0)'), 51, 8_000);
+    $assertReaderRenderable();
+
+    $page->script(
+        quranReaderCommandScript("data.dispatchPageNavigationRequest(50, 'test-modal-jump-geometry-return');"),
+    );
+    waitForScriptWithTimeout($page, quranReaderDataScript('Number(data.pageNumber ?? 0)'), 50, 8_000);
+    $assertReaderRenderable();
+    $directMetrics = $measureHeaderedGeometry();
+
+    expect(abs((float) $modalMetrics['gap'] - (float) $directMetrics['gap']))->toBeLessThan(1.6);
+    expect(abs((float) $modalMetrics['fillRatio'] - (float) $directMetrics['fillRatio']))->toBeLessThan(0.03);
+
+    $page->assertNoJavaScriptErrors();
+});
+
+it('keeps surah-directory modal navigation fitted like a subsequent regular render on mobile', function () {
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
+
+    $assertReaderRenderable = function (int $timeoutMs = 10_000) use ($page): void {
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript('data.ready && data.mushafLines.length > 0'),
+            true,
+            $timeoutMs,
+        );
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript('data._pendingNavigationRequest === null && !data._navigationRevealLocked && !data.isLoadingPage'),
+            true,
+            $timeoutMs,
+        );
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript('data.isFittingPage'),
+            false,
+            $timeoutMs,
+        );
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript("typeof data.pageFitState === 'function' ? data.pageFitState() : 'ready'"),
+            'ready',
+            $timeoutMs,
+        );
+    };
+
+    $measureHeaderOnlyFit = function () use ($page): array {
+        $metrics = $page->script(
+            <<<'JS'
+(() => {
+  const frame = document.querySelector('[x-ref="pageFrame"]');
+  const lines = document.querySelector('.quran-page-lines');
+
+  if (!(frame instanceof HTMLElement) || !(lines instanceof HTMLElement)) {
+    return null;
+  }
+
+  const frameRect = frame.getBoundingClientRect();
+  const linesRect = lines.getBoundingClientRect();
+
+  return {
+    fillRatio: Number((linesRect.height / frameRect.height).toFixed(4)),
+    widthRatio: Number((linesRect.width / frameRect.width).toFixed(4)),
+  };
+})()
+JS,
+        );
+
+        expect($metrics)->toBeArray();
+
+        return $metrics;
+    };
+
+    resetBrowserState($page, true);
+    safeBrowserResize($page, 390, 844);
+    waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
+    waitForScriptWithTimeout($page, 'window.innerWidth <= 420', true, 5_000);
+    waitForScriptWithTimeout($page, 'window.innerHeight >= 820', true, 5_000);
+    hashAction($page, '#quran-app-tilawa', true);
+    waitForScript($page, homeDataScript('data.activeView'), 'quran-app-tilawa');
+    waitForScript($page, 'window.location.hash', '#quran-app-tilawa');
+    waitForQuranReaderVisible($page);
+    $assertReaderRenderable();
+
+    $page->script(quranReaderCommandScript("data.dispatchPageNavigationRequest(3, 'test-surah-directory-seed');"));
+    waitForScriptWithTimeout($page, quranReaderDataScript('Number(data.pageNumber ?? 0)'), 3, 8_000);
+    $assertReaderRenderable();
+
+    scriptClick($page, '.quran-soorah-trigger');
+    waitForScriptWithTimeout($page, 'Boolean(document.querySelector("#quran-reader-search-modal"))', true, 5_000);
+    $page->script(
+        quranReaderCommandScript(
+            <<<'JS'
+const entries = Array.isArray(data.search?.surahDirectory) ? data.search.surahDirectory : [];
+const entry = entries.find((item) => Number(item?.page_number ?? 0) === 187) ?? null;
+
+if (!entry || typeof data.goToSurahFromDirectory !== 'function') {
+  return false;
+}
+
+void data.goToSurahFromDirectory(entry);
+
+return true;
+JS,
+        ),
+    );
+    waitForScriptWithTimeout($page, modalClosedScript(), true, 6_000);
+    waitForScriptWithTimeout($page, quranReaderDataScript('Number(data.pageNumber ?? 0)'), 187, 8_000);
+    $assertReaderRenderable();
+    $modalMetrics = $measureHeaderOnlyFit();
+
+    $page->script(
+        quranReaderCommandScript("data.dispatchPageNavigationRequest(188, 'test-surah-directory-next');"),
+    );
+    waitForScriptWithTimeout($page, quranReaderDataScript('Number(data.pageNumber ?? 0)'), 188, 8_000);
+    $assertReaderRenderable();
+
+    $page->script(
+        quranReaderCommandScript("data.dispatchPageNavigationRequest(187, 'test-surah-directory-return');"),
+    );
+    waitForScriptWithTimeout($page, quranReaderDataScript('Number(data.pageNumber ?? 0)'), 187, 8_000);
+    $assertReaderRenderable();
+    $directMetrics = $measureHeaderOnlyFit();
+
+    expect(abs((float) $modalMetrics['fillRatio'] - (float) $directMetrics['fillRatio']))->toBeLessThan(0.03);
+    expect(abs((float) $modalMetrics['widthRatio'] - (float) $directMetrics['widthRatio']))->toBeLessThan(0.02);
+
+    $page->assertNoJavaScriptErrors();
+});
+
 it('keeps the reader visible on 4xl after rapid swipe-next then slider jump to page 604', function () {
     $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
