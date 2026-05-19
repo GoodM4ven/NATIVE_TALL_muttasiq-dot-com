@@ -200,6 +200,9 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                 searchHighlightAyahIndex: request.searchHighlightAyahIndex,
                 forceRefit: request.forceRefit,
                 source: request.source,
+                deferInitialReveal: ['search-result', 'surah-directory', 'page-jump'].includes(
+                    String(request.source ?? ''),
+                ),
             });
 
             if (request.animate && !isSamePageNavigation) {
@@ -769,6 +772,7 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                 searchHighlightAyahIndex = null,
                 forceRefit = false,
                 source = 'generic',
+                deferInitialReveal = false,
             } = {},
         ) {
             const normalizedPage = clampPage(pageNumber, this.maxPage);
@@ -884,12 +888,7 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                     return;
                 }
 
-                const wasOnDensePage = this.isDenseFullLinePage();
                 this.applyPayload(payload, { setPageNumber: true });
-                this.clearStaleFitInlineVariables();
-                if (isModalSourcedNavigation && wasOnDensePage && !this.isDenseFullLinePage()) {
-                    this.applyModalFromDenseTransitionGuard();
-                }
                 this.persistLastPageNumber(this.pageNumber);
                 this.refreshSurahTriggerCaption(animate);
                 this.refreshMobileEdgeCaptions(animate);
@@ -924,6 +923,7 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                           ? 3
                           : 4,
                     useIdleFit: !shouldUseFastFitPriority,
+                    deferReveal: Boolean(deferInitialReveal),
                 });
                 didCompletePageTransition = true;
             } catch (error) {
@@ -1780,10 +1780,11 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
             }
         },
 
-        normalizeLayoutRequest({ revealDelayMs = 180, maxAttempts = 4 } = {}) {
+        normalizeLayoutRequest({ revealDelayMs = 180, maxAttempts = 4, deferReveal = false } = {}) {
             return {
                 revealDelayMs: Math.max(0, Math.trunc(Number(revealDelayMs) || 180)),
                 maxAttempts: Math.max(2, Math.trunc(Number(maxAttempts) || 4)),
+                deferReveal: Boolean(deferReveal),
             };
         },
 
@@ -1805,6 +1806,9 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                     this._queuedLayoutRequest.maxAttempts,
                     normalizedRequest.maxAttempts,
                 ),
+                deferReveal:
+                    Boolean(this._queuedLayoutRequest.deferReveal) &&
+                    Boolean(normalizedRequest.deferReveal),
             };
         },
     };

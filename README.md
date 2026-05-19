@@ -7,6 +7,8 @@
 
 <img width="100%" alt="screenshot of muttasiq app home and main menu buttons" src="public/docs/updates/images/v-0-1-0/web/home-main-menu.png" />
 
+(open daily processes instead, with a caption too)
+
 ### المتصفح
 
 لتجربة التطبيق الآن من أي متصفح:<br>
@@ -18,6 +20,8 @@ https://muttasiq.com
 <br><br>
 <img src="public/docs/updates/images/v-0-1-0/web/athkar-app-reader-light.png" alt="The athkar app reader - light mode" height="320"/>
 
+(quran reader image)
+
 ### الأندرويد
 
 يتم الاختبار الآن من قبل متطوعين...
@@ -27,6 +31,8 @@ https://muttasiq.com
 <img src=".assets/images/screenshots/android/athkar-app-reader-dark.jpg" alt="A notification message showing in athkar app gate - light mode" height="400"/>
 <span>&nbsp;&nbsp;</span>
 <img src=".assets/images/screenshots/android/athkar-app-gate-light-notification.jpg" alt="Athkar app reader - dark mode" height="400"/>
+
+(quran reader image)
 
 ### الآي أو اس
 
@@ -74,17 +80,21 @@ https://muttasiq.com
 - قضاء الصلوات أيّام ضلال المرء
 - تذكير بأذكار الصباح والمساء
 - أذكار يوم الجمعة
+- نمط الأذكار المطلق
+- تذكير بالورد اليومي للقرآن
 
 ### التحديث الثالث
-- صِلة
+- صِلة، لصلة الأرحام
 - سُنّة الاستهام
 - سنن اليوم والليلة
 - اصطياد كل السنن بآثارها، ولو مرّة في العمر
 - صحيح الأدعية، مُقسَّمَة بأنواع الاحتياجات
+- أسماء الله الحسنى
 
 ### التحديث الرابع
 - علم الحديث: إسناد ورواة ومتون
 - إمكانية جرد الآثار باتساق
+- (والمزيد، إن شاء الله...)
 
 
 ## الدعم
@@ -172,7 +182,7 @@ https://muttasiq.com
 </div>
 
 > [!TIP]
-> You can also start learning about ALL of these technologies by using [Laravel Boost](https://laravel.com/docs/boost), which does almost everything for you if you give the AI agent well-engineered commands — including writing feature tests. I set it up in this project for [Anthropic Claude](https://code.claude.com/docs) and [Codex CLI](https://developers.openai.com/codex/cli/), but it can work with pretty much anything else.
+> You can also start learning about ALL of these technologies by using [Laravel Boost](https://laravel.com/docs/boost), which does almost everything for you if you give the AI agent well-engineered commands — including writing feature tests. I set it up in this project for [OpenAI - Codex CLI](https://developers.openai.com/codex/cli/) and [Anthropic - Claude CLI](https://code.claude.com/docs), but it can work with pretty much anything else.
 
 <div align="left">
 
@@ -188,11 +198,7 @@ https://muttasiq.com
    - The process runs [PestPHP browser tests](https://pestphp.com/docs/browser-testing) in `--compact` mode only (not `--parallel`) due to current bugs in the [Playwright](https://playwright.dev) and PestPHP integration, including direct mobile emulation support—this **may make tests slower locally**, though they work reliably (this limitation does not apply to CI, I think, since it’s ephemeral).
 4. We have [`muttasiq-patches` NativePHP plugin](https://github.com/GoodM4ven/NATIVE_PLUGIN_muttasiq-patches) that overrides the original NativePHP engine a bit. Make sure you account for what it does in mind, where (the PR you're going to do there) its modifications **do not conflict with one another when patching the same file and correctly patch the files they're targetting from the NativePHP version specified in [`composer.json`](./composer.json)** over here.
     - Keep in mind that there is a Bash switching script for when you have the package locally and test its changes locally before the PR. [Check it out](./.scripts/composer-local-plugins-switch.sh).
-    - The native platform wrappers now prune stale bundled front-end assets before install/run and refresh `nativephp/<platform>` automatically when plugin patch sources change. Quran reader data for native is delivered by the web API snapshot download flow (`/api/quran-snapshot/meta` + `/api/quran-snapshot/download`) with in-app progress reporting.
-    - Native watch scripts now include local-source Quran snapshot broadcasting by default: use [`./.scripts/watch-android.sh`](./.scripts/watch-android.sh) or [`./.scripts/watch-ios.sh`](./.scripts/watch-ios.sh). Shared logic remains in [`./.scripts/support/run-native-local-source-broadcast.sh`](./.scripts/support/run-native-local-source-broadcast.sh).
-    - Native run/watch wrappers set `COMPOSER_NO_DEV=1` for mobile bundle assembly to reduce first-launch extraction payload and startup latency on devices.
-    - Shared native prepare now skips expensive `composer dump-autoload` and `optimize:clear` by default during watch loops; enable them only when needed with `NATIVE_PREPARE_DUMP_AUTOLOAD=1` and `NATIVE_PREPARE_CLEAR_CACHE=1`.
-    - Local watch/build flows no longer clear `database/native-quran-reader.*` by default; set `NATIVE_QURAN_SNAPSHOT_CLEAR_BEFORE_BUILD=1` only when you explicitly need to regenerate those files from scratch before a build.
+    - Quran data is delivered via the web API snapshot flow (`/api/quran-snapshot/meta` + `/api/quran-snapshot/download`) with in-app progress reporting. Watch scripts ([`watch-android.sh`](./.scripts/watch-android.sh), [`watch-ios.sh`](./.scripts/watch-ios.sh)) include local-source snapshot broadcasting by default, with shared logic in [`run-native-local-source-broadcast.sh`](./.scripts/support/run-native-local-source-broadcast.sh).
 5. **Ensure that your PR can be modified by the maintainers please.**
 
 ### Setup

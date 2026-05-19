@@ -3131,6 +3131,181 @@ JS,
     $page->assertNoJavaScriptErrors();
 });
 
+it('keeps dense-to-headered jump-page navigation to a single visible reveal on mobile', function () {
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
+
+    $assertReaderRenderable = function (int $timeoutMs = 10_000) use ($page): void {
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript('data.ready && data.mushafLines.length > 0'),
+            true,
+            $timeoutMs,
+        );
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript('data._pendingNavigationRequest === null && !data._navigationRevealLocked && !data.isLoadingPage'),
+            true,
+            $timeoutMs,
+        );
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript('data.isFittingPage'),
+            false,
+            $timeoutMs,
+        );
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript("typeof data.pageFitState === 'function' ? data.pageFitState() : 'ready'"),
+            'ready',
+            $timeoutMs,
+        );
+        waitForScriptWithTimeout(
+            $page,
+            <<<'JS'
+(() => {
+  const lines = document.querySelector('.quran-page-lines');
+  if (!(lines instanceof HTMLElement)) {
+    return false;
+  }
+
+  const styles = window.getComputedStyle(lines);
+  const opacity = Number.parseFloat(styles.opacity || '0');
+  const lineTexts = Array.from(lines.querySelectorAll('[data-quran-line-text]'))
+    .map((line) => String(line.textContent ?? '').replace(/\s+/g, '').trim())
+    .filter((text) => text.length > 0);
+
+  return String(lines.getAttribute('data-fit-state') ?? '') === 'ready'
+    && styles.visibility !== 'hidden'
+    && opacity > 0.35
+    && lineTexts.length > 0;
+})()
+JS,
+            true,
+            $timeoutMs,
+        );
+    };
+
+    resetBrowserState($page, true);
+    safeBrowserResize($page, 390, 844);
+    waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
+    waitForScriptWithTimeout($page, 'window.innerWidth <= 420', true, 5_000);
+    waitForScriptWithTimeout($page, 'window.innerHeight >= 820', true, 5_000);
+    hashAction($page, '#quran-app-tilawa', true);
+    waitForScript($page, homeDataScript('data.activeView'), 'quran-app-tilawa');
+    waitForScript($page, 'window.location.hash', '#quran-app-tilawa');
+    waitForQuranReaderVisible($page);
+    $assertReaderRenderable();
+
+    $page->script(
+        quranReaderCommandScript("data.dispatchPageNavigationRequest(3, 'test-dense-headered-setup');"),
+    );
+    waitForScriptWithTimeout($page, quranReaderDataScript('Number(data.pageNumber ?? 0)'), 3, 8_000);
+    $assertReaderRenderable();
+    waitForScriptWithTimeout($page, quranReaderDataScript('Boolean(data.isDenseFullLinePage())'), true, 6_000);
+
+    $page->script(
+        quranReaderCommandScript(
+            <<<'JS'
+window.__quranDenseHeaderedJumpRevealStats = (() => {
+  const stats = {
+    fittingRevealCount: 0,
+    visibleRevealCount: 0,
+    samples: [],
+  };
+  const targetPage = 50;
+  const startedAt = Date.now();
+  let lastIsFitting = Boolean(data.isFittingPage);
+  let lastVisible = false;
+  const timer = window.setInterval(() => {
+    const lines = document.querySelector('.quran-page-lines');
+    const visible = lines instanceof HTMLElement
+      && window.getComputedStyle(lines).visibility !== 'hidden'
+      && Number.parseFloat(window.getComputedStyle(lines).opacity || '0') > 0.35;
+    const currentPage = Number(data.pageNumber ?? 0);
+
+    if (currentPage === targetPage && lastIsFitting && !data.isFittingPage) {
+      stats.fittingRevealCount += 1;
+    }
+
+    if (currentPage === targetPage && !lastVisible && visible) {
+      stats.visibleRevealCount += 1;
+    }
+
+    stats.samples.push({
+      t: Date.now() - startedAt,
+      pageNumber: currentPage,
+      isFittingPage: Boolean(data.isFittingPage),
+      visible,
+      fitState: typeof data.pageFitState === 'function' ? data.pageFitState() : null,
+    });
+
+    lastIsFitting = Boolean(data.isFittingPage);
+    lastVisible = visible;
+
+    if (Date.now() - startedAt >= 3200) {
+      window.clearInterval(timer);
+      stats.done = true;
+    }
+  }, 30);
+
+  stats.stop = () => {
+    window.clearInterval(timer);
+    stats.done = true;
+
+    return stats;
+  };
+
+  return stats;
+})();
+
+return true;
+JS,
+        ),
+    );
+
+    safeClick($page, '.quran-page-slider-chip');
+    waitForScriptWithTimeout($page, 'Boolean(document.querySelector(".fi-modal-window"))', true, 5_000);
+    $page->script(
+        js_template(
+            <<<'JS'
+(() => {
+  const input = document.querySelector('#quran-reader-page-counter-input');
+  if (!(input instanceof HTMLInputElement)) {
+    return false;
+  }
+
+  input.value = String({{target}});
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+
+  const submitButton = input.closest('.fi-modal-window')?.querySelector('button[type="submit"]');
+  if (!(submitButton instanceof HTMLButtonElement)) {
+    return false;
+  }
+
+  submitButton.click();
+
+  return true;
+})()
+JS,
+            ['target' => 50],
+        ),
+    );
+
+    waitForScriptWithTimeout($page, modalClosedScript(), true, 6_000);
+    waitForScriptWithTimeout($page, quranReaderDataScript('Number(data.pageNumber ?? 0)'), 50, 8_000);
+    waitForScriptWithTimeout($page, quranReaderDataScript('Boolean(data.isSingleHeaderLongContentPage())'), true, 8_000);
+    $assertReaderRenderable(12_000);
+
+    $revealStats = $page->script(
+        'window.__quranDenseHeaderedJumpRevealStats?.stop?.() ?? window.__quranDenseHeaderedJumpRevealStats ?? null;',
+    );
+    expect($revealStats)->toBeArray();
+    expect((int) ($revealStats['fittingRevealCount'] ?? 0))->toBeLessThanOrEqual(1);
+    expect((int) ($revealStats['visibleRevealCount'] ?? 0))->toBeLessThanOrEqual(1);
+
+    $page->assertNoJavaScriptErrors();
+});
+
 it('keeps the reader visible on 4xl after rapid swipe-next then slider jump to page 604', function () {
     $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
