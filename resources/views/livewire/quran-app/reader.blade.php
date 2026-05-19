@@ -3363,7 +3363,7 @@
                             data-quran-open-history
                             type="button"
                             aria-label="{{ arabic_text('سجل التنقل') }}"
-                            x-on:click="void openHistoryModal().then((opened) => { if (!opened && !wirdModeActive) { $wire.mountAction('navigationHistory') } })"
+                            x-on:click="void openHistoryModal()"
                         >
                             <x-icon
                                 class="quran-history-toggle-icon 4xl:size-6 3xl:size-[1.45rem] size-[1.2rem] sm:size-[1.26rem] md:h-[1.64rem] md:w-[1.64rem] lg:size-[1.4rem] xl:size-[1.3rem] 2xl:size-[1.3rem]"
@@ -3715,7 +3715,7 @@
                                 x-bind:style="`--quran-counter-digit-count: ${pageCounterDigitLength()};`"
                                 x-bind:disabled="wirdModeActive"
                                 x-bind:class="{ 'quran-page-slider-chip--disabled': wirdModeActive }"
-                                x-on:click="void openJumpPageModal().then((opened) => { if (!opened && !wirdModeActive) { $wire.mountAction('jumpToPage') } })"
+                                x-on:click="void openJumpPageModal()"
                             >
                                 <span class="quran-page-chip-total me-1.5">
                                     <template

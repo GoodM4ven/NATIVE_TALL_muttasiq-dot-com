@@ -161,7 +161,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderViewSource)->toContain("x-on:x-modal-closed.window=\"handleModalLifecycleEvent('closed', \$event)\"")
         ->and($quranReaderViewSource)->toContain('x-on:control-panel-updated.window="applyControlPanelSettings($event.detail?.controlPanel ?? {})"')
         ->and($quranReaderViewSource)->toContain("\$wire.mountAction('searchQuran');")
-        ->and($quranReaderViewSource)->toContain("\$wire.mountAction('navigationHistory')")
+        ->and($quranReaderViewSource)->toContain('x-on:click="void openHistoryModal()"')
         ->and($quranReaderViewSource)->toContain('transform: rotate(360deg);')
         ->and($quranReaderViewSource)->toContain('x-on:pointerdown="onBookmarkButtonPointerDown($event)"')
         ->and($quranReaderViewSource)->toContain(
@@ -383,7 +383,13 @@ it('wires quran reader entry points from main menu to hash navigation and view m
             'await this.runFitPageToViewportLazily();',
         )
         ->and($quranReaderScriptSource)->toContain(
-            'await this.calibrateGlobalFitLayoutFromReferencePage();',
+            'await this.calibrateGlobalFitLayoutFromReferencePage(fitCalibrationReferencePage);',
+        )
+        ->and($quranReaderScriptSource)->toContain(
+            '{ persistGlobalCalibration: false },',
+        )
+        ->and($quranReaderScriptSource)->toContain(
+            'startupSecondaryCalibrationReferencePage,',
         )
         ->and($quranReaderScriptSource)->toContain(
             'this.syncFitCacheBreakpoint({ persist: false });',

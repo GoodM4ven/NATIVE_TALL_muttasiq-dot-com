@@ -127,6 +127,8 @@ export const createLifecycleBootstrapSupportAndWirdStateModule = (deps) => {
         writeWirdDayOffsetDays,
     } = deps;
 
+    const startupSecondaryCalibrationReferencePage = 549;
+
     return {
         hydratePersistedFitCache() {
             if (!shouldPersistFitCacheAcrossReloads) {
@@ -283,7 +285,25 @@ export const createLifecycleBootstrapSupportAndWirdStateModule = (deps) => {
                     '[QR:bootstrap] before calibrate, visible:',
                     this.isReaderElementVisible(),
                 );
-                await this.calibrateGlobalFitLayoutFromReferencePage();
+                await this.calibrateGlobalFitLayoutFromReferencePage(fitCalibrationReferencePage);
+
+                const primaryCalibrationLayout = this._globalFitCalibrationLayout
+                    ? { ...this._globalFitCalibrationLayout }
+                    : null;
+                const primaryCalibrationScale = Number(this._globalFitCalibrationScale) || 0;
+                const primaryCalibrationPageNumber = Math.max(
+                    0,
+                    Math.trunc(Number(this._globalFitCalibrationPageNumber) || 0),
+                );
+
+                await this.calibrateGlobalFitLayoutFromReferencePage(
+                    startupSecondaryCalibrationReferencePage,
+                    { persistGlobalCalibration: false },
+                );
+
+                this._globalFitCalibrationLayout = primaryCalibrationLayout;
+                this._globalFitCalibrationScale = primaryCalibrationScale;
+                this._globalFitCalibrationPageNumber = primaryCalibrationPageNumber;
                 this.qrDebugLog(
                     '[QR:bootstrap] after calibrate, _globalFitCalibrationLayout:',
                     !!this._globalFitCalibrationLayout,
@@ -391,6 +411,7 @@ export const createLifecycleBootstrapSupportAndWirdStateModule = (deps) => {
 
         async calibrateGlobalFitLayoutFromReferencePage(
             referencePage = fitCalibrationReferencePage,
+            { persistGlobalCalibration = true } = {},
         ) {
             const normalizedReferencePage = clampPage(referencePage, this.maxPage);
 
@@ -549,7 +570,7 @@ export const createLifecycleBootstrapSupportAndWirdStateModule = (deps) => {
 
                 const capturedLayout = this.captureCurrentFitLayoutFromRoot();
 
-                if (capturedLayout) {
+                if (capturedLayout && persistGlobalCalibration) {
                     this._globalFitCalibrationLayout = capturedLayout;
                     this._globalFitCalibrationScale = Math.max(
                         0.05,
@@ -558,15 +579,33 @@ export const createLifecycleBootstrapSupportAndWirdStateModule = (deps) => {
                     this._globalFitCalibrationPageNumber = normalizedReferencePage;
                 }
             } catch (error) {
-                this._globalFitCalibrationLayout = null;
-                this._globalFitCalibrationScale = 0;
-                this._globalFitCalibrationPageNumber = 0;
+                if (persistGlobalCalibration) {
+                    this._globalFitCalibrationLayout = null;
+                    this._globalFitCalibrationScale = 0;
+                    this._globalFitCalibrationPageNumber = 0;
+                }
+
                 this.traceReaderReveal('startup-global-fit-calibration-failed', {
                     page: normalizedReferencePage,
                     name: String(error?.name ?? 'Error'),
                     message: String(error?.message ?? ''),
                 });
             } finally {
+                if (!persistGlobalCalibration) {
+                    const rootElement = this.$el?.firstElementChild;
+
+                    if (rootElement instanceof HTMLElement) {
+                        rootElement.style.removeProperty('--quran-page-type-scale');
+                        rootElement.style.removeProperty('--quran-page-leading-multiplier');
+                        rootElement.style.removeProperty('--quran-page-gap-multiplier');
+                        rootElement.style.removeProperty('--quran-page-surah-header-scale');
+                        rootElement.style.removeProperty('--quran-basmallah-bottom-gap-scale');
+                    }
+
+                    this.pageScale = 1;
+                    this.setCurrentPageScale(1, { forFitting: true });
+                }
+
                 this.isCalibrating = false;
                 this.pageInput = startupTargetPage;
                 this._lastPageInputVisualValue = startupTargetPage;

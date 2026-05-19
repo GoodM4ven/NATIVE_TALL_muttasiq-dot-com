@@ -585,6 +585,14 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                             requiredStableFrames: 3,
                             tolerancePx: 0.8,
                         });
+
+                        if (
+                            requestedSource === 'page-jump' &&
+                            typeof this.runSecondaryModalExitRecoveryPulse === 'function'
+                        ) {
+                            await this.runSecondaryModalExitRecoveryPulse(this.jumpPageModalId);
+                        }
+
                         this.refreshMobileEdgeCaptions(false);
                         this.syncReaderChromeDocumentClass();
                     }

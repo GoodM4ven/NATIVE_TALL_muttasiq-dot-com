@@ -404,6 +404,12 @@ export const createReaderNavigationFitSurahQuickNavAndBurstModule = (deps) => {
         },
 
         openBookmarksManager() {
+            if (typeof this.openBookmarksModal === 'function') {
+                void this.openBookmarksModal();
+
+                return;
+            }
+
             void this.mountReaderAction('bookmarksManager');
         },
 

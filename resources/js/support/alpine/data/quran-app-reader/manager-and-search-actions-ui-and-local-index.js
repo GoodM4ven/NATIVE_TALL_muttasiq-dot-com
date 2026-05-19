@@ -508,46 +508,154 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             window.dispatchEvent(new CustomEvent('quran-go-gate'));
         },
 
-        async openHistoryModal() {
-            if (this.wirdModeActive) {
+        shouldCloseSearchModalBeforeManagerModalOpen() {
+            return this.search.modalOpen || this.isSearchModalWindowVisible();
+        },
+
+        prepareManagerModalOpenLifecycle(modalIds = []) {
+            const normalizedModalIds = (Array.isArray(modalIds) ? modalIds : [modalIds])
+                .map((value) => String(value ?? '').trim())
+                .filter((value) => value !== '');
+
+            if (this._modalLayoutResumeTimer !== null) {
+                clearTimeout(this._modalLayoutResumeTimer);
+                this._modalLayoutResumeTimer = null;
+            }
+
+            this.clearPendingPostModalTargetFit();
+            this._bypassNextFitCache = true;
+
+            if (this.hasRenderablePage()) {
+                this.holdPageHiddenForModalLifecycle();
+            }
+
+            if (normalizedModalIds.length > 0) {
+                this.suppressModalLifecycleEffects(normalizedModalIds, {
+                    durationMs: Math.max(
+                        modalLifecycleSuppressionDurationMs,
+                        postModalFitRevealSettleDelayMs + 640,
+                    ),
+                });
+            }
+        },
+
+        async openManagerModalAction(actionName, modalIds = []) {
+            const normalizedActionName = String(actionName ?? '').trim();
+
+            if (normalizedActionName === '' || this.wirdModeActive) {
                 return false;
             }
 
-            await this.requestSearchModalClose({ skipLayout: true });
-            await this.waitForModalLifecycleToSettle();
+            this.resetSwipeState();
+            this.clearWordPressState();
+            this.prepareManagerModalOpenLifecycle(modalIds);
+
+            if (this.shouldCloseSearchModalBeforeManagerModalOpen()) {
+                await this.requestSearchModalClose({ skipLayout: true });
+                await this.waitForModalLifecycleToSettle();
+                await wait(modalCloseTransitionDelayMs);
+            }
 
             if (typeof this.mountReaderAction === 'function') {
-                return await this.mountReaderAction('navigationHistory');
+                const mountedViaReaderAction = await this.mountReaderAction(normalizedActionName);
+
+                if (mountedViaReaderAction) {
+                    return true;
+                }
             }
 
             if (typeof this.$wire?.mountAction === 'function') {
-                await this.$wire.mountAction('navigationHistory');
+                try {
+                    await this.$wire.mountAction(normalizedActionName);
 
-                return true;
+                    return true;
+                } catch (_) {
+                    return false;
+                }
             }
 
             return false;
         },
 
+        async openHistoryModal() {
+            return await this.openManagerModalAction('navigationHistory', [this.historyModalId]);
+        },
+
         async openJumpPageModal() {
-            if (this.wirdModeActive) {
-                return false;
+            return await this.openManagerModalAction('jumpToPage', [this.jumpPageModalId]);
+        },
+
+        async openBookmarksModal() {
+            return await this.openManagerModalAction('bookmarksManager', [this.bookmarksModalId]);
+        },
+
+        async runSecondaryModalExitRecoveryPulse(modalId = '') {
+            if (!this.hasRenderablePage()) {
+                return;
             }
 
-            await this.requestSearchModalClose({ skipLayout: true });
+            const normalizedModalId = String(modalId ?? '').trim();
+
+            if (normalizedModalId !== '') {
+                this._activeModalIds.add(normalizedModalId);
+            }
+
+            this._bypassNextFitCache = true;
+            this.holdPageHiddenForModalLifecycle();
+            this.resumeLayoutWhenNoOpenModals();
+
+            await wait(Math.max(180, modalCloseTransitionDelayMs + 90));
             await this.waitForModalLifecycleToSettle();
+            await this.nextTickAsync();
 
-            if (typeof this.mountReaderAction === 'function') {
-                return await this.mountReaderAction('jumpToPage');
+            this._bypassNextFitCache = true;
+            await this.stabilizeModalDrivenLayout({
+                revealDelayMs: 140,
+                maxAttempts: 4,
+                maxFrames: 16,
+                requiredStableFrames: 3,
+                tolerancePx: 0.8,
+            });
+        },
+
+        async navigateFromManagerModalRecord({
+            targetPage,
+            ayahIndex = 0,
+            source = 'history-entry',
+            modalId = '',
+            suppressionDurationMs = historyNavigationModalLifecycleSuppressionDurationMs,
+        } = {}) {
+            const normalizedModalId = String(modalId ?? '').trim();
+            const normalizedSource = String(source ?? '').trim() || 'history-entry';
+            const normalizedTargetPage = clampPage(Number(targetPage ?? 1), this.maxPage);
+            const normalizedAyahIndex = Math.max(0, Math.trunc(Number(ayahIndex ?? 0)));
+
+            this.resetNavigationQueueForPriorityJump();
+            this.clearPendingPostModalTargetFit();
+
+            if (normalizedModalId !== '') {
+                this.suppressModalLifecycleEffects([normalizedModalId], {
+                    durationMs: Math.max(120, Math.trunc(Number(suppressionDurationMs) || 0)),
+                });
             }
 
-            if (typeof this.$wire?.mountAction === 'function') {
-                await this.$wire.mountAction('jumpToPage');
+            this._bypassNextFitCache = true;
+            await this.goToPageFromChevron(normalizedTargetPage, {
+                activeAyahIndex: normalizedAyahIndex,
+                source: normalizedSource,
+                commitNow: true,
+                settleDelayMs: 0,
+            });
 
-                return true;
-            }
+            await this.stabilizeModalDrivenLayout({
+                revealDelayMs: 160,
+                maxAttempts: 4,
+                maxFrames: 18,
+                requiredStableFrames: 3,
+                tolerancePx: 0.8,
+            });
 
-            return false;
+            await this.runSecondaryModalExitRecoveryPulse(normalizedModalId);
         },
 
         async goToHistoryEntry(entry) {
@@ -562,23 +670,12 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             await this.requestHistoryModalClose();
             await this.waitForModalLifecycleToSettle();
             await wait(modalCloseTransitionDelayMs);
-            this.suppressModalLifecycleEffects([this.historyModalId], {
-                durationMs: historyNavigationModalLifecycleSuppressionDurationMs,
-            });
-            this._bypassNextFitCache = true;
-            await this.goToPageFromChevron(targetPage, {
-                activeAyahIndex: ayahIndex,
+            await this.navigateFromManagerModalRecord({
+                targetPage,
+                ayahIndex,
                 source: 'history-entry',
-                commitNow: true,
-                settleDelayMs: 0,
-            });
-
-            await this.stabilizeModalDrivenLayout({
-                revealDelayMs: 160,
-                maxAttempts: 4,
-                maxFrames: 18,
-                requiredStableFrames: 3,
-                tolerancePx: 0.8,
+                modalId: this.historyModalId,
+                suppressionDurationMs: historyNavigationModalLifecycleSuppressionDurationMs,
             });
 
             this.activeWordIndex = 0;
@@ -593,20 +690,12 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             await this.requestBookmarksModalClose();
             await this.waitForModalLifecycleToSettle();
             await wait(modalCloseTransitionDelayMs);
-            this._bypassNextFitCache = true;
-            await this.goToPageFromChevron(targetPage, {
-                activeAyahIndex: 0,
+            await this.navigateFromManagerModalRecord({
+                targetPage,
+                ayahIndex: 0,
                 source: 'bookmark',
-                commitNow: true,
-                settleDelayMs: 0,
-            });
-
-            await this.stabilizeModalDrivenLayout({
-                revealDelayMs: 160,
-                maxAttempts: 4,
-                maxFrames: 18,
-                requiredStableFrames: 3,
-                tolerancePx: 0.8,
+                modalId: this.bookmarksModalId,
+                suppressionDurationMs: historyNavigationModalLifecycleSuppressionDurationMs,
             });
             this.activeAyahIndex = 0;
             this.activeWordIndex = 0;
