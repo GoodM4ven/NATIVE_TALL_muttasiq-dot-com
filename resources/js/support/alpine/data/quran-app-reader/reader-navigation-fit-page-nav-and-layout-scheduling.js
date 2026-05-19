@@ -884,7 +884,12 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                     return;
                 }
 
+                const wasOnDensePage = this.isDenseFullLinePage();
                 this.applyPayload(payload, { setPageNumber: true });
+                this.clearStaleFitInlineVariables();
+                if (isModalSourcedNavigation && wasOnDensePage && !this.isDenseFullLinePage()) {
+                    this.applyModalFromDenseTransitionGuard();
+                }
                 this.persistLastPageNumber(this.pageNumber);
                 this.refreshSurahTriggerCaption(animate);
                 this.refreshMobileEdgeCaptions(animate);

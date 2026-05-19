@@ -1475,6 +1475,129 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             });
         },
 
+        clearStaleFitInlineVariables() {
+            const rootElement = this.$el?.firstElementChild;
+
+            if (rootElement instanceof HTMLElement) {
+                rootElement.style.removeProperty('--quran-page-type-scale');
+                rootElement.style.removeProperty('--quran-page-leading-multiplier');
+                rootElement.style.removeProperty('--quran-page-gap-multiplier');
+                rootElement.style.removeProperty('--quran-page-surah-header-scale');
+                rootElement.style.removeProperty('--quran-basmallah-bottom-gap-scale');
+                rootElement.style.removeProperty('--quran-surah-header-basmallah-overlap');
+            }
+
+            const contentElement = this.$refs?.pageContent;
+
+            if (contentElement instanceof HTMLElement) {
+                contentElement.style.removeProperty('--quran-page-scale');
+                contentElement.style.removeProperty('--quran-page-gap-adjust-factor');
+                contentElement.style.removeProperty('--quran-page-y-offset-adjust');
+                contentElement.style.removeProperty('--quran-page-headered-leading-multiplier');
+                contentElement.style.removeProperty('--quran-basmallah-bottom-gap-scale');
+            }
+        },
+
+        applyModalFromDenseTransitionGuard() {
+            const contentElement = this.$refs?.pageContent;
+
+            if (!(contentElement instanceof HTMLElement)) {
+                return;
+            }
+
+            contentElement.style.setProperty('--quran-page-headered-leading-multiplier', '0.3');
+            contentElement.style.setProperty('--quran-basmallah-bottom-gap-scale', '-0.1');
+        },
+
+        enforceSurahHeaderBasmallahGap() {
+            const rootElement = this.$el?.firstElementChild;
+            const contentElement = this.$refs?.pageContent;
+
+            if (!(rootElement instanceof HTMLElement) || !(contentElement instanceof HTMLElement)) {
+                return;
+            }
+
+            rootElement.style.removeProperty('--quran-surah-header-basmallah-overlap');
+
+            const headerBasmallahPairs = [];
+            const surahHeaderLines = Array.from(
+                contentElement.querySelectorAll(
+                    "[data-quran-line][data-quran-line-type='surah_name']",
+                ),
+            );
+
+            surahHeaderLines.forEach((headerLine) => {
+                const nextLine = headerLine.nextElementSibling;
+
+                if (
+                    !(nextLine instanceof HTMLElement) ||
+                    nextLine.getAttribute('data-quran-line-type') !== 'basmallah'
+                ) {
+                    return;
+                }
+
+                headerBasmallahPairs.push({ headerLine, basmallahLine: nextLine });
+            });
+
+            if (headerBasmallahPairs.length === 0) {
+                return;
+            }
+
+            this.qrDebugLog(
+                '[QR:enforceSurahHeaderBasmallahGap] start, pairs:',
+                headerBasmallahPairs.length,
+            );
+
+            const evaluatePairs = () => {
+                let worstHeaderHeightPx = 0;
+                let detectedExcess = false;
+
+                headerBasmallahPairs.forEach(({ headerLine, basmallahLine }) => {
+                    const headerRect = headerLine.getBoundingClientRect();
+                    const basmallahRect = basmallahLine.getBoundingClientRect();
+
+                    if (headerRect.height <= 0 || basmallahRect.height <= 0) {
+                        return;
+                    }
+
+                    const maxAllowedOverlapPx = headerRect.height * 0.5;
+                    const actualOverlapPx = headerRect.bottom - basmallahRect.top;
+
+                    if (actualOverlapPx > maxAllowedOverlapPx) {
+                        detectedExcess = true;
+
+                        if (headerRect.height > worstHeaderHeightPx) {
+                            worstHeaderHeightPx = headerRect.height;
+                        }
+                    }
+                });
+
+                return { detectedExcess, worstHeaderHeightPx };
+            };
+
+            const { detectedExcess, worstHeaderHeightPx } = evaluatePairs();
+
+            if (!detectedExcess) {
+                this.qrDebugLog('[QR:enforceSurahHeaderBasmallahGap] no excess detected');
+                return;
+            }
+
+            // Pin overlap to a small fraction of the header so basmala stays in the lower zone.
+            const targetOverlapPx = -Math.max(2, worstHeaderHeightPx * 0.18);
+
+            rootElement.style.setProperty(
+                '--quran-surah-header-basmallah-overlap',
+                `${targetOverlapPx.toFixed(2)}px`,
+            );
+
+            this.qrDebugLog(
+                '[QR:enforceSurahHeaderBasmallahGap] applied override',
+                targetOverlapPx,
+                'header height:',
+                worstHeaderHeightPx,
+            );
+        },
+
         resetCurrentPageFitStyles() {
             const rootElement = this.$el.firstElementChild;
 
@@ -2763,6 +2886,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 if (cached.fits && cacheHasHealthyFill) {
                     this.pageScale = cached.scale;
                     this.setCurrentPageScale(cached.scale);
+                    this.enforceSurahHeaderBasmallahGap();
                     this._fitRunCounter += 1;
                     this._lastFittedPageNumber = this.pageNumber;
                     this.scheduleFitSanityCheck({
@@ -3042,6 +3166,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             this.applyFitLayoutVariables(rootElement, bestLayout);
             this.pageScale = finalEvaluation.scale;
             this.setCurrentPageScale(finalEvaluation.scale);
+            this.enforceSurahHeaderBasmallahGap();
             const safetyAdjustedScale = this.applySafetyScaleForCurrentPageOverflow()
                 ? this.pageScale
                 : finalEvaluation.scale;
