@@ -245,7 +245,7 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             this.setupSearchStreamObserver();
             this.clearSearchStreamTarget();
             this.ensureSearchResultAnimations();
-            this.bindSearchModalInputSyncListener();
+            this.queueSearchModalInputSyncBinding();
             this.searchModalInputElement()?.focus?.();
             this.queueSurahDirectoryAutoFocus();
             this._surahDirectoryPostOpenTimers = [260, 560, 920].map((delayMs) =>
@@ -581,11 +581,66 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             return await this.openManagerModalAction('navigationHistory', [this.historyModalId]);
         },
 
+        scheduleSearchModalBootstrapFallback() {
+            if (
+                typeof this.usesFilamentNativeSearchSelect === 'function' &&
+                this.usesFilamentNativeSearchSelect()
+            ) {
+                return;
+            }
+
+            const bootstrapDelaysMs = [0, 60, 150, 320, 640];
+            let didBootstrap = false;
+
+            bootstrapDelaysMs.forEach((delayMs) => {
+                window.setTimeout(() => {
+                    if (didBootstrap) {
+                        return;
+                    }
+
+                    const hasSearchModalContext =
+                        this.search.modalOpen ||
+                        this.isSearchModalWindowVisible() ||
+                        this.searchModalWindowElement() instanceof HTMLElement ||
+                        this.searchModalInputElement() instanceof HTMLInputElement ||
+                        Boolean(this.searchResultsSelectInstance());
+
+                    if (!hasSearchModalContext) {
+                        return;
+                    }
+
+                    if (!this.search.modalOpen) {
+                        this.search.modalOpen = true;
+                        this._lastKnownModalOpenState = true;
+                        this.dispatchManagerModalsVisibilityState();
+                    }
+
+                    if (typeof this.setupSearchStreamObserver === 'function') {
+                        this.setupSearchStreamObserver();
+                    }
+
+                    if (typeof this.queueSearchModalInputSyncBinding === 'function') {
+                        this.queueSearchModalInputSyncBinding();
+                    }
+
+                    didBootstrap = true;
+                }, delayMs);
+            });
+        },
+
         async openSearchModal() {
-            return await this.openManagerModalAction('searchQuran', [
+            const didOpen = await this.openManagerModalAction('searchQuran', [
                 this.searchModalId,
                 this.searchModalDomId,
             ]);
+
+            if (!didOpen) {
+                return false;
+            }
+
+            this.scheduleSearchModalBootstrapFallback();
+
+            return true;
         },
 
         async openJumpPageModal() {

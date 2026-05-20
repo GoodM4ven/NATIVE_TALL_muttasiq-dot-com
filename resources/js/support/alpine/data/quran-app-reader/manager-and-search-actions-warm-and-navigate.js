@@ -373,6 +373,14 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
         },
 
         async updateSearchResults() {
+            if (
+                typeof this.usesFilamentNativeSearchSelect === 'function' &&
+                this.usesFilamentNativeSearchSelect()
+            ) {
+                this.search.isLoading = false;
+                return;
+            }
+
             if (this._searchNavigationInFlight) {
                 this._searchQueuedNormalizedQuery = null;
                 this.search.isLoading = false;
@@ -433,9 +441,14 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                 void this.warmSearchLocalIndex();
             }
 
-            const isSearchModalVisible = this.search.modalOpen || this.isSearchModalWindowVisible();
+            const hasSearchModalContext =
+                this.search.modalOpen ||
+                this.isSearchModalWindowVisible() ||
+                this.searchModalWindowElement() instanceof HTMLElement ||
+                this.searchModalInputElement() instanceof HTMLInputElement ||
+                Boolean(this.searchResultsSelectInstance());
 
-            if (!isSearchModalVisible) {
+            if (!hasSearchModalContext) {
                 return;
             }
 

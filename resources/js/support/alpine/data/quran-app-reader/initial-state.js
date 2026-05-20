@@ -637,6 +637,12 @@ export const createInitialState = (config, deps) => {
 
         _onSearchModalInputSync: null,
 
+        _searchModalInputSyncBindTimers: [],
+
+        _searchModalTypeSyncInstance: null,
+
+        _onSearchModalTypeSync: null,
+
         _searchInputSyncDebounceTimer: null,
 
         _stopIsCalibratingWatcher: null,

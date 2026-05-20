@@ -128,6 +128,13 @@ export const createSearchAndModalsStreamAndResultsModule = (deps) => {
     } = deps;
 
     return {
+        usesFilamentNativeSearchSelect() {
+            const selectElement = this.searchResultsSelectElement();
+            const attribute = String(selectElement?.dataset?.quranSearchNative ?? '').trim();
+
+            return attribute === 'true';
+        },
+
         clearSearchResultsUpdateQueue() {
             if (this._searchInputSyncDebounceTimer !== null) {
                 clearTimeout(this._searchInputSyncDebounceTimer);
@@ -200,14 +207,17 @@ export const createSearchAndModalsStreamAndResultsModule = (deps) => {
 
         bindSearchModalInputSyncListener() {
             const inputElement = this.searchModalInputElement();
+            const selectInstance = this.searchResultsSelectInstance();
 
-            if (!(inputElement instanceof HTMLInputElement)) {
+            if (!(inputElement instanceof HTMLInputElement) && !selectInstance) {
                 return false;
             }
 
             if (
                 this._searchModalInputSyncElement === inputElement &&
-                typeof this._onSearchModalInputSync === 'function'
+                this._searchModalTypeSyncInstance === selectInstance &&
+                typeof this._onSearchModalInputSync === 'function' &&
+                typeof this._onSearchModalTypeSync === 'function'
             ) {
                 return true;
             }
@@ -226,19 +236,83 @@ export const createSearchAndModalsStreamAndResultsModule = (deps) => {
                 this.search.query = nextQuery;
                 this.queueSearchResultsUpdate();
             };
-            this._searchModalInputSyncElement = inputElement;
-            this._searchModalInputSyncElement.addEventListener(
-                'input',
-                this._onSearchModalInputSync,
-            );
+            if (inputElement instanceof HTMLInputElement) {
+                this._searchModalInputSyncElement = inputElement;
+                this._searchModalInputSyncElement.addEventListener(
+                    'input',
+                    this._onSearchModalInputSync,
+                );
+            }
 
-            const nextQuery = String(inputElement.value ?? '');
+            this._onSearchModalTypeSync = (value) => {
+                const nextQuery = String(value ?? '');
+
+                if (nextQuery === this.search.query) {
+                    return;
+                }
+
+                this.search.query = nextQuery;
+                this.queueSearchResultsUpdate();
+            };
+
+            if (
+                selectInstance &&
+                typeof selectInstance.on === 'function' &&
+                typeof this._onSearchModalTypeSync === 'function'
+            ) {
+                selectInstance.on('type', this._onSearchModalTypeSync);
+                this._searchModalTypeSyncInstance = selectInstance;
+            }
+
+            const nextQuery = String(
+                inputElement instanceof HTMLInputElement ? (inputElement.value ?? '') : '',
+            );
 
             if (nextQuery !== this.search.query) {
                 this.search.query = nextQuery;
             }
 
             return true;
+        },
+
+        queueSearchModalInputSyncBinding() {
+            if (this.usesFilamentNativeSearchSelect()) {
+                return;
+            }
+
+            if (typeof this.clearSearchModalInputSyncBindingQueue === 'function') {
+                this.clearSearchModalInputSyncBindingQueue();
+            }
+
+            const bindingDelaysMs = [0, 40, 120, 260, 520, 900];
+            let didBind = false;
+
+            this._searchModalInputSyncBindTimers = bindingDelaysMs.map((delayMs) =>
+                window.setTimeout(() => {
+                    if (didBind) {
+                        return;
+                    }
+
+                    const hasSearchModalContext =
+                        this.search.modalOpen ||
+                        this.isSearchModalWindowVisible() ||
+                        this.searchModalWindowElement() instanceof HTMLElement ||
+                        this.searchModalInputElement() instanceof HTMLInputElement ||
+                        Boolean(this.searchResultsSelectInstance());
+
+                    if (!hasSearchModalContext) {
+                        return;
+                    }
+
+                    didBind = this.bindSearchModalInputSyncListener();
+
+                    if (!didBind) {
+                        return;
+                    }
+
+                    this.queueSearchResultsUpdate(0);
+                }, delayMs),
+            );
         },
 
         jumpPageInputElement() {
@@ -519,6 +593,10 @@ export const createSearchAndModalsStreamAndResultsModule = (deps) => {
         },
 
         setupSearchStreamObserver() {
+            if (this.usesFilamentNativeSearchSelect()) {
+                return;
+            }
+
             this.teardownSearchStreamObserver();
 
             const target = this.searchStreamTargetElement();
@@ -726,6 +804,159 @@ export const createSearchAndModalsStreamAndResultsModule = (deps) => {
             });
 
             return Array.from(mergedByKey.values()).slice(0, 24);
+        },
+
+        searchResultsSelectElement() {
+            const directElement = document.getElementById('quran-reader-search-select');
+
+            if (directElement instanceof HTMLSelectElement && directElement.isConnected) {
+                return directElement;
+            }
+
+            const fallbackElement = document.querySelector(
+                '#quran-reader-search-modal select[name$=\"search_result_key\"]',
+            );
+
+            return fallbackElement instanceof HTMLSelectElement ? fallbackElement : null;
+        },
+
+        searchResultsSelectInstance() {
+            const selectElement = this.searchResultsSelectElement();
+
+            if (!selectElement) {
+                return null;
+            }
+
+            const instance = selectElement?.tomselect ?? null;
+
+            if (!instance || typeof instance.addOption !== 'function') {
+                return null;
+            }
+
+            return instance;
+        },
+
+        searchResultGroupLabel(strategy = '') {
+            const normalizedStrategy = String(strategy ?? '')
+                .trim()
+                .toLowerCase();
+
+            if (
+                normalizedStrategy === 'surah_exact' ||
+                normalizedStrategy === 'exact_phrase' ||
+                normalizedStrategy === 'exact_tokens'
+            ) {
+                return 'مطابقات تامة';
+            }
+
+            if (normalizedStrategy === 'surah_stem' || normalizedStrategy === 'stem_tokens') {
+                return 'مطابقات قريبة / صرفية';
+            }
+
+            if (normalizedStrategy === 'root_tokens') {
+                return 'مطابقات الجذر';
+            }
+
+            return 'نتائج أخرى';
+        },
+
+        encodeFilamentSearchSelectionPayload(result, query = '') {
+            const payload = {
+                verse_id: Math.max(0, Math.trunc(Number(result?.id ?? 0))),
+                page_number: Math.max(1, Math.trunc(Number(result?.page_number ?? 1))),
+                surah_number: Math.max(1, Math.trunc(Number(result?.surah_number ?? 1))),
+                ayah_number: Math.max(0, Math.trunc(Number(result?.ayah_number ?? 0))),
+                highlight_ayah_index: Math.max(0, Math.trunc(Number(result?.ayah_index ?? 0))),
+                query: String(query ?? '').trim() || null,
+            };
+
+            const json = JSON.stringify(payload);
+            const base64 = btoa(unescape(encodeURIComponent(json)));
+
+            return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+        },
+
+        searchResultOptionHtml(result) {
+            const escapeHtml = (value) =>
+                String(value ?? '').replace(
+                    /[&<>"']/g,
+                    (character) =>
+                        ({
+                            '&': '&amp;',
+                            '<': '&lt;',
+                            '>': '&gt;',
+                            '"': '&quot;',
+                            "'": '&#39;',
+                        })[character] ?? character,
+                );
+            const surahNumber = Math.max(1, Math.trunc(Number(result?.surah_number ?? 1)));
+            const ayahNumber = Math.max(0, Math.trunc(Number(result?.ayah_number ?? 0)));
+            const pageNumber = Math.max(1, Math.trunc(Number(result?.page_number ?? 1)));
+            const strategy = String(result?.match_strategy ?? '')
+                .trim()
+                .toLowerCase();
+            const matchTone = escapeHtml(this.searchMatchTone(result));
+            const label = escapeHtml(this.searchMatchLabel(result));
+            const meta = strategy.startsWith('surah_')
+                ? `سورة ${surahNumber} · صفحة ${pageNumber}`
+                : `سورة ${surahNumber} · آية ${Math.max(1, ayahNumber)}`;
+            const ayahText = escapeHtml(this.searchResultAyahText(result));
+
+            return `<div class="quran-search-option-card" data-match-tone="${matchTone}"><span class="quran-search-option-card__meta">${escapeHtml(meta)}</span><span class="quran-search-option-card__ayah font-quran">${ayahText}</span><span class="quran-search-option-card__badge" data-match-tone="${matchTone}">${label}</span></div>`;
+        },
+
+        syncFilamentSearchSelectOptionsFromResults() {
+            const instance = this.searchResultsSelectInstance();
+
+            if (!instance) {
+                return;
+            }
+
+            const activeResults = this.activeSearchResults();
+            const query = this.normalizeSearchQuery(this.search.query);
+            const previousValue = instance.getValue?.() ?? '';
+            const optionRecords = [];
+            const groupLabels = new Map();
+
+            activeResults.forEach((result) => {
+                const value = this.encodeFilamentSearchSelectionPayload(result, query);
+                const groupLabel = this.searchResultGroupLabel(result?.match_strategy);
+                const groupKey = groupLabel;
+                groupLabels.set(groupKey, groupLabel);
+                optionRecords.push({
+                    value,
+                    text: this.searchResultOptionHtml(result),
+                    optgroup: groupKey,
+                });
+            });
+
+            instance.clearOptions();
+
+            if (typeof instance.clearOptionGroups === 'function') {
+                instance.clearOptionGroups();
+            }
+
+            groupLabels.forEach((label, value) => {
+                if (typeof instance.addOptionGroup === 'function') {
+                    instance.addOptionGroup(value, { label });
+                }
+            });
+
+            optionRecords.forEach((record) => {
+                instance.addOption(record);
+            });
+
+            const hasPreviousOption = optionRecords.some(
+                (record) => record.value === previousValue,
+            );
+
+            if (hasPreviousOption && previousValue) {
+                instance.setValue(previousValue, true);
+            } else {
+                instance.clear(true);
+            }
+
+            instance.refreshOptions(false);
         },
     };
 };

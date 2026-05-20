@@ -321,13 +321,14 @@ class Reader extends Component implements HasActions, HasSchemas
      *     match_rank: int
      * }>
      */
-    public function streamSearch(string $query, int $requestSerial = 0): array
+    public function streamSearch(string $query, int $requestSerial = 0, int $limit = 24): array
     {
         $this->prepareSearchStreamingOutput();
 
         /** @var QuranReaderDataService $readerDataService */
         $readerDataService = app(QuranReaderDataService::class);
         $normalizedRequestSerial = max(0, $requestSerial);
+        $resolvedLimit = max(6, min(24, $limit));
         $this->markSearchStreamStarted($normalizedRequestSerial);
 
         $this->streamSearchPayload(
@@ -345,7 +346,7 @@ class Reader extends Component implements HasActions, HasSchemas
         try {
             $results = $readerDataService->searchProgressively(
                 $query,
-                24,
+                $resolvedLimit,
                 function (array $matches, string $stage, bool $isComplete) use (
                     $normalizedRequestSerial,
                     $shouldCancel,

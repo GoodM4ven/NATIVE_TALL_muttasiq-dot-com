@@ -29,5 +29,6 @@
 AGENTS.md
 boost.json
 CLAUDE.md
+nativephp.json
 /database/native-quran-reader.sqlite
 /database/native-quran-reader.json

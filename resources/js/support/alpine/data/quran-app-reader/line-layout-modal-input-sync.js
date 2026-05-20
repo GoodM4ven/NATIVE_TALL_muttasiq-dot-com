@@ -128,7 +128,33 @@ export const createLineLayoutModalInputSyncModule = (deps) => {
     } = deps;
 
     return {
+        clearSearchModalInputSyncBindingQueue() {
+            if (!Array.isArray(this._searchModalInputSyncBindTimers)) {
+                this._searchModalInputSyncBindTimers = [];
+
+                return;
+            }
+
+            this._searchModalInputSyncBindTimers.forEach((timerId) => {
+                if (timerId !== null) {
+                    clearTimeout(timerId);
+                }
+            });
+
+            this._searchModalInputSyncBindTimers = [];
+        },
+
         unbindSearchModalInputSyncListener() {
+            this.clearSearchModalInputSyncBindingQueue();
+
+            if (
+                this._searchModalTypeSyncInstance &&
+                typeof this._searchModalTypeSyncInstance.off === 'function' &&
+                typeof this._onSearchModalTypeSync === 'function'
+            ) {
+                this._searchModalTypeSyncInstance.off('type', this._onSearchModalTypeSync);
+            }
+
             if (
                 this._searchModalInputSyncElement instanceof HTMLInputElement &&
                 typeof this._onSearchModalInputSync === 'function'
@@ -141,6 +167,8 @@ export const createLineLayoutModalInputSyncModule = (deps) => {
 
             this._searchModalInputSyncElement = null;
             this._onSearchModalInputSync = null;
+            this._searchModalTypeSyncInstance = null;
+            this._onSearchModalTypeSync = null;
         },
     };
 };

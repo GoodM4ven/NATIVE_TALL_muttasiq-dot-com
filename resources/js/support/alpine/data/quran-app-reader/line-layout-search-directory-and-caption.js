@@ -967,7 +967,9 @@ export const createLineLayoutSearchDirectoryAndCaptionModule = (deps) => {
 
         searchModalInputElement() {
             const candidates = Array.from(
-                document.querySelectorAll('#quran-reader-search-input'),
+                document.querySelectorAll(
+                    '#quran-reader-search-input, #quran-reader-search-modal .quran-search-results-select-wrapper .ts-control input',
+                ),
             ).filter((element) => element instanceof HTMLInputElement && element.isConnected);
 
             if (candidates.length === 0) {

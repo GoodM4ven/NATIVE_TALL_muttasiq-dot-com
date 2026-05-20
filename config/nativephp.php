@@ -159,6 +159,7 @@ return [
         'boost.json',
         'CLAUDE.md',
         'laravel-boost-mcp.sh',
+        'nativephp.json',
         'phpstan-baseline.neon',
         'phpstan.neon.dist',
         'phpunit.xml',
