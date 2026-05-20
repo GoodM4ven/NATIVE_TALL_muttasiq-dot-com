@@ -587,13 +587,6 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                             tolerancePx: 0.8,
                         });
 
-                        if (
-                            requestedSource === 'page-jump' &&
-                            typeof this.runSecondaryModalExitRecoveryPulse === 'function'
-                        ) {
-                            await this.runSecondaryModalExitRecoveryPulse(this.jumpPageModalId);
-                        }
-
                         this.refreshMobileEdgeCaptions(false);
                         this.syncReaderChromeDocumentClass();
                     }
@@ -853,6 +846,12 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                 const transitionDelayMs = this.isHighFrequencyNavigationSource(source) ? 68 : 128;
 
                 if (this.mushafLines.length > 0) {
+                    if (this._modalLifecycleFadeOutTimer !== null) {
+                        clearTimeout(this._modalLifecycleFadeOutTimer);
+                        this._modalLifecycleFadeOutTimer = null;
+                    }
+
+                    this._modalLifecycleFadeOutPending = false;
                     this.isTransitioningOutPage = true;
                     this.isFittingPage = false;
                     await this.nextTickAsync();

@@ -535,22 +535,13 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                     commitNow: true,
                     settleDelayMs: 0,
                 });
-
-                await this.stabilizeModalDrivenLayout({
-                    revealDelayMs: 160,
-                    maxAttempts: 4,
-                    maxFrames: 18,
-                    requiredStableFrames: 3,
-                    tolerancePx: 0.8,
+                this.queuePendingPostModalTargetFit(targetPage);
+                this.schedulePendingModalCloseFit(targetPage, {
+                    retries: 42,
+                    delayMs: 84,
+                    revealDelayMs: 220,
+                    maxAttempts: 5,
                 });
-
-                if (typeof this.scheduleModalDrivenFinalRecoveryFit === 'function') {
-                    this.scheduleModalDrivenFinalRecoveryFit(targetPage, {
-                        source: 'search-result',
-                        delayMs: 340,
-                        retries: 6,
-                    });
-                }
 
                 if (highlightAyahIndex > 0) {
                     this.activeAyahIndex = highlightAyahIndex;

@@ -152,7 +152,40 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             ).length;
         },
 
+        clearModalPreOpenPending() {
+            if (this._modalPreOpenPendingTimer !== null) {
+                clearTimeout(this._modalPreOpenPendingTimer);
+                this._modalPreOpenPendingTimer = null;
+            }
+
+            this._modalPreOpenPending = false;
+        },
+
+        setModalPreOpenPending(timeoutMs = 1400) {
+            this.clearModalPreOpenPending();
+            this._modalPreOpenPending = true;
+
+            this._modalPreOpenPendingTimer = window.setTimeout(
+                () => {
+                    this._modalPreOpenPendingTimer = null;
+
+                    if (this.openModalCount() > 0 || this._isModalLifecycleSettling) {
+                        return;
+                    }
+
+                    this._modalPreOpenPending = false;
+                    this.scheduleLayoutAfterModalLifecycle(120);
+                    this.syncReaderChromeDocumentClass();
+                },
+                Math.max(400, Math.trunc(Number(timeoutMs) || 1400)),
+            );
+        },
+
         hasBlockingModalLifecycleState({ recoverStaleState = false } = {}) {
+            if (this._modalPreOpenPending) {
+                return true;
+            }
+
             const openModalCount = this.openModalCount();
 
             if (openModalCount > 0) {
@@ -183,6 +216,8 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
 
             this._activeModalIds.clear();
             this._isModalLifecycleSettling = false;
+            this._modalLifecycleFadeOutPending = false;
+            this.clearModalPreOpenPending();
 
             return true;
         },
@@ -402,83 +437,6 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
 
             clearTimeout(this._swipeRevealWatchdogTimer);
             this._swipeRevealWatchdogTimer = null;
-        },
-
-        scheduleModalDrivenFinalRecoveryFit(
-            pageNumber = this.pageNumber,
-            { source = 'modal-driven', delayMs = 360, retries = 6 } = {},
-        ) {
-            const normalizedPageNumber = clampPage(
-                Number(pageNumber ?? this.pageNumber),
-                this.maxPage,
-            );
-            const normalizedDelayMs = Math.max(160, Math.trunc(Number(delayMs) || 360));
-            const normalizedRetries = Math.max(0, Math.trunc(Number(retries) || 0));
-
-            if (normalizedPageNumber <= 0) {
-                return;
-            }
-
-            if (this._modalDrivenFinalRecoveryFitTimer !== null) {
-                clearTimeout(this._modalDrivenFinalRecoveryFitTimer);
-                this._modalDrivenFinalRecoveryFitTimer = null;
-            }
-
-            const attemptRecovery = (remainingRetries) => {
-                const canRunRecovery =
-                    this.pageNumber === normalizedPageNumber &&
-                    this.hasRenderablePage() &&
-                    !this.isLoadingPage &&
-                    this._pendingNavigationRequest === null &&
-                    !this._navigationRevealLocked &&
-                    !this._isModalLifecycleSettling &&
-                    this._activeModalIds.size <= 0 &&
-                    this.openModalCount() <= 0;
-
-                if (!canRunRecovery) {
-                    if (remainingRetries <= 0) {
-                        return;
-                    }
-
-                    this._modalDrivenFinalRecoveryFitTimer = window.setTimeout(() => {
-                        this._modalDrivenFinalRecoveryFitTimer = null;
-                        attemptRecovery(remainingRetries - 1);
-                    }, 120);
-
-                    return;
-                }
-
-                void (async () => {
-                    this.qrDebugLayoutSnapshot('modal-driven-final-recovery-before', {
-                        source,
-                        targetPage: normalizedPageNumber,
-                    });
-                    this._bypassNextFitCache = true;
-                    this.resetFitSanityRecoveryState();
-                    await this.nextTickAsync();
-                    await this.waitForStablePageFrame({
-                        maxFrames: 16,
-                        requiredStableFrames: 2,
-                        tolerancePx: 0.8,
-                    });
-                    await this.stabilizeModalDrivenLayout({
-                        revealDelayMs: 140,
-                        maxAttempts: 5,
-                        maxFrames: 16,
-                        requiredStableFrames: 3,
-                        tolerancePx: 0.8,
-                    });
-                    this.qrDebugLayoutSnapshot('modal-driven-final-recovery-after', {
-                        source,
-                        targetPage: normalizedPageNumber,
-                    });
-                })();
-            };
-
-            this._modalDrivenFinalRecoveryFitTimer = window.setTimeout(() => {
-                this._modalDrivenFinalRecoveryFitTimer = null;
-                attemptRecovery(normalizedRetries);
-            }, normalizedDelayMs);
         },
 
         forceRevealCurrentPage(reason = 'generic') {
@@ -855,8 +813,49 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             }
         },
 
-        holdPageHiddenForModalLifecycle() {
+        holdPageHiddenForModalLifecycle({
+            waitForModalLifecycle = true,
+            animateFadeOut = true,
+        } = {}) {
             if (!this.hasRenderablePage()) {
+                return;
+            }
+
+            if (this._modalLifecycleFadeOutTimer !== null) {
+                if (this._modalLifecycleFadeOutPending) {
+                    if (waitForModalLifecycle) {
+                        this._isModalLifecycleSettling = true;
+                        this.clearLayoutTimers();
+                        this.beginLayoutCycle();
+                    }
+
+                    return;
+                }
+
+                clearTimeout(this._modalLifecycleFadeOutTimer);
+                this._modalLifecycleFadeOutTimer = null;
+            }
+
+            const shouldAnimateFadeOut =
+                animateFadeOut && !this.isTransitioningOutPage && !this.isFittingPage;
+
+            if (shouldAnimateFadeOut) {
+                this._modalLifecycleFadeOutPending = true;
+                this.isTransitioningOutPage = true;
+
+                this._modalLifecycleFadeOutTimer = window.setTimeout(() => {
+                    this._modalLifecycleFadeOutTimer = null;
+
+                    if (!this._modalLifecycleFadeOutPending) {
+                        return;
+                    }
+
+                    this._modalLifecycleFadeOutPending = false;
+                    this.isTransitioningOutPage = false;
+                }, 130);
+            }
+
+            if (!waitForModalLifecycle) {
                 return;
             }
 
@@ -879,6 +878,8 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 () => {
                     this._modalLayoutResumeTimer = null;
                     this._isModalLifecycleSettling = false;
+                    this._modalLifecycleFadeOutPending = false;
+                    this.clearModalPreOpenPending();
                     this.clearLayoutTimers();
                     this.isFittingPage = true;
                     this._bypassNextFitCache = true;
@@ -891,6 +892,8 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 },
                 Math.max(0, Math.trunc(Number(delayMs) || 220)),
             );
+
+            this._isModalLifecycleSettling = true;
         },
 
         cancelActiveSearchProcessing() {
@@ -1113,6 +1116,21 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 this._activeModalIds.size > 0 || this._isModalLifecycleSettling;
             const isLateCloseLikeEvent = kind === 'closing' || kind === 'closed';
             const now = Date.now();
+            const lifecycleEventKey = modalId !== '' ? `${kind}:${modalId}` : '';
+            const shouldDedupeLifecycleEvent = kind === 'closing' || kind === 'closed';
+            const isDuplicateLifecycleEvent =
+                shouldDedupeLifecycleEvent &&
+                lifecycleEventKey !== '' &&
+                lifecycleEventKey === this._lastModalLifecycleEventKey &&
+                now - this._lastModalLifecycleEventAt < 140;
+
+            if (isDuplicateLifecycleEvent) {
+                return;
+            }
+
+            if (lifecycleEventKey !== '') {
+                this._lastModalLifecycleEventKey = lifecycleEventKey;
+            }
 
             this.pruneModalLifecycleSuppression(now);
 
@@ -1134,6 +1152,13 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
 
                 if (openModalCount <= 0) {
                     this._isModalLifecycleSettling = false;
+                    this._modalLifecycleFadeOutPending = false;
+                    const hasNavigationInFlight =
+                        this._pendingNavigationRequest !== null || this.isLoadingPage;
+
+                    if (!hasNavigationInFlight) {
+                        this.scheduleLayoutAfterModalLifecycle(kind === 'closed' ? 120 : 180);
+                    }
                 }
 
                 if (
@@ -1199,15 +1224,17 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 }
             }
 
-            this._lastModalLifecycleEventAt = Date.now();
+            this._lastModalLifecycleEventAt = now;
 
             if (kind === 'opened') {
+                this.clearModalPreOpenPending();
+
                 if (modalId !== '') {
                     this._activeModalIds.add(modalId);
                 }
 
                 this._bypassNextFitCache = true;
-                this.holdPageHiddenForModalLifecycle();
+                this.holdPageHiddenForModalLifecycle({ animateFadeOut: false });
                 this._managerModalVersion += 1;
                 this.syncReaderChromeDocumentClass();
 
@@ -1215,12 +1242,14 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             }
 
             if (kind === 'closing') {
+                this.clearModalPreOpenPending();
+
                 if (modalId === '' || this._activeModalIds.has(modalId) || openModalCount > 0) {
                     const navigatedAway = this._lastFittedPageNumber !== this.pageNumber;
 
                     if (navigatedAway) {
                         this._bypassNextFitCache = true;
-                        this.holdPageHiddenForModalLifecycle();
+                        this.holdPageHiddenForModalLifecycle({ animateFadeOut: false });
                     }
 
                     this.resumeLayoutWhenNoOpenModals();
@@ -1230,6 +1259,8 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             }
 
             if (kind === 'closed') {
+                this.clearModalPreOpenPending();
+
                 if (modalId !== '') {
                     this._activeModalIds.delete(modalId);
                 }
@@ -1238,7 +1269,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
 
                 if (navigatedAway) {
                     this._bypassNextFitCache = true;
-                    this.holdPageHiddenForModalLifecycle();
+                    this.holdPageHiddenForModalLifecycle({ animateFadeOut: false });
                 }
 
                 this._managerModalVersion += 1;

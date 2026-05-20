@@ -127,8 +127,6 @@ export const createLifecycleBootstrapSupportAndWirdStateModule = (deps) => {
         writeWirdDayOffsetDays,
     } = deps;
 
-    const startupSecondaryCalibrationReferencePage = 549;
-
     return {
         hydratePersistedFitCache() {
             if (!shouldPersistFitCacheAcrossReloads) {
@@ -286,24 +284,6 @@ export const createLifecycleBootstrapSupportAndWirdStateModule = (deps) => {
                     this.isReaderElementVisible(),
                 );
                 await this.calibrateGlobalFitLayoutFromReferencePage(fitCalibrationReferencePage);
-
-                const primaryCalibrationLayout = this._globalFitCalibrationLayout
-                    ? { ...this._globalFitCalibrationLayout }
-                    : null;
-                const primaryCalibrationScale = Number(this._globalFitCalibrationScale) || 0;
-                const primaryCalibrationPageNumber = Math.max(
-                    0,
-                    Math.trunc(Number(this._globalFitCalibrationPageNumber) || 0),
-                );
-
-                await this.calibrateGlobalFitLayoutFromReferencePage(
-                    startupSecondaryCalibrationReferencePage,
-                    { persistGlobalCalibration: false },
-                );
-
-                this._globalFitCalibrationLayout = primaryCalibrationLayout;
-                this._globalFitCalibrationScale = primaryCalibrationScale;
-                this._globalFitCalibrationPageNumber = primaryCalibrationPageNumber;
                 this.qrDebugLog(
                     '[QR:bootstrap] after calibrate, _globalFitCalibrationLayout:',
                     !!this._globalFitCalibrationLayout,

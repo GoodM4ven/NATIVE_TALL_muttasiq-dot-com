@@ -1293,6 +1293,20 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
                 this._modalLayoutResumeTimer = null;
             }
 
+            if (this._modalLifecycleFadeOutTimer !== null) {
+                clearTimeout(this._modalLifecycleFadeOutTimer);
+                this._modalLifecycleFadeOutTimer = null;
+            }
+
+            this._modalLifecycleFadeOutPending = false;
+
+            if (this._modalPreOpenPendingTimer !== null) {
+                clearTimeout(this._modalPreOpenPendingTimer);
+                this._modalPreOpenPendingTimer = null;
+            }
+
+            this._modalPreOpenPending = false;
+
             if (this._postModalTargetFitTimer !== null) {
                 clearTimeout(this._postModalTargetFitTimer);
                 this._postModalTargetFitTimer = null;

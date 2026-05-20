@@ -691,6 +691,14 @@ export const createInitialState = (config, deps) => {
 
         _modalLayoutResumeTimer: null,
 
+        _modalLifecycleFadeOutTimer: null,
+
+        _modalLifecycleFadeOutPending: false,
+
+        _modalPreOpenPending: false,
+
+        _modalPreOpenPendingTimer: null,
+
         _postModalTargetFitPage: 0,
 
         _postModalTargetFitRetries: 0,
@@ -706,6 +714,8 @@ export const createInitialState = (config, deps) => {
         _managerModalVersion: 0,
 
         _lastModalLifecycleEventAt: 0,
+
+        _lastModalLifecycleEventKey: '',
 
         _suppressModalLifecycleEffectsUntil: 0,
 
