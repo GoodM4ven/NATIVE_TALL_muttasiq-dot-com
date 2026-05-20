@@ -507,7 +507,9 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                     Math.trunc(Number(detail?.searchHighlightAyahIndex ?? 0)),
                 );
                 const isModalDrivenPriorityRequest =
-                    requestedSource === 'search-result' || requestedSource === 'surah-directory';
+                    requestedSource === 'search-result' ||
+                    requestedSource === 'surah-directory' ||
+                    requestedSource === 'search-modal';
                 const isPriorityPageRequest =
                     requestedSource === 'page-jump' ||
                     requestedSource === 'page-slider-commit' ||
@@ -527,15 +529,26 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                 }
 
                 if (requestedSource === 'page-jump' || isModalDrivenPriorityRequest) {
-                    const modalLifecycleIds =
-                        requestedSource === 'page-jump'
-                            ? [this.jumpPageModalId]
-                            : [
-                                  this.resolveSearchModalCloseTargetId(),
-                                  this.searchActionModalId,
-                                  this.searchModalId,
-                                  this.searchModalDomId,
-                              ];
+                    const modalLifecycleIds = (() => {
+                        if (requestedSource === 'page-jump') {
+                            return [this.jumpPageModalId];
+                        }
+
+                        if (requestedSource === 'search-modal') {
+                            return [
+                                this.searchActionModalId,
+                                this.searchModalId,
+                                this.searchModalDomId,
+                            ];
+                        }
+
+                        return [
+                            this.resolveSearchModalCloseTargetId(),
+                            this.searchActionModalId,
+                            this.searchModalId,
+                            this.searchModalDomId,
+                        ];
+                    })();
 
                     this.suppressModalLifecycleEffects(modalLifecycleIds, {
                         durationMs: Math.max(

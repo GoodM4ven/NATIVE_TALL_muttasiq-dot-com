@@ -684,74 +684,45 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                 this.dispatchManagerModalsVisibilityState();
             }
 
-            if (!isSearchModalEvent) {
-                if (
-                    (normalizedKind === 'closing' || normalizedKind === 'closed') &&
-                    this.search.modalOpen &&
-                    !this.isSearchModalWindowVisible()
-                ) {
-                    this.handleSearchModalClosed();
-                }
+            if (isSearchModalEvent) {
+                if (normalizedKind === 'opened') {
+                    this.search.modalOpen = true;
+                    this._lastKnownModalOpenState = true;
+                    this.dispatchManagerModalsVisibilityState();
+                    this.traceSearchModalLifecycle('opened');
 
-                if (normalizedKind === 'closed' && this.openModalCount() <= 0) {
-                    this.recoverStaleModalLifecycleState();
-                    this.pruneModalLifecycleSuppression();
-                    this.refreshMobileEdgeCaptions(false);
-                    this.syncReaderChromeDocumentClass();
-
-                    if (this._postModalTargetFitPage > 0) {
-                        this.schedulePendingModalCloseFit(this._postModalTargetFitPage, {
-                            retries: 42,
-                            delayMs: 90,
-                            revealDelayMs: 230,
-                            maxAttempts: 6,
-                        });
-                    }
-                }
-
-                return;
-            }
-
-            if (normalizedKind === 'opened') {
-                this.clearPendingPostModalTargetFit();
-                this.traceSearchModalLifecycle('opened');
-
-                if (this._searchModalOpenInFlight) {
                     return;
                 }
 
-                if (this.search.modalOpen) {
-                    this.handleSearchModalClosed();
+                if (normalizedKind === 'closing') {
+                    this.cancelActiveSearchProcessing();
+                    this.traceSearchModalLifecycle('closing');
+
+                    return;
                 }
 
-                this._searchModalOpenInFlight = Promise.resolve(this.handleSearchModalOpened())
-                    .catch(() => {
-                        //
-                    })
-                    .finally(() => {
-                        this._searchModalOpenInFlight = null;
-                    });
-
-                return;
-            }
-
-            if (normalizedKind === 'closing') {
-                this.cancelActiveSearchProcessing();
-                this.traceSearchModalLifecycle('closing');
-
-                return;
-            }
-
-            if (normalizedKind === 'closed') {
-                this.traceSearchModalLifecycle('closed-before-cleanup');
-                this.handleSearchModalClosed();
-
-                if (this.openModalCount() <= 0) {
-                    this.recoverStaleModalLifecycleState();
-                    this.pruneModalLifecycleSuppression();
-                    this.refreshMobileEdgeCaptions(false);
-                    this.syncReaderChromeDocumentClass();
+                if (normalizedKind === 'closed') {
+                    this.cancelActiveSearchProcessing();
+                    this.search.modalOpen = false;
+                    this._lastKnownModalOpenState = false;
+                    this.dispatchManagerModalsVisibilityState();
+                    this.traceSearchModalLifecycle('closed');
                 }
+            } else if (
+                (normalizedKind === 'closing' || normalizedKind === 'closed') &&
+                this.search.modalOpen &&
+                !this.isSearchModalWindowVisible()
+            ) {
+                this.search.modalOpen = false;
+                this._lastKnownModalOpenState = false;
+                this.dispatchManagerModalsVisibilityState();
+            }
+
+            if (normalizedKind === 'closed' && this.openModalCount() <= 0) {
+                this.recoverStaleModalLifecycleState();
+                this.pruneModalLifecycleSuppression();
+                this.refreshMobileEdgeCaptions(false);
+                this.syncReaderChromeDocumentClass();
 
                 if (this._postModalTargetFitPage > 0) {
                     this.schedulePendingModalCloseFit(this._postModalTargetFitPage, {
@@ -761,8 +732,6 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                         maxAttempts: 6,
                     });
                 }
-
-                this.traceSearchModalLifecycle('closed-after-cleanup');
             }
         },
     };

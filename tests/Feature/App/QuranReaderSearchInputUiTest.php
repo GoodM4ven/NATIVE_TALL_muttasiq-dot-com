@@ -4,42 +4,45 @@ declare(strict_types=1);
 
 test('quran search input clears immediately when native search clear button is used', function () {
     $readerSource = file_get_contents(app_path('Livewire/QuranApp/Reader.php'));
-    $searchModalSource = file_get_contents(resource_path('views/components/partials/quran-app/search-modal.blade.php'));
-    $readerScriptSource = file_get_contents(resource_path('js/support/alpine/data/quran-app-reader/index.js'));
+    $readerSearchActionTraitSource = file_get_contents(
+        app_path('Livewire/QuranApp/Concerns/InteractsWithQuranSearchAction.php'),
+    );
 
     expect($readerSource)->not->toBeFalse()
-        ->and($readerSource)->toContain("'x-on:search' => 'search.query = String(\$event?.target?.value ?? \'\'); queueSearchResultsUpdate(0)'")
-        ->and($readerSource)->toContain("'x-on:input' => 'if (String(\$event?.target?.value ?? \'\').trim() === \'\') { queueSearchResultsUpdate(0) }'")
-        ->and($searchModalSource)->toContain('x-show="shouldShowSearchNoResults()"')
-        ->and($readerScriptSource)->toContain('this._searchRequestSerial += 1;')
-        ->and($readerScriptSource)->toContain('this._searchRequestInFlight = false;')
-        ->and($readerScriptSource)->toContain('cancelActiveSearchProcessing()')
-        ->and($readerScriptSource)->toContain('this.cancelActiveSearchProcessing();')
-        ->and($readerScriptSource)->toContain('async waitForSearchModalToClose(maxAttempts = 18, delayMs = 24)')
-        ->and($readerScriptSource)->toContain("const closeEventName = quietly ? 'close-modal-quietly' : 'close-modal';")
-        ->and($readerScriptSource)->not->toContain(
-            "if (this._searchRequestInFlight) {\n                this._searchQueuedNormalizedQuery = normalizedQuery;\n\n                return;\n            }",
-        );
+        ->and($readerSource)->toContain('use InteractsWithQuranSearchAction;')
+        ->and($readerSource)->not->toContain("Blade::render('<x-partials.quran-app.search-modal />')");
+
+    expect($readerSearchActionTraitSource)->not->toBeFalse()
+        ->and($readerSearchActionTraitSource)->toContain("Action::make('searchQuran')")
+        ->and($readerSearchActionTraitSource)->toContain("Select::make('surah_number')")
+        ->and($readerSearchActionTraitSource)->toContain("TextInput::make('query')")
+        ->and($readerSearchActionTraitSource)->toContain("'id' => 'quran-reader-search-modal'")
+        ->and($readerSearchActionTraitSource)->toContain("source: 'search-modal'");
 });
 
 test('quran modal navigation keeps immersive captions and same-page refit paths ready', function () {
-    $readerScriptSource = file_get_contents(resource_path('js/support/alpine/data/quran-app-reader/index.js'));
+    $surahQuickNavScriptSource = file_get_contents(
+        resource_path('js/support/alpine/data/quran-app-reader/reader-navigation-fit-surah-quick-nav-and-burst.js'),
+    );
+    $managerAndSearchActionsScriptSource = file_get_contents(
+        resource_path('js/support/alpine/data/quran-app-reader/manager-and-search-actions-ui-and-local-index.js'),
+    );
+    $searchLifecycleScriptSource = file_get_contents(
+        resource_path('js/support/alpine/data/quran-app-reader/search-and-modals-lifecycle-and-state.js'),
+    );
 
-    expect($readerScriptSource)->not->toBeFalse()
-        ->and($readerScriptSource)->toContain('resolveSearchModalCloseTargetId()')
-        ->and($readerScriptSource)->toContain("const closeEventName = quietly ? 'close-modal-quietly' : 'close-modal';")
-        ->and($readerScriptSource)->toContain('quietly: true,')
-        ->and($readerScriptSource)->toContain('allowLivewireUnmount: false,')
-        ->and($readerScriptSource)->toContain('await this.waitForSearchModalToClose(')
-        ->and($readerScriptSource)->toContain('this.suppressModalLifecycleEffects(searchModalLifecycleIds);')
-        ->and($readerScriptSource)->toContain('await this.requestSearchModalClose();')
-        ->and($readerScriptSource)->toContain('await this.waitForModalLifecycleToSettle();')
-        ->and($readerScriptSource)->toContain('source: \'search-result\',')
-        ->and($readerScriptSource)->toContain('source: \'surah-directory\',')
-        ->and($readerScriptSource)->toContain('searchHighlightAyahIndex: highlightAyahIndex,')
-        ->and($readerScriptSource)->toContain('this.searchHighlightedAyahIndex = highlightAyahIndex;')
-        ->and($readerScriptSource)->toContain('this.hasBlockingModalLifecycleState({')
-        ->and($readerScriptSource)->toContain('void this._managerModalVersion;')
-        ->and($readerScriptSource)->not->toContain('ensureReaderChromeVisible')
-        ->and($readerScriptSource)->not->toContain('scheduleModalDrivenNavigationRecovery');
+    expect($surahQuickNavScriptSource)->not->toBeFalse()
+        ->and($surahQuickNavScriptSource)->toContain('void this.openSearchModal();')
+        ->and($surahQuickNavScriptSource)->not->toContain('this.warmSearchIndex();');
+
+    expect($managerAndSearchActionsScriptSource)->not->toBeFalse()
+        ->and($managerAndSearchActionsScriptSource)->toContain('async openSearchModal()')
+        ->and($managerAndSearchActionsScriptSource)->toContain("openManagerModalAction('searchQuran'");
+
+    expect($searchLifecycleScriptSource)->not->toBeFalse()
+        ->and($searchLifecycleScriptSource)->toContain("this.traceSearchModalLifecycle('opened');")
+        ->and($searchLifecycleScriptSource)->toContain("this.traceSearchModalLifecycle('closed');")
+        ->and($searchLifecycleScriptSource)->not->toContain(
+            'this._searchModalOpenInFlight = Promise.resolve(this.handleSearchModalOpened())',
+        );
 });

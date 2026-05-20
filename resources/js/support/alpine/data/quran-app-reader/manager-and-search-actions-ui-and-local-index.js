@@ -581,6 +581,13 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             return await this.openManagerModalAction('navigationHistory', [this.historyModalId]);
         },
 
+        async openSearchModal() {
+            return await this.openManagerModalAction('searchQuran', [
+                this.searchModalId,
+                this.searchModalDomId,
+            ]);
+        },
+
         async openJumpPageModal() {
             return await this.openManagerModalAction('jumpToPage', [this.jumpPageModalId]);
         },

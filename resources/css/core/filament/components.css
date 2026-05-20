@@ -80,6 +80,21 @@
         opacity: 0.9;
     }
 
+    #quran-reader-search-modal .fi-fo-field-wrp {
+        width: min(88vw, 42rem);
+        max-width: 100%;
+        margin-inline: auto;
+    }
+
+    #quran-reader-search-modal .fi-fo-field-wrp .fi-input-wrp,
+    #quran-reader-search-modal .fi-fo-field-wrp .fi-select-input {
+        border-radius: 1rem;
+    }
+
+    #quran-reader-search-modal .fi-modal-footer {
+        justify-content: center;
+    }
+
     #quran-reader-search-modal .fi-modal-close-btn {
         color: color-mix(in srgb, var(--quran-subtle) 88%, transparent);
     }

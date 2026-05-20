@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Livewire\QuranApp;
 
+use App\Livewire\QuranApp\Concerns\InteractsWithQuranSearchAction;
 use App\Models\Setting;
 use App\Services\Native\NativeQuranPreparationService;
 use App\Services\Quran\QuranReaderDataService;
@@ -26,6 +27,7 @@ use Livewire\Component;
 class Reader extends Component implements HasActions, HasSchemas
 {
     use InteractsWithActions;
+    use InteractsWithQuranSearchAction;
     use InteractsWithSchemas;
 
     private const SEARCH_STREAM_TARGET = 'quran-search-results-stream';
@@ -516,43 +518,6 @@ class Reader extends Component implements HasActions, HasSchemas
             $pageNumber,
             $matchRank,
         );
-    }
-
-    public function searchQuranAction(): Action
-    {
-        return Action::make('searchQuran')
-            ->modalHeading(arabic_text('البحث الشامل للقرآن الكريم'))
-            ->modalDescription(arabic_text('ابحث عن الآيات أو سورها بكفاءة لغويّة وانتقل إليها مباشرة بإذن الله...'))
-            ->modalAutofocus(false)
-            ->modalWidth(Width::FiveExtraLarge)
-            ->modalSubmitAction(false)
-            ->modalCancelAction(false)
-            ->extraModalWindowAttributes([
-                'id' => 'quran-reader-search-modal',
-            ])
-            ->schema([
-                TextInput::make('search')
-                    ->hiddenLabel()
-                    ->type('search')
-                    ->placeholder(arabic_text('اسم سورة أو جزء من آية...'))
-                    ->extraFieldWrapperAttributes([
-                        'class' => 'quran-search-field-wrapper',
-                    ])
-                    ->extraInputAttributes([
-                        'id' => 'quran-reader-search-input',
-                        'x-ref' => 'searchModalInput',
-                        'x-model.debounce.600ms' => 'search.query',
-                        'x-on:input' => 'if (String($event?.target?.value ?? \'\').trim() === \'\') { queueSearchResultsUpdate(0) }',
-                        'x-on:input.debounce.600ms' => 'queueSearchResultsUpdate()',
-                        'x-on:search' => 'search.query = String($event?.target?.value ?? \'\'); queueSearchResultsUpdate(0)',
-                        'x-on:keydown.enter.prevent' => 'confirmSearchSelection()',
-                        'autocomplete' => 'off',
-                        'class' => 'relative top-[0.25rem]',
-                    ], merge: true),
-            ])
-            ->modalContentFooter(
-                fn (): HtmlString => new HtmlString(Blade::render('<x-partials.quran-app.search-modal />')),
-            );
     }
 
     public function jumpToPageAction(): Action
