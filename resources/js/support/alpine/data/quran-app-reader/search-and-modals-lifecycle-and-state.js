@@ -128,6 +128,26 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
     } = deps;
 
     return {
+        traceSearchModalLifecycle(eventName, details = {}) {
+            if (typeof this.traceReaderReveal !== 'function') {
+                return;
+            }
+
+            const normalizedEventName = String(eventName ?? '').trim() || 'event';
+            const payload =
+                details && typeof details === 'object' && !Array.isArray(details) ? details : {};
+
+            this.traceReaderReveal(`search-modal:${normalizedEventName}`, {
+                searchModalOpen: Boolean(this.search?.modalOpen),
+                searchNavigationInFlight: Boolean(this._searchNavigationInFlight),
+                searchRequestInFlight: Boolean(this._searchRequestInFlight),
+                searchResultsCount: Array.isArray(this.search?.results)
+                    ? this.search.results.length
+                    : 0,
+                ...payload,
+            });
+        },
+
         syncSearchResultMetadata(results = []) {
             const activeResults = (Array.isArray(results) ? results : []).filter(
                 (result) => !this.searchResultIsLeaving(result),
@@ -529,28 +549,50 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                 return;
             }
 
-            this.trackModalLifecycle(kind, event);
-            const isSearchModalEvent = this.isSearchModalEvent(kind, event);
-            const isHistoryModalEvent = this.isHistoryModalEvent(kind, event);
-            const isBookmarksModalEvent = this.isBookmarksModalEvent(kind, event);
-            const isJumpPageModalEvent = this.isJumpPageModalEvent(kind, event);
+            const nativeLifecycleEventName = String(event?.type ?? '').trim();
+            const normalizedKind =
+                kind === 'opened' && nativeLifecycleEventName === 'open-modal' ? 'opening' : kind;
+
+            this.trackModalLifecycle(normalizedKind, event);
+            const isSearchModalEvent = this.isSearchModalEvent(normalizedKind, event);
+            const isHistoryModalEvent = this.isHistoryModalEvent(normalizedKind, event);
+            const isBookmarksModalEvent = this.isBookmarksModalEvent(normalizedKind, event);
+            const isJumpPageModalEvent = this.isJumpPageModalEvent(normalizedKind, event);
             let shouldSyncManagerModalsVisibility = false;
 
-            if (kind === 'opened' || kind === 'closing' || kind === 'closed') {
+            this.traceSearchModalLifecycle('lifecycle-event', {
+                kind: normalizedKind,
+                nativeLifecycleEventName,
+                modalId: String(event?.detail?.id ?? '').trim(),
+                isSearchModalEvent,
+                isHistoryModalEvent,
+                isBookmarksModalEvent,
+                isJumpPageModalEvent,
+            });
+
+            if (
+                normalizedKind === 'opening' ||
+                normalizedKind === 'opened' ||
+                normalizedKind === 'closing' ||
+                normalizedKind === 'closed'
+            ) {
                 this.$nextTick(() => {
                     this.syncSupportLockTargetsUi();
                 });
             }
 
-            if (kind === 'opened') {
+            if (normalizedKind === 'opened') {
                 this.$nextTick(() => {
                     this.queueJumpPageModalInputSync();
                 });
             }
 
-            if (kind === 'closing' || kind === 'closed') {
+            if (
+                (normalizedKind === 'closing' || normalizedKind === 'closed') &&
+                !isSearchModalEvent
+            ) {
                 this.queueSearchModalCloseSync({
-                    delayMs: kind === 'closed' ? 0 : 96,
+                    delayMs: normalizedKind === 'closed' ? 0 : 96,
                 });
 
                 window.setTimeout(
@@ -566,17 +608,17 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                         this.refreshMobileEdgeCaptions(false);
                         this.syncReaderChromeDocumentClass();
                     },
-                    kind === 'closed' ? 0 : 120,
+                    normalizedKind === 'closed' ? 0 : 120,
                 );
             }
 
             if (isJumpPageModalEvent) {
-                if (kind === 'opened') {
+                if (normalizedKind === 'opened') {
                     this.jumpPageModalOpen = true;
                     shouldSyncManagerModalsVisibility = true;
                 }
 
-                if (kind === 'closing' || kind === 'closed') {
+                if (normalizedKind === 'closing' || normalizedKind === 'closed') {
                     window.setTimeout(
                         () => {
                             const isStillVisible = this.isJumpPageInputVisible();
@@ -590,14 +632,14 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                             this.jumpPageModalOpen = false;
                             this.dispatchManagerModalsVisibilityState();
                         },
-                        kind === 'closed' ? 0 : 48,
+                        normalizedKind === 'closed' ? 0 : 48,
                     );
                     shouldSyncManagerModalsVisibility = true;
                 }
             }
 
             if (isHistoryModalEvent) {
-                if (kind === 'opened') {
+                if (normalizedKind === 'opened') {
                     this.historyModalOpen = true;
                     this.$nextTick(() => {
                         this.ensureHistoryRowsAnimations();
@@ -605,11 +647,11 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                     });
                 }
 
-                if (kind === 'closing' || kind === 'closed') {
+                if (normalizedKind === 'closing' || normalizedKind === 'closed') {
                     this.clearHistoryManagerSyncQueue();
                 }
 
-                if (kind === 'closed') {
+                if (normalizedKind === 'closed') {
                     this.historyModalOpen = false;
                     this.teardownHistoryRowsAnimations();
                 }
@@ -618,7 +660,7 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
             }
 
             if (isBookmarksModalEvent) {
-                if (kind === 'opened') {
+                if (normalizedKind === 'opened') {
                     this.bookmarksModalOpen = true;
                     this.$nextTick(() => {
                         this.ensureBookmarksRowsAnimations();
@@ -626,11 +668,11 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                     });
                 }
 
-                if (kind === 'closing' || kind === 'closed') {
+                if (normalizedKind === 'closing' || normalizedKind === 'closed') {
                     this.clearBookmarksManagerSyncQueue();
                 }
 
-                if (kind === 'closed') {
+                if (normalizedKind === 'closed') {
                     this.bookmarksModalOpen = false;
                     this.teardownBookmarksRowsAnimations();
                 }
@@ -644,14 +686,14 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
 
             if (!isSearchModalEvent) {
                 if (
-                    (kind === 'closing' || kind === 'closed') &&
+                    (normalizedKind === 'closing' || normalizedKind === 'closed') &&
                     this.search.modalOpen &&
                     !this.isSearchModalWindowVisible()
                 ) {
                     this.handleSearchModalClosed();
                 }
 
-                if (kind === 'closed' && this.openModalCount() <= 0) {
+                if (normalizedKind === 'closed' && this.openModalCount() <= 0) {
                     this.recoverStaleModalLifecycleState();
                     this.pruneModalLifecycleSuppression();
                     this.refreshMobileEdgeCaptions(false);
@@ -670,8 +712,9 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                 return;
             }
 
-            if (kind === 'opened') {
+            if (normalizedKind === 'opened') {
                 this.clearPendingPostModalTargetFit();
+                this.traceSearchModalLifecycle('opened');
 
                 if (this._searchModalOpenInFlight) {
                     return;
@@ -692,11 +735,15 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                 return;
             }
 
-            if (kind === 'closing') {
+            if (normalizedKind === 'closing') {
+                this.cancelActiveSearchProcessing();
+                this.traceSearchModalLifecycle('closing');
+
                 return;
             }
 
-            if (kind === 'closed') {
+            if (normalizedKind === 'closed') {
+                this.traceSearchModalLifecycle('closed-before-cleanup');
                 this.handleSearchModalClosed();
 
                 if (this.openModalCount() <= 0) {
@@ -714,6 +761,8 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                         maxAttempts: 6,
                     });
                 }
+
+                this.traceSearchModalLifecycle('closed-after-cleanup');
             }
         },
     };

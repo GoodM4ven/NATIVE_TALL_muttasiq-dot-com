@@ -116,9 +116,7 @@ return [
         'ADMIN_*',
         'ANDROID_KEYSTORE_PASSWORD',
         'ANDROID_KEY_PASSWORD',
-        'NATIVEPHP_DEVELOPMENT_TEAM',
         'IOS_DISTRIBUTION_CERTIFICATE_PASSWORD',
-        'NATIVEPHP_DEVELOPMENT_TEAM',
     ],
 
     /*
@@ -134,16 +132,18 @@ return [
 
     'cleanup_exclude_files' => [
         '.agents',
+        '.ai',
         '.assets',
         '.claude',
         '.codex',
+        '.credentials',
         '.git',
         '.github',
+        '.playwright-mcp',
         '.scripts',
         '.vscode',
         'build/phpstan',
         'tests',
-        '.credentials',
         'storage/framework/sessions',
         'storage/framework/cache',
         'storage/framework/testing',
@@ -161,6 +161,7 @@ return [
         'laravel-boost-mcp.sh',
         'phpstan-baseline.neon',
         'phpstan.neon.dist',
+        'phpunit.xml',
     ],
 
     /*

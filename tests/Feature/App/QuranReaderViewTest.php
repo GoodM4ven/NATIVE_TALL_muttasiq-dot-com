@@ -789,6 +789,47 @@ it('exposes local quran search index payload for client-side instant preview', f
         ->and((string) ($items[0]['text_searchable_typed'] ?? ''))->not->toBe('');
 });
 
+it('resolves a canonical navigation target for local quran search preview rows', function () {
+    /** @var QuranReaderDataService $service */
+    $service = app(QuranReaderDataService::class);
+
+    if (! $service->isReady()) {
+        $this->markTestSkipped('Quran reader search dependencies are unavailable.');
+    }
+
+    $candidate = null;
+
+    foreach (array_slice($service->searchIndex(), 0, 900) as $row) {
+        $resolvedTarget = $service->resolveSearchNavigationTarget(
+            (int) ($row['id'] ?? 0),
+            (int) ($row['page_number'] ?? 1),
+            (int) ($row['ayah_index'] ?? 0),
+            (int) ($row['surah_number'] ?? 1),
+            (int) ($row['ayah_number'] ?? 0),
+        );
+
+        if ((int) ($resolvedTarget['page_number'] ?? 0) !== (int) ($row['page_number'] ?? 0)) {
+            $candidate = [
+                'row' => $row,
+                'resolved' => $resolvedTarget,
+            ];
+
+            break;
+        }
+    }
+
+    if ($candidate === null) {
+        $this->markTestSkipped('No differing canonical-page candidate found in local search index.');
+    }
+
+    expect((int) ($candidate['row']['id'] ?? 0))->toBeGreaterThan(0)
+        ->and((int) ($candidate['resolved']['page_number'] ?? 0))->toBeGreaterThan(0)
+        ->and((int) ($candidate['resolved']['ayah_index'] ?? 0))->toBeGreaterThan(0)
+        ->and((int) ($candidate['resolved']['page_number'] ?? 0))
+        ->not
+        ->toBe((int) ($candidate['row']['page_number'] ?? 0));
+});
+
 it('normalizes invisible directional chars in quran search queries while preserving exact phrase ranking', function () {
     if (! Schema::hasTable('quran_verses')) {
         $this->markTestSkipped('Quran verses table is unavailable.');

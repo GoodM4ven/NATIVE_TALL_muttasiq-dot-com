@@ -494,7 +494,10 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
             }
 
             this._searchNavigationInFlight = true;
-            const targetPage = clampPage(Number(result?.page_number ?? 1), this.maxPage);
+            const targetPage = clampPage(
+                Number(result?.page_number ?? result?.canonical_page_number ?? 1),
+                this.maxPage,
+            );
             const ayahIndex = Math.max(0, Math.trunc(Number(result?.ayah_index ?? 0)));
             const activeQuery = this.search.query;
             const surahNumber = Math.max(1, Math.trunc(Number(result?.surah_number ?? 1)));
@@ -513,11 +516,18 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
             ]
                 .map((value) => String(value ?? '').trim())
                 .filter((value) => value !== '');
+            this.traceSearchModalLifecycle('result-select-start', {
+                targetPage,
+                surahNumber,
+                ayahNumber,
+                highlightAyahIndex,
+            });
 
             try {
                 this.resetNavigationQueueForPriorityJump();
                 this.clearPendingPostModalTargetFit();
                 this.cancelActiveSearchProcessing();
+                this.setSearchResults([], { immediate: true });
                 this.suppressModalLifecycleEffects(searchModalLifecycleIds);
                 await this.requestSearchModalClose();
                 await this.waitForModalLifecycleToSettle();
@@ -542,6 +552,42 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                     revealDelayMs: 220,
                     maxAttempts: 5,
                 });
+                await this.fitSpecificPageAfterModalClose(targetPage, {
+                    revealDelayMs: 220,
+                    maxAttempts: 6,
+                });
+                if (!this.isCurrentPageVisiblyReady()) {
+                    await this.waitForNavigationRevealUnlock(targetPage, {
+                        maxAttempts: 32,
+                        delayMs: 22,
+                    });
+                    await this.fitSpecificPageAfterModalClose(targetPage, {
+                        revealDelayMs: 190,
+                        maxAttempts: 4,
+                    });
+                }
+
+                const revealCycleReady = await this.waitForPageRevealCycle(targetPage, {
+                    maxAttempts: 32,
+                    delayMs: 24,
+                });
+
+                if (!revealCycleReady && !this.isCurrentPageContentVisible(0.12)) {
+                    this.recoverStaleModalLifecycleState();
+                    this.scheduleLayoutAfterModalLifecycle(110);
+                    await this.waitForNavigationRevealUnlock(targetPage, {
+                        maxAttempts: 26,
+                        delayMs: 22,
+                    });
+                    await this.waitForPageRevealCycle(targetPage, {
+                        maxAttempts: 30,
+                        delayMs: 24,
+                    });
+                }
+
+                if (!this.isCurrentPageContentVisible(0.12)) {
+                    this.forceRevealCurrentPage('search-result-post-fit-fail-open');
+                }
 
                 if (highlightAyahIndex > 0) {
                     this.activeAyahIndex = highlightAyahIndex;
@@ -558,6 +604,13 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                     ayahNumber,
                     ayahIndex: highlightAyahIndex,
                     query: activeQuery,
+                });
+                this.traceSearchModalLifecycle('result-select-complete', {
+                    targetPage,
+                    surahNumber,
+                    ayahNumber,
+                    highlightAyahIndex,
+                    isCurrentPageVisiblyReady: this.isCurrentPageVisiblyReady(),
                 });
             } finally {
                 this._searchNavigationInFlight = false;

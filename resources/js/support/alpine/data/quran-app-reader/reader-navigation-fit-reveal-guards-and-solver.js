@@ -174,10 +174,9 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                     }
 
                     this._modalPreOpenPending = false;
-                    this.scheduleLayoutAfterModalLifecycle(120);
                     this.syncReaderChromeDocumentClass();
                 },
-                Math.max(400, Math.trunc(Number(timeoutMs) || 1400)),
+                Math.max(680, Math.trunc(Number(timeoutMs) || 1400)),
             );
         },
 
@@ -291,6 +290,8 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 pageNumber: this.pageNumber,
                 isFittingPage: this.isFittingPage,
                 isLoadingPage: this.isLoadingPage,
+                isTransitioningOutPage: this.isTransitioningOutPage,
+                modalPreOpenPending: this._modalPreOpenPending,
                 pendingTargetPage: clampPage(
                     Number(this._pendingNavigationRequest?.targetPage ?? 0),
                     this.maxPage,
@@ -444,6 +445,15 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 return false;
             }
 
+            if (this._navigationRevealLocked || this._pendingNavigationRequest !== null) {
+                this.traceReaderReveal('force-reveal-skipped', {
+                    reason,
+                    blockedByNavigation: true,
+                });
+
+                return false;
+            }
+
             if (this.hasBlockingModalLifecycleState()) {
                 this.traceReaderReveal('force-reveal-skipped', {
                     reason,
@@ -455,6 +465,11 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
 
             this.clearSwipeRevealWatchdog();
             this.syncPageInputToCurrentPage();
+            this.clearModalPreOpenPending();
+            this._isModalLifecycleSettling = false;
+            this._activeModalIds.clear();
+            this._modalLifecycleFadeOutPending = false;
+            this.isTransitioningOutPage = false;
             this.isFittingPage = false;
             this._lastPageRevealAt = Date.now();
             this._revealBlockedSinceAt = 0;
@@ -462,6 +477,100 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             this.traceReaderReveal('force-reveal-current-page', { reason });
 
             return true;
+        },
+
+        async waitForNavigationRevealUnlock(
+            pageNumber = this.pageNumber,
+            { maxAttempts = 32, delayMs = 28 } = {},
+        ) {
+            const normalizedPageNumber = clampPage(Number(pageNumber ?? 0), this.maxPage);
+            const attempts = Math.max(1, Math.trunc(Number(maxAttempts) || 32));
+            const waitDelayMs = Math.max(12, Math.trunc(Number(delayMs) || 28));
+
+            for (let attempt = 0; attempt < attempts; attempt += 1) {
+                if (
+                    this._pendingNavigationRequest !== null &&
+                    !this._navigationRevealLocked &&
+                    !this.isLoadingPage
+                ) {
+                    void this.commitPendingNavigation();
+                }
+
+                const hasOpenModal = this.openModalCount() > 0;
+                const isReadyForPostModalFit =
+                    this.pageNumber === normalizedPageNumber &&
+                    !this._navigationRevealLocked &&
+                    this._pendingNavigationRequest === null &&
+                    !this.isLoadingPage &&
+                    !this._isModalLifecycleSettling &&
+                    this._activeModalIds.size === 0 &&
+                    !hasOpenModal;
+
+                if (isReadyForPostModalFit) {
+                    this.traceReaderReveal('navigation-reveal-unlocked', {
+                        targetPage: normalizedPageNumber,
+                        attempt,
+                    });
+
+                    return true;
+                }
+
+                await wait(waitDelayMs);
+            }
+
+            this.traceReaderReveal('navigation-reveal-unlock-timeout', {
+                targetPage: normalizedPageNumber,
+            });
+
+            return (
+                this.pageNumber === normalizedPageNumber &&
+                !this._navigationRevealLocked &&
+                this._pendingNavigationRequest === null &&
+                !this.isLoadingPage
+            );
+        },
+
+        async waitForPageRevealCycle(
+            pageNumber = this.pageNumber,
+            { maxAttempts = 28, delayMs = 24 } = {},
+        ) {
+            const normalizedPageNumber = clampPage(Number(pageNumber ?? 0), this.maxPage);
+            const attempts = Math.max(1, Math.trunc(Number(maxAttempts) || 28));
+            const waitDelayMs = Math.max(12, Math.trunc(Number(delayMs) || 24));
+
+            for (let attempt = 0; attempt < attempts; attempt += 1) {
+                if (this.pageNumber !== normalizedPageNumber) {
+                    return false;
+                }
+
+                const revealReady =
+                    this._revealTimer === null &&
+                    !this.isFittingPage &&
+                    this.pageFitState() === 'ready' &&
+                    (this.isCurrentPageVisiblyReady() || this.isCurrentPageContentVisible(0.12));
+
+                if (revealReady) {
+                    this.traceReaderReveal('page-reveal-cycle-ready', {
+                        targetPage: normalizedPageNumber,
+                        attempt,
+                    });
+
+                    return true;
+                }
+
+                await wait(waitDelayMs);
+            }
+
+            this.traceReaderReveal('page-reveal-cycle-timeout', {
+                targetPage: normalizedPageNumber,
+            });
+
+            return (
+                this.pageNumber === normalizedPageNumber &&
+                this._revealTimer === null &&
+                !this.isFittingPage &&
+                (this.isCurrentPageVisiblyReady() || this.isCurrentPageContentVisible(0.12))
+            );
         },
 
         scheduleSwipeRevealWatchdog(
@@ -606,19 +715,31 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             const styles = window.getComputedStyle(contentElement);
             const opacity = Number.parseFloat(styles.opacity || '0');
             const visibleLineCount = Array.from(
-                contentElement.querySelectorAll('[data-quran-line-text]'),
+                contentElement.querySelectorAll('[data-quran-line-text], [data-quran-word-button]'),
             ).filter(
                 (lineElement) =>
                     String(lineElement.textContent ?? '')
                         .replace(/\s+/g, '')
                         .trim().length > 0,
             ).length;
+            const fallbackRenderableText =
+                String(contentElement.textContent ?? '')
+                    .replace(/\s+/g, '')
+                    .trim().length > 0;
+            const hasRenderableText = visibleLineCount > 0 || fallbackRenderableText;
+            const hasLayoutReadyState = this.pageFitState() === 'ready';
+            const hasVisualReadyState =
+                !this.isLoadingPage &&
+                !this.isFittingPage &&
+                !this.isTransitioningOutPage &&
+                this._pendingNavigationRequest === null &&
+                this.openModalCount() <= 0;
 
             return (
-                this.pageFitState() === 'ready' &&
+                (hasLayoutReadyState || hasVisualReadyState) &&
                 styles.visibility !== 'hidden' &&
-                opacity > 0.35 &&
-                visibleLineCount > 0
+                opacity > 0.08 &&
+                hasRenderableText
             );
         },
 
@@ -897,6 +1018,15 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
         },
 
         cancelActiveSearchProcessing() {
+            const activeRequestSerial = Math.max(
+                0,
+                Math.trunc(Number(this._searchRequestSerial ?? 0)),
+            );
+
+            if (activeRequestSerial > 0 && typeof this.$wire?.cancelSearch === 'function') {
+                void this.$wire.cancelSearch(activeRequestSerial);
+            }
+
             this.clearSearchResultsUpdateQueue();
             this._searchRequestSerial += 1;
             this._searchRequestInFlight = false;
@@ -936,6 +1066,11 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
         ) {
             const normalizedPageNumber = clampPage(Number(pageNumber ?? 0), this.maxPage);
 
+            await this.waitForNavigationRevealUnlock(normalizedPageNumber, {
+                maxAttempts: 36,
+                delayMs: 24,
+            });
+
             if (
                 normalizedPageNumber <= 0 ||
                 this.pageNumber !== normalizedPageNumber ||
@@ -959,20 +1094,86 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             this.clearLayoutTimers();
 
             await this.nextTickAsync();
+            await this.waitForStablePageFrame({
+                maxFrames: 22,
+                requiredStableFrames: 3,
+                tolerancePx: 0.75,
+            });
+            this._bypassNextFitCache = true;
             await this.layoutPageGuaranteed({
                 revealDelayMs,
                 maxAttempts,
+                useIdleFit: false,
+            });
+            const initialRevealReady = await this.waitForPageRevealCycle(normalizedPageNumber, {
+                maxAttempts: 20,
+                delayMs: 24,
+            });
+            this.traceReaderReveal('post-modal-fit-pass', {
+                targetPage: normalizedPageNumber,
+                stage: 'initial',
+                fittedPage: this._lastFittedPageNumber,
+                isCurrentPageVisiblyReady: this.isCurrentPageVisiblyReady(),
+                initialRevealReady,
             });
 
-            if (this._lastFittedPageNumber !== normalizedPageNumber) {
+            const requiresRecoveryPass =
+                this._lastFittedPageNumber !== normalizedPageNumber || !initialRevealReady;
+
+            if (requiresRecoveryPass) {
                 this._bypassNextFitCache = true;
-                await this.layoutPageGuaranteed({
-                    revealDelayMs: 180,
+                await this.stabilizeModalDrivenLayout({
+                    revealDelayMs: Math.max(170, revealDelayMs - 30),
                     maxAttempts: Math.max(4, maxAttempts - 1),
+                    maxFrames: 20,
+                    requiredStableFrames: 3,
+                    tolerancePx: 0.7,
+                });
+                const recoveryRevealReady = await this.waitForPageRevealCycle(
+                    normalizedPageNumber,
+                    {
+                        maxAttempts: 20,
+                        delayMs: 24,
+                    },
+                );
+                this.traceReaderReveal('post-modal-fit-pass', {
+                    targetPage: normalizedPageNumber,
+                    stage: 'recovery',
+                    fittedPage: this._lastFittedPageNumber,
+                    isCurrentPageVisiblyReady: this.isCurrentPageVisiblyReady(),
+                    recoveryRevealReady,
                 });
             }
 
-            return this._lastFittedPageNumber === normalizedPageNumber;
+            if (
+                this.pageNumber === normalizedPageNumber &&
+                (!this.isCurrentPageVisiblyReady() ||
+                    this._lastFittedPageNumber !== normalizedPageNumber)
+            ) {
+                this._bypassNextFitCache = true;
+                await this.layoutPageGuaranteed({
+                    revealDelayMs: 150,
+                    maxAttempts: 3,
+                    useIdleFit: false,
+                });
+                const finalRevealReady = await this.waitForPageRevealCycle(normalizedPageNumber, {
+                    maxAttempts: 24,
+                    delayMs: 24,
+                });
+                this.traceReaderReveal('post-modal-fit-pass', {
+                    targetPage: normalizedPageNumber,
+                    stage: 'final',
+                    fittedPage: this._lastFittedPageNumber,
+                    isCurrentPageVisiblyReady: this.isCurrentPageVisiblyReady(),
+                    finalRevealReady,
+                });
+            }
+
+            return (
+                this.pageNumber === normalizedPageNumber &&
+                this._lastFittedPageNumber === normalizedPageNumber &&
+                (this.isCurrentPageVisiblyReady() || this.isCurrentPageContentVisible(0.12))
+            );
         },
 
         schedulePendingModalCloseFit(
@@ -1226,6 +1427,16 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
 
             this._lastModalLifecycleEventAt = now;
 
+            if (kind === 'opening') {
+                if (this.hasRenderablePage()) {
+                    this.setModalPreOpenPending();
+                    this.holdPageHiddenForModalLifecycle({ waitForModalLifecycle: false });
+                    this.syncReaderChromeDocumentClass();
+                }
+
+                return;
+            }
+
             if (kind === 'opened') {
                 this.clearModalPreOpenPending();
 
@@ -1426,6 +1637,10 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 }
 
                 this.isFittingPage = false;
+                this.clearModalPreOpenPending();
+                this._isModalLifecycleSettling = false;
+                this._modalLifecycleFadeOutPending = false;
+                this.isTransitioningOutPage = false;
                 this.traceReaderReveal('queue-page-reveal-ready');
             }, delayMs);
         },

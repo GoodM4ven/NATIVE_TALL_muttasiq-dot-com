@@ -3076,7 +3076,7 @@
         x-on:control-panel-updated.window="applyControlPanelSettings($event.detail?.controlPanel ?? {})"
         x-on:switch-view.window="$nextTick(() => syncNativeVolumeNavigation())"
         x-on:quran-bootstrap-request.window="prepareQuranFromMainMenu($event.detail ?? {})"
-        x-on:open-modal.window="handleModalLifecycleEvent('opened', $event)"
+        x-on:open-modal.window="handleModalLifecycleEvent('opening', $event)"
         x-on:x-modal-opened.window="handleModalLifecycleEvent('opened', $event)"
         x-on:close-modal.window="handleModalLifecycleEvent('closing', $event)"
         x-on:close-modal-quietly.window="handleModalLifecycleEvent('closing', $event)"

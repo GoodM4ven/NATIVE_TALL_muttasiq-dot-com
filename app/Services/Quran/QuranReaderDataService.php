@@ -21,7 +21,9 @@ class QuranReaderDataService
 
     private const SEARCH_RESULTS_CACHE_PREFIX = 'quran-reader-search-results-v6';
 
-    private const DISPLAYED_PAGE_CACHE_PREFIX = 'quran-reader-display-page-v1';
+    private const DISPLAYED_PAGE_CACHE_PREFIX = 'quran-reader-display-page-v2';
+
+    private const DISPLAYED_PAGE_LOOKUP_CACHE_KEY = 'quran-reader-qpc-displayed-page-lookup-v1';
 
     /**
      * @var array<int, string>
@@ -285,7 +287,7 @@ class QuranReaderDataService
          *     text_searchable: string
          * }> $index
          */
-        $index = Cache::remember('quran-reader-search-index-v2', now()->addDays(30), static function (): array {
+        $index = Cache::remember('quran-reader-search-index-v4', now()->addDays(30), function (): array {
             return DB::table('quran_verses')
                 ->select([
                     'id',
@@ -300,13 +302,22 @@ class QuranReaderDataService
                 ->whereNotNull('text_searchable_typed')
                 ->orderBy('ayah_index')
                 ->get()
-                ->map(static function (object $row): array {
+                ->map(function (object $row): array {
+                    $surahNumber = (int) ($row->surah_number ?? 0);
+                    $ayahNumber = max(1, (int) ($row->ayah_number ?? 1));
+                    $mushafPage = $row->mushaf_page !== null ? (int) $row->mushaf_page : 0;
+                    $displayPage = $this->resolveDisplayedMushafPage(
+                        $surahNumber,
+                        $ayahNumber,
+                        $mushafPage > 0 ? $mushafPage : null,
+                    );
+
                     return [
                         'id' => (int) $row->id,
                         'ayah_index' => (int) $row->ayah_index,
-                        'surah_number' => (int) $row->surah_number,
-                        'ayah_number' => (int) $row->ayah_number,
-                        'page_number' => (int) ($row->mushaf_page ?? 0),
+                        'surah_number' => $surahNumber,
+                        'ayah_number' => $ayahNumber,
+                        'page_number' => max(1, (int) ($displayPage ?? max(1, $mushafPage))),
                         'text_uthmani' => trim((string) $row->text_uthmani),
                         'text_searchable_typed' => trim((string) $row->text_searchable_typed),
                         'text_searchable' => trim((string) ($row->text_searchable ?? '')),
@@ -342,6 +353,60 @@ class QuranReaderDataService
     }
 
     /**
+     * @return array{
+     *     page_number: int,
+     *     surah_number: int,
+     *     ayah_number: int,
+     *     ayah_index: int,
+     *     highlight_ayah_index: int
+     * }
+     */
+    public function resolveSearchNavigationTarget(
+        ?int $verseId,
+        int $fallbackPageNumber = 1,
+        int $fallbackAyahIndex = 0,
+        int $fallbackSurahNumber = 1,
+        int $fallbackAyahNumber = 0,
+    ): array {
+        $resolvedPageNumber = max(1, $fallbackPageNumber);
+        $resolvedAyahIndex = max(0, $fallbackAyahIndex);
+        $resolvedSurahNumber = max(1, $fallbackSurahNumber);
+        $resolvedAyahNumber = max(0, $fallbackAyahNumber);
+
+        if ($verseId !== null && $verseId > 0) {
+            $row = DB::table('quran_verses')
+                ->select(['ayah_index', 'surah_number', 'ayah_number', 'mushaf_page'])
+                ->where('id', $verseId)
+                ->first();
+
+            if ($row !== null) {
+                $resolvedAyahIndex = max(0, (int) ($row->ayah_index ?? 0));
+                $resolvedSurahNumber = max(1, (int) ($row->surah_number ?? $resolvedSurahNumber));
+                $resolvedAyahNumber = max(0, (int) ($row->ayah_number ?? $resolvedAyahNumber));
+                $resolvedDisplayPage = $this->resolveDisplayedMushafPage(
+                    $resolvedSurahNumber,
+                    max(1, $resolvedAyahNumber),
+                    $row->mushaf_page !== null ? (int) $row->mushaf_page : $resolvedPageNumber,
+                );
+
+                if ($resolvedDisplayPage !== null && $resolvedDisplayPage > 0) {
+                    $resolvedPageNumber = $resolvedDisplayPage;
+                }
+            }
+        }
+
+        $highlightAyahIndex = $resolvedAyahIndex > 0 ? $resolvedAyahIndex : $resolvedAyahNumber;
+
+        return [
+            'page_number' => max(1, $resolvedPageNumber),
+            'surah_number' => max(1, $resolvedSurahNumber),
+            'ayah_number' => max(0, $resolvedAyahNumber),
+            'ayah_index' => max(0, $resolvedAyahIndex),
+            'highlight_ayah_index' => max(0, $highlightAyahIndex),
+        ];
+    }
+
+    /**
      * @return array<int, array{
      *     id: int,
      *     ayah_index: int,
@@ -358,8 +423,12 @@ class QuranReaderDataService
      *     match_rank: int
      * }>
      */
-    public function searchProgressively(string $query, int $limit = 24, ?callable $onProgress = null): array
-    {
+    public function searchProgressively(
+        string $query,
+        int $limit = 24,
+        ?callable $onProgress = null,
+        ?callable $shouldCancel = null,
+    ): array {
         if (! $this->isReady()) {
             return [];
         }
@@ -388,12 +457,21 @@ class QuranReaderDataService
             return $cachedMatches;
         }
 
+        if ($shouldCancel !== null && $shouldCancel() === true) {
+            return [];
+        }
+
         $resolvedMatches = $this->buildSearchMatches(
             $normalizedQuery,
             $resolvedLimit,
             $hasTypedWordColumn,
             $onProgress,
+            $shouldCancel,
         );
+
+        if ($shouldCancel !== null && $shouldCancel() === true) {
+            return [];
+        }
 
         Cache::memo()->put($cacheKey, $resolvedMatches, now()->addHours(12));
 
@@ -508,6 +586,7 @@ class QuranReaderDataService
         int $limit,
         bool $hasTypedWordColumn,
         ?callable $onProgress = null,
+        ?callable $shouldCancel = null,
     ): array {
         $tokens = $this->prepareSearchTokens(array_values(array_unique(array_filter(
             preg_split('/\s+/u', trim($searchQuery)) ?: [],
@@ -545,6 +624,10 @@ class QuranReaderDataService
             return $matches;
         }
 
+        if ($shouldCancel !== null && $shouldCancel() === true) {
+            return [];
+        }
+
         $surahStemMatches = $this->collectSurahMatchesByStemQuery($searchQuery, $tokens, $limit);
         $surahStemStageMatches = $this->appendSurahMatches(
             $matches,
@@ -568,12 +651,17 @@ class QuranReaderDataService
             return $matches;
         }
 
+        if ($shouldCancel !== null && $shouldCancel() === true) {
+            return [];
+        }
+
         $this->appendExactPhraseMatchesFromSearchIndex(
             $matches,
             $seenAyahIndexes,
             $limit,
             $searchQuery,
             $onProgress,
+            $shouldCancel,
         );
 
         if (count($matches) >= $limit) {
@@ -589,12 +677,17 @@ class QuranReaderDataService
             $limit,
             $searchQuery,
             $onProgress,
+            $shouldCancel,
         );
 
         if (count($matches) >= $limit) {
             $this->emitSearchProgress($onProgress, $matches, 'complete', true);
 
             return $matches;
+        }
+
+        if ($shouldCancel !== null && $shouldCancel() === true) {
+            return [];
         }
 
         if ($hasTypedWordColumn) {
@@ -637,6 +730,7 @@ class QuranReaderDataService
                 $limit,
                 $searchQuery,
                 $onProgress,
+                $shouldCancel,
             );
         }
 
@@ -654,6 +748,7 @@ class QuranReaderDataService
                 $limit,
                 $searchQuery,
                 $onProgress,
+                $shouldCancel,
             );
         }
 
@@ -1146,6 +1241,7 @@ class QuranReaderDataService
         int $limit,
         string $searchQuery,
         ?callable $onProgress,
+        ?callable $shouldCancel = null,
     ): array {
         $queryVariants = $this->exactPhraseQueryVariants($searchQuery);
 
@@ -1156,6 +1252,10 @@ class QuranReaderDataService
         $addedMatches = [];
 
         foreach ($this->searchIndex() as $row) {
+            if ($shouldCancel !== null && $shouldCancel() === true) {
+                return $addedMatches;
+            }
+
             if (count($matches) >= $limit) {
                 return $addedMatches;
             }
@@ -1389,6 +1489,7 @@ class QuranReaderDataService
         int $limit,
         string $searchQuery,
         ?callable $onProgress,
+        ?callable $shouldCancel = null,
     ): array {
         if ($tokens === [] || count($matches) >= $limit) {
             return [];
@@ -1406,6 +1507,10 @@ class QuranReaderDataService
         $addedMatches = [];
 
         foreach ($this->searchIndex() as $row) {
+            if ($shouldCancel !== null && $shouldCancel() === true) {
+                return $addedMatches;
+            }
+
             if (count($matches) >= $limit) {
                 return $addedMatches;
             }
@@ -1596,6 +1701,7 @@ class QuranReaderDataService
         int $limit,
         string $searchQuery,
         ?callable $onProgress,
+        ?callable $shouldCancel = null,
     ): array {
         return $this->appendSemanticTokenMatchesFromQuranWords(
             $matches,
@@ -1604,6 +1710,7 @@ class QuranReaderDataService
             $limit,
             $searchQuery,
             $onProgress,
+            $shouldCancel,
             'stem_tokens',
             'token_stem',
         );
@@ -1650,6 +1757,7 @@ class QuranReaderDataService
         int $limit,
         string $searchQuery,
         ?callable $onProgress,
+        ?callable $shouldCancel = null,
     ): array {
         return $this->appendSemanticTokenMatchesFromQuranWords(
             $matches,
@@ -1658,6 +1766,7 @@ class QuranReaderDataService
             $limit,
             $searchQuery,
             $onProgress,
+            $shouldCancel,
             'root_tokens',
             'token_root',
         );
@@ -1704,6 +1813,7 @@ class QuranReaderDataService
         int $limit,
         string $searchQuery,
         ?callable $onProgress,
+        ?callable $shouldCancel,
         string $matchStrategy,
         string $semanticColumn,
     ): array {
@@ -1814,6 +1924,10 @@ class QuranReaderDataService
             ->orderBy('word_position');
 
         foreach ($wordRowsQuery->lazy(512) as $wordRow) {
+            if ($shouldCancel !== null && $shouldCancel() === true) {
+                return $addedMatches;
+            }
+
             if (count($matches) >= $limit) {
                 return $addedMatches;
             }
@@ -2750,65 +2864,161 @@ class QuranReaderDataService
             $surahNumber,
             $ayahNumber,
         );
-        $cachedPage = (int) Cache::memo()->remember(
-            $cacheKey,
-            now()->addDays(30),
-            fn (): int => $this->resolveMushafPageFromQpcWordsUncached($surahNumber, $ayahNumber) ?? 0,
-        );
+        $cachedPage = (int) Cache::memo()->remember($cacheKey, now()->addDays(30), function () use (
+            $surahNumber,
+            $ayahNumber,
+        ): int {
+            $lookup = $this->displayedPageLookupBySurahAyah();
+            $key = $this->displayedPageLookupKey($surahNumber, $ayahNumber);
+
+            return (int) ($lookup[$key] ?? 0);
+        });
 
         return $cachedPage > 0 ? $cachedPage : null;
     }
 
-    private function resolveMushafPageFromQpcWordsUncached(int $surahNumber, int $ayahNumber): ?int
+    /**
+     * @return array<string, int>
+     */
+    private function displayedPageLookupBySurahAyah(): array
     {
-        $databasePath = $this->resolveQpcDisplayWordsDatabasePath();
+        /** @var array<string, int> $lookup */
+        $lookup = Cache::memo()->remember(
+            self::DISPLAYED_PAGE_LOOKUP_CACHE_KEY,
+            now()->addDays(30),
+            function (): array {
+                $databasePath = $this->resolveQpcDisplayWordsDatabasePath();
 
-        if ($databasePath === null) {
-            return null;
-        }
+                if ($databasePath === null) {
+                    return [];
+                }
 
-        $database = new \SQLite3($databasePath, SQLITE3_OPEN_READONLY);
-        $statement = $database->prepare(
-            'SELECT MIN(id) AS first_word_index FROM words WHERE surah = :surah AND ayah = :ayah',
+                $lineRanges = DB::table('quran_mushaf_lines')
+                    ->select(['page_number', 'first_word_index', 'last_word_index'])
+                    ->whereNotNull('first_word_index')
+                    ->whereNotNull('last_word_index')
+                    ->orderBy('first_word_index')
+                    ->get();
+
+                if ($lineRanges->isEmpty()) {
+                    return [];
+                }
+
+                $normalizedLineRanges = [];
+
+                foreach ($lineRanges as $lineRangeRow) {
+                    $firstWordIndex = (int) ($lineRangeRow->first_word_index ?? 0);
+                    $lastWordIndex = (int) ($lineRangeRow->last_word_index ?? 0);
+                    $pageNumber = (int) ($lineRangeRow->page_number ?? 0);
+
+                    if ($firstWordIndex < 1 || $lastWordIndex < $firstWordIndex || $pageNumber < 1) {
+                        continue;
+                    }
+
+                    $normalizedLineRanges[] = [
+                        'start' => $firstWordIndex,
+                        'end' => $lastWordIndex,
+                        'page' => $pageNumber,
+                    ];
+                }
+
+                if ($normalizedLineRanges === []) {
+                    return [];
+                }
+
+                $lookup = [];
+                $database = new \SQLite3($databasePath, SQLITE3_OPEN_READONLY);
+                $statement = $database->prepare(
+                    'SELECT surah AS surah_number, ayah AS ayah_number, MIN(id) AS first_word_index FROM words GROUP BY surah, ayah',
+                );
+
+                if (! $statement instanceof \SQLite3Stmt) {
+                    $database->close();
+
+                    return [];
+                }
+
+                $result = $statement->execute();
+
+                if (! $result instanceof \SQLite3Result) {
+                    $statement->close();
+                    $database->close();
+
+                    return [];
+                }
+
+                while (true) {
+                    $row = $result->fetchArray(SQLITE3_ASSOC);
+
+                    if (! is_array($row)) {
+                        break;
+                    }
+
+                    $surahNumber = (int) ($row['surah_number'] ?? 0);
+                    $ayahNumber = (int) ($row['ayah_number'] ?? 0);
+                    $firstWordIndex = (int) ($row['first_word_index'] ?? 0);
+
+                    if ($surahNumber < 1 || $ayahNumber < 1 || $firstWordIndex < 1) {
+                        continue;
+                    }
+
+                    $pageNumber = $this->resolveMushafPageFromWordIndex($firstWordIndex, $normalizedLineRanges);
+
+                    if ($pageNumber === null) {
+                        continue;
+                    }
+
+                    $lookup[$this->displayedPageLookupKey($surahNumber, $ayahNumber)] = $pageNumber;
+                }
+
+                $result->finalize();
+                $statement->close();
+                $database->close();
+
+                return $lookup;
+            },
         );
 
-        if (! $statement instanceof \SQLite3Stmt) {
-            $database->close();
+        return $lookup;
+    }
 
-            return null;
+    private function displayedPageLookupKey(int $surahNumber, int $ayahNumber): string
+    {
+        return $surahNumber.':'.$ayahNumber;
+    }
+
+    /**
+     * @param  array<int, array{start: int, end: int, page: int}>  $lineRanges
+     */
+    private function resolveMushafPageFromWordIndex(int $wordIndex, array $lineRanges): ?int
+    {
+        $low = 0;
+        $high = count($lineRanges) - 1;
+
+        while ($low <= $high) {
+            $middle = intdiv($low + $high, 2);
+            $range = $lineRanges[$middle] ?? null;
+
+            if (! is_array($range)) {
+                break;
+            }
+
+            if ($wordIndex < $range['start']) {
+                $high = $middle - 1;
+
+                continue;
+            }
+
+            if ($wordIndex > $range['end']) {
+                $low = $middle + 1;
+
+                continue;
+            }
+
+            return (int) $range['page'];
         }
 
-        $statement->bindValue(':surah', $surahNumber, SQLITE3_INTEGER);
-        $statement->bindValue(':ayah', $ayahNumber, SQLITE3_INTEGER);
-        $result = $statement->execute();
-
-        if (! $result instanceof \SQLite3Result) {
-            $statement->close();
-            $database->close();
-
-            return null;
-        }
-
-        $row = $result->fetchArray(SQLITE3_ASSOC);
-        $firstWordIndex = is_array($row) ? (int) ($row['first_word_index'] ?? 0) : 0;
-
-        $result->finalize();
-        $statement->close();
-        $database->close();
-
-        if ($firstWordIndex < 1) {
-            return null;
-        }
-
-        $pageNumber = DB::table('quran_mushaf_lines')
-            ->whereNotNull('first_word_index')
-            ->whereNotNull('last_word_index')
-            ->where('first_word_index', '<=', $firstWordIndex)
-            ->where('last_word_index', '>=', $firstWordIndex)
-            ->orderBy('page_number')
-            ->value('page_number');
-
-        return is_numeric($pageNumber) ? (int) $pageNumber : null;
+        return null;
     }
 
     private function hasQuranWordColumn(string $column): bool

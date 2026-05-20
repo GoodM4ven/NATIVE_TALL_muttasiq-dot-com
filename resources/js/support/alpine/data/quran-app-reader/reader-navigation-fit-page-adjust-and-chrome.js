@@ -299,7 +299,7 @@ export const createReaderNavigationFitPageAdjustAndChromeModule = (deps) => {
                 return false;
             }
 
-            return this.isCurrentPageVisiblyReady();
+            return this.isCurrentPageVisiblyReady() || this.isCurrentPageContentVisible(0.12);
         },
 
         syncReaderChromeDocumentClass({ forceInactive = false } = {}) {

@@ -18,6 +18,7 @@ use Filament\Support\Enums\Width;
 use GoodMaven\Arabicable\Enums\ArabicSpecialCharacters;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\HtmlString;
 use Livewire\Attributes\Renderless;
 use Livewire\Component;
@@ -32,6 +33,8 @@ class Reader extends Component implements HasActions, HasSchemas
     private const SEARCH_STREAM_PADDING_BYTES = 65536;
 
     private const SEARCH_STREAM_FRAME_DELIMITER = "\n<<<QURAN_SEARCH_STREAM_FRAME>>>\n";
+
+    private const SEARCH_CANCEL_CACHE_PREFIX = 'quran-reader-search-cancel-v1';
 
     private const HISTORY_MODAL_ID = 'quran-reader-history-modal';
 
@@ -323,6 +326,7 @@ class Reader extends Component implements HasActions, HasSchemas
         /** @var QuranReaderDataService $readerDataService */
         $readerDataService = app(QuranReaderDataService::class);
         $normalizedRequestSerial = max(0, $requestSerial);
+        $this->markSearchStreamStarted($normalizedRequestSerial);
 
         $this->streamSearchPayload(
             [],
@@ -334,70 +338,149 @@ class Reader extends Component implements HasActions, HasSchemas
 
         $didStreamChunks = false;
         $emittedMatchKeys = [];
-        $results = $readerDataService->searchProgressively(
-            $query,
-            24,
-            function (array $matches, string $stage, bool $isComplete) use (
-                $normalizedRequestSerial,
-                &$didStreamChunks,
-                &$emittedMatchKeys,
-            ): void {
-                $didStreamChunks = true;
+        $shouldCancel = fn (): bool => $this->shouldCancelSearchStream($normalizedRequestSerial);
 
-                $normalizedMatches = array_values($matches);
-
-                if (! $isComplete) {
-                    $newStageMatches = [];
-
-                    foreach ($normalizedMatches as $match) {
-                        $matchKey = $this->searchStreamMatchKey($match);
-
-                        if ($matchKey === null || isset($emittedMatchKeys[$matchKey])) {
-                            continue;
-                        }
-
-                        $emittedMatchKeys[$matchKey] = true;
-                        $newStageMatches[] = $match;
-                    }
-
-                    if ($newStageMatches === []) {
+        try {
+            $results = $readerDataService->searchProgressively(
+                $query,
+                24,
+                function (array $matches, string $stage, bool $isComplete) use (
+                    $normalizedRequestSerial,
+                    $shouldCancel,
+                    &$didStreamChunks,
+                    &$emittedMatchKeys,
+                ): void {
+                    if ($shouldCancel()) {
                         return;
                     }
 
-                    foreach ($newStageMatches as $stageMatch) {
-                        $this->streamSearchPayload(
-                            [],
-                            [$stageMatch],
-                            $normalizedRequestSerial,
-                            $stage,
-                            false,
-                        );
+                    $didStreamChunks = true;
+
+                    $normalizedMatches = array_values($matches);
+
+                    if (! $isComplete) {
+                        $newStageMatches = [];
+
+                        foreach ($normalizedMatches as $match) {
+                            $matchKey = $this->searchStreamMatchKey($match);
+
+                            if ($matchKey === null || isset($emittedMatchKeys[$matchKey])) {
+                                continue;
+                            }
+
+                            $emittedMatchKeys[$matchKey] = true;
+                            $newStageMatches[] = $match;
+                        }
+
+                        if ($newStageMatches === []) {
+                            return;
+                        }
+
+                        foreach ($newStageMatches as $stageMatch) {
+                            $this->streamSearchPayload(
+                                [],
+                                [$stageMatch],
+                                $normalizedRequestSerial,
+                                $stage,
+                                false,
+                            );
+                        }
+
+                        return;
                     }
 
-                    return;
-                }
+                    $this->streamSearchPayload(
+                        $normalizedMatches,
+                        [],
+                        $normalizedRequestSerial,
+                        $stage,
+                        true,
+                    );
+                },
+                $shouldCancel,
+            );
 
+            if (! $didStreamChunks && ! $shouldCancel()) {
                 $this->streamSearchPayload(
-                    $normalizedMatches,
+                    $results,
                     [],
                     $normalizedRequestSerial,
-                    $stage,
+                    'complete',
                     true,
                 );
-            },
-        );
+            }
 
-        if (! $didStreamChunks) {
-            $this->streamSearchPayload(
-                $results,
-                [],
-                $normalizedRequestSerial,
-                'complete',
-                true,
-            );
+            return $shouldCancel() ? [] : $results;
+        } finally {
+            $this->clearSearchStreamState($normalizedRequestSerial);
+        }
+    }
+
+    #[Renderless]
+    public function cancelSearch(int $requestSerial = 0): void
+    {
+        $this->markSearchStreamCancelled(max(0, $requestSerial));
+    }
+
+    /**
+     * @return array{cancelled_serial: int}
+     */
+    private function searchStreamState(): array
+    {
+        $state = Cache::get($this->searchStreamCacheKey());
+
+        if (! is_array($state)) {
+            return [
+                'cancelled_serial' => 0,
+            ];
         }
 
-        return $results;
+        return [
+            'cancelled_serial' => max(0, (int) ($state['cancelled_serial'] ?? 0)),
+        ];
+    }
+
+    private function markSearchStreamStarted(int $requestSerial): void
+    {
+        $this->persistSearchStreamState([
+            'cancelled_serial' => max(0, $requestSerial - 1),
+        ]);
+    }
+
+    private function markSearchStreamCancelled(int $requestSerial): void
+    {
+        $state = $this->searchStreamState();
+        $state['cancelled_serial'] = max($state['cancelled_serial'], $requestSerial);
+        $this->persistSearchStreamState($state);
+    }
+
+    private function shouldCancelSearchStream(int $requestSerial): bool
+    {
+        return $this->searchStreamState()['cancelled_serial'] >= $requestSerial;
+    }
+
+    private function clearSearchStreamState(int $requestSerial): void
+    {
+        $state = $this->searchStreamState();
+
+        if ($state['cancelled_serial'] <= $requestSerial) {
+            Cache::forget($this->searchStreamCacheKey());
+        }
+    }
+
+    /**
+     * @param  array{cancelled_serial: int}  $state
+     */
+    private function persistSearchStreamState(array $state): void
+    {
+        Cache::put($this->searchStreamCacheKey(), $state, now()->addMinutes(30));
+    }
+
+    private function searchStreamCacheKey(): string
+    {
+        $sessionId = (string) session()->getId();
+
+        return self::SEARCH_CANCEL_CACHE_PREFIX.':'.$sessionId.':'.static::class;
     }
 
     /**

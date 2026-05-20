@@ -139,6 +139,15 @@ export const createSearchAndModalsStreamAndResultsModule = (deps) => {
             const normalized = String(normalizedQuery ?? '').trim();
 
             if (this._searchRequestInFlight) {
+                const activeRequestSerial = Math.max(
+                    0,
+                    Math.trunc(Number(this._searchRequestSerial ?? 0)),
+                );
+
+                if (activeRequestSerial > 0 && typeof this.$wire?.cancelSearch === 'function') {
+                    void this.$wire.cancelSearch(activeRequestSerial);
+                }
+
                 this._searchRequestSerial += 1;
                 this._searchRequestInFlight = false;
                 this.clearSearchStreamTarget();
