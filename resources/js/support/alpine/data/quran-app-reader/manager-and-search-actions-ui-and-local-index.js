@@ -220,13 +220,32 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
         },
 
         async handleSearchModalOpened() {
-            await this.warmSearchIndex();
+            const lifecycleToken =
+                Math.max(0, Math.trunc(Number(this._searchModalLifecycleToken ?? 0))) + 1;
+            this._searchModalLifecycleToken = lifecycleToken;
             this.search.modalOpen = true;
             this._searchNavigationInFlight = false;
             this._lastKnownModalOpenState = true;
             this._skipNextSearchModalCloseLayout = false;
             this.refreshSurahTriggerCaption(false);
             this.dispatchManagerModalsVisibilityState();
+
+            await this.warmSearchIndex();
+
+            if (
+                this._searchModalLifecycleToken !== lifecycleToken ||
+                !this.search.modalOpen ||
+                !this.isSearchModalWindowVisible()
+            ) {
+                this.traceSearchModalLifecycle('opened-aborted', {
+                    reason: 'stale-open',
+                    lifecycleToken,
+                    activeLifecycleToken: this._searchModalLifecycleToken,
+                    modalOpen: this.search.modalOpen,
+                });
+
+                return;
+            }
 
             if (this.search.preserveActiveSurahOnNextOpen) {
                 this.search.preserveActiveSurahOnNextOpen = false;
@@ -242,6 +261,22 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             this.hoveredWordIndex = 0;
 
             await this.nextTickAsync();
+
+            if (
+                this._searchModalLifecycleToken !== lifecycleToken ||
+                !this.search.modalOpen ||
+                !this.isSearchModalWindowVisible()
+            ) {
+                this.traceSearchModalLifecycle('opened-aborted', {
+                    reason: 'stale-open-next-tick',
+                    lifecycleToken,
+                    activeLifecycleToken: this._searchModalLifecycleToken,
+                    modalOpen: this.search.modalOpen,
+                });
+
+                return;
+            }
+
             this.setupSearchStreamObserver();
             this.clearSearchStreamTarget();
             this.ensureSearchResultAnimations();
@@ -260,6 +295,8 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
         },
 
         handleSearchModalClosed() {
+            this._searchModalLifecycleToken =
+                Math.max(0, Math.trunc(Number(this._searchModalLifecycleToken ?? 0))) + 1;
             this.cancelSurahDirectoryAutoFocus();
             this.clearSearchResultsUpdateQueue();
             this.unbindSearchModalInputSyncListener();
@@ -546,6 +583,12 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                 return false;
             }
 
+            if (normalizedActionName === 'searchQuran') {
+                this._searchModalOpenRequestedAt = Date.now();
+            } else {
+                this._searchModalOpenRequestedAt = 0;
+            }
+
             this.resetSwipeState();
             this.clearWordPressState();
             this.prepareManagerModalOpenLifecycle(modalIds);
@@ -629,12 +672,14 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
         },
 
         async openSearchModal() {
+            this._searchModalOpenRequestedAt = Date.now();
             const didOpen = await this.openManagerModalAction('searchQuran', [
                 this.searchModalId,
                 this.searchModalDomId,
             ]);
 
             if (!didOpen) {
+                this._searchModalOpenRequestedAt = 0;
                 return false;
             }
 

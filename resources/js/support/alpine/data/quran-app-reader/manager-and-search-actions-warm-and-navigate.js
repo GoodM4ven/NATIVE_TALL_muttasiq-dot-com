@@ -540,21 +540,11 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                     this.handleSearchModalClosed();
                 }
 
-                this._bypassNextFitCache = true;
-                await this.goToPageFromChevron(targetPage, {
-                    activeAyahIndex: highlightAyahIndex,
-                    searchHighlightAyahIndex: highlightAyahIndex,
+                await this.navigateFromManagerModalRecord({
+                    targetPage,
+                    ayahIndex: highlightAyahIndex,
                     source: 'search-result',
-                    commitNow: true,
-                    settleDelayMs: 0,
-                });
-
-                await this.stabilizeModalDrivenLayout({
-                    revealDelayMs: 160,
-                    maxAttempts: 4,
-                    maxFrames: 18,
-                    requiredStableFrames: 3,
-                    tolerancePx: 0.8,
+                    modalId: this.resolveSearchModalCloseTargetId(),
                 });
 
                 if (highlightAyahIndex > 0) {

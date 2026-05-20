@@ -743,6 +743,10 @@ export const createInitialState = (config, deps) => {
 
         _skipNextSearchModalCloseLayout: false,
 
+        _searchModalOpenRequestedAt: 0,
+
+        _searchModalLifecycleToken: 0,
+
         _lastKnownModalOpenState: false,
 
         _lastPageInputCommitPage: 0,

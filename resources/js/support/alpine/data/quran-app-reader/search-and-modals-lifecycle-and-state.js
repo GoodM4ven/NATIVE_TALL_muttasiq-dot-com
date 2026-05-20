@@ -400,6 +400,26 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                 .map((value) => String(value ?? '').trim())
                 .filter((value) => value !== '');
             const matchedKnownId = modalId !== '' && knownIds.includes(modalId);
+            const searchOpenRequestAgeMs =
+                Date.now() - Number(this._searchModalOpenRequestedAt ?? 0);
+            const hasRecentSearchOpenRequest =
+                Number.isFinite(searchOpenRequestAgeMs) &&
+                searchOpenRequestAgeMs >= 0 &&
+                searchOpenRequestAgeMs <= 2600;
+            const resolveModalIdFromWindowElement = (modalWindowElement) => {
+                if (!(modalWindowElement instanceof Element)) {
+                    return '';
+                }
+
+                const modalElement = modalWindowElement.closest('.fi-modal');
+                const dataModalId = String(modalElement?.dataset?.fiModalId ?? '').trim();
+
+                if (dataModalId !== '') {
+                    return dataModalId;
+                }
+
+                return String(modalElement?.id ?? '').trim();
+            };
 
             const modalElementContainsSearchFields = () => {
                 if (modalId === '') {
@@ -417,6 +437,25 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                     modalWindowElement.querySelector('#quran-reader-surah-select'),
                 );
             };
+            const findAnySearchModalWindowElement = () => {
+                const openModalSearchInput = document.querySelector(
+                    '.fi-modal.fi-modal-open #quran-reader-search-select, .fi-modal.fi-modal-open #quran-reader-surah-select',
+                );
+
+                if (openModalSearchInput instanceof Element) {
+                    return openModalSearchInput.closest('.fi-modal-window');
+                }
+
+                const anyModalSearchInput = document.querySelector(
+                    '#quran-reader-search-select, #quran-reader-surah-select',
+                );
+
+                if (anyModalSearchInput instanceof Element) {
+                    return anyModalSearchInput.closest('.fi-modal-window');
+                }
+
+                return null;
+            };
 
             if (kind === 'opened') {
                 if (matchedKnownId) {
@@ -426,6 +465,21 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                 }
 
                 if (modalElementContainsSearchFields()) {
+                    this.searchActionModalId = modalId;
+
+                    return true;
+                }
+
+                const searchWindowElement = findAnySearchModalWindowElement();
+                const searchWindowModalId = resolveModalIdFromWindowElement(searchWindowElement);
+
+                if (searchWindowModalId !== '') {
+                    this.searchActionModalId = searchWindowModalId;
+
+                    return true;
+                }
+
+                if (hasRecentSearchOpenRequest && modalId !== '') {
                     this.searchActionModalId = modalId;
 
                     return true;
@@ -445,6 +499,25 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
             }
 
             if (modalElementContainsSearchFields()) {
+                this.searchActionModalId = modalId;
+
+                return true;
+            }
+
+            const searchWindowElement = findAnySearchModalWindowElement();
+            const searchWindowModalId = resolveModalIdFromWindowElement(searchWindowElement);
+
+            if (searchWindowModalId !== '') {
+                this.searchActionModalId = searchWindowModalId;
+
+                return true;
+            }
+
+            if (
+                hasRecentSearchOpenRequest &&
+                modalId !== '' &&
+                (kind === 'opening' || kind === 'opened')
+            ) {
                 this.searchActionModalId = modalId;
 
                 return true;
@@ -555,6 +628,9 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                 }
 
                 if (!this.isSearchModalWindowVisible()) {
+                    this.traceSearchModalLifecycle('closed-by-sync', {
+                        delayMs: normalizedDelayMs,
+                    });
                     this.handleSearchModalClosed();
                 }
             }, normalizedDelayMs);
@@ -739,6 +815,7 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
 
             if (isSearchModalEvent) {
                 if (normalizedKind === 'opened') {
+                    this._searchModalOpenRequestedAt = 0;
                     void this.handleSearchModalOpened();
                     this.traceSearchModalLifecycle('opened', {
                         handler: 'handleSearchModalOpened',
@@ -749,12 +826,14 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
 
                 if (normalizedKind === 'closing') {
                     this.cancelActiveSearchProcessing();
+                    this.queueSearchModalCloseSync({ delayMs: 96 });
                     this.traceSearchModalLifecycle('closing');
 
                     return;
                 }
 
                 if (normalizedKind === 'closed') {
+                    this._searchModalOpenRequestedAt = 0;
                     this.cancelActiveSearchProcessing();
                     this.handleSearchModalClosed();
                     this.traceSearchModalLifecycle('closed', {
