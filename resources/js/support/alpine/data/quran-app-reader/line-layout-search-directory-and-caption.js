@@ -210,6 +210,10 @@ export const createLineLayoutSearchDirectoryAndCaptionModule = (deps) => {
                 return 'مطابقة سورة قريبة';
             }
 
+            if (strategy === 'surah_sarf') {
+                return 'مطابقة سورة صرفية';
+            }
+
             if (strategy === 'ayah_close') {
                 return 'مطابقة آية قريبة';
             }
@@ -599,6 +603,15 @@ export const createLineLayoutSearchDirectoryAndCaptionModule = (deps) => {
 
                 const gridElement = this.resolveSurahDirectoryGridElement();
                 const activeTile = this.resolveActiveSurahDirectoryTile(gridElement);
+                const shouldResyncActiveSurahNumber =
+                    !(activeTile instanceof HTMLElement) &&
+                    normalizedAttempt < 4 &&
+                    typeof this.syncSearchActiveSurahNumber === 'function';
+
+                if (shouldResyncActiveSurahNumber) {
+                    this.syncSearchActiveSurahNumber();
+                }
+
                 const isGridReady =
                     gridElement instanceof HTMLElement &&
                     activeTile instanceof HTMLElement &&

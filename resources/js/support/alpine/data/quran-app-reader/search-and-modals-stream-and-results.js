@@ -673,13 +673,14 @@ export const createSearchAndModalsStreamAndResultsModule = (deps) => {
         },
 
         searchResultKey(result) {
+            const strategy = this.searchResultChunkKey(result);
             const id = Math.max(0, Math.trunc(Number(result?.id ?? 0)));
 
             if (id > 0) {
-                return `id:${id}`;
+                return `id:${strategy}:${id}`;
             }
 
-            return `fallback:${Math.max(0, Math.trunc(Number(result?.surah_number ?? 0)))}:${Math.max(0, Math.trunc(Number(result?.ayah_number ?? 0)))}:${Math.max(0, Math.trunc(Number(result?.page_number ?? 0)))}:${Math.max(0, Math.trunc(Number(result?.match_rank ?? 0)))}`;
+            return `fallback:${strategy}:${Math.max(0, Math.trunc(Number(result?.surah_number ?? 0)))}:${Math.max(0, Math.trunc(Number(result?.ayah_number ?? 0)))}:${Math.max(0, Math.trunc(Number(result?.ayah_index ?? 0)))}:${Math.max(0, Math.trunc(Number(result?.page_number ?? 0)))}:${Math.max(0, Math.trunc(Number(result?.match_rank ?? 0)))}`;
         },
 
         searchResultIsLeaving(result) {
@@ -701,7 +702,11 @@ export const createSearchAndModalsStreamAndResultsModule = (deps) => {
         isSurahNameSearchResult(result) {
             const strategy = this.searchResultStrategy(result);
 
-            return strategy === 'surah_exact' || strategy === 'surah_close';
+            return (
+                strategy === 'surah_exact' ||
+                strategy === 'surah_close' ||
+                strategy === 'surah_sarf'
+            );
         },
 
         searchResultSortWeight(result) {
@@ -715,23 +720,27 @@ export const createSearchAndModalsStreamAndResultsModule = (deps) => {
                 return 1;
             }
 
-            if (strategy === 'ayah_exact') {
+            if (strategy === 'surah_sarf') {
                 return 2;
             }
 
-            if (strategy === 'ayah_close') {
+            if (strategy === 'ayah_exact') {
                 return 3;
             }
 
-            if (strategy === 'ayah_sarf') {
+            if (strategy === 'ayah_close') {
                 return 4;
             }
 
-            if (strategy === 'ayah_jathr') {
+            if (strategy === 'ayah_sarf') {
                 return 5;
             }
 
-            return 6;
+            if (strategy === 'ayah_jathr') {
+                return 6;
+            }
+
+            return 7;
         },
 
         searchResultChunkKey(resultOrStrategy = '') {
@@ -748,6 +757,10 @@ export const createSearchAndModalsStreamAndResultsModule = (deps) => {
 
             if (strategy === 'surah_close') {
                 return 'surah_close';
+            }
+
+            if (strategy === 'surah_sarf') {
+                return 'surah_sarf';
             }
 
             if (strategy === 'ayah_exact') {
@@ -782,6 +795,10 @@ export const createSearchAndModalsStreamAndResultsModule = (deps) => {
                 return 'السور القريبة';
             }
 
+            if (normalizedChunkKey === 'surah_sarf') {
+                return 'السور الصرفية';
+            }
+
             if (normalizedChunkKey === 'ayah_exact') {
                 return 'الآيات المطابقة';
             }
@@ -805,6 +822,7 @@ export const createSearchAndModalsStreamAndResultsModule = (deps) => {
             const chunkOrder = [
                 'surah_exact',
                 'surah_close',
+                'surah_sarf',
                 'ayah_exact',
                 'ayah_close',
                 'ayah_sarf',
@@ -882,8 +900,7 @@ export const createSearchAndModalsStreamAndResultsModule = (deps) => {
                         Math.max(0, Math.trunc(Number(left?.ayah_number ?? 0))) -
                         Math.max(0, Math.trunc(Number(right?.ayah_number ?? 0)))
                     );
-                })
-                .slice(0, 24);
+                });
         },
 
         mergeSearchResults(existingResults, incomingResults) {
@@ -903,7 +920,7 @@ export const createSearchAndModalsStreamAndResultsModule = (deps) => {
                 });
             });
 
-            return Array.from(mergedByKey.values()).slice(0, 24);
+            return this.normalizeSearchResults(Array.from(mergedByKey.values()));
         },
 
         searchResultsSelectElement() {

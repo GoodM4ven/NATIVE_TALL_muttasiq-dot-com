@@ -69,9 +69,37 @@ test('quran search endpoint returns the rewritten ayah and surah stage names', f
         ->and(collect($strategies)->every(static fn (string $strategy): bool => in_array($strategy, [
             'surah_exact',
             'surah_close',
+            'surah_sarf',
             'ayah_exact',
             'ayah_close',
             'ayah_sarf',
             'ayah_jathr',
         ], true)))->toBeTrue();
+});
+
+test('quran search runs stage workers concurrently through json livewire endpoints', function () {
+    $readerSource = file_get_contents(app_path('Livewire/QuranApp/Reader.php'));
+    $searchWorkerScriptSource = file_get_contents(
+        resource_path('js/support/alpine/data/quran-app-reader/manager-and-search-actions-warm-and-navigate.js'),
+    );
+
+    expect($readerSource)->not->toBeFalse()
+        ->and($readerSource)->toContain('#[Json]')
+        ->and($readerSource)->toContain('public function searchSurahExact(')
+        ->and($readerSource)->toContain('public function searchSurahClose(')
+        ->and($readerSource)->toContain('public function searchSurahSarf(')
+        ->and($readerSource)->toContain('public function searchAyahExact(')
+        ->and($readerSource)->toContain('public function searchAyahClose(')
+        ->and($readerSource)->toContain('public function searchAyahSarf(')
+        ->and($readerSource)->toContain('public function searchAyahJathr(');
+
+    expect($searchWorkerScriptSource)->not->toBeFalse()
+        ->and($searchWorkerScriptSource)->toContain('Promise.resolve()')
+        ->and($searchWorkerScriptSource)->toContain('$wire.searchSurahExact(')
+        ->and($searchWorkerScriptSource)->toContain('$wire.searchSurahClose(')
+        ->and($searchWorkerScriptSource)->toContain('$wire.searchSurahSarf(')
+        ->and($searchWorkerScriptSource)->toContain('$wire.searchAyahExact(')
+        ->and($searchWorkerScriptSource)->toContain('$wire.searchAyahClose(')
+        ->and($searchWorkerScriptSource)->toContain('$wire.searchAyahSarf(')
+        ->and($searchWorkerScriptSource)->toContain('$wire.searchAyahJathr(');
 });

@@ -48,6 +48,7 @@ class QuranReaderDataService
     private const SEARCH_PROGRESS_STAGE_ORDER = [
         'surah_exact',
         'surah_close',
+        'surah_sarf',
         'ayah_exact',
         'ayah_close',
         'ayah_sarf',
@@ -349,6 +350,76 @@ class QuranReaderDataService
     public function search(string $query, int $limit = 24): array
     {
         return $this->searchProgressively($query, $limit);
+    }
+
+    /**
+     * @param  array<int, string>  $stages
+     * @return array<int, array{
+     *     id: int,
+     *     ayah_index: int,
+     *     surah_number: int,
+     *     ayah_number: int,
+     *     page_number: int,
+     *     text_uthmani: string,
+     *     text_searchable_typed: string,
+     *     search_snippet: string,
+     *     match_strategy: string,
+     *     match_tone: string,
+     *     match_shade: int,
+     *     match_label: string,
+     *     match_rank: int
+     * }>
+     */
+    public function searchByStages(string $query, array $stages, int $limit = 24): array
+    {
+        if (! $this->isReady()) {
+            return [];
+        }
+
+        $normalizedQuery = $this->sanitizeQuranSearchQuery($query);
+
+        if ($normalizedQuery === '' || mb_strlen($normalizedQuery) < 2) {
+            return [];
+        }
+
+        $resolvedStages = [];
+
+        foreach ($stages as $stage) {
+            $normalizedStage = trim((string) $stage);
+
+            if ($normalizedStage === '') {
+                continue;
+            }
+
+            if (! in_array($normalizedStage, self::SEARCH_PROGRESS_STAGE_ORDER, true)) {
+                continue;
+            }
+
+            $resolvedStages[$normalizedStage] = true;
+        }
+
+        if ($resolvedStages === []) {
+            return [];
+        }
+
+        $resolvedLimit = max(1, min(60, $limit));
+        $hasTypedWordColumn = $this->hasQuranWordColumn('token_searchable_typed');
+        $tokens = $this->prepareSearchTokens(array_values(array_unique(array_filter(
+            preg_split('/\s+/u', trim($normalizedQuery)) ?: [],
+            static fn (string $token): bool => $token !== '',
+        ))));
+
+        if ($tokens === []) {
+            return [];
+        }
+
+        return $this->buildSearchMatchesForStageSet(
+            $normalizedQuery,
+            $tokens,
+            $resolvedLimit,
+            $hasTypedWordColumn,
+            array_keys($resolvedStages),
+        );
     }
 
     /**
@@ -654,6 +725,33 @@ class QuranReaderDataService
             return [];
         }
 
+        $surahSarfMatches = $this->collectSurahMatchesBySarfQuery($searchQuery, $tokens, $limit);
+        $surahSarfStageMatches = $this->appendSurahMatches(
+            $matches,
+            $seenAyahIndexes,
+            $seenSurahNumbers,
+            $surahSarfMatches,
+            $limit,
+            $searchQuery,
+            'surah_sarf',
+        );
+        $this->emitIncrementalSearchProgress(
+            $onProgress,
+            $matches,
+            'surah_sarf',
+            $surahSarfStageMatches,
+        );
+
+        if (count($matches) >= $limit) {
+            $this->emitSearchProgress($onProgress, $matches, 'complete', true);
+
+            return $matches;
+        }
+
+        if ($shouldCancel !== null && $shouldCancel() === true) {
+            return [];
+        }
+
         $this->appendExactPhraseMatchesFromSearchIndex(
             $matches,
             $seenAyahIndexes,
@@ -764,6 +862,179 @@ class QuranReaderDataService
 
     /**
      * @param  array<int, string>  $tokens
+     * @param  array<int, string>  $stages
+     * @return array<int, array{
+     *     id: int,
+     *     ayah_index: int,
+     *     surah_number: int,
+     *     ayah_number: int,
+     *     page_number: int,
+     *     text_uthmani: string,
+     *     text_searchable_typed: string,
+     *     search_snippet: string,
+     *     match_strategy: string,
+     *     match_tone: string,
+     *     match_shade: int,
+     *     match_label: string,
+     *     match_rank: int
+     * }>
+     */
+    private function buildSearchMatchesForStageSet(
+        string $searchQuery,
+        array $tokens,
+        int $limit,
+        bool $hasTypedWordColumn,
+        array $stages,
+    ): array {
+        $stageSet = array_fill_keys($stages, true);
+        $matches = [];
+        $seenAyahIndexes = [];
+        $seenSurahNumbers = [];
+
+        if (isset($stageSet['surah_exact'])) {
+            $surahExactMatches = $this->collectSurahMatchesByExactQuery($searchQuery, $tokens, $limit);
+            $this->appendSurahMatches(
+                $matches,
+                $seenAyahIndexes,
+                $seenSurahNumbers,
+                $surahExactMatches,
+                $limit,
+                $searchQuery,
+                'surah_exact',
+            );
+        }
+
+        if (count($matches) >= $limit) {
+            return $matches;
+        }
+
+        if (isset($stageSet['surah_close'])) {
+            $surahCloseMatches = $this->collectSurahMatchesByCloseQuery($searchQuery, $tokens, $limit);
+            $this->appendSurahMatches(
+                $matches,
+                $seenAyahIndexes,
+                $seenSurahNumbers,
+                $surahCloseMatches,
+                $limit,
+                $searchQuery,
+                'surah_close',
+            );
+        }
+
+        if (count($matches) >= $limit) {
+            return $matches;
+        }
+
+        if (isset($stageSet['surah_sarf'])) {
+            $surahSarfMatches = $this->collectSurahMatchesBySarfQuery($searchQuery, $tokens, $limit);
+            $this->appendSurahMatches(
+                $matches,
+                $seenAyahIndexes,
+                $seenSurahNumbers,
+                $surahSarfMatches,
+                $limit,
+                $searchQuery,
+                'surah_sarf',
+            );
+        }
+
+        if (count($matches) >= $limit) {
+            return $matches;
+        }
+
+        if (isset($stageSet['ayah_exact'])) {
+            $this->appendExactPhraseMatchesFromSearchIndex(
+                $matches,
+                $seenAyahIndexes,
+                $limit,
+                $searchQuery,
+                null,
+                null,
+            );
+        }
+
+        if (count($matches) >= $limit) {
+            return $matches;
+        }
+
+        if (isset($stageSet['ayah_close'])) {
+            $this->appendExactTokenMatchesFromSearchIndex(
+                $matches,
+                $seenAyahIndexes,
+                $tokens,
+                $limit,
+                $searchQuery,
+                null,
+                null,
+            );
+
+            if (count($matches) < $limit && $hasTypedWordColumn) {
+                $wordLikeVerseIds = $this->collectVerseIdsByWordLikeFallback($searchQuery, $limit);
+                $this->appendVerseMatches(
+                    $matches,
+                    $seenAyahIndexes,
+                    $wordLikeVerseIds,
+                    $limit,
+                    $searchQuery,
+                    'ayah_close',
+                );
+            }
+        }
+
+        if (count($matches) >= $limit) {
+            return $matches;
+        }
+
+        $rootAndStemTokens = array_values(array_filter(
+            $tokens,
+            fn (string $token): bool => ! $this->isSacredNameToken($token),
+        ));
+        $hasRootAndStemTokens = $rootAndStemTokens !== [];
+        $shouldUseExpandedRoots = count($tokens) <= 6;
+        $shouldUseRootStage = count($tokens) <= 4;
+
+        if (
+            isset($stageSet['ayah_sarf']) &&
+            $shouldUseExpandedRoots &&
+            $hasRootAndStemTokens
+        ) {
+            $this->appendStemTokenMatchesFromQuranWords(
+                $matches,
+                $seenAyahIndexes,
+                $rootAndStemTokens,
+                $limit,
+                $searchQuery,
+                null,
+                null,
+            );
+        }
+
+        if (count($matches) >= $limit) {
+            return $matches;
+        }
+
+        if (
+            isset($stageSet['ayah_jathr']) &&
+            $shouldUseExpandedRoots &&
+            $shouldUseRootStage &&
+            $hasRootAndStemTokens
+        ) {
+            $this->appendRootTokenMatchesFromQuranWords(
+                $matches,
+                $seenAyahIndexes,
+                $rootAndStemTokens,
+                $limit,
+                $searchQuery,
+                null,
+                null,
+            );
+        }
+
+        return $matches;
+    }
+
+    /**
+     * @param  array<int, string>  $tokens
      * @return array<int, array{
      *     surah_number: int,
      *     ayah_index: int,
@@ -840,23 +1111,28 @@ class QuranReaderDataService
             return [];
         }
 
+        $normalizedQueryTokens = $this->surahNameStageTokens($tokens);
+        $rawQueryTokens = $this->surahNameStageTokens($this->rawSearchQueryTokens($searchQuery));
+
+        if (count($normalizedQueryTokens) !== 1 || count($rawQueryTokens) !== 1) {
+            return [];
+        }
+
         $queryStemCandidates = [];
-        $shouldUseStemFallback = count($tokens) === 1;
         $rawQueryStem = trim(ArabicFilter::forStem($searchQuery));
 
-        if ($shouldUseStemFallback && mb_strlen($rawQueryStem) >= 3) {
+        if (mb_strlen($rawQueryStem) >= 3) {
             $queryStemCandidates[$rawQueryStem] = true;
         }
 
-        if ($shouldUseStemFallback) {
-            $tokenStem = trim(ArabicFilter::forStem(implode(' ', $tokens)));
+        $tokenStem = trim(ArabicFilter::forStem(implode(' ', $normalizedQueryTokens)));
 
-            if (mb_strlen($tokenStem) >= 3) {
-                $queryStemCandidates[$tokenStem] = true;
-            }
+        if (mb_strlen($tokenStem) >= 3) {
+            $queryStemCandidates[$tokenStem] = true;
         }
 
         $queryStems = array_keys($queryStemCandidates);
+
         $matches = [];
 
         foreach ($entries as $entry) {
@@ -868,9 +1144,9 @@ class QuranReaderDataService
                     $nameSearchable,
                     $nameStem,
                     $searchQuery,
-                    $tokens,
+                    $normalizedQueryTokens,
                     $queryStems,
-                    $shouldUseStemFallback,
+                    true,
                 )
             ) {
                 continue;
@@ -891,6 +1167,119 @@ class QuranReaderDataService
         }
 
         return $matches;
+    }
+
+    /**
+     * @param  array<int, string>  $tokens
+     * @return array<int, array{
+     *     surah_number: int,
+     *     ayah_index: int,
+     *     ayah_number: int,
+     *     page_number: int,
+     *     verse_id: int,
+     *     surah_name: string
+     * }>
+     */
+    private function collectSurahMatchesBySarfQuery(string $searchQuery, array $tokens, int $limit): array
+    {
+        if ($limit < 1) {
+            return [];
+        }
+
+        $normalizedQueryTokens = $this->surahNameStageTokens($tokens);
+        $rawQueryTokens = $this->surahNameStageTokens($this->rawSearchQueryTokens($searchQuery));
+
+        if (count($normalizedQueryTokens) !== 1 || count($rawQueryTokens) !== 1) {
+            return [];
+        }
+
+        $entries = $this->surahSearchEntries();
+
+        if ($entries === []) {
+            return [];
+        }
+
+        $queryStemCandidates = [];
+        $rawQueryStem = trim(ArabicFilter::forStem($searchQuery));
+
+        if (mb_strlen($rawQueryStem) >= 2) {
+            $queryStemCandidates[$rawQueryStem] = true;
+        }
+
+        foreach ($normalizedQueryTokens as $token) {
+            $tokenStem = trim(ArabicFilter::forStem($token));
+
+            if (mb_strlen($tokenStem) < 2) {
+                continue;
+            }
+
+            $queryStemCandidates[$tokenStem] = true;
+        }
+
+        $queryStems = array_keys($queryStemCandidates);
+
+        if ($queryStems === []) {
+            return [];
+        }
+
+        $matches = [];
+
+        foreach ($entries as $entry) {
+            $nameStem = trim((string) $entry['name_stem']);
+
+            if (! $this->isSurahNameStemMatch($nameStem, $queryStems)) {
+                continue;
+            }
+
+            $matches[] = [
+                'surah_number' => (int) $entry['surah_number'],
+                'ayah_index' => max(0, (int) $entry['ayah_index']),
+                'ayah_number' => max(1, (int) $entry['ayah_number']),
+                'page_number' => max(1, (int) $entry['page_number']),
+                'verse_id' => max(0, (int) $entry['verse_id']),
+                'surah_name' => trim((string) $entry['surah_name']),
+            ];
+
+            if (count($matches) >= $limit) {
+                break;
+            }
+        }
+
+        return $matches;
+    }
+
+    /**
+     * @param  array<int, string>  $tokens
+     * @return array<int, string>
+     */
+    private function surahNameStageTokens(array $tokens): array
+    {
+        $normalizedTokens = array_values(array_filter(
+            array_map(static fn (string $token): string => trim($token), $tokens),
+            static fn (string $token): bool => $token !== '',
+        ));
+
+        if ($normalizedTokens === []) {
+            return [];
+        }
+
+        $minimumLength = count($normalizedTokens) <= 1 ? 3 : 4;
+
+        return array_values(array_filter(
+            $normalizedTokens,
+            static fn (string $token): bool => mb_strlen($token) >= $minimumLength,
+        ));
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function rawSearchQueryTokens(string $searchQuery): array
+    {
+        return array_values(array_filter(
+            preg_split('/\s+/u', trim($searchQuery)) ?: [],
+            static fn (string $token): bool => $token !== '',
+        ));
     }
 
     private function isSurahNameExactMatch(
@@ -2711,35 +3100,41 @@ class QuranReaderDataService
                 'label' => 'مطابقة سورة قريبة',
                 'rank' => 2,
             ],
+            'surah_sarf' => [
+                'tone' => 'info',
+                'shade' => 500,
+                'label' => 'مطابقة سورة صرفية',
+                'rank' => 3,
+            ],
             'ayah_exact' => [
                 'tone' => 'success',
                 'shade' => 500,
                 'label' => 'مطابقة آية تامة',
-                'rank' => 3,
+                'rank' => 4,
             ],
             'ayah_close' => [
                 'tone' => 'warning',
                 'shade' => 500,
                 'label' => 'مطابقة آية قريبة',
-                'rank' => 4,
+                'rank' => 5,
             ],
             'ayah_sarf' => [
                 'tone' => 'info',
                 'shade' => 500,
                 'label' => 'مطابقة صرفية',
-                'rank' => 5,
+                'rank' => 6,
             ],
             'ayah_jathr' => [
                 'tone' => 'danger',
                 'shade' => 500,
                 'label' => 'مطابقة جذرية',
-                'rank' => 6,
+                'rank' => 7,
             ],
             default => [
                 'tone' => 'warning',
                 'shade' => 500,
                 'label' => 'مطابقة',
-                'rank' => 7,
+                'rank' => 8,
             ],
         };
     }

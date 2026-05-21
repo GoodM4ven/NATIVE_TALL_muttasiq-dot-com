@@ -462,41 +462,57 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
             this.search.isLoading = true;
             this.search.streamHasUpdates = false;
             this.clearSearchStreamTarget();
-            await this.applyLocalSearchPreview(normalizedQuery, requestSerial);
-
-            try {
-                const livewireResults = await this.$wire.streamSearch(
-                    normalizedQuery,
-                    requestSerial,
-                );
-                const results = Array.isArray(livewireResults) ? livewireResults.slice(0, 24) : [];
-
+            const appendWorkerResults = (workerResults) => {
                 if (requestSerial !== this._searchRequestSerial) {
                     return;
                 }
 
-                this.setSearchResults(
-                    this.search.streamHasUpdates
-                        ? this.mergeSearchResults(this.activeSearchResults(), results)
-                        : results,
-                );
+                const results = Array.isArray(workerResults) ? workerResults : [];
+
+                if (results.length < 1) {
+                    return;
+                }
+
+                this.search.streamHasUpdates = true;
+                this.setSearchResults(this.mergeSearchResults(this.activeSearchResults(), results));
                 this.$nextTick(() => {
                     this.ensureSearchResultAnimations();
                 });
-            } catch (error) {
-                if (requestSerial !== this._searchRequestSerial) {
-                    return;
-                }
+            };
 
-                this.setSearchResults([], { immediate: true });
-            } finally {
-                if (requestSerial === this._searchRequestSerial) {
-                    this.search.isLoading = false;
-                    this.search.lastCompletedNormalizedQuery = normalizedQuery;
-                    this._searchRequestInFlight = false;
-                }
-                this._searchQueuedNormalizedQuery = null;
-            }
+            const workers = [
+                () => this.$wire.searchSurahExact(normalizedQuery, requestSerial, 24),
+                () => this.$wire.searchSurahClose(normalizedQuery, requestSerial, 24),
+                () => this.$wire.searchSurahSarf(normalizedQuery, requestSerial, 24),
+                () => this.$wire.searchAyahExact(normalizedQuery, requestSerial, 24),
+                () => this.$wire.searchAyahClose(normalizedQuery, requestSerial, 24),
+                () => this.$wire.searchAyahSarf(normalizedQuery, requestSerial, 24),
+                () => this.$wire.searchAyahJathr(normalizedQuery, requestSerial, 24),
+            ];
+            let pendingWorkers = workers.length;
+
+            workers.forEach((runWorker) => {
+                Promise.resolve()
+                    .then(() => runWorker())
+                    .then((results) => {
+                        appendWorkerResults(results);
+                    })
+                    .catch(() => {
+                        //
+                    })
+                    .finally(() => {
+                        pendingWorkers = Math.max(0, pendingWorkers - 1);
+
+                        if (pendingWorkers > 0 || requestSerial !== this._searchRequestSerial) {
+                            return;
+                        }
+
+                        this.search.isLoading = false;
+                        this.search.lastCompletedNormalizedQuery = normalizedQuery;
+                        this._searchRequestInFlight = false;
+                        this._searchQueuedNormalizedQuery = null;
+                    });
+            });
         },
 
         async goToSearchResult(result) {

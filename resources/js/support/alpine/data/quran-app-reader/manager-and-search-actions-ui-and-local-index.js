@@ -220,6 +220,32 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
         },
 
         async handleSearchModalOpened() {
+            const waitForSearchModalVisibility = async (
+                expectedLifecycleToken,
+                { maxAttempts = 18, delayMs = 24 } = {},
+            ) => {
+                const attempts = Math.max(1, Math.trunc(Number(maxAttempts) || 18));
+                const waitDelayMs = Math.max(12, Math.trunc(Number(delayMs) || 24));
+
+                for (let attempt = 0; attempt < attempts; attempt += 1) {
+                    if (this._searchModalLifecycleToken !== expectedLifecycleToken) {
+                        return false;
+                    }
+
+                    if (!this.search.modalOpen) {
+                        return false;
+                    }
+
+                    if (this.isSearchModalWindowVisible()) {
+                        return true;
+                    }
+
+                    await wait(waitDelayMs);
+                }
+
+                return this.isSearchModalWindowVisible();
+            };
+
             const lifecycleToken =
                 Math.max(0, Math.trunc(Number(this._searchModalLifecycleToken ?? 0))) + 1;
             this._searchModalLifecycleToken = lifecycleToken;
@@ -232,13 +258,20 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
 
             await this.warmSearchIndex();
 
-            if (
-                this._searchModalLifecycleToken !== lifecycleToken ||
-                !this.search.modalOpen ||
-                !this.isSearchModalWindowVisible()
-            ) {
+            if (this._searchModalLifecycleToken !== lifecycleToken || !this.search.modalOpen) {
                 this.traceSearchModalLifecycle('opened-aborted', {
                     reason: 'stale-open',
+                    lifecycleToken,
+                    activeLifecycleToken: this._searchModalLifecycleToken,
+                    modalOpen: this.search.modalOpen,
+                });
+
+                return;
+            }
+
+            if (!(await waitForSearchModalVisibility(lifecycleToken))) {
+                this.traceSearchModalLifecycle('opened-aborted', {
+                    reason: 'stale-open-not-visible',
                     lifecycleToken,
                     activeLifecycleToken: this._searchModalLifecycleToken,
                     modalOpen: this.search.modalOpen,
@@ -262,13 +295,20 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
 
             await this.nextTickAsync();
 
-            if (
-                this._searchModalLifecycleToken !== lifecycleToken ||
-                !this.search.modalOpen ||
-                !this.isSearchModalWindowVisible()
-            ) {
+            if (this._searchModalLifecycleToken !== lifecycleToken || !this.search.modalOpen) {
                 this.traceSearchModalLifecycle('opened-aborted', {
                     reason: 'stale-open-next-tick',
+                    lifecycleToken,
+                    activeLifecycleToken: this._searchModalLifecycleToken,
+                    modalOpen: this.search.modalOpen,
+                });
+
+                return;
+            }
+
+            if (!(await waitForSearchModalVisibility(lifecycleToken, { maxAttempts: 10 }))) {
+                this.traceSearchModalLifecycle('opened-aborted', {
+                    reason: 'stale-open-next-tick-not-visible',
                     lifecycleToken,
                     activeLifecycleToken: this._searchModalLifecycleToken,
                     modalOpen: this.search.modalOpen,
@@ -282,8 +322,9 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             this.ensureSearchResultAnimations();
             this.queueSearchModalInputSyncBinding();
             this.searchModalInputElement()?.focus?.();
+            this.scrollSurahDirectoryToActive({ behavior: 'auto' });
             this.queueSurahDirectoryAutoFocus();
-            this._surahDirectoryPostOpenTimers = [260, 560, 920].map((delayMs) =>
+            this._surahDirectoryPostOpenTimers = [0, 180, 360, 620, 920].map((delayMs) =>
                 window.setTimeout(() => {
                     if (!this.search.modalOpen) {
                         return;

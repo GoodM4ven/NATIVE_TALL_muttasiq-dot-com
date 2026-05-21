@@ -20,6 +20,8 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\HtmlString;
+use Livewire\Attributes\Async;
+use Livewire\Attributes\Json;
 use Livewire\Attributes\Renderless;
 use Livewire\Component;
 
@@ -417,6 +419,223 @@ class Reader extends Component implements HasActions, HasSchemas
         }
     }
 
+    /**
+     * @return array<int, array{
+     *     id: int,
+     *     ayah_index: int,
+     *     surah_number: int,
+     *     ayah_number: int,
+     *     page_number: int,
+     *     text_uthmani: string,
+     *     text_searchable_typed: string,
+     *     search_snippet: string,
+     *     match_strategy: string,
+     *     match_tone: string,
+     *     match_shade: int,
+     *     match_label: string,
+     *     match_rank: int
+     * }>
+     */
+    #[Json]
+    #[Async]
+    public function searchSurahExact(string $query, int $requestSerial = 0, int $limit = 24): array
+    {
+        /** @var QuranReaderDataService $readerDataService */
+        $readerDataService = app(QuranReaderDataService::class);
+
+        return $readerDataService->searchByStages(
+            $query,
+            ['surah_exact'],
+            max(1, min(24, $limit)),
+        );
+    }
+
+    /**
+     * @return array<int, array{
+     *     id: int,
+     *     ayah_index: int,
+     *     surah_number: int,
+     *     ayah_number: int,
+     *     page_number: int,
+     *     text_uthmani: string,
+     *     text_searchable_typed: string,
+     *     search_snippet: string,
+     *     match_strategy: string,
+     *     match_tone: string,
+     *     match_shade: int,
+     *     match_label: string,
+     *     match_rank: int
+     * }>
+     */
+    #[Json]
+    #[Async]
+    public function searchSurahClose(string $query, int $requestSerial = 0, int $limit = 24): array
+    {
+        /** @var QuranReaderDataService $readerDataService */
+        $readerDataService = app(QuranReaderDataService::class);
+
+        return $readerDataService->searchByStages(
+            $query,
+            ['surah_close'],
+            max(1, min(24, $limit)),
+        );
+    }
+
+    /**
+     * @return array<int, array{
+     *     id: int,
+     *     ayah_index: int,
+     *     surah_number: int,
+     *     ayah_number: int,
+     *     page_number: int,
+     *     text_uthmani: string,
+     *     text_searchable_typed: string,
+     *     search_snippet: string,
+     *     match_strategy: string,
+     *     match_tone: string,
+     *     match_shade: int,
+     *     match_label: string,
+     *     match_rank: int
+     * }>
+     */
+    #[Json]
+    #[Async]
+    public function searchAyahExact(string $query, int $requestSerial = 0, int $limit = 24): array
+    {
+        /** @var QuranReaderDataService $readerDataService */
+        $readerDataService = app(QuranReaderDataService::class);
+
+        return $readerDataService->searchByStages(
+            $query,
+            ['ayah_exact'],
+            max(1, min(24, $limit)),
+        );
+    }
+
+    /**
+     * @return array<int, array{
+     *     id: int,
+     *     ayah_index: int,
+     *     surah_number: int,
+     *     ayah_number: int,
+     *     page_number: int,
+     *     text_uthmani: string,
+     *     text_searchable_typed: string,
+     *     search_snippet: string,
+     *     match_strategy: string,
+     *     match_tone: string,
+     *     match_shade: int,
+     *     match_label: string,
+     *     match_rank: int
+     * }>
+     */
+    #[Json]
+    #[Async]
+    public function searchAyahClose(string $query, int $requestSerial = 0, int $limit = 24): array
+    {
+        /** @var QuranReaderDataService $readerDataService */
+        $readerDataService = app(QuranReaderDataService::class);
+
+        return $readerDataService->searchByStages(
+            $query,
+            ['ayah_close'],
+            max(1, min(24, $limit)),
+        );
+    }
+
+    /**
+     * @return array<int, array{
+     *     id: int,
+     *     ayah_index: int,
+     *     surah_number: int,
+     *     ayah_number: int,
+     *     page_number: int,
+     *     text_uthmani: string,
+     *     text_searchable_typed: string,
+     *     search_snippet: string,
+     *     match_strategy: string,
+     *     match_tone: string,
+     *     match_shade: int,
+     *     match_label: string,
+     *     match_rank: int
+     * }>
+     */
+    #[Json]
+    #[Async]
+    public function searchSurahSarf(string $query, int $requestSerial = 0, int $limit = 24): array
+    {
+        /** @var QuranReaderDataService $readerDataService */
+        $readerDataService = app(QuranReaderDataService::class);
+
+        return $readerDataService->searchByStages(
+            $query,
+            ['surah_sarf'],
+            max(1, min(24, $limit)),
+        );
+    }
+
+    /**
+     * @return array<int, array{
+     *     id: int,
+     *     ayah_index: int,
+     *     surah_number: int,
+     *     ayah_number: int,
+     *     page_number: int,
+     *     text_uthmani: string,
+     *     text_searchable_typed: string,
+     *     search_snippet: string,
+     *     match_strategy: string,
+     *     match_tone: string,
+     *     match_shade: int,
+     *     match_label: string,
+     *     match_rank: int
+     * }>
+     */
+    #[Json]
+    #[Async]
+    public function searchAyahSarf(string $query, int $requestSerial = 0, int $limit = 24): array
+    {
+        /** @var QuranReaderDataService $readerDataService */
+        $readerDataService = app(QuranReaderDataService::class);
+
+        return $readerDataService->searchByStages(
+            $query,
+            ['ayah_sarf'],
+            max(1, min(24, $limit)),
+        );
+    }
+
+    /**
+     * @return array<int, array{
+     *     id: int,
+     *     ayah_index: int,
+     *     surah_number: int,
+     *     ayah_number: int,
+     *     page_number: int,
+     *     text_uthmani: string,
+     *     text_searchable_typed: string,
+     *     search_snippet: string,
+     *     match_strategy: string,
+     *     match_tone: string,
+     *     match_shade: int,
+     *     match_label: string,
+     *     match_rank: int
+     * }>
+     */
+    #[Json]
+    #[Async]
+    public function searchAyahJathr(string $query, int $requestSerial = 0, int $limit = 24): array
+    {
+        /** @var QuranReaderDataService $readerDataService */
+        $readerDataService = app(QuranReaderDataService::class);
+
+        return $readerDataService->searchByStages(
+            $query,
+            ['ayah_jathr'],
+            max(1, min(24, $limit)),
+        );
+    }
+
     #[Renderless]
     public function cancelSearch(int $requestSerial = 0): void
     {
@@ -490,15 +709,17 @@ class Reader extends Component implements HasActions, HasSchemas
      *     surah_number?: int,
      *     ayah_number?: int,
      *     page_number?: int,
-     *     match_rank?: int
+     *     match_rank?: int,
+     *     match_strategy?: string
      * }  $match
      */
     private function searchStreamMatchKey(array $match): ?string
     {
         $id = max(0, (int) ($match['id'] ?? 0));
+        $matchStrategy = trim((string) ($match['match_strategy'] ?? ''));
 
         if ($id > 0) {
-            return 'id:'.$id;
+            return sprintf('id:%s:%d', $matchStrategy, $id);
         }
 
         $surahNumber = max(0, (int) ($match['surah_number'] ?? 0));
@@ -511,7 +732,8 @@ class Reader extends Component implements HasActions, HasSchemas
         }
 
         return sprintf(
-            'fallback:%d:%d:%d:%d',
+            'fallback:%s:%d:%d:%d:%d',
+            $matchStrategy,
             $surahNumber,
             $ayahNumber,
             $pageNumber,
@@ -524,7 +746,7 @@ class Reader extends Component implements HasActions, HasSchemas
         return Action::make('searchQuran')
             ->modalHeading(arabic_text('البحث الشامل في القرآن الكريم'))
             ->modalDescription(
-                arabic_text('تظهر النتائج على دفعات: سور مطابقة أو قريبة، ثم آيات مطابقة أو قريبة أو صرفية أو جذرية.'),
+                arabic_text('تظهر النتائج على دفعات: سور مطابقة أو قريبة أو صرفية، ثم آيات مطابقة أو قريبة أو صرفية أو جذرية.'),
             )
             ->modalAutofocus(false)
             ->modalWidth(Width::FiveExtraLarge)
