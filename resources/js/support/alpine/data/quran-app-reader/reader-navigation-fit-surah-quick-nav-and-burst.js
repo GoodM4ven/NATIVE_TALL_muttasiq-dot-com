@@ -214,8 +214,6 @@ export const createReaderNavigationFitSurahQuickNavAndBurstModule = (deps) => {
             this.closeSurahQuickNavigator({ resetSuppressClick: false });
             if (typeof this.openSearchModal === 'function') {
                 void this.openSearchModal();
-            } else {
-                void this.mountReaderAction('searchQuran');
             }
             this.clearSurahQuickNavigatorPressState();
         },

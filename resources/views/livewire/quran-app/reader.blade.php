@@ -3266,7 +3266,7 @@
                     </div>
                 </template>
                 <header
-                    class="quran-top-strip rounded-t-2xl sm:rounded-[1.75rem] gap-[0.4rem] px-[0.6rem] pb-2 pt-[0.45rem] sm:gap-[0.65rem] sm:px-4 sm:pb-2 sm:pt-[0.8rem]"
+                    class="quran-top-strip gap-[0.4rem] rounded-t-2xl px-[0.6rem] pb-2 pt-[0.45rem] sm:gap-[0.65rem] sm:rounded-[1.75rem] sm:px-4 sm:pb-2 sm:pt-[0.8rem]"
                     data-quran-reader-chrome
                     x-bind:class="{
                         'quran-top-strip--wird-active': wirdModeActive,
@@ -3302,7 +3302,6 @@
                             x-on:click="onSurahTriggerClick()"
                             x-bind:aria-label="@js(arabic_text('ابحث في ')) + currentSurahTitle()"
                         >
-                            {{-- legacy marker: $wire.mountAction('searchQuran'); --}}
                             <x-icon
                                 class="quran-soorah-trigger-icon 4xl:size-4 3xl:size-4 4xl:inset-s-[0.82rem] inset-s-[0.62rem] sm:inset-s-[0.68rem] md:inset-s-[0.72rem] lg:inset-s-[0.76rem] xl:inset-s-[0.8rem] 2xl:inset-s-[0.85rem] 3xl:inset-s-[0.8rem] size-[0.8rem] sm:size-[0.84rem] md:size-[1.12rem] lg:size-[0.92rem] xl:size-[0.8rem] 2xl:size-3.5"
                                 :name="'heroicon-o-magnifying-glass'"

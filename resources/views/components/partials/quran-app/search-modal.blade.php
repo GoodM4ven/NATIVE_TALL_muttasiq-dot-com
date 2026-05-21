@@ -2,10 +2,42 @@
     class="quran-search-shell"
     data-no-swipe
 >
-    <div
-        class="quran-search-results-shell mt-4"
-        x-cloak
-    >
+    <div class="quran-search-results-shell mt-2 sm:mt-3">
+        <label
+            class="quran-search-field-wrapper flex flex-col gap-2"
+            for="quran-reader-search-input"
+        >
+            <span class="sr-only">{{ arabic_text('ابحث في القرآن') }}</span>
+
+            <div class="quran-search-input-shell relative">
+                <input
+                    class="quran-search-input block w-full rounded-[1rem] border border-transparent bg-transparent px-4 py-[0.9rem] text-right text-[0.95rem] leading-7 text-[var(--quran-panel-text)] outline-none sm:px-5 sm:py-[1rem] sm:text-[1rem]"
+                    id="quran-reader-search-input"
+                    type="text"
+                    x-ref="searchModalInput"
+                    x-model="search.query"
+                    dir="rtl"
+                    inputmode="search"
+                    autocomplete="off"
+                    autocapitalize="off"
+                    spellcheck="false"
+                    placeholder="{{ arabic_text('اسم سورة أو جزء من آية...') }}"
+                    x-on:keydown.enter.prevent="void confirmSearchSelection()"
+                >
+
+                <button
+                    class="quran-search-clear-btn absolute inset-y-0 left-2 my-auto inline-flex h-9 w-9 items-center justify-center rounded-full text-[0.85rem] font-bold"
+                    type="button"
+                    aria-label="{{ arabic_text('مسح البحث') }}"
+                    x-cloak
+                    x-show="String(search.query ?? '').trim() !== ''"
+                    x-on:click="search.query = ''; queueSearchResultsUpdate(0); $nextTick(() => searchModalInputElement()?.focus?.())"
+                >
+                    {{ arabic_text('مسح') }}
+                </button>
+            </div>
+        </label>
+
         <div
             class="sr-only hidden"
             data-quran-search-stream-target
@@ -13,70 +45,89 @@
             x-ref="searchResultsStream"
         ></div>
 
-        <div
+        <p
             class="quran-search-feedback mt-2"
             x-cloak
             x-show="normalizeSearchQuery(search.query).length > 0 && normalizeSearchQuery(search.query).length < search.minQueryLength"
             x-transition.opacity.duration.220ms
             x-text="`${search.minQueryLength} {{ arabic_text('أحرف أو أكثر ليبدأ البحث.') }}`"
-        ></div>
+        ></p>
 
-        <div
+        <p
             class="quran-search-feedback mt-2"
             x-cloak
             x-show="shouldShowSearchNoResults()"
             x-transition.opacity.duration.220ms
         >
             {{ arabic_text('لا توجد نتائج مطابقة.') }}
-        </div>
+        </p>
 
         <div
-            class="quran-search-results"
+            class="quran-search-chunks"
             x-cloak
             x-ref="searchResultsList"
-            x-bind:class="{
-                'quran-search-results--active': search.results.length > 0,
-                'quran-search-results--empty': search.results.length === 0,
-            }"
+            x-show="search.results.length > 0"
+            x-transition.opacity.duration.220ms
         >
             <template
-                x-for="(result, resultIndex) in search.results"
-                x-bind:key="result.__key ||
-                    `quran-search-modal-${result.id || [result.surah_number, result.ayah_number, result.page_number, result.match_rank].join('-')}`"
+                x-for="chunk in searchResultChunks()"
+                x-bind:key="`quran-search-chunk-${chunk.key}`"
             >
-                <button
-                    class="quran-search-result-btn"
-                    type="button"
-                    x-bind:data-match-tone="searchMatchTone(result)"
-                    x-bind:data-result-key="result.__key || ''"
-                    x-bind:tabindex="searchResultIsLeaving(result) ? -1 : (resultIndex === 0 ? 0 : -1)"
-                    x-bind:class="{
-                        'quran-search-result-btn--active': !searchResultIsLeaving(result),
-                        'quran-search-result-btn--leaving': searchResultIsLeaving(result),
-                        'quran-search-result-btn--surah-name': isSurahNameSearchResult(result),
-                    }"
-                    x-on:click="if (!searchResultIsLeaving(result)) { goToSearchResult(result) }"
-                >
-                    <span
-                        class="quran-search-result-meta"
-                        x-text="searchResultMetaLabel(result)"
-                    ></span>
-                    <span
-                        class="quran-search-result-ayah font-quran"
-                        x-text="searchResultAyahText(result)"
-                    ></span>
-                    <span
-                        class="quran-search-result-match-badge"
-                        x-bind:data-match-tone="searchMatchTone(result)"
-                        x-bind:class="{ 'quran-search-result-match-badge--surah-name': isSurahNameSearchResult(result) }"
-                        x-text="searchMatchLabel(result)"
-                    ></span>
-                </button>
+                <section class="quran-search-chunk">
+                    <header class="quran-search-chunk__header">
+                        <p
+                            class="quran-search-chunk__title"
+                            x-text="chunk.label"
+                        ></p>
+                        <p
+                            class="quran-search-chunk__count"
+                            dir="ltr"
+                            x-text="String(chunk.results.length)"
+                        ></p>
+                    </header>
+
+                    <div class="quran-search-results">
+                        <template
+                            x-for="(result, resultIndex) in chunk.results"
+                            x-bind:key="result.__key ||
+                                `quran-search-modal-${result.id || [result.surah_number, result.ayah_number, result.page_number, result.match_rank].join('-')}`"
+                        >
+                            <button
+                                class="quran-search-result-btn"
+                                type="button"
+                                x-bind:data-match-tone="searchMatchTone(result)"
+                                x-bind:data-result-key="result.__key || ''"
+                                x-bind:tabindex="searchResultIsLeaving(result) ? -1 : (resultIndex === 0 ? 0 : -1)"
+                                x-bind:class="{
+                                    'quran-search-result-btn--active': !searchResultIsLeaving(result),
+                                    'quran-search-result-btn--leaving': searchResultIsLeaving(result),
+                                    'quran-search-result-btn--surah-name': isSurahNameSearchResult(result),
+                                }"
+                                x-on:click="if (!searchResultIsLeaving(result)) { goToSearchResult(result) }"
+                            >
+                                <span
+                                    class="quran-search-result-meta"
+                                    x-text="searchResultMetaLabel(result)"
+                                ></span>
+                                <span
+                                    class="quran-search-result-ayah font-quran"
+                                    x-text="searchResultAyahText(result)"
+                                ></span>
+                                <span
+                                    class="quran-search-result-match-badge"
+                                    x-bind:data-match-tone="searchMatchTone(result)"
+                                    x-bind:class="{ 'quran-search-result-match-badge--surah-name': isSurahNameSearchResult(result) }"
+                                    x-text="searchMatchLabel(result)"
+                                ></span>
+                            </button>
+                        </template>
+                    </div>
+                </section>
             </template>
         </div>
 
         <div
-            class="quran-search-feedback mt-2 flex items-center justify-center"
+            class="quran-search-feedback mt-2 flex items-center justify-center gap-3"
             x-cloak
             x-show="normalizeSearchQuery(search.query).length >= search.minQueryLength && search.isLoading"
             x-transition.opacity.duration.220ms
@@ -85,6 +136,7 @@
                 class="inline-block h-5 w-5 animate-spin rounded-full border-2 border-amber-300/80 border-t-transparent"
                 aria-hidden="true"
             ></span>
+            <span>{{ arabic_text('تتوسع النتائج تباعًا...') }}</span>
         </div>
     </div>
 

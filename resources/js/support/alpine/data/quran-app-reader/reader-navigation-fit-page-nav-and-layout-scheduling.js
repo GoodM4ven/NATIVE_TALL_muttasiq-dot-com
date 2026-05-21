@@ -577,6 +577,16 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                         forceRefit: true,
                         source: requestedSource || 'page-event',
                     });
+
+                    if (requestedSource === 'search-result') {
+                        const highlightedAyahIndex =
+                            requestedActiveAyahIndex > 0
+                                ? requestedActiveAyahIndex
+                                : requestedSearchHighlightAyahIndex;
+
+                        this.activeAyahIndex = highlightedAyahIndex;
+                        this.searchHighlightedAyahIndex = highlightedAyahIndex;
+                    }
                 } else {
                     await this.goToPageFromChevron(requestedPage, {
                         source: requestedSource || 'page-event',

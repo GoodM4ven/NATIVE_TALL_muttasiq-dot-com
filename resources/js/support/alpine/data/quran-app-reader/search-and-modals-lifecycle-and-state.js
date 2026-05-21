@@ -433,13 +433,14 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                 }
 
                 return Boolean(
-                    modalWindowElement.querySelector('#quran-reader-search-select') ||
-                    modalWindowElement.querySelector('#quran-reader-surah-select'),
+                    modalWindowElement.querySelector('#quran-reader-search-input') ||
+                    modalWindowElement.querySelector('[data-quran-search-stream-target]') ||
+                    modalWindowElement.querySelector('[data-quran-surah-grid]'),
                 );
             };
             const findAnySearchModalWindowElement = () => {
                 const openModalSearchInput = document.querySelector(
-                    '.fi-modal.fi-modal-open #quran-reader-search-select, .fi-modal.fi-modal-open #quran-reader-surah-select',
+                    '.fi-modal.fi-modal-open #quran-reader-search-input, .fi-modal.fi-modal-open [data-quran-search-stream-target]',
                 );
 
                 if (openModalSearchInput instanceof Element) {
@@ -447,7 +448,7 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                 }
 
                 const anyModalSearchInput = document.querySelector(
-                    '#quran-reader-search-select, #quran-reader-surah-select',
+                    '#quran-reader-search-input, [data-quran-search-stream-target]',
                 );
 
                 if (anyModalSearchInput instanceof Element) {

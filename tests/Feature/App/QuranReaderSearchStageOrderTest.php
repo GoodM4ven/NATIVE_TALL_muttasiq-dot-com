@@ -2,29 +2,52 @@
 
 declare(strict_types=1);
 
-test('quran search stages run in exact then near then stem then root order', function () {
+use App\Services\Quran\QuranReaderDataService;
+
+test('quran search stages run in surah then ayah exact close sarf and jathr order', function () {
     $serviceSource = file_get_contents(app_path('Services/Quran/QuranReaderDataService.php'));
 
     expect($serviceSource)->not->toBeFalse();
 
-    $wordPrefixPos = strpos($serviceSource, "'word_prefix'");
-    $stemStagePos = strpos($serviceSource, 'appendStemTokenMatchesFromQuranWords');
-    $rootStagePos = strpos($serviceSource, 'appendRootTokenMatchesFromQuranWords');
+    $surahExactPos = strpos($serviceSource, "'surah_exact'");
+    $surahClosePos = strpos($serviceSource, "'surah_close'");
+    $ayahExactPos = strpos($serviceSource, "'ayah_exact'");
+    $ayahClosePos = strpos($serviceSource, "'ayah_close'");
+    $ayahSarfPos = strpos($serviceSource, "'ayah_sarf'");
+    $ayahJathrPos = strpos($serviceSource, "'ayah_jathr'");
 
-    expect($wordPrefixPos)->not->toBeFalse()
-        ->and($stemStagePos)->not->toBeFalse()
-        ->and($rootStagePos)->not->toBeFalse()
-        ->and($wordPrefixPos)->toBeLessThan($stemStagePos)
-        ->and($stemStagePos)->toBeLessThan($rootStagePos);
+    expect($surahExactPos)->not->toBeFalse()
+        ->and($surahClosePos)->not->toBeFalse()
+        ->and($ayahExactPos)->not->toBeFalse()
+        ->and($ayahClosePos)->not->toBeFalse()
+        ->and($ayahSarfPos)->not->toBeFalse()
+        ->and($ayahJathrPos)->not->toBeFalse()
+        ->and($surahExactPos)->toBeLessThan($surahClosePos)
+        ->and($surahClosePos)->toBeLessThan($ayahExactPos)
+        ->and($ayahExactPos)->toBeLessThan($ayahClosePos)
+        ->and($ayahClosePos)->toBeLessThan($ayahSarfPos)
+        ->and($ayahSarfPos)->toBeLessThan($ayahJathrPos);
 });
 
-test('semantic token stage scans prefiltered quran words instead of full table', function () {
-    $serviceSource = file_get_contents(app_path('Services/Quran/QuranReaderDataService.php'));
+test('quran search keeps divine-name tokens out of sarf and jathr stages', function () {
+    /** @var QuranReaderDataService $service */
+    $service = app(QuranReaderDataService::class);
 
-    expect($serviceSource)->not->toBeFalse()
-        ->and($serviceSource)->toContain('allSemanticCandidates')
-        ->and($serviceSource)->toContain('allTextCandidates')
-        ->and($serviceSource)->toContain('whereIn($semanticColumn, $semanticCandidates)')
-        ->and($serviceSource)->toContain('whereIn($searchColumn, $textCandidates)')
-        ->and($serviceSource)->toContain('if (! $canFilterBySemantic && ! $canFilterByText) {');
+    if (! $service->isReady()) {
+        $this->markTestSkipped('Quran reader search dependencies are unavailable.');
+    }
+
+    $results = $service->searchProgressively('تالله', 20);
+
+    expect($results)->toBeArray()->not->toBeEmpty()
+        ->and(collect($results)->contains(
+            static fn (array $item): bool => (string) ($item['match_strategy'] ?? '') === 'ayah_exact',
+        ))->toBeTrue()
+        ->and(collect($results)->contains(
+            static fn (array $item): bool => in_array(
+                (string) ($item['match_strategy'] ?? ''),
+                ['ayah_sarf', 'ayah_jathr'],
+                true,
+            ),
+        ))->toBeFalse();
 });

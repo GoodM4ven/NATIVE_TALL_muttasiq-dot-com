@@ -1084,7 +1084,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 return false;
             }
 
-            if (this.isCurrentPageVisiblyReady()) {
+            if (this.isCurrentPageVisiblyReady() && this.isCurrentFitQualityHealthy()) {
                 return true;
             }
 
@@ -1109,16 +1109,20 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 maxAttempts: 20,
                 delayMs: 24,
             });
+            const initialFitQualityHealthy = this.isCurrentFitQualityHealthy();
             this.traceReaderReveal('post-modal-fit-pass', {
                 targetPage: normalizedPageNumber,
                 stage: 'initial',
                 fittedPage: this._lastFittedPageNumber,
                 isCurrentPageVisiblyReady: this.isCurrentPageVisiblyReady(),
                 initialRevealReady,
+                fitQualityHealthy: initialFitQualityHealthy,
             });
 
             const requiresRecoveryPass =
-                this._lastFittedPageNumber !== normalizedPageNumber || !initialRevealReady;
+                this._lastFittedPageNumber !== normalizedPageNumber ||
+                !initialRevealReady ||
+                !initialFitQualityHealthy;
 
             if (requiresRecoveryPass) {
                 this._bypassNextFitCache = true;
@@ -1136,20 +1140,29 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                         delayMs: 24,
                     },
                 );
+                const recoveryFitQualityHealthy = this.isCurrentFitQualityHealthy();
                 this.traceReaderReveal('post-modal-fit-pass', {
                     targetPage: normalizedPageNumber,
                     stage: 'recovery',
                     fittedPage: this._lastFittedPageNumber,
                     isCurrentPageVisiblyReady: this.isCurrentPageVisiblyReady(),
                     recoveryRevealReady,
+                    fitQualityHealthy: recoveryFitQualityHealthy,
                 });
             }
 
             if (
                 this.pageNumber === normalizedPageNumber &&
                 (!this.isCurrentPageVisiblyReady() ||
-                    this._lastFittedPageNumber !== normalizedPageNumber)
+                    this._lastFittedPageNumber !== normalizedPageNumber ||
+                    !this.isCurrentFitQualityHealthy())
             ) {
+                await wait(120);
+                await this.waitForStablePageFrame({
+                    maxFrames: 14,
+                    requiredStableFrames: 2,
+                    tolerancePx: 0.6,
+                });
                 this._bypassNextFitCache = true;
                 await this.layoutPageGuaranteed({
                     revealDelayMs: 150,
@@ -1160,19 +1173,22 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                     maxAttempts: 24,
                     delayMs: 24,
                 });
+                const finalFitQualityHealthy = this.isCurrentFitQualityHealthy();
                 this.traceReaderReveal('post-modal-fit-pass', {
                     targetPage: normalizedPageNumber,
                     stage: 'final',
                     fittedPage: this._lastFittedPageNumber,
                     isCurrentPageVisiblyReady: this.isCurrentPageVisiblyReady(),
                     finalRevealReady,
+                    fitQualityHealthy: finalFitQualityHealthy,
                 });
             }
 
             return (
                 this.pageNumber === normalizedPageNumber &&
                 this._lastFittedPageNumber === normalizedPageNumber &&
-                (this.isCurrentPageVisiblyReady() || this.isCurrentPageContentVisible(0.12))
+                (this.isCurrentPageVisiblyReady() || this.isCurrentPageContentVisible(0.12)) &&
+                this.isCurrentFitQualityHealthy()
             );
         },
 
@@ -2436,10 +2452,6 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             );
             const normalizedAvailableWidth = Math.max(1, Number(availableWidth) || 1);
             const normalizedAvailableHeight = Math.max(1, Number(availableHeight) || 1);
-            const widthOverflowThreshold =
-                normalizedAvailableWidth * Number(strictWidthOverflowTolerance ?? 1.06);
-            const heightOverflowThreshold =
-                normalizedAvailableHeight * Number(strictHeightOverflowTolerance ?? 1.01);
             const normalizedMinimumFillWidth = Math.max(
                 0.1,
                 Math.min(1, Number(minimumFillWidth ?? 0.32)),
@@ -2477,16 +2489,34 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                     return;
                 }
 
-                // Do not run post-reveal fit adjustments.
-                if (this.isCurrentPageVisiblyReady() && this.pageFitState() === 'ready') {
-                    return;
-                }
-
                 const contentElement = this.$refs.pageContent;
+                const rootElement = this.$el?.firstElementChild;
+                const frameElement = this.$refs?.pageFrame;
 
-                if (!(contentElement instanceof Element)) {
+                if (
+                    !(contentElement instanceof Element) ||
+                    !(rootElement instanceof HTMLElement) ||
+                    !(frameElement instanceof HTMLElement)
+                ) {
                     return;
                 }
+
+                const currentTargetMetrics = this.currentFitTargetMetrics({
+                    rootElement,
+                    frameElement,
+                });
+                const sanityAvailableWidth = Math.max(
+                    1,
+                    Number(currentTargetMetrics?.targetWidth ?? normalizedAvailableWidth),
+                );
+                const sanityAvailableHeight = Math.max(
+                    1,
+                    Number(currentTargetMetrics?.targetHeight ?? normalizedAvailableHeight),
+                );
+                const widthOverflowThreshold =
+                    sanityAvailableWidth * Number(strictWidthOverflowTolerance ?? 1.06);
+                const heightOverflowThreshold =
+                    sanityAvailableHeight * Number(strictHeightOverflowTolerance ?? 1.01);
 
                 const measured = this.measureRenderedBounds(contentElement, {
                     useRobustWidth: false,
@@ -2494,8 +2524,8 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 const hasOverflow =
                     measured.width > widthOverflowThreshold ||
                     measured.height > heightOverflowThreshold;
-                const fillWidth = measured.width / normalizedAvailableWidth;
-                const fillHeight = measured.height / normalizedAvailableHeight;
+                const fillWidth = measured.width / sanityAvailableWidth;
+                const fillHeight = measured.height / sanityAvailableHeight;
                 const hasSuspiciousUnderfill =
                     fillWidth < normalizedMinimumFillWidth ||
                     fillHeight < normalizedMinimumFillHeight;
@@ -2596,6 +2626,231 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             }, 160);
         },
 
+        resolveFitWidthReferenceRect(frameElement = this.$refs.pageFrame) {
+            const candidateElements = [
+                this.$refs?.pageSurface,
+                this.$refs?.pageViewport,
+                frameElement?.parentElement,
+                frameElement,
+            ];
+
+            for (const candidateElement of candidateElements) {
+                if (!(candidateElement instanceof HTMLElement)) {
+                    continue;
+                }
+
+                const candidateRect = candidateElement.getBoundingClientRect();
+
+                if (Number(candidateRect?.width ?? 0) > 1) {
+                    return candidateRect;
+                }
+            }
+
+            return null;
+        },
+
+        currentFitTargetMetrics({
+            rootElement = this.$el?.firstElementChild ?? null,
+            frameElement = this.$refs?.pageFrame ?? null,
+            computedRootStyles = null,
+        } = {}) {
+            if (!(rootElement instanceof HTMLElement) || !(frameElement instanceof HTMLElement)) {
+                return null;
+            }
+
+            const frameRect = frameElement.getBoundingClientRect();
+            const widthReferenceRect = this.resolveFitWidthReferenceRect(frameElement);
+            const resolvedRootStyles =
+                computedRootStyles instanceof CSSStyleDeclaration
+                    ? computedRootStyles
+                    : window.getComputedStyle(rootElement);
+            const fitAreaPaddingX = Math.max(
+                0,
+                this.cssCustomLengthPixels(
+                    resolvedRootStyles,
+                    '--quran-fit-area-pad-x',
+                    rootElement,
+                    0,
+                ),
+            );
+            const fitAreaPaddingY = Math.max(
+                0,
+                this.cssCustomLengthPixels(
+                    resolvedRootStyles,
+                    '--quran-fit-area-pad-y',
+                    rootElement,
+                    0,
+                ),
+            );
+            const fitTopClearance = Math.max(
+                0,
+                this.cssCustomLengthPixels(
+                    resolvedRootStyles,
+                    '--quran-fit-top-clearance',
+                    rootElement,
+                    0,
+                ),
+            );
+            const fitBottomClearance = Math.max(
+                0,
+                this.cssCustomLengthPixels(
+                    resolvedRootStyles,
+                    '--quran-fit-bottom-clearance',
+                    rootElement,
+                    8,
+                ),
+            );
+            const immersiveFitTopPadding = this.shouldUseImmersiveReaderChrome()
+                ? Math.max(
+                      0,
+                      this.cssCustomLengthPixels(
+                          resolvedRootStyles,
+                          '--quran-immersive-page-pad-top',
+                          rootElement,
+                          0,
+                      ),
+                  )
+                : 0;
+            const immersiveFitBottomPadding = this.shouldUseImmersiveReaderChrome()
+                ? Math.max(
+                      0,
+                      this.cssCustomLengthPixels(
+                          resolvedRootStyles,
+                          '--quran-immersive-page-pad-bottom',
+                          rootElement,
+                          0,
+                      ),
+                  )
+                : 0;
+            const rawAvailableWidth = Math.max(
+                1,
+                Number(
+                    widthReferenceRect?.width ??
+                        frameRect?.width ??
+                        this.$refs?.pageSurface?.clientWidth ??
+                        this.$refs?.pageViewport?.clientWidth ??
+                        frameElement.parentElement?.clientWidth ??
+                        frameElement.clientWidth ??
+                        1,
+                ),
+            );
+            const fitHeightRatio = Math.min(
+                1,
+                Math.max(
+                    0.7,
+                    Number.parseFloat(
+                        resolvedRootStyles.getPropertyValue('--quran-fit-height-ratio'),
+                    ) || 1,
+                ),
+            );
+            const fitTargetWidthRatio = Math.min(
+                0.95,
+                Math.max(
+                    0.55,
+                    Number.parseFloat(
+                        resolvedRootStyles.getPropertyValue('--quran-fit-target-width-ratio'),
+                    ) || 0.8,
+                ),
+            );
+            const frameAreaTop =
+                Number(frameRect?.top ?? 0) +
+                fitAreaPaddingY +
+                fitTopClearance +
+                immersiveFitTopPadding;
+            let frameAreaBottom =
+                Number(frameRect?.bottom ?? 0) > 0
+                    ? Number(frameRect.bottom) - fitAreaPaddingY - immersiveFitBottomPadding
+                    : Number(frameRect?.top ?? 0) +
+                      Number(frameRect?.height ?? frameElement.clientHeight ?? 1) -
+                      fitAreaPaddingY -
+                      immersiveFitBottomPadding;
+            const protectedBottomElements = this.shouldUseImmersiveReaderChrome()
+                ? []
+                : [
+                      rootElement.querySelector('.quran-page-slider-chip'),
+                      rootElement.querySelector('.quran-page-slider'),
+                  ];
+
+            protectedBottomElements.forEach((element) => {
+                if (!(element instanceof Element)) {
+                    return;
+                }
+
+                const elementRect = element.getBoundingClientRect();
+
+                if (
+                    elementRect.width <= 0 ||
+                    elementRect.height <= 0 ||
+                    elementRect.top <= frameAreaTop ||
+                    elementRect.top > frameAreaBottom + fitBottomClearance * 1.5
+                ) {
+                    return;
+                }
+
+                frameAreaBottom = Math.min(frameAreaBottom, elementRect.top - fitBottomClearance);
+            });
+
+            const availableWidth = Math.max(1, rawAvailableWidth - fitAreaPaddingX * 2);
+            const rawAvailableHeight = Math.max(1, frameAreaBottom - frameAreaTop);
+            const availableHeight = Math.max(1, rawAvailableHeight * fitHeightRatio);
+
+            return {
+                targetWidth: Math.max(1, availableWidth * fitTargetWidthRatio),
+                targetHeight: Math.max(1, availableHeight),
+            };
+        },
+
+        currentFitQualitySnapshot() {
+            const surfaceElement = this.$refs?.pageSurface;
+            const frameElement = this.$refs?.pageFrame;
+            const contentElement = this.$refs?.pageContent;
+
+            if (
+                !(surfaceElement instanceof HTMLElement) ||
+                !(frameElement instanceof HTMLElement) ||
+                !(contentElement instanceof HTMLElement)
+            ) {
+                return null;
+            }
+
+            const surfaceRect = surfaceElement.getBoundingClientRect();
+            const frameRect = frameElement.getBoundingClientRect();
+            const contentRect = contentElement.getBoundingClientRect();
+
+            if (
+                surfaceRect.width <= 0 ||
+                frameRect.width <= 0 ||
+                frameRect.height <= 0 ||
+                contentRect.width <= 0
+            ) {
+                return null;
+            }
+
+            return {
+                frameSurfaceRatio: frameRect.width / surfaceRect.width,
+                lineFrameRatio: contentRect.width / frameRect.width,
+                lineHeightRatio: frameRect.height > 0 ? contentRect.height / frameRect.height : 0,
+            };
+        },
+
+        isCurrentFitQualityHealthy({
+            minimumFrameSurfaceRatio = 0.58,
+            minimumLineFrameRatio = 0.76,
+        } = {}) {
+            const fitQualitySnapshot = this.currentFitQualitySnapshot();
+
+            if (!fitQualitySnapshot) {
+                return false;
+            }
+
+            return (
+                Number(fitQualitySnapshot.frameSurfaceRatio ?? 0) >=
+                    Math.max(0.1, Number(minimumFrameSurfaceRatio) || 0.58) &&
+                Number(fitQualitySnapshot.lineFrameRatio ?? 0) >=
+                    Math.max(0.1, Number(minimumLineFrameRatio) || 0.76)
+            );
+        },
+
         applySafetyScaleForCurrentPageOverflow() {
             const rootElement = this.$el.firstElementChild;
             const frameElement = this.$refs.pageFrame;
@@ -2610,12 +2865,14 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             }
 
             const frameRect = frameElement.getBoundingClientRect();
-            const frameParentRect = frameElement.parentElement?.getBoundingClientRect?.() ?? null;
+            const widthReferenceRect = this.resolveFitWidthReferenceRect(frameElement);
             const availableWidth = Math.max(
                 1,
                 Number(
-                    frameParentRect?.width ??
+                    widthReferenceRect?.width ??
                         frameRect?.width ??
+                        this.$refs?.pageSurface?.clientWidth ??
+                        this.$refs?.pageViewport?.clientWidth ??
                         frameElement.parentElement?.clientWidth ??
                         frameElement.clientWidth ??
                         1,
@@ -2748,7 +3005,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             rootElement.style.removeProperty('--quran-basmallah-bottom-gap-scale');
 
             const frameRect = frameElement.getBoundingClientRect();
-            const frameParentRect = frameElement.parentElement?.getBoundingClientRect?.() ?? null;
+            const widthReferenceRect = this.resolveFitWidthReferenceRect(frameElement);
             const computedRootStyles = window.getComputedStyle(rootElement);
             const computedContentStyles = window.getComputedStyle(contentElement);
             const readCssNumber = (propertyName, fallback) => {
@@ -2835,8 +3092,10 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             const rawAvailableWidth = Math.max(
                 1,
                 Number(
-                    frameParentRect?.width ??
+                    widthReferenceRect?.width ??
                         frameRect?.width ??
+                        this.$refs?.pageSurface?.clientWidth ??
+                        this.$refs?.pageViewport?.clientWidth ??
                         frameElement.parentElement?.clientWidth ??
                         frameElement.clientWidth ??
                         1,
@@ -2962,7 +3221,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             const targetWidth = Math.max(1, availableWidth * fitTargetWidthRatio);
             const targetHeight = Math.max(1, availableHeight);
             const targetAreaLeft =
-                Number(frameRect?.left ?? 0) +
+                Number(widthReferenceRect?.left ?? frameRect?.left ?? 0) +
                 fitAreaPaddingX +
                 (availableWidth - targetWidth) * 0.5;
             const targetAreaRight = targetAreaLeft + targetWidth;
@@ -3484,10 +3743,10 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                             baselineLayout.pageGapMultiplier,
                     ) * 0.018;
                 const score =
-                    Math.min(1.04, evaluation.fillWidth) * 1.24 +
-                    Math.min(1.04, evaluation.fillHeight) * 0.9 -
-                    widthDeficitPenalty * 1.6 -
-                    heightDeficitPenalty * 0.72 -
+                    Math.min(1.04, evaluation.fillWidth) * 1.12 +
+                    Math.min(1.04, evaluation.fillHeight) * 1.12 -
+                    widthDeficitPenalty * 1.25 -
+                    heightDeficitPenalty * 1.05 -
                     compressionPenalty -
                     expansionPenalty -
                     areaOverflowPenalty;

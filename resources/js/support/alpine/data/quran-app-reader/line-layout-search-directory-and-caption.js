@@ -198,32 +198,28 @@ export const createLineLayoutSearchDirectoryAndCaptionModule = (deps) => {
 
             const strategy = String(result?.match_strategy ?? '').trim();
 
-            if (strategy === 'exact_phrase') {
-                return 'مطابقة تامة';
+            if (strategy === 'ayah_exact') {
+                return 'مطابقة آية تامة';
             }
 
             if (strategy === 'surah_exact') {
                 return 'مطابقة اسم سورة';
             }
 
-            if (strategy === 'surah_stem') {
-                return 'مطابقة صرفية لاسم سورة';
+            if (strategy === 'surah_close') {
+                return 'مطابقة سورة قريبة';
             }
 
-            if (strategy === 'exact_tokens') {
-                return 'مطابقة كلمات';
+            if (strategy === 'ayah_close') {
+                return 'مطابقة آية قريبة';
             }
 
-            if (strategy === 'stem_tokens') {
+            if (strategy === 'ayah_sarf') {
                 return 'مطابقة صرفية';
             }
 
-            if (strategy === 'root_tokens') {
+            if (strategy === 'ayah_jathr') {
                 return 'مطابقة جذرية';
-            }
-
-            if (strategy === 'word_prefix') {
-                return 'مطابقة تقريبية';
             }
 
             return 'مطابقة';

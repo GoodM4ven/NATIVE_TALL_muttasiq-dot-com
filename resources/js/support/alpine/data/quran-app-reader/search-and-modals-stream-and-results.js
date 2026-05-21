@@ -701,7 +701,7 @@ export const createSearchAndModalsStreamAndResultsModule = (deps) => {
         isSurahNameSearchResult(result) {
             const strategy = this.searchResultStrategy(result);
 
-            return strategy === 'surah_exact' || strategy === 'surah_stem';
+            return strategy === 'surah_exact' || strategy === 'surah_close';
         },
 
         searchResultSortWeight(result) {
@@ -711,31 +711,131 @@ export const createSearchAndModalsStreamAndResultsModule = (deps) => {
                 return 0;
             }
 
-            if (strategy === 'surah_stem') {
+            if (strategy === 'surah_close') {
                 return 1;
             }
 
-            if (strategy === 'exact_phrase') {
+            if (strategy === 'ayah_exact') {
                 return 2;
             }
 
-            if (strategy === 'exact_tokens') {
+            if (strategy === 'ayah_close') {
                 return 3;
             }
 
-            if (strategy === 'stem_tokens') {
+            if (strategy === 'ayah_sarf') {
                 return 4;
             }
 
-            if (strategy === 'root_tokens') {
+            if (strategy === 'ayah_jathr') {
                 return 5;
             }
 
-            if (strategy === 'word_prefix') {
-                return 6;
+            return 6;
+        },
+
+        searchResultChunkKey(resultOrStrategy = '') {
+            const strategy =
+                typeof resultOrStrategy === 'string'
+                    ? String(resultOrStrategy ?? '')
+                          .trim()
+                          .toLowerCase()
+                    : this.searchResultStrategy(resultOrStrategy);
+
+            if (strategy === 'surah_exact') {
+                return 'surah_exact';
             }
 
-            return 7;
+            if (strategy === 'surah_close') {
+                return 'surah_close';
+            }
+
+            if (strategy === 'ayah_exact') {
+                return 'ayah_exact';
+            }
+
+            if (strategy === 'ayah_close') {
+                return 'ayah_close';
+            }
+
+            if (strategy === 'ayah_sarf') {
+                return 'ayah_sarf';
+            }
+
+            if (strategy === 'ayah_jathr') {
+                return 'ayah_jathr';
+            }
+
+            return 'other';
+        },
+
+        searchResultChunkLabel(chunkKey = '') {
+            const normalizedChunkKey = String(chunkKey ?? '')
+                .trim()
+                .toLowerCase();
+
+            if (normalizedChunkKey === 'surah_exact') {
+                return 'السور المطابقة';
+            }
+
+            if (normalizedChunkKey === 'surah_close') {
+                return 'السور القريبة';
+            }
+
+            if (normalizedChunkKey === 'ayah_exact') {
+                return 'الآيات المطابقة';
+            }
+
+            if (normalizedChunkKey === 'ayah_close') {
+                return 'الآيات القريبة';
+            }
+
+            if (normalizedChunkKey === 'ayah_sarf') {
+                return 'الآيات الصرفية';
+            }
+
+            if (normalizedChunkKey === 'ayah_jathr') {
+                return 'الآيات الجذرية';
+            }
+
+            return 'نتائج أخرى';
+        },
+
+        searchResultChunks() {
+            const chunkOrder = [
+                'surah_exact',
+                'surah_close',
+                'ayah_exact',
+                'ayah_close',
+                'ayah_sarf',
+                'ayah_jathr',
+                'other',
+            ];
+            const groupedResults = new Map(
+                chunkOrder.map((chunkKey) => [
+                    chunkKey,
+                    {
+                        key: chunkKey,
+                        label: this.searchResultChunkLabel(chunkKey),
+                        results: [],
+                    },
+                ]),
+            );
+
+            this.activeSearchResults().forEach((result) => {
+                const chunkKey = this.searchResultChunkKey(result);
+                const chunk = groupedResults.get(chunkKey) ?? groupedResults.get('other');
+
+                if (!chunk) {
+                    return;
+                }
+
+                chunk.results.push(result);
+            });
+
+            return chunkOrder
+                .map((chunkKey) => groupedResults.get(chunkKey))
+                .filter((chunk) => chunk && chunk.results.length > 0);
         },
 
         normalizeSearchResults(nextResults = []) {
@@ -837,27 +937,7 @@ export const createSearchAndModalsStreamAndResultsModule = (deps) => {
         },
 
         searchResultGroupLabel(strategy = '') {
-            const normalizedStrategy = String(strategy ?? '')
-                .trim()
-                .toLowerCase();
-
-            if (
-                normalizedStrategy === 'surah_exact' ||
-                normalizedStrategy === 'exact_phrase' ||
-                normalizedStrategy === 'exact_tokens'
-            ) {
-                return 'مطابقات تامة';
-            }
-
-            if (normalizedStrategy === 'surah_stem' || normalizedStrategy === 'stem_tokens') {
-                return 'مطابقات قريبة / صرفية';
-            }
-
-            if (normalizedStrategy === 'root_tokens') {
-                return 'مطابقات الجذر';
-            }
-
-            return 'نتائج أخرى';
+            return this.searchResultChunkLabel(this.searchResultChunkKey(strategy));
         },
 
         encodeFilamentSearchSelectionPayload(result, query = '') {

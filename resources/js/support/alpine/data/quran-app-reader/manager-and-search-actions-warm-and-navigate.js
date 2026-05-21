@@ -167,37 +167,35 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                 this.localSearchContainsWholePhrase(typedText, normalizedQuery) ||
                 this.localSearchContainsWholePhrase(searchableText, normalizedQuery)
             ) {
-                return 'exact_phrase';
+                return 'ayah_exact';
             }
 
             if (
                 queryTokens.length > 0 &&
                 queryTokens.every((token) => Boolean(row._tokens?.[token]))
             ) {
-                return 'exact_tokens';
+                return 'ayah_close';
             }
 
             if (
                 (typedText !== '' && typedText.includes(normalizedQuery)) ||
                 (searchableText !== '' && searchableText.includes(normalizedQuery))
             ) {
-                return 'word_prefix';
+                return 'ayah_close';
             }
 
             return null;
         },
 
         buildLocalSearchResultFromRow(row, strategy) {
-            const resolvedStrategy = String(strategy ?? '').trim() || 'exact_tokens';
+            const resolvedStrategy = String(strategy ?? '').trim() || 'ayah_close';
             const toneByStrategy = {
-                exact_phrase: 'success',
-                exact_tokens: 'success',
-                word_prefix: 'warning',
+                ayah_exact: 'success',
+                ayah_close: 'warning',
             };
             const shadeByStrategy = {
-                exact_phrase: 50,
-                exact_tokens: 50,
-                word_prefix: 100,
+                ayah_exact: 50,
+                ayah_close: 100,
             };
 
             return {
@@ -213,7 +211,7 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                 match_tone: toneByStrategy[resolvedStrategy] ?? 'warning',
                 match_shade: shadeByStrategy[resolvedStrategy] ?? 100,
                 match_label: '',
-                match_rank: resolvedStrategy === 'exact_phrase' ? 30 : 40,
+                match_rank: resolvedStrategy === 'ayah_exact' ? 30 : 40,
             };
         },
 
@@ -545,6 +543,7 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                     ayahIndex: highlightAyahIndex,
                     source: 'search-result',
                     modalId: this.resolveSearchModalCloseTargetId(),
+                    ensureVisibleAfterModalClose: true,
                 });
 
                 if (highlightAyahIndex > 0) {

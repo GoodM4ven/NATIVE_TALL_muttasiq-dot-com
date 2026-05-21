@@ -20,9 +20,12 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         resource_path('views/components/partials/quran-app/reader.blade.php'),
     );
     $quranReaderViewSource = file_get_contents(resource_path('views/livewire/quran-app/reader.blade.php'));
-    $quranSearchModalViewSource = file_get_contents(resource_path('views/components/partials/quran-app/search-modal.blade.php'));
     $quranHistoryModalViewSource = file_get_contents(resource_path('views/components/partials/quran-app/history-modal.blade.php'));
     $quranBookmarksModalViewSource = file_get_contents(resource_path('views/components/partials/quran-app/bookmarks-modal.blade.php'));
+    $quranSearchModalViewSource = file_get_contents(
+        resource_path('views/components/partials/quran-app/search-modal.blade.php'),
+    );
+    $appLayoutSource = file_get_contents(resource_path('views/components/app.blade.php'));
     $quranReaderScriptSource = file_get_contents(
         resource_path('js/support/alpine/data/quran-app-reader/index.js'),
     );
@@ -160,7 +163,6 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderViewSource)->toContain("x-on:close-modal.window=\"handleModalLifecycleEvent('closing', \$event)\"")
         ->and($quranReaderViewSource)->toContain("x-on:x-modal-closed.window=\"handleModalLifecycleEvent('closed', \$event)\"")
         ->and($quranReaderViewSource)->toContain('x-on:control-panel-updated.window="applyControlPanelSettings($event.detail?.controlPanel ?? {})"')
-        ->and($quranReaderViewSource)->toContain("\$wire.mountAction('searchQuran');")
         ->and($quranReaderViewSource)->toContain('x-on:click="void openHistoryModal()"')
         ->and($quranReaderViewSource)->toContain('transform: rotate(360deg);')
         ->and($quranReaderViewSource)->toContain('x-on:pointerdown="onBookmarkButtonPointerDown($event)"')
@@ -255,17 +257,12 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderClassSource)->toContain("'class' => 'quran-search-field-wrapper'");
 
     expect($quranSearchModalViewSource)->not->toBeFalse()
-        ->and($quranSearchModalViewSource)->toContain('quran-search-shell')
-        ->and($quranSearchModalViewSource)->toContain('quran-search-results-shell mt-4')
-        ->and($quranSearchModalViewSource)->toContain('quran-search-results--active')
-        ->and($quranSearchModalViewSource)->toContain('quran-search-result-btn--leaving')
-        ->and($quranSearchModalViewSource)->toContain('searchResultIsLeaving(result)')
-        ->and($quranSearchModalViewSource)->toContain('quran-surah-grid')
-        ->and($quranSearchModalViewSource)->toContain('x-ref="surahDirectoryGrid"')
-        ->and($quranSearchModalViewSource)->toContain("'quran-surah-tile--active': isSurahDirectoryEntryActive(entry)")
-        ->and($quranSearchModalViewSource)->toContain('x-ref="searchResultsList"')
-        ->and($quranSearchModalViewSource)->toContain('goToSearchResult(result)')
-        ->and($quranSearchModalViewSource)->toContain('goToSurahFromDirectory(entry)');
+        ->and($quranSearchModalViewSource)->toContain('id="quran-reader-search-input"')
+        ->and($quranSearchModalViewSource)->toContain('wire:stream="quran-search-results-stream"')
+        ->and($quranSearchModalViewSource)->toContain('x-for="chunk in searchResultChunks()"');
+
+    expect($appLayoutSource)->not->toBeFalse()
+        ->and($appLayoutSource)->not->toContain("@livewire('livewire-ui-spotlight')");
 
     expect($historyManagerTableSource)->not->toBeFalse()
         ->and($historyManagerTableSource)->toContain('public function reorderTable(array $order, int|string|null $draggedRecordKey = null): void')
@@ -452,16 +449,13 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderClassSource)->toContain('use InteractsWithActions;')
         ->and($quranReaderClassSource)->toContain('use InteractsWithSchemas;')
         ->and($quranReaderClassSource)->toContain('public function searchQuranAction(): Action')
-        ->and($quranReaderClassSource)->toContain("TextInput::make('search')")
+        ->and($quranReaderClassSource)->not->toContain('InteractsWithQuranSearchAction')
         ->and($quranReaderClassSource)->toContain('public function jumpToPageAction(): Action')
         ->and($quranReaderClassSource)->toContain('public function navigationHistoryAction(): Action')
         ->and($quranReaderClassSource)->toContain('public function bookmarksManagerAction(): Action')
-        ->and($quranReaderClassSource)->toContain('->modalContentFooter(')
-        ->and($quranReaderClassSource)->toContain("Blade::render('<x-partials.quran-app.search-modal />')")
         ->and($quranReaderClassSource)->toContain("Blade::render('<x-partials.quran-app.history-modal />')")
         ->and($quranReaderClassSource)->toContain("Blade::render('<x-partials.quran-app.bookmarks-modal />')")
         ->and($quranReaderClassSource)->toContain('->extraModalWindowAttributes([')
-        ->and($quranReaderClassSource)->toContain("'id' => 'quran-reader-search-modal'")
         ->and($quranReaderClassSource)->toContain("'id' => self::HISTORY_MODAL_ID")
         ->and($quranReaderClassSource)->toContain("'id' => self::BOOKMARKS_MODAL_ID")
         ->and($quranReaderClassSource)->toContain('->modalAutofocus(true)')
@@ -634,12 +628,12 @@ it('keeps sacred divine name tokens out of stem and root search stages', functio
 
     expect($sacredTokenResults)->toBeArray()->not->toBeEmpty()
         ->and(collect($sacredTokenResults)->contains(
-            static fn (array $item): bool => (string) ($item['match_strategy'] ?? '') === 'exact_phrase',
+            static fn (array $item): bool => (string) ($item['match_strategy'] ?? '') === 'ayah_exact',
         ))->toBeTrue()
         ->and(collect($sacredTokenResults)->contains(
             static fn (array $item): bool => in_array(
                 (string) ($item['match_strategy'] ?? ''),
-                ['stem_tokens', 'root_tokens'],
+                ['ayah_sarf', 'ayah_jathr'],
                 true,
             ),
         ))->toBeFalse();
@@ -666,7 +660,7 @@ it('matches conjunction-attached aal tokens before falling back to root search',
         ->and($firstResult)->toBeArray()
         ->and((string) ($firstResult['match_strategy'] ?? ''))->toBe('surah_exact')
         ->and($aliImranVerseMatch)->toBeArray()
-        ->and((string) ($aliImranVerseMatch['match_strategy'] ?? ''))->toBe('exact_tokens');
+        ->and((string) ($aliImranVerseMatch['match_strategy'] ?? ''))->toBe('ayah_close');
 });
 
 it('guards mobile js error reporting against known benign runtime noise', function () {
@@ -745,7 +739,7 @@ it('returns matches for legacy orthography phrases in quran search endpoint', fu
         ->and(collect($legacyItems)->contains(
             static fn (array $item): bool => (int) ($item['surah_number'] ?? 0) === 10
                 && (int) ($item['ayah_number'] ?? 0) === 25
-                && (string) ($item['match_strategy'] ?? '') === 'exact_phrase',
+                && (string) ($item['match_strategy'] ?? '') === 'ayah_exact',
         ))->toBeTrue();
 });
 
@@ -765,7 +759,7 @@ it('matches quran orthography variants when the query drops the ra from al-quran
     expect($items)->toBeArray()->not->toBeEmpty()
         ->and((int) ($items[0]['surah_number'] ?? 0))->toBe(50)
         ->and((int) ($items[0]['ayah_number'] ?? 0))->toBe(1)
-        ->and((string) ($items[0]['match_strategy'] ?? ''))->toBe('exact_phrase');
+        ->and((string) ($items[0]['match_strategy'] ?? ''))->toBe('ayah_exact');
 });
 
 it('exposes local quran search index payload for client-side instant preview', function () {
@@ -849,7 +843,7 @@ it('normalizes invisible directional chars in quran search queries while preserv
         ->and(collect($vocativeItems)->contains(
             static fn (array $item): bool => (int) ($item['surah_number'] ?? 0) === 31
                 && (int) ($item['ayah_number'] ?? 0) === 17
-                && (string) ($item['match_strategy'] ?? '') === 'exact_phrase',
+                && (string) ($item['match_strategy'] ?? '') === 'ayah_exact',
         ))->toBeTrue();
 
     $invocationQueryWithRlm = "وقال ربكم\u{200F} ادعوني أستجب لكم";
@@ -864,7 +858,7 @@ it('normalizes invisible directional chars in quran search queries while preserv
     expect($invocationItems)->toBeArray()->not->toBeEmpty()
         ->and((int) ($invocationItems[0]['surah_number'] ?? 0))->toBe(40)
         ->and((int) ($invocationItems[0]['ayah_number'] ?? 0))->toBe(60)
-        ->and((string) ($invocationItems[0]['match_strategy'] ?? ''))->toBe('exact_phrase');
+        ->and((string) ($invocationItems[0]['match_strategy'] ?? ''))->toBe('ayah_exact');
 });
 
 it('caches repeated quran search queries while preserving complete progress emission', function () {
@@ -1508,9 +1502,9 @@ it('reacts to quran search query changes through an alpine watcher', function ()
         );
 });
 
-it('pads quran search stream payloads so livewire can flush incremental updates promptly', function () {
+it('keeps quran search progressive stages and reader modal contracts aligned', function () {
     $quranReaderClassSource = file_get_contents(app_path('Livewire/QuranApp/Reader.php'));
-    $quranSearchModalSource = file_get_contents(
+    $quranSearchModalViewSource = file_get_contents(
         resource_path('views/components/partials/quran-app/search-modal.blade.php'),
     );
     $quranReaderScriptSource = file_get_contents(
@@ -1535,14 +1529,9 @@ it('pads quran search stream payloads so livewire can flush incremental updates 
         ->and($quranReaderDataServiceSource)->not->toContain('collectVerseIdsByStemTokens')
         ->and($quranReaderDataServiceSource)->not->toContain('collectVerseIdsByRootTokens');
 
-    expect($quranSearchModalSource)->not->toBeFalse()
-        ->and($quranSearchModalSource)->toContain('wire:stream="quran-search-results-stream"')
-        ->and($quranSearchModalSource)->not->toContain('wire:stream.replace="quran-search-results-stream"')
-        ->and($quranSearchModalSource)->toContain(
-            'search.lastCompletedNormalizedQuery === normalizeSearchQuery(search.query)',
-        )
-        ->and($quranSearchModalSource)->toContain('animate-spin rounded-full')
-        ->and($quranSearchModalSource)->not->toContain('جاري البحث...');
+    expect($quranSearchModalViewSource)->not->toBeFalse()
+        ->and($quranSearchModalViewSource)->toContain('wire:stream="quran-search-results-stream"')
+        ->and($quranSearchModalViewSource)->toContain('x-for="chunk in searchResultChunks()"');
 
     expect($quranReaderScriptSource)->not->toBeFalse()
         ->and($quranReaderScriptSource)->toContain('quranSearchStreamFrameDelimiter')

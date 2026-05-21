@@ -313,7 +313,7 @@ export const createInitialState = (config, deps) => {
 
         search: {
             query: '',
-            minQueryLength: 3,
+            minQueryLength: 2,
             inputDebounceMs: 600,
             results: [],
             isLoading: false,

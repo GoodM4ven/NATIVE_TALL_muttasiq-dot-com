@@ -583,11 +583,7 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                 return false;
             }
 
-            if (normalizedActionName === 'searchQuran') {
-                this._searchModalOpenRequestedAt = Date.now();
-            } else {
-                this._searchModalOpenRequestedAt = 0;
-            }
+            this._searchModalOpenRequestedAt = 0;
 
             this.resetSwipeState();
             this.clearWordPressState();
@@ -672,20 +668,17 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
         },
 
         async openSearchModal() {
-            this._searchModalOpenRequestedAt = Date.now();
-            const didOpen = await this.openManagerModalAction('searchQuran', [
-                this.searchModalId,
-                this.searchModalDomId,
-            ]);
-
-            if (!didOpen) {
-                this._searchModalOpenRequestedAt = 0;
+            if (this.wirdModeActive) {
                 return false;
             }
 
-            this.scheduleSearchModalBootstrapFallback();
+            this._searchModalOpenRequestedAt = Date.now();
 
-            return true;
+            if (typeof this.warmSearchIndex === 'function') {
+                void this.warmSearchIndex();
+            }
+
+            return await this.openManagerModalAction('searchQuran', [this.searchModalId]);
         },
 
         async openJumpPageModal() {
@@ -694,6 +687,51 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
 
         async openBookmarksModal() {
             return await this.openManagerModalAction('bookmarksManager', [this.bookmarksModalId]);
+        },
+
+        async ensureModalDrivenPageVisible(
+            pageNumber,
+            {
+                revealDelayMs = 180,
+                maxAttempts = 5,
+                fallbackReason = 'modal-driven-post-close-visibility-recovery',
+            } = {},
+        ) {
+            const normalizedPageNumber = clampPage(Number(pageNumber ?? 0), this.maxPage);
+
+            if (
+                normalizedPageNumber <= 0 ||
+                this.pageNumber !== normalizedPageNumber ||
+                !this.hasRenderablePage()
+            ) {
+                return false;
+            }
+
+            const recovered = await this.fitSpecificPageAfterModalClose(normalizedPageNumber, {
+                revealDelayMs,
+                maxAttempts,
+            });
+
+            if (recovered) {
+                return true;
+            }
+
+            this.clearStaleRevealGuards();
+            this._bypassNextFitCache = true;
+            await this.stabilizeModalDrivenLayout({
+                revealDelayMs: Math.max(160, revealDelayMs - 20),
+                maxAttempts: Math.max(4, maxAttempts - 1),
+                maxFrames: 18,
+                requiredStableFrames: 3,
+                tolerancePx: 0.8,
+            });
+
+            if (!this.isCurrentPageVisiblyReady() && this.hasRenderablePage()) {
+                this.clearStaleRevealGuards();
+                this.forceRevealCurrentPage(fallbackReason);
+            }
+
+            return this.isCurrentPageVisiblyReady() || this.isCurrentPageContentVisible(0.12);
         },
 
         async runSecondaryModalExitRecoveryPulse(modalId = '') {
@@ -731,6 +769,7 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             source = 'history-entry',
             modalId = '',
             suppressionDurationMs = historyNavigationModalLifecycleSuppressionDurationMs,
+            ensureVisibleAfterModalClose = false,
         } = {}) {
             const normalizedModalId = String(modalId ?? '').trim();
             const normalizedSource = String(source ?? '').trim() || 'history-entry';
@@ -763,6 +802,14 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             });
 
             await this.runSecondaryModalExitRecoveryPulse(normalizedModalId);
+
+            if (ensureVisibleAfterModalClose) {
+                await this.ensureModalDrivenPageVisible(normalizedTargetPage, {
+                    revealDelayMs: 190,
+                    maxAttempts: 5,
+                    fallbackReason: `${normalizedSource}-post-close-visibility-recovery`,
+                });
+            }
         },
 
         async goToHistoryEntry(entry) {
@@ -868,6 +915,12 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                     maxFrames: 18,
                     requiredStableFrames: 3,
                     tolerancePx: 0.8,
+                });
+
+                await this.ensureModalDrivenPageVisible(pageNumber, {
+                    revealDelayMs: 190,
+                    maxAttempts: 5,
+                    fallbackReason: 'surah-directory-post-close-visibility-recovery',
                 });
 
                 this.search.activeSurahNumber = surahNumber;

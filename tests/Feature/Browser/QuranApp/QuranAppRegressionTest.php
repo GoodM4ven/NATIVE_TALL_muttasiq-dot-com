@@ -651,6 +651,54 @@ JS,
 it('persists local reader state for last page, navigation history, and bookmarks', function () {
     $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
+    $assertReaderVisibleAfterModalClose = function (int $timeoutMs = 8_000) use ($page): void {
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript(
+                "Boolean(typeof data.isCurrentPageVisiblyReady === 'function' && data.isCurrentPageVisiblyReady())",
+            ),
+            true,
+            $timeoutMs,
+        );
+        waitForScriptWithTimeout(
+            $page,
+            <<<'JS'
+(() => {
+  const surface = document.querySelector('.quran-page-surface');
+  const frame = document.querySelector('[x-ref="pageFrame"]');
+  const lines = document.querySelector('.quran-page-lines');
+
+  if (
+    !(surface instanceof HTMLElement) ||
+    !(frame instanceof HTMLElement) ||
+    !(lines instanceof HTMLElement)
+  ) {
+    return false;
+  }
+
+  const surfaceRect = surface.getBoundingClientRect();
+  const frameRect = frame.getBoundingClientRect();
+  const linesRect = lines.getBoundingClientRect();
+  const styles = window.getComputedStyle(lines);
+  const opacity = Number.parseFloat(styles.opacity || '0');
+
+  if (surfaceRect.width <= 0 || frameRect.width <= 0 || linesRect.width <= 0) {
+    return false;
+  }
+
+  return (
+    styles.visibility !== 'hidden' &&
+    opacity > 0.5 &&
+    (frameRect.width / surfaceRect.width) >= 0.58 &&
+    (linesRect.width / frameRect.width) >= 0.76
+  );
+})()
+JS,
+            true,
+            $timeoutMs,
+        );
+    };
+
     resetBrowserState($page);
     waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
     hashAction($page, '#quran-app-tilawa', true);
@@ -797,23 +845,19 @@ JS,
         true,
         6_000,
     );
+    $assertReaderVisibleAfterModalClose();
 
     scriptClick($page, '.quran-soorah-trigger');
     waitForScriptWithTimeout($page, 'Boolean(document.querySelector("#quran-reader-search-modal"))', true, 5_000);
-    $page->script(<<<'JS'
-(() => {
-  const searchInput = document.querySelector('#quran-reader-search-input');
-
-  if (!(searchInput instanceof HTMLInputElement)) {
-    return false;
-  }
-
-  searchInput.value = 'الذين';
-  searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-
-  return true;
-})()
-JS);
+    $page->script(
+        quranReaderCommandScript(
+            <<<'JS'
+data.search.modalOpen = true;
+data.search.query = 'الذين';
+return data.updateSearchResults();
+JS,
+        ),
+    );
     waitForScriptWithTimeout($page, quranReaderDataScript('data.search.results.length > 0'), true, 12_000);
 
     $targetSearchPage = $page->script(
@@ -861,6 +905,7 @@ JS,
         true,
         6_000,
     );
+    $assertReaderVisibleAfterModalClose();
 
     scriptClick($page, '[data-quran-open-history]');
     waitForScriptWithTimeout(

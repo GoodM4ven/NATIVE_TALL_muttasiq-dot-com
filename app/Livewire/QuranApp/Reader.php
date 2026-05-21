@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Livewire\QuranApp;
 
-use App\Livewire\QuranApp\Concerns\InteractsWithQuranSearchAction;
 use App\Models\Setting;
 use App\Services\Native\NativeQuranPreparationService;
 use App\Services\Quran\QuranReaderDataService;
@@ -27,7 +26,6 @@ use Livewire\Component;
 class Reader extends Component implements HasActions, HasSchemas
 {
     use InteractsWithActions;
-    use InteractsWithQuranSearchAction;
     use InteractsWithSchemas;
 
     private const SEARCH_STREAM_TARGET = 'quran-search-results-stream';
@@ -521,6 +519,27 @@ class Reader extends Component implements HasActions, HasSchemas
         );
     }
 
+    public function searchQuranAction(): Action
+    {
+        return Action::make('searchQuran')
+            ->modalHeading(arabic_text('البحث الشامل في القرآن الكريم'))
+            ->modalDescription(
+                arabic_text('تظهر النتائج على دفعات: سور مطابقة أو قريبة، ثم آيات مطابقة أو قريبة أو صرفية أو جذرية.'),
+            )
+            ->modalAutofocus(false)
+            ->modalWidth(Width::FiveExtraLarge)
+            ->modalSubmitAction(false)
+            ->modalCancelActionLabel(arabic_text('إغلاق'))
+            ->extraModalWindowAttributes([
+                'id' => 'quran-reader-search-modal',
+                'class' => 'quran-reader-search-modal-window',
+            ])
+            ->modalContent(
+                fn (): HtmlString => new HtmlString(Blade::render('<x-partials.quran-app.search-modal />')),
+            )
+            ->action(static fn (): null => null);
+    }
+
     public function jumpToPageAction(): Action
     {
         return Action::make('jumpToPage')
@@ -608,7 +627,7 @@ class Reader extends Component implements HasActions, HasSchemas
     #[Renderless]
     public function prewarmManagerModals(): void
     {
-        foreach (['history-modal', 'bookmarks-modal'] as $partial) {
+        foreach (['search-modal', 'history-modal', 'bookmarks-modal'] as $partial) {
             Blade::render("<x-partials.quran-app.{$partial} />");
         }
     }
