@@ -110,7 +110,7 @@
 
     #quran-reader-search-modal .quran-search-results-select-wrapper .fi-select-input,
     #quran-reader-search-modal .quran-surah-select-wrapper .fi-select-input {
-        min-height: 3.1rem;
+        /* min-height: 3.1rem; */
     }
 
     #quran-reader-search-modal .quran-search-results-select-wrapper .fi-input-wrp:focus-within,

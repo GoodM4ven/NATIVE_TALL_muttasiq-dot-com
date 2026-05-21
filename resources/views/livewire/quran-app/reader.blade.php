@@ -3266,7 +3266,7 @@
                     </div>
                 </template>
                 <header
-                    class="quran-top-strip gap-[0.4rem] px-[0.6rem] pb-2 pt-[0.45rem] sm:gap-[0.65rem] sm:px-4 sm:pb-2 sm:pt-[0.8rem]"
+                    class="quran-top-strip rounded-t-2xl sm:rounded-[1.75rem] gap-[0.4rem] px-[0.6rem] pb-2 pt-[0.45rem] sm:gap-[0.65rem] sm:px-4 sm:pb-2 sm:pt-[0.8rem]"
                     data-quran-reader-chrome
                     x-bind:class="{
                         'quran-top-strip--wird-active': wirdModeActive,
