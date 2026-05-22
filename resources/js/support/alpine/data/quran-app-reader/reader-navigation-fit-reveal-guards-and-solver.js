@@ -1635,10 +1635,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 if (
                     this.shouldUseImmersiveReaderChrome() &&
                     this.isAnyQuranReaderViewOpen() &&
-                    this._immersiveEntryAwaitingFirstReveal &&
-                    !this._startupCalibrationPending &&
-                    !this.isCalibrating &&
-                    this.hasCompletedInitialMushafPreparation
+                    this._immersiveEntryAwaitingFirstReveal
                 ) {
                     this._immersiveEntryAwaitingFirstReveal = false;
                     this.isReaderChromeVisible = true;

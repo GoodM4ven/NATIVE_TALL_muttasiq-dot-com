@@ -186,17 +186,6 @@
     "prefer-stable": true,
     "repositories": [
         {
-            "name": "nativephp-muttasiq-patches",
-            "type": "path",
-            "url": "/home/goodm4ven/Code/LaravelPackages/NATIVE_PLUGIN_muttasiq-patches",
-            "options": {
-                "symlink": true,
-                "versions": {
-                    "goodm4ven/nativephp-muttasiq-patches": "1.3.999999"
-                }
-            }
-        },
-        {
             "name": "filament",
             "type": "composer",
             "url": "https://packages.filamentphp.com/composer"

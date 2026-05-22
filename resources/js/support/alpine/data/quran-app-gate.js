@@ -634,20 +634,6 @@ document.addEventListener('alpine:init', () => {
                 tadabbur: 'quran-app-tadabbur',
             };
             const targetView = modeViewMap[mode] ?? 'quran-app-gate';
-            const emitLaunchRequested = (phase = 'requested') => {
-                window.dispatchEvent(
-                    new CustomEvent('quran-reader-launch-requested', {
-                        detail: {
-                            mode,
-                            view: targetView,
-                            phase,
-                            ts: Date.now(),
-                        },
-                    }),
-                );
-            };
-
-            emitLaunchRequested('open-mode');
 
             if (this.isFastUiMode()) {
                 this.$viewNav(targetView);
@@ -670,7 +656,6 @@ document.addEventListener('alpine:init', () => {
             this.launchNavigateTimeoutId = window.setTimeout(
                 () => {
                     this.launchNavigateTimeoutId = null;
-                    emitLaunchRequested('before-view-nav');
                     this.$viewNav(targetView);
 
                     const shellElement = this.quranShellElement();
