@@ -2526,9 +2526,19 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                     measured.height > heightOverflowThreshold;
                 const fillWidth = measured.width / sanityAvailableWidth;
                 const fillHeight = measured.height / sanityAvailableHeight;
+                const rootStyles = window.getComputedStyle(rootElement);
+                const sanityMinScale = Math.max(
+                    0.05,
+                    Number.parseFloat(rootStyles.getPropertyValue('--quran-min-page-scale')) || 0.1,
+                );
+                const isPageScaleAtFloor = Number(this.pageScale ?? 1) <= sanityMinScale + 1e-3;
+                // When the solver legitimately bottomed at --quran-min-page-scale (e.g. dense
+                // pages on small viewports), under-fill is expected, not a fit failure — skip
+                // the recovery refit to avoid storm. Overflow is still treated as a real issue.
                 const hasSuspiciousUnderfill =
-                    fillWidth < normalizedMinimumFillWidth ||
-                    fillHeight < normalizedMinimumFillHeight;
+                    !isPageScaleAtFloor &&
+                    (fillWidth < normalizedMinimumFillWidth ||
+                        fillHeight < normalizedMinimumFillHeight);
 
                 if (!hasOverflow && !hasSuspiciousUnderfill) {
                     this._fitSanityContextKey = '';
@@ -3410,59 +3420,36 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                     ? measuredAyahLineTargets
                     : measuredBoundsTargets;
 
-            const measureVisualBounds = () => {
-                const widths = [];
-                let minLeft = Number.POSITIVE_INFINITY;
-                let minTop = Number.POSITIVE_INFINITY;
-                let maxRight = Number.NEGATIVE_INFINITY;
-                let maxBottom = Number.NEGATIVE_INFINITY;
+            const captureMaxLineWidth = () => {
+                let widest = 0;
 
-                measuredBoundsTargets.forEach((target) => {
-                    const rect = target.getBoundingClientRect();
+                for (let index = 0; index < measuredWidthTargets.length; index += 1) {
+                    const rect = measuredWidthTargets[index].getBoundingClientRect();
 
-                    if (rect.width <= 0 || rect.height <= 0) {
-                        return;
+                    if (rect.height > 0 && rect.width > widest) {
+                        widest = rect.width;
                     }
-
-                    minLeft = Math.min(minLeft, rect.left);
-                    minTop = Math.min(minTop, rect.top);
-                    maxRight = Math.max(maxRight, rect.right);
-                    maxBottom = Math.max(maxBottom, rect.bottom);
-                });
-
-                measuredWidthTargets.forEach((target) => {
-                    const rect = target.getBoundingClientRect();
-
-                    if (rect.width <= 0 || rect.height <= 0) {
-                        return;
-                    }
-
-                    widths.push(rect.width);
-                });
-
-                if (!Number.isFinite(minLeft) || !Number.isFinite(maxRight)) {
-                    const fallbackRect = contentElement.getBoundingClientRect();
-
-                    return {
-                        width: Math.max(1, Number(fallbackRect.width ?? 0)),
-                        height: Math.max(1, Number(fallbackRect.height ?? 0)),
-                        minLeft: Number(fallbackRect.left ?? 0),
-                        minTop: Number(fallbackRect.top ?? 0),
-                        maxRight: Number(fallbackRect.right ?? 0),
-                        maxBottom: Number(fallbackRect.bottom ?? 0),
-                    };
                 }
 
-                const measuredWidth =
-                    widths.length > 0 ? Math.max(...widths) : Math.max(1, maxRight - minLeft);
+                return widest;
+            };
+
+            const measureVisualBounds = ({ refineWidthWithLines = false } = {}) => {
+                const rect = contentElement.getBoundingClientRect();
+                const width = Math.max(1, Number(rect.width ?? 0) || 1);
+                const height = Math.max(1, Number(rect.height ?? 0) || 1);
+                const refinedWidth =
+                    refineWidthWithLines && measuredWidthTargets.length > 0
+                        ? captureMaxLineWidth()
+                        : 0;
 
                 return {
-                    width: Math.max(1, measuredWidth),
-                    height: Math.max(1, maxBottom - minTop),
-                    minLeft,
-                    minTop,
-                    maxRight,
-                    maxBottom,
+                    width: refinedWidth > 0 ? Math.max(1, refinedWidth) : width,
+                    height,
+                    minLeft: Number(rect.left ?? 0),
+                    minTop: Number(rect.top ?? 0),
+                    maxRight: Number(rect.right ?? 0),
+                    maxBottom: Number(rect.bottom ?? 0),
                 };
             };
 
@@ -3475,13 +3462,13 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 return !(overflowLeft || overflowRight || overflowTop || overflowBottom);
             };
 
-            const evaluateScale = (scale) => {
+            const evaluateScale = (scale, { refineWidthWithLines = true } = {}) => {
                 const normalizedScale = Math.max(
                     minScale,
                     Math.min(maxScale, Number(scale) || minScale),
                 );
                 this.setCurrentPageScale(normalizedScale, { forFitting: true });
-                const bounds = measureVisualBounds();
+                const bounds = measureVisualBounds({ refineWidthWithLines });
                 const fillWidth = bounds.width / targetWidth;
                 const fillHeight = bounds.height / targetHeight;
                 const fitsBox =
@@ -3676,39 +3663,69 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                   })
                 : layoutCandidates;
             const solveBestScaleForCurrentLayout = () => {
-                let lower = minScale;
-                let upper = maxScale;
-                let best = evaluateScale(minScale);
+                // 1. Read natural (scale=1) size using actual line width rather than
+                //    container width, so the geometric scale is height-limited when text
+                //    is narrower than the frame (prevents profile candidates from winning
+                //    at a smaller scale than the CSS baseline on post-modal fits).
+                this.setCurrentPageScale(1, { forFitting: true });
+                const naturalBounds = measureVisualBounds({ refineWidthWithLines: true });
+                const naturalWidth = Math.max(1, naturalBounds.width);
+                const naturalHeight = Math.max(1, naturalBounds.height);
 
-                if (!best.fits) {
-                    return best;
+                // 2. Geometric scale = the largest s where s * natural fits both axes.
+                //    With --quran-page-scale appearing once in every font-size/gap calc(),
+                //    the rendered W and H scale ~linearly with it for a given candidate.
+                const geometricScale = Math.max(
+                    minScale,
+                    Math.min(
+                        maxScale,
+                        Math.min(targetWidth / naturalWidth, targetHeight / naturalHeight),
+                    ),
+                );
+
+                // 3. One verification with line-width refinement for accurate fit detection.
+                const verification = evaluateScale(geometricScale, { refineWidthWithLines: true });
+
+                if (verification.fits || geometricScale <= minScale + 1e-4) {
+                    return verification;
                 }
 
-                const binarySearchSteps = shouldUseFastFitPath ? 7 : isBaseBreakpoint ? 12 : 16;
+                // 4. One refinement step if the linear projection over-shot due to wrap
+                //    edge cases or content padding. Shrink by the largest observed overflow.
+                const overflowFactor = Math.min(
+                    targetWidth / Math.max(1, verification.bounds.width),
+                    targetHeight / Math.max(1, verification.bounds.height),
+                );
 
-                for (let step = 0; step < binarySearchSteps; step += 1) {
-                    const mid = (lower + upper) * 0.5;
-                    const evaluation = evaluateScale(mid);
-
-                    if (evaluation.fits) {
-                        best = evaluation;
-                        lower = mid;
-                    } else {
-                        upper = mid;
-                    }
+                if (overflowFactor >= 1 || overflowFactor < 0.5) {
+                    return verification;
                 }
 
-                return best;
+                const refinedScale = Math.max(minScale, geometricScale * overflowFactor * 0.998);
+                const refined = evaluateScale(refinedScale, { refineWidthWithLines: true });
+
+                return refined.fits || !verification.fits ? refined : verification;
             };
 
             let bestLayout = baselineLayout;
-            let finalEvaluation = evaluateScale(minScale);
+            let finalEvaluation = null;
             let bestScore = Number.NEGATIVE_INFINITY;
+            let relaxedFallbackLayout = baselineLayout;
+            let relaxedFallbackEvaluation = null;
+            let relaxedFallbackScore = Number.NEGATIVE_INFINITY;
 
             layoutCandidatesToEvaluate.forEach((candidateLayout) => {
                 this.applyFitLayoutVariables(rootElement, candidateLayout);
-                this.setCurrentPageScale(1, { forFitting: true });
                 const evaluation = solveBestScaleForCurrentLayout();
+                const relaxedScore =
+                    Math.min(1.08, evaluation.fillWidth) * 1.2 +
+                    Math.min(1.08, evaluation.fillHeight) * 0.8;
+
+                if (relaxedScore > relaxedFallbackScore) {
+                    relaxedFallbackScore = relaxedScore;
+                    relaxedFallbackLayout = { ...candidateLayout };
+                    relaxedFallbackEvaluation = evaluation;
+                }
 
                 if (!evaluation.fits) {
                     return;
@@ -3759,40 +3776,8 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             });
 
             if (bestScore === Number.NEGATIVE_INFINITY) {
-                let relaxedBestLayout = { ...baselineLayout };
-                let relaxedBestEvaluation = evaluateScale(minScale);
-                let relaxedBestScore = Number.NEGATIVE_INFINITY;
-
-                layoutCandidatesToEvaluate.forEach((candidateLayout) => {
-                    this.applyFitLayoutVariables(rootElement, candidateLayout);
-                    this.setCurrentPageScale(1, { forFitting: true });
-                    const natural = measureVisualBounds();
-
-                    if (natural.width <= 1 || natural.height <= 1) {
-                        return;
-                    }
-
-                    const geometricScale = Math.max(
-                        minScale,
-                        Math.min(
-                            maxScale,
-                            Math.min(targetWidth / natural.width, targetHeight / natural.height),
-                        ),
-                    );
-                    const evaluation = evaluateScale(geometricScale);
-                    const relaxedScore =
-                        Math.min(1.08, evaluation.fillWidth) * 1.2 +
-                        Math.min(1.08, evaluation.fillHeight) * 0.8;
-
-                    if (relaxedScore > relaxedBestScore) {
-                        relaxedBestScore = relaxedScore;
-                        relaxedBestLayout = { ...candidateLayout };
-                        relaxedBestEvaluation = evaluation;
-                    }
-                });
-
-                bestLayout = relaxedBestLayout;
-                finalEvaluation = relaxedBestEvaluation;
+                bestLayout = relaxedFallbackLayout;
+                finalEvaluation = relaxedFallbackEvaluation ?? evaluateScale(minScale);
             }
 
             this.applyFitLayoutVariables(rootElement, bestLayout);
