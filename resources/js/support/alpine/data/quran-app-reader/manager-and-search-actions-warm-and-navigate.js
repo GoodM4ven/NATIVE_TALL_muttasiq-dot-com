@@ -492,26 +492,33 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
             let pendingWorkers = workers.length;
 
             workers.forEach((runWorker) => {
-                Promise.resolve()
-                    .then(() => runWorker())
-                    .then((results) => {
-                        appendWorkerResults(results);
-                    })
-                    .catch(() => {
-                        //
-                    })
-                    .finally(() => {
+                window.setTimeout(() => {
+                    if (requestSerial !== this._searchRequestSerial) {
                         pendingWorkers = Math.max(0, pendingWorkers - 1);
 
-                        if (pendingWorkers > 0 || requestSerial !== this._searchRequestSerial) {
-                            return;
-                        }
+                        return;
+                    }
 
-                        this.search.isLoading = false;
-                        this.search.lastCompletedNormalizedQuery = normalizedQuery;
-                        this._searchRequestInFlight = false;
-                        this._searchQueuedNormalizedQuery = null;
-                    });
+                    runWorker()
+                        .then((results) => {
+                            appendWorkerResults(results);
+                        })
+                        .catch(() => {
+                            //
+                        })
+                        .finally(() => {
+                            pendingWorkers = Math.max(0, pendingWorkers - 1);
+
+                            if (pendingWorkers > 0 || requestSerial !== this._searchRequestSerial) {
+                                return;
+                            }
+
+                            this.search.isLoading = false;
+                            this.search.lastCompletedNormalizedQuery = normalizedQuery;
+                            this._searchRequestInFlight = false;
+                            this._searchQueuedNormalizedQuery = null;
+                        });
+                }, 0);
             });
         },
 
