@@ -675,6 +675,8 @@ export const createInitialState = (config, deps) => {
         _startupReaderLaunchIntentView: '',
         _startupRecoveryTimerIds: [],
         _postBootstrapRecoveryTimerIds: [],
+        _startupAutoTapTimer: null,
+        _startupAutoTapToken: 0,
 
         calibrationHudTop: 0,
 

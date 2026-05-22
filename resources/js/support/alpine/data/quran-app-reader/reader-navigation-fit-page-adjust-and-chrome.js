@@ -302,6 +302,108 @@ export const createReaderNavigationFitPageAdjustAndChromeModule = (deps) => {
             return this.isCurrentPageVisiblyReady() || this.isCurrentPageContentVisible(0.12);
         },
 
+        clearStartupAutoTapTimer() {
+            if (this._startupAutoTapTimer !== null) {
+                clearTimeout(this._startupAutoTapTimer);
+                this._startupAutoTapTimer = null;
+            }
+        },
+
+        runStartupAutoTapRecovery(source = 'unknown') {
+            if (
+                !this.nativeRuntime ||
+                !this._startupCalibrationPending ||
+                this._bootstrapInFlight ||
+                !this.shouldTreatReaderAsLaunchPending()
+            ) {
+                return false;
+            }
+
+            const recovered = this.attemptAndroidReaderTapRecovery('startup-auto-tap');
+
+            this.traceStartupState?.('startup-auto-tap-recovery', {
+                source,
+                recovered,
+            });
+
+            return recovered;
+        },
+
+        queueStartupAutoTapAfterChromeReveal(source = 'unknown') {
+            if (
+                !this.nativeRuntime ||
+                !this._startupCalibrationPending ||
+                this._bootstrapInFlight ||
+                !this.isReaderChromeVisible ||
+                !this.shouldTreatReaderAsLaunchPending()
+            ) {
+                return;
+            }
+
+            if (this._startupAutoTapTimer !== null) {
+                return;
+            }
+
+            const stackElement = document.querySelector('.app-action-buttons-stack');
+
+            if (!(stackElement instanceof HTMLElement)) {
+                this.clearStartupAutoTapTimer();
+                this._startupAutoTapTimer = window.setTimeout(() => {
+                    this._startupAutoTapTimer = null;
+                    this.runStartupAutoTapRecovery(`${source}:fallback-no-stack`);
+                }, 360);
+
+                this.traceStartupState?.('startup-auto-tap-queued', {
+                    source,
+                    mode: 'fallback-no-stack',
+                });
+
+                return;
+            }
+
+            const token = Number(this._startupAutoTapToken ?? 0) + 1;
+            this._startupAutoTapToken = token;
+            this.clearStartupAutoTapTimer();
+            let hasSettled = false;
+
+            const finalizeAutoTap = (reason = 'timeout') => {
+                if (hasSettled || token !== this._startupAutoTapToken) {
+                    return;
+                }
+
+                hasSettled = true;
+                stackElement.removeEventListener('transitionend', handleStackTransitionEnd, true);
+                this.clearStartupAutoTapTimer();
+                this.runStartupAutoTapRecovery(`${source}:${reason}`);
+            };
+
+            const handleStackTransitionEnd = (event) => {
+                if (event.target !== stackElement) {
+                    return;
+                }
+
+                const propertyName = String(event.propertyName ?? '')
+                    .trim()
+                    .toLowerCase();
+
+                if (propertyName !== '' && !['opacity', 'transform'].includes(propertyName)) {
+                    return;
+                }
+
+                finalizeAutoTap('transitionend');
+            };
+
+            stackElement.addEventListener('transitionend', handleStackTransitionEnd, true);
+            this._startupAutoTapTimer = window.setTimeout(() => {
+                finalizeAutoTap('timeout');
+            }, 420);
+            this.traceStartupState?.('startup-auto-tap-queued', {
+                source,
+                mode: 'transitionend',
+                token,
+            });
+        },
+
         syncReaderChromeDocumentClass({ forceInactive = false } = {}) {
             if (typeof document === 'undefined' || !(document.body instanceof HTMLElement)) {
                 return;
@@ -345,6 +447,13 @@ export const createReaderNavigationFitPageAdjustAndChromeModule = (deps) => {
                         },
                     }),
                 );
+            }
+
+            if (isCalibrating && isActive && this.isReaderChromeVisible) {
+                this.queueStartupAutoTapAfterChromeReveal('sync-reader-chrome');
+            } else if (!isCalibrating) {
+                this._startupAutoTapToken = 0;
+                this.clearStartupAutoTapTimer();
             }
         },
 
@@ -468,6 +577,25 @@ export const createReaderNavigationFitPageAdjustAndChromeModule = (deps) => {
                     this.traceStartupState?.('panel-tap-startup-recovery', {
                         reason: recoveryReason,
                         mode: 'attempt-pending-startup-bootstrap',
+                    });
+
+                    return true;
+                }
+
+                if (
+                    this._bootstrapInFlight &&
+                    typeof this.shouldTreatReaderAsLaunchPending === 'function' &&
+                    this.shouldTreatReaderAsLaunchPending()
+                ) {
+                    const wasReaderChromeVisible = this.isReaderChromeVisible;
+
+                    this.isReaderChromeVisible = false;
+                    this.syncReaderChromeDocumentClass?.();
+                    this.scheduleReaderPanelLayoutRefresh?.();
+                    this.traceStartupState?.('panel-tap-startup-recovery', {
+                        reason: recoveryReason,
+                        mode: 'bootstrap-in-flight-visibility-sync',
+                        wasReaderChromeVisible,
                     });
 
                     return true;

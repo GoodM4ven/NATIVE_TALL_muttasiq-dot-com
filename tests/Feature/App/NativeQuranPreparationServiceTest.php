@@ -208,7 +208,9 @@ it('reader returns quran payload once native preparation status is ready', funct
 it('shows native quran bootstrap progress through home and reader events', function () {
     $homeView = file_get_contents(resource_path('views/home.blade.php'));
     $readerView = file_get_contents(resource_path('views/livewire/quran-app/reader.blade.php'));
-    $readerScript = file_get_contents(resource_path('js/support/alpine/data/quran-app-reader/index.js'));
+    $readerScript = file_get_contents(
+        resource_path('js/support/alpine/data/quran-app-reader/lifecycle-bootstrap-environment-and-cache.js'),
+    );
 
     expect($homeView)->toContain('quran-bootstrap-progress');
     expect($homeView)->toContain('quranBootstrap.progressPercent');
@@ -216,4 +218,16 @@ it('shows native quran bootstrap progress through home and reader events', funct
     expect($readerView)->not()->toContain('quran-background-prepare-request');
     expect($readerScript)->toContain('emitNativeQuranPreparationProgress');
     expect($readerScript)->toContain('quran-bootstrap-progress');
+});
+
+it('keeps native quran bootstrap modal in restart-required mode after successful download flow', function () {
+    $homeView = file_get_contents(resource_path('views/home.blade.php'));
+
+    expect($homeView)->toContain('didStartDownloadFlow')
+        ->and($homeView)->toContain('requiresRestart')
+        ->and($homeView)->toContain('restartNativeAppAfterQuranBootstrap')
+        ->and($homeView)->toContain('window.AndroidBridge.restartApplication()')
+        ->and($homeView)->toContain('handleQuranBootstrapOverlayClick()')
+        ->and($homeView)->toContain('x-show="quranBootstrap.requiresRestart"')
+        ->and($homeView)->toContain('x-bind:disabled="quranBootstrap.isRestarting"');
 });

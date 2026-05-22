@@ -345,20 +345,49 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
             this.clearStartupRecoveryTimers();
 
             const recoverySource = String(source ?? '').trim() || 'unknown';
-            const delaysMs = [0, 120, 280, 520, 880, 1280];
+            const delaysMs = [0, 120, 280, 520, 880, 1280, 1820, 2460, 3220];
 
             delaysMs.forEach((delayMs, index) => {
                 const timerId = window.setTimeout(() => {
                     this._startupRecoveryTimerIds = this._startupRecoveryTimerIds.filter(
                         (activeTimerId) => activeTimerId !== timerId,
                     );
-                    const attempted = this.attemptPendingStartupBootstrap();
+                    const attemptedStartupBootstrap = this.attemptPendingStartupBootstrap();
+                    let attemptedTapRecovery = false;
+                    let forcedImmersiveChromeHide = false;
+
+                    if (
+                        this.nativeRuntime &&
+                        typeof this.attemptAndroidReaderTapRecovery === 'function' &&
+                        (!attemptedStartupBootstrap || delayMs >= 880)
+                    ) {
+                        attemptedTapRecovery =
+                            this.attemptAndroidReaderTapRecovery('startup-recovery-sweep');
+                    }
+
+                    if (
+                        this.nativeRuntime &&
+                        this._startupCalibrationPending &&
+                        !this._bootstrapInFlight &&
+                        this.shouldTreatReaderAsLaunchPending() &&
+                        this.isReaderChromeVisible &&
+                        delayMs >= 880
+                    ) {
+                        this.isReaderChromeVisible = false;
+                        this.syncReaderChromeDocumentClass?.();
+                        this.scheduleReaderPanelLayoutRefresh?.();
+                        forcedImmersiveChromeHide = true;
+                    }
+                    const attempted = attemptedStartupBootstrap || attemptedTapRecovery;
 
                     this.traceStartupState('reader-startup-recovery-sweep', {
                         source: recoverySource,
                         delayMs,
                         attempt: index + 1,
                         attempted,
+                        attemptedStartupBootstrap,
+                        attemptedTapRecovery,
+                        forcedImmersiveChromeHide,
                     });
                 }, delayMs);
 
@@ -624,6 +653,8 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
                 if (!isGoingToQuranReader) {
                     this.isFontScaleOverlayVisible = false;
                     this.isReaderChromeVisible = false;
+                    this._startupAutoTapToken = 0;
+                    this.clearStartupAutoTapTimer?.();
                     this.syncReaderChromeDocumentClass({ forceInactive: true });
                     this._immersiveEntryAwaitingFirstReveal = true;
                     this.clearDeferredBootstrapCheckTimer();
@@ -670,8 +701,6 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
                         );
                         this.bootstrap();
                     });
-
-                    return;
                 }
 
                 window.setTimeout(() => {
@@ -686,6 +715,8 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
             this._onReaderGoGate = () => {
                 this.isReaderChromeVisible = false;
                 this.isFontScaleOverlayVisible = false;
+                this._startupAutoTapToken = 0;
+                this.clearStartupAutoTapTimer?.();
                 this.syncReaderChromeDocumentClass({ forceInactive: true });
                 this.clearStartupRecoveryTimers();
                 this.clearPostBootstrapRecoveryTimers();
@@ -1628,6 +1659,8 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
             this._deferredBootstrapCheckAttempts = 0;
             this.clearStartupRecoveryTimers();
             this.clearPostBootstrapRecoveryTimers();
+            this._startupAutoTapToken = 0;
+            this.clearStartupAutoTapTimer?.();
 
             if (this._onWindowStorage) {
                 window.removeEventListener('storage', this._onWindowStorage);

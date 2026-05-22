@@ -18,6 +18,9 @@
                 isVisible: false,
                 isPreparing: false,
                 isFinishing: false,
+                requiresRestart: false,
+                isRestarting: false,
+                didStartDownloadFlow: false,
                 errorMessage: null,
                 progressPercent: 0,
                 displayProgressPercent: 0,
@@ -179,6 +182,9 @@
                 this.quranBootstrap.isVisible = true;
                 this.quranBootstrap.isPreparing = true;
                 this.quranBootstrap.isFinishing = false;
+                this.quranBootstrap.requiresRestart = false;
+                this.quranBootstrap.isRestarting = false;
+                this.quranBootstrap.didStartDownloadFlow = true;
                 this.quranBootstrap.errorMessage = null;
                 this.quranBootstrap.progressPercent = 0;
                 this.quranBootstrap.displayProgressPercent = 0;
@@ -203,10 +209,23 @@
                 this.clearQuranBootstrapCloseTimeout();
                 this.setQuranBootstrapProgress(100, { allowDecrease: true });
                 this.quranBootstrap.isPreparing = false;
-                this.quranBootstrap.isFinishing = true;
+                this.quranBootstrap.isFinishing = false;
                 this.quranBootstrap.errorMessage = null;
                 const shouldOpenGate = detail?.openGateOnSuccess !== false;
         
+                if (this.quranBootstrap.didStartDownloadFlow) {
+                    this.stopQuranBootstrapProgressAnimation();
+                    this.quranBootstrap.displayProgressPercent = 100;
+                    this.quranBootstrap.requiresRestart = true;
+                    this.quranBootstrap.isRestarting = false;
+                    this.quranBootstrap.statusMessage = String(
+                        @js(arabic_text('اكتمل تنزيل بيانات القرآن بنجاح. يلزم إعادة تشغيل التطبيق الآن.')),
+                    );
+        
+                    return;
+                }
+        
+                this.quranBootstrap.isFinishing = true;
                 const holdAtHundredMs = 100;
                 const closeAnimationDurationMs = 220;
         
@@ -226,12 +245,60 @@
                     }, closeAnimationDurationMs);
                 }, holdAtHundredMs);
             },
+            handleQuranBootstrapOverlayClick() {
+                if (this.quranBootstrap.requiresRestart) {
+                    this.restartNativeAppAfterQuranBootstrap('overlay-click');
+        
+                    return;
+                }
+        
+                if (!this.quranBootstrap.didStartDownloadFlow) {
+                    this.dismissQuranBootstrapState();
+                }
+            },
+            restartNativeAppAfterQuranBootstrap(source = 'unknown') {
+                if (!this.quranBootstrap.requiresRestart || this.quranBootstrap.isRestarting) {
+                    return;
+                }
+        
+                this.quranBootstrap.isRestarting = true;
+                this.quranBootstrap.statusMessage = String(
+                    @js(arabic_text('جاري إعادة تشغيل التطبيق...')),
+                );
+        
+                if (
+                    this.isNativeRuntime &&
+                    typeof window.AndroidBridge === 'object' &&
+                    window.AndroidBridge !== null &&
+                    typeof window.AndroidBridge.restartApplication === 'function'
+                ) {
+                    window.AndroidBridge.restartApplication();
+                    return;
+                }
+        
+                this.quranBootstrap.isRestarting = false;
+                this.quranBootstrap.errorMessage = String(
+                    @js(arabic_text('تعذر إرسال أمر إعادة التشغيل. أعد بناء التطبيق ثم حاول مرة أخرى.')),
+                );
+                this.quranBootstrap.statusMessage = String(
+                    @js(arabic_text('يلزم إعادة تشغيل التطبيق يدويًا.')),
+                );
+                window.dispatchEvent(
+                    new CustomEvent('quran-bootstrap-restart-unavailable', {
+                        detail: {
+                            source: String(source ?? '').trim() || 'unknown',
+                        },
+                    }),
+                );
+            },
             handleQuranBootstrapFailed(detail = {}) {
                 this.clearQuranBootstrapCloseTimeout();
                 this.stopQuranBootstrapProgressAnimation();
                 this.quranBootstrap.isVisible = true;
                 this.quranBootstrap.isPreparing = false;
                 this.quranBootstrap.isFinishing = false;
+                this.quranBootstrap.requiresRestart = false;
+                this.quranBootstrap.isRestarting = false;
                 this.quranBootstrap.errorMessage =
                     String(detail?.message ?? @js(arabic_text('تعذر تجهيز بيانات القرآن الآن. حاول مرة أخرى بعد قليل.')));
             },
@@ -241,6 +308,9 @@
                 this.quranBootstrap.isVisible = false;
                 this.quranBootstrap.isPreparing = false;
                 this.quranBootstrap.isFinishing = false;
+                this.quranBootstrap.requiresRestart = false;
+                this.quranBootstrap.isRestarting = false;
+                this.quranBootstrap.didStartDownloadFlow = false;
                 this.quranBootstrap.errorMessage = null;
                 this.quranBootstrap.progressPercent = 0;
                 this.quranBootstrap.displayProgressPercent = 0;
@@ -433,7 +503,7 @@
             <div
                 class="absolute inset-0 bg-slate-950/35 backdrop-blur-[2px]"
                 x-transition.opacity.duration.220ms
-                x-on:click="if (!quranBootstrap.isPreparing && !quranBootstrap.isFinishing) { dismissQuranBootstrapState() }"
+                x-on:click="handleQuranBootstrapOverlayClick()"
             ></div>
 
             <section
@@ -449,15 +519,50 @@
                     class="space-y-4"
                     x-show="!quranBootstrap.errorMessage"
                 >
-                    <div
-                        class="border-3 border-primary-200 border-t-primary-600 mx-auto h-10 w-10 animate-spin rounded-full">
+                    <div x-show="!quranBootstrap.requiresRestart">
+                        <div
+                            class="border-3 border-primary-200 border-t-primary-600 mx-auto h-10 w-10 animate-spin rounded-full">
+                        </div>
                     </div>
-                    <h2 class="text-primary-950 dark:text-primary-50 text-base font-semibold">
-                        {{ arabic_text('تحميل بيانات المصحف') }}</h2>
+                    <div x-show="quranBootstrap.requiresRestart">
+                        <div
+                            class="dark:bg-emerald-500/18 mx-auto grid h-10 w-10 place-items-center rounded-full border border-emerald-300/70 bg-emerald-100/80 text-emerald-700 dark:border-emerald-400/60 dark:text-emerald-300">
+                            <svg
+                                class="h-6 w-6"
+                                aria-hidden="true"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2.2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path d="M20 6L9 17l-5-5"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <h2
+                        class="text-base font-semibold"
+                        x-bind:class="quranBootstrap.requiresRestart ?
+                            'text-emerald-700 dark:text-emerald-300' :
+                            'text-primary-950 dark:text-primary-50'"
+                    >
+                        <span x-show="!quranBootstrap.requiresRestart">{{ arabic_text('تحميل بيانات المصحف') }}</span>
+                        <span
+                            x-show="quranBootstrap.requiresRestart">{{ arabic_text('اكتمل تجهيز بيانات المصحف') }}</span>
+                    </h2>
                     <p class="text-primary-900/78 dark:text-primary-100/82 text-sm leading-7">
-                        {{ arabic_text('يتم تجهيز المصحف بشكل أنيق ومحرك اللغة العربية لبحث متقدم...') }}
+                        <span x-show="!quranBootstrap.requiresRestart">
+                            {{ arabic_text('يتم تجهيز المصحف بشكل أنيق ومحرك اللغة العربية لبحث متقدم...') }}
+                        </span>
+                        <span x-show="quranBootstrap.requiresRestart">
+                            {{ arabic_text('لضمان تهيئة القارئ بشكل صحيح، أعد تشغيل التطبيق الآن.') }}
+                        </span>
                     </p>
-                    <div class="space-y-2">
+                    <div
+                        class="space-y-2"
+                        x-show="!quranBootstrap.requiresRestart"
+                    >
                         <div class="h-2.5 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-700/60">
                             <div
                                 class="from-primary-500 to-primary-700 bg-linear-to-r h-full rounded-full transition-[width] duration-150"
@@ -469,6 +574,21 @@
                                 x-text="`${Math.max(0, Math.min(100, Math.round(Number(quranBootstrap.displayProgressPercent ?? 0))))}%`"
                             ></span>
                         </p>
+                    </div>
+                    <div
+                        class="pt-1"
+                        x-show="quranBootstrap.requiresRestart"
+                    >
+                        <button
+                            class="bg-primary-600 hover:bg-primary-700 disabled:bg-primary-300 rounded-xl px-4 py-2 text-sm font-semibold text-white transition disabled:cursor-not-allowed"
+                            type="button"
+                            x-bind:disabled="quranBootstrap.isRestarting"
+                            x-on:click="restartNativeAppAfterQuranBootstrap('success-button')"
+                        >
+                            <span
+                                x-show="!quranBootstrap.isRestarting">{{ arabic_text('إعادة تشغيل التطبيق الآن') }}</span>
+                            <span x-show="quranBootstrap.isRestarting">{{ arabic_text('جاري إعادة التشغيل...') }}</span>
+                        </button>
                     </div>
                 </div>
 
@@ -493,6 +613,7 @@
                         <button
                             class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                             type="button"
+                            x-show="!quranBootstrap.didStartDownloadFlow"
                             x-on:click="dismissQuranBootstrapState()"
                         >
                             {{ arabic_text('إغلاق') }}
