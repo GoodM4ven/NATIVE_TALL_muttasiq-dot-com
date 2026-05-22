@@ -172,7 +172,12 @@
             body.quran-reader-immersive-active {
                 --quran-immersive-top-actions-row-top: 1.15rem;
                 --quran-immersive-stack-row-top: calc(var(--quran-immersive-top-actions-row-top) + 1.8rem);
-                --quran-immersive-stack-row-inline-start: 1.16rem;
+                --quran-immersive-panel-max-inline-size: 25rem;
+                --quran-immersive-panel-inline-size: min(calc(100vw - (var(--quran-immersive-panel-edge-padding, 0.62rem) * 2)),
+                        var(--quran-immersive-panel-max-inline-size, 25rem));
+                --quran-immersive-panel-inline-start: calc((100vw - var(--quran-immersive-panel-inline-size)) / 2);
+                --quran-immersive-stack-row-inline-padding: 0.52rem;
+                --quran-immersive-stack-row-inline-start: calc(var(--quran-immersive-panel-inline-start) + var(--quran-immersive-stack-row-inline-padding));
             }
 
             .quran-reader-panel--immersive .quran-top-strip,
