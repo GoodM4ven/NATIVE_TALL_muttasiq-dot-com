@@ -395,8 +395,6 @@
         <x-buttons-stack
             x-bind:data-respecting-stack="$store.bp.current === 'base'"
             stack-top-offset="0.4rem"
-            x-show="$store.bp.current === 'base'"
-            x-transition.opacity.duration.220ms
             @class(['mt-8' => is_platform('ios')])
         >
             <livewire:athkar-manager />
