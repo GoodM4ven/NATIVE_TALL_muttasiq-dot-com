@@ -321,18 +321,25 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             this.clearSearchStreamTarget();
             this.ensureSearchResultAnimations();
             this.queueSearchModalInputSyncBinding();
-            this.searchModalInputElement()?.focus?.();
-            this.scrollSurahDirectoryToActive({ behavior: 'auto' });
             this.queueSurahDirectoryAutoFocus();
-            this._surahDirectoryPostOpenTimers = [0, 180, 360, 620, 920].map((delayMs) =>
-                window.setTimeout(() => {
-                    if (!this.search.modalOpen) {
-                        return;
-                    }
+            this.searchModalInputElement()?.focus?.();
+            window.setTimeout(() => {
+                if (this._searchModalLifecycleToken !== lifecycleToken || !this.search.modalOpen) {
+                    return;
+                }
 
-                    this.scrollSurahDirectoryToActive({ behavior: 'auto' });
-                }, delayMs),
-            );
+                const input = this.searchModalInputElement();
+
+                if (!(input instanceof HTMLInputElement)) {
+                    return;
+                }
+
+                try {
+                    input.focus({ preventScroll: true });
+                } catch (_) {
+                    input.focus();
+                }
+            }, 48);
         },
 
         handleSearchModalClosed() {

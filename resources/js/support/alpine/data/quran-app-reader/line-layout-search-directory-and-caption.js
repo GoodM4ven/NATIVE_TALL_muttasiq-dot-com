@@ -620,15 +620,15 @@ export const createLineLayoutSearchDirectoryAndCaptionModule = (deps) => {
 
                 if (isGridReady) {
                     this.scrollSurahDirectoryToActive({ behavior: 'auto' });
-                    activeTile.focus({ preventScroll: true });
 
-                    if (normalizedAttempt < 8) {
-                        this._surahDirectoryAutoFocusTimer = window.setTimeout(
-                            () => {
-                                attemptAutoFocus(normalizedAttempt + 1);
-                            },
-                            normalizedAttempt === 0 ? 140 : 180,
-                        );
+                    const searchInput = this.searchModalInputElement();
+
+                    if (searchInput instanceof HTMLInputElement) {
+                        try {
+                            searchInput.focus({ preventScroll: true });
+                        } catch (_) {
+                            searchInput.focus();
+                        }
                     }
 
                     return;

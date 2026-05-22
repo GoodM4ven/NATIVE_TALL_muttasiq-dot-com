@@ -94,7 +94,9 @@ test('quran search runs stage workers concurrently through json livewire endpoin
         ->and($readerSource)->toContain('public function searchAyahJathr(');
 
     expect($searchWorkerScriptSource)->not->toBeFalse()
-        ->and($searchWorkerScriptSource)->toContain('Promise.resolve()')
+        ->and($searchWorkerScriptSource)->toContain('workers.forEach((runWorker) => {')
+        ->and($searchWorkerScriptSource)->toContain('runWorker()')
+        ->and($searchWorkerScriptSource)->toContain('.then((results) => {')
         ->and($searchWorkerScriptSource)->toContain('$wire.searchSurahExact(')
         ->and($searchWorkerScriptSource)->toContain('$wire.searchSurahClose(')
         ->and($searchWorkerScriptSource)->toContain('$wire.searchSurahSarf(')
