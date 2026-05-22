@@ -1096,8 +1096,7 @@ export const createLifecycleBootstrapSupportAndWirdStateModule = (deps) => {
                 );
                 const completed =
                     Boolean(parsedRecord?.completed) ||
-                    currentStep >= maxStep ||
-                    progressStep >= maxStep;
+                    (maxStep > 0 && (currentStep >= maxStep || progressStep >= maxStep));
 
                 normalizedState.dayRecords[dateKey] = {
                     startAbsolutePage,

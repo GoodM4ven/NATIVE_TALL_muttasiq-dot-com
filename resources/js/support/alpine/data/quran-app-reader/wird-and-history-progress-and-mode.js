@@ -194,7 +194,7 @@ export const createWirdAndHistoryProgressAndModeModule = (deps) => {
                       })
                     : currentStep;
                 const completed = canCarryExistingProgress
-                    ? Boolean(record?.completed) || carriedProgressStep >= maxStep
+                    ? Boolean(record?.completed) || (maxStep > 0 && carriedProgressStep >= maxStep)
                     : false;
                 const progressStep = completed
                     ? maxStep
