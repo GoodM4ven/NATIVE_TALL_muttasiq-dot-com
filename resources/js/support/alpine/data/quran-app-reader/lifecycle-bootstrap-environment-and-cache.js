@@ -127,8 +127,325 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
         writeWirdDayOffsetDays,
     } = deps;
 
+    const nativeInstallFingerprintStorageKey = 'quran-reader-native-install-fingerprint-v1';
+    const quranReaderViewNames = Object.freeze([
+        'quran-app-tilawa',
+        'quran-app-hifth',
+        'quran-app-tadabbur',
+    ]);
+
     return {
+        traceStartupState(eventName, details = {}) {
+            const normalizedEventName = String(eventName ?? '')
+                .trim()
+                .toLowerCase();
+            const payload = {
+                event: normalizedEventName || 'event',
+                ts: Date.now(),
+                view:
+                    typeof this.activeQuranReaderView === 'function'
+                        ? this.activeQuranReaderView()
+                        : '',
+                anyReaderViewOpen:
+                    typeof this.isAnyQuranReaderViewOpen === 'function'
+                        ? this.isAnyQuranReaderViewOpen()
+                        : false,
+                readerVisible:
+                    typeof this.isReaderElementVisible === 'function'
+                        ? this.isReaderElementVisible()
+                        : false,
+                readerPanelVisible:
+                    typeof this.isReaderPanelVisible === 'function'
+                        ? this.isReaderPanelVisible()
+                        : false,
+                startupCalibrationPending: Boolean(this._startupCalibrationPending),
+                bootstrapDeferred: Boolean(this._bootstrapDeferred),
+                bootstrapInFlight: Boolean(this._bootstrapInFlight),
+                hasCompletedInitialMushafPreparation: Boolean(
+                    this.hasCompletedInitialMushafPreparation,
+                ),
+                ready: Boolean(this.ready),
+                maxPage: Number(this.maxPage ?? 0),
+                pageNumber: Number(this.pageNumber ?? 0),
+                ...(details && typeof details === 'object' && !Array.isArray(details)
+                    ? details
+                    : {}),
+            };
+            let serializedPayload = '{}';
+
+            try {
+                serializedPayload = JSON.stringify(payload);
+            } catch {
+                serializedPayload = '{"event":"serialization-failed"}';
+            }
+
+            if (this.nativeRuntime) {
+                console.info(`[QR:startup] ${serializedPayload}`);
+            }
+
+            this.qrDebugLog(`[QR:startup] ${serializedPayload}`);
+        },
+
+        resolveNativeInstallFingerprint() {
+            if (!this.nativeRuntime || typeof window === 'undefined') {
+                return null;
+            }
+
+            const androidBridge =
+                window.AndroidBridge && typeof window.AndroidBridge === 'object'
+                    ? window.AndroidBridge
+                    : null;
+
+            if (!androidBridge || typeof androidBridge.getAppFirstInstallTime !== 'function') {
+                return null;
+            }
+
+            try {
+                const resolvedFingerprint = String(
+                    androidBridge.getAppFirstInstallTime() ?? '',
+                ).trim();
+
+                if (/^\d{5,}$/.test(resolvedFingerprint)) {
+                    return resolvedFingerprint;
+                }
+            } catch (_) {
+                //
+            }
+
+            return null;
+        },
+
+        syncNativeInstallScopedReaderStorage() {
+            if (typeof localStorage === 'undefined') {
+                return;
+            }
+
+            const installFingerprint = this.resolveNativeInstallFingerprint();
+
+            if (!installFingerprint) {
+                this.traceStartupState('native-install-fingerprint-unavailable');
+
+                return;
+            }
+
+            const persistedInstallFingerprint = String(
+                readLocalStorage(nativeInstallFingerprintStorageKey, '') ?? '',
+            ).trim();
+
+            if (persistedInstallFingerprint === installFingerprint) {
+                return;
+            }
+
+            [
+                lastPageStorageKey,
+                navigationHistoryStorageKey,
+                bookmarksStorageKey,
+                wirdProgressStorageKey,
+                wirdDayOffsetStorageKey,
+                supportUnlockStorageKey,
+                quranPageScaleAdjustStorageKey,
+                quranPageGapAdjustStorageKey,
+                quranPageYOffsetAdjustStorageKey,
+                fitCacheStorageKey,
+                readerRevealDebugStorageKey,
+                'quran-reader-page-number-v1',
+                'app-active-view',
+                'athkar-reader-visible',
+            ].forEach((storageKey) => {
+                if (typeof storageKey !== 'string' || storageKey.trim() === '') {
+                    return;
+                }
+
+                try {
+                    localStorage.removeItem(storageKey);
+                    localStorage.removeItem(`_x_${storageKey}`);
+                } catch (_) {
+                    //
+                }
+            });
+
+            writeLocalStorage(nativeInstallFingerprintStorageKey, installFingerprint);
+            this._wirdStateStorageRawSnapshot = null;
+            this._wirdDayOffsetStorageRawSnapshot = null;
+
+            this.traceStartupState('native-install-fingerprint-changed', {
+                installFingerprint,
+                hadPersistedFingerprint: persistedInstallFingerprint !== '',
+            });
+        },
+
+        isQuranReaderViewName(viewName = '') {
+            return quranReaderViewNames.includes(String(viewName ?? '').trim());
+        },
+
+        currentHashViewName() {
+            if (typeof window === 'undefined') {
+                return '';
+            }
+
+            return String(window.location?.hash ?? '')
+                .trim()
+                .replace(/^#+/u, '');
+        },
+
+        isQuranReaderHashActive() {
+            return this.isQuranReaderViewName(this.currentHashViewName());
+        },
+
+        hasRecentReaderLaunchIntent(maxAgeMs = 2800) {
+            const startedAt = Number(this._startupReaderLaunchIntentAt ?? 0);
+
+            if (!Number.isFinite(startedAt) || startedAt <= 0) {
+                return false;
+            }
+
+            return Date.now() - startedAt <= Math.max(120, Math.trunc(Number(maxAgeMs) || 2800));
+        },
+
+        markReaderLaunchIntent(viewName = '', source = 'generic') {
+            const normalizedViewName = this.isQuranReaderViewName(viewName) ? viewName : '';
+            const normalizedSource = String(source ?? '').trim() || 'generic';
+
+            this._startupReaderLaunchIntentAt = Date.now();
+            this._startupReaderLaunchIntentView = normalizedViewName;
+            this.traceStartupState('reader-launch-intent', {
+                source: normalizedSource,
+                requestedView: normalizedViewName,
+                hashView: this.currentHashViewName(),
+            });
+        },
+
+        clearStartupRecoveryTimers() {
+            if (!Array.isArray(this._startupRecoveryTimerIds)) {
+                this._startupRecoveryTimerIds = [];
+
+                return;
+            }
+
+            this._startupRecoveryTimerIds.forEach((timerId) => {
+                clearTimeout(timerId);
+            });
+            this._startupRecoveryTimerIds = [];
+        },
+
+        clearPostBootstrapRecoveryTimers() {
+            if (!Array.isArray(this._postBootstrapRecoveryTimerIds)) {
+                this._postBootstrapRecoveryTimerIds = [];
+
+                return;
+            }
+
+            this._postBootstrapRecoveryTimerIds.forEach((timerId) => {
+                clearTimeout(timerId);
+            });
+            this._postBootstrapRecoveryTimerIds = [];
+        },
+
+        queueReaderStartupRecoverySweep(source = 'unknown') {
+            this.clearStartupRecoveryTimers();
+
+            const recoverySource = String(source ?? '').trim() || 'unknown';
+            const delaysMs = [0, 120, 280, 520, 880, 1280];
+
+            delaysMs.forEach((delayMs, index) => {
+                const timerId = window.setTimeout(() => {
+                    this._startupRecoveryTimerIds = this._startupRecoveryTimerIds.filter(
+                        (activeTimerId) => activeTimerId !== timerId,
+                    );
+                    const attempted = this.attemptPendingStartupBootstrap();
+
+                    this.traceStartupState('reader-startup-recovery-sweep', {
+                        source: recoverySource,
+                        delayMs,
+                        attempt: index + 1,
+                        attempted,
+                    });
+                }, delayMs);
+
+                this._startupRecoveryTimerIds.push(timerId);
+            });
+        },
+
+        queuePostBootstrapReaderVisibilityRecovery(source = 'bootstrap-finished') {
+            this.clearPostBootstrapRecoveryTimers();
+
+            const normalizedSource = String(source ?? '').trim() || 'bootstrap-finished';
+            const recoveryDelaysMs = [90, 220, 460, 860, 1280, 1800];
+
+            recoveryDelaysMs.forEach((delayMs, index) => {
+                const timerId = window.setTimeout(() => {
+                    this._postBootstrapRecoveryTimerIds =
+                        this._postBootstrapRecoveryTimerIds.filter(
+                            (activeTimerId) => activeTimerId !== timerId,
+                        );
+
+                    if (
+                        this._startupCalibrationPending ||
+                        this._bootstrapInFlight ||
+                        !this.shouldTreatReaderAsLaunchPending()
+                    ) {
+                        return;
+                    }
+
+                    const isPageVisible =
+                        this.isCurrentPageVisiblyReady?.() ||
+                        this.isCurrentPageContentVisible?.(0.12);
+
+                    if (isPageVisible) {
+                        this.traceStartupState('post-bootstrap-visibility-ready', {
+                            source: normalizedSource,
+                            delayMs,
+                            attempt: index + 1,
+                        });
+
+                        return;
+                    }
+
+                    this.traceStartupState('post-bootstrap-visibility-recovery-attempt', {
+                        source: normalizedSource,
+                        delayMs,
+                        attempt: index + 1,
+                    });
+
+                    this.scheduleReaderPanelLayoutRefresh?.();
+                    this.clearStaleRevealGuards?.();
+
+                    if (!this.isFittingPage) {
+                        this.isFittingPage = true;
+                    }
+
+                    this.scheduleLayout?.({ revealDelayMs: 110, maxAttempts: 5 });
+
+                    if (index === recoveryDelaysMs.length - 1) {
+                        this.traceStartupState('post-bootstrap-visibility-force-reveal', {
+                            source: normalizedSource,
+                        });
+                        this.forceRevealCurrentPage?.('post-bootstrap-visibility-recovery');
+                    }
+                }, delayMs);
+
+                this._postBootstrapRecoveryTimerIds.push(timerId);
+            });
+        },
+
+        shouldTreatReaderAsLaunchPending() {
+            if (this.isAnyQuranReaderViewOpen()) {
+                return true;
+            }
+
+            if (this.isReaderElementVisible() || this.isReaderPanelVisible()) {
+                return true;
+            }
+
+            if (this.isQuranReaderHashActive()) {
+                return true;
+            }
+
+            return this.hasRecentReaderLaunchIntent();
+        },
+
         init() {
+            this.syncNativeInstallScopedReaderStorage();
             this.applyPayload(this.initialPayload, {
                 setPageNumber: true,
                 persistPageNumber: false,
@@ -252,11 +569,57 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
                 this.syncCalibrationHudPosition();
             };
             window.addEventListener('scroll', this._onWindowScroll, { passive: true });
+            this._onDocumentVisibilityChange = () => {
+                this.traceStartupState('document-visibilitychange', {
+                    visibilityState: String(document.visibilityState ?? ''),
+                    hidden: Boolean(document.hidden),
+                });
+                this.attemptPendingStartupBootstrap();
+            };
+            document.addEventListener('visibilitychange', this._onDocumentVisibilityChange);
+            this._onWindowFocus = () => {
+                this.traceStartupState('window-focus');
+                this.attemptPendingStartupBootstrap();
+            };
+            window.addEventListener('focus', this._onWindowFocus);
+            this._onWindowBlur = () => {
+                this.traceStartupState('window-blur');
+            };
+            window.addEventListener('blur', this._onWindowBlur);
+            this._onWindowPageShow = () => {
+                this.traceStartupState('window-pageshow');
+                this.attemptPendingStartupBootstrap();
+            };
+            window.addEventListener('pageshow', this._onWindowPageShow);
+            this._onNativeLifecycleTrace = (event) => {
+                const detail =
+                    event?.detail && typeof event.detail === 'object' ? event.detail : {};
+                this.traceStartupState('native-lifecycle-event', detail);
+                this.attemptPendingStartupBootstrap();
+            };
+            window.addEventListener('quran-native-lifecycle', this._onNativeLifecycleTrace);
+            this._onReaderLaunchRequested = (event) => {
+                const detail =
+                    event?.detail && typeof event.detail === 'object' ? event.detail : {};
+                const requestedView = String(detail?.view ?? '').trim();
+
+                this.markReaderLaunchIntent(requestedView, 'gate-launch-requested-event');
+                this.queueReaderStartupRecoverySweep('gate-launch-requested-event');
+            };
+            window.addEventListener('quran-reader-launch-requested', this._onReaderLaunchRequested);
 
             this._onSwitchView = (event) => {
                 const to = String(event?.detail?.to ?? '');
-                const quranViews = ['quran-app-tilawa', 'quran-app-hifth', 'quran-app-tadabbur'];
-                const isGoingToQuranReader = quranViews.includes(to);
+                const isGoingToQuranReader = this.isQuranReaderViewName(to);
+
+                if (isGoingToQuranReader) {
+                    this.markReaderLaunchIntent(to, 'switch-view-event');
+                }
+
+                this.traceStartupState('switch-view', {
+                    to,
+                    isGoingToQuranReader,
+                });
 
                 if (!isGoingToQuranReader) {
                     this.isFontScaleOverlayVisible = false;
@@ -265,6 +628,7 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
                     this._immersiveEntryAwaitingFirstReveal = true;
                     this.clearDeferredBootstrapCheckTimer();
                     this._deferredBootstrapCheckAttempts = 0;
+                    this.clearPostBootstrapRecoveryTimers();
 
                     if (this.hasRenderablePage()) {
                         this.isFittingPage = true;
@@ -283,6 +647,8 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
                 this.isReaderChromeVisible = false;
                 this.isFittingPage = true;
                 this.clearLayoutTimers();
+                this.clearStartupRecoveryTimers();
+                this.clearPostBootstrapRecoveryTimers();
                 this.scheduleReaderPanelLayoutRefresh();
                 this.scheduleDeferredBootstrapCheck();
 
@@ -308,6 +674,11 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
                     return;
                 }
 
+                window.setTimeout(() => {
+                    this.attemptPendingStartupBootstrap();
+                }, 520);
+                this.queueReaderStartupRecoverySweep('switch-view-reader-entry');
+
                 this.scheduleLayout({ revealDelayMs: 200 });
             };
 
@@ -316,6 +687,8 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
                 this.isReaderChromeVisible = false;
                 this.isFontScaleOverlayVisible = false;
                 this.syncReaderChromeDocumentClass({ forceInactive: true });
+                this.clearStartupRecoveryTimers();
+                this.clearPostBootstrapRecoveryTimers();
             };
             window.addEventListener('quran-reader-go-gate', this._onReaderGoGate);
             this.scheduleReaderPanelLayoutRefresh();
@@ -430,12 +803,74 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
             this._deferredBootstrapCheckTimer = null;
         },
 
+        attemptPendingStartupBootstrap() {
+            if (this._bootstrapInFlight || !this._startupCalibrationPending) {
+                this.traceStartupState('startup-recovery-skipped', {
+                    reason: this._bootstrapInFlight ? 'bootstrap-in-flight' : 'not-pending',
+                });
+                return false;
+            }
+
+            const isReaderViewOpen = this.isAnyQuranReaderViewOpen();
+            const isReaderElementVisible = this.isReaderElementVisible();
+            const isReaderPanelVisible = this.isReaderPanelVisible();
+            const isReaderSurfaceVisible = isReaderElementVisible || isReaderPanelVisible;
+
+            if (!this.shouldTreatReaderAsLaunchPending()) {
+                this.traceStartupState('startup-recovery-skipped', {
+                    reason: 'reader-view-closed-and-hidden',
+                    isReaderViewOpen,
+                    isReaderSurfaceVisible,
+                    hashView: this.currentHashViewName(),
+                    hasRecentReaderLaunchIntent: this.hasRecentReaderLaunchIntent(),
+                });
+                return false;
+            }
+
+            const hasPreparedPayload =
+                this.ready &&
+                this.maxPage > 0 &&
+                Array.isArray(this.mushafLines) &&
+                this.mushafLines.length > 0;
+
+            if (!hasPreparedPayload) {
+                this.traceStartupState('startup-recovery-skipped', {
+                    reason: 'payload-not-ready',
+                });
+                return false;
+            }
+
+            this.clearDeferredBootstrapCheckTimer();
+            this._deferredBootstrapCheckAttempts = 0;
+            this.traceStartupState('startup-recovery-triggering-bootstrap');
+
+            this.$nextTick(() => {
+                if (
+                    this._bootstrapInFlight ||
+                    !this._startupCalibrationPending ||
+                    !this.shouldTreatReaderAsLaunchPending()
+                ) {
+                    this.traceStartupState('startup-recovery-next-tick-skipped');
+                    return;
+                }
+
+                this.traceStartupState('startup-recovery-bootstrap-call');
+                this.bootstrap();
+            });
+
+            return true;
+        },
+
         maybeBootstrapDeferred() {
             if (!this._bootstrapDeferred) {
                 return true;
             }
 
-            if (!this.isAnyQuranReaderViewOpen() || !this.isReaderElementVisible()) {
+            const isReaderViewOpen = this.isAnyQuranReaderViewOpen();
+            const isReaderElementVisible = this.isReaderElementVisible();
+            const isReaderPanelVisible = this.isReaderPanelVisible();
+
+            if (!this.shouldTreatReaderAsLaunchPending()) {
                 return false;
             }
 
@@ -471,8 +906,12 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
                 }
 
                 this._deferredBootstrapCheckAttempts += 1;
+                this.traceStartupState('deferred-bootstrap-check-attempt', {
+                    attempt: this._deferredBootstrapCheckAttempts,
+                });
 
                 if (this._deferredBootstrapCheckAttempts > 18) {
+                    this.traceStartupState('deferred-bootstrap-check-expired');
                     this._deferredBootstrapCheckAttempts = 0;
 
                     return;
@@ -821,7 +1260,19 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
         isReaderPanelVisible() {
             const readerPanel = this.$refs?.readerPanel;
 
-            return readerPanel instanceof Element && readerPanel.offsetParent !== null;
+            if (!(readerPanel instanceof Element)) {
+                return false;
+            }
+
+            if (readerPanel.offsetParent !== null) {
+                return true;
+            }
+
+            return Boolean(
+                readerPanel.offsetWidth ||
+                readerPanel.offsetHeight ||
+                readerPanel.getClientRects().length,
+            );
         },
 
         canUseNativeVolumeButtonNavigation() {
@@ -965,6 +1416,7 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
                 this.initializeLayoutObservers();
                 this.queueSupportLockTargetsUiSync();
                 this.syncNativeVolumeNavigation();
+                this.attemptPendingStartupBootstrap();
             });
         },
 
@@ -1083,6 +1535,39 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
             this.clearSearchResultsUpdateQueue();
             this.unbindSearchModalInputSyncListener();
 
+            if (this._onDocumentVisibilityChange) {
+                document.removeEventListener('visibilitychange', this._onDocumentVisibilityChange);
+                this._onDocumentVisibilityChange = null;
+            }
+
+            if (this._onWindowFocus) {
+                window.removeEventListener('focus', this._onWindowFocus);
+                this._onWindowFocus = null;
+            }
+
+            if (this._onWindowBlur) {
+                window.removeEventListener('blur', this._onWindowBlur);
+                this._onWindowBlur = null;
+            }
+
+            if (this._onWindowPageShow) {
+                window.removeEventListener('pageshow', this._onWindowPageShow);
+                this._onWindowPageShow = null;
+            }
+
+            if (this._onNativeLifecycleTrace) {
+                window.removeEventListener('quran-native-lifecycle', this._onNativeLifecycleTrace);
+                this._onNativeLifecycleTrace = null;
+            }
+
+            if (this._onReaderLaunchRequested) {
+                window.removeEventListener(
+                    'quran-reader-launch-requested',
+                    this._onReaderLaunchRequested,
+                );
+                this._onReaderLaunchRequested = null;
+            }
+
             if (this._onWindowViewportChange) {
                 window.removeEventListener('resize', this._onWindowViewportChange);
                 window.removeEventListener('orientationchange', this._onWindowViewportChange);
@@ -1141,6 +1626,8 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
 
             this.clearDeferredBootstrapCheckTimer();
             this._deferredBootstrapCheckAttempts = 0;
+            this.clearStartupRecoveryTimers();
+            this.clearPostBootstrapRecoveryTimers();
 
             if (this._onWindowStorage) {
                 window.removeEventListener('storage', this._onWindowStorage);

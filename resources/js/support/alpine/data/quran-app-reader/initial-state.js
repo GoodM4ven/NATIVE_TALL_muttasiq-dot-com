@@ -436,6 +436,12 @@ export const createInitialState = (config, deps) => {
         _onVisualViewportChange: null,
 
         _onWindowScroll: null,
+        _onDocumentVisibilityChange: null,
+        _onWindowFocus: null,
+        _onWindowBlur: null,
+        _onWindowPageShow: null,
+        _onNativeLifecycleTrace: null,
+        _onReaderLaunchRequested: null,
 
         _onSwitchView: null,
 
@@ -664,6 +670,11 @@ export const createInitialState = (config, deps) => {
         _startupTargetPageNumber: 1,
 
         _bootstrapDeferred: false,
+        _bootstrapInFlight: false,
+        _startupReaderLaunchIntentAt: 0,
+        _startupReaderLaunchIntentView: '',
+        _startupRecoveryTimerIds: [],
+        _postBootstrapRecoveryTimerIds: [],
 
         calibrationHudTop: 0,
 

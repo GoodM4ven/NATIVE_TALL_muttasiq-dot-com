@@ -423,7 +423,96 @@ export const createReaderNavigationFitPageAdjustAndChromeModule = (deps) => {
                 return;
             }
 
+            const recovered = this.attemptAndroidReaderTapRecovery('reader-panel-tap');
+            this.traceStartupState?.('panel-tap', {
+                recovered,
+                canRevealChrome: this.canRevealReaderChrome(),
+                pageFitState:
+                    typeof this.pageFitState === 'function' ? this.pageFitState() : 'unknown',
+                isCurrentPageVisiblyReady:
+                    typeof this.isCurrentPageVisiblyReady === 'function'
+                        ? this.isCurrentPageVisiblyReady()
+                        : false,
+                isCurrentPageContentVisible:
+                    typeof this.isCurrentPageContentVisible === 'function'
+                        ? this.isCurrentPageContentVisible(0.12)
+                        : false,
+            });
+
+            if (recovered) {
+                return;
+            }
+
             this.toggleReaderChrome();
+        },
+
+        attemptAndroidReaderTapRecovery(reason = 'generic') {
+            if (!this.nativeRuntime) {
+                return false;
+            }
+
+            const recoveryReason = String(reason ?? 'generic').trim() || 'generic';
+            const hasPreparedPayload =
+                this.ready &&
+                this.maxPage > 0 &&
+                Array.isArray(this.mushafLines) &&
+                this.mushafLines.length > 0;
+
+            if (this._startupCalibrationPending) {
+                const attemptedStartupBootstrap =
+                    typeof this.attemptPendingStartupBootstrap === 'function'
+                        ? this.attemptPendingStartupBootstrap()
+                        : false;
+
+                if (attemptedStartupBootstrap) {
+                    this.traceStartupState?.('panel-tap-startup-recovery', {
+                        reason: recoveryReason,
+                        mode: 'attempt-pending-startup-bootstrap',
+                    });
+
+                    return true;
+                }
+
+                if (hasPreparedPayload && !this._bootstrapInFlight) {
+                    this.traceStartupState?.('panel-tap-startup-recovery', {
+                        reason: recoveryReason,
+                        mode: 'direct-startup-bootstrap',
+                    });
+
+                    this._bootstrapDeferred = false;
+                    this.clearDeferredBootstrapCheckTimer?.();
+                    this.$nextTick(() => {
+                        this.bootstrap();
+                    });
+
+                    return true;
+                }
+
+                return false;
+            }
+
+            const isPageHiddenOrUnstable =
+                this.isFittingPage ||
+                this.pageFitState() !== 'ready' ||
+                !this.isCurrentPageVisiblyReady();
+
+            if (
+                !isPageHiddenOrUnstable ||
+                !hasPreparedPayload ||
+                this.isLoadingPage ||
+                this.hasBlockingModalLifecycleState({ recoverStaleState: true })
+            ) {
+                return false;
+            }
+
+            this.traceStartupState?.('panel-tap-layout-recovery', {
+                reason: recoveryReason,
+            });
+            this.clearStaleRevealGuards?.();
+            this.forceRevealCurrentPage('panel-tap-layout-recovery');
+            this.scheduleLayout({ revealDelayMs: 110, maxAttempts: 5 });
+
+            return true;
         },
 
         readerPanelStyle() {

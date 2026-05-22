@@ -251,6 +251,12 @@ export const createLifecycleBootstrapSupportAndWirdStateModule = (deps) => {
         },
 
         async bootstrap() {
+            if (this._bootstrapInFlight) {
+                return;
+            }
+
+            this._bootstrapInFlight = true;
+            this.traceStartupState?.('bootstrap-start');
             this.qrDebugLog(
                 '[QR:bootstrap] START, visible:',
                 this.isReaderElementVisible(),
@@ -307,12 +313,19 @@ export const createLifecycleBootstrapSupportAndWirdStateModule = (deps) => {
                 this.warmSearchIndex();
                 this.scheduleManagerModalsPrewarm();
             } catch (error) {
+                this.traceStartupState?.('bootstrap-error', {
+                    name: String(error?.name ?? 'Error'),
+                    message: String(error?.message ?? ''),
+                });
                 this.qrDebugError('[QR:bootstrap] ERROR:', error);
             } finally {
                 this._startupCalibrationPending = false;
                 this.hasCompletedInitialMushafPreparation = true;
+                this._bootstrapInFlight = false;
+                this.traceStartupState?.('bootstrap-finished');
                 this.syncReaderChromeDocumentClass();
                 window.dispatchEvent(new CustomEvent('quran-reader-calibration-finished'));
+                this.queuePostBootstrapReaderVisibilityRecovery?.('bootstrap-finished');
                 this.qrDebugLog(
                     '[QR:bootstrap] DONE, hasCompletedInitialMushafPreparation:',
                     true,

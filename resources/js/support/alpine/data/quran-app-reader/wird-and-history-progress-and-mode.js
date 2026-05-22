@@ -254,6 +254,25 @@ export const createWirdAndHistoryProgressAndModeModule = (deps) => {
                 this.persistWirdState();
             }
 
+            if (
+                this.nativeRuntime &&
+                !this._hasLoggedInitialWirdRecord &&
+                typeof this.traceStartupState === 'function'
+            ) {
+                this._hasLoggedInitialWirdRecord = true;
+                this.traceStartupState('wird-initial-record', {
+                    dateKey,
+                    forceRebuild,
+                    shouldRebuild,
+                    didNextAbsolutePageChange,
+                    completed: Boolean(record?.completed),
+                    requiredPages: Number(record?.requiredPages ?? 0),
+                    currentStep: Number(record?.currentStep ?? 0),
+                    progressStep: Number(record?.progressStep ?? 0),
+                    nextAbsolutePage: Number(this.wirdState?.nextAbsolutePage ?? 0),
+                });
+            }
+
             return this.wirdDailyRecord;
         },
 
