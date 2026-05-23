@@ -44,6 +44,40 @@ it('loads default athkar cards and keeps origin badge semantics correct', functi
         ->and($resolvedCards->firstWhere('id', $withoutOrigin->id)['is_original'])->toBeFalse();
 });
 
+it('prioritizes arabic-normalized text matches over origin-only matches in athkar manager search', function () {
+    $textMatchOne = Thikr::factory()->create([
+        'text' => 'لَيْسَ كَمِثْلِهِ شَيْءٌ',
+        'origin' => 'القرآن الكريم',
+    ]);
+
+    $textMatchTwo = Thikr::factory()->create([
+        'text' => 'فَلَيْسَ عَلَيْكُمْ جُنَاحٌ',
+        'origin' => null,
+    ]);
+
+    $originOnlyMatch = Thikr::factory()->create([
+        'text' => 'ذكر بلا تطابق مباشر',
+        'origin' => 'مرجع فيه كلمة ليس',
+    ]);
+
+    $results = collect(
+        livewire(AthkarManager::class)
+            ->set('athkarSearchQuery', 'ليس')
+            ->instance()
+            ->filteredAthkarCards(),
+    );
+
+    $resultIds = $results->pluck('id')->values();
+    $textMatchOneIndex = $resultIds->search($textMatchOne->id);
+    $textMatchTwoIndex = $resultIds->search($textMatchTwo->id);
+    $originOnlyMatchIndex = $resultIds->search($originOnlyMatch->id);
+
+    expect($textMatchOneIndex)->not->toBeFalse()
+        ->and($textMatchTwoIndex)->not->toBeFalse()
+        ->and($originOnlyMatchIndex)->not->toBeFalse()
+        ->and($originOnlyMatchIndex)->toBeGreaterThan(max((int) $textMatchOneIndex, (int) $textMatchTwoIndex));
+});
+
 it('opens athkar manager in slide-over mode on desktop and modal mode on mobile', function () {
     livewire(AthkarManager::class)
         ->call('openManageAthkar', false)

@@ -132,6 +132,22 @@
                 backdrop-filter: none;
                 -webkit-backdrop-filter: none;
             }
+
+            .athkar-gate__spill {
+                display: none;
+                opacity: 0;
+            }
+
+            .athkar-gate-shell.is-pinging .athkar-gate__ping {
+                animation: none;
+            }
+
+            .athkar-gate__pane--night,
+            .athkar-gate__pane--morning,
+            .athkar-gate__divider,
+            .athkar-gate__divider-glow {
+                transition-duration: 220ms;
+            }
         }
 
         .athkar-gate__glass {

@@ -561,7 +561,7 @@
             data-testid="control-panel-button"
             :useInvertedStyle="true"
             :iconName="'heroicon-s-adjustments-horizontal'"
-            x-on:click="window.dispatchEvent(new CustomEvent('open-control-panel-modal'))"
+            x-on:click="window.dispatchEvent(new CustomEvent('request-open-control-panel-modal'))"
         />
     </div>
 

@@ -657,6 +657,20 @@
                 transition-duration: 0ms;
             }
 
+            .quran-app-sector__media {
+                animation: none;
+                opacity: 1;
+            }
+
+            [data-quran-app-shell].quran-app-shell--reader-launching .quran-app-gate-shell,
+            [data-quran-app-shell].quran-app-shell--gate-returning .quran-app-gate-shell,
+            [data-quran-app-shell].quran-app-shell--reader-launching .quran-app-sector,
+            [data-quran-app-shell].quran-app-shell--gate-returning .quran-app-sector {
+                animation: none !important;
+                transform: none !important;
+                opacity: 1 !important;
+            }
+
             [data-quran-app-shell].quran-app-shell--reader-launching .quran-app-sector.is-launch-target img.quran-app-sector__image-img,
             [data-quran-app-shell].quran-app-shell--gate-returning .quran-app-sector.is-launch-target img.quran-app-sector__image-img {
                 transform: scale(1.03);

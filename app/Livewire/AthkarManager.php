@@ -16,6 +16,8 @@ use Filament\Actions\Contracts\HasActions;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Support\Enums\Width;
+use GoodMaven\Arabicable\Facades\Arabic;
+use GoodMaven\Arabicable\Facades\ArabicFilter;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Blade;
@@ -28,6 +30,8 @@ class AthkarManager extends Component implements HasActions, HasSchemas
     use InteractsWithSchemas;
 
     public bool $isManageAthkarMobile = false;
+
+    public string $athkarSearchQuery = '';
 
     /**
      * @var array<int, array{
@@ -79,13 +83,19 @@ class AthkarManager extends Component implements HasActions, HasSchemas
                         '<x-partials.athkar-app.slideover-content :component-id="$componentId" :cards="$cards" :is-mobile="$isMobile" />',
                         [
                             'componentId' => $this->getId(),
-                            'cards' => $this->resolvedAthkarCards(),
+                            'cards' => $this->filteredAthkarCards(),
+                            'searchQuery' => $this->athkarSearchQuery,
                             'isMobile' => $this->isManageAthkarMobile,
                         ],
                     ),
                 ),
             )
             ->action(static fn (): null => null);
+    }
+
+    public function clearAthkarSearchQuery(): void
+    {
+        $this->athkarSearchQuery = '';
     }
 
     public function editAthkarAction(): Action
@@ -558,6 +568,92 @@ class AthkarManager extends Component implements HasActions, HasSchemas
         });
 
         return $this->attachOverrideFlags($cards, $normalizedOverrides);
+    }
+
+    /**
+     * @return array<int, array{
+     *     id: int,
+     *     time: string,
+     *     type: string,
+     *     text: string,
+     *     origin: string|null,
+     *     is_aayah: bool,
+     *     is_original: bool,
+     *     count: int,
+     *     order: int,
+     *     is_overridden: bool,
+     *     is_custom: bool
+     * }>
+     */
+    public function filteredAthkarCards(): array
+    {
+        $cards = $this->resolvedAthkarCards();
+        $searchPlan = $this->buildAthkarSearchPlan($this->athkarSearchQuery);
+        $normalizedQuery = $searchPlan['normalized'];
+        $normalizedTerms = $searchPlan['terms'];
+
+        if ($normalizedQuery === '') {
+            return $cards;
+        }
+
+        $textMatches = [];
+        $originMatches = [];
+
+        foreach ($cards as $card) {
+            $textScore = $this->scoreAthkarSearchText(
+                $card['text'],
+                $normalizedQuery,
+                $normalizedTerms,
+            );
+
+            if ($textScore > 0) {
+                $textMatches[] = [
+                    'card' => $card,
+                    'score' => $textScore,
+                ];
+
+                continue;
+            }
+
+            $originScore = $this->scoreAthkarSearchText(
+                $card['origin'],
+                $normalizedQuery,
+                $normalizedTerms,
+            );
+
+            if ($originScore > 0) {
+                $originMatches[] = [
+                    'card' => $card,
+                    'score' => $originScore,
+                ];
+            }
+        }
+
+        $sortByScoreThenOrder = static function (array $left, array $right): int {
+            $scoreComparison = ((int) $right['score']) <=> ((int) $left['score']);
+
+            if ($scoreComparison !== 0) {
+                return $scoreComparison;
+            }
+
+            $leftCard = is_array($left['card']) ? $left['card'] : [];
+            $rightCard = is_array($right['card']) ? $right['card'] : [];
+            $orderComparison = ((int) ($leftCard['order'] ?? 0)) <=> ((int) ($rightCard['order'] ?? 0));
+
+            if ($orderComparison !== 0) {
+                return $orderComparison;
+            }
+
+            return ((int) ($leftCard['id'] ?? 0)) <=> ((int) ($rightCard['id'] ?? 0));
+        };
+
+        usort($textMatches, $sortByScoreThenOrder);
+        usort($originMatches, $sortByScoreThenOrder);
+
+        return collect([...$textMatches, ...$originMatches])
+            ->map(fn (array $match): array => $match['card'])
+            ->values()
+            ->all();
     }
 
     /**
@@ -1195,6 +1291,102 @@ class AthkarManager extends Component implements HasActions, HasSchemas
         $normalized = trim((string) $value);
 
         return $normalized !== '' ? $normalized : null;
+    }
+
+    private function normalizeAthkarSearchValue(mixed $value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+
+        $normalized = trim((string) $value);
+
+        if ($normalized === '') {
+            return '';
+        }
+
+        $searchable = trim((string) ArabicFilter::forSearch($normalized));
+        $collapsed = preg_replace('/\s+/u', ' ', $searchable) ?? $searchable;
+
+        return trim($collapsed);
+    }
+
+    /**
+     * @return array{normalized: string, terms: array<int, string>}
+     */
+    private function buildAthkarSearchPlan(mixed $value): array
+    {
+        $normalized = $this->normalizeAthkarSearchValue($value);
+
+        if ($normalized === '') {
+            return [
+                'normalized' => '',
+                'terms' => [],
+            ];
+        }
+
+        $terms = [$normalized];
+
+        try {
+            /** @var array{terms?: array<int, string>} $plan */
+            $plan = Arabic::buildComprehensiveSearchPlan($normalized, 80);
+
+            foreach ($plan['terms'] ?? [] as $term) {
+                $terms[] = $term;
+            }
+        } catch (\Throwable) {
+            // Fall through with normalized-only matching.
+        }
+
+        $terms = collect($terms)
+            ->map(fn (string $term): string => $this->normalizeAthkarSearchValue($term))
+            ->flatMap(
+                static fn (string $term): array => preg_split('/\s+/u', $term, -1, PREG_SPLIT_NO_EMPTY) ?: [],
+            )
+            ->unique()
+            ->values()
+            ->all();
+
+        return [
+            'normalized' => $normalized,
+            'terms' => $terms,
+        ];
+    }
+
+    /**
+     * @param  array<int, string>  $terms
+     */
+    private function scoreAthkarSearchText(mixed $value, string $normalizedQuery, array $terms): int
+    {
+        $normalizedValue = $this->normalizeAthkarSearchValue($value);
+
+        if ($normalizedValue === '') {
+            return 0;
+        }
+
+        $score = 0;
+
+        if (str_contains($normalizedValue, $normalizedQuery)) {
+            $score += 120;
+        }
+
+        foreach ($terms as $term) {
+            if ($term === '') {
+                continue;
+            }
+
+            if ($normalizedValue === $term) {
+                $score += 70;
+
+                continue;
+            }
+
+            if (str_contains($normalizedValue, $term)) {
+                $score += 36;
+            }
+        }
+
+        return $score;
     }
 
     private function hasOrigin(mixed $origin): bool

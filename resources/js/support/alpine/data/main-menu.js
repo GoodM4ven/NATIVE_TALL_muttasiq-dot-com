@@ -41,6 +41,9 @@ document.addEventListener('alpine:init', () => {
         insightsPanelHeight: 0,
         insightsFastCloseDurationMs: 315,
         insightsGateLaunchDelayMs: 420,
+        insightsTouchRowsInteractive: false,
+        insightsTouchRowsUnlockDelayMs: 720,
+        insightsTouchRowsUnlockTimer: null,
         progressLabels: {
             sabah: config?.progressLabels?.sabah ?? 'أذكار الصباح',
             wird: config?.progressLabels?.wird ?? 'الوِرد اليومي',
@@ -185,6 +188,7 @@ document.addEventListener('alpine:init', () => {
             this.clearInsightsGateLaunchTimer();
             this.stopInsightsRefreshLoop();
             this.clearQuranWirdAutoEntry();
+            this.clearInsightsTouchRowsUnlockTimer();
 
             if (this._onWindowMouseMove) {
                 window.removeEventListener('mousemove', this._onWindowMouseMove);
@@ -282,6 +286,27 @@ document.addEventListener('alpine:init', () => {
             }
 
             this.handleOutside(true);
+        },
+        handleMainMenuBackgroundTap(event) {
+            if (!this.isInsightsExpanded) {
+                return;
+            }
+
+            const eventTarget = event?.target;
+
+            if (!(eventTarget instanceof Element)) {
+                return;
+            }
+
+            if (eventTarget.closest('[data-main-menu-item]')) {
+                return;
+            }
+
+            if (eventTarget.closest('.main-menu-insights-zone')) {
+                return;
+            }
+
+            this.collapseInsightsForNavigation();
         },
         normalizeProgressPercent(value) {
             const numeric = Number(value ?? NaN);
@@ -500,6 +525,32 @@ document.addEventListener('alpine:init', () => {
                 clearTimeout(this.insightsHideTimer);
                 this.insightsHideTimer = null;
             }
+        },
+        clearInsightsTouchRowsUnlockTimer() {
+            if (this.insightsTouchRowsUnlockTimer !== null) {
+                clearTimeout(this.insightsTouchRowsUnlockTimer);
+                this.insightsTouchRowsUnlockTimer = null;
+            }
+        },
+        isInsightsTouchRowsLocked() {
+            return (
+                this.isTouchDevice && this.isInsightsExpanded && !this.insightsTouchRowsInteractive
+            );
+        },
+        scheduleInsightsTouchRowsUnlock() {
+            this.clearInsightsTouchRowsUnlockTimer();
+
+            if (!this.isTouchDevice || !this.isInsightsExpanded) {
+                this.insightsTouchRowsInteractive = true;
+
+                return;
+            }
+
+            this.insightsTouchRowsInteractive = false;
+            this.insightsTouchRowsUnlockTimer = window.setTimeout(() => {
+                this.insightsTouchRowsUnlockTimer = null;
+                this.insightsTouchRowsInteractive = true;
+            }, this.insightsTouchRowsUnlockDelayMs);
         },
         clearInsightsGateLaunchTimer() {
             if (this._insightsGateLaunchTimer !== null) {
@@ -849,6 +900,10 @@ document.addEventListener('alpine:init', () => {
             });
         },
         handleInsightsRowClick(mode) {
+            if (this.isInsightsTouchRowsLocked()) {
+                return;
+            }
+
             if (mode === 'wird') {
                 this.handleInsightsWirdRowClick();
 
@@ -898,7 +953,7 @@ document.addEventListener('alpine:init', () => {
                 this.insightsRefreshTimer = null;
             }
         },
-        showInsightsPanel({ refresh = true } = {}) {
+        showInsightsPanel({ refresh = true, lockTouchRows = true } = {}) {
             this.clearInsightsHideTimer();
             this.isInsightsFastClosing = false;
 
@@ -907,7 +962,14 @@ document.addEventListener('alpine:init', () => {
             }
 
             this.measureInsightsPanelHeight();
+            const wasExpanded = this.isInsightsExpanded;
             this.isInsightsExpanded = true;
+
+            if (!lockTouchRows && wasExpanded && this.insightsTouchRowsInteractive) {
+                return;
+            }
+
+            this.scheduleInsightsTouchRowsUnlock();
         },
         scheduleInsightsCollapse() {
             this.clearInsightsHideTimer();
@@ -925,6 +987,7 @@ document.addEventListener('alpine:init', () => {
 
                 this.isInsightsFastClosing = false;
                 this.isInsightsExpanded = false;
+                this.insightsTouchRowsInteractive = false;
             }, this.insightsHideDelayMs);
         },
         resetInsightsPanelState({ preservePendingGateLaunch = false } = {}) {
@@ -936,6 +999,8 @@ document.addEventListener('alpine:init', () => {
             this.isInsightsFastClosing = false;
             this.isInsightsPointerInside = false;
             this.isInsightsExpanded = false;
+            this.insightsTouchRowsInteractive = false;
+            this.clearInsightsTouchRowsUnlockTimer();
         },
         collapseInsightsForNavigation() {
             this.clearInsightsHideTimer();
@@ -955,6 +1020,8 @@ document.addEventListener('alpine:init', () => {
             this._insightsFastCloseToken = resetToken;
             this.isInsightsFastClosing = true;
             this.isInsightsExpanded = false;
+            this.insightsTouchRowsInteractive = false;
+            this.clearInsightsTouchRowsUnlockTimer();
 
             window.setTimeout(() => {
                 if (this._insightsFastCloseToken !== resetToken) {
@@ -1105,7 +1172,7 @@ document.addEventListener('alpine:init', () => {
 
             if (hasCoordinates && this.isPointInsideInsightsZone(pointerX, pointerY)) {
                 this.isInsightsPointerInside = true;
-                this.showInsightsPanel({ refresh: false });
+                this.showInsightsPanel({ refresh: false, lockTouchRows: false });
                 return;
             }
 

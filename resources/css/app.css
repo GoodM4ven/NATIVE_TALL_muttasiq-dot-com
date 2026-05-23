@@ -93,3 +93,56 @@
 :root.color-scheme-switching .main-menu-caption__shine {
     filter: none !important;
 }
+
+@media (max-width: 639px) {
+    .athkar-gate,
+    .athkar-gate__label,
+    .athkar-gate__divider,
+    .athkar-gate__divider-glow,
+    .quran-app-sector__chip,
+    .quran-app-gate-anchor,
+    .quran-app-gate-pointer,
+    .main-menu-insights-trigger,
+    .main-menu-insights-panel,
+    .main-menu-insights-row,
+    .main-menu-insights-track,
+    .quran-calibration-overlay::before {
+        -webkit-backdrop-filter: none !important;
+        backdrop-filter: none !important;
+        filter: none !important;
+    }
+
+    .athkar-gate__spill {
+        display: none !important;
+        opacity: 0 !important;
+    }
+
+    .main-menu-insights-panel::before,
+    .main-menu-insights-panel::after,
+    .main-menu-insights-trigger::before,
+    .main-menu-insights-trigger::after,
+    .main-menu-insights-fill::after,
+    .quran-app-gate-focal-dim,
+    .quran-app-gate-geometry,
+    .quran-app-gate-orbit {
+        display: none !important;
+    }
+
+    .quran-app-gate-anchor::before,
+    .quran-app-gate-orbit,
+    .quran-app-gate-pointer {
+        animation: none !important;
+        transition-duration: 120ms !important;
+    }
+
+    .quran-swipe-hint-button,
+    .quran-soorah-trigger,
+    .quran-history-toggle-button,
+    .quran-bookmark-toggle-button,
+    .quran-page-number-chip,
+    .quran-wird-progress-button,
+    .app-action-button {
+        box-shadow: none !important;
+        filter: none !important;
+    }
+}

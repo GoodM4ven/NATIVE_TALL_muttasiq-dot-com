@@ -1,7 +1,9 @@
-@props(['componentId', 'cards' => [], 'isMobile' => false])
+@props(['componentId', 'cards' => [], 'searchQuery' => '', 'isMobile' => false])
 
 @php
     $isMobile = (bool) ($isMobile ?? false);
+    $searchQuery = trim((string) ($searchQuery ?? ''));
+    $hasActiveSearch = $searchQuery !== '';
 @endphp
 
 @assets
@@ -311,6 +313,7 @@
     x-data="athkarAppManager({
         componentId: @js($componentId),
         nativeMobileRuntime: @js((bool) config('nativephp-internal.running', false) && is_platform('mobile')),
+        hasActiveSearch: @js($hasActiveSearch),
     })"
     x-bind:class="{ 'athkar-manager--handle-only': shouldRestrictSortHandles() }"
 >
@@ -320,6 +323,32 @@
         </p>
 
         <div class="flex flex-wrap items-center gap-2">
+            <label class="relative min-w-[min(22rem,88vw)] flex-1">
+                <x-filament::icon
+                    class="pointer-events-none absolute inset-y-0 start-3 my-auto h-4 w-4 text-gray-400"
+                    icon="heroicon-o-magnifying-glass"
+                />
+                <input
+                    class="focus:border-primary-500 focus:ring-primary-500/35 w-full rounded-lg border border-gray-300 bg-white/90 py-2 pe-10 ps-9 text-sm text-gray-800 transition dark:border-gray-700 dark:bg-gray-900/80 dark:text-gray-100"
+                    type="search"
+                    dir="rtl"
+                    placeholder="{{ arabic_text('ابحث في نص الذكر أو المصدر...') }}"
+                    wire:model.live.debounce.180ms="athkarSearchQuery"
+                />
+                @if ($hasActiveSearch)
+                    <button
+                        class="absolute inset-y-0 end-2 my-auto inline-flex h-6 w-6 items-center justify-center rounded-md text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100"
+                        type="button"
+                        wire:click="clearAthkarSearchQuery"
+                    >
+                        <x-filament::icon
+                            class="h-4 w-4"
+                            icon="heroicon-o-x-mark"
+                        />
+                    </button>
+                @endif
+            </label>
+
             <x-filament::button
                 color="primary"
                 icon="heroicon-s-pencil"
@@ -398,6 +427,7 @@
                             class="athkar-manager-card__drag-handle"
                             data-athkar-sort-handle
                             title="اسحب لإعادة الترتيب"
+                            x-bind:class="{ 'opacity-45 pointer-events-none': hasActiveSearch }"
                             wire:click.stop
                             x-on:click.stop
                         >

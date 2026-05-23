@@ -302,7 +302,7 @@
                         .isOpen || views['quran-app-gate'].isOpen),
                     'text-primary-700! decoration-primary-500/70! hover:text-primary-900! focus-visible:ring-primary-500/35!': isQuranReaderDarkModeOpen(),
                 }"
-                x-on:click="$dispatch('open-control-panel-modal', { tab: 'updates' })"
+                x-on:click="$dispatch('request-open-control-panel-modal', { tab: 'updates' })"
             >
                 <span x-text="`v${appVersion}`">v{{ \App\Models\Setting::appVersion() }}</span>
             </button>

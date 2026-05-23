@@ -50,6 +50,11 @@ document.addEventListener('alpine:init', () => {
 
             this.isEnhanced = nextEnhanced;
             this.spillTargetOpacity = this.isEnhanced ? 0.55 : 0.45;
+
+            if (!this.isEnhanced) {
+                this.spillOpacity = 0;
+                this.isSpillReady = false;
+            }
         },
         animateSplit(value) {
             if (this.splitAnimation?.pause) {
@@ -134,6 +139,14 @@ document.addEventListener('alpine:init', () => {
             return mode;
         },
         syncSpillState(isActive) {
+            if (!this.isEnhanced) {
+                this.spillOpacity = 0;
+                this.setScrollLock(Boolean(isActive));
+                this.lastSpillState = isActive;
+
+                return;
+            }
+
             if (this.lastSpillState === isActive) {
                 return;
             }
