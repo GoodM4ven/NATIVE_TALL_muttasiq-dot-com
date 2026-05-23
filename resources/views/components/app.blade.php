@@ -64,7 +64,7 @@
 >
     <x-partials.blinker />
 
-    <div class="flex min-h-[calc(100dvh-var(--inset-top,0px)-var(--inset-bottom,0px))] flex-col">
+    <div class="flex min-h-[calc(100dvh-var(--inset-top,0)-var(--inset-bottom,0))] flex-col">
         {{ $slot }}
     </div>
 

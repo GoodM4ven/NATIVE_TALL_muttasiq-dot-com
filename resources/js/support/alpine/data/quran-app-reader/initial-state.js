@@ -275,6 +275,16 @@ export const createInitialState = (config, deps) => {
 
         mobileEdgePageCaptionAnimClass: '',
 
+        searchDestinationCueText: '',
+
+        searchDestinationCueSource: '',
+
+        searchDestinationCueActive: false,
+
+        searchDestinationCuePageNumber: 0,
+
+        searchDestinationCueBlinking: false,
+
         pageMotionTimer: null,
 
         pageScale: 1,
@@ -502,6 +512,8 @@ export const createInitialState = (config, deps) => {
         _mobileEdgeCaptionTimer: null,
 
         _mobileEdgeCaptionCleanupTimer: null,
+
+        _searchDestinationCueBlinkStartTimer: null,
 
         _lastMobileEdgeSurahNumber: 1,
 

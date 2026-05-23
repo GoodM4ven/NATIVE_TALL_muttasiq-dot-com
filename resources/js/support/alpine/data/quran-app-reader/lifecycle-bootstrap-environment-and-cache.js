@@ -1229,6 +1229,11 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
                 this._mobileEdgeCaptionCleanupTimer = null;
             }
 
+            if (this._searchDestinationCueBlinkStartTimer !== null) {
+                clearTimeout(this._searchDestinationCueBlinkStartTimer);
+                this._searchDestinationCueBlinkStartTimer = null;
+            }
+
             if (this._navigationDebounceTimer !== null) {
                 clearTimeout(this._navigationDebounceTimer);
                 this._navigationDebounceTimer = null;

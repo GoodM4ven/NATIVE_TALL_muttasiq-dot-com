@@ -798,6 +798,12 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                     : 0;
             const nextSearchHighlightedAyahIndex =
                 source === 'search-result' ? normalizedSearchHighlightAyahIndex : 0;
+            const shouldPreserveSearchDestinationCue =
+                source === 'search-result' || source === 'surah-directory';
+
+            if (!shouldPreserveSearchDestinationCue && this.searchDestinationCueActive) {
+                this.deactivateSearchDestinationCue();
+            }
             this.clearWordPressState();
             this.hoveredAyahIndex = 0;
             this.hoveredWordIndex = 0;

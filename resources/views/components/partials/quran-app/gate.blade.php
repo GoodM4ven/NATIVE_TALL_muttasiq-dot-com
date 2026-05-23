@@ -564,20 +564,33 @@
             }
 
             img.quran-app-sector__image-img {
-                transform: scale(1.045);
-                filter: blur(0.52px) brightness(0.72) saturate(0.9);
+                transform: scale(1.03);
+                filter: brightness(0.76) saturate(0.9);
                 transition:
-                    transform 240ms ease,
-                    filter 220ms ease,
+                    transform 220ms ease,
+                    filter 180ms ease,
                     opacity var(--tw-duration, 500ms) var(--tw-ease, ease);
             }
 
             .quran-app-sector.is-muted img.quran-app-sector__image-img {
-                filter: blur(0.86px) brightness(0.74) saturate(0.9);
+                filter: brightness(0.72) saturate(0.88);
             }
 
             .dark .quran-app-sector.is-muted img.quran-app-sector__image-img {
-                filter: blur(1.2px) brightness(0.62) saturate(0.82);
+                filter: brightness(0.62) saturate(0.82);
+            }
+
+            .quran-app-sector__chip {
+                -webkit-backdrop-filter: none;
+                backdrop-filter: none;
+                box-shadow:
+                    inset 0 1px 0 rgba(255, 234, 183, 0.22),
+                    inset 0 -1px 0 rgba(44, 28, 10, 0.3),
+                    0 8px 18px rgba(8, 4, 2, 0.3);
+            }
+
+            .quran-app-gate-geometry path {
+                filter: none;
             }
 
             .quran-app-sector__chip--tilawa {
@@ -604,6 +617,7 @@
             .quran-app-gate-anchor::before {
                 inset: 0.38rem;
                 opacity: 0.66;
+                animation: none;
             }
 
             .quran-app-gate-anchor::after {
@@ -639,6 +653,12 @@
 
             .quran-app-gate-orbit {
                 transition-duration: 0ms;
+            }
+
+            [data-quran-app-shell].quran-app-shell--reader-launching .quran-app-sector.is-launch-target img.quran-app-sector__image-img,
+            [data-quran-app-shell].quran-app-shell--gate-returning .quran-app-sector.is-launch-target img.quran-app-sector__image-img {
+                transform: scale(1.06);
+                filter: brightness(0.94) saturate(1.02);
             }
         }
     </style>

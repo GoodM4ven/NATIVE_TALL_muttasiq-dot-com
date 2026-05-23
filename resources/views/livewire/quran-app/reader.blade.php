@@ -1087,6 +1087,85 @@
                     transparent 100%);
         }
 
+        .quran-search-destination-cue {
+            padding-block: 0.02rem 0.05rem;
+            font-size: 0.55rem;
+            line-height: 1.18;
+            color: color-mix(in srgb, var(--primary-700) 82%, var(--quran-panel-text));
+        }
+
+        .quran-search-destination-cue::before,
+        .quran-search-destination-cue::after {
+            width: clamp(1.35rem, 9vw, 2.9rem);
+            height: 0.14rem;
+            flex: 0 1 clamp(1.35rem, 9vw, 2.9rem);
+            background: linear-gradient(90deg,
+                    transparent 0%,
+                    color-mix(in srgb, var(--primary-300) 68%, transparent) 52%,
+                    transparent 100%);
+        }
+
+        .dark .quran-search-destination-cue {
+            color: color-mix(in srgb, var(--primary-100) 88%, var(--quran-panel-text));
+        }
+
+        .dark .quran-search-destination-cue::before,
+        .dark .quran-search-destination-cue::after {
+            background: linear-gradient(90deg,
+                    transparent 0%,
+                    color-mix(in srgb, var(--primary-200) 74%, transparent) 52%,
+                    transparent 100%);
+        }
+
+        .quran-search-destination-cue.quran-search-destination-cue--blink {
+            animation: quran-search-destination-cue-blink 3.35s ease-in-out 0.92s infinite;
+        }
+
+        .quran-search-destination-frame-wrap {
+            position: absolute;
+            inset-inline: 0;
+            top: 3rem;
+            bottom: 2.95rem;
+            display: flex;
+            justify-content: center;
+            padding-inline: 0.58rem;
+            pointer-events: none;
+            z-index: 53;
+        }
+
+        .quran-search-destination-frame {
+            position: relative;
+            width: min(calc(100vw - 1.16rem), var(--quran-immersive-panel-inline-size, 25rem));
+            height: 100%;
+            border-radius: 1.16rem;
+            border: 1px solid color-mix(in srgb, var(--primary-300) 34%, transparent);
+            box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary-200) 19%, transparent);
+            opacity: 0.92;
+        }
+
+        .quran-search-destination-frame__ring {
+            position: absolute;
+            inset: -1px;
+            border-radius: inherit;
+            padding: 1px;
+            background: conic-gradient(from 0deg,
+                    color-mix(in srgb, var(--primary-300) 0%, transparent) 0deg,
+                    color-mix(in srgb, var(--primary-300) 96%, transparent) 56deg,
+                    color-mix(in srgb, var(--primary-200) 78%, transparent) 88deg,
+                    color-mix(in srgb, var(--primary-300) 0%, transparent) 122deg,
+                    color-mix(in srgb, var(--primary-300) 0%, transparent) 360deg);
+            -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            -webkit-mask-composite: xor;
+            mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            mask-composite: exclude;
+            transform-origin: center;
+            opacity: 0.96;
+        }
+
+        .quran-search-destination-frame.quran-search-destination-cue--blink .quran-search-destination-frame__ring {
+            animation: quran-search-destination-frame-blink 3.35s ease-in-out 0.92s infinite;
+        }
+
         .quran-page-surface {
             /* background: var(--quran-page-surface); */
             border-color: var(--quran-page-border);
@@ -2491,6 +2570,56 @@
             }
         }
 
+        @keyframes quran-search-destination-cue-blink {
+
+            0%,
+            58%,
+            100% {
+                opacity: 1;
+            }
+
+            62% {
+                opacity: 0.36;
+            }
+
+            66% {
+                opacity: 1;
+            }
+
+            70% {
+                opacity: 0.52;
+            }
+
+            74% {
+                opacity: 1;
+            }
+        }
+
+        @keyframes quran-search-destination-frame-blink {
+
+            0%,
+            58%,
+            100% {
+                opacity: 0.96;
+            }
+
+            62% {
+                opacity: 0.42;
+            }
+
+            66% {
+                opacity: 0.96;
+            }
+
+            70% {
+                opacity: 0.58;
+            }
+
+            74% {
+                opacity: 0.96;
+            }
+        }
+
         .quran-top-strip:not(.quran-top-strip--wird-active) .quran-soorah-trigger:hover {
             color: color-mix(in srgb, var(--primary-50) 92%, var(--gray-900));
             box-shadow: 0 0 0 0.75rem transparent;
@@ -3177,6 +3306,42 @@
                     ></p>
                 </div>
                 <div
+                    class="z-54 pointer-events-none absolute inset-x-0 top-[1.92rem] flex justify-center px-3 sm:hidden"
+                    x-cloak
+                    x-show="typeof shouldShowSearchDestinationCueCaption === 'function' && shouldShowSearchDestinationCueCaption()"
+                    x-transition:enter="transition-opacity ease-out duration-360 delay-150"
+                    x-transition:enter-start="opacity-0"
+                    x-transition:enter-end="opacity-100"
+                    x-transition:leave="transition-opacity ease-in duration-110"
+                    x-transition:leave-start="opacity-100"
+                    x-transition:leave-end="opacity-0"
+                >
+                    <p
+                        class="quran-surah-grid-caption quran-reader-edge-caption quran-search-destination-cue"
+                        dir="rtl"
+                        x-text="typeof searchDestinationCueText === 'string' ? searchDestinationCueText : ''"
+                        x-bind:class="typeof searchDestinationCueVisualClass === 'function' ? searchDestinationCueVisualClass() : ''"
+                    ></p>
+                </div>
+                <div
+                    class="quran-search-destination-frame-wrap sm:hidden"
+                    x-cloak
+                    x-show="typeof shouldShowSearchDestinationCueFrame === 'function' && shouldShowSearchDestinationCueFrame()"
+                    x-transition:enter="transition-opacity ease-out duration-420 delay-130"
+                    x-transition:enter-start="opacity-0"
+                    x-transition:enter-end="opacity-100"
+                    x-transition:leave="transition-opacity ease-in duration-110"
+                    x-transition:leave-start="opacity-100"
+                    x-transition:leave-end="opacity-0"
+                >
+                    <div
+                        class="quran-search-destination-frame"
+                        x-bind:class="typeof searchDestinationCueVisualClass === 'function' ? searchDestinationCueVisualClass() : ''"
+                    >
+                        <span class="quran-search-destination-frame__ring"></span>
+                    </div>
+                </div>
+                <div
                     class="z-54 pointer-events-none absolute inset-x-0 bottom-8 flex justify-center px-3 sm:hidden"
                     x-cloak
                     x-show="shouldShowImmersiveMobileEdgeCaptions()"
@@ -3695,7 +3860,7 @@
                 </div>
 
                 <footer
-                    class="quran-bottom-strip gap-x-[0.65rem] gap-y-[0.175rem] pb-7! sm:gap-y-[0.42rem] sm:pb-0! md:gap-y-2 lg:gap-y-[0.2rem] xl:gap-x-[0.65rem] xl:gap-y-[0.24rem] 2xl:gap-x-[0.65rem] 2xl:gap-y-[0.42rem]"
+                    class="quran-bottom-strip pb-7! sm:pb-0! gap-x-[0.65rem] gap-y-[0.175rem] sm:gap-y-[0.42rem] md:gap-y-2 lg:gap-y-[0.2rem] xl:gap-x-[0.65rem] xl:gap-y-[0.24rem] 2xl:gap-x-[0.65rem] 2xl:gap-y-[0.42rem]"
                     data-quran-reader-chrome
                 >
                     <button

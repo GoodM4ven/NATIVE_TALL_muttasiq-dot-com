@@ -826,6 +826,7 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
 
             this.resetNavigationQueueForPriorityJump();
             this.clearPendingPostModalTargetFit();
+            this.holdPageHiddenForModalLifecycle({ animateFadeOut: false });
 
             if (normalizedModalId !== '') {
                 this.suppressModalLifecycleEffects([normalizedModalId], {
@@ -940,6 +941,7 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                 this.cancelActiveSearchProcessing();
                 this.resetNavigationQueueForPriorityJump();
                 this.clearPendingPostModalTargetFit();
+                this.holdPageHiddenForModalLifecycle({ animateFadeOut: false });
                 this.suppressModalLifecycleEffects(searchModalLifecycleIds);
                 await this.requestSearchModalClose();
                 await this.waitForModalLifecycleToSettle();
@@ -975,6 +977,11 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                 this.activeAyahIndex = 0;
                 this.activeWordIndex = 0;
                 this.searchHighlightedAyahIndex = 0;
+                this.activateSearchDestinationCue({
+                    source: 'surah-directory',
+                    surahNumber,
+                    pageNumber,
+                });
                 this.recordNavigationHistory({
                     source: 'surah-directory',
                     pageNumber,

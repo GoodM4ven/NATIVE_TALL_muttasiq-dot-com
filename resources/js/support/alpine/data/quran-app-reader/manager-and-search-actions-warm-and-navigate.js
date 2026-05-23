@@ -551,6 +551,7 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
             try {
                 this.resetNavigationQueueForPriorityJump();
                 this.clearPendingPostModalTargetFit();
+                this.holdPageHiddenForModalLifecycle({ animateFadeOut: false });
                 this.cancelActiveSearchProcessing();
                 this.suppressModalLifecycleEffects(searchModalLifecycleIds);
                 await this.requestSearchModalClose();
@@ -577,6 +578,12 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                     this.searchHighlightedAyahIndex = 0;
                 }
                 this.activeWordIndex = 0;
+                this.activateSearchDestinationCue({
+                    source: isSurahNameResult ? 'surah-directory' : 'search-result',
+                    surahNumber,
+                    pageNumber: targetPage,
+                    ayahText: this.searchResultAyahText(result),
+                });
                 this.recordNavigationHistory({
                     source: 'search-result',
                     pageNumber: targetPage,

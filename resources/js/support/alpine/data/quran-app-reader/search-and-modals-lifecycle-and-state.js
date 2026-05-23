@@ -711,6 +711,14 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                 });
             }
 
+            if (
+                (normalizedKind === 'opening' || normalizedKind === 'opened') &&
+                !isSearchModalEvent &&
+                this.searchDestinationCueActive
+            ) {
+                this.deactivateSearchDestinationCue();
+            }
+
             if (normalizedKind === 'opened') {
                 this.$nextTick(() => {
                     this.queueJumpPageModalInputSync();

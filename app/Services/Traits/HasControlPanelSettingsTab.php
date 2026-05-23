@@ -36,6 +36,7 @@ trait HasControlPanelSettingsTab
         $quranDefinitions = Setting::definitionsForGroup(Setting::GROUP_QURAN);
 
         return Tab::make(arabic_text('الإعدادات'))
+            ->key('settings')
             ->icon('heroicon-s-adjustments-horizontal')
             ->schema([
                 Text::make(arabic_text('العامة'))

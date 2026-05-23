@@ -14,6 +14,7 @@ trait HasControlPanelChangelogsTab
     protected function controlPanelChangelogsTab(): Tab
     {
         return Tab::make('تحديثات')
+            ->key('updates')
             ->icon('material-design.update')
             ->schema([
                 Text::make(fn (): HtmlString => $this->changelogsMarkdown())

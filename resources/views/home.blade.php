@@ -548,8 +548,7 @@
                             'text-primary-950 dark:text-primary-50'"
                     >
                         <span x-show="!quranBootstrap.requiresRestart">{{ arabic_text('تحميل بيانات المصحف') }}</span>
-                        <span
-                            x-show="quranBootstrap.requiresRestart">{{ arabic_text('تم بحمد الله') }}</span>
+                        <span x-show="quranBootstrap.requiresRestart">{{ arabic_text('تم بحمد الله') }}</span>
                     </h2>
                     <p class="text-primary-900/78 dark:text-primary-100/82 text-sm leading-7">
                         <span x-show="!quranBootstrap.requiresRestart">

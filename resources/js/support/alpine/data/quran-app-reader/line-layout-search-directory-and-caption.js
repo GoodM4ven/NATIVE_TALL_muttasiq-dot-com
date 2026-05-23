@@ -974,6 +974,102 @@ export const createLineLayoutSearchDirectoryAndCaptionModule = (deps) => {
             }, 140);
         },
 
+        activateSearchDestinationCue({
+            source = 'search-result',
+            surahNumber = 0,
+            pageNumber = 0,
+            ayahText = '',
+        } = {}) {
+            const normalizedSource = String(source ?? '').trim() || 'search-result';
+            const normalizedSurahNumber = Math.max(0, Math.trunc(Number(surahNumber ?? 0)));
+            const normalizedPageNumber = Math.max(0, Math.trunc(Number(pageNumber ?? 0)));
+            const cleanedAyahText = String(ayahText ?? '')
+                .replace(/\s+/g, ' ')
+                .trim();
+            const surahName = this.surahNameOnly(normalizedSurahNumber);
+
+            const resolvedCaption =
+                normalizedSource === 'surah-directory'
+                    ? surahName !== ''
+                        ? `الانتقال إلى سورة ${surahName}`
+                        : 'الانتقال إلى السورة'
+                    : cleanedAyahText !== ''
+                      ? cleanedAyahText
+                      : surahName !== ''
+                        ? `نتيجة البحث في سورة ${surahName}`
+                        : 'نتيجة البحث';
+
+            if (this._searchDestinationCueBlinkStartTimer !== null) {
+                clearTimeout(this._searchDestinationCueBlinkStartTimer);
+                this._searchDestinationCueBlinkStartTimer = null;
+            }
+
+            this.searchDestinationCueSource = normalizedSource;
+            this.searchDestinationCueText = resolvedCaption;
+            this.searchDestinationCuePageNumber = normalizedPageNumber;
+            this.searchDestinationCueActive = resolvedCaption !== '';
+            this.searchDestinationCueBlinking = false;
+
+            if (!this.searchDestinationCueActive || !this.doesEnableVisualEnhancements) {
+                return;
+            }
+
+            this._searchDestinationCueBlinkStartTimer = window.setTimeout(() => {
+                this._searchDestinationCueBlinkStartTimer = null;
+
+                if (!this.searchDestinationCueActive) {
+                    return;
+                }
+
+                this.searchDestinationCueBlinking = true;
+            }, 880);
+        },
+
+        deactivateSearchDestinationCue() {
+            if (this._searchDestinationCueBlinkStartTimer !== null) {
+                clearTimeout(this._searchDestinationCueBlinkStartTimer);
+                this._searchDestinationCueBlinkStartTimer = null;
+            }
+
+            this.searchDestinationCueActive = false;
+            this.searchDestinationCueBlinking = false;
+            this.searchDestinationCueText = '';
+            this.searchDestinationCueSource = '';
+            this.searchDestinationCuePageNumber = 0;
+        },
+
+        shouldShowSearchDestinationCueCaption() {
+            if (!this.searchDestinationCueActive || this.searchDestinationCueText === '') {
+                return false;
+            }
+
+            if (this.pageNumber !== this.searchDestinationCuePageNumber) {
+                return false;
+            }
+
+            return this.shouldShowImmersiveMobileEdgeCaptions();
+        },
+
+        shouldShowSearchDestinationCueFrame() {
+            if (!this.searchDestinationCueActive) {
+                return false;
+            }
+
+            if (this.pageNumber !== this.searchDestinationCuePageNumber) {
+                return false;
+            }
+
+            return this.shouldShowImmersiveMobileEdgeCaptions();
+        },
+
+        searchDestinationCueVisualClass() {
+            if (!this.doesEnableVisualEnhancements || !this.searchDestinationCueBlinking) {
+                return '';
+            }
+
+            return 'quran-search-destination-cue--blink';
+        },
+
         searchModalInputElement() {
             const candidates = Array.from(
                 document.querySelectorAll(
