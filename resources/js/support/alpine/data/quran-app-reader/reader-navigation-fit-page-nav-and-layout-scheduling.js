@@ -893,10 +893,10 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                     signal: pageAbortController?.signal ?? null,
                 });
                 const transitionDelayMs = this.isImmediateNavigationSource(source)
-                    ? 24
+                    ? 0
                     : this.isHighFrequencyNavigationSource(source)
-                      ? 32
-                      : 68;
+                      ? 18
+                      : 44;
 
                 if (this.mushafLines.length > 0) {
                     this.isTransitioningOutPage = true;
@@ -949,10 +949,10 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                 const shouldUseFastFitPriority = this.isFastFitPrioritySource(source);
                 await this.layoutPageGuaranteed({
                     revealDelayMs: shouldUseFastFitPriority
-                        ? 96
+                        ? 62
                         : this.isHighFrequencyNavigationSource(source)
-                          ? 104
-                          : 132,
+                          ? 70
+                          : 96,
                     maxAttempts: shouldUseFastFitPriority
                         ? 3
                         : this.isHighFrequencyNavigationSource(source)
@@ -1507,6 +1507,10 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
         },
 
         async waitForPageFontReady() {
+            if (this.areTrackedPageFontsLoaded()) {
+                return;
+            }
+
             const family = String(this.qpcPageFontFamily ?? '').trim();
             const basmallahFamily = String(this.basmallahFontFamily ?? '').trim();
             const surahHeaderFamily = String(this.surahHeaderFontFamily ?? '').trim();

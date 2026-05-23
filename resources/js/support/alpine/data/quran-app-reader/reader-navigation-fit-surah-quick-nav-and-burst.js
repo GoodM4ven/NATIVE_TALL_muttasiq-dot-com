@@ -801,6 +801,7 @@ export const createReaderNavigationFitSurahQuickNavAndBurstModule = (deps) => {
             return (
                 normalizedSource === 'chevron' ||
                 normalizedSource === 'chevron-page' ||
+                normalizedSource === 'swipe' ||
                 normalizedSource === 'surah-directory' ||
                 normalizedSource === 'search-result' ||
                 normalizedSource === 'page-jump' ||
@@ -808,6 +809,7 @@ export const createReaderNavigationFitSurahQuickNavAndBurstModule = (deps) => {
                 normalizedSource === 'page-input-blur' ||
                 normalizedSource === 'page-event' ||
                 normalizedSource === 'page-slider-commit' ||
+                normalizedSource.endsWith('-swipe') ||
                 normalizedSource.startsWith('wird-')
             );
         },

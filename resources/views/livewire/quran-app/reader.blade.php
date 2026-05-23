@@ -59,6 +59,7 @@
             --quran-line-height-rect: 1.58;
             --quran-line-height-center: 1.7;
             --quran-line-height-meta: 1.66;
+            --quran-dark-panel-shade: #45474a;
         }
 
         .quran-page-lines--opening {
@@ -221,6 +222,21 @@
                 padding-bottom: 1.5rem;
                 background: linear-gradient(to top, rgb(255 255 255 / 0.98) 0%, rgb(255 255 255 / 0.94) 54%, rgb(255 255 255 / 0) 100%);
                 transform: translate3d(0, 0.58rem, 0);
+            }
+
+            .dark .quran-reader-panel--immersive .quran-top-strip {
+                background: linear-gradient(to bottom,
+                        color-mix(in srgb, var(--quran-dark-panel-shade) 98%, transparent) 0%,
+                        color-mix(in srgb, var(--quran-dark-panel-shade) 96%, transparent) 44%,
+                        color-mix(in srgb, var(--quran-dark-panel-shade) 84%, transparent) 72%,
+                        color-mix(in srgb, var(--quran-dark-panel-shade) 0%, transparent) 100%);
+            }
+
+            .dark .quran-reader-panel--immersive .quran-bottom-strip {
+                background: linear-gradient(to top,
+                        color-mix(in srgb, var(--quran-dark-panel-shade) 98%, transparent) 0%,
+                        color-mix(in srgb, var(--quran-dark-panel-shade) 92%, transparent) 54%,
+                        color-mix(in srgb, var(--quran-dark-panel-shade) 0%, transparent) 100%);
             }
 
             .quran-reader-panel--immersive .quran-page-viewport-shell {
@@ -1031,7 +1047,7 @@
         }
 
         .dark .quran-reader {
-            --quran-panel-bg: color-mix(in srgb, var(--primary-200) 24%, transparent);
+            --quran-panel-bg: color-mix(in srgb, var(--quran-dark-panel-shade) 94%, transparent);
             --quran-panel-border: color-mix(in srgb, var(--primary-300) 42%, transparent);
             --quran-panel-shadow: 0 24px 44px color-mix(in srgb, var(--gray-950) 62%, transparent);
             --quran-panel-text: var(--primary-50);
@@ -1125,7 +1141,7 @@
             position: absolute;
             inset-inline: 0;
             top: 3rem;
-            bottom: 2.95rem;
+            bottom: 4.05rem;
             display: flex;
             justify-content: center;
             padding-inline: 0.58rem;
@@ -1332,7 +1348,7 @@
             width: 100%;
             max-width: 100%;
             padding: calc(0.42rem * var(--quran-page-scale)) 0;
-            font-size: calc(var(--quran-font-size-meta) * 1.5 * var(--quran-type-scale) * var(--quran-page-type-scale) * var(--quran-page-surah-header-scale) * var(--quran-page-scale));
+            font-size: calc(var(--quran-font-size-meta) * 1.5 * var(--quran-type-scale) * var(--quran-page-type-scale-effective, var(--quran-page-type-scale)) * var(--quran-page-surah-header-scale) * var(--quran-page-scale));
             line-height: 1;
             color: color-mix(in srgb, var(--primary-600) 86%, var(--quran-ink));
             background: transparent;
@@ -1431,6 +1447,18 @@
             -webkit-backdrop-filter: blur(11px) saturate(1.12);
             z-index: 0;
             pointer-events: none;
+        }
+
+        .dark .quran-calibration-overlay::before {
+            background:
+                linear-gradient(152deg,
+                    color-mix(in srgb, var(--quran-dark-panel-shade) 92%, transparent) 0%,
+                    color-mix(in srgb, var(--quran-dark-panel-shade) 82%, transparent) 60%,
+                    color-mix(in srgb, var(--quran-dark-panel-shade) 70%, transparent) 100%);
+            border-color: color-mix(in srgb, var(--quran-dark-panel-shade) 68%, var(--quran-panel-border));
+            box-shadow:
+                inset 0 1px 0 color-mix(in srgb, white 16%, transparent),
+                0 10px 24px color-mix(in srgb, var(--gray-950) 40%, transparent);
         }
 
         .quran-calibration-overlay.quran-calibration-overlay--visible {
@@ -1588,12 +1616,12 @@
         .quran-page-lines[data-fit-state='ready'] {
             opacity: 1;
             visibility: visible;
-            transition: opacity 180ms ease-in;
+            transition: opacity 120ms ease-in;
         }
 
         .quran-page-lines[data-fit-state='ready'] [data-quran-line] {
-            animation: quran-line-reveal 440ms ease both;
-            animation-delay: calc(var(--quran-line-index, 0) * 18ms);
+            animation: quran-line-reveal 240ms ease both;
+            animation-delay: calc(var(--quran-line-index, 0) * 10ms);
             backface-visibility: hidden;
             will-change: opacity, transform;
         }
@@ -1615,17 +1643,17 @@
         }
 
         .quran-ayah-line-run-rect {
-            font-size: calc(var(--quran-font-size-rect) * var(--quran-type-scale) * var(--quran-page-type-scale) * var(--quran-page-scale) * var(--quran-page-dense-type-multiplier, 1) * var(--quran-page-segmented-type-multiplier, 1) * var(--quran-page-headered-type-multiplier, 1) * var(--quran-page-opening-type-multiplier, 1));
+            font-size: calc(var(--quran-font-size-rect) * var(--quran-type-scale) * var(--quran-page-type-scale-effective, var(--quran-page-type-scale)) * var(--quran-page-scale) * var(--quran-page-dense-type-multiplier, 1) * var(--quran-page-segmented-type-multiplier, 1) * var(--quran-page-headered-type-multiplier, 1) * var(--quran-page-opening-type-multiplier, 1));
             line-height: calc(var(--quran-line-height-rect) * var(--quran-leading-scale) * var(--quran-page-leading-multiplier) * var(--quran-page-dense-leading-multiplier, 1) * var(--quran-page-segmented-leading-multiplier, 1) * var(--quran-page-headered-leading-multiplier, 1) * var(--quran-page-opening-leading-multiplier, 1));
         }
 
         .quran-ayah-line-run-centered {
-            font-size: calc(var(--quran-font-size-center) * var(--quran-type-scale) * var(--quran-page-type-scale) * var(--quran-page-scale) * var(--quran-page-dense-type-multiplier, 1) * var(--quran-page-segmented-type-multiplier, 1) * var(--quran-page-headered-type-multiplier, 1) * var(--quran-page-opening-type-multiplier, 1));
+            font-size: calc(var(--quran-font-size-center) * var(--quran-type-scale) * var(--quran-page-type-scale-effective, var(--quran-page-type-scale)) * var(--quran-page-scale) * var(--quran-page-dense-type-multiplier, 1) * var(--quran-page-segmented-type-multiplier, 1) * var(--quran-page-headered-type-multiplier, 1) * var(--quran-page-opening-type-multiplier, 1));
             line-height: calc(var(--quran-line-height-center) * var(--quran-leading-scale) * var(--quran-page-leading-multiplier) * var(--quran-page-dense-leading-multiplier, 1) * var(--quran-page-segmented-leading-multiplier, 1) * var(--quran-page-headered-leading-multiplier, 1) * var(--quran-page-opening-leading-multiplier, 1));
         }
 
         .quran-meta-line {
-            font-size: calc(var(--quran-font-size-meta) * var(--quran-type-scale) * var(--quran-page-type-scale) * var(--quran-page-scale) * var(--quran-page-dense-type-multiplier, 1) * var(--quran-page-segmented-type-multiplier, 1) * var(--quran-page-headered-type-multiplier, 1) * var(--quran-page-opening-type-multiplier, 1));
+            font-size: calc(var(--quran-font-size-meta) * var(--quran-type-scale) * var(--quran-page-type-scale-effective, var(--quran-page-type-scale)) * var(--quran-page-scale) * var(--quran-page-dense-type-multiplier, 1) * var(--quran-page-segmented-type-multiplier, 1) * var(--quran-page-headered-type-multiplier, 1) * var(--quran-page-opening-type-multiplier, 1));
             line-height: calc(var(--quran-line-height-meta) * var(--quran-leading-scale) * var(--quran-page-leading-multiplier) * var(--quran-page-dense-leading-multiplier, 1) * var(--quran-page-segmented-leading-multiplier, 1) * var(--quran-page-headered-leading-multiplier, 1) * var(--quran-page-opening-leading-multiplier, 1));
         }
 
@@ -1635,7 +1663,7 @@
             justify-content: center;
             gap: 0.22ch;
             white-space: nowrap;
-            font-size: calc(var(--quran-font-size-center) * var(--quran-type-scale) * var(--quran-page-type-scale) * var(--quran-page-scale) * var(--quran-page-dense-type-multiplier, 1) * var(--quran-page-segmented-type-multiplier, 1) * var(--quran-page-headered-type-multiplier, 1) * var(--quran-page-opening-type-multiplier, 1));
+            font-size: calc(var(--quran-font-size-center) * var(--quran-type-scale) * var(--quran-page-type-scale-effective, var(--quran-page-type-scale)) * var(--quran-page-scale) * var(--quran-page-dense-type-multiplier, 1) * var(--quran-page-segmented-type-multiplier, 1) * var(--quran-page-headered-type-multiplier, 1) * var(--quran-page-opening-type-multiplier, 1));
             line-height: calc(var(--quran-line-height-center) * var(--quran-leading-scale) * var(--quran-page-leading-multiplier) * var(--quran-page-dense-leading-multiplier, 1) * var(--quran-page-segmented-leading-multiplier, 1) * var(--quran-page-headered-leading-multiplier, 1) * var(--quran-page-opening-leading-multiplier, 1));
         }
 
@@ -1658,6 +1686,12 @@
             align-items: center;
             opacity: 0;
             transition: opacity 220ms ease;
+        }
+
+        .dark .quran-top-strip {
+            background: linear-gradient(to bottom,
+                    color-mix(in srgb, var(--quran-dark-panel-shade) 90%, transparent) 0%,
+                    color-mix(in srgb, var(--quran-dark-panel-shade) 74%, transparent) 100%);
         }
 
         .quran-top-strip.quran-top-strip--initial-loading {
@@ -2692,6 +2726,12 @@
             position: relative;
             isolation: isolate;
             overflow: hidden;
+        }
+
+        .dark .quran-bottom-strip {
+            background: linear-gradient(to top,
+                    color-mix(in srgb, var(--quran-dark-panel-shade) 92%, transparent) 0%,
+                    color-mix(in srgb, var(--quran-dark-panel-shade) 68%, transparent) 100%);
         }
 
         @media (min-width: 1920px) and (max-width: 2559px) {

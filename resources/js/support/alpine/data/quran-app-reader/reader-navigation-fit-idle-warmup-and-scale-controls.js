@@ -938,12 +938,40 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
             return 0.05;
         },
 
-        setCurrentPageScale(baseScale, { forFitting = false } = {}) {
-            const scaleElement = this.pageScaleElement();
+        searchDestinationTypeScaleBoostAmount() {
+            const boostPageNumber = Math.max(
+                0,
+                Math.trunc(Number(this.searchDestinationScaleBoostPageNumber ?? 0)),
+            );
+            const boostSource = String(this.searchDestinationScaleBoostSource ?? '').trim();
+            const isSearchDestinationSource =
+                boostSource === 'search-result' || boostSource === 'surah-directory';
 
-            if (!(scaleElement instanceof HTMLElement)) {
+            if (!isSearchDestinationSource || boostPageNumber <= 0) {
+                return 0;
+            }
+
+            if (this.pageNumber !== boostPageNumber) {
+                return 0;
+            }
+
+            return 0.3;
+        },
+
+        setCurrentPageScale(baseScale, { forFitting = false } = {}) {
+            const contentElement = this.$refs?.pageContent;
+            const frameElement = this.$refs?.pageFrame;
+            const fallbackScaleElement = this.pageScaleElement();
+            const scaleTargets = [contentElement, frameElement, fallbackScaleElement].filter(
+                (element, index, array) =>
+                    element instanceof HTMLElement && array.indexOf(element) === index,
+            );
+
+            if (scaleTargets.length === 0) {
                 return;
             }
+
+            const scaleElement = scaleTargets[0];
 
             const normalizedBaseScale = Math.max(0.05, Number(baseScale) || 1);
             const scaledBaseScale = normalizedBaseScale + this.searchDestinationScaleBoostAmount();
@@ -956,13 +984,27 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
             const effectiveYOffset = forFitting
                 ? '0rem'
                 : `${this.pageYOffsetAdjustRemValue().toFixed(3)}rem`;
-
-            scaleElement.style.setProperty('--quran-page-scale', String(effectiveScale));
-            scaleElement.style.setProperty(
-                '--quran-page-gap-adjust-factor',
-                String(effectiveGapFactor),
+            const readTypeScaleValue = Number(
+                getComputedStyle(scaleElement).getPropertyValue('--quran-page-type-scale').trim(),
             );
-            scaleElement.style.setProperty('--quran-page-y-offset-adjust', effectiveYOffset);
+            const baseTypeScale = Number.isFinite(readTypeScaleValue) ? readTypeScaleValue : 1;
+            const boostedTypeScale = Math.max(
+                0.2,
+                baseTypeScale + this.searchDestinationTypeScaleBoostAmount(),
+            );
+
+            scaleTargets.forEach((targetElement) => {
+                targetElement.style.setProperty('--quran-page-scale', String(effectiveScale));
+                targetElement.style.setProperty(
+                    '--quran-page-type-scale-effective',
+                    String(boostedTypeScale),
+                );
+                targetElement.style.setProperty(
+                    '--quran-page-gap-adjust-factor',
+                    String(effectiveGapFactor),
+                );
+                targetElement.style.setProperty('--quran-page-y-offset-adjust', effectiveYOffset);
+            });
         },
 
         schedulePageScaleAdjustRefit() {

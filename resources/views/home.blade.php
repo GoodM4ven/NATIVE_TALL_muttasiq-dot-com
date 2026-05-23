@@ -507,7 +507,7 @@
             ></div>
 
             <section
-                class="border-primary-300/35 bg-white/92 shadow-slate-950/18 dark:bg-slate-950/88 relative w-[min(92vw,24rem)] rounded-[1.8rem] border px-6 py-5 text-center shadow-2xl transition-[transform,opacity]"
+                class="border-primary-300/35 bg-white/92 shadow-slate-950/18 dark:bg-slate-950/88 relative flex min-h-[19rem] w-[min(92vw,24rem)] items-center rounded-[1.8rem] border px-6 py-5 text-center shadow-2xl transition-[transform,opacity] sm:min-h-[18.25rem]"
                 x-transition:enter="transition-[opacity,transform] duration-220 ease-out"
                 x-transition:enter-start="opacity-0 scale-[0.97]"
                 x-transition:enter-end="opacity-100 scale-100"
@@ -516,17 +516,19 @@
                 x-transition:leave-end="opacity-0 scale-[0.97]"
             >
                 <div
-                    class="space-y-4"
+                    class="relative mx-auto flex min-h-[13.25rem] w-full max-w-[18.25rem] flex-col items-center justify-center gap-4"
                     x-show="!quranBootstrap.errorMessage"
                 >
-                    <div x-show="!quranBootstrap.requiresRestart">
+                    <div class="relative mx-auto h-10 w-10">
                         <div
-                            class="border-3 border-primary-200 border-t-primary-600 mx-auto h-10 w-10 animate-spin rounded-full">
-                        </div>
-                    </div>
-                    <div x-show="quranBootstrap.requiresRestart">
+                            class="border-3 border-primary-200 border-t-primary-600 duration-220 absolute inset-0 rounded-full transition-[opacity,transform]"
+                            x-bind:class="quranBootstrap.requiresRestart ? 'opacity-0 scale-[0.92]' :
+                                'opacity-100 scale-100 animate-spin'"
+                        ></div>
                         <div
-                            class="dark:bg-emerald-500/18 mx-auto grid h-10 w-10 place-items-center rounded-full border border-emerald-300/70 bg-emerald-100/80 text-emerald-700 dark:border-emerald-400/60 dark:text-emerald-300">
+                            class="dark:bg-emerald-500/18 duration-220 absolute inset-0 grid place-items-center rounded-full border border-emerald-300/70 bg-emerald-100/80 text-emerald-700 transition-[opacity,transform] dark:border-emerald-400/60 dark:text-emerald-300"
+                            x-bind:class="quranBootstrap.requiresRestart ? 'opacity-100 scale-100' : 'opacity-0 scale-[0.92]'"
+                        >
                             <svg
                                 class="h-6 w-6"
                                 aria-hidden="true"
@@ -542,52 +544,69 @@
                         </div>
                     </div>
                     <h2
-                        class="text-base font-semibold"
+                        class="relative mx-auto h-6 w-full text-base font-semibold"
                         x-bind:class="quranBootstrap.requiresRestart ?
                             'text-emerald-700 dark:text-emerald-300' :
                             'text-primary-950 dark:text-primary-50'"
                     >
-                        <span x-show="!quranBootstrap.requiresRestart">{{ arabic_text('تحميل بيانات المصحف') }}</span>
-                        <span x-show="quranBootstrap.requiresRestart">{{ arabic_text('تم بحمد الله') }}</span>
+                        <span
+                            class="duration-220 absolute inset-0 transition-opacity"
+                            x-bind:class="quranBootstrap.requiresRestart ? 'opacity-0' : 'opacity-100'"
+                        >{{ arabic_text('تحميل بيانات المصحف') }}</span>
+                        <span
+                            class="duration-220 absolute inset-0 transition-opacity"
+                            x-bind:class="quranBootstrap.requiresRestart ? 'opacity-100' : 'opacity-0'"
+                        >{{ arabic_text('تم بحمد الله') }}</span>
                     </h2>
-                    <p class="text-primary-900/78 dark:text-primary-100/82 text-sm leading-7">
-                        <span x-show="!quranBootstrap.requiresRestart">
+                    <p
+                        class="text-primary-900/78 dark:text-primary-100/82 relative h-[3.6rem] w-full text-sm leading-7">
+                        <span
+                            class="duration-220 absolute inset-0 transition-opacity"
+                            x-bind:class="quranBootstrap.requiresRestart ? 'opacity-0' : 'opacity-100'"
+                        >
                             {{ arabic_text('يتم تجهيز المصحف بشكل أنيق ومحرك اللغة العربية لبحث متقدم...') }}
                         </span>
-                        <span x-show="quranBootstrap.requiresRestart">
+                        <span
+                            class="duration-220 absolute inset-0 transition-opacity"
+                            x-bind:class="quranBootstrap.requiresRestart ? 'opacity-100' : 'opacity-0'"
+                        >
                             {{ arabic_text('يرجى إعادة تشغيل التطبيق ليتمّ اعتماد البيانات.') }}
                         </span>
                     </p>
-                    <div
-                        class="space-y-2"
-                        x-show="!quranBootstrap.requiresRestart"
-                    >
-                        <div class="h-2.5 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-700/60">
-                            <div
-                                class="from-primary-500 to-primary-700 bg-linear-to-r h-full rounded-full transition-[width] duration-150"
-                                x-bind:style="`width: ${Math.max(0, Math.min(100, Number(quranBootstrap.displayProgressPercent ?? 0)))}%`"
-                            ></div>
-                        </div>
-                        <p class="text-primary-900/70 dark:text-primary-100/70 text-xs font-semibold">
-                            <span
-                                x-text="`${Math.max(0, Math.min(100, Math.round(Number(quranBootstrap.displayProgressPercent ?? 0))))}%`"
-                            ></span>
-                        </p>
-                    </div>
-                    <div
-                        class="pt-1"
-                        x-show="quranBootstrap.requiresRestart"
-                    >
-                        <button
-                            class="bg-primary-600 hover:bg-primary-700 disabled:bg-primary-300 rounded-xl px-4 py-2 text-sm font-semibold text-white transition disabled:cursor-not-allowed"
-                            type="button"
-                            x-bind:disabled="quranBootstrap.isRestarting"
-                            x-on:click="restartNativeAppAfterQuranBootstrap('success-button')"
+                    <div class="relative h-[2.9rem] w-full">
+                        <div
+                            class="duration-220 absolute inset-0 space-y-2 transition-opacity"
+                            x-bind:class="quranBootstrap.requiresRestart ? 'opacity-0 pointer-events-none' : 'opacity-100'"
                         >
-                            <span
-                                x-show="!quranBootstrap.isRestarting">{{ arabic_text('إعادة تشغيل التطبيق الآن') }}</span>
-                            <span x-show="quranBootstrap.isRestarting">{{ arabic_text('جاري إعادة التشغيل...') }}</span>
-                        </button>
+                            <div class="h-2.5 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-700/60">
+                                <div
+                                    class="from-primary-500 to-primary-700 bg-linear-to-r h-full rounded-full transition-[width] duration-150"
+                                    x-bind:style="`width: ${Math.max(0, Math.min(100, Number(quranBootstrap.displayProgressPercent ?? 0)))}%`"
+                                ></div>
+                            </div>
+                            <p class="text-primary-900/70 dark:text-primary-100/70 text-xs font-semibold">
+                                <span
+                                    x-text="`${Math.max(0, Math.min(100, Math.round(Number(quranBootstrap.displayProgressPercent ?? 0))))}%`"
+                                ></span>
+                            </p>
+                        </div>
+                        <div
+                            class="duration-220 absolute inset-0 flex items-center justify-center transition-opacity"
+                            x-show="quranBootstrap.requiresRestart"
+                            x-bind:class="quranBootstrap.requiresRestart ? 'opacity-100' : 'opacity-0 pointer-events-none'"
+                        >
+                            <button
+                                class="bg-primary-600 hover:bg-primary-700 disabled:bg-primary-300 rounded-xl px-4 py-2 text-sm font-semibold text-white transition disabled:cursor-not-allowed"
+                                type="button"
+                                x-bind:disabled="quranBootstrap.isRestarting"
+                                x-on:click="restartNativeAppAfterQuranBootstrap('success-button')"
+                            >
+                                <span
+                                    x-show="!quranBootstrap.isRestarting">{{ arabic_text('إعادة تشغيل التطبيق الآن') }}</span>
+                                <span
+                                    x-show="quranBootstrap.isRestarting">{{ arabic_text('جاري إعادة التشغيل...') }}</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 

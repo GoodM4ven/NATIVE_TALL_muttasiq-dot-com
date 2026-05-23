@@ -137,10 +137,12 @@
             transform: scale(1.065);
             filter: blur(4px) brightness(0.66) saturate(0.9);
             transition:
-                transform 420ms ease,
-                filter 320ms ease,
+                transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
+                filter 180ms ease,
                 opacity var(--tw-duration, 500ms) var(--tw-ease, ease);
             pointer-events: none;
+            will-change: transform;
+            backface-visibility: hidden;
         }
 
         img.quran-app-sector__image-img--tilawa {
@@ -460,20 +462,20 @@
         }
 
         [data-quran-app-shell].quran-app-shell--reader-launching .quran-app-sector.is-launch-target {
-            transform: scale(1.05);
+            transform: scale(1.03);
         }
 
         [data-quran-app-shell].quran-app-shell--gate-returning .quran-app-sector.is-launch-target {
-            transform: scale(1.02);
+            transform: scale(1.01);
         }
 
         [data-quran-app-shell].quran-app-shell--reader-launching .quran-app-sector.is-launch-target img.quran-app-sector__image-img {
-            transform: scale(1.16);
-            filter: blur(0.6px) brightness(0.98) saturate(1.08);
+            transform: scale(1.04);
+            filter: blur(0.2px) brightness(0.96) saturate(1.04);
         }
 
         [data-quran-app-shell].quran-app-shell--gate-returning .quran-app-sector.is-launch-target img.quran-app-sector__image-img {
-            transform: scale(1.08);
+            transform: scale(1.025);
             filter: blur(0.25px) brightness(0.94) saturate(1.04);
         }
 
@@ -657,7 +659,7 @@
 
             [data-quran-app-shell].quran-app-shell--reader-launching .quran-app-sector.is-launch-target img.quran-app-sector__image-img,
             [data-quran-app-shell].quran-app-shell--gate-returning .quran-app-sector.is-launch-target img.quran-app-sector__image-img {
-                transform: scale(1.06);
+                transform: scale(1.03);
                 filter: brightness(0.94) saturate(1.02);
             }
         }

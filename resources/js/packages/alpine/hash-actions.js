@@ -376,7 +376,78 @@ document.addEventListener('alpine:init', () => {
         });
     };
 
+    const getVisibleFilamentModals = () => {
+        const modalElements = Array.from(document.querySelectorAll('.fi-modal.fi-modal-open'));
+
+        return modalElements
+            .filter((modalElement) => {
+                if (!(modalElement instanceof HTMLElement)) {
+                    return false;
+                }
+
+                const rect = modalElement.getBoundingClientRect();
+
+                if (rect.width <= 0 || rect.height <= 0) {
+                    return false;
+                }
+
+                const styles = window.getComputedStyle(modalElement);
+
+                return styles.display !== 'none' && styles.visibility !== 'hidden';
+            })
+            .sort((leftModal, rightModal) => {
+                const leftZ = Number.parseInt(window.getComputedStyle(leftModal).zIndex || '0', 10);
+                const rightZ = Number.parseInt(
+                    window.getComputedStyle(rightModal).zIndex || '0',
+                    10,
+                );
+
+                if (Number.isFinite(leftZ) && Number.isFinite(rightZ) && leftZ !== rightZ) {
+                    return rightZ - leftZ;
+                }
+
+                return 0;
+            });
+    };
+
+    const closeTopFilamentModal = () => {
+        const topModal = getVisibleFilamentModals()[0] ?? null;
+
+        if (!(topModal instanceof HTMLElement)) {
+            return false;
+        }
+
+        const modalId = String(
+            topModal.getAttribute('data-fi-modal-id') ||
+                topModal.querySelector('.fi-modal-window')?.getAttribute('id') ||
+                '',
+        ).trim();
+
+        if (modalId !== '') {
+            const payload = { id: modalId };
+            window.dispatchEvent(new CustomEvent('close-modal-quietly', { detail: payload }));
+            window.dispatchEvent(new CustomEvent('close-modal', { detail: payload }));
+
+            return true;
+        }
+
+        window.dispatchEvent(
+            new KeyboardEvent('keydown', {
+                key: 'Escape',
+                code: 'Escape',
+                bubbles: true,
+                cancelable: true,
+            }),
+        );
+
+        return true;
+    };
+
     window.__nativeBackAction = () => {
+        if (closeTopFilamentModal()) {
+            return true;
+        }
+
         const currentHash = normalizeHash(window.location.hash || '#');
         const viewIndex = getViewIndex();
 

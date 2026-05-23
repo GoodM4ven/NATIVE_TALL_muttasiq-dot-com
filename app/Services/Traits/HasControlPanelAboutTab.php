@@ -14,7 +14,8 @@ trait HasControlPanelAboutTab
 {
     protected function controlPanelAboutTab(): Tab
     {
-        return Tab::make('حولنا')
+        return Tab::make('about')
+            ->label(arabic_text('حولنا'))
             ->key('about')
             ->icon('phosphor.warning-diamond-fill')
             ->schema([

@@ -983,21 +983,7 @@ export const createLineLayoutSearchDirectoryAndCaptionModule = (deps) => {
             const normalizedSource = String(source ?? '').trim() || 'search-result';
             const normalizedSurahNumber = Math.max(0, Math.trunc(Number(surahNumber ?? 0)));
             const normalizedPageNumber = Math.max(0, Math.trunc(Number(pageNumber ?? 0)));
-            const cleanedAyahText = String(ayahText ?? '')
-                .replace(/\s+/g, ' ')
-                .trim();
-            const surahName = this.surahNameOnly(normalizedSurahNumber);
-
-            const resolvedCaption =
-                normalizedSource === 'surah-directory'
-                    ? surahName !== ''
-                        ? `الانتقال إلى سورة ${surahName}`
-                        : 'الانتقال إلى السورة'
-                    : cleanedAyahText !== ''
-                      ? cleanedAyahText
-                      : surahName !== ''
-                        ? `نتيجة البحث في سورة ${surahName}`
-                        : 'نتيجة البحث';
+            const resolvedCaption = 'الانتقال البحثي';
 
             if (this._searchDestinationCueBlinkStartTimer !== null) {
                 clearTimeout(this._searchDestinationCueBlinkStartTimer);

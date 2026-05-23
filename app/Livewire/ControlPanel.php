@@ -47,6 +47,10 @@ class ControlPanel extends Component implements HasActions, HasSchemas
             ->modalSubmitActionLabel(arabic_text('حفظ'))
             ->extraModalWindowAttributes([
                 'id' => 'control-panel-modal',
+                'class' => 'quran-control-panel-modal-window',
+            ])
+            ->extraModalOverlayAttributes([
+                'class' => 'quran-control-panel-modal-overlay',
             ])
             ->fillForm(fn (): array => $this->loadControlPanel())
             ->schema([
@@ -96,6 +100,10 @@ class ControlPanel extends Component implements HasActions, HasSchemas
             ->modalCancelAction(false)
             ->extraModalWindowAttributes([
                 'id' => 'support-unlock-modal',
+                'class' => 'quran-support-unlock-modal-window',
+            ])
+            ->extraModalOverlayAttributes([
+                'class' => 'quran-support-unlock-modal-overlay',
             ])
             ->modalContent(fn (): HtmlString => $this->supportUnlockModalContent())
             ->extraModalFooterActions(fn (Action $action): array => [

@@ -985,7 +985,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             this.beginLayoutCycle();
         },
 
-        scheduleLayoutAfterModalLifecycle(delayMs = 220) {
+        scheduleLayoutAfterModalLifecycle(delayMs = 140) {
             if (!this.hasRenderablePage()) {
                 return;
             }
@@ -1006,12 +1006,12 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                     this._bypassNextFitCache = true;
 
                     void this.layoutPageGuaranteed({
-                        revealDelayMs: 180,
+                        revealDelayMs: 120,
                         maxAttempts: 5,
                         useIdleFit: false,
                     });
                 },
-                Math.max(0, Math.trunc(Number(delayMs) || 220)),
+                Math.max(0, Math.trunc(Number(delayMs) || 140)),
             );
 
             this._isModalLifecycleSettling = true;
@@ -1305,7 +1305,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
 
             if (remainingModalCount <= 0) {
                 this.recoverStaleModalLifecycleState();
-                this.scheduleLayoutAfterModalLifecycle(220);
+                this.scheduleLayoutAfterModalLifecycle(120);
 
                 return;
             }
@@ -1315,7 +1315,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             if (normalizedAttempt >= 24) {
                 this._activeModalIds.clear();
                 this._isModalLifecycleSettling = false;
-                this.scheduleLayout({ revealDelayMs: 240 });
+                this.scheduleLayout({ revealDelayMs: 140 });
 
                 return;
             }
@@ -1385,26 +1385,6 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                     this._postModalTargetFitPage === this.pageNumber &&
                     this.isCurrentPageVisiblyReady()
                 ) {
-                    this.clearPendingPostModalTargetFit();
-                }
-
-                return;
-            }
-
-            if (
-                isLateCloseLikeEvent &&
-                openModalCount <= 0 &&
-                this.hasRenderablePage() &&
-                this.isCurrentPageVisiblyReady() &&
-                !shouldKeepHiddenForModalNavigation
-            ) {
-                if (modalId !== '') {
-                    this._activeModalIds.delete(modalId);
-                }
-
-                this._isModalLifecycleSettling = false;
-
-                if (this._postModalTargetFitPage === this.pageNumber) {
                     this.clearPendingPostModalTargetFit();
                 }
 
@@ -1482,9 +1462,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                     openModalCount > 0 ||
                     shouldKeepHiddenForModalNavigation
                 ) {
-                    const navigatedAway = this._lastFittedPageNumber !== this.pageNumber;
-
-                    if (navigatedAway || shouldKeepHiddenForModalNavigation) {
+                    if (this.hasRenderablePage()) {
                         this._bypassNextFitCache = true;
                         this.holdPageHiddenForModalLifecycle({ animateFadeOut: false });
                     }
@@ -1502,9 +1480,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                     this._activeModalIds.delete(modalId);
                 }
 
-                const navigatedAway = this._lastFittedPageNumber !== this.pageNumber;
-
-                if (navigatedAway || shouldKeepHiddenForModalNavigation) {
+                if (this.hasRenderablePage()) {
                     this._bypassNextFitCache = true;
                     this.holdPageHiddenForModalLifecycle({ animateFadeOut: false });
                 }
@@ -1523,7 +1499,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             }
         },
 
-        queuePageReveal(layoutToken, delayMs = 180) {
+        queuePageReveal(layoutToken, delayMs = 120) {
             this._revealTimer = window.setTimeout(() => {
                 this._revealTimer = null;
 
@@ -1552,7 +1528,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                         reason: 'modal-lifecycle',
                     });
                     this.isFittingPage = true;
-                    this.queuePageReveal(layoutToken, 120);
+                    this.queuePageReveal(layoutToken, 84);
 
                     return;
                 }
@@ -1630,7 +1606,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                         revealBlockedForMs,
                     });
                     this.isFittingPage = true;
-                    this.queuePageReveal(layoutToken, 90);
+                    this.queuePageReveal(layoutToken, 72);
 
                     return;
                 }
@@ -1686,7 +1662,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             }, 90);
         },
 
-        scheduleLayout({ revealDelayMs = 180, maxAttempts = 4 } = {}) {
+        scheduleLayout({ revealDelayMs = 120, maxAttempts = 4 } = {}) {
             if (
                 this.wirdModeActive &&
                 this.isWirdEntryLayoutSchedulingSuppressed() &&
@@ -1793,17 +1769,19 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             }
         },
 
-        async layoutPage({ revealDelayMs = 180, useIdleFit = true, deferReveal = false } = {}) {
+        async layoutPage({ revealDelayMs = 120, useIdleFit = true, deferReveal = false } = {}) {
             const layoutToken = this.beginLayoutCycle();
             const shouldUseImmersiveChrome = this.shouldUseImmersiveReaderChrome();
-            const stableTextFrames = shouldUseImmersiveChrome ? 6 : 10;
+            const stableTextFrames = shouldUseImmersiveChrome ? 4 : 6;
             const shouldRebalanceWordSpacing =
                 !shouldUseImmersiveChrome &&
                 !this._startupCalibrationPending &&
                 !this.isCalibrating;
 
             await this.nextTickAsync();
-            await this.waitForPageFontReady();
+            if (!this.areTrackedPageFontsLoaded()) {
+                await this.waitForPageFontReady();
+            }
             await nextAnimationFrame();
             await this.waitForStableRenderedText(stableTextFrames);
 
