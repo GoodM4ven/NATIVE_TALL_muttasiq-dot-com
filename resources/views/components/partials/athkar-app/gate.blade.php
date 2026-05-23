@@ -434,8 +434,8 @@
                     <div class="athkar-gate__spill-pane athkar-gate__spill-pane--night">
                         <x-goodmaven::blurred-image
                             alt="Athkar night spill"
-                            :imagePath="asset('images/background/night-blurred.webp')"
-                            :thumbnailImagePath="asset('images/background/night-blurred-blur-thumbnail.png')"
+                            :imagePath="asset('images/background/athkar-night-blurred.webp')"
+                            :thumbnailImagePath="asset('images/background/athkar-night-blurred-blur-thumbnail.png')"
                             :isDisplayEnforced="true"
                             containerClasses="overflow-visible bg-transparent"
                             imageClasses="athkar-gate__spill-image"
@@ -445,8 +445,8 @@
                     <div class="athkar-gate__spill-pane athkar-gate__spill-pane--morning">
                         <x-goodmaven::blurred-image
                             alt="Athkar morning spill"
-                            :imagePath="asset('images/background/morning-blurred.webp')"
-                            :thumbnailImagePath="asset('images/background/morning-blurred-blur-thumbnail.png')"
+                            :imagePath="asset('images/background/athkar-morning-blurred.webp')"
+                            :thumbnailImagePath="asset('images/background/athkar-morning-blurred-blur-thumbnail.png')"
                             :isDisplayEnforced="true"
                             containerClasses="overflow-visible bg-transparent"
                             imageClasses="athkar-gate__spill-image"
@@ -472,8 +472,8 @@
                         >
                             <x-goodmaven::blurred-image
                                 alt="Athkar night"
-                                :imagePath="asset('images/background/night.webp')"
-                                :thumbnailImagePath="asset('images/background/night-blur-thumbnail.png')"
+                                :imagePath="asset('images/background/athkar-night.webp')"
+                                :thumbnailImagePath="asset('images/background/athkar-night-blur-thumbnail.png')"
                                 :isDisplayEnforced="true"
                                 imageClasses="athkar-gate__image-img select-none"
                             />
@@ -512,8 +512,8 @@
                         >
                             <x-goodmaven::blurred-image
                                 alt="Athkar morning"
-                                :imagePath="asset('images/background/morning.webp')"
-                                :thumbnailImagePath="asset('images/background/morning-blur-thumbnail.png')"
+                                :imagePath="asset('images/background/athkar-morning.webp')"
+                                :thumbnailImagePath="asset('images/background/athkar-morning-blur-thumbnail.png')"
                                 :isDisplayEnforced="true"
                                 imageClasses="athkar-gate__image-img select-none"
                             />

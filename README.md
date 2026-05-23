@@ -244,7 +244,7 @@ If you're a designer, or perhaps you don't know much about coding, feel free to 
 
   <br>
 
-The assets used for the app so far can be found in this online [Penpot](https://design.penpot.app/#/workspace?team-id=82e31d90-3829-8139-8002-c1de54898224&file-id=ff5222bd-026b-80fd-8007-8c6597adff77&page-id=71bc4f81-468d-8163-8007-8a43ee7cd755) draft (request needed), **which you preview quickly from [here](https://design.penpot.app/#/view?file-id=ff5222bd-026b-80fd-8007-8c6597adff77&page-id=71bc4f81-468d-8163-8007-8a43ee7cd755&section=interactions&frame-id=987eaac6-303b-803f-8007-8ce38438e2c9&index=0&share-id=57e6ab48-ab48-8193-8007-8ce21800cfa5)** or edit it freely using this [[design.penpot](./.assets/design.penpot)] file.
+The assets used for the app so far can be found in this over [here](https://design.penpot.app/#/view?file-id=ff5222bd-026b-80fd-8007-8c6597adff77&page-id=71bc4f81-468d-8163-8007-8a43ee7cd755&section=interactions&index=0&share-id=e7a86fff-661d-81c1-8008-1028011d91a3)** or edit it freely using this [[design.penpot](./.assets/design.penpot)] file.
 
 
 ## Resources

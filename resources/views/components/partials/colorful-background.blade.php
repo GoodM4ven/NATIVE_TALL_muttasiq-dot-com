@@ -18,14 +18,15 @@
         <div
             class="absolute inset-0 opacity-0 transition-opacity duration-500 will-change-[opacity]"
             data-testid="main-menu-bg-light-layer"
-            x-bind:class="!$store.colorScheme.isDarkModeOn && !views[`quran-app-tilawa`].isOpen && !views[`quran-app-hifth`].isOpen &&
+            x-bind:class="views[`main-menu`].isOpen && !$store.colorScheme.isDarkModeOn && !views[`quran-app-tilawa`].isOpen && !
+                views[`quran-app-hifth`].isOpen &&
                 !views[`quran-app-tadabbur`].isOpen && 'opacity-100!'"
         >
             <x-goodmaven::blurred-image
                 class="h-full w-full scale-110 object-cover"
                 alt="Morning background"
-                :imagePath="asset('images/background/morning-blurred.webp')"
-                :thumbnailImagePath="asset('images/background/morning-blurred-blur-thumbnail.png')"
+                :imagePath="asset('images/background/main-morning-blurred.webp')"
+                :thumbnailImagePath="asset('images/background/main-morning-blurred-blur-thumbnail.webp')"
                 :isDisplayEnforced="true"
             />
         </div>
@@ -34,14 +35,49 @@
         <div
             class="absolute inset-0 opacity-0 transition-opacity duration-500 will-change-[opacity]"
             data-testid="main-menu-bg-dark-layer"
-            x-bind:class="$store.colorScheme.isDarkModeOn && !views[`quran-app-tilawa`].isOpen && !views[`quran-app-hifth`].isOpen &&
+            x-bind:class="views[`main-menu`].isOpen && $store.colorScheme.isDarkModeOn && !views[`quran-app-tilawa`].isOpen && !views[
+                    `quran-app-hifth`].isOpen &&
                 !views[`quran-app-tadabbur`].isOpen && 'opacity-100!'"
         >
             <x-goodmaven::blurred-image
                 class="h-full w-full scale-110 object-cover"
                 alt="Night background"
-                :imagePath="asset('images/background/night-blurred.webp')"
-                :thumbnailImagePath="asset('images/background/night-blurred-blur-thumbnail.png')"
+                :imagePath="asset('images/background/main-night-blurred.webp')"
+                :thumbnailImagePath="asset('images/background/main-night-blurred-blur-thumbnail.webp')"
+                :isDisplayEnforced="true"
+            />
+        </div>
+
+        <!-- ATHKAR READER LIGHT MODE -->
+        <div
+            class="absolute inset-0 opacity-0 transition-opacity duration-500 will-change-[opacity]"
+            data-testid="athkar-reader-bg-light-layer"
+            x-bind:class="views[`athkar-app-gate`].isReaderVisible && !$store.colorScheme.isDarkModeOn && !views[`quran-app-tilawa`]
+                .isOpen && !views[`quran-app-hifth`].isOpen &&
+                !views[`quran-app-tadabbur`].isOpen && 'opacity-100!'"
+        >
+            <x-goodmaven::blurred-image
+                class="h-full w-full scale-110 object-cover"
+                alt="Athkar morning background"
+                :imagePath="asset('images/background/athkar-morning-blurred.webp')"
+                :thumbnailImagePath="asset('images/background/athkar-morning-blurred-blur-thumbnail.png')"
+                :isDisplayEnforced="true"
+            />
+        </div>
+
+        <!-- ATHKAR READER DARK MODE -->
+        <div
+            class="absolute inset-0 opacity-0 transition-opacity duration-500 will-change-[opacity]"
+            data-testid="athkar-reader-bg-dark-layer"
+            x-bind:class="views[`athkar-app-gate`].isReaderVisible && $store.colorScheme.isDarkModeOn && !views[`quran-app-tilawa`]
+                .isOpen && !views[`quran-app-hifth`].isOpen &&
+                !views[`quran-app-tadabbur`].isOpen && 'opacity-100!'"
+        >
+            <x-goodmaven::blurred-image
+                class="h-full w-full scale-110 object-cover"
+                alt="Athkar night background"
+                :imagePath="asset('images/background/athkar-night-blurred.webp')"
+                :thumbnailImagePath="asset('images/background/athkar-night-blurred-blur-thumbnail.png')"
                 :isDisplayEnforced="true"
             />
         </div>
