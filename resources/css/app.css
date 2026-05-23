@@ -101,7 +101,6 @@
     .athkar-gate__divider-glow,
     .quran-app-sector__chip,
     .quran-app-gate-anchor,
-    .quran-app-gate-pointer,
     .main-menu-insights-trigger,
     .main-menu-insights-panel,
     .main-menu-insights-row,
@@ -123,26 +122,34 @@
     .main-menu-insights-trigger::after,
     .main-menu-insights-fill::after,
     .quran-app-gate-focal-dim,
-    .quran-app-gate-geometry,
-    .quran-app-gate-orbit {
+    .quran-app-gate-geometry {
         display: none !important;
     }
 
-    .quran-app-gate-anchor::before,
-    .quran-app-gate-orbit,
-    .quran-app-gate-pointer {
+    .quran-app-gate-anchor::before {
         animation: none !important;
         transition-duration: 120ms !important;
     }
 
-    .quran-swipe-hint-button,
-    .quran-soorah-trigger,
     .quran-history-toggle-button,
     .quran-bookmark-toggle-button,
     .quran-page-number-chip,
     .quran-wird-progress-button,
     .app-action-button {
-        box-shadow: none !important;
+        box-shadow: 0 6px 14px rgba(15, 23, 42, 0.16) !important;
+    }
+
+    .native-platform .quran-history-toggle-button,
+    .native-platform .quran-bookmark-toggle-button,
+    .native-platform .quran-page-number-chip,
+    .native-platform .quran-wird-progress-button,
+    .native-platform .app-action-button {
+        transition-duration: 140ms !important;
+    }
+
+    .native-platform .athkar-gate__divider,
+    .native-platform .athkar-gate__divider-glow,
+    .native-platform .quran-app-sector__chip {
         filter: none !important;
     }
 }

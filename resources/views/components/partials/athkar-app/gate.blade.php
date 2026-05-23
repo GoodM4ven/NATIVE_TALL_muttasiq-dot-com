@@ -18,6 +18,7 @@
             --spill-split-top: calc(var(--spill-split) - var(--tilt));
             --spill-split-bottom: calc(var(--spill-split) + var(--tilt));
             --gate-glass-border-radius: calc(var(--radius) - 10px);
+            contain: layout paint;
         }
 
         @media (max-width: 639px) {
@@ -409,7 +410,7 @@
         .native-platform .athkar-gate__divider,
         .native-platform .athkar-gate__divider-glow,
         .native-platform .athkar-gate__spill-pane {
-            transition-duration: 220ms !important;
+            transition-duration: 150ms !important;
         }
 
         .native-platform img.athkar-gate__image-img,

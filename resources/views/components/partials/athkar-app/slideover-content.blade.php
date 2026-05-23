@@ -333,7 +333,7 @@
                     type="search"
                     dir="rtl"
                     placeholder="{{ arabic_text('ابحث في نص الذكر أو المصدر...') }}"
-                    wire:model.live.debounce.180ms="athkarSearchQuery"
+                    wire:model.live.debounce.320ms="athkarSearchQuery"
                 />
                 @if ($hasActiveSearch)
                     <button

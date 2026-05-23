@@ -308,6 +308,19 @@ document.addEventListener('alpine:init', () => {
 
             this.collapseInsightsForNavigation();
         },
+        handleMainMenuBackgroundPointerDown(event) {
+            if (!this.isTouchDevice || !this.isInsightsExpanded) {
+                return;
+            }
+
+            const pointerType = String(event?.pointerType ?? '').toLowerCase();
+
+            if (pointerType !== '' && pointerType !== 'touch' && pointerType !== 'pen') {
+                return;
+            }
+
+            this.handleMainMenuBackgroundTap(event);
+        },
         normalizeProgressPercent(value) {
             const numeric = Number(value ?? NaN);
 
@@ -1120,6 +1133,13 @@ document.addEventListener('alpine:init', () => {
 
             this.clearActiveItemForInsightsTrigger();
             this.isInsightsPointerInside = true;
+
+            if (this.isInsightsExpanded) {
+                this.showInsightsPanel({ refresh: false, lockTouchRows: false });
+
+                return;
+            }
+
             this.showInsightsPanel();
         },
         shouldClearActiveItemOnInsightsTrigger() {

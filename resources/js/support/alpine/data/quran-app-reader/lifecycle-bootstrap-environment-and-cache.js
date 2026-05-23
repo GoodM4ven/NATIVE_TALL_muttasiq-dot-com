@@ -265,6 +265,7 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
                     this._immersiveEntryAwaitingFirstReveal = true;
                     this.clearDeferredBootstrapCheckTimer();
                     this._deferredBootstrapCheckAttempts = 0;
+                    this.deactivateSearchDestinationCue();
 
                     if (this.hasRenderablePage()) {
                         this.isFittingPage = true;
@@ -317,6 +318,7 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
                 this.isReaderChromeVisible = false;
                 this.isFontScaleOverlayVisible = false;
                 this.syncReaderChromeDocumentClass({ forceInactive: true });
+                this.deactivateSearchDestinationCue();
             };
             window.addEventListener('quran-reader-go-gate', this._onReaderGoGate);
             this._onQuranNativeLifecycle = (event) => {
@@ -514,7 +516,7 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
             this.calibrationHudTop = Math.round(panelRect.top + panelRect.height * 0.5);
         },
 
-        queueReaderReentryRefit(delayMs = 40) {
+        queueReaderReentryRefit(delayMs = 40, retriesRemaining = 4) {
             if (this._readerReentryRefitTimer !== null) {
                 window.clearTimeout(this._readerReentryRefitTimer);
                 this._readerReentryRefitTimer = null;
@@ -524,7 +526,16 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
             this._readerReentryRefitTimer = window.setTimeout(() => {
                 this._readerReentryRefitTimer = null;
 
-                if (!this.isAnyQuranReaderViewOpen() || !this.hasRenderablePage()) {
+                if (!this.isAnyQuranReaderViewOpen()) {
+                    return;
+                }
+
+                if (!this.hasRenderablePage()) {
+                    if (retriesRemaining > 0) {
+                        const nextDelayMs = Math.min(520, Math.max(60, normalizedDelay + 80));
+                        this.queueReaderReentryRefit(nextDelayMs, retriesRemaining - 1);
+                    }
+
                     return;
                 }
 

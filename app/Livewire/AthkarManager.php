@@ -600,8 +600,9 @@ class AthkarManager extends Component implements HasActions, HasSchemas
         $originMatches = [];
 
         foreach ($cards as $card) {
-            $textScore = $this->scoreAthkarSearchText(
-                $card['text'],
+            $normalizedCardText = $this->normalizeAthkarSearchValue($card['text']);
+            $textScore = $this->scoreAthkarSearchNormalizedText(
+                $normalizedCardText,
                 $normalizedQuery,
                 $normalizedTerms,
             );
@@ -615,8 +616,8 @@ class AthkarManager extends Component implements HasActions, HasSchemas
                 continue;
             }
 
-            $originScore = $this->scoreAthkarSearchText(
-                $card['origin'],
+            $originScore = $this->scoreAthkarSearchNormalizedText(
+                $this->normalizeAthkarSearchValue($card['origin']),
                 $normalizedQuery,
                 $normalizedTerms,
             );
@@ -1305,8 +1306,35 @@ class AthkarManager extends Component implements HasActions, HasSchemas
             return '';
         }
 
-        $searchable = trim((string) ArabicFilter::forSearch($normalized));
+        $strippedWrappers = $this->stripAthkarSearchWrappers($normalized);
+        $searchable = trim((string) ArabicFilter::forSearch($strippedWrappers));
         $collapsed = preg_replace('/\s+/u', ' ', $searchable) ?? $searchable;
+
+        return trim($collapsed);
+    }
+
+    private function stripAthkarSearchWrappers(string $value): string
+    {
+        $normalized = str_replace(
+            [
+                Thikr::AAYAH_OPENING_MARK,
+                Thikr::AAYAH_CLOSING_MARK,
+                '(',
+                ')',
+                '[',
+                ']',
+                '{',
+                '}',
+                '«',
+                '»',
+                '‹',
+                '›',
+            ],
+            ' ',
+            $value,
+        );
+
+        $collapsed = preg_replace('/\s+/u', ' ', $normalized) ?? $normalized;
 
         return trim($collapsed);
     }
@@ -1329,7 +1357,7 @@ class AthkarManager extends Component implements HasActions, HasSchemas
 
         try {
             /** @var array{terms?: array<int, string>} $plan */
-            $plan = Arabic::buildComprehensiveSearchPlan($normalized, 80);
+            $plan = Arabic::buildComprehensiveSearchPlan($normalized, 32);
 
             foreach ($plan['terms'] ?? [] as $term) {
                 $terms[] = $term;
@@ -1344,6 +1372,7 @@ class AthkarManager extends Component implements HasActions, HasSchemas
                 static fn (string $term): array => preg_split('/\s+/u', $term, -1, PREG_SPLIT_NO_EMPTY) ?: [],
             )
             ->unique()
+            ->take(48)
             ->values()
             ->all();
 
@@ -1356,10 +1385,11 @@ class AthkarManager extends Component implements HasActions, HasSchemas
     /**
      * @param  array<int, string>  $terms
      */
-    private function scoreAthkarSearchText(mixed $value, string $normalizedQuery, array $terms): int
-    {
-        $normalizedValue = $this->normalizeAthkarSearchValue($value);
-
+    private function scoreAthkarSearchNormalizedText(
+        string $normalizedValue,
+        string $normalizedQuery,
+        array $terms,
+    ): int {
         if ($normalizedValue === '') {
             return 0;
         }

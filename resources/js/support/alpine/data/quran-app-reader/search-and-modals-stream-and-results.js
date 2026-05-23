@@ -682,6 +682,79 @@ export const createSearchAndModalsStreamAndResultsModule = (deps) => {
 
             return `fallback:${strategy}:${Math.max(0, Math.trunc(Number(result?.surah_number ?? 0)))}:${Math.max(0, Math.trunc(Number(result?.ayah_number ?? 0)))}:${Math.max(0, Math.trunc(Number(result?.ayah_index ?? 0)))}:${Math.max(0, Math.trunc(Number(result?.page_number ?? 0)))}:${Math.max(0, Math.trunc(Number(result?.match_rank ?? 0)))}`;
         },
+        searchResultDestinationKey(result) {
+            const verseId = Math.max(0, Math.trunc(Number(result?.id ?? 0)));
+
+            if (verseId > 0) {
+                return `verse:${verseId}`;
+            }
+
+            const pageNumber = Math.max(0, Math.trunc(Number(result?.page_number ?? 0)));
+            const surahNumber = Math.max(0, Math.trunc(Number(result?.surah_number ?? 0)));
+            const ayahNumber = Math.max(0, Math.trunc(Number(result?.ayah_number ?? 0)));
+            const ayahIndex = Math.max(0, Math.trunc(Number(result?.ayah_index ?? 0)));
+
+            if (ayahIndex > 0) {
+                return `ayah-index:${pageNumber}:${surahNumber}:${ayahNumber}:${ayahIndex}`;
+            }
+
+            if (ayahNumber > 0) {
+                return `ayah:${pageNumber}:${surahNumber}:${ayahNumber}`;
+            }
+
+            if (surahNumber > 0) {
+                return `surah:${pageNumber}:${surahNumber}`;
+            }
+
+            if (pageNumber > 0) {
+                return `page:${pageNumber}`;
+            }
+
+            return `raw:${this.searchResultKey(result)}`;
+        },
+        shouldReplaceSearchDestinationResult(currentResult, nextResult) {
+            const weightDelta =
+                this.searchResultSortWeight(nextResult) -
+                this.searchResultSortWeight(currentResult);
+
+            if (weightDelta !== 0) {
+                return weightDelta < 0;
+            }
+
+            const rankDelta =
+                Math.max(0, Math.trunc(Number(nextResult?.match_rank ?? 0))) -
+                Math.max(0, Math.trunc(Number(currentResult?.match_rank ?? 0)));
+
+            if (rankDelta !== 0) {
+                return rankDelta < 0;
+            }
+
+            return this.searchResultKey(nextResult) < this.searchResultKey(currentResult);
+        },
+        dedupeSearchResultsByDestination(results = []) {
+            const dedupedByDestination = new Map();
+
+            (Array.isArray(results) ? results : []).forEach((result) => {
+                if (!result || typeof result !== 'object') {
+                    return;
+                }
+
+                const destinationKey = this.searchResultDestinationKey(result);
+                const previous = dedupedByDestination.get(destinationKey);
+
+                if (!previous) {
+                    dedupedByDestination.set(destinationKey, result);
+
+                    return;
+                }
+
+                if (this.shouldReplaceSearchDestinationResult(previous, result)) {
+                    dedupedByDestination.set(destinationKey, result);
+                }
+            });
+
+            return Array.from(dedupedByDestination.values());
+        },
 
         searchResultIsLeaving(result) {
             return Boolean(result?.__leaving) || this._searchNavigationInFlight;
@@ -920,7 +993,9 @@ export const createSearchAndModalsStreamAndResultsModule = (deps) => {
                 });
             });
 
-            return this.normalizeSearchResults(Array.from(mergedByKey.values()));
+            return this.normalizeSearchResults(
+                this.dedupeSearchResultsByDestination(Array.from(mergedByKey.values())),
+            );
         },
 
         searchResultsSelectElement() {

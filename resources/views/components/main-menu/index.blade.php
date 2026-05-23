@@ -986,6 +986,7 @@
     x-on:main-menu-item-click="handleItemClick($event.detail)"
     x-on:click.outside="handleRootOutsideClick()"
     x-on:click="handleMainMenuBackgroundTap($event)"
+    x-on:pointerdown="handleMainMenuBackgroundPointerDown($event)"
 >
     <!-- Selected Item Caption -->
     <div

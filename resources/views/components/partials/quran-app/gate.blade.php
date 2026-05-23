@@ -18,6 +18,7 @@
             transform-origin:
                 var(--quran-gate-launch-origin-x, var(--gate-cx)) var(--quran-gate-launch-origin-y, var(--gate-cy));
             will-change: transform, opacity;
+            contain: layout paint;
         }
 
         .quran-app-gate-caption {
@@ -570,7 +571,6 @@
                 filter: brightness(0.76) saturate(0.9);
                 transition:
                     transform 220ms ease,
-                    filter 180ms ease,
                     opacity var(--tw-duration, 500ms) var(--tw-ease, ease);
             }
 
@@ -683,16 +683,15 @@
         }
 
         .native-platform img.quran-app-sector__image-img {
-            filter: brightness(0.86) saturate(0.92) !important;
+            filter: brightness(0.89) saturate(0.93) !important;
             transition:
-                transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+                transform 140ms cubic-bezier(0.22, 1, 0.36, 1),
                 opacity 130ms ease !important;
             will-change: transform, opacity;
         }
 
         .native-platform .quran-app-sector.is-active img.quran-app-sector__image-img {
-            filter: brightness(0.94) saturate(0.98) !important;
-            transform: scale(1.015);
+            transform: scale(1.008);
         }
 
         .native-platform .quran-app-sector__chip,

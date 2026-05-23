@@ -708,6 +708,7 @@ class Reader extends Component implements HasActions, HasSchemas
      *     id?: int,
      *     surah_number?: int,
      *     ayah_number?: int,
+     *     ayah_index?: int,
      *     page_number?: int,
      *     match_rank?: int,
      *     match_strategy?: string
@@ -716,28 +717,32 @@ class Reader extends Component implements HasActions, HasSchemas
     private function searchStreamMatchKey(array $match): ?string
     {
         $id = max(0, (int) ($match['id'] ?? 0));
-        $matchStrategy = trim((string) ($match['match_strategy'] ?? ''));
 
         if ($id > 0) {
-            return sprintf('id:%s:%d', $matchStrategy, $id);
+            return sprintf('id:%d', $id);
         }
 
         $surahNumber = max(0, (int) ($match['surah_number'] ?? 0));
         $ayahNumber = max(0, (int) ($match['ayah_number'] ?? 0));
+        $ayahIndex = max(0, (int) ($match['ayah_index'] ?? 0));
         $pageNumber = max(0, (int) ($match['page_number'] ?? 0));
-        $matchRank = max(0, (int) ($match['match_rank'] ?? 0));
 
         if ($surahNumber < 1 || $pageNumber < 1) {
             return null;
         }
 
+        if ($ayahIndex > 0) {
+            return sprintf('ayah-index:%d:%d:%d:%d', $surahNumber, $ayahNumber, $pageNumber, $ayahIndex);
+        }
+
+        if ($ayahNumber > 0) {
+            return sprintf('ayah:%d:%d:%d', $surahNumber, $ayahNumber, $pageNumber);
+        }
+
         return sprintf(
-            'fallback:%s:%d:%d:%d:%d',
-            $matchStrategy,
+            'surah:%d:%d',
             $surahNumber,
-            $ayahNumber,
             $pageNumber,
-            $matchRank,
         );
     }
 
