@@ -42,8 +42,9 @@ document.addEventListener('alpine:init', () => {
         insightsFastCloseDurationMs: 315,
         insightsGateLaunchDelayMs: 420,
         insightsTouchRowsInteractive: false,
-        insightsTouchRowsUnlockDelayMs: 260,
+        insightsTouchRowsUnlockDelayMs: 120,
         insightsTouchRowsUnlockTimer: null,
+        lastInsightsRowTouchActivationAt: 0,
         progressLabels: {
             sabah: config?.progressLabels?.sabah ?? 'أذكار الصباح',
             wird: config?.progressLabels?.wird ?? 'الوِرد اليومي',
@@ -908,8 +909,33 @@ document.addEventListener('alpine:init', () => {
                 this.runViewNavigation(targetReaderView);
             });
         },
-        handleInsightsRowClick(mode) {
+        handleInsightsRowTouchEnd(mode, event = null) {
+            if (!this.isTouchDevice) {
+                return;
+            }
+
+            if (event?.cancelable) {
+                event.preventDefault();
+            }
+
             if (this.isInsightsTouchRowsLocked()) {
+                return;
+            }
+
+            this.lastInsightsRowTouchActivationAt = Date.now();
+            this.handleInsightsRowClick(mode);
+        },
+        handleInsightsRowClick(mode, event = null) {
+            if (this.isInsightsTouchRowsLocked()) {
+                return;
+            }
+
+            if (
+                this.isTouchDevice &&
+                event?.type === 'click' &&
+                this.lastInsightsRowTouchActivationAt > 0 &&
+                Date.now() - this.lastInsightsRowTouchActivationAt < 420
+            ) {
                 return;
             }
 

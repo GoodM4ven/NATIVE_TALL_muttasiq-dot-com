@@ -8,19 +8,25 @@ it('keeps native touch interaction contracts for quran gate and main menu insigh
     $mainMenuViewSource = file_get_contents(resource_path('views/components/main-menu/index.blade.php'));
 
     expect($quranGateSource)->not->toBeFalse()
-        ->and($quranGateSource)->toContain('this.clearArmedMode();')
+        ->and($quranGateSource)->toContain('modeForUiState()')
+        ->and($quranGateSource)->toContain('this.modeForUiState() === mode')
         ->and($quranGateSource)->toContain('this.syncProjectedModeWithOrbitAngle(orbitAngleDeg);')
         ->and($quranGateSource)->toContain('this.setOrbitAngle(orbitAngleDeg);');
 
     expect($mainMenuSource)->not->toBeFalse()
-        ->and($mainMenuSource)->toContain('insightsTouchRowsUnlockDelayMs: 260')
+        ->and($mainMenuSource)->toContain('insightsTouchRowsUnlockDelayMs: 120')
         ->and($mainMenuSource)->toContain('handleInsightsTouchStart(event = null)')
+        ->and($mainMenuSource)->toContain('handleInsightsRowTouchEnd(mode, event = null)')
         ->and($mainMenuSource)->toContain("event.target.closest('.main-menu-insights-row--button')");
 
     expect($mainMenuViewSource)->not->toBeFalse()
         ->and($mainMenuViewSource)->toContain(
             'x-on:touchstart.passive="handleInsightsTouchStart($event)"',
-        );
+        )
+        ->and($mainMenuViewSource)->toContain(
+            'x-on:touchend.stop.prevent="handleInsightsRowTouchEnd(row.key, $event)"',
+        )
+        ->and($mainMenuViewSource)->not->toContain('x-bind:disabled="isInsightsTouchRowsLocked()"');
 });
 
 it('handles athkar native volume next actions through tap-completion flow', function () {

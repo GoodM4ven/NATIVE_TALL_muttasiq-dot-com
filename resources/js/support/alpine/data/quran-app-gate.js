@@ -314,7 +314,7 @@ document.addEventListener('alpine:init', () => {
             return 'tadabbur';
         },
         isModeActive(mode) {
-            return (this.armedMode ?? this.pinnedMode ?? this.projectedMode) === mode;
+            return this.modeForUiState() === mode;
         },
         isModeAvailable(mode) {
             return Boolean(this.modeAvailability?.[mode] ?? false);
@@ -322,8 +322,15 @@ document.addEventListener('alpine:init', () => {
         isModeLocked(mode) {
             return !this.isModeAvailable(mode);
         },
-        currentMode() {
+        modeForUiState() {
+            if (this.hasTouchInput() && this.isTouchPointerActive && this.projectedMode) {
+                return this.projectedMode;
+            }
+
             return this.armedMode ?? this.pinnedMode ?? this.projectedMode;
+        },
+        currentMode() {
+            return this.modeForUiState();
         },
         requiresArmedActivation() {
             return this.hasTouchInput();
@@ -516,8 +523,6 @@ document.addEventListener('alpine:init', () => {
             if (!this.hasTouchInput()) {
                 return;
             }
-
-            this.clearArmedMode();
 
             const touch =
                 this.resolveActiveTouch(event.changedTouches) ??

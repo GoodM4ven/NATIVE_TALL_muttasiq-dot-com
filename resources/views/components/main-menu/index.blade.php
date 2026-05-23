@@ -1120,10 +1120,10 @@
                         <button
                             class="main-menu-insights-row main-menu-insights-row--button 3xl:text-[0.95rem] text-[0.89rem] sm:text-[0.9rem] md:text-[0.8rem] lg:text-[0.85rem] xl:text-[0.9rem] 2xl:text-[0.9rem]"
                             type="button"
-                            x-bind:disabled="isInsightsTouchRowsLocked()"
                             x-bind:aria-disabled="isInsightsTouchRowsLocked() ? 'true' : 'false'"
-                            x-bind:class="{ 'pointer-events-none opacity-70': isInsightsTouchRowsLocked() }"
-                            x-on:click.stop.prevent="handleInsightsRowClick(row.key)"
+                            x-bind:class="{ 'opacity-70': isInsightsTouchRowsLocked() }"
+                            x-on:touchend.stop.prevent="handleInsightsRowTouchEnd(row.key, $event)"
+                            x-on:click.stop.prevent="handleInsightsRowClick(row.key, $event)"
                             x-bind:aria-label="`${row.label} ${row.percent}%`"
                         >
                             <p
