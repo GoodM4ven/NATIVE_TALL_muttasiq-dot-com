@@ -92,7 +92,7 @@
         }
 
         .quran-page-lines {
-            transform: translateY(calc(var(--quran-page-y-offset, 0rem) + var(--quran-page-y-offset-adjust, 0rem)));
+            transform: translate3d(0, calc(var(--quran-page-y-offset, 0rem) + var(--quran-page-y-offset-adjust, 0rem)), 0);
         }
 
         .quran-font-scale-overlay {
@@ -218,7 +218,7 @@
                 bottom: 0;
                 min-height: 4.6rem;
                 padding-top: 1.95rem;
-                padding-bottom: 0.42rem;
+                padding-bottom: 1.5rem;
                 background: linear-gradient(to top, rgb(255 255 255 / 0.98) 0%, rgb(255 255 255 / 0.94) 54%, rgb(255 255 255 / 0) 100%);
                 transform: translate3d(0, 0.58rem, 0);
             }
@@ -1090,6 +1090,9 @@
         .quran-page-surface {
             /* background: var(--quran-page-surface); */
             border-color: var(--quran-page-border);
+            backface-visibility: hidden;
+            transform: translate3d(0, 0, 0);
+            will-change: opacity, transform;
         }
 
         .font-quran {
@@ -1300,6 +1303,7 @@
         .quran-page-lines {
             transition: opacity 180ms ease;
             opacity: 0;
+            backface-visibility: hidden;
             user-select: none;
             -webkit-user-select: none;
             cursor: default;
@@ -1308,6 +1312,7 @@
             direction: rtl;
             display: flex;
             flex-direction: column;
+            will-change: opacity, transform;
             --quran-surah-section-gap: calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * 0.56);
             --quran-basmallah-top-gap: calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * 0.12);
             --quran-surah-header-basmallah-overlap: calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * -0.44);
@@ -1510,6 +1515,8 @@
         .quran-page-lines[data-fit-state='ready'] [data-quran-line] {
             animation: quran-line-reveal 440ms ease both;
             animation-delay: calc(var(--quran-line-index, 0) * 18ms);
+            backface-visibility: hidden;
+            will-change: opacity, transform;
         }
 
         @keyframes quran-line-reveal {
@@ -3170,7 +3177,7 @@
                     ></p>
                 </div>
                 <div
-                    class="z-54 pointer-events-none absolute inset-x-0 bottom-[0.6rem] flex justify-center px-3 sm:hidden"
+                    class="z-54 pointer-events-none absolute inset-x-0 bottom-8 flex justify-center px-3 sm:hidden"
                     x-cloak
                     x-show="shouldShowImmersiveMobileEdgeCaptions()"
                     x-transition:enter="transition-opacity ease-out duration-280 delay-500"
@@ -3688,7 +3695,7 @@
                 </div>
 
                 <footer
-                    class="quran-bottom-strip pb-6 sm:pb-0 gap-x-[0.65rem] gap-y-[0.175rem] sm:gap-y-[0.42rem] md:gap-y-2 lg:gap-y-[0.2rem] xl:gap-x-[0.65rem] xl:gap-y-[0.24rem] 2xl:gap-x-[0.65rem] 2xl:gap-y-[0.42rem]"
+                    class="quran-bottom-strip gap-x-[0.65rem] gap-y-[0.175rem] pb-7! sm:gap-y-[0.42rem] sm:pb-0! md:gap-y-2 lg:gap-y-[0.2rem] xl:gap-x-[0.65rem] xl:gap-y-[0.24rem] 2xl:gap-x-[0.65rem] 2xl:gap-y-[0.42rem]"
                     data-quran-reader-chrome
                 >
                     <button
