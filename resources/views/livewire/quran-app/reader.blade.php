@@ -433,7 +433,7 @@
                 --quran-page-gap-multiplier: 2.8;
                 --quran-page-surah-header-scale: 0.63;
                 --quran-basmallah-bottom-gap-scale: -0.28;
-                --quran-page-y-offset: 0rem;
+                --quran-page-y-offset: -0.3rem;
                 --quran-page-type-scale: 2.66;
             }
 
