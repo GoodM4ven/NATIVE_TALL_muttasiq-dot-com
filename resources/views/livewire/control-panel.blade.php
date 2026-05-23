@@ -4,12 +4,12 @@
         .fi-modal:has(.quran-support-unlock-modal-window) {
             position: fixed !important;
             inset: 0 !important;
-            z-index: 440 !important;
+            z-index: 9000 !important;
         }
 
         .fi-modal .quran-control-panel-modal-window,
         .fi-modal .quran-support-unlock-modal-window {
-            z-index: 442 !important;
+            z-index: 9002 !important;
             position: relative;
         }
 
@@ -17,7 +17,7 @@
         .fi-modal:has(.quran-support-unlock-modal-window)>.fi-modal-window-ctn {
             position: fixed !important;
             inset: 0 !important;
-            z-index: 441 !important;
+            z-index: 9001 !important;
             width: 100vw !important;
             height: 100dvh !important;
             transform: none !important;
@@ -29,7 +29,7 @@
             background: color-mix(in srgb, var(--gray-950) 72%, transparent) !important;
             backdrop-filter: none !important;
             -webkit-backdrop-filter: none !important;
-            z-index: 441 !important;
+            z-index: 9001 !important;
         }
     </style>
 
@@ -76,17 +76,22 @@
                 }
         
                 const modalRoot = modalWindow.closest('.fi-modal');
+                const modalWindowContainer = modalRoot?.querySelector('.fi-modal-window-ctn');
                 const modalOverlay = modalRoot?.querySelector('.quran-control-panel-modal-overlay,.quran-support-unlock-modal-overlay');
         
                 if (modalRoot instanceof HTMLElement) {
-                    modalRoot.style.zIndex = '280';
+                    modalRoot.style.zIndex = '9000';
+                }
+        
+                if (modalWindowContainer instanceof HTMLElement) {
+                    modalWindowContainer.style.zIndex = '9001';
                 }
         
                 if (modalOverlay instanceof HTMLElement) {
-                    modalOverlay.style.zIndex = '281';
+                    modalOverlay.style.zIndex = '9001';
                 }
         
-                modalWindow.style.zIndex = '282';
+                modalWindow.style.zIndex = '9002';
             },
             resolveControlPanelWesternNumeralState() {
                 const modalWindow = this.resolveControlPanelModalWindow();
