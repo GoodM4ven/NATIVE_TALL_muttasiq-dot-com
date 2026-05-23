@@ -33,6 +33,7 @@ import './support/alpine/magic/top-scroller';
 import './support/alpine/magic/livewire-lock';
 
 import './overrides/livewire-session-expiry-reload';
+import './overrides/livewire-dialog-show-modal-guard';
 import './overrides/livewire-transition-consistency';
 
 import './support/debugging/alpine-transition-debugger';

@@ -95,7 +95,7 @@ install_args=()
 
 if [[ "$(native_read_icu_preference)" == "1" ]]; then
     install_args+=(--with-icu)
-    echo "[native-prepare:ios] ICU-enabled PHP binaries are required by nativephp.json"
+    echo "[native-prepare:ios] ICU-enabled PHP binaries are required by NativePHP lock/config"
 fi
 
 echo "[native-prepare:ios] forcing native:install ios ${install_args[*]} --force --no-interaction"

@@ -30,18 +30,29 @@ native_read_mobile_version() {
 
 native_read_icu_preference() {
     php -r '
-$jsonPath = $argv[1] ?? null;
-if (! $jsonPath || ! file_exists($jsonPath)) {
-    echo "0";
-    exit(0);
+$lockPath = $argv[1] ?? null;
+$legacyJsonPath = $argv[2] ?? null;
+
+if ($lockPath && file_exists($lockPath)) {
+    $lock = json_decode(file_get_contents($lockPath), true);
+
+    if (is_array($lock) && array_key_exists("php", $lock) && is_array($lock["php"]) && array_key_exists("icu", $lock["php"])) {
+        echo ! empty($lock["php"]["icu"]) ? "1" : "0";
+        exit(0);
+    }
 }
-$json = json_decode(file_get_contents($jsonPath), true);
-if (! is_array($json)) {
-    echo "0";
-    exit(0);
+
+if ($legacyJsonPath && file_exists($legacyJsonPath)) {
+    $json = json_decode(file_get_contents($legacyJsonPath), true);
+
+    if (is_array($json)) {
+        echo ! empty($json["php"]["icu"]) ? "1" : "0";
+        exit(0);
+    }
 }
-echo ! empty($json["php"]["icu"]) ? "1" : "0";
-' "${native_root_dir}/nativephp.json"
+
+echo "0";
+' "${native_root_dir}/nativephp.lock" "${native_root_dir}/nativephp.json"
 }
 
 native_hash_paths_signature() {
@@ -264,7 +275,7 @@ native_prepare_platform_install() {
     if [[ "${should_install}" -eq 1 ]]; then
         echo "[native-prepare:${platform}] refreshing native ${platform} project (${reason})"
         if [[ "${desired_icu}" == "1" ]]; then
-            echo "[native-prepare:${platform}] ICU-enabled PHP binaries are required by nativephp.json"
+            echo "[native-prepare:${platform}] ICU-enabled PHP binaries are required by NativePHP lock/config"
         fi
         (
             cd "${native_root_dir}"
