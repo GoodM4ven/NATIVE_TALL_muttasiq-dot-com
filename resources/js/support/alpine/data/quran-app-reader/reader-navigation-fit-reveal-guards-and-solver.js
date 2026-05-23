@@ -1332,6 +1332,9 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             const hasTrackedModalState =
                 this._activeModalIds.size > 0 || this._isModalLifecycleSettling;
             const isLateCloseLikeEvent = kind === 'closing' || kind === 'closed';
+            const shouldKeepHiddenForModalNavigation = Boolean(
+                this._modalNavigationCloseGuardActive,
+            );
             const now = Date.now();
             const lifecycleEventKey = modalId !== '' ? `${kind}:${modalId}` : '';
             const shouldDedupeLifecycleEvent = kind === 'closing' || kind === 'closed';
@@ -1373,7 +1376,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                     const hasNavigationInFlight =
                         this._pendingNavigationRequest !== null || this.isLoadingPage;
 
-                    if (!hasNavigationInFlight) {
+                    if (!hasNavigationInFlight && !shouldKeepHiddenForModalNavigation) {
                         this.scheduleLayoutAfterModalLifecycle(kind === 'closed' ? 120 : 180);
                     }
                 }
@@ -1392,7 +1395,8 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 isLateCloseLikeEvent &&
                 openModalCount <= 0 &&
                 this.hasRenderablePage() &&
-                this.isCurrentPageVisiblyReady()
+                this.isCurrentPageVisiblyReady() &&
+                !shouldKeepHiddenForModalNavigation
             ) {
                 if (modalId !== '') {
                     this._activeModalIds.delete(modalId);
@@ -1411,7 +1415,8 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 (kind === 'closing' || kind === 'closed') &&
                 modalId === '' &&
                 openModalCount <= 0 &&
-                this._activeModalIds.size === 0
+                this._activeModalIds.size === 0 &&
+                !shouldKeepHiddenForModalNavigation
             ) {
                 if (this._isModalLifecycleSettling) {
                     this._isModalLifecycleSettling = false;
@@ -1471,10 +1476,15 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             if (kind === 'closing') {
                 this.clearModalPreOpenPending();
 
-                if (modalId === '' || this._activeModalIds.has(modalId) || openModalCount > 0) {
+                if (
+                    modalId === '' ||
+                    this._activeModalIds.has(modalId) ||
+                    openModalCount > 0 ||
+                    shouldKeepHiddenForModalNavigation
+                ) {
                     const navigatedAway = this._lastFittedPageNumber !== this.pageNumber;
 
-                    if (navigatedAway) {
+                    if (navigatedAway || shouldKeepHiddenForModalNavigation) {
                         this._bypassNextFitCache = true;
                         this.holdPageHiddenForModalLifecycle({ animateFadeOut: false });
                     }
@@ -1494,7 +1504,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
 
                 const navigatedAway = this._lastFittedPageNumber !== this.pageNumber;
 
-                if (navigatedAway) {
+                if (navigatedAway || shouldKeepHiddenForModalNavigation) {
                     this._bypassNextFitCache = true;
                     this.holdPageHiddenForModalLifecycle({ animateFadeOut: false });
                 }
@@ -1865,7 +1875,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 for (let attempt = 0; attempt < layoutRequest.maxAttempts; attempt += 1) {
                     const fitRunsBeforeAttempt = this._fitRunCounter;
                     await this.layoutPage({
-                        revealDelayMs: attempt === 0 ? layoutRequest.revealDelayMs : 160,
+                        revealDelayMs: attempt === 0 ? layoutRequest.revealDelayMs : 108,
                         useIdleFit: shouldUseIdleFit,
                         deferReveal: Boolean(layoutRequest.deferReveal),
                     });
@@ -1877,7 +1887,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                         return;
                     }
 
-                    await wait(55);
+                    await wait(24);
                 }
             })();
 

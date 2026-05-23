@@ -547,13 +547,17 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
             ]
                 .map((value) => String(value ?? '').trim())
                 .filter((value) => value !== '');
+            this.searchDestinationScaleBoostPageNumber = targetPage;
+            this.searchDestinationScaleBoostSource = isSurahNameResult
+                ? 'surah-directory'
+                : 'search-result';
 
             try {
                 this.resetNavigationQueueForPriorityJump();
                 this.clearPendingPostModalTargetFit();
                 this.holdPageHiddenForModalLifecycle({ animateFadeOut: false });
                 this.cancelActiveSearchProcessing();
-                this.suppressModalLifecycleEffects(searchModalLifecycleIds);
+                this.beginModalNavigationCloseGuard(searchModalLifecycleIds);
                 await this.requestSearchModalClose();
                 await this.waitForModalLifecycleToSettle();
                 await wait(modalCloseTransitionDelayMs);
@@ -593,6 +597,7 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                     query: activeQuery,
                 });
             } finally {
+                this.endModalNavigationCloseGuard();
                 this._searchNavigationInFlight = false;
             }
         },

@@ -1009,6 +1009,9 @@ export const createLineLayoutSearchDirectoryAndCaptionModule = (deps) => {
             this.searchDestinationCuePageNumber = normalizedPageNumber;
             this.searchDestinationCueActive = resolvedCaption !== '';
             this.searchDestinationCueBlinking = false;
+            this.searchDestinationScaleBoostPageNumber = normalizedPageNumber;
+            this.searchDestinationScaleBoostSource = normalizedSource;
+            this.setCurrentPageScale(this.pageScale);
 
             if (!this.searchDestinationCueActive || !this.doesEnableVisualEnhancements) {
                 return;
@@ -1036,6 +1039,9 @@ export const createLineLayoutSearchDirectoryAndCaptionModule = (deps) => {
             this.searchDestinationCueText = '';
             this.searchDestinationCueSource = '';
             this.searchDestinationCuePageNumber = 0;
+            this.searchDestinationScaleBoostPageNumber = 0;
+            this.searchDestinationScaleBoostSource = '';
+            this.setCurrentPageScale(this.pageScale);
         },
 
         shouldShowSearchDestinationCueCaption() {

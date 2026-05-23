@@ -918,6 +918,26 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
             return null;
         },
 
+        searchDestinationScaleBoostAmount() {
+            const boostPageNumber = Math.max(
+                0,
+                Math.trunc(Number(this.searchDestinationScaleBoostPageNumber ?? 0)),
+            );
+            const boostSource = String(this.searchDestinationScaleBoostSource ?? '').trim();
+            const isSearchDestinationSource =
+                boostSource === 'search-result' || boostSource === 'surah-directory';
+
+            if (!isSearchDestinationSource || boostPageNumber <= 0) {
+                return 0;
+            }
+
+            if (this.pageNumber !== boostPageNumber) {
+                return 0;
+            }
+
+            return 0.05;
+        },
+
         setCurrentPageScale(baseScale, { forFitting = false } = {}) {
             const scaleElement = this.pageScaleElement();
 
@@ -926,10 +946,11 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
             }
 
             const normalizedBaseScale = Math.max(0.05, Number(baseScale) || 1);
+            const scaledBaseScale = normalizedBaseScale + this.searchDestinationScaleBoostAmount();
             const effectiveScale = Number(
                 forFitting
-                    ? normalizedBaseScale
-                    : (normalizedBaseScale * this.pageScaleAdjustFactor()).toFixed(4),
+                    ? scaledBaseScale
+                    : (scaledBaseScale * this.pageScaleAdjustFactor()).toFixed(4),
             );
             const effectiveGapFactor = forFitting ? 1 : this.pageGapAdjustFactor();
             const effectiveYOffset = forFitting

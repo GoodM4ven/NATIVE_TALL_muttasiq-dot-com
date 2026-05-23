@@ -285,6 +285,10 @@ export const createInitialState = (config, deps) => {
 
         searchDestinationCueBlinking: false,
 
+        searchDestinationScaleBoostPageNumber: 0,
+
+        searchDestinationScaleBoostSource: '',
+
         pageMotionTimer: null,
 
         pageScale: 1,
@@ -730,6 +734,8 @@ export const createInitialState = (config, deps) => {
         _isModalLifecycleSettling: false,
 
         _managerModalVersion: 0,
+
+        _modalNavigationCloseGuardActive: false,
 
         _lastModalLifecycleEventAt: 0,
 

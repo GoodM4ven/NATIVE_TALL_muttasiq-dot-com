@@ -197,6 +197,33 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             }
         },
 
+        beginModalNavigationCloseGuard(modalIds = [], { durationMs = null } = {}) {
+            this._modalNavigationCloseGuardActive = true;
+            this.holdPageHiddenForModalLifecycle({ animateFadeOut: false });
+
+            const normalizedModalIds = (Array.isArray(modalIds) ? modalIds : [modalIds])
+                .map((value) => String(value ?? '').trim())
+                .filter((value) => value !== '');
+
+            if (normalizedModalIds.length < 1) {
+                return;
+            }
+
+            const resolvedDurationMs = Math.max(
+                modalLifecycleSuppressionDurationMs,
+                postModalFitRevealSettleDelayMs + 560,
+                Math.trunc(Number(durationMs) || 0),
+            );
+
+            this.suppressModalLifecycleEffects(normalizedModalIds, {
+                durationMs: resolvedDurationMs,
+            });
+        },
+
+        endModalNavigationCloseGuard() {
+            this._modalNavigationCloseGuardActive = false;
+        },
+
         ensureSearchResultAnimations() {
             if (typeof window.autoAnimate !== 'function') {
                 return;
@@ -867,19 +894,24 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
 
             this.resetNavigationQueueForPriorityJump();
             this.clearPendingPostModalTargetFit();
-            this.suppressModalLifecycleEffects([this.historyModalId], {
+            this.beginModalNavigationCloseGuard([this.historyModalId], {
                 durationMs: historyNavigationModalLifecycleSuppressionDurationMs,
             });
-            await this.requestHistoryModalClose();
-            await this.waitForModalLifecycleToSettle();
-            await wait(modalCloseTransitionDelayMs);
-            await this.navigateFromManagerModalRecord({
-                targetPage,
-                ayahIndex,
-                source: 'history-entry',
-                modalId: this.historyModalId,
-                suppressionDurationMs: historyNavigationModalLifecycleSuppressionDurationMs,
-            });
+
+            try {
+                await this.requestHistoryModalClose();
+                await this.waitForModalLifecycleToSettle();
+                await wait(modalCloseTransitionDelayMs);
+                await this.navigateFromManagerModalRecord({
+                    targetPage,
+                    ayahIndex,
+                    source: 'history-entry',
+                    modalId: this.historyModalId,
+                    suppressionDurationMs: historyNavigationModalLifecycleSuppressionDurationMs,
+                });
+            } finally {
+                this.endModalNavigationCloseGuard();
+            }
 
             this.activeWordIndex = 0;
         },
@@ -889,17 +921,24 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
 
             this.resetNavigationQueueForPriorityJump();
             this.clearPendingPostModalTargetFit();
-            this.suppressModalLifecycleEffects([this.bookmarksModalId]);
-            await this.requestBookmarksModalClose();
-            await this.waitForModalLifecycleToSettle();
-            await wait(modalCloseTransitionDelayMs);
-            await this.navigateFromManagerModalRecord({
-                targetPage,
-                ayahIndex: 0,
-                source: 'bookmark',
-                modalId: this.bookmarksModalId,
-                suppressionDurationMs: historyNavigationModalLifecycleSuppressionDurationMs,
+            this.beginModalNavigationCloseGuard([this.bookmarksModalId], {
+                durationMs: historyNavigationModalLifecycleSuppressionDurationMs,
             });
+
+            try {
+                await this.requestBookmarksModalClose();
+                await this.waitForModalLifecycleToSettle();
+                await wait(modalCloseTransitionDelayMs);
+                await this.navigateFromManagerModalRecord({
+                    targetPage,
+                    ayahIndex: 0,
+                    source: 'bookmark',
+                    modalId: this.bookmarksModalId,
+                    suppressionDurationMs: historyNavigationModalLifecycleSuppressionDurationMs,
+                });
+            } finally {
+                this.endModalNavigationCloseGuard();
+            }
             this.activeAyahIndex = 0;
             this.activeWordIndex = 0;
             this.recordNavigationHistory({
@@ -936,13 +975,15 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
 
             this.search.activeSurahNumber = surahNumber;
             this.search.preserveActiveSurahOnNextOpen = true;
+            this.searchDestinationScaleBoostPageNumber = pageNumber;
+            this.searchDestinationScaleBoostSource = 'surah-directory';
 
             try {
                 this.cancelActiveSearchProcessing();
                 this.resetNavigationQueueForPriorityJump();
                 this.clearPendingPostModalTargetFit();
                 this.holdPageHiddenForModalLifecycle({ animateFadeOut: false });
-                this.suppressModalLifecycleEffects(searchModalLifecycleIds);
+                this.beginModalNavigationCloseGuard(searchModalLifecycleIds);
                 await this.requestSearchModalClose();
                 await this.waitForModalLifecycleToSettle();
                 await wait(modalCloseTransitionDelayMs);
@@ -988,6 +1029,7 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                     surahNumber,
                 });
             } finally {
+                this.endModalNavigationCloseGuard();
                 this._searchNavigationInFlight = false;
             }
         },

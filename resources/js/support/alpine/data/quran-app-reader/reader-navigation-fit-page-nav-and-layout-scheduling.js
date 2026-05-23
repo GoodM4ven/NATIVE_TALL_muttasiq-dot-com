@@ -518,152 +518,163 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                 const shouldResetQueueForPriorityRequest =
                     requestedSource === 'page-jump' || isModalDrivenPriorityRequest;
                 const shouldCommitImmediately = isPriorityPageRequest;
+                const shouldUseModalNavigationCloseGuard =
+                    requestedSource === 'page-jump' || isModalDrivenPriorityRequest;
+                let modalLifecycleIds = [];
 
-                if (shouldResetQueueForPriorityRequest) {
-                    this.resetNavigationQueueForPriorityJump();
-                    this.clearPendingPostModalTargetFit();
-                }
+                try {
+                    if (shouldResetQueueForPriorityRequest) {
+                        this.resetNavigationQueueForPriorityJump();
+                        this.clearPendingPostModalTargetFit();
+                    }
 
-                if (isPriorityPageRequest) {
-                    this._bypassNextFitCache = true;
-                }
+                    if (isPriorityPageRequest) {
+                        this._bypassNextFitCache = true;
+                    }
 
-                if (requestedSource === 'page-jump' || isModalDrivenPriorityRequest) {
-                    const modalLifecycleIds = (() => {
-                        if (requestedSource === 'page-jump') {
-                            return [this.jumpPageModalId];
-                        }
+                    if (requestedSource === 'page-jump' || isModalDrivenPriorityRequest) {
+                        modalLifecycleIds = (() => {
+                            if (requestedSource === 'page-jump') {
+                                return [this.jumpPageModalId];
+                            }
 
-                        if (requestedSource === 'search-modal') {
+                            if (requestedSource === 'search-modal') {
+                                return [
+                                    this.searchActionModalId,
+                                    this.searchModalId,
+                                    this.searchModalDomId,
+                                ];
+                            }
+
                             return [
+                                this.resolveSearchModalCloseTargetId(),
                                 this.searchActionModalId,
                                 this.searchModalId,
                                 this.searchModalDomId,
                             ];
-                        }
+                        })();
 
-                        return [
-                            this.resolveSearchModalCloseTargetId(),
-                            this.searchActionModalId,
-                            this.searchModalId,
-                            this.searchModalDomId,
-                        ];
-                    })();
-
-                    this.suppressModalLifecycleEffects(modalLifecycleIds, {
-                        durationMs: Math.max(
-                            modalLifecycleSuppressionDurationMs,
-                            postModalFitRevealSettleDelayMs + 640,
-                        ),
-                    });
-                    await this.waitForModalLifecycleToSettle(28, 28);
-                    await wait(modalCloseTransitionDelayMs);
-                    this._bypassNextFitCache = true;
-                }
-
-                if (isSliderCommitRequest) {
-                    if (this._navigationDebounceTimer !== null) {
-                        clearTimeout(this._navigationDebounceTimer);
-                        this._navigationDebounceTimer = null;
-                    }
-
-                    this._pendingNavigationRequest = null;
-                    this._navigationRevealLocked = false;
-                    this.clearSwipeRevealWatchdog();
-
-                    await this.goToPage(requestedPage, {
-                        direction: this.resolveNavigationDirection(requestedPage),
-                        animate: false,
-                        forceRefit: true,
-                        source: requestedSource || 'page-event',
-                    });
-
-                    if (requestedSource === 'search-result') {
-                        const highlightedAyahIndex =
-                            requestedActiveAyahIndex > 0
-                                ? requestedActiveAyahIndex
-                                : requestedSearchHighlightAyahIndex;
-
-                        this.activeAyahIndex = highlightedAyahIndex;
-                        this.searchHighlightedAyahIndex = highlightedAyahIndex;
-                    }
-                } else {
-                    await this.goToPageFromChevron(requestedPage, {
-                        source: requestedSource || 'page-event',
-                        activeAyahIndex: requestedActiveAyahIndex,
-                        searchHighlightAyahIndex: requestedSearchHighlightAyahIndex,
-                        commitNow: shouldCommitImmediately || undefined,
-                    });
-                }
-
-                if (isPriorityPageRequest) {
-                    const shouldRunPostModalStableFit =
-                        requestedSource === 'page-jump' || isModalDrivenPriorityRequest;
-
-                    if (shouldRunPostModalStableFit) {
-                        await this.stabilizeModalDrivenLayout({
-                            revealDelayMs: 150,
-                            maxAttempts: 5,
-                            maxFrames: 18,
-                            requiredStableFrames: 3,
-                            tolerancePx: 0.8,
+                        this.beginModalNavigationCloseGuard(modalLifecycleIds, {
+                            durationMs: Math.max(
+                                modalLifecycleSuppressionDurationMs,
+                                postModalFitRevealSettleDelayMs + 640,
+                            ),
                         });
-
-                        if (
-                            requestedSource === 'page-jump' &&
-                            typeof this.runSecondaryModalExitRecoveryPulse === 'function'
-                        ) {
-                            await this.runSecondaryModalExitRecoveryPulse(this.jumpPageModalId);
-                        }
-
-                        this.refreshMobileEdgeCaptions(false);
-                        this.syncReaderChromeDocumentClass();
+                        await this.waitForModalLifecycleToSettle(28, 28);
+                        await wait(modalCloseTransitionDelayMs);
+                        this._bypassNextFitCache = true;
                     }
 
                     if (isSliderCommitRequest) {
-                        this._bypassNextFitCache = true;
-                        this.resetFitSanityRecoveryState();
-                        await this.layoutPageGuaranteed({
-                            revealDelayMs: 140,
-                            maxAttempts: 5,
-                            useIdleFit: false,
+                        if (this._navigationDebounceTimer !== null) {
+                            clearTimeout(this._navigationDebounceTimer);
+                            this._navigationDebounceTimer = null;
+                        }
+
+                        this._pendingNavigationRequest = null;
+                        this._navigationRevealLocked = false;
+                        this.clearSwipeRevealWatchdog();
+
+                        await this.goToPage(requestedPage, {
+                            direction: this.resolveNavigationDirection(requestedPage),
+                            animate: false,
+                            forceRefit: true,
+                            source: requestedSource || 'page-event',
                         });
+
+                        if (requestedSource === 'search-result') {
+                            const highlightedAyahIndex =
+                                requestedActiveAyahIndex > 0
+                                    ? requestedActiveAyahIndex
+                                    : requestedSearchHighlightAyahIndex;
+
+                            this.activeAyahIndex = highlightedAyahIndex;
+                            this.searchHighlightedAyahIndex = highlightedAyahIndex;
+                        }
+                    } else {
+                        await this.goToPageFromChevron(requestedPage, {
+                            source: requestedSource || 'page-event',
+                            activeAyahIndex: requestedActiveAyahIndex,
+                            searchHighlightAyahIndex: requestedSearchHighlightAyahIndex,
+                            commitNow: shouldCommitImmediately || undefined,
+                        });
+                    }
+
+                    if (isPriorityPageRequest) {
+                        const shouldRunPostModalStableFit =
+                            requestedSource === 'page-jump' || isModalDrivenPriorityRequest;
+
+                        if (shouldRunPostModalStableFit) {
+                            await this.stabilizeModalDrivenLayout({
+                                revealDelayMs: 110,
+                                maxAttempts: 4,
+                                maxFrames: 14,
+                                requiredStableFrames: 2,
+                                tolerancePx: 0.8,
+                            });
+
+                            if (
+                                requestedSource === 'page-jump' &&
+                                typeof this.runSecondaryModalExitRecoveryPulse === 'function'
+                            ) {
+                                await this.runSecondaryModalExitRecoveryPulse(this.jumpPageModalId);
+                            }
+
+                            this.refreshMobileEdgeCaptions(false);
+                            this.syncReaderChromeDocumentClass();
+                        }
+
+                        if (isSliderCommitRequest) {
+                            this._bypassNextFitCache = true;
+                            this.resetFitSanityRecoveryState();
+                            await this.layoutPageGuaranteed({
+                                revealDelayMs: 90,
+                                maxAttempts: 4,
+                                useIdleFit: false,
+                            });
+                        }
+
+                        if (
+                            !this.isCurrentPageVisiblyReady() &&
+                            this._lastFittedPageNumber !== this.pageNumber
+                        ) {
+                            this._bypassNextFitCache = true;
+                            await this.layoutPageGuaranteed({
+                                revealDelayMs: 120,
+                                maxAttempts: 3,
+                                useIdleFit: false,
+                            });
+                        }
+
+                        if (!this.isCurrentPageVisiblyReady() && this.hasRenderablePage()) {
+                            this.clearStaleRevealGuards();
+                            this.forceRevealCurrentPage('priority-page-post-fit-fail-open');
+                        }
                     }
 
                     if (
-                        !this.isCurrentPageVisiblyReady() &&
-                        this._lastFittedPageNumber !== this.pageNumber
+                        requestedSource === 'page-jump' ||
+                        requestedSource === 'page-slider-commit' ||
+                        isModalDrivenPriorityRequest
                     ) {
-                        this._bypassNextFitCache = true;
-                        await this.layoutPageGuaranteed({
-                            revealDelayMs: 170,
-                            maxAttempts: 4,
-                            useIdleFit: false,
+                        this.recordNavigationHistory({
+                            source: requestedSource,
+                            pageNumber: requestedPage,
+                            surahNumber: Math.max(
+                                0,
+                                Math.trunc(
+                                    Number(detail?.surahNumber ?? this.currentSurahNumber()),
+                                ),
+                            ),
+                            ayahNumber: Math.max(0, Math.trunc(Number(detail?.ayahNumber ?? 0))),
+                            ayahIndex: requestedActiveAyahIndex,
+                            query: detail?.query ?? null,
                         });
                     }
-
-                    if (!this.isCurrentPageVisiblyReady() && this.hasRenderablePage()) {
-                        this.clearStaleRevealGuards();
-                        this.forceRevealCurrentPage('priority-page-post-fit-fail-open');
+                } finally {
+                    if (shouldUseModalNavigationCloseGuard) {
+                        this.endModalNavigationCloseGuard();
                     }
-                }
-
-                if (
-                    requestedSource === 'page-jump' ||
-                    requestedSource === 'page-slider-commit' ||
-                    isModalDrivenPriorityRequest
-                ) {
-                    this.recordNavigationHistory({
-                        source: requestedSource,
-                        pageNumber: requestedPage,
-                        surahNumber: Math.max(
-                            0,
-                            Math.trunc(Number(detail?.surahNumber ?? this.currentSurahNumber())),
-                        ),
-                        ayahNumber: Math.max(0, Math.trunc(Number(detail?.ayahNumber ?? 0))),
-                        ayahIndex: requestedActiveAyahIndex,
-                        query: detail?.query ?? null,
-                    });
                 }
             }
         },
@@ -803,6 +814,9 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
 
             if (!shouldPreserveSearchDestinationCue && this.searchDestinationCueActive) {
                 this.deactivateSearchDestinationCue();
+            } else if (!shouldPreserveSearchDestinationCue) {
+                this.searchDestinationScaleBoostPageNumber = 0;
+                this.searchDestinationScaleBoostSource = '';
             }
             this.clearWordPressState();
             this.hoveredAyahIndex = 0;
@@ -833,7 +847,7 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
 
                     if (forceRefit) {
                         await this.layoutPageGuaranteed({
-                            revealDelayMs: 200,
+                            revealDelayMs: 110,
                             deferReveal: Boolean(isModalSourcedNavigation),
                         });
                     } else if (
@@ -841,7 +855,7 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                         this._lastFittedPageNumber !== normalizedPage
                     ) {
                         await this.layoutPageGuaranteed({
-                            revealDelayMs: 140,
+                            revealDelayMs: 90,
                             maxAttempts: 3,
                             useIdleFit: false,
                             deferReveal: Boolean(isModalSourcedNavigation),
@@ -856,7 +870,7 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                     this.schedulePendingModalCloseFit(normalizedPage, {
                         retries: 42,
                         delayMs: 84,
-                        revealDelayMs: 220,
+                        revealDelayMs: 140,
                         maxAttempts: 5,
                     });
                 }
@@ -878,7 +892,11 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                 const payloadPromise = this.getPagePayload(normalizedPage, {
                     signal: pageAbortController?.signal ?? null,
                 });
-                const transitionDelayMs = this.isHighFrequencyNavigationSource(source) ? 68 : 128;
+                const transitionDelayMs = this.isImmediateNavigationSource(source)
+                    ? 24
+                    : this.isHighFrequencyNavigationSource(source)
+                      ? 32
+                      : 68;
 
                 if (this.mushafLines.length > 0) {
                     this.isTransitioningOutPage = true;
@@ -931,15 +949,15 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                 const shouldUseFastFitPriority = this.isFastFitPrioritySource(source);
                 await this.layoutPageGuaranteed({
                     revealDelayMs: shouldUseFastFitPriority
-                        ? 170
+                        ? 96
                         : this.isHighFrequencyNavigationSource(source)
-                          ? 180
-                          : 220,
+                          ? 104
+                          : 132,
                     maxAttempts: shouldUseFastFitPriority
                         ? 3
                         : this.isHighFrequencyNavigationSource(source)
                           ? 3
-                          : 4,
+                          : 3,
                     useIdleFit: !shouldUseFastFitPriority,
                     deferReveal: Boolean(deferInitialReveal),
                 });

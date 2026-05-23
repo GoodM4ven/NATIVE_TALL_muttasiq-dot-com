@@ -1324,6 +1324,7 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
 
             this._activeModalIds.clear();
             this._isModalLifecycleSettling = false;
+            this._modalNavigationCloseGuardActive = false;
             this._postModalTargetFitPage = 0;
             this._postModalTargetFitRetries = 0;
             this._lastPageRevealAt = 0;
