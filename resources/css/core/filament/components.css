@@ -210,7 +210,8 @@
 
     @media (max-width: 639px) {
         .fi-modal:not(.fi-modal-slide-over):not(.fi-width-screen) > .fi-modal-window-ctn {
-            padding: 0.6em;
+            padding: 0.42rem;
+            align-items: end;
         }
 
         #quran-reader-search-modal .fi-modal-content {
@@ -247,6 +248,30 @@
 
         .quran-surah-tile-label.quran-surah-tile-label--glyph {
             font-size: 1.68rem;
+        }
+
+        .mobile-platform .fi-modal > .fi-modal-close-overlay {
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            background: rgb(2 6 23 / 45%) !important;
+        }
+
+        .mobile-platform .fi-modal > .fi-modal-window-ctn > .fi-modal-window {
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            box-shadow: 0 12px 24px color-mix(in srgb, var(--gray-950) 24%, transparent) !important;
+            transform: none !important;
+            transition:
+                opacity 130ms ease,
+                background-color 130ms ease,
+                border-color 130ms ease !important;
+        }
+
+        .mobile-platform .fi-modal .fi-modal-content,
+        .mobile-platform .fi-modal .fi-modal-header,
+        .mobile-platform .fi-modal .fi-modal-footer {
+            transition: opacity 120ms ease !important;
+            will-change: auto !important;
         }
     }
 
@@ -792,6 +817,29 @@
             inset 0 0 0 1px color-mix(in srgb, var(--quran-chip-border) 20%, transparent);
         backdrop-filter: blur(16px) saturate(1.02);
         -webkit-backdrop-filter: blur(16px) saturate(1.02);
+    }
+
+    @media (max-width: 639px) {
+        #quran-reader-search-modal,
+        #quran-reader-history-modal,
+        #quran-reader-bookmarks-modal,
+        #quran-reader-jump-page-modal {
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            box-shadow:
+                0 14px 30px color-mix(in srgb, var(--gray-950) 22%, transparent),
+                inset 0 0 0 1px color-mix(in srgb, var(--quran-chip-border) 16%, transparent);
+        }
+
+        #quran-reader-search-modal .fi-modal-content,
+        #quran-reader-history-modal .fi-modal-content,
+        #quran-reader-bookmarks-modal .fi-modal-content,
+        #quran-reader-jump-page-modal .fi-modal-content {
+            max-height: min(76dvh, 34rem);
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
+            contain: layout paint;
+        }
     }
 
     #quran-reader-history-modal {

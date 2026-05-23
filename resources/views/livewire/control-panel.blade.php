@@ -2,21 +2,34 @@
     <style>
         .fi-modal:has(.quran-control-panel-modal-window),
         .fi-modal:has(.quran-support-unlock-modal-window) {
-            z-index: 240 !important;
+            position: fixed !important;
+            inset: 0 !important;
+            z-index: 440 !important;
         }
 
         .fi-modal .quran-control-panel-modal-window,
         .fi-modal .quran-support-unlock-modal-window {
-            z-index: 282 !important;
+            z-index: 442 !important;
             position: relative;
+        }
+
+        .fi-modal:has(.quran-control-panel-modal-window)>.fi-modal-window-ctn,
+        .fi-modal:has(.quran-support-unlock-modal-window)>.fi-modal-window-ctn {
+            position: fixed !important;
+            inset: 0 !important;
+            z-index: 441 !important;
+            width: 100vw !important;
+            height: 100dvh !important;
+            transform: none !important;
+            isolation: isolate;
         }
 
         .quran-control-panel-modal-overlay,
         .quran-support-unlock-modal-overlay {
             background: color-mix(in srgb, var(--gray-950) 72%, transparent) !important;
-            backdrop-filter: blur(4px) saturate(0.95);
-            -webkit-backdrop-filter: blur(4px) saturate(0.95);
-            z-index: 281 !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            z-index: 441 !important;
         }
     </style>
 
@@ -513,5 +526,7 @@
         />
     </div>
 
-    <x-filament-actions::modals />
+    <template x-teleport="body">
+        <x-filament-actions::modals />
+    </template>
 </div>

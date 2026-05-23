@@ -309,6 +309,7 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
                 }
 
                 this.scheduleLayout({ revealDelayMs: 200 });
+                this.queueReaderReentryRefit();
             };
 
             window.addEventListener('switch-view', this._onSwitchView);
@@ -318,6 +319,22 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
                 this.syncReaderChromeDocumentClass({ forceInactive: true });
             };
             window.addEventListener('quran-reader-go-gate', this._onReaderGoGate);
+            this._onQuranNativeLifecycle = (event) => {
+                const lifecycleEvent = String(event?.detail?.event ?? '')
+                    .trim()
+                    .toLowerCase();
+
+                if (lifecycleEvent !== 'activity-resume') {
+                    return;
+                }
+
+                if (!this.isAnyQuranReaderViewOpen()) {
+                    return;
+                }
+
+                this.queueReaderReentryRefit(80);
+            };
+            window.addEventListener('quran-native-lifecycle', this._onQuranNativeLifecycle);
             this.scheduleReaderPanelLayoutRefresh();
             this._onWirdSimulateDay = (event) => {
                 const deltaDays = normalizeDayOffsetDays(event?.detail?.days ?? 1, 1);
@@ -495,6 +512,27 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
             const panelRect = readerPanelElement.getBoundingClientRect();
             this.calibrationHudLeft = Math.round(panelRect.left + panelRect.width * 0.5);
             this.calibrationHudTop = Math.round(panelRect.top + panelRect.height * 0.5);
+        },
+
+        queueReaderReentryRefit(delayMs = 40) {
+            if (this._readerReentryRefitTimer !== null) {
+                window.clearTimeout(this._readerReentryRefitTimer);
+                this._readerReentryRefitTimer = null;
+            }
+
+            const normalizedDelay = Math.max(0, Math.trunc(Number(delayMs) || 0));
+            this._readerReentryRefitTimer = window.setTimeout(() => {
+                this._readerReentryRefitTimer = null;
+
+                if (!this.isAnyQuranReaderViewOpen() || !this.hasRenderablePage()) {
+                    return;
+                }
+
+                this._bypassNextFitCache = true;
+                this.isFittingPage = true;
+                this.clearLayoutTimers();
+                this.scheduleLayout({ revealDelayMs: 120 });
+            }, normalizedDelay);
         },
 
         calibrationHudStyle() {
@@ -1105,6 +1143,11 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
                 this._onReaderGoGate = null;
             }
 
+            if (this._onQuranNativeLifecycle) {
+                window.removeEventListener('quran-native-lifecycle', this._onQuranNativeLifecycle);
+                this._onQuranNativeLifecycle = null;
+            }
+
             if (this._onQrDebugLogsToggle) {
                 window.removeEventListener(
                     quranReaderDebugLogsToggleEventName,
@@ -1137,6 +1180,11 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
             if (this._pageScaleAdjustRefitRaf !== null) {
                 cancelAnimationFrame(this._pageScaleAdjustRefitRaf);
                 this._pageScaleAdjustRefitRaf = null;
+            }
+
+            if (this._readerReentryRefitTimer !== null) {
+                window.clearTimeout(this._readerReentryRefitTimer);
+                this._readerReentryRefitTimer = null;
             }
 
             this.clearDeferredBootstrapCheckTimer();

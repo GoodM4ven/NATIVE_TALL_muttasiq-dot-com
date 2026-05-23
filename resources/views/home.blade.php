@@ -507,7 +507,7 @@
             ></div>
 
             <section
-                class="border-primary-300/35 bg-white/92 shadow-slate-950/18 dark:bg-slate-950/88 relative flex min-h-[19rem] w-[min(92vw,24rem)] items-center rounded-[1.8rem] border px-6 py-5 text-center shadow-2xl transition-[transform,opacity] sm:min-h-[18.25rem]"
+                class="border-primary-300/35 bg-white/92 shadow-slate-950/18 dark:bg-slate-950/88 relative flex min-h-76 w-[min(92vw,24rem)] items-center rounded-[1.8rem] border px-6 py-5 text-center shadow-2xl transition-[transform,opacity] sm:min-h-73"
                 x-transition:enter="transition-[opacity,transform] duration-220 ease-out"
                 x-transition:enter-start="opacity-0 scale-[0.97]"
                 x-transition:enter-end="opacity-100 scale-100"
@@ -516,7 +516,7 @@
                 x-transition:leave-end="opacity-0 scale-[0.97]"
             >
                 <div
-                    class="relative mx-auto flex min-h-[13.25rem] w-full max-w-[18.25rem] flex-col items-center justify-center gap-4"
+                    class="relative mx-auto flex min-h-53 w-full max-w-73 flex-col items-center justify-center gap-4"
                     x-show="!quranBootstrap.errorMessage"
                 >
                     <div class="relative mx-auto h-10 w-10">

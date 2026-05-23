@@ -28,6 +28,7 @@
                 --divider-glow-width: 2.6%;
                 --radius: 18px;
                 --radius-bottom: 20px;
+                --gate-blur: 0px;
             }
         }
 
@@ -92,6 +93,8 @@
                 box-shadow:
                     0 26px 52px rgba(15, 23, 42, 0.22),
                     inset 0 1px 0 rgba(255, 255, 255, 0.3);
+                backdrop-filter: none;
+                -webkit-backdrop-filter: none;
             }
 
             .dark .athkar-gate {
@@ -108,6 +111,26 @@
 
             .athkar-gate__divider {
                 opacity: 0.82;
+            }
+
+            img.athkar-gate__image-img {
+                transition:
+                    transform 320ms ease,
+                    opacity 280ms ease;
+                filter: none !important;
+                transform: scale(1.01);
+            }
+
+            .athkar-gate-shell.is-night .athkar-gate__pane--night img.athkar-gate__image-img,
+            .athkar-gate-shell.is-morning .athkar-gate__pane--morning img.athkar-gate__image-img {
+                transform: scale(1.02);
+            }
+
+            .athkar-gate__divider-glow,
+            .athkar-gate__label {
+                filter: none;
+                backdrop-filter: none;
+                -webkit-backdrop-filter: none;
             }
         }
 

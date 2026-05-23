@@ -455,6 +455,8 @@ export const createInitialState = (config, deps) => {
 
         _onReaderGoGate: null,
 
+        _onQuranNativeLifecycle: null,
+
         _onWirdSimulateDay: null,
 
         _onWirdCongratsPreview: null,
@@ -462,6 +464,8 @@ export const createInitialState = (config, deps) => {
         _onFontScaleToggle: null,
 
         _pageScaleAdjustRefitRaf: null,
+
+        _readerReentryRefitTimer: null,
 
         _deferredBootstrapCheckTimer: null,
 

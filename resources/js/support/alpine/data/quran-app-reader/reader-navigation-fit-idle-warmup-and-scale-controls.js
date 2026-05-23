@@ -962,7 +962,18 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
             const contentElement = this.$refs?.pageContent;
             const frameElement = this.$refs?.pageFrame;
             const fallbackScaleElement = this.pageScaleElement();
-            const scaleTargets = [contentElement, frameElement, fallbackScaleElement].filter(
+            const pageLinesTargets = [
+                contentElement?.classList?.contains('quran-page-lines')
+                    ? contentElement
+                    : contentElement?.querySelector?.('.quran-page-lines'),
+                frameElement?.querySelector?.('.quran-page-lines'),
+            ];
+            const scaleTargets = [
+                contentElement,
+                frameElement,
+                fallbackScaleElement,
+                ...pageLinesTargets,
+            ].filter(
                 (element, index, array) =>
                     element instanceof HTMLElement && array.indexOf(element) === index,
             );
