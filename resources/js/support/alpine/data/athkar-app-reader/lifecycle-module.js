@@ -469,7 +469,9 @@ export const createLifecycleModule = (deps) => {
                 .toLowerCase();
 
             if (normalizedDirection === 'next') {
-                this.next();
+                // Match primary tap behavior: increment current thikr, and auto-advance
+                // when completion conditions are met.
+                this.handleTap();
 
                 return;
             }

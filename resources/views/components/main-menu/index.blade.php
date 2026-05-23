@@ -1086,7 +1086,7 @@
             x-on:pointerleave="if ($event.pointerType !== 'touch') { handleInsightsHoverLeave() }"
             x-on:focusin="handleInsightsFocusIn()"
             x-on:focusout="handleInsightsFocusOut($event)"
-            x-on:touchstart.passive="handleInsightsTouchStart()"
+            x-on:touchstart.passive="handleInsightsTouchStart($event)"
         >
             <div class="main-menu-insights-trigger-wrap">
                 <button

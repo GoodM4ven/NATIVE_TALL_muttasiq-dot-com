@@ -517,6 +517,8 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            this.clearArmedMode();
+
             const touch =
                 this.resolveActiveTouch(event.changedTouches) ??
                 this.resolveActiveTouch(event.touches);
@@ -605,8 +607,12 @@ document.addEventListener('alpine:init', () => {
                 projectedY - anchorCenterY,
                 projectedX - anchorCenterX,
             );
+            const orbitAngleDeg = (projectedAngle * 180) / Math.PI + 90;
 
-            this.setOrbitAngle((projectedAngle * 180) / Math.PI + 90);
+            // Keep touch-hover sector activation in sync with the pointer immediately,
+            // without waiting for orbit easing frames.
+            this.syncProjectedModeWithOrbitAngle(orbitAngleDeg);
+            this.setOrbitAngle(orbitAngleDeg);
         },
         openMode(mode, event = null) {
             if (this.activeTransitionDirection !== null) {

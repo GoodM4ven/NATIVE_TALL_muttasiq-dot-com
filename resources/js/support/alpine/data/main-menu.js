@@ -42,7 +42,7 @@ document.addEventListener('alpine:init', () => {
         insightsFastCloseDurationMs: 315,
         insightsGateLaunchDelayMs: 420,
         insightsTouchRowsInteractive: false,
-        insightsTouchRowsUnlockDelayMs: 720,
+        insightsTouchRowsUnlockDelayMs: 260,
         insightsTouchRowsUnlockTimer: null,
         progressLabels: {
             sabah: config?.progressLabels?.sabah ?? 'أذكار الصباح',
@@ -295,10 +295,6 @@ document.addEventListener('alpine:init', () => {
             const eventTarget = event?.target;
 
             if (!(eventTarget instanceof Element)) {
-                return;
-            }
-
-            if (eventTarget.closest('[data-main-menu-item]')) {
                 return;
             }
 
@@ -1126,8 +1122,21 @@ document.addEventListener('alpine:init', () => {
             this.isInsightsPointerInside = false;
             this.scheduleInsightsCollapse();
         },
-        handleInsightsTouchStart() {
+        handleInsightsTouchStart(event = null) {
             if (!this.isTouchDevice) {
+                return;
+            }
+
+            const touchedRowButton =
+                event?.target instanceof Element
+                    ? event.target.closest('.main-menu-insights-row--button')
+                    : null;
+
+            if (touchedRowButton && this.isInsightsExpanded) {
+                this.clearInsightsHideTimer();
+                this.isInsightsPointerInside = true;
+                this.insightsTouchRowsInteractive = true;
+
                 return;
             }
 
