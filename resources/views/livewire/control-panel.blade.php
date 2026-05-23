@@ -4,12 +4,12 @@
         .fi-modal:has(.quran-support-unlock-modal-window) {
             position: fixed !important;
             inset: 0 !important;
-            z-index: 9000 !important;
+            z-index: 2147482000 !important;
         }
 
         .fi-modal .quran-control-panel-modal-window,
         .fi-modal .quran-support-unlock-modal-window {
-            z-index: 9002 !important;
+            z-index: 2147482002 !important;
             position: relative;
         }
 
@@ -17,7 +17,7 @@
         .fi-modal:has(.quran-support-unlock-modal-window)>.fi-modal-window-ctn {
             position: fixed !important;
             inset: 0 !important;
-            z-index: 9001 !important;
+            z-index: 2147482001 !important;
             width: 100vw !important;
             height: 100dvh !important;
             transform: none !important;
@@ -29,7 +29,7 @@
             background: color-mix(in srgb, var(--gray-950) 72%, transparent) !important;
             backdrop-filter: none !important;
             -webkit-backdrop-filter: none !important;
-            z-index: 9001 !important;
+            z-index: 2147482001 !important;
         }
     </style>
 
@@ -80,18 +80,42 @@
                 const modalOverlay = modalRoot?.querySelector('.quran-control-panel-modal-overlay,.quran-support-unlock-modal-overlay');
         
                 if (modalRoot instanceof HTMLElement) {
-                    modalRoot.style.zIndex = '9000';
+                    modalRoot.style.zIndex = '2147482000';
                 }
         
                 if (modalWindowContainer instanceof HTMLElement) {
-                    modalWindowContainer.style.zIndex = '9001';
+                    modalWindowContainer.style.zIndex = '2147482001';
                 }
         
                 if (modalOverlay instanceof HTMLElement) {
-                    modalOverlay.style.zIndex = '9001';
+                    modalOverlay.style.zIndex = '2147482001';
                 }
         
-                modalWindow.style.zIndex = '9002';
+                modalWindow.style.zIndex = '2147482002';
+            },
+            isControlPanelModalCurrentlyOpen() {
+                const modalWindow = this.resolveControlPanelModalWindow();
+        
+                if (!(modalWindow instanceof HTMLElement)) {
+                    return false;
+                }
+        
+                const modalRoot = modalWindow.closest('.fi-modal');
+        
+                return Boolean(
+                    modalRoot?.classList?.contains?.('fi-modal-open') ||
+                    modalWindow.getAttribute('aria-hidden') === 'false' ||
+                    modalRoot?.getAttribute?.('aria-hidden') === 'false',
+                );
+            },
+            isControlPanelModalEvent(detail = {}) {
+                const detailId = String(detail?.id ?? '').trim();
+        
+                if (detailId !== '' && detailId === this.controlPanelModalId) {
+                    return true;
+                }
+        
+                return this.isControlPanelModalCurrentlyOpen();
             },
             resolveControlPanelWesternNumeralState() {
                 const modalWindow = this.resolveControlPanelModalWindow();
@@ -460,6 +484,15 @@
                     window.getAthkarSettingsFromStorage?.() ?? {},
                     detail?.tab ?? null,
                 );
+        
+                window.setTimeout(() => {
+                    if (this.isControlPanelModalCurrentlyOpen()) {
+                        isControlPanelOpen = true;
+                        this.boostControlPanelModalLayer();
+                        this.setupControlPanelSliderNumeralsObserver();
+                        this.queueControlPanelSliderNumeralsSync(40);
+                    }
+                }, 120);
             },
             openSupportUnlockModalFromEvent() {
                 this.openSupportUnlockModal();
@@ -518,9 +551,11 @@
         x-on:resize.window="if (isControlPanelOpen) { queueControlPanelSliderNumeralsSync(0); }"
         x-on:change.window="if (resolveControlPanelModalWindow()?.contains($event.target)) { queueControlPanelSliderNumeralsSync(0); }"
         x-on:input.window="if (resolveControlPanelModalWindow()?.contains($event.target)) { queueControlPanelSliderNumeralsSync(0); }"
-        x-on:x-modal-opened.window="if ($event.detail?.id === controlPanelModalId) { isControlPanelOpen = true; boostControlPanelModalLayer(); setupControlPanelSliderNumeralsObserver(); queueControlPanelSliderNumeralsSync(40); }"
-        x-on:close-modal.window="if ($event.detail?.id === controlPanelModalId) { isControlPanelOpen = false; teardownControlPanelSliderNumeralsObserver(); }"
-        x-on:close-modal-quietly.window="if ($event.detail?.id === controlPanelModalId) { isControlPanelOpen = false; teardownControlPanelSliderNumeralsObserver(); }"
+        x-on:x-modal-opened.window="if (isControlPanelModalEvent($event.detail ?? {})) { isControlPanelOpen = true; boostControlPanelModalLayer(); setupControlPanelSliderNumeralsObserver(); queueControlPanelSliderNumeralsSync(40); }"
+        x-on:opened-form-component-action-modal.window="if (isControlPanelModalEvent($event.detail ?? {})) { isControlPanelOpen = true; boostControlPanelModalLayer(); setupControlPanelSliderNumeralsObserver(); queueControlPanelSliderNumeralsSync(40); }"
+        x-on:close-modal.window="if (String($event.detail?.id ?? '') === controlPanelModalId || !isControlPanelModalCurrentlyOpen()) { isControlPanelOpen = false; teardownControlPanelSliderNumeralsObserver(); }"
+        x-on:close-modal-quietly.window="if (String($event.detail?.id ?? '') === controlPanelModalId || !isControlPanelModalCurrentlyOpen()) { isControlPanelOpen = false; teardownControlPanelSliderNumeralsObserver(); }"
+        x-on:closed-form-component-action-modal.window="if (String($event.detail?.id ?? '') === controlPanelModalId || !isControlPanelModalCurrentlyOpen()) { isControlPanelOpen = false; teardownControlPanelSliderNumeralsObserver(); }"
     >
         <x-action-button
             data-testid="control-panel-button"

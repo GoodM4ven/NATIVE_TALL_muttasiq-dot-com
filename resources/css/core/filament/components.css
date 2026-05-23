@@ -275,6 +275,26 @@
         }
     }
 
+    .native-platform .fi-modal {
+        z-index: 2147481000 !important;
+    }
+
+    .native-platform .fi-modal > .fi-modal-close-overlay {
+        z-index: 2147481001 !important;
+        -webkit-backdrop-filter: none !important;
+        backdrop-filter: none !important;
+    }
+
+    .native-platform .fi-modal > .fi-modal-window-ctn {
+        position: fixed !important;
+        inset: 0 !important;
+        z-index: 2147481002 !important;
+    }
+
+    .native-platform .fi-modal > .fi-modal-window-ctn > .fi-modal-window {
+        z-index: 2147481003 !important;
+    }
+
     .quran-search-shell {
         display: flex;
         flex-direction: column;

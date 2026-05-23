@@ -46,6 +46,7 @@
 <body
     class="{{ twMerge([
         'mobile-platform' => is_platform('mobile'),
+        'native-platform' => is_platform('native'),
         'nativephp-safe-area font-arabic-sans relative h-full min-h-dvh antialiased transition-[color,background-color,border-color,text-decoration-color,fill,stroke] ease-in will-change-[color,background-color,border-color,text-decoration-color,fill,stroke]',
         'test-fast-ui' => config('app.browser_test_fast_mode'),
     ]) }}"

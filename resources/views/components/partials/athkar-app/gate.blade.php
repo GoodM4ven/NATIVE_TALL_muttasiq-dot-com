@@ -379,6 +379,40 @@
                 opacity: 0;
             }
         }
+
+        .native-platform .athkar-gate {
+            -webkit-backdrop-filter: none !important;
+            backdrop-filter: none !important;
+            box-shadow:
+                0 18px 34px rgba(15, 23, 42, 0.18),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+        }
+
+        .native-platform .athkar-gate__pane--night,
+        .native-platform .athkar-gate__pane--morning,
+        .native-platform .athkar-gate__divider,
+        .native-platform .athkar-gate__divider-glow,
+        .native-platform .athkar-gate__spill-pane {
+            transition-duration: 220ms !important;
+        }
+
+        .native-platform img.athkar-gate__image-img,
+        .native-platform .athkar-gate__spill-image {
+            filter: none !important;
+            transition:
+                transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 170ms ease !important;
+            will-change: transform, opacity;
+        }
+
+        .native-platform .athkar-gate__divider,
+        .native-platform .athkar-gate__divider-glow,
+        .native-platform .athkar-gate__label {
+            filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            backdrop-filter: none !important;
+            box-shadow: none !important;
+        }
     </style>
 @endassets
 

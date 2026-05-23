@@ -928,6 +928,44 @@
                 transform: translateX(-340%);
             }
         }
+
+        .native-platform [data-main-menu-item] {
+            transition:
+                opacity 120ms ease,
+                transform 145ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+            filter: none !important;
+            will-change: transform, opacity;
+        }
+
+        .native-platform [data-main-menu-exiting='true'] [data-main-menu-item] {
+            transform: scale(0.9);
+            filter: none !important;
+        }
+
+        .native-platform .main-menu-caption__ripples,
+        .native-platform .main-menu-caption__burst,
+        .native-platform .main-menu-caption__shine {
+            display: none !important;
+        }
+
+        .native-platform .main-menu-insights-trigger,
+        .native-platform .main-menu-insights-panel,
+        .native-platform .main-menu-insights-row {
+            -webkit-backdrop-filter: none !important;
+            backdrop-filter: none !important;
+            box-shadow: 0 8px 20px color-mix(in srgb, var(--primary-900) 14%, transparent) !important;
+            transition:
+                opacity 140ms ease,
+                transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+                background-color 160ms ease !important;
+        }
+
+        .native-platform .main-menu-insights-trigger::before,
+        .native-platform .main-menu-insights-trigger::after,
+        .native-platform .main-menu-insights-fill::after {
+            display: none !important;
+            animation: none !important;
+        }
     </style>
 @endassets
 

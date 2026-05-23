@@ -430,7 +430,7 @@
                 --quran-page-headered-leading-multiplier: 0.5;
                 --quran-page-headered-gap-multiplier: 1;
                 --quran-surah-header-no-basmallah-first-ayah-gap-scale: 0;
-                --quran-page-gap-multiplier: 2.5;
+                --quran-page-gap-multiplier: 2.8;
                 --quran-page-surah-header-scale: 0.63;
                 --quran-basmallah-bottom-gap-scale: -0.28;
                 --quran-page-y-offset: 0rem;
@@ -3217,6 +3217,27 @@
                 opacity: 1;
                 transform: translateY(0);
             }
+        }
+
+        .native-platform .quran-reader-panel {
+            box-shadow: 0 12px 28px color-mix(in srgb, var(--gray-950) 24%, transparent) !important;
+        }
+
+        .native-platform .quran-calibration-overlay::before {
+            -webkit-backdrop-filter: none !important;
+            backdrop-filter: none !important;
+            box-shadow: 0 8px 22px color-mix(in srgb, var(--gray-950) 20%, transparent) !important;
+        }
+
+        .native-platform .quran-calibration-jelly-group {
+            filter: none !important;
+        }
+
+        .native-platform .quran-calibration-hud,
+        .native-platform .quran-calibration-overlay,
+        .native-platform .quran-top-strip,
+        .native-platform .quran-bottom-strip {
+            transition-duration: 140ms !important;
         }
     </style>
 @endassets
