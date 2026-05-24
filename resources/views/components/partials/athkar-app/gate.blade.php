@@ -91,9 +91,7 @@
                         rgba(148, 163, 184, 0.35),
                         rgba(125, 211, 252, 0.5),
                         rgba(148, 163, 184, 0.22)) border-box;
-                box-shadow:
-                    0 26px 52px rgba(15, 23, 42, 0.22),
-                    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+                box-shadow: none !important;
                 backdrop-filter: none;
                 -webkit-backdrop-filter: none;
             }
@@ -105,9 +103,7 @@
                         rgba(148, 163, 184, 0.28),
                         rgba(56, 189, 248, 0.38),
                         rgba(30, 41, 59, 0.36)) border-box;
-                box-shadow:
-                    0 30px 56px rgba(2, 6, 23, 0.6),
-                    inset 0 1px 0 rgba(226, 232, 240, 0.16);
+                box-shadow: none !important;
             }
 
             .athkar-gate__divider {
@@ -401,9 +397,7 @@
             .native-platform .athkar-gate {
                 -webkit-backdrop-filter: none !important;
                 backdrop-filter: none !important;
-                box-shadow:
-                    0 18px 34px rgba(15, 23, 42, 0.18),
-                    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+                box-shadow: none !important;
             }
 
             .native-platform .athkar-gate__pane--night,
@@ -447,7 +441,7 @@
     x-transition:leave-start="opacity-100 blur-0 athkar-shift-center"
     x-transition:leave-end="opacity-0! blur-[2px] athkar-shift-away"
 >
-    <div class="relative flex select-none flex-col items-center">
+    <div class="relative flex select-none flex-col items-center sm:zoom-[1.15] md:zoom-[1.0]">
         <div
             class="athkar-gate-wrap relative w-full"
             x-data="athkarAppGate"

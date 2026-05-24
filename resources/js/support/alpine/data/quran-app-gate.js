@@ -531,7 +531,7 @@ document.addEventListener('alpine:init', () => {
             this.isTouchPointerActive = false;
             this.isPointerInside = false;
 
-            if (this.projectedMode) {
+            if (event.type !== 'pointercancel' && this.projectedMode && this.didTouchOrbitMove) {
                 this.armProjectedModeAfterTouchRelease();
             }
 
@@ -617,7 +617,7 @@ document.addEventListener('alpine:init', () => {
             this.isTouchPointerActive = false;
             this.isPointerInside = false;
 
-            if (this.projectedMode) {
+            if (event.type !== 'touchcancel' && this.projectedMode && this.didTouchOrbitMove) {
                 this.armProjectedModeAfterTouchRelease();
             }
 

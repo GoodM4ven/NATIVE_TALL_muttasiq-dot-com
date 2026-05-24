@@ -51,7 +51,7 @@
             x-show="views[`athkar-app-gate`].isReaderVisible && !$store.colorScheme.isDarkModeOn && !views[`quran-app-tilawa`].isOpen && !views[`quran-app-hifth`].isOpen && !views[`quran-app-tadabbur`].isOpen"
         >
             <x-goodmaven::blurred-image
-                class="opacity-(--bg-athkar-gate-sabah-opacity) h-full w-full scale-110 object-cover"
+                class="opacity-(--bg-athkar-sabah-opacity) h-full w-full scale-110 object-cover"
                 alt="Athkar morning background"
                 :imagePath="asset('images/background/athkar-morning-blurred.webp')"
                 :thumbnailImagePath="asset('images/background/athkar-morning-blurred-blur-thumbnail.png')"
@@ -66,7 +66,7 @@
             x-show="views[`athkar-app-gate`].isReaderVisible && $store.colorScheme.isDarkModeOn && !views[`quran-app-tilawa`].isOpen && !views[`quran-app-hifth`].isOpen && !views[`quran-app-tadabbur`].isOpen"
         >
             <x-goodmaven::blurred-image
-                class="opacity-(--bg-athkar-gate-masaa-opacity) h-full w-full scale-110 object-cover"
+                class="opacity-(--bg-athkar-masaa-opacity) h-full w-full scale-110 object-cover"
                 alt="Athkar night background"
                 :imagePath="asset('images/background/athkar-night-blurred.webp')"
                 :thumbnailImagePath="asset('images/background/athkar-night-blurred-blur-thumbnail.png')"
@@ -79,9 +79,15 @@
             data-testid="athkar-gate-bg-light-layer"
             x-cloak
             x-show="views[`athkar-app-gate`].isOpen && !views[`athkar-app-gate`].isReaderVisible && !$store.colorScheme.isDarkModeOn && ($store.bp?.is?.('base') || document.documentElement.classList.contains('native-platform')) && !views[`quran-app-tilawa`].isOpen && !views[`quran-app-hifth`].isOpen && !views[`quran-app-tadabbur`].isOpen"
+            x-transition:enter="transition-opacity ease-out duration-400 delay-100"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition-opacity ease-in duration-150"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
         >
             <x-goodmaven::blurred-image
-                class="opacity-(--bg-athkar-sabah-opacity) h-full w-full scale-110 object-cover"
+                class="opacity-(--bg-athkar-gate-sabah-opacity) h-full w-full scale-110 object-cover"
                 alt="Athkar gate morning background"
                 :imagePath="asset('images/background/athkar-morning-blurred.webp')"
                 :thumbnailImagePath="asset('images/background/athkar-morning-blurred-blur-thumbnail.png')"
@@ -94,9 +100,15 @@
             data-testid="athkar-gate-bg-dark-layer"
             x-cloak
             x-show="views[`athkar-app-gate`].isOpen && !views[`athkar-app-gate`].isReaderVisible && $store.colorScheme.isDarkModeOn && ($store.bp?.is?.('base') || document.documentElement.classList.contains('native-platform')) && !views[`quran-app-tilawa`].isOpen && !views[`quran-app-hifth`].isOpen && !views[`quran-app-tadabbur`].isOpen"
+            x-transition:enter="transition-opacity ease-out duration-400 delay-100"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition-opacity ease-in duration-150"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
         >
             <x-goodmaven::blurred-image
-                class="opacity-(--bg-athkar-masaa-opacity) h-full w-full scale-110 object-cover"
+                class="opacity-(--bg-athkar-gate-masaa-opacity) h-full w-full scale-110 object-cover"
                 alt="Athkar gate night background"
                 :imagePath="asset('images/background/athkar-night-blurred.webp')"
                 :thumbnailImagePath="asset('images/background/athkar-night-blurred-blur-thumbnail.png')"

@@ -323,9 +323,9 @@
         </p>
 
         <div class="flex flex-wrap items-center gap-2">
-            <label class="relative min-w-[min(22rem,88vw)] flex-1">
+            <label class="relative min-w-[min(19rem,88vw)] flex-1">
                 <x-filament::icon
-                    class="pointer-events-none absolute inset-y-0 start-3 my-auto h-4 w-4 text-gray-400"
+                    class="pointer-events-none absolute inset-y-0 inset-s-3 my-auto h-4 w-4 text-gray-400"
                     icon="heroicon-o-magnifying-glass"
                 />
                 <input
@@ -337,7 +337,7 @@
                 />
                 @if ($hasActiveSearch)
                     <button
-                        class="absolute inset-y-0 end-2 my-auto inline-flex h-6 w-6 items-center justify-center rounded-md text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100"
+                        class="absolute inset-y-0 inset-e-2 my-auto inline-flex h-6 w-6 items-center justify-center rounded-md text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100"
                         type="button"
                         wire:click="clearAthkarSearchQuery"
                     >

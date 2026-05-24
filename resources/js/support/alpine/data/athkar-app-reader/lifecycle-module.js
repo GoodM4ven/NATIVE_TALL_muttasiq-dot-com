@@ -521,7 +521,7 @@ export const createLifecycleModule = (deps) => {
                 required > 1 ||
                 count > required ||
                 this.topUi.progressOverride !== null ||
-                (this.countPulse.index === this.activeIndex && this.countPulse.hasChanges)
+                this.topUi.pulseActive
             );
         },
 

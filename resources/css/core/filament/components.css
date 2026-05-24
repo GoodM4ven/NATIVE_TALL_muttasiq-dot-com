@@ -60,6 +60,14 @@
         border-bottom-right-radius: var(--muttasiq-modal-radius, 1.15rem);
     }
 
+    .fi-modal.fi-modal-slide-over > .fi-modal-window-ctn > .fi-modal-window,
+    .fi-modal.fi-modal-slide-over .muttasiq-modal-window,
+    .fi-modal.fi-modal-slide-over .fi-modal-header,
+    .fi-modal.fi-modal-slide-over .fi-modal-content,
+    .fi-modal.fi-modal-slide-over .fi-modal-footer {
+        border-radius: 0 !important;
+    }
+
     :where(.dark, .dark *) .fi-modal .muttasiq-modal-window {
         background-color: var(--fi-surface-bg-dark);
         border-color: color-mix(in srgb, var(--primary-300) 45%, transparent);
@@ -273,6 +281,12 @@
         .fi-modal:not(.fi-modal-slide-over):not(.fi-width-screen) > .fi-modal-window-ctn {
             padding: 0.42rem;
             align-items: end;
+        }
+
+        #athkar-manager-modal.fi-modal-window {
+            inline-size: min(100%, calc(100vw - 0.84rem));
+            max-inline-size: calc(100vw - 0.84rem);
+            margin-inline: auto;
         }
 
         #quran-reader-search-modal .fi-modal-content {
