@@ -1258,7 +1258,7 @@
                     x-bind:data-counter-pulse="shouldEnableVisualEnhancements() ? sharedCounterPulseState() : 'inactive'"
                 >
                     <div
-                        class="sm:h-15.5 sm:w-15.5 md:h-18 md:w-18 lg:h-19 lg:w-19 xl:w-19.5 2xl:h-22 2xl:w-22 3xl:h-24 3xl:w-24 group relative h-20 w-20 xl:h-20">
+                        class="sm:h-17 sm:w-17 md:h-18 md:w-18 lg:h-19 lg:w-19 xl:w-19.5 2xl:h-22 2xl:w-22 3xl:h-24 3xl:w-24 group relative h-20 w-20 xl:h-20">
                         <div class="athkar-counter-repel"></div>
                         <div
                             class="athkar-counter-ring absolute inset-0 rounded-full"
@@ -1337,7 +1337,7 @@
                         </template>
 
                         <span
-                            class="3xl:-left-14 absolute -left-10 top-1/2 -translate-y-1/2 select-none text-gray-600 sm:-left-8 md:-left-9 lg:-left-10 xl:-left-11 2xl:-left-12 dark:text-gray-300"
+                            class="3xl:-left-14 absolute -left-10 top-1/2 -translate-y-1/2 select-none text-gray-600 sm:-left-9 sm:text-[0.74rem] md:-left-9 lg:-left-10 xl:-left-11 2xl:-left-12 dark:text-gray-300"
                         >{{ arabic_text('العدد') }}</span>
                     </div>
                 </div>

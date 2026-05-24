@@ -13,8 +13,9 @@ it('keeps native touch interaction contracts for quran gate and main menu insigh
         ->and($quranGateSource)->toContain('this.syncProjectedModeWithOrbitAngle(orbitAngleDeg);')
         ->and($quranGateSource)->toContain('this.setOrbitAngle(orbitAngleDeg);')
         ->and($quranGateSource)->toContain("if (event.pointerType !== 'touch' || !this.hasTouchInput()) {")
-        ->and($quranGateSource)->toContain('if (this.projectedMode) {')
-        ->and($quranGateSource)->toContain('this.armMode(this.projectedMode);');
+        ->and($quranGateSource)->toContain('didTouchOrbitMove')
+        ->and($quranGateSource)->toContain('armProjectedModeAfterTouchRelease()')
+        ->and($quranGateSource)->toContain('suppressNextOpenMode');
 
     expect($mainMenuSource)->not->toBeFalse()
         ->and($mainMenuSource)->toContain('insightsTouchRowsUnlockDelayMs: 120')

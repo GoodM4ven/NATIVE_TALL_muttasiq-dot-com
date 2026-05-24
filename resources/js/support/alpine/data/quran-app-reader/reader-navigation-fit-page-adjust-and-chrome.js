@@ -434,7 +434,7 @@ export const createReaderNavigationFitPageAdjustAndChromeModule = (deps) => {
             ];
             const breakpointName = String(this.resolveCurrentBreakpointName() ?? '').trim();
 
-            if (!['base', 'sm'].includes(breakpointName)) {
+            if (!['base', 'sm', 'md', 'lg'].includes(breakpointName)) {
                 return `${styleEntries.join('; ')};`;
             }
 
@@ -531,9 +531,13 @@ export const createReaderNavigationFitPageAdjustAndChromeModule = (deps) => {
                     `height: ${Math.round(availablePanelHeight)}px`,
                     'width: min(91vw, 25rem)',
                 );
-            } else {
+            } else if (breakpointName === 'sm') {
                 styleEntries.push(
                     `height: min(${Math.round(availablePanelHeight)}px, 82svh, 50rem)`,
+                );
+            } else {
+                styleEntries.push(
+                    `height: min(${Math.round(availablePanelHeight)}px, 84svh, 54rem)`,
                 );
             }
 

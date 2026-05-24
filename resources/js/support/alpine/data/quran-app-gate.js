@@ -32,6 +32,10 @@ document.addEventListener('alpine:init', () => {
         touchPointerId: null,
         activeTouchIdentifier: null,
         isTouchPointerActive: false,
+        touchStartClientX: null,
+        touchStartClientY: null,
+        didTouchOrbitMove: false,
+        suppressNextOpenMode: null,
         orbitAnimationFrameId: null,
         orbitLastFrameAt: 0,
         isLaunchTransitioning: false,
@@ -258,6 +262,8 @@ document.addEventListener('alpine:init', () => {
             this.launchMode = null;
             this.activeTransitionDirection = null;
             this.armedMode = null;
+            this.suppressNextOpenMode = null;
+            this.clearTouchGestureState();
 
             const shellElement = this.quranShellElement();
 
@@ -338,6 +344,35 @@ document.addEventListener('alpine:init', () => {
         armMode(mode) {
             this.armedMode = mode;
             this.setOrbitAngle(modeOrbitAngles[mode] ?? defaultOrbitAngleDeg);
+        },
+        armProjectedModeAfterTouchRelease() {
+            if (!this.projectedMode) {
+                return;
+            }
+
+            this.armMode(this.projectedMode);
+            this.suppressNextOpenMode = this.projectedMode;
+        },
+        clearTouchGestureState() {
+            this.touchStartClientX = null;
+            this.touchStartClientY = null;
+            this.didTouchOrbitMove = false;
+        },
+        markTouchGestureMovement(clientX, clientY) {
+            const startX = Number(this.touchStartClientX);
+            const startY = Number(this.touchStartClientY);
+
+            if (!Number.isFinite(startX) || !Number.isFinite(startY)) {
+                return;
+            }
+
+            const deltaX = Number(clientX) - startX;
+            const deltaY = Number(clientY) - startY;
+            const movement = Math.hypot(deltaX, deltaY);
+
+            if (movement >= 4) {
+                this.didTouchOrbitMove = true;
+            }
         },
         clearArmedMode() {
             this.armedMode = null;
@@ -463,6 +498,9 @@ document.addEventListener('alpine:init', () => {
             this.touchPointerId = event.pointerId;
             this.isTouchPointerActive = true;
             this.isPointerInside = true;
+            this.touchStartClientX = event.clientX;
+            this.touchStartClientY = event.clientY;
+            this.didTouchOrbitMove = false;
 
             if (event.cancelable) {
                 event.preventDefault();
@@ -490,10 +528,7 @@ document.addEventListener('alpine:init', () => {
             this.touchPointerId = null;
             this.isTouchPointerActive = false;
             this.isPointerInside = false;
-
-            if (this.projectedMode) {
-                this.armMode(this.projectedMode);
-            }
+            this.clearTouchGestureState();
 
             if (this.$refs?.shell?.releasePointerCapture) {
                 try {
@@ -539,6 +574,9 @@ document.addEventListener('alpine:init', () => {
             this.activeTouchIdentifier = touch.identifier;
             this.isTouchPointerActive = true;
             this.isPointerInside = true;
+            this.touchStartClientX = touch.clientX;
+            this.touchStartClientY = touch.clientY;
+            this.didTouchOrbitMove = false;
             this.updateOrbitFromClientPoint(touch.clientX, touch.clientY);
         },
         handleTouchMove(event) {
@@ -554,6 +592,7 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            this.markTouchGestureMovement(touch.clientX, touch.clientY);
             this.updateOrbitFromClientPoint(touch.clientX, touch.clientY);
         },
         handleTouchEnd(event) {
@@ -571,9 +610,11 @@ document.addEventListener('alpine:init', () => {
             this.isTouchPointerActive = false;
             this.isPointerInside = false;
 
-            if (this.projectedMode) {
-                this.armMode(this.projectedMode);
+            if (this.didTouchOrbitMove) {
+                this.armProjectedModeAfterTouchRelease();
             }
+
+            this.clearTouchGestureState();
         },
         handlePointerMove(event) {
             if (event.pointerType === 'touch' && this.hasTouchInput()) {
@@ -631,6 +672,13 @@ document.addEventListener('alpine:init', () => {
             if (this.activeTransitionDirection !== null) {
                 return;
             }
+
+            if (this.suppressNextOpenMode === mode) {
+                this.suppressNextOpenMode = null;
+                return;
+            }
+
+            this.suppressNextOpenMode = null;
 
             const isAvailable = this.isModeAvailable(mode);
 

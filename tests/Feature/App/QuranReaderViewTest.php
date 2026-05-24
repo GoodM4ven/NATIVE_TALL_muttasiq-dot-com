@@ -103,9 +103,12 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($colorfulBackgroundSource)->toContain('images/background/quran/night/hifth-blurred.webp')
         ->and($colorfulBackgroundSource)->toContain('images/background/quran/morning/tadabbur-blurred.webp')
         ->and($colorfulBackgroundSource)->toContain('images/background/quran/night/tadabbur-blurred.webp')
-        ->and($colorfulBackgroundSource)->toContain('quran-bg-tilawa-layer')
-        ->and($colorfulBackgroundSource)->toContain('quran-bg-hifth-layer')
-        ->and($colorfulBackgroundSource)->toContain('quran-bg-tadabbur-layer');
+        ->and($colorfulBackgroundSource)->toContain('quran-bg-tilawa-light-layer')
+        ->and($colorfulBackgroundSource)->toContain('quran-bg-tilawa-dark-layer')
+        ->and($colorfulBackgroundSource)->toContain('quran-bg-hifth-light-layer')
+        ->and($colorfulBackgroundSource)->toContain('quran-bg-hifth-dark-layer')
+        ->and($colorfulBackgroundSource)->toContain('quran-bg-tadabbur-light-layer')
+        ->and($colorfulBackgroundSource)->toContain('quran-bg-tadabbur-dark-layer');
 
     expect($quranIndexSource)->not->toBeFalse()
         ->and($quranIndexSource)->toContain('data-quran-app-shell')
