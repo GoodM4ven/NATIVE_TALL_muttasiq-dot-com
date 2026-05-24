@@ -1,5 +1,5 @@
 <div
-    class="quran-search-shell"
+    class="quran-search-shell select-none"
     data-no-swipe
 >
     <div class="quran-search-results-shell mt-2 sm:mt-3">
@@ -11,7 +11,7 @@
 
             <div class="quran-search-input-shell relative">
                 <input
-                    class="quran-search-input block w-full rounded-[1rem] border border-transparent bg-transparent px-4 py-[0.9rem] text-right text-[0.95rem] leading-7 text-[var(--quran-panel-text)] outline-none sm:px-5 sm:py-[1rem] sm:text-[1rem]"
+                    class="quran-search-input block w-full rounded-2xl border border-transparent bg-transparent px-4 py-[0.9rem] text-right text-[0.95rem] leading-7 text-(--quran-panel-text) outline-none sm:px-5 sm:py-4 sm:text-[1rem]"
                     id="quran-reader-search-input"
                     type="text"
                     x-ref="searchModalInput"
@@ -32,9 +32,7 @@
                     x-cloak
                     x-show="String(search.query ?? '').trim() !== ''"
                     x-on:click="search.query = ''; queueSearchResultsUpdate(0); $nextTick(() => searchModalInputElement()?.focus?.())"
-                >
-                    {{ arabic_text('مسح') }}
-                </button>
+                >x</button>
             </div>
         </label>
 
