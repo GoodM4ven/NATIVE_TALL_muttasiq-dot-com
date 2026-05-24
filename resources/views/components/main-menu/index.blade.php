@@ -1118,7 +1118,7 @@
                             type="button"
                             x-bind:aria-disabled="isInsightsTouchRowsLocked() ? 'true' : 'false'"
                             x-bind:class="{ 'opacity-70': isInsightsTouchRowsLocked() }"
-                            x-on:touchend.stop.prevent="handleInsightsRowTouchEnd(row.key, $event)"
+                            x-on:touchend.stop="handleInsightsRowTouchEnd(row.key, $event)"
                             x-on:click.stop.prevent="handleInsightsRowClick(row.key, $event)"
                             x-bind:aria-label="`${row.label} ${row.percent}%`"
                         >

@@ -1140,7 +1140,7 @@
                     class="pointer-events-auto absolute inset-x-0 top-0 h-11 overflow-visible"
                     data-athkar-mobile-counter
                     x-bind:data-counter-pulse="shouldEnableVisualEnhancements() ? sharedCounterPulseState() : 'inactive'"
-                    x-show="requiredCount(activeIndex) > 1 || countAt(activeIndex) > requiredCount(activeIndex) || !settingValue('does_automatically_switch_completed_athkar', true) || !settingValue('does_clicking_switch_athkar_too', true)"
+                    x-show="shouldShowSharedMobileCounter() || !settingValue('does_automatically_switch_completed_athkar', true) || !settingValue('does_clicking_switch_athkar_too', true)"
                     x-transition.opacity.duration.250ms
                 >
                     <div class="group relative h-11">

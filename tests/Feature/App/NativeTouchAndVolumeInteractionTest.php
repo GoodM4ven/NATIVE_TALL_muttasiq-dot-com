@@ -28,7 +28,7 @@ it('keeps native touch interaction contracts for quran gate and main menu insigh
             'x-on:touchstart.passive="handleInsightsTouchStart($event)"',
         )
         ->and($mainMenuViewSource)->toContain(
-            'x-on:touchend.stop.prevent="handleInsightsRowTouchEnd(row.key, $event)"',
+            'x-on:touchend.stop="handleInsightsRowTouchEnd(row.key, $event)"',
         )
         ->and($mainMenuViewSource)->not->toContain('x-bind:disabled="isInsightsTouchRowsLocked()"');
 });

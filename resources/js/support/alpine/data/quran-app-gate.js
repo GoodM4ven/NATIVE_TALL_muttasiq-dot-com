@@ -350,8 +350,10 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            const previouslyArmedMode = this.armedMode;
             this.armMode(this.projectedMode);
-            this.suppressNextOpenMode = this.projectedMode;
+            this.suppressNextOpenMode =
+                previouslyArmedMode !== this.projectedMode ? this.projectedMode : null;
         },
         clearTouchGestureState() {
             this.touchStartClientX = null;
@@ -529,7 +531,7 @@ document.addEventListener('alpine:init', () => {
             this.isTouchPointerActive = false;
             this.isPointerInside = false;
 
-            if (this.didTouchOrbitMove) {
+            if (this.projectedMode) {
                 this.armProjectedModeAfterTouchRelease();
             }
 
@@ -615,7 +617,7 @@ document.addEventListener('alpine:init', () => {
             this.isTouchPointerActive = false;
             this.isPointerInside = false;
 
-            if (this.didTouchOrbitMove) {
+            if (this.projectedMode) {
                 this.armProjectedModeAfterTouchRelease();
             }
 
