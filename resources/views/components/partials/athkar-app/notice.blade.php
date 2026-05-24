@@ -290,6 +290,11 @@
                         x-bind:data-fitty-max-size-override="$store.bp?.is?.('4xl') ? 27 : $store.bp?.is?.('3xl') ? 20 : $store.bp?.is?.('2xl') ? 19 : $store.bp?.is?.('xl') ? 11 : $store.bp?.is?.('lg') ? 18 : $store.bp?.is?.('md') ? 14 : $store.bp?.is?.('sm') ? 27 : 24"
                     >{{ arabic_text('معظمُ الآياتِ هذه في البدايةِ لم يردْ عن النبيِّ صلى الله عليه وسلم أنه قالها — كأذكارٍ للصباحِ والمساء — ولكن ورد عنه أنه كان يستفتح الدعاءَ بالثناء، وخيرُ الثناءِ ثناءُ اللهِ على نفسه، ولذا جمعناه ووضعناه في المقدمة، لتُستجابَ أدعيةُ الأذكارِ أتمَّ الإجابة، وليقوى حصنك وتوفيقك وتيسيرُ أمورك بإذن الله...') }}</p>
                     {{-- blade-formatter-enable --}}
+                    <button
+                        class="3xl:text-[0.86rem] 4xl:text-[1rem] mt-1.5 inline-flex items-center justify-center text-[0.65rem] font-medium text-slate-600 underline decoration-slate-400/70 underline-offset-2 transition hover:text-slate-800 sm:text-[0.42rem] md:text-[0.48rem] lg:text-[0.5rem] xl:text-[0.58rem] 2xl:text-[0.66rem] dark:text-slate-300 dark:decoration-slate-500/70 dark:hover:text-slate-100"
+                        type="button"
+                        x-on:click="confirmNoticeAndBypassFutureDisplay()"
+                    >{{ arabic_text('أو لا تظهر هذا مجدّدًا.') }}</button>
                 </div>
 
                 <div class="flex justify-center">

@@ -168,14 +168,13 @@ class Setting extends Model
             ],
             self::DOES_QURAN_SHOW_IMMERSIVE_MOBILE_EDGE_CAPTIONS => [
                 'default' => true,
-                'label' => '5. إظهار اسم السورة ورقم الصفحة عند أطراف القارئ في وضع الجوال فقط.',
-                'help' => 'يظهر هذا العرض فقط في تطبيقات الجوال والشاشات الصغيرة (base).',
+                'label' => '5. إظهار اسم السورة ورقم الصفحة عند أطراف القارئ.',
                 'group' => self::GROUP_QURAN,
                 'type' => 'boolean',
             ],
             self::QURAN_WIRD_FREQUENCY_MODE => [
                 'default' => self::QURAN_WIRD_FREQUENCY_MONTHLY,
-                'label' => '6. إعداد الوِرد اليومي: ختمات موزعة على الشهر أو هدف يومي مباشر.',
+                'label' => '6. إعداد الوِرد اليومي.',
                 'group' => self::GROUP_QURAN,
                 'type' => 'integer',
                 'min' => self::QURAN_WIRD_FREQUENCY_MONTHLY,
@@ -192,9 +191,9 @@ class Setting extends Model
             ],
             self::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION => [
                 'default' => false,
-                'label' => '7. استخدام أزرار رفع وخفض الصوت للتنقل بين الأذكار أو صفحات القرآن.',
-                'help' => 'زر رفع الصوت يعود للسابق، وزر خفض الصوت ينتقل للتالي.',
-                'group' => self::GROUP_QURAN,
+                'label' => '6. استخدام أزرار رفع وخفض الصوت للتنقل بين الأذكار وصفحات القرآن.',
+                'help' => 'عند التفعيل: زر رفع الصوت يعود للذكر/الصفحة السابقة، وزر خفض الصوت ينتقل للذكر/الصفحة التالية.',
+                'group' => self::GROUP_GENERAL,
                 'type' => 'boolean',
             ],
         ];

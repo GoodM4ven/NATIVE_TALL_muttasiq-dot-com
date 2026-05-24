@@ -15,6 +15,7 @@ export const createModeFlowModule = (deps) => {
         doesEnableVisualEnhancementsKey,
         skipGuidancePanelsSettingKey,
         progressStorageKey,
+        athkarReaderNoticeBypassKey,
         supportUnlockStorageKey,
         supportUnlockModePermanent,
         supportUnlockModeWeekly,
@@ -315,7 +316,7 @@ export const createModeFlowModule = (deps) => {
             }
 
             if (this.shouldSkipGuidancePanels()) {
-                this.confirmNotice();
+                this.confirmNotice({ markBypassed: false });
                 return;
             }
 
@@ -339,7 +340,7 @@ export const createModeFlowModule = (deps) => {
             }
 
             if (this.views?.['athkar-app-gate']?.isReaderVisible) {
-                this.confirmNotice();
+                this.confirmNotice({ markBypassed: false });
                 return;
             }
 
@@ -352,10 +353,19 @@ export const createModeFlowModule = (deps) => {
             }
 
             if (this.shouldSkipGuidancePanels()) {
-                this.confirmNotice();
+                this.confirmNotice({ markBypassed: false });
                 return;
             }
 
+            if (this.shouldBypassNoticeOnce(athkarReaderNoticeBypassKey)) {
+                this.confirmNotice({
+                    noticeKey: athkarReaderNoticeBypassKey,
+                    markBypassed: false,
+                });
+                return;
+            }
+
+            this.markNoticeDisplayed(athkarReaderNoticeBypassKey);
             this.isNoticeVisible = true;
 
             if (this.views?.['athkar-app-gate']) {
@@ -366,9 +376,18 @@ export const createModeFlowModule = (deps) => {
             this.syncNativeVolumeNavigation();
         },
 
-        confirmNotice() {
+        confirmNotice(options = {}) {
             if (!this.activeMode) {
                 return;
+            }
+
+            const normalizedNoticeKey = String(
+                options?.noticeKey ?? athkarReaderNoticeBypassKey,
+            ).trim();
+            const shouldMarkBypassed = options?.markBypassed === true;
+
+            if (shouldMarkBypassed) {
+                this.markNoticeBypassedOnce(normalizedNoticeKey);
             }
 
             this.isNoticeVisible = false;
@@ -384,6 +403,91 @@ export const createModeFlowModule = (deps) => {
             this.$nextTick(() => this.queueTextFit());
             this.queueReaderTextFit();
             this.syncNativeVolumeNavigation();
+        },
+
+        confirmNoticeAndBypassFutureDisplay() {
+            this.confirmNotice({
+                noticeKey: athkarReaderNoticeBypassKey,
+                markBypassed: true,
+            });
+        },
+
+        resolveNoticeBypassFlags() {
+            if (!this.noticeBypassFlags || typeof this.noticeBypassFlags !== 'object') {
+                this.noticeBypassFlags = {};
+            }
+
+            return this.noticeBypassFlags;
+        },
+
+        noticeBypassState(noticeKey) {
+            const normalizedNoticeKey = String(noticeKey ?? '').trim();
+
+            if (normalizedNoticeKey === '') {
+                return { hasDisplayed: false, hasBypassedOnce: false };
+            }
+
+            const flags = this.resolveNoticeBypassFlags();
+            const storedState = flags[normalizedNoticeKey];
+
+            if (!storedState || typeof storedState !== 'object') {
+                return { hasDisplayed: false, hasBypassedOnce: false };
+            }
+
+            return {
+                hasDisplayed: Boolean(storedState.hasDisplayed),
+                hasBypassedOnce: Boolean(storedState.hasBypassedOnce),
+            };
+        },
+
+        persistNoticeBypassState(noticeKey, state = {}) {
+            const normalizedNoticeKey = String(noticeKey ?? '').trim();
+
+            if (normalizedNoticeKey === '') {
+                return;
+            }
+
+            const flags = this.resolveNoticeBypassFlags();
+
+            this.noticeBypassFlags = {
+                ...flags,
+                [normalizedNoticeKey]: {
+                    hasDisplayed: Boolean(state?.hasDisplayed),
+                    hasBypassedOnce: Boolean(state?.hasBypassedOnce),
+                },
+            };
+        },
+
+        markNoticeDisplayed(noticeKey) {
+            const state = this.noticeBypassState(noticeKey);
+
+            if (state.hasDisplayed) {
+                return;
+            }
+
+            this.persistNoticeBypassState(noticeKey, {
+                hasDisplayed: true,
+                hasBypassedOnce: state.hasBypassedOnce,
+            });
+        },
+
+        markNoticeBypassedOnce(noticeKey) {
+            const state = this.noticeBypassState(noticeKey);
+
+            if (state.hasBypassedOnce) {
+                return;
+            }
+
+            this.persistNoticeBypassState(noticeKey, {
+                hasDisplayed: true,
+                hasBypassedOnce: true,
+            });
+        },
+
+        shouldBypassNoticeOnce(noticeKey) {
+            const state = this.noticeBypassState(noticeKey);
+
+            return state.hasDisplayed && state.hasBypassedOnce;
         },
 
         returnToGateFromNotice() {

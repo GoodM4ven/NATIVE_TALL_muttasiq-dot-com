@@ -68,6 +68,10 @@ class AthkarManager extends Component implements HasActions, HasSchemas
             ->modalWidth($this->isManageAthkarMobile ? Width::FiveExtraLarge : Width::SevenExtraLarge)
             ->extraModalWindowAttributes([
                 'id' => 'athkar-manager-modal',
+                'class' => 'muttasiq-modal-window',
+            ])
+            ->extraModalOverlayAttributes([
+                'class' => 'muttasiq-modal-overlay',
             ])
             ->registerModalActions([
                 $this->editAthkarAction(),
@@ -112,6 +116,10 @@ class AthkarManager extends Component implements HasActions, HasSchemas
             )
             ->extraModalWindowAttributes([
                 'id' => 'athkar-edit-modal',
+                'class' => 'muttasiq-modal-window',
+            ])
+            ->extraModalOverlayAttributes([
+                'class' => 'muttasiq-modal-overlay',
             ])
             ->extraModalFooterActions([
                 Action::make('submitOverrideForReview')
@@ -224,6 +232,10 @@ class AthkarManager extends Component implements HasActions, HasSchemas
             ->modalSubmitActionLabel('إضافة')
             ->extraModalWindowAttributes([
                 'id' => 'athkar-create-modal',
+                'class' => 'muttasiq-modal-window',
+            ])
+            ->extraModalOverlayAttributes([
+                'class' => 'muttasiq-modal-overlay',
             ])
             ->fillForm(fn (): array => [
                 'order' => max(1, $this->maxResolvedOrder() + 1),
@@ -270,6 +282,10 @@ class AthkarManager extends Component implements HasActions, HasSchemas
             ->modalDescription('سيتم إخفاء الذكر محليًا ويمكن استعادته عبر زر استعادة الكل.')
             ->extraModalWindowAttributes([
                 'id' => 'athkar-delete-modal',
+                'class' => 'muttasiq-modal-window',
+            ])
+            ->extraModalOverlayAttributes([
+                'class' => 'muttasiq-modal-overlay',
             ])
             ->action(function (array $arguments): void {
                 $thikrId = (int) ($arguments['thikrId'] ?? 0);
@@ -295,6 +311,10 @@ class AthkarManager extends Component implements HasActions, HasSchemas
             ->modalSubmitActionLabel('نعم، استعادة الكل')
             ->extraModalWindowAttributes([
                 'id' => 'athkar-reset-modal',
+                'class' => 'muttasiq-modal-window',
+            ])
+            ->extraModalOverlayAttributes([
+                'class' => 'muttasiq-modal-overlay',
             ])
             ->action(function (): void {
                 if ($this->resetAllAthkarOverrides()) {

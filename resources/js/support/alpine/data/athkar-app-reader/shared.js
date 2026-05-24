@@ -31,6 +31,8 @@ export {
 export const doesEnableVisualEnhancementsKey = 'enable_visual_enhancements';
 export const skipGuidancePanelsSettingKey = 'does_skip_notice_panels';
 export const progressStorageKey = 'athkar-progress-v1';
+export const noticeBypassFlagsStorageKey = 'athkar-notice-bypass-flags-v1';
+export const athkarReaderNoticeBypassKey = 'athkar-reader-notice-v2';
 export const supportUnlockStorageKey = 'quran-support-unlock-v1';
 export const supportUnlockModePermanent = 'permanent';
 export const supportUnlockModeWeekly = 'weekly';

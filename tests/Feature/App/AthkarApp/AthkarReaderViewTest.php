@@ -26,3 +26,33 @@ it('keeps manager button styling and mobile counter expansion layout contracts i
         ->and($source)->toContain("x-bind:class=\"isHintOpen(activeIndex) ? '")
         ->and($source)->toContain("pointer-events-none' : ''\"");
 });
+
+it('persists and reuses athkar notice bypass flags after first acknowledged display', function () {
+    $sharedSource = file_get_contents(resource_path('js/support/alpine/data/athkar-app-reader/shared.js'));
+    $initialStateSource = file_get_contents(resource_path('js/support/alpine/data/athkar-app-reader/initial-state.js'));
+    $modeFlowSource = file_get_contents(resource_path('js/support/alpine/data/athkar-app-reader/mode-flow-module.js'));
+    $lifecycleSource = file_get_contents(resource_path('js/support/alpine/data/athkar-app-reader/lifecycle-module.js'));
+    $noticeViewSource = file_get_contents(resource_path('views/components/partials/athkar-app/notice.blade.php'));
+
+    expect($sharedSource)->not->toBeFalse()
+        ->and($sharedSource)->toContain("noticeBypassFlagsStorageKey = 'athkar-notice-bypass-flags-v1'")
+        ->and($sharedSource)->toContain("athkarReaderNoticeBypassKey = 'athkar-reader-notice-v2'");
+
+    expect($initialStateSource)->not->toBeFalse()
+        ->and($initialStateSource)->toContain('noticeBypassFlags: window.Alpine.$persist({}).as(noticeBypassFlagsStorageKey)');
+
+    expect($modeFlowSource)->not->toBeFalse()
+        ->and($modeFlowSource)->toContain('shouldBypassNoticeOnce(athkarReaderNoticeBypassKey)')
+        ->and($modeFlowSource)->toContain('markNoticeDisplayed(athkarReaderNoticeBypassKey)')
+        ->and($modeFlowSource)->toContain('markNoticeBypassedOnce(normalizedNoticeKey)')
+        ->and($modeFlowSource)->toContain('const shouldMarkBypassed = options?.markBypassed === true;')
+        ->and($modeFlowSource)->toContain('confirmNoticeAndBypassFutureDisplay()')
+        ->and($modeFlowSource)->toContain('this.confirmNotice({ markBypassed: false });');
+
+    expect($lifecycleSource)->not->toBeFalse()
+        ->and($lifecycleSource)->toContain('this.confirmNotice({ markBypassed: false });');
+
+    expect($noticeViewSource)->not->toBeFalse()
+        ->and($noticeViewSource)->toContain('x-on:click="confirmNoticeAndBypassFutureDisplay()"')
+        ->and($noticeViewSource)->toContain('أو لا تظهر هذا مجدّدًا');
+});

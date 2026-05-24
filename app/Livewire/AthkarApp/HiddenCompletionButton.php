@@ -25,7 +25,14 @@ class HiddenCompletionButton extends Component implements HasActions, HasSchemas
             ->label('إكمال الأذكار')
             ->modalDescription('هل قمت بقراءة كل الأذكار مسبقًا، وتريد أن تجعلها كلها مقروءة بشكل تلقائي؟')
             ->modalSubmitActionLabel('قرأتها')
-            ->modalCancelActionLabel('لم أقرأها بعد');
+            ->modalCancelActionLabel('لم أقرأها بعد')
+            ->extraModalWindowAttributes([
+                'id' => 'athkar-hidden-completion-modal',
+                'class' => 'muttasiq-modal-window',
+            ])
+            ->extraModalOverlayAttributes([
+                'class' => 'muttasiq-modal-overlay',
+            ]);
     }
 
     public function singleThikrCompletionAction(): Action
@@ -47,7 +54,14 @@ class HiddenCompletionButton extends Component implements HasActions, HasSchemas
             ->label('إتمام الذكر')
             ->modalDescription('هل أتممت قراءة هذا الذكر بعدده كاملا؟')
             ->modalSubmitActionLabel('نعم، أكملت قراءته')
-            ->modalCancelActionLabel('إلغاء');
+            ->modalCancelActionLabel('إلغاء')
+            ->extraModalWindowAttributes([
+                'id' => 'athkar-hidden-single-completion-modal',
+                'class' => 'muttasiq-modal-window',
+            ])
+            ->extraModalOverlayAttributes([
+                'class' => 'muttasiq-modal-overlay',
+            ]);
     }
 
     public function render()

@@ -78,6 +78,13 @@ class JsErrorReporter extends Component implements HasActions, HasSchemas
             ->modalWidth(Width::ThreeExtraLarge)
             ->modalSubmitActionLabel('إرسال البلاغ')
             ->modalCancelActionLabel('إغلاق')
+            ->extraModalWindowAttributes([
+                'id' => 'js-error-report-modal',
+                'class' => 'muttasiq-modal-window',
+            ])
+            ->extraModalOverlayAttributes([
+                'class' => 'muttasiq-modal-overlay',
+            ])
             ->registerModalActions([
                 $this->openGithubIssueAction(),
             ])

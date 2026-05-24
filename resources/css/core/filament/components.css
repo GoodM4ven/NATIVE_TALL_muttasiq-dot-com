@@ -25,6 +25,40 @@
         line-height: var(--tw-leading, 1.6);
     }
 
+    .fi-modal .muttasiq-modal-window {
+        background-color: var(--fi-surface-bg-light);
+        border-color: color-mix(in srgb, var(--primary-300) 35%, transparent);
+        box-shadow:
+            0 24px 50px color-mix(in srgb, var(--gray-950) 30%, transparent),
+            inset 0 0 0 1px color-mix(in srgb, white 22%, transparent);
+    }
+
+    :where(.dark, .dark *) .fi-modal .muttasiq-modal-window {
+        background-color: var(--fi-surface-bg-dark);
+        border-color: color-mix(in srgb, var(--primary-300) 45%, transparent);
+        box-shadow:
+            0 30px 62px color-mix(in srgb, var(--gray-950) 56%, transparent),
+            inset 0 0 0 1px color-mix(in srgb, white 9%, transparent);
+    }
+
+    .fi-modal .muttasiq-modal-window > .fi-modal-header,
+    .fi-modal .muttasiq-modal-window > .fi-modal-footer {
+        background-color: var(--fi-surface-bg-light);
+    }
+
+    :where(.dark, .dark *) .fi-modal .muttasiq-modal-window > .fi-modal-header,
+    :where(.dark, .dark *) .fi-modal .muttasiq-modal-window > .fi-modal-footer {
+        background-color: var(--fi-surface-bg-dark);
+    }
+
+    .fi-modal .muttasiq-modal-overlay {
+        background: color-mix(in srgb, var(--gray-950) 56%, transparent) !important;
+    }
+
+    :where(.dark, .dark *) .fi-modal .muttasiq-modal-overlay {
+        background: color-mix(in srgb, var(--gray-950) 72%, transparent) !important;
+    }
+
     @media (min-width: 80rem) {
         #control-panel-modal,
         #athkar-manager-modal,

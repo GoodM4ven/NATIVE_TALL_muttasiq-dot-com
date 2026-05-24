@@ -678,36 +678,38 @@
             }
         }
 
-        .native-platform .quran-app-gate-shell {
-            will-change: auto;
-        }
+        @media (max-width: 639px) {
+            .native-platform .quran-app-gate-shell {
+                will-change: auto;
+            }
 
-        .native-platform img.quran-app-sector__image-img {
-            filter: brightness(0.89) saturate(0.93) !important;
-            transition:
-                transform 140ms cubic-bezier(0.22, 1, 0.36, 1),
-                opacity 130ms ease !important;
-            will-change: transform, opacity;
-        }
+            .native-platform img.quran-app-sector__image-img {
+                filter: brightness(0.89) saturate(0.93) !important;
+                transition:
+                    transform 140ms cubic-bezier(0.22, 1, 0.36, 1),
+                    opacity 130ms ease !important;
+                will-change: transform, opacity;
+            }
 
-        .native-platform .quran-app-sector.is-active img.quran-app-sector__image-img {
-            transform: scale(1.008);
-        }
+            .native-platform .quran-app-sector.is-active img.quran-app-sector__image-img {
+                transform: scale(1.008);
+            }
 
-        .native-platform .quran-app-sector__chip,
-        .native-platform .quran-app-gate-anchor,
-        .native-platform .quran-app-gate-pointer {
-            -webkit-backdrop-filter: none !important;
-            backdrop-filter: none !important;
-            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.24) !important;
-            transition:
-                transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
-                opacity 150ms ease !important;
-        }
+            .native-platform .quran-app-sector__chip,
+            .native-platform .quran-app-gate-anchor,
+            .native-platform .quran-app-gate-pointer {
+                -webkit-backdrop-filter: none !important;
+                backdrop-filter: none !important;
+                box-shadow: 0 8px 18px rgba(0, 0, 0, 0.24) !important;
+                transition:
+                    transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+                    opacity 150ms ease !important;
+            }
 
-        .native-platform .quran-app-sector__veil,
-        .native-platform .quran-app-gate-orbit {
-            transition-duration: 180ms !important;
+            .native-platform .quran-app-sector__veil,
+            .native-platform .quran-app-gate-orbit {
+                transition-duration: 180ms !important;
+            }
         }
     </style>
 @endassets

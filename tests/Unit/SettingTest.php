@@ -4,6 +4,7 @@ use App\Models\Setting;
 
 test('athkar setting defaults are available for the home payload', function () {
     $defaults = Setting::defaults();
+    $definitions = Setting::definitions();
 
     expect($defaults)->toBeArray();
     expect(array_key_exists(Setting::DOES_AUTOMATICALLY_SWITCH_COMPLETED_ATHKAR, $defaults))->toBeTrue();
@@ -27,6 +28,16 @@ test('athkar setting defaults are available for the home payload', function () {
     expect($defaults[Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ALWAYS_ON_COPY])->toBeFalse();
     expect($defaults[Setting::DOES_QURAN_SHOW_IMMERSIVE_MOBILE_EDGE_CAPTIONS])->toBeTrue();
     expect($defaults[Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION])->toBeFalse();
+    expect($definitions[Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION]['group'] ?? null)
+        ->toBe(Setting::GROUP_GENERAL);
+
+    expect($definitions[Setting::DOES_QURAN_SHOW_IMMERSIVE_MOBILE_EDGE_CAPTIONS]['label'] ?? '')
+        ->toContain('إظهار اسم السورة ورقم الصفحة عند أطراف القارئ')
+        ->not->toContain('الجوال')
+        ->not->toContain('base');
+
+    expect(array_key_exists('help', $definitions[Setting::DOES_QURAN_SHOW_IMMERSIVE_MOBILE_EDGE_CAPTIONS] ?? []))
+        ->toBeFalse();
 });
 
 test('it exposes main text size limits for frontend consumers', function () {
@@ -111,4 +122,22 @@ test('it caps wird khatamat target to fixed daily and monthly maxima', function 
         ->toBe(Setting::QURAN_WIRD_KHATMAT_MONTHLY_MAX);
     expect($normalizedDaily[Setting::QURAN_WIRD_KHATMAT_TARGET])
         ->toBe(Setting::QURAN_WIRD_KHATMAT_MAX);
+});
+
+test('volume buttons navigation setting key is shared by quran and athkar readers', function () {
+    $projectRoot = dirname(__DIR__, 2);
+    $quranSharedSource = file_get_contents(
+        $projectRoot.'/resources/js/support/alpine/data/quran-app-reader/shared.js',
+    );
+    $athkarLifecycleSource = file_get_contents(
+        $projectRoot.'/resources/js/support/alpine/data/athkar-app-reader/lifecycle-module.js',
+    );
+
+    expect($quranSharedSource)->not->toBeFalse()
+        ->and($quranSharedSource)->toContain("useVolumeButtonsNavigation: 'does_quran_use_volume_buttons_navigation'");
+
+    expect($athkarLifecycleSource)->not->toBeFalse()
+        ->and($athkarLifecycleSource)->toContain(
+            "this.settingValue('does_quran_use_volume_buttons_navigation', false)",
+        );
 });

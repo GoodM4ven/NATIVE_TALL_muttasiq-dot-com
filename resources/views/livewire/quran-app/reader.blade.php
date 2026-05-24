@@ -3219,25 +3219,27 @@
             }
         }
 
-        .native-platform .quran-reader-panel {
-            box-shadow: 0 12px 28px color-mix(in srgb, var(--gray-950) 24%, transparent) !important;
-        }
+        @media (max-width: 639px) {
+            .native-platform .quran-reader-panel {
+                box-shadow: 0 12px 28px color-mix(in srgb, var(--gray-950) 24%, transparent) !important;
+            }
 
-        .native-platform .quran-calibration-overlay::before {
-            -webkit-backdrop-filter: none !important;
-            backdrop-filter: none !important;
-            box-shadow: 0 8px 22px color-mix(in srgb, var(--gray-950) 20%, transparent) !important;
-        }
+            .native-platform .quran-calibration-overlay::before {
+                -webkit-backdrop-filter: none !important;
+                backdrop-filter: none !important;
+                box-shadow: 0 8px 22px color-mix(in srgb, var(--gray-950) 20%, transparent) !important;
+            }
 
-        .native-platform .quran-calibration-jelly-group {
-            filter: none !important;
-        }
+            .native-platform .quran-calibration-jelly-group {
+                filter: none !important;
+            }
 
-        .native-platform .quran-calibration-hud,
-        .native-platform .quran-calibration-overlay,
-        .native-platform .quran-top-strip,
-        .native-platform .quran-bottom-strip {
-            transition-duration: 140ms !important;
+            .native-platform .quran-calibration-hud,
+            .native-platform .quran-calibration-overlay,
+            .native-platform .quran-top-strip,
+            .native-platform .quran-bottom-strip {
+                transition-duration: 140ms !important;
+            }
         }
     </style>
 @endassets
@@ -4048,7 +4050,7 @@
                                 </span>
                             </button>
                             <span
-                                class="border-primary-300/55 bg-primary-50/75 text-primary-800 4xl:ms-1.5 4xl:min-h-[2.06rem] 4xl:rounded-[0.72rem] 4xl:px-2.5 4xl:text-[0.72rem] ms-1 inline-flex min-h-[1.8rem] items-center gap-1 rounded-[0.58rem] border px-2 text-[0.66rem] font-semibold sm:min-h-[1.78rem] sm:text-[0.64rem] md:min-h-[1.84rem] md:text-[0.66rem] lg:min-h-[1.9rem] lg:text-[0.68rem]"
+                                class="border-primary-300/55 bg-primary-50/75 text-primary-800 4xl:ms-1.5 3xl:min-w-[5.8rem] 4xl:min-w-[5.8rem] 4xl:px-[0.56rem] 4xl:py-[0.28rem] 4xl:text-[0.84rem] 3xl:px-[0.52rem] 3xl:py-[0.26rem] 3xl:text-[0.82rem] sm:min-w-21 ms-1 inline-flex min-w-[5rem] select-none items-center justify-center gap-1 rounded-full border px-[0.46rem] py-[0.22rem] text-[0.73rem] font-semibold sm:px-2 sm:pb-[0.24rem] sm:pt-[0.16rem] sm:text-[0.85rem] md:min-w-[5.2rem] md:px-3 md:py-[0.3rem] md:text-[1rem] lg:min-w-[5.4rem] lg:px-[0.52rem] lg:py-[0.26rem] lg:text-[0.77rem] xl:min-w-20 xl:rounded-lg xl:text-[0.68rem] 2xl:min-w-[4.4rem] 2xl:rounded-full 2xl:px-[0.52rem] 2xl:py-[0.26rem] 2xl:text-[0.7rem]"
                                 data-quran-mushaf-page-indicator
                                 x-cloak
                                 x-show="shouldShowMushafPageIndicator()"

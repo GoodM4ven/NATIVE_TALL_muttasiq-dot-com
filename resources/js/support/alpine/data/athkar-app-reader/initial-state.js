@@ -15,6 +15,7 @@ export const createInitialState = (config, deps) => {
         doesEnableVisualEnhancementsKey,
         skipGuidancePanelsSettingKey,
         progressStorageKey,
+        noticeBypassFlagsStorageKey,
         supportUnlockStorageKey,
         supportUnlockModePermanent,
         supportUnlockModeWeekly,
@@ -49,6 +50,8 @@ export const createInitialState = (config, deps) => {
         isCompletionVisible: false,
 
         isNoticeVisible: window.Alpine.$persist(false).as('athkar-notice-visible'),
+
+        noticeBypassFlags: window.Alpine.$persist({}).as(noticeBypassFlagsStorageKey),
 
         isRestoring: true,
 

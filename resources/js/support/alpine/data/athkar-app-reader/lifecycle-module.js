@@ -305,7 +305,7 @@ export const createLifecycleModule = (deps) => {
                 this.closeHint();
 
                 if (this.isNoticeVisible) {
-                    this.confirmNotice();
+                    this.confirmNotice({ markBypassed: false });
                 }
 
                 if (this.isCompletionVisible) {

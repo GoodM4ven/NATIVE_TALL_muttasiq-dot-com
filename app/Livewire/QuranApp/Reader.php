@@ -759,7 +759,10 @@ class Reader extends Component implements HasActions, HasSchemas
             ->modalCancelActionLabel(arabic_text('إغلاق'))
             ->extraModalWindowAttributes([
                 'id' => 'quran-reader-search-modal',
-                'class' => 'quran-reader-search-modal-window',
+                'class' => 'muttasiq-modal-window quran-reader-search-modal-window',
+            ])
+            ->extraModalOverlayAttributes([
+                'class' => 'muttasiq-modal-overlay',
             ])
             ->modalContent(
                 fn (): HtmlString => new HtmlString(Blade::render('<x-partials.quran-app.search-modal />')),
@@ -777,6 +780,10 @@ class Reader extends Component implements HasActions, HasSchemas
             ->modalSubmitActionLabel(arabic_text('انتقال'))
             ->extraModalWindowAttributes([
                 'id' => 'quran-reader-jump-page-modal',
+                'class' => 'muttasiq-modal-window',
+            ])
+            ->extraModalOverlayAttributes([
+                'class' => 'muttasiq-modal-overlay',
             ])
             ->fillForm(fn (): array => [
                 'page' => max(1, $this->pageNumber),
@@ -825,6 +832,10 @@ class Reader extends Component implements HasActions, HasSchemas
             ->extraModalWindowAttributes([
                 'id' => self::HISTORY_MODAL_ID,
                 'dir' => 'ltr',
+                'class' => 'muttasiq-modal-window',
+            ])
+            ->extraModalOverlayAttributes([
+                'class' => 'muttasiq-modal-overlay',
             ])
             ->modalContent(
                 fn (): HtmlString => new HtmlString(Blade::render('<x-partials.quran-app.history-modal />')),
@@ -844,6 +855,10 @@ class Reader extends Component implements HasActions, HasSchemas
             ->modalCancelActionLabel(arabic_text('إغلاق'))
             ->extraModalWindowAttributes([
                 'id' => self::BOOKMARKS_MODAL_ID,
+                'class' => 'muttasiq-modal-window',
+            ])
+            ->extraModalOverlayAttributes([
+                'class' => 'muttasiq-modal-overlay',
             ])
             ->modalContent(
                 fn (): HtmlString => new HtmlString(Blade::render('<x-partials.quran-app.bookmarks-modal />')),
@@ -869,6 +884,10 @@ class Reader extends Component implements HasActions, HasSchemas
             ->modalCancelAction(false)
             ->extraModalWindowAttributes([
                 'id' => 'support-unlock-modal',
+                'class' => 'muttasiq-modal-window',
+            ])
+            ->extraModalOverlayAttributes([
+                'class' => 'muttasiq-modal-overlay',
             ])
             ->modalContent(fn (): HtmlString => $this->supportUnlockModalContent())
             ->extraModalFooterActions(fn (Action $action): array => [
