@@ -528,6 +528,11 @@ document.addEventListener('alpine:init', () => {
             this.touchPointerId = null;
             this.isTouchPointerActive = false;
             this.isPointerInside = false;
+
+            if (this.didTouchOrbitMove) {
+                this.armProjectedModeAfterTouchRelease();
+            }
+
             this.clearTouchGestureState();
 
             if (this.$refs?.shell?.releasePointerCapture) {
@@ -617,16 +622,16 @@ document.addEventListener('alpine:init', () => {
             this.clearTouchGestureState();
         },
         handlePointerMove(event) {
-            if (event.pointerType === 'touch' && this.hasTouchInput()) {
-                return;
-            }
-
             if (
                 event.pointerType === 'touch' &&
                 (!this.isTouchPointerActive ||
                     (this.touchPointerId !== null && event.pointerId !== this.touchPointerId))
             ) {
                 return;
+            }
+
+            if (event.pointerType === 'touch') {
+                this.markTouchGestureMovement(event.clientX, event.clientY);
             }
 
             this.updateOrbitFromClientPoint(event.clientX, event.clientY);

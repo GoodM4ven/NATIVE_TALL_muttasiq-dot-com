@@ -943,12 +943,6 @@
                 filter: none !important;
             }
 
-            .native-platform .main-menu-caption__ripples,
-            .native-platform .main-menu-caption__burst,
-            .native-platform .main-menu-caption__shine {
-                display: none !important;
-            }
-
             .native-platform .main-menu-insights-trigger,
             .native-platform .main-menu-insights-panel,
             .native-platform .main-menu-insights-row {

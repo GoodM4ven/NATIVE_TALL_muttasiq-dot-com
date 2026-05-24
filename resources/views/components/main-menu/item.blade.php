@@ -69,19 +69,6 @@
                         transparent 78%);
             }
 
-            @media (max-width: 639px) {
-
-                .item-unlocked-indicator::before,
-                .item-unlocked-indicator::after {
-                    animation: none;
-                    opacity: 0;
-                }
-
-                .item-unlocked-indicator-icon {
-                    filter: none;
-                }
-            }
-
             .item-unlocked-indicator.fill-primary-500::before {
                 animation-duration: 2.1s;
             }
