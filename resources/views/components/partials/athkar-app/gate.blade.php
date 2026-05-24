@@ -467,7 +467,7 @@
             x-on:click.outside="handleOutsideActivation()"
         >
             <div
-                class="athkar-gate-shell 3xl:max-h-[min(75svh,38rem)] 4xl:max-h-[min(72svh,38rem)] lg:max-w-130 xl:max-w-140 2xl:max-w-176 3xl:max-w-3xl 4xl:max-w-5xl relative z-10 mx-auto h-[min(92vw,760px)] max-h-[clamp(10rem,75svh,50rem)] w-[min(92vw,920px)] max-w-[clamp(10rem,84svw,26rem)] sm:min-h-60 sm:max-h-[min(65svh,25rem)] sm:max-w-[clamp(20rem,60svw,40rem)] md:max-h-[min(70svh,28rem)] md:max-w-[clamp(25rem,60svw,40rem)] lg:max-h-[min(75svh,25rem)] xl:max-h-[min(75svh,25rem)] 2xl:max-h-[min(75svh,31rem)]"
+                class="athkar-gate-shell 3xl:max-h-[min(75svh,38rem)] 4xl:max-h-[min(72svh,38rem)] lg:max-w-130 xl:max-w-140 2xl:max-w-176 3xl:max-w-3xl 4xl:max-w-5xl relative z-10 mx-auto h-[min(92vw,760px)] max-h-[clamp(10rem,75svh,50rem)] w-[min(92vw,920px)] max-w-[clamp(10rem,84svw,26rem)] sm:max-h-[min(65svh,25rem)] sm:min-h-60 sm:max-w-[clamp(20rem,60svw,40rem)] md:max-h-[min(70svh,28rem)] md:max-w-[clamp(25rem,60svw,40rem)] lg:max-h-[min(75svh,25rem)] xl:max-h-[min(75svh,25rem)] 2xl:max-h-[min(75svh,31rem)]"
                 x-ref="gate"
                 x-bind:class="{
                     'is-hovering': isHovering,

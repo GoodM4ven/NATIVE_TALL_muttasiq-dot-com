@@ -1001,7 +1001,7 @@
         <div
             class="athkar-panel athkar-panel-actions 3xl:px-4 3xl:py-3 flex flex-wrap items-center gap-2 rounded-[0.55rem] py-1.5 pe-2.5 ps-1.5 sm:flex-nowrap sm:gap-4 sm:rounded-[0.45rem] sm:py-1 sm:pe-2 sm:ps-1 md:rounded-[0.65rem] md:px-[0.45rem] md:py-[0.3rem] lg:px-2 lg:py-[0.3rem] xl:px-[0.58rem] xl:py-[0.34rem] 2xl:px-3 2xl:py-2">
             <button
-                class="athkar-chip athkar-chip--manager focus-visible:outline-primary-500 3xl:text-xs 3xl:px-4 3xl:py-3 relative inline-flex cursor-pointer items-center justify-center px-2.5 py-1.5 text-[0.65rem] font-semibold shadow-inner transition focus-visible:outline-2 focus-visible:outline-offset-2 sm:px-2 sm:py-1.5 sm:text-[0.425rem] md:px-2 md:py-[0.4rem] md:text-[0.525rem] lg:px-[0.6rem] lg:py-2 lg:text-[0.575rem] xl:px-[0.7rem] xl:py-[0.580rem] xl:text-[0.6rem] 2xl:px-3 2xl:py-2 2xl:text-[0.7rem]"
+                class="athkar-chip athkar-chip--manager focus-visible:outline-primary-500 3xl:text-xs 3xl:px-4 3xl:py-3 relative inline-flex cursor-pointer items-center justify-center px-2.5 py-1.5 text-[0.65rem] font-semibold shadow-inner transition focus-visible:outline-2 focus-visible:outline-offset-2 sm:px-2 sm:py-1.5 sm:text-[0.52rem] md:px-2 md:py-[0.4rem] md:text-[0.525rem] lg:px-[0.6rem] lg:py-2 lg:text-[0.575rem] xl:px-[0.7rem] xl:py-[0.580rem] xl:text-[0.6rem] 2xl:px-3 2xl:py-2 2xl:text-[0.7rem]"
                 data-athkar-open-manager
                 type="button"
                 x-on:click="$tippy.hide(); openGateAndManageAthkar()"
@@ -1012,7 +1012,7 @@
             ><span x-text="activeLabel"></span></button>
 
             <div
-                class="3xl:text-[0.95rem] flex flex-1 items-center gap-0.5 text-[0.8rem] text-gray-600 sm:gap-3 sm:text-[0.6rem] md:text-[0.65rem] lg:text-[0.7rem] xl:text-[0.7rem] 2xl:text-[0.85rem] dark:text-gray-300">
+                class="3xl:text-[0.95rem] flex flex-1 items-center gap-0.5 text-[0.8rem] text-gray-600 sm:gap-3 sm:text-[0.72rem] md:text-[0.65rem] lg:text-[0.7rem] xl:text-[0.7rem] 2xl:text-[0.85rem] dark:text-gray-300">
                 <span
                     class="text-primary-700 dark:text-primary-200 inline-flex min-w-[4.3rem] items-center justify-center gap-1 text-center tabular-nums sm:min-w-[4.6rem]"
                     dir="ltr"
@@ -1253,7 +1253,7 @@
                 <div class="w-16"></div>
 
                 <div
-                    class="3xl:text-base pointer-events-auto flex items-center justify-center gap-3 text-sm sm:text-[0.5rem] md:text-[0.6rem] lg:text-[0.65rem] xl:text-[0.7rem] 2xl:text-sm"
+                    class="3xl:text-base pointer-events-auto flex items-center justify-center gap-3 text-sm sm:text-[0.62rem] md:text-[0.6rem] lg:text-[0.65rem] xl:text-[0.7rem] 2xl:text-sm"
                     data-athkar-desktop-counter
                     x-bind:data-counter-pulse="shouldEnableVisualEnhancements() ? sharedCounterPulseState() : 'inactive'"
                 >
@@ -1344,7 +1344,7 @@
 
                 <div class="pointer-events-auto w-16">
                     <button
-                        class="athkar-origin-indicator 3xl:size-13 3xl:[--athkar-origin-inset:7px] 4xl:size-13.5 4xl:[--athkar-origin-inset:8px] md:size-9.5 2xl:size-12.5 left-4 size-7 [--athkar-origin-inset:1px] sm:size-6 sm:[--athkar-origin-inset:1px] md:[--athkar-origin-inset:4.5px] lg:size-10 lg:[--athkar-origin-inset:5px] xl:size-12 xl:[--athkar-origin-inset:6px] 2xl:[--athkar-origin-inset:6px]"
+                        class="athkar-origin-indicator 3xl:size-13 3xl:[--athkar-origin-inset:7px] 4xl:size-13.5 4xl:[--athkar-origin-inset:8px] md:size-9.5 2xl:size-12.5 left-4 size-7 [--athkar-origin-inset:1px] sm:size-7 sm:[--athkar-origin-inset:2px] md:[--athkar-origin-inset:4.5px] lg:size-10 lg:[--athkar-origin-inset:5px] xl:size-12 xl:[--athkar-origin-inset:6px] 2xl:[--athkar-origin-inset:6px]"
                         type="button"
                         x-show="hasOrigin(activeIndex)"
                         x-transition.opacity.duration.300ms
@@ -1359,7 +1359,7 @@
                         x-on:blur="$tippy.hide()"
                     >
                         <x-icon
-                            class="athkar-origin-indicator__icon 3xl:size-9 4xl:size-10 size-6.5 2xl:size-8.5 md:size-7 lg:size-7 xl:size-8"
+                            class="athkar-origin-indicator__icon 3xl:size-9 4xl:size-10 size-6.5 2xl:size-8.5 sm:size-7 md:size-7 lg:size-7 xl:size-8"
                             name="bootstrap.exclamation-diamond"
                         />
                     </button>
@@ -1484,7 +1484,7 @@
 
                                     <!-- Completion Indicator -->
                                     <div
-                                        class="3xl:text-sm relative flex items-center justify-between gap-3 text-[0.675rem] text-gray-600 sm:text-[0.55rem] md:text-[0.6rem] lg:text-[0.685rem] xl:text-[0.7rem] 2xl:text-[0.8rem] dark:text-gray-300">
+                                        class="3xl:text-sm relative flex items-center justify-between gap-3 text-[0.675rem] text-gray-600 sm:text-[0.68rem] md:text-[0.6rem] lg:text-[0.685rem] xl:text-[0.7rem] 2xl:text-[0.8rem] dark:text-gray-300">
                                         <span
                                             class="text-primary-700 dark:text-primary-200 inline-flex min-w-[4.4rem] items-center justify-center gap-1 text-center tabular-nums opacity-0 transition-opacity duration-300"
                                             x-data="{
@@ -1633,7 +1633,7 @@
                         x-bind:style="`left: ${segmentCenterPercent(navPreviewIndex ?? 0)}; transform: translateX(-50%);`"
                     >
                         <div
-                            class="bg-(--background) text-primary-700 dark:bg-(--background-dark) dark:text-primary-100 rounded-sm border border-gray-200 px-2 py-0.5 text-[0.65rem] font-semibold shadow-sm dark:border-gray-700"
+                            class="bg-(--background) text-primary-700 dark:bg-(--background-dark) dark:text-primary-100 rounded-sm border border-gray-200 px-2 py-0.5 text-[0.65rem] font-semibold shadow-sm sm:text-[0.75rem] dark:border-gray-700"
                             x-bind:style="{
                                 opacity: (navPreviewIndex !== null && nav.hasInteracted && nav.isHovering) ? 1 : 0,
                             }"

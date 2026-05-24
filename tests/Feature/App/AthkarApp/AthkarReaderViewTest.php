@@ -53,6 +53,7 @@ it('persists and reuses athkar notice bypass flags after first acknowledged disp
         ->and($lifecycleSource)->toContain('this.confirmNotice({ markBypassed: false });');
 
     expect($noticeViewSource)->not->toBeFalse()
-        ->and($noticeViewSource)->toContain('x-on:click="confirmNoticeAndBypassFutureDisplay()"')
-        ->and($noticeViewSource)->toContain('أو لا تظهر هذا مجدّدًا');
+        ->and($noticeViewSource)->toContain('أو لا تظهر هذا مجدّدًا')
+        ->and($noticeViewSource)->toContain('athkar-notice__cta-subtext')
+        ->and($noticeViewSource)->toContain('x-on:click.stop="confirmNoticeAndBypassFutureDisplay()"');
 });

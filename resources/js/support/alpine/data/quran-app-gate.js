@@ -456,7 +456,7 @@ document.addEventListener('alpine:init', () => {
             this.isPointerInside = false;
         },
         handlePointerDown(event) {
-            if (event.pointerType !== 'touch' || this.hasTouchInput()) {
+            if (event.pointerType !== 'touch' || !this.hasTouchInput()) {
                 return;
             }
 
@@ -479,7 +479,7 @@ document.addEventListener('alpine:init', () => {
             this.handlePointerMove(event);
         },
         handlePointerUp(event) {
-            if (event.pointerType !== 'touch' || this.hasTouchInput()) {
+            if (event.pointerType !== 'touch' || !this.hasTouchInput()) {
                 return;
             }
 
@@ -490,6 +490,10 @@ document.addEventListener('alpine:init', () => {
             this.touchPointerId = null;
             this.isTouchPointerActive = false;
             this.isPointerInside = false;
+
+            if (this.projectedMode) {
+                this.armMode(this.projectedMode);
+            }
 
             if (this.$refs?.shell?.releasePointerCapture) {
                 try {
@@ -566,6 +570,10 @@ document.addEventListener('alpine:init', () => {
             this.activeTouchIdentifier = null;
             this.isTouchPointerActive = false;
             this.isPointerInside = false;
+
+            if (this.projectedMode) {
+                this.armMode(this.projectedMode);
+            }
         },
         handlePointerMove(event) {
             if (event.pointerType === 'touch' && this.hasTouchInput()) {

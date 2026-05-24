@@ -290,11 +290,6 @@
                         x-bind:data-fitty-max-size-override="$store.bp?.is?.('4xl') ? 27 : $store.bp?.is?.('3xl') ? 20 : $store.bp?.is?.('2xl') ? 19 : $store.bp?.is?.('xl') ? 11 : $store.bp?.is?.('lg') ? 18 : $store.bp?.is?.('md') ? 14 : $store.bp?.is?.('sm') ? 27 : 24"
                     >{{ arabic_text('معظمُ الآياتِ هذه في البدايةِ لم يردْ عن النبيِّ صلى الله عليه وسلم أنه قالها — كأذكارٍ للصباحِ والمساء — ولكن ورد عنه أنه كان يستفتح الدعاءَ بالثناء، وخيرُ الثناءِ ثناءُ اللهِ على نفسه، ولذا جمعناه ووضعناه في المقدمة، لتُستجابَ أدعيةُ الأذكارِ أتمَّ الإجابة، وليقوى حصنك وتوفيقك وتيسيرُ أمورك بإذن الله...') }}</p>
                     {{-- blade-formatter-enable --}}
-                    <button
-                        class="3xl:text-[0.86rem] 4xl:text-[1rem] mt-1.5 inline-flex items-center justify-center text-[0.65rem] font-medium text-slate-600 underline decoration-slate-400/70 underline-offset-2 transition hover:text-slate-800 sm:text-[0.42rem] md:text-[0.48rem] lg:text-[0.5rem] xl:text-[0.58rem] 2xl:text-[0.66rem] dark:text-slate-300 dark:decoration-slate-500/70 dark:hover:text-slate-100"
-                        type="button"
-                        x-on:click="confirmNoticeAndBypassFutureDisplay()"
-                    >{{ arabic_text('أو لا تظهر هذا مجدّدًا.') }}</button>
                 </div>
 
                 <div class="flex justify-center">
@@ -333,11 +328,18 @@
                         >اضغط
                             للمتابعة</span>
                         <span
-                            class="athkar-notice__cta-subtext 3xl:text-[0.7rem] 4xl:text-[0.82rem] text-[0.65rem] sm:text-[0.4rem] md:text-[0.45rem] lg:text-[0.45rem] xl:text-[0.55rem] 2xl:text-[0.65rem]"
-                        >أو
-                            اسحب
-                            للأمام
-                            للبدء</span>
+                            class="athkar-notice__cta-subtext 3xl:text-[0.7rem] 4xl:text-[0.82rem] inline-flex flex-wrap items-center justify-center gap-1 text-[0.65rem] sm:text-[0.4rem] md:text-[0.45rem] lg:text-[0.45rem] xl:text-[0.55rem] 2xl:text-[0.65rem]"
+                        >
+                            <span>{{ arabic_text('أو اسحب للأمام للبدء') }}</span>
+                            <span
+                                class="decoration-current/70 inline-flex cursor-pointer items-center justify-center underline underline-offset-2 transition hover:opacity-85"
+                                role="button"
+                                tabindex="0"
+                                x-on:click.stop="confirmNoticeAndBypassFutureDisplay()"
+                                x-on:keydown.enter.stop.prevent="confirmNoticeAndBypassFutureDisplay()"
+                                x-on:keydown.space.stop.prevent="confirmNoticeAndBypassFutureDisplay()"
+                            >{{ arabic_text('أو لا تظهر هذا مجدّدًا.') }}</span>
+                        </span>
                     </button>
                 </div>
             </div>

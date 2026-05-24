@@ -548,6 +548,8 @@
                 --quran-max-page-scale: 1.36;
                 --quran-fit-area-pad-x: 0.45rem;
                 --quran-fit-area-pad-y: 0.3rem;
+                --quran-fit-panel-stack-clearance: 0.72rem;
+                --quran-fit-panel-top-reserve: 4.3rem;
                 --quran-fit-height-ratio: 0.945;
                 --quran-fit-target-width-ratio: 0.84;
                 --quran-min-page-gap-multiplier: 0.85;
@@ -634,6 +636,8 @@
                 --quran-max-page-scale: 1.38;
                 --quran-fit-area-pad-x: 0.7rem;
                 --quran-fit-area-pad-y: 0.35rem;
+                --quran-fit-panel-stack-clearance: 0.74rem;
+                --quran-fit-panel-top-reserve: 4.2rem;
                 --quran-fit-height-ratio: 0.95;
                 --quran-fit-target-width-ratio: 0.845;
                 --quran-min-page-gap-multiplier: 0.86;
@@ -1716,9 +1720,7 @@
         }
 
         .dark .quran-top-strip {
-            background: linear-gradient(to bottom,
-                    color-mix(in srgb, #45474a 98%, transparent) 0%,
-                    color-mix(in srgb, #45474a 84%, transparent) 100%);
+            background: transparent;
         }
 
         .quran-top-strip.quran-top-strip--initial-loading {
@@ -2756,9 +2758,7 @@
         }
 
         .dark .quran-bottom-strip {
-            background: linear-gradient(to top,
-                    color-mix(in srgb, #45474a 96%, transparent) 0%,
-                    color-mix(in srgb, #45474a 82%, transparent) 100%);
+            background: transparent;
         }
 
         @media (min-width: 1920px) and (max-width: 2559px) {

@@ -582,6 +582,11 @@
                 filter: brightness(0.62) saturate(0.82);
             }
 
+            .quran-app-sector.is-active.is-locked .quran-app-sector__chip-text {
+                filter: blur(1px);
+                opacity: 0.58;
+            }
+
             .quran-app-sector__chip {
                 -webkit-backdrop-filter: none;
                 backdrop-filter: none;

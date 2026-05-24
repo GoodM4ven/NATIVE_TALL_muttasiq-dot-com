@@ -121,6 +121,11 @@ document.addEventListener('alpine:init', () => {
             this.animateSplit(50);
         },
         handleOutsideActivation() {
+            if (this.hasTouchInput()) {
+                this.deactivateSide();
+                return;
+            }
+
             if (this.isEnhanced) {
                 return;
             }
@@ -137,6 +142,9 @@ document.addEventListener('alpine:init', () => {
             }
 
             return mode;
+        },
+        hasTouchInput() {
+            return Boolean(this.$store?.bp?.hasTouch);
         },
         syncSpillState(isActive) {
             if (!this.isEnhanced) {
@@ -222,12 +230,23 @@ document.addEventListener('alpine:init', () => {
             }, this.pingDuration);
         },
         requestOpenMode(mode) {
+            const side = this.sideForMode(mode);
+
+            if (this.hasTouchInput()) {
+                if (this.activeSide === side) {
+                    this.deactivateSide();
+                    this.$dispatch('athkar-gate-open', { mode });
+                    return;
+                }
+
+                this.activateSide(side);
+                return;
+            }
+
             if (this.isEnhanced) {
                 this.$dispatch('athkar-gate-open', { mode });
                 return;
             }
-
-            const side = this.sideForMode(mode);
 
             if (this.activeSide === side) {
                 this.deactivateSide();

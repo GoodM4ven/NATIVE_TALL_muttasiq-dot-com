@@ -31,7 +31,13 @@ test('filament modal actions opt into muttasiq modal color override classes', fu
 
     expect($filamentComponentCss)->not->toBeFalse()
         ->and($filamentComponentCss)->toContain('.fi-modal .muttasiq-modal-window')
-        ->and($filamentComponentCss)->toContain('.fi-modal .muttasiq-modal-overlay');
+        ->and($filamentComponentCss)->toContain('.fi-modal .muttasiq-modal-overlay')
+        ->and($filamentComponentCss)->toContain('.fi-modal:not(.fi-modal-slide-over):not(.fi-width-screen)')
+        ->and($filamentComponentCss)->toContain('> .fi-modal-window-ctn')
+        ->and($filamentComponentCss)->toContain('> .fi-modal-window')
+        ->and($filamentComponentCss)->toContain('#quran-reader-bookmarks-modal')
+        ->and($filamentComponentCss)->toContain('border-radius: 1.2rem;')
+        ->and($filamentComponentCss)->toContain(':where(.dark, .dark *) #quran-reader-search-modal .quran-search-input-shell');
 
     $controlPanelSource = file_get_contents(app_path('Livewire/ControlPanel.php'));
     $athkarManagerSource = file_get_contents(app_path('Livewire/AthkarManager.php'));
@@ -69,6 +75,20 @@ test('filament modal actions opt into muttasiq modal color override classes', fu
         ->and($quranReaderSource)->toContain("'class' => 'muttasiq-modal-overlay'");
 });
 
+test('colorful background layers are conditionally shown instead of opacity-only toggled', function () {
+    $source = file_get_contents(resource_path('views/components/partials/colorful-background.blade.php'));
+
+    expect($source)->not->toBeFalse()
+        ->and($source)->toContain('x-show="views[`quran-app-tilawa`].isOpen"')
+        ->and($source)->toContain('x-show="views[`quran-app-hifth`].isOpen"')
+        ->and($source)->toContain('x-show="views[`quran-app-tadabbur`].isOpen"')
+        ->and($source)->toContain('x-show="!$store.colorScheme.isDarkModeOn"')
+        ->and($source)->toContain('x-show="$store.colorScheme.isDarkModeOn"')
+        ->and($source)->not->toContain("x-bind:class=\"views[`quran-app-tilawa`].isOpen && 'opacity-100!'\"")
+        ->and($source)->not->toContain("x-bind:class=\"views[`quran-app-hifth`].isOpen && 'opacity-100!'\"")
+        ->and($source)->not->toContain("x-bind:class=\"views[`quran-app-tadabbur`].isOpen && 'opacity-100!'\"");
+});
+
 test('quran wird mushaf page indicator keeps responsive tailwind chip sizing classes', function () {
     $quranReaderViewSource = file_get_contents(resource_path('views/livewire/quran-app/reader.blade.php'));
 
@@ -81,6 +101,24 @@ test('quran wird mushaf page indicator keeps responsive tailwind chip sizing cla
         ->and($quranReaderViewSource)->toContain('2xl:min-w-[4.4rem]')
         ->and($quranReaderViewSource)->toContain('3xl:min-w-[5.8rem]')
         ->and($quranReaderViewSource)->toContain('4xl:min-w-[5.8rem]');
+});
+
+test('quran reader keeps fit reserve variables across sm md lg and avoids sm+ strip dark shades', function () {
+    $source = file_get_contents(resource_path('views/livewire/quran-app/reader.blade.php'));
+
+    expect($source)->not->toBeFalse()
+        ->and($source)->toContain('/* sm */')
+        ->and($source)->toContain('/* md */')
+        ->and($source)->toContain('/* lg */')
+        ->and($source)->toContain('--quran-fit-panel-stack-clearance: 0.68rem;')
+        ->and($source)->toContain('--quran-fit-panel-top-reserve: 4.35rem;')
+        ->and($source)->toContain('--quran-fit-panel-stack-clearance: 0.72rem;')
+        ->and($source)->toContain('--quran-fit-panel-top-reserve: 4.3rem;')
+        ->and($source)->toContain('--quran-fit-panel-stack-clearance: 0.74rem;')
+        ->and($source)->toContain('--quran-fit-panel-top-reserve: 4.2rem;')
+        ->and($source)->toContain('.dark .quran-top-strip {')
+        ->and($source)->toContain('.dark .quran-bottom-strip {')
+        ->and($source)->toContain('background: transparent;');
 });
 
 test('athkar gate spill visuals remain available on sm+ while containment stays base-only', function () {

@@ -11,7 +11,7 @@
 
             <div class="quran-search-input-shell relative">
                 <input
-                    class="quran-search-input block w-full rounded-2xl border border-transparent bg-transparent px-4 py-[0.9rem] text-right text-[0.95rem] leading-7 text-(--quran-panel-text) outline-none sm:px-5 sm:py-4 sm:text-[1rem]"
+                    class="quran-search-input text-(--quran-panel-text) block w-full rounded-2xl border border-transparent bg-transparent px-4 py-[0.9rem] text-right text-[0.95rem] leading-7 outline-none sm:px-5 sm:py-4 sm:text-[1rem]"
                     id="quran-reader-search-input"
                     type="text"
                     x-ref="searchModalInput"
