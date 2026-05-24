@@ -12,7 +12,7 @@
 >
     <div
         class="duration-400 absolute inset-0 opacity-10 transition-opacity will-change-[opacity]"
-        x-bind:class="!$store.colorScheme.isDarkModeOn && 'opacity-15! sm:opacity-20!'"
+        x-bind:class="!$store.colorScheme.isDarkModeOn && 'opacity-30!'"
     >
         <!-- LIGHT MODE -->
         <div

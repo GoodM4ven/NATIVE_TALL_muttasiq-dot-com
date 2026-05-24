@@ -467,7 +467,7 @@
             x-on:click.outside="handleOutsideActivation()"
         >
             <div
-                class="athkar-gate-shell 3xl:max-h-[min(75svh,38rem)] 4xl:max-h-[min(72svh,38rem)] lg:max-w-130 xl:max-w-140 2xl:max-w-176 3xl:max-w-3xl 4xl:max-w-5xl relative z-10 mx-auto h-[min(92vw,760px)] max-h-[clamp(10rem,75svh,50rem)] w-[min(92vw,920px)] max-w-[clamp(10rem,84svw,26rem)] sm:max-h-[min(65svh,18rem)] sm:max-w-[clamp(20rem,60svw,40rem)] md:max-h-[min(70svh,28rem)] md:max-w-[clamp(25rem,60svw,40rem)] lg:max-h-[min(75svh,25rem)] xl:max-h-[min(75svh,25rem)] 2xl:max-h-[min(75svh,31rem)]"
+                class="athkar-gate-shell 3xl:max-h-[min(75svh,38rem)] 4xl:max-h-[min(72svh,38rem)] lg:max-w-130 xl:max-w-140 2xl:max-w-176 3xl:max-w-3xl 4xl:max-w-5xl relative z-10 mx-auto h-[min(92vw,760px)] max-h-[clamp(10rem,75svh,50rem)] w-[min(92vw,920px)] max-w-[clamp(10rem,84svw,26rem)] sm:min-h-60 sm:max-h-[min(65svh,25rem)] sm:max-w-[clamp(20rem,60svw,40rem)] md:max-h-[min(70svh,28rem)] md:max-w-[clamp(25rem,60svw,40rem)] lg:max-h-[min(75svh,25rem)] xl:max-h-[min(75svh,25rem)] 2xl:max-h-[min(75svh,31rem)]"
                 x-ref="gate"
                 x-bind:class="{
                     'is-hovering': isHovering,
@@ -531,7 +531,7 @@
                                 imageClasses="athkar-gate__image-img select-none"
                             />
                             <span
-                                class="athkar-gate__label athkar-gate__label--night font-arabic-serif 3xl:text-xl bottom-[0.75rem] left-[0.55rem] px-[1rem] py-[0.4rem] text-[0.9rem] sm:bottom-[1.35rem] sm:left-[1.35rem] sm:px-[0.65rem] sm:py-[0.25rem] sm:text-[0.65rem] md:px-[0.8rem] md:py-[0.35rem] md:text-[0.7rem] lg:px-[1.1rem] lg:py-[0.45rem] lg:text-[0.85rem] xl:text-[1rem] 2xl:text-[1.1rem]"
+                                class="athkar-gate__label athkar-gate__label--night font-arabic-serif 3xl:text-xl bottom-3 left-[0.55rem] px-4 py-[0.4rem] text-[0.9rem] sm:bottom-[1.35rem] sm:left-[1.35rem] sm:px-[0.65rem] sm:py-1 sm:text-[0.8rem] md:px-[0.8rem] md:py-[0.35rem] md:text-[0.7rem] lg:px-[1.1rem] lg:py-[0.45rem] lg:text-[0.85rem] xl:text-[1rem] 2xl:text-[1.1rem]"
                             >
                                 <span class="inline-flex items-center gap-2">
                                     <span
@@ -572,7 +572,7 @@
                             />
                             <span class="athkar-gate__veil athkar-gate__veil--morning"></span>
                             <span
-                                class="athkar-gate__label athkar-gate__label--morning font-arabic-serif 3xl:text-xl right-[0.55rem] top-[0.75rem] px-[1rem] py-[0.4rem] text-[0.9rem] sm:right-[1.35rem] sm:top-[1.35rem] sm:px-[0.65rem] sm:py-[0.25rem] sm:text-[0.65rem] md:px-[0.8rem] md:py-[0.35rem] md:text-[0.7rem] lg:px-[1.1rem] lg:py-[0.45rem] lg:text-[0.85rem] xl:text-[1rem] 2xl:text-[1.1rem]"
+                                class="athkar-gate__label athkar-gate__label--morning font-arabic-serif 3xl:text-xl right-[0.55rem] top-3 px-4 py-[0.4rem] text-[0.9rem] sm:right-[1.35rem] sm:top-[1.35rem] sm:px-[0.65rem] sm:py-1 sm:text-[0.8rem] md:px-[0.8rem] md:py-[0.35rem] md:text-[0.7rem] lg:px-[1.1rem] lg:py-[0.45rem] lg:text-[0.85rem] xl:text-[1rem] 2xl:text-[1.1rem]"
                             >
                                 <span class="inline-flex items-center gap-2">
                                     <span

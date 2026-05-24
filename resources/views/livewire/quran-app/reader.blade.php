@@ -3951,7 +3951,7 @@
                 </div>
 
                 <footer
-                    class="quran-bottom-strip pb-7! sm:pb-0! gap-x-[0.65rem] gap-y-[0.175rem] sm:gap-y-[0.42rem] md:gap-y-2 lg:gap-y-[0.2rem] xl:gap-x-[0.65rem] xl:gap-y-[0.24rem] 2xl:gap-x-[0.65rem] 2xl:gap-y-[0.42rem]"
+                    class="quran-bottom-strip pb-7! sm:pb-4! gap-x-[0.65rem] gap-y-[0.175rem] sm:gap-y-[0.42rem] md:gap-y-2 lg:gap-y-[0.2rem] xl:gap-x-[0.65rem] xl:gap-y-[0.24rem] 2xl:gap-x-[0.65rem] 2xl:gap-y-[0.42rem]"
                     data-quran-reader-chrome
                 >
                     <button
@@ -3980,7 +3980,7 @@
                             x-bind:class="{ 'quran-page-counter--morphing': pageCounterPulse.isActive && pageCounterPulse.hasChanges }"
                         >
                             <button
-                                class="quran-page-slider-chip 3xl:min-w-[5.8rem] 4xl:min-w-[5.8rem] 4xl:px-[0.56rem] 4xl:py-[0.28rem] 4xl:text-[0.84rem] 3xl:px-[0.52rem] 3xl:py-[0.26rem] 3xl:text-[0.82rem] sm:min-w-21 min-w-[5rem] select-none rounded-full px-[0.46rem] py-[0.22rem] text-[0.73rem] outline-none sm:px-2 sm:pb-[0.24rem] sm:pt-[0.16rem] sm:text-[0.85rem] md:min-w-[5.2rem] md:px-3 md:py-[0.3rem] md:text-[1rem] lg:min-w-[5.4rem] lg:px-[0.52rem] lg:py-[0.26rem] lg:text-[0.77rem] xl:min-w-20 xl:rounded-lg xl:text-[0.68rem] 2xl:min-w-[4.4rem] 2xl:rounded-full 2xl:px-[0.52rem] 2xl:py-[0.26rem] 2xl:text-[0.7rem]"
+                                class="quran-page-slider-chip 3xl:min-w-[5.8rem] 4xl:min-w-[5.8rem] 4xl:px-[0.56rem] 4xl:py-[0.28rem] 4xl:text-[0.84rem] 3xl:px-[0.52rem] 3xl:py-[0.26rem] 3xl:text-[0.82rem] sm:min-w-21 min-w-20 select-none rounded-full px-[0.46rem] py-[0.22rem] text-[0.73rem] outline-none sm:px-2 sm:pb-[0.24rem] sm:pt-[0.16rem] sm:text-[0.85rem] md:min-w-[5.2rem] md:px-3 md:py-[0.3rem] md:text-[1rem] lg:min-w-[5.4rem] lg:px-[0.52rem] lg:py-[0.26rem] lg:text-[0.77rem] xl:min-w-20 xl:rounded-lg xl:text-[0.68rem] 2xl:min-w-[4.4rem] 2xl:rounded-full 2xl:px-[0.52rem] 2xl:py-[0.26rem] 2xl:text-[0.7rem]"
                                 type="button"
                                 x-bind:aria-label="wirdModeActive ? @js(arabic_text('وضع الوِرد اليومي مفعل')) : @js(arabic_text('إدخال رقم صفحة'))"
                                 x-bind:style="`--quran-counter-digit-count: ${pageCounterDigitLength()};`"
@@ -4050,7 +4050,7 @@
                                 </span>
                             </button>
                             <span
-                                class="border-primary-300/55 bg-primary-50/75 text-primary-800 4xl:ms-1.5 3xl:min-w-[5.8rem] 4xl:min-w-[5.8rem] 4xl:px-[0.56rem] 4xl:py-[0.28rem] 4xl:text-[0.84rem] 3xl:px-[0.52rem] 3xl:py-[0.26rem] 3xl:text-[0.82rem] sm:min-w-21 ms-1 inline-flex min-w-[5rem] select-none items-center justify-center gap-1 rounded-full border px-[0.46rem] py-[0.22rem] text-[0.73rem] font-semibold sm:px-2 sm:pb-[0.24rem] sm:pt-[0.16rem] sm:text-[0.85rem] md:min-w-[5.2rem] md:px-3 md:py-[0.3rem] md:text-[1rem] lg:min-w-[5.4rem] lg:px-[0.52rem] lg:py-[0.26rem] lg:text-[0.77rem] xl:min-w-20 xl:rounded-lg xl:text-[0.68rem] 2xl:min-w-[4.4rem] 2xl:rounded-full 2xl:px-[0.52rem] 2xl:py-[0.26rem] 2xl:text-[0.7rem]"
+                                class="border-primary-300/55 bg-primary-50/75 text-primary-800 4xl:ms-1.5 3xl:min-w-[5.8rem] 4xl:min-w-[5.8rem] 4xl:px-[0.56rem] 4xl:py-[0.28rem] 4xl:text-[0.84rem] 3xl:px-[0.52rem] 3xl:py-[0.26rem] 3xl:text-[0.82rem] sm:min-w-21 ms-1 inline-flex min-w-20 select-none items-center justify-center gap-1 rounded-full border px-[0.46rem] py-[0.22rem] text-[0.73rem] font-semibold sm:px-2 sm:pb-[0.24rem] sm:pt-[0.16rem] sm:text-[0.85rem] md:min-w-[5.2rem] md:px-3 md:py-[0.3rem] md:text-[1rem] lg:min-w-[5.4rem] lg:px-[0.52rem] lg:py-[0.26rem] lg:text-[0.77rem] xl:min-w-20 xl:rounded-lg xl:text-[0.68rem] 2xl:min-w-[4.4rem] 2xl:rounded-full 2xl:px-[0.52rem] 2xl:py-[0.26rem] 2xl:text-[0.7rem]"
                                 data-quran-mushaf-page-indicator
                                 x-cloak
                                 x-show="shouldShowMushafPageIndicator()"
