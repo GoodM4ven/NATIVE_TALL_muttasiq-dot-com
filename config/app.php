@@ -7,7 +7,7 @@ return [
 
     'custom' => [
 
-        'app_description' => 'منصة تعين على الإسلام والالتزام باتساق ويسر بإذن الله...',
+        'app_description' => 'تطبيقات تعين على الإسلام والالتزام باتساق ويسر بإذن الله...',
         'app_keywords' => 'islam, muslim, platform, thikr, athkar, quran, reader',
         'app_version' => env('NATIVEPHP_APP_VERSION'),
 

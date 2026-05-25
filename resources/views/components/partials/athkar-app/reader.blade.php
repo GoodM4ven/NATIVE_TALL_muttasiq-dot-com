@@ -1171,13 +1171,13 @@
                                 x-transition.opacity.duration.200ms
                                 dir="ltr"
                             >
-                                <span x-text="`${requiredCount(activeIndex)} /`"></span>
+                                <span x-text="`${topUiDisplayRequiredCount(activeIndex)} /`"></span>
 
                                 <span class="athkar-count">
                                     <span
                                         class="athkar-count__current"
                                         x-show="!(countPulse.index === activeIndex && countPulse.isActive && countPulse.hasChanges)"
-                                        x-text="countAt(activeIndex)"
+                                        x-text="topUiDisplayCount(activeIndex)"
                                     ></span>
                                     <span
                                         class="athkar-count__current inline-flex items-center gap-0"
@@ -1272,12 +1272,12 @@
                             class="text-primary-800 dark:text-primary-100 absolute inset-0 flex select-none items-center justify-center gap-1 font-semibold tabular-nums"
                             dir="ltr"
                         >
-                            <span x-text="`${requiredCount(activeIndex)} /`"></span>
+                            <span x-text="`${topUiDisplayRequiredCount(activeIndex)} /`"></span>
                             <span class="athkar-count">
                                 <span
                                     class="athkar-count__current"
                                     x-show="!(countPulse.index === activeIndex && countPulse.isActive && countPulse.hasChanges)"
-                                    x-text="countAt(activeIndex)"
+                                    x-text="topUiDisplayCount(activeIndex)"
                                 ></span>
                                 <span
                                     class="athkar-count__current inline-flex items-center gap-0"

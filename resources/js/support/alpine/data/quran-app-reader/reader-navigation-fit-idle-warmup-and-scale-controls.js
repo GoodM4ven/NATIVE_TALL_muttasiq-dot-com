@@ -937,6 +937,13 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
         },
 
         searchDestinationScaleBoostAmount() {
+            if (
+                typeof this.shouldShowImmersiveMobileEdgeCaptions === 'function' &&
+                !this.shouldShowImmersiveMobileEdgeCaptions()
+            ) {
+                return 0;
+            }
+
             const boostPageNumber = Math.max(
                 0,
                 Math.trunc(Number(this.searchDestinationScaleBoostPageNumber ?? 0)),
@@ -944,8 +951,13 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
             const boostSource = String(this.searchDestinationScaleBoostSource ?? '').trim();
             const isSearchDestinationSource =
                 boostSource === 'search-result' || boostSource === 'surah-directory';
+            const boostExpiresAt = Math.max(
+                0,
+                Math.trunc(Number(this.searchDestinationScaleBoostExpiresAt ?? 0)),
+            );
+            const isBoostExpired = boostExpiresAt > 0 && Date.now() > boostExpiresAt;
 
-            if (!isSearchDestinationSource || boostPageNumber <= 0) {
+            if (!isSearchDestinationSource || boostPageNumber <= 0 || isBoostExpired) {
                 return 0;
             }
 
@@ -957,6 +969,13 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
         },
 
         searchDestinationTypeScaleBoostAmount() {
+            if (
+                typeof this.shouldShowImmersiveMobileEdgeCaptions === 'function' &&
+                !this.shouldShowImmersiveMobileEdgeCaptions()
+            ) {
+                return 0;
+            }
+
             const boostPageNumber = Math.max(
                 0,
                 Math.trunc(Number(this.searchDestinationScaleBoostPageNumber ?? 0)),
@@ -964,8 +983,13 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
             const boostSource = String(this.searchDestinationScaleBoostSource ?? '').trim();
             const isSearchDestinationSource =
                 boostSource === 'search-result' || boostSource === 'surah-directory';
+            const boostExpiresAt = Math.max(
+                0,
+                Math.trunc(Number(this.searchDestinationScaleBoostExpiresAt ?? 0)),
+            );
+            const isBoostExpired = boostExpiresAt > 0 && Date.now() > boostExpiresAt;
 
-            if (!isSearchDestinationSource || boostPageNumber <= 0) {
+            if (!isSearchDestinationSource || boostPageNumber <= 0 || isBoostExpired) {
                 return 0;
             }
 

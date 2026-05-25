@@ -551,6 +551,22 @@ export const createLifecycleModule = (deps) => {
             return this.topUi.pulseActive ? 'active' : 'inactive';
         },
 
+        topUiDisplayRequiredCount(index) {
+            if (typeof this.topUi.requiredOverride === 'number') {
+                return Math.max(0, Math.trunc(this.topUi.requiredOverride));
+            }
+
+            return this.requiredCount(index);
+        },
+
+        topUiDisplayCount(index) {
+            if (typeof this.topUi.countOverride === 'number') {
+                return Math.max(0, Math.trunc(this.topUi.countOverride));
+            }
+
+            return this.countAt(index);
+        },
+
         resetTopUiTransition() {
             if (this.topUi.lingerTimer) {
                 clearTimeout(this.topUi.lingerTimer);
@@ -563,6 +579,8 @@ export const createLifecycleModule = (deps) => {
             }
 
             this.topUi.progressOverride = null;
+            this.topUi.countOverride = null;
+            this.topUi.requiredOverride = null;
             this.topUi.pulseActive = false;
         },
 
@@ -595,12 +613,23 @@ export const createLifecycleModule = (deps) => {
             }
 
             const nextCount = this.countAt(nextIndex);
+            const shouldHoldCompletedDigitsUntilPulse = completedRequired <= 1 && nextRequired <= 1;
 
             this.topUi.progressOverride = 100;
+
+            if (shouldHoldCompletedDigitsUntilPulse) {
+                this.topUi.requiredOverride = completedRequired;
+                this.topUi.countOverride = completedCount;
+            }
 
             this.topUi.lingerTimer = setTimeout(() => {
                 this.topUi.lingerTimer = null;
                 this.topUi.pulseActive = true;
+
+                if (shouldHoldCompletedDigitsUntilPulse) {
+                    this.topUi.requiredOverride = null;
+                    this.topUi.countOverride = null;
+                }
 
                 this.topUi.pulseTimer = setTimeout(() => {
                     this.topUi.pulseTimer = null;

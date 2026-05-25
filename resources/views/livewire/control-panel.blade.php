@@ -451,9 +451,24 @@
                     return;
                 }
         
+                const immersiveCaptionSettingToggle = modalWindow.querySelector(
+                    `input[type='checkbox'][name*='does_quran_show_immersive_mobile_edge_captions'],input[type='checkbox'][wire\\:model*='does_quran_show_immersive_mobile_edge_captions']`,
+                );
+                const immersiveCaptionSettingWrapper =
+                    immersiveCaptionSettingToggle?.closest(
+                        '.fi-fo-field-wrp, .fi-field-wrp, [data-field-wrapper]',
+                    ) ?? null;
+                const shouldUseSixthOrdinal = (() => {
+                    if (!(immersiveCaptionSettingWrapper instanceof HTMLElement)) {
+                        return Boolean(this.$store?.bp?.is?.('base'));
+                    }
+        
+                    return immersiveCaptionSettingWrapper.offsetParent !== null;
+                })();
+        
                 labelElement.dataset.quranWirdBaseLabel = computedBaseLabel;
                 labelElement.dataset.controlPanelOrdinalManaged = 'true';
-                const resolvedOrdinal = Boolean(this.$store?.bp?.is?.('base')) ? '6.' : '5.';
+                const resolvedOrdinal = shouldUseSixthOrdinal ? '6.' : '5.';
                 const nextLabel = `${resolvedOrdinal} ${computedBaseLabel}`;
                 const useWesternNumerals = this.resolveControlPanelWesternNumeralState();
                 const preserveHarakat = this.resolveControlPanelPreserveHarakatState();

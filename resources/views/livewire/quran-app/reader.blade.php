@@ -3809,6 +3809,9 @@
                                 x-on:pointermove.window.passive="onWordPointerMove($event)"
                                 x-on:pointerup.window.passive="onWordPointerUp($event)"
                                 x-on:pointercancel.window.passive="onWordPointerCancel()"
+                                x-on:touchmove.window.passive="onWordPointerMove($event)"
+                                x-on:touchend.window.passive="onWordPointerUp($event)"
+                                x-on:touchcancel.window.passive="onWordPointerCancel()"
                                 x-on:mouseleave="clearHoveredSegment()"
                                 x-ref="pageContent"
                             >

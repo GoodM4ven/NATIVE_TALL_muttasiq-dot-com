@@ -254,7 +254,7 @@
 
     <!-- Panel -->
     <section
-        class="athkar-notice 3xl:max-w-[min(65vw,45rem)] 4xl:max-w-[min(70vw,50rem)] 3xl:max-h-[min(70svh,30rem)] 4xl:max-h-[min(84svh,42rem)] sm:zoom-[1.5] md:zoom-[1.0] relative z-10 mt-4 flex w-full max-w-[min(92vw,36rem)] flex-col gap-4 overflow-hidden text-center before:inset-[12px] sm:mt-0 sm:max-h-[min(63svh,33rem)] sm:max-w-[min(53vw,32rem)] sm:gap-5 sm:before:inset-[6px] md:max-h-[min(60svh,30rem)] md:max-w-[min(54vw,33rem)] md:before:inset-[8px] lg:max-h-[min(50svh,30rem)] lg:max-w-[min(50vw,33rem)] lg:before:inset-[10px] xl:max-h-[min(50svh,18.75rem)] xl:max-w-[min(50vw,31rem)] xl:before:inset-[12px] 2xl:max-h-[min(60svh,24rem)] 2xl:max-w-[min(65vw,37rem)]"
+        class="athkar-notice 3xl:max-w-[min(65vw,45rem)] 4xl:max-w-[min(70vw,50rem)] 3xl:max-h-[min(70svh,30rem)] 4xl:max-h-[min(84svh,42rem)] sm:zoom-[1.5] md:zoom-[1.25] relative z-10 mt-4 flex w-full max-w-[min(92vw,36rem)] flex-col gap-4 overflow-hidden text-center before:inset-[12px] sm:mt-0 sm:max-h-[min(63svh,33rem)] sm:max-w-[min(53vw,32rem)] sm:gap-5 sm:before:inset-[6px] md:max-h-[min(60svh,30rem)] md:max-w-[min(54vw,33rem)] md:before:inset-[8px] lg:max-h-[min(50svh,30rem)] lg:max-w-[min(50vw,33rem)] lg:before:inset-[10px] xl:max-h-[min(50svh,18.75rem)] xl:max-w-[min(50vw,31rem)] xl:before:inset-[12px] 2xl:max-h-[min(60svh,24rem)] 2xl:max-w-[min(65vw,37rem)]"
         role="dialog"
         aria-live="polite"
     >

@@ -441,7 +441,7 @@
     x-transition:leave-start="opacity-100 blur-0 athkar-shift-center"
     x-transition:leave-end="opacity-0! blur-[2px] athkar-shift-away"
 >
-    <div class="sm:zoom-[1.15] md:zoom-[1.0] relative flex select-none flex-col items-center">
+    <div class="sm:zoom-[1.15] md:zoom-[1.15] relative flex select-none flex-col items-center">
         <div
             class="athkar-gate-wrap relative w-full"
             x-data="athkarAppGate"
@@ -525,7 +525,7 @@
                                 imageClasses="athkar-gate__image-img select-none"
                             />
                             <span
-                                class="athkar-gate__label athkar-gate__label--night font-arabic-serif 3xl:text-xl bottom-3 left-[0.55rem] px-4 py-[0.4rem] text-[0.9rem] sm:bottom-[1.35rem] sm:left-[1.35rem] sm:px-[0.65rem] sm:py-1 sm:text-[0.8rem] md:px-[0.8rem] md:py-[0.35rem] md:text-[0.7rem] lg:px-[1.1rem] lg:py-[0.45rem] lg:text-[0.85rem] xl:text-[1rem] 2xl:text-[1.1rem]"
+                                class="athkar-gate__label athkar-gate__label--night font-arabic-serif 3xl:text-xl bottom-3 left-[0.55rem] px-4 py-[0.4rem] text-[0.9rem] sm:bottom-[1.35rem] sm:left-[1.35rem] sm:px-[0.65rem] sm:py-1 sm:text-[0.8rem] md:px-[0.8rem] md:py-[0.35rem] md:text-[0.875rem] lg:px-[1.1rem] lg:py-[0.45rem] lg:text-[0.85rem] xl:text-[1rem] 2xl:text-[1.1rem]"
                             >
                                 <span class="inline-flex items-center gap-2">
                                     <span
@@ -566,7 +566,7 @@
                             />
                             <span class="athkar-gate__veil athkar-gate__veil--morning"></span>
                             <span
-                                class="athkar-gate__label athkar-gate__label--morning font-arabic-serif 3xl:text-xl right-[0.55rem] top-3 px-4 py-[0.4rem] text-[0.9rem] sm:right-[1.35rem] sm:top-[1.35rem] sm:px-[0.65rem] sm:py-1 sm:text-[0.8rem] md:px-[0.8rem] md:py-[0.35rem] md:text-[0.7rem] lg:px-[1.1rem] lg:py-[0.45rem] lg:text-[0.85rem] xl:text-[1rem] 2xl:text-[1.1rem]"
+                                class="athkar-gate__label athkar-gate__label--morning font-arabic-serif 3xl:text-xl right-[0.55rem] top-3 px-4 py-[0.4rem] text-[0.9rem] sm:right-[1.35rem] sm:top-[1.35rem] sm:px-[0.65rem] sm:py-1 sm:text-[0.8rem] md:px-[0.8rem] md:py-[0.35rem] md:text-[0.875rem] lg:px-[1.1rem] lg:py-[0.45rem] lg:text-[0.85rem] xl:text-[1rem] 2xl:text-[1.1rem]"
                             >
                                 <span class="inline-flex items-center gap-2">
                                     <span

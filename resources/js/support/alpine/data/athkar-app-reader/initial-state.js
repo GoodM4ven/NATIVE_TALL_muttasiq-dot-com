@@ -172,6 +172,8 @@ export const createInitialState = (config, deps) => {
 
         topUi: {
             progressOverride: null,
+            countOverride: null,
+            requiredOverride: null,
             pulseActive: false,
             lingerTimer: null,
             pulseTimer: null,

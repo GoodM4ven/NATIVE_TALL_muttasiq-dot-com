@@ -997,6 +997,24 @@ export const createLineLayoutSearchDirectoryAndCaptionModule = (deps) => {
             this.searchDestinationCueBlinking = false;
             this.searchDestinationScaleBoostPageNumber = normalizedPageNumber;
             this.searchDestinationScaleBoostSource = normalizedSource;
+            this.searchDestinationScaleBoostExpiresAt = Date.now() + 1250;
+
+            if (this._searchDestinationScaleBoostExpiryTimer !== null) {
+                clearTimeout(this._searchDestinationScaleBoostExpiryTimer);
+                this._searchDestinationScaleBoostExpiryTimer = null;
+            }
+
+            this._searchDestinationScaleBoostExpiryTimer = window.setTimeout(() => {
+                this._searchDestinationScaleBoostExpiryTimer = null;
+
+                if (this.searchDestinationScaleBoostPageNumber !== normalizedPageNumber) {
+                    return;
+                }
+
+                this.searchDestinationScaleBoostExpiresAt = 0;
+                this.setCurrentPageScale(this.pageScale);
+            }, 1300);
+
             this.setCurrentPageScale(this.pageScale);
 
             if (!this.searchDestinationCueActive || !this.doesEnableVisualEnhancements) {
@@ -1027,6 +1045,13 @@ export const createLineLayoutSearchDirectoryAndCaptionModule = (deps) => {
             this.searchDestinationCuePageNumber = 0;
             this.searchDestinationScaleBoostPageNumber = 0;
             this.searchDestinationScaleBoostSource = '';
+            this.searchDestinationScaleBoostExpiresAt = 0;
+
+            if (this._searchDestinationScaleBoostExpiryTimer !== null) {
+                clearTimeout(this._searchDestinationScaleBoostExpiryTimer);
+                this._searchDestinationScaleBoostExpiryTimer = null;
+            }
+
             this.setCurrentPageScale(this.pageScale);
         },
 

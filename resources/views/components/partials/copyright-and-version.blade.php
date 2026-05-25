@@ -1,8 +1,8 @@
 <div
     class="{{ \Illuminate\Support\Arr::toCssClasses([
-        'bottom-4 sm:bottom-8 md:bottom-10 lg:bottom-8.5 xl:bottom-10 2xl:bottom-8 3xl:bottom-10' => !is_platform('mobile'),
+        'bottom-4 sm:bottom-8 md:bottom-8 lg:bottom-8.5 xl:bottom-10 2xl:bottom-8 3xl:bottom-10' => !is_platform('mobile'),
         'bottom-7' => is_platform('mobile'),
-        'fixed inset-x-0 z-30 flex w-full max-w-full justify-center px-4 opacity-0 transition-opacity sm:w-auto sm:max-w-none sm:px-5 md:px-5 lg:px-6 pointer-events-none sm:zoom-[0.95] md:zoom-[0.95] lg:zoom-[1] xl:zoom-[0.8] 2xl:zoom-[0.95] 3xl:zoom-[1.05] 4xl:zoom-[1.25]',
+        'fixed inset-x-0 z-30 flex w-full max-w-full justify-center px-4 opacity-0 transition-opacity sm:w-auto sm:max-w-none sm:px-5 md:px-5 lg:px-6 pointer-events-none sm:zoom-[0.95] md:zoom-[1] lg:zoom-[1] xl:zoom-[0.8] 2xl:zoom-[0.95] 3xl:zoom-[1.05] 4xl:zoom-[1.25]',
     ]) }}"
     data-testid="copyright-version-shell"
     x-bind:class="{

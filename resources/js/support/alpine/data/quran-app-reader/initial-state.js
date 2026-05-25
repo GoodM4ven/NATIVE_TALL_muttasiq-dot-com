@@ -289,6 +289,8 @@ export const createInitialState = (config, deps) => {
 
         searchDestinationScaleBoostSource: '',
 
+        searchDestinationScaleBoostExpiresAt: 0,
+
         pageMotionTimer: null,
 
         pageScale: 1,
@@ -522,6 +524,8 @@ export const createInitialState = (config, deps) => {
         _mobileEdgeCaptionCleanupTimer: null,
 
         _searchDestinationCueBlinkStartTimer: null,
+
+        _searchDestinationScaleBoostExpiryTimer: null,
 
         _lastMobileEdgeSurahNumber: 1,
 
