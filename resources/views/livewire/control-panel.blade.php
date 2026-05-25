@@ -335,6 +335,7 @@
                 this.syncControlPanelSliderNumerals();
                 this.syncControlPanelFieldNumerals();
                 this.syncQuranCopyInteractionHint();
+                this.syncQuranWirdSettingOrdinalLabel();
             },
             syncQuranCopyInteractionHint() {
                 const modalWindow = this.resolveControlPanelModalWindow();
@@ -371,6 +372,61 @@
                 helperElement.textContent = isBaseBreakpoint ?
                     this.quranCopyHintMobile :
                     this.quranCopyHintDesktop;
+            },
+            syncQuranWirdSettingOrdinalLabel() {
+                const modalWindow = this.resolveControlPanelModalWindow();
+        
+                if (!(modalWindow instanceof Element)) {
+                    return;
+                }
+        
+                const wirdFrequencyInput = modalWindow.querySelector(
+                    `input[type='radio'][name*='quran_wird_frequency_mode'],input[type='radio'][wire\\:model*='quran_wird_frequency_mode']`,
+                );
+        
+                if (!(wirdFrequencyInput instanceof Element)) {
+                    return;
+                }
+        
+                const fieldWrapper = wirdFrequencyInput.closest(
+                    '.fi-fo-field-wrp, .fi-field-wrp, [data-field-wrapper]',
+                );
+        
+                if (!(fieldWrapper instanceof Element)) {
+                    return;
+                }
+        
+                const labelElement = fieldWrapper.querySelector(
+                    '.fi-fo-field-wrp-label, .fi-field-wrp-label, label',
+                );
+        
+                if (!(labelElement instanceof HTMLElement)) {
+                    return;
+                }
+        
+                const savedBaseLabel = String(labelElement.dataset.quranWirdBaseLabel ?? '').trim();
+                const computedBaseLabel = savedBaseLabel !== '' ?
+                    savedBaseLabel :
+                    String(labelElement.textContent ?? '')
+                    .replace(/^\s*\d+\.\s*/u, '')
+                    .trim();
+        
+                if (computedBaseLabel === '') {
+                    return;
+                }
+        
+                labelElement.dataset.quranWirdBaseLabel = computedBaseLabel;
+        
+                const shouldKeepImmersiveCaptionSettingVisible = Boolean(
+                    document.documentElement.classList.contains('native-platform') ||
+                    this.$store?.bp?.is?.('base'),
+                );
+                const resolvedOrdinal = shouldKeepImmersiveCaptionSettingVisible ? '6.' : '5.';
+                const nextLabel = `${resolvedOrdinal} ${computedBaseLabel}`;
+        
+                if (labelElement.textContent !== nextLabel) {
+                    labelElement.textContent = nextLabel;
+                }
             },
             teardownControlPanelSliderNumeralsObserver() {
                 if (this.sliderNumeralsObserver) {

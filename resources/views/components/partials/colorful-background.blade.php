@@ -79,7 +79,7 @@
             data-testid="athkar-gate-bg-light-layer"
             x-cloak
             x-show="views[`athkar-app-gate`].isOpen && !views[`athkar-app-gate`].isReaderVisible && !$store.colorScheme.isDarkModeOn && ($store.bp?.is?.('base') || document.documentElement.classList.contains('native-platform')) && !views[`quran-app-tilawa`].isOpen && !views[`quran-app-hifth`].isOpen && !views[`quran-app-tadabbur`].isOpen"
-            x-transition:enter="transition-opacity ease-out duration-400 delay-100"
+            x-transition:enter="transition-opacity ease-out duration-400 delay-200"
             x-transition:enter-start="opacity-0"
             x-transition:enter-end="opacity-100"
             x-transition:leave="transition-opacity ease-in duration-150"
@@ -100,7 +100,7 @@
             data-testid="athkar-gate-bg-dark-layer"
             x-cloak
             x-show="views[`athkar-app-gate`].isOpen && !views[`athkar-app-gate`].isReaderVisible && $store.colorScheme.isDarkModeOn && ($store.bp?.is?.('base') || document.documentElement.classList.contains('native-platform')) && !views[`quran-app-tilawa`].isOpen && !views[`quran-app-hifth`].isOpen && !views[`quran-app-tadabbur`].isOpen"
-            x-transition:enter="transition-opacity ease-out duration-400 delay-100"
+            x-transition:enter="transition-opacity ease-out duration-400 delay-200"
             x-transition:enter-start="opacity-0"
             x-transition:enter-end="opacity-100"
             x-transition:leave="transition-opacity ease-in duration-150"

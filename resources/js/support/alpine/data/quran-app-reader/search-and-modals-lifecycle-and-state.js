@@ -813,6 +813,15 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                 if (normalizedKind === 'closed') {
                     this.bookmarksModalOpen = false;
                     this.teardownBookmarksRowsAnimations();
+
+                    const shouldRefitAfterBookmarksModalClose =
+                        !this.nativeRuntime &&
+                        !this.shouldUseImmersiveReaderChrome() &&
+                        typeof this.queueReaderReentryRefit === 'function';
+
+                    if (shouldRefitAfterBookmarksModalClose) {
+                        this.queueReaderReentryRefit(36, 4);
+                    }
                 }
 
                 shouldSyncManagerModalsVisibility = true;

@@ -572,12 +572,18 @@ export const createLifecycleModule = (deps) => {
             }
 
             const completedCount = this.countAt(completedIndex);
+            const completedRequired = this.requiredCount(completedIndex);
+            const nextRequired = this.requiredCount(nextIndex);
 
             this.resetTopUiTransition();
             this.setActiveIndex({
                 index: nextIndex,
                 preserveTopUiTransition: true,
             });
+
+            if (completedRequired <= 1 && nextRequired <= 1) {
+                return;
+            }
 
             const nextCount = this.countAt(nextIndex);
 

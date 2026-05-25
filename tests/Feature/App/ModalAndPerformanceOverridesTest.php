@@ -156,3 +156,24 @@ test('control panel keeps base-only setting visibility and compact base spacing 
             "'class' => is_platform('native') ? 'relative z-20' : 'relative z-20 sm:hidden'",
         );
 });
+
+test('control panel syncs quran wird setting ordinal with runtime visibility rules', function () {
+    $controlPanelSource = file_get_contents(resource_path('views/livewire/control-panel.blade.php'));
+
+    expect($controlPanelSource)->not->toBeFalse()
+        ->and($controlPanelSource)->toContain('syncQuranWirdSettingOrdinalLabel()')
+        ->and($controlPanelSource)->toContain("const resolvedOrdinal = shouldKeepImmersiveCaptionSettingVisible ? '6.' : '5.';")
+        ->and($controlPanelSource)->toContain('labelElement.dataset.quranWirdBaseLabel = computedBaseLabel;');
+});
+
+test('quran reader requests sm+ web refit after bookmarks modal closes', function () {
+    $source = file_get_contents(
+        resource_path('js/support/alpine/data/quran-app-reader/search-and-modals-lifecycle-and-state.js'),
+    );
+
+    expect($source)->not->toBeFalse()
+        ->and($source)->toContain('const shouldRefitAfterBookmarksModalClose =')
+        ->and($source)->toContain('!this.nativeRuntime &&')
+        ->and($source)->toContain('!this.shouldUseImmersiveReaderChrome() &&')
+        ->and($source)->toContain('this.queueReaderReentryRefit(36, 4);');
+});

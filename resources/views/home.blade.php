@@ -531,7 +531,7 @@
             ></div>
 
             <section
-                class="border-primary-300/35 bg-white/92 shadow-slate-950/18 dark:bg-slate-950/88 min-h-76 sm:min-h-73 relative flex w-[min(92vw,24rem)] items-center rounded-[1.8rem] border px-6 py-5 text-center shadow-2xl transition-[transform,opacity]"
+                class="border-primary-300/35 bg-white/92 shadow-slate-950/18 dark:bg-slate-950/88 min-h-76 sm:min-h-73 relative flex w-[min(92vw,28rem)] items-center rounded-[1.8rem] border px-6 py-5 text-center shadow-2xl transition-[transform,opacity] sm:w-[min(90vw,31rem)]"
                 x-transition:enter="transition-[opacity,transform] duration-220 ease-out"
                 x-transition:enter-start="opacity-0 scale-[0.97]"
                 x-transition:enter-end="opacity-100 scale-100"
@@ -568,7 +568,7 @@
                         </div>
                     </div>
                     <h2
-                        class="relative mx-auto h-6 w-full text-base font-semibold"
+                        class="relative mx-auto min-h-[1.85rem] w-full text-base/8 font-semibold sm:text-lg/9"
                         x-bind:class="quranBootstrap.requiresRestart ?
                             'text-emerald-700 dark:text-emerald-300' :
                             'text-primary-950 dark:text-primary-50'"
@@ -583,21 +583,23 @@
                         >{{ arabic_text('تم بحمد الله') }}</span>
                     </h2>
                     <p
-                        class="text-primary-900/78 dark:text-primary-100/82 relative h-[3.6rem] w-full text-sm leading-7">
+                        class="text-primary-900/78 dark:text-primary-100/82 relative min-h-[4.9rem] w-full text-sm/8 sm:text-base/9">
                         <span
-                            class="duration-220 absolute inset-0 transition-opacity"
-                            x-bind:class="quranBootstrap.requiresRestart ? 'opacity-0' : 'opacity-100'"
+                            class="duration-220 block w-full transition-opacity"
+                            x-show="!quranBootstrap.requiresRestart"
+                            x-transition.opacity.duration.180ms
                         >
                             {{ arabic_text('يتم تجهيز المصحف بشكل أنيق ومحرك اللغة العربية لبحث متقدم...') }}
                         </span>
                         <span
-                            class="duration-220 absolute inset-0 transition-opacity"
-                            x-bind:class="quranBootstrap.requiresRestart ? 'opacity-100' : 'opacity-0'"
+                            class="duration-220 block w-full transition-opacity"
+                            x-show="quranBootstrap.requiresRestart"
+                            x-transition.opacity.duration.180ms
                         >
                             {{ arabic_text('يرجى إعادة تشغيل التطبيق ليتمّ اعتماد البيانات.') }}
                         </span>
                     </p>
-                    <div class="relative h-[2.9rem] w-full">
+                    <div class="relative min-h-[3.1rem] w-full">
                         <div
                             class="duration-220 absolute inset-0 space-y-2 transition-opacity"
                             x-bind:class="quranBootstrap.requiresRestart ? 'opacity-0 pointer-events-none' : 'opacity-100'"

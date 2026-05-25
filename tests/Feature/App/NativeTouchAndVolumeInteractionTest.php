@@ -49,7 +49,19 @@ it('handles athkar native volume next actions through tap-completion flow', func
     expect($source)->not->toBeFalse()
         ->and($source)->toContain("if (normalizedDirection === 'next') {")
         ->and($source)->toContain('this.handleTap();')
+        ->and($source)->toContain('if (completedRequired <= 1 && nextRequired <= 1) {')
         ->and($source)->toContain(
             "if (normalizedDirection === 'previous' || normalizedDirection === 'prev') {",
         );
+});
+
+it('uses touch capability for quran double tap copy mode beyond base breakpoint', function () {
+    $source = file_get_contents(
+        resource_path('js/support/alpine/data/quran-app-reader/selection-copy-settings-and-drag-state.js'),
+    );
+
+    expect($source)->not->toBeFalse()
+        ->and($source)->toContain("if (typeof this.\$store?.bp?.isTouch === 'function') {")
+        ->and($source)->toContain('return Boolean(this.$store.bp.isTouch());')
+        ->and($source)->toContain('return Boolean(this.$store?.bp?.hasTouch);');
 });

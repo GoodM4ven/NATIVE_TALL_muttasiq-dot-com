@@ -3173,9 +3173,64 @@ class QuranReaderDataService
             }
 
             $variants[$normalizedVariant] = true;
+
+            foreach ($this->expandDefiniteArticlePhraseVariants($normalizedVariant) as $definiteVariant) {
+                $variants[$definiteVariant] = true;
+            }
         }
 
         return array_keys($variants);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function expandDefiniteArticlePhraseVariants(string $text): array
+    {
+        $trimmedText = trim($text);
+
+        if ($trimmedText === '') {
+            return [];
+        }
+
+        $tokens = array_values(array_filter(preg_split('/\s+/u', $trimmedText) ?: []));
+
+        if ($tokens === []) {
+            return [];
+        }
+
+        $strippedTokens = array_map(
+            fn (string $token): string => $this->stripDefiniteArticleToken($token),
+            $tokens,
+        );
+        $strippedPhrase = trim(implode(' ', $strippedTokens));
+
+        if ($strippedPhrase === '' || $strippedPhrase === $trimmedText) {
+            return [];
+        }
+
+        return [$strippedPhrase];
+    }
+
+    private function stripDefiniteArticleToken(string $token): string
+    {
+        $normalizedToken = trim($token);
+
+        if ($normalizedToken === '') {
+            return '';
+        }
+
+        $strippedToken = preg_replace(
+            '/^([وفبكل]?)(?:ال)([\p{Arabic}]{2,})$/u',
+            '$1$2',
+            $normalizedToken,
+        );
+
+        if (! is_string($strippedToken) || trim($strippedToken) === '') {
+            return $normalizedToken;
+        }
+
+        return trim($strippedToken);
     }
 
     /**

@@ -516,7 +516,11 @@ export const createSelectionCopySettingsAndDragStateModule = (deps) => {
         },
 
         usesMobileDoubleTapCopyMode() {
-            return this.shouldUseImmersiveReaderChrome();
+            if (typeof this.$store?.bp?.isTouch === 'function') {
+                return Boolean(this.$store.bp.isTouch());
+            }
+
+            return Boolean(this.$store?.bp?.hasTouch);
         },
 
         activeQuranReaderView() {

@@ -128,6 +128,46 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
     } = deps;
 
     return {
+        stripDefiniteArticleToken(token) {
+            const normalizedToken = String(token ?? '').trim();
+
+            if (normalizedToken === '') {
+                return '';
+            }
+
+            return normalizedToken.replace(/^([وفبكل]?)(?:ال)([\u0600-\u06FF]{2,})$/u, '$1$2');
+        },
+
+        stripDefiniteArticlePhrase(phrase) {
+            return String(phrase ?? '')
+                .trim()
+                .split(/\s+/)
+                .filter(Boolean)
+                .map((token) => this.stripDefiniteArticleToken(token))
+                .join(' ')
+                .trim();
+        },
+
+        rowMatchesQueryToken(row, token) {
+            const normalizedToken = String(token ?? '').trim();
+
+            if (normalizedToken === '') {
+                return false;
+            }
+
+            if (Boolean(row._tokens?.[normalizedToken])) {
+                return true;
+            }
+
+            const strippedToken = this.stripDefiniteArticleToken(normalizedToken);
+
+            if (strippedToken !== normalizedToken && strippedToken !== '') {
+                return Boolean(row._tokens?.[strippedToken]);
+            }
+
+            return false;
+        },
+
         localSearchContainsWholePhrase(text, phrase) {
             const normalizedText = String(text ?? '').trim();
             const normalizedPhrase = String(phrase ?? '').trim();
@@ -162,24 +202,37 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
 
             const typedText = String(row._typed ?? '');
             const searchableText = String(row._searchable ?? '');
+            const strippedDefiniteArticleQuery = this.stripDefiniteArticlePhrase(normalizedQuery);
 
             if (
                 this.localSearchContainsWholePhrase(typedText, normalizedQuery) ||
-                this.localSearchContainsWholePhrase(searchableText, normalizedQuery)
+                this.localSearchContainsWholePhrase(searchableText, normalizedQuery) ||
+                (strippedDefiniteArticleQuery !== normalizedQuery &&
+                    strippedDefiniteArticleQuery !== '' &&
+                    (this.localSearchContainsWholePhrase(typedText, strippedDefiniteArticleQuery) ||
+                        this.localSearchContainsWholePhrase(
+                            searchableText,
+                            strippedDefiniteArticleQuery,
+                        )))
             ) {
                 return 'ayah_exact';
             }
 
             if (
                 queryTokens.length > 0 &&
-                queryTokens.every((token) => Boolean(row._tokens?.[token]))
+                queryTokens.every((token) => this.rowMatchesQueryToken(row, token))
             ) {
                 return 'ayah_close';
             }
 
             if (
                 (typedText !== '' && typedText.includes(normalizedQuery)) ||
-                (searchableText !== '' && searchableText.includes(normalizedQuery))
+                (searchableText !== '' && searchableText.includes(normalizedQuery)) ||
+                (strippedDefiniteArticleQuery !== normalizedQuery &&
+                    strippedDefiniteArticleQuery !== '' &&
+                    ((typedText !== '' && typedText.includes(strippedDefiniteArticleQuery)) ||
+                        (searchableText !== '' &&
+                            searchableText.includes(strippedDefiniteArticleQuery))))
             ) {
                 return 'ayah_close';
             }

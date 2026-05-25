@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Services\Quran\QuranReaderDataService;
+use Illuminate\Support\Facades\Schema;
 
 test('quran reader search sanitizes mixed payloads and keeps arabic matches', function () {
     /** @var QuranReaderDataService $service */
@@ -47,4 +48,29 @@ TEXT;
     $results = $service->searchProgressively($nonArabicPayload, 24);
 
     expect($results)->toBeArray()->toBe([]);
+});
+
+test('quran reader search keeps close relevance when the query includes definite article prefixes', function () {
+    if (! Schema::hasTable('quran_verses')) {
+        $this->markTestSkipped('Quran reader search dependencies are unavailable.');
+    }
+
+    /** @var QuranReaderDataService $service */
+    $service = app(QuranReaderDataService::class);
+
+    $withDefiniteArticle = $service->searchProgressively('الشورى', 24);
+    $withoutDefiniteArticle = $service->searchProgressively('شورى', 24);
+
+    $withDefiniteIds = array_values(array_filter(array_map(
+        static fn (array $match): int => (int) ($match['id'] ?? 0),
+        $withDefiniteArticle,
+    )));
+    $withoutDefiniteIds = array_values(array_filter(array_map(
+        static fn (array $match): int => (int) ($match['id'] ?? 0),
+        $withoutDefiniteArticle,
+    )));
+
+    expect($withDefiniteIds)->not->toBe([])
+        ->and($withoutDefiniteIds)->not->toBe([])
+        ->and(array_intersect(array_slice($withoutDefiniteIds, 0, 5), $withDefiniteIds))->not->toBe([]);
 });
