@@ -460,6 +460,17 @@
         background: color-mix(in srgb, white 82%, transparent);
     }
 
+    :where(.dark, .dark *) #quran-reader-search-modal .quran-search-clear-btn {
+        color: color-mix(in srgb, var(--primary-100) 88%, white 12%);
+        background: color-mix(in srgb, var(--gray-800) 72%, transparent);
+        border-color: color-mix(in srgb, var(--primary-300) 44%, transparent);
+    }
+
+    :where(.dark, .dark *) #quran-reader-search-modal .quran-search-clear-btn:hover {
+        border-color: color-mix(in srgb, var(--primary-200) 66%, transparent);
+        background: color-mix(in srgb, var(--gray-700) 78%, transparent);
+    }
+
     .quran-search-feedback {
         border-radius: 0.8rem;
         padding: 0.64rem 0.78rem;
@@ -527,6 +538,12 @@
         color: color-mix(in srgb, var(--warning-800) 82%, var(--quran-panel-text));
         background: color-mix(in srgb, var(--warning-100) 72%, white 28%);
         border: 1px solid color-mix(in srgb, var(--warning-300) 48%, transparent);
+    }
+
+    :where(.dark, .dark *) #quran-reader-search-modal .quran-search-chunk__count {
+        color: color-mix(in srgb, var(--primary-100) 88%, white 12%);
+        background: color-mix(in srgb, var(--primary-900) 34%, transparent);
+        border-color: color-mix(in srgb, var(--primary-300) 46%, transparent);
     }
 
     .quran-search-result-btn {
@@ -614,6 +631,11 @@
         opacity: 0.8;
     }
 
+    :where(.dark, .dark *) #quran-reader-search-modal .quran-search-result-meta {
+        color: color-mix(in srgb, var(--primary-100) 84%, white 16%);
+        opacity: 0.9;
+    }
+
     .quran-search-result-ayah {
         display: block;
         margin-top: 0.1rem;
@@ -636,6 +658,12 @@
         border: 1px solid color-mix(in srgb, var(--quran-search-match-300) 44%, transparent);
         color: color-mix(in srgb, var(--quran-search-match-700) 84%, var(--quran-panel-text));
         background: color-mix(in srgb, var(--quran-search-match-100) 62%, white 38%);
+    }
+
+    :where(.dark, .dark *) #quran-reader-search-modal .quran-search-result-match-badge {
+        color: color-mix(in srgb, var(--quran-search-match-100) 88%, white 12%);
+        background: color-mix(in srgb, var(--quran-search-match-700) 28%, transparent);
+        border-color: color-mix(in srgb, var(--quran-search-match-300) 52%, transparent);
     }
 
     .quran-search-result-match-badge[data-match-tone='success'] {

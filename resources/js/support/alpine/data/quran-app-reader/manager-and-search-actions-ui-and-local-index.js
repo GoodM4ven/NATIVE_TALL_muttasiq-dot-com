@@ -625,7 +625,11 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
         },
 
         shouldUseSmPlusWebFastModalRecovery() {
-            return !this.nativeRuntime && !this.shouldUseImmersiveReaderChrome();
+            if (this.nativeRuntime || this.shouldUseImmersiveReaderChrome()) {
+                return false;
+            }
+
+            return Boolean(this.$store?.bp?.is?.('sm'));
         },
 
         prepareManagerModalOpenLifecycle(modalIds = []) {

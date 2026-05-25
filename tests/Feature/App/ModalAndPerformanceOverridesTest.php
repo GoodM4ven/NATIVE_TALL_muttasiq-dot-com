@@ -162,8 +162,9 @@ test('control panel syncs quran wird setting ordinal with runtime visibility rul
 
     expect($controlPanelSource)->not->toBeFalse()
         ->and($controlPanelSource)->toContain('syncQuranWirdSettingOrdinalLabel()')
-        ->and($controlPanelSource)->toContain('const shouldUseSixthOrdinal = (() => {')
-        ->and($controlPanelSource)->toContain("const resolvedOrdinal = shouldUseSixthOrdinal ? '6.' : '5.';")
+        ->and($controlPanelSource)->toContain("const resolvedOrdinal = '5.';")
+        ->and($controlPanelSource)->toContain('immersiveLabelElement.dataset.immersiveBaseLabel = computedImmersiveBaseLabel;')
+        ->and($controlPanelSource)->toContain('`6. ${computedImmersiveBaseLabel}`')
         ->and($controlPanelSource)->toContain('!candidate.closest(\'.quran-wird-frequency-field\')')
         ->and($controlPanelSource)->toContain('labelElement.dataset.quranWirdBaseLabel = computedBaseLabel;')
         ->and($controlPanelSource)->toContain("labelElement.dataset.controlPanelOrdinalManaged = 'true';");

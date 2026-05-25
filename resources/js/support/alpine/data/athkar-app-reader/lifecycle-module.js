@@ -615,6 +615,10 @@ export const createLifecycleModule = (deps) => {
             const nextCount = this.countAt(nextIndex);
             const shouldHoldCompletedDigitsUntilPulse = completedRequired <= 1 && nextRequired <= 1;
 
+            if (shouldHoldCompletedDigitsUntilPulse) {
+                this.triggerCountPulse(nextIndex, nextCount, completedCount);
+            }
+
             this.topUi.progressOverride = 100;
 
             if (shouldHoldCompletedDigitsUntilPulse) {
@@ -631,12 +635,13 @@ export const createLifecycleModule = (deps) => {
                     this.topUi.countOverride = null;
                 }
 
+                if (shouldDelayCountMorphUntilPanelPulse) {
+                    this.triggerCountPulse(nextIndex, completedCount, nextCount);
+                }
+
                 this.topUi.pulseTimer = setTimeout(() => {
                     this.topUi.pulseTimer = null;
                     this.topUi.pulseActive = false;
-                    if (shouldDelayCountMorphUntilPanelPulse) {
-                        this.triggerCountPulse(nextIndex, completedCount, nextCount);
-                    }
                     this.topUi.progressOverride = null;
                 }, this.topUiPulseDurationMs);
             }, this.topUiCompletionLingerMs);

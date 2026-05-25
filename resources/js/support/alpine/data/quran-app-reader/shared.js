@@ -97,7 +97,7 @@ const wait = async (durationMs) => {
 
 const wordPressHoldDelayMs = 750;
 const wordPressDragThresholdPx = 14;
-const mobileDoubleTapCopyWindowMs = 320;
+const mobileDoubleTapCopyWindowMs = 520;
 const mobileDoubleTapHoldDelayMs = 340;
 const bookmarkHoldDelayMs = 680;
 const surahQuickNavigatorHoldDelayMs = 620;

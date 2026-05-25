@@ -44,7 +44,7 @@ it('loads default athkar cards and keeps origin badge semantics correct', functi
         ->and($resolvedCards->firstWhere('id', $withoutOrigin->id)['is_original'])->toBeFalse();
 });
 
-it('prioritizes arabic-normalized text matches over origin-only matches in athkar manager search', function () {
+it('searches athkar manager by thikr text only and ignores origin-only matches', function () {
     $textMatchOne = Thikr::factory()->create([
         'text' => 'لَيْسَ كَمِثْلِهِ شَيْءٌ',
         'origin' => 'القرآن الكريم',
@@ -74,8 +74,7 @@ it('prioritizes arabic-normalized text matches over origin-only matches in athka
 
     expect($textMatchOneIndex)->not->toBeFalse()
         ->and($textMatchTwoIndex)->not->toBeFalse()
-        ->and($originOnlyMatchIndex)->not->toBeFalse()
-        ->and($originOnlyMatchIndex)->toBeGreaterThan(max((int) $textMatchOneIndex, (int) $textMatchTwoIndex));
+        ->and($originOnlyMatchIndex)->toBeFalse();
 });
 
 it('opens athkar manager in slide-over mode on desktop and modal mode on mobile', function () {

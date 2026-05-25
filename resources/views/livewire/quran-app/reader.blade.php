@@ -681,11 +681,11 @@
                 --quran-page-dense-y-offset: 0.1rem;
                 --quran-page-y-offset: -0.57rem;
                 --quran-page-scale: 0.55;
-                --quran-page-type-scale: 1.18;
-                --quran-page-leading-multiplier: 1.2;
-                --quran-page-gap-multiplier: 0.69;
                 --quran-page-surah-header-scale: 1.02;
                 --quran-basmallah-bottom-gap-scale: -0.295;
+                --quran-page-type-scale: 1.58;
+                --quran-page-leading-multiplier: 1.2;
+                --quran-page-gap-multiplier: 0.75;
             }
 
             .quran-page-lines--headered-long {
@@ -1261,6 +1261,11 @@
                 color 360ms cubic-bezier(0.22, 1, 0.36, 1),
                 box-shadow 440ms cubic-bezier(0.22, 1, 0.36, 1);
             will-change: background-color, color, box-shadow;
+        }
+
+        .has-touch .quran-word-button {
+            touch-action: none;
+            -webkit-touch-callout: none;
         }
 
         .quran-word-button.quran-segment-hovered {

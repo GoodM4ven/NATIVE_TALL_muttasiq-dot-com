@@ -627,7 +627,6 @@ class AthkarManager extends Component implements HasActions, HasSchemas
         }
 
         $textMatches = [];
-        $originMatches = [];
 
         foreach ($cards as $card) {
             $normalizedCardText = $this->normalizeAthkarSearchValue($card['text']);
@@ -646,18 +645,6 @@ class AthkarManager extends Component implements HasActions, HasSchemas
                 continue;
             }
 
-            $originScore = $this->scoreAthkarSearchNormalizedText(
-                $this->normalizeAthkarSearchValue($card['origin']),
-                $normalizedQuery,
-                $normalizedTerms,
-            );
-
-            if ($originScore > 0) {
-                $originMatches[] = [
-                    'card' => $card,
-                    'score' => $originScore,
-                ];
-            }
         }
 
         $sortByScoreThenOrder = static function (array $left, array $right): int {
@@ -679,9 +666,8 @@ class AthkarManager extends Component implements HasActions, HasSchemas
         };
 
         usort($textMatches, $sortByScoreThenOrder);
-        usort($originMatches, $sortByScoreThenOrder);
 
-        return collect([...$textMatches, ...$originMatches])
+        return collect($textMatches)
             ->map(fn (array $match): array => $match['card'])
             ->values()
             ->all();

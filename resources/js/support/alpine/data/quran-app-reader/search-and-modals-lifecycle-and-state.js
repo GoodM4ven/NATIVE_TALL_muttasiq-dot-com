@@ -593,6 +593,8 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
             this.queueReaderReentryRefit(72, 5);
             window.setTimeout(() => this.queueReaderReentryRefit(180, 3), 120);
             window.setTimeout(() => this.queueReaderReentryRefit(300, 2), 240);
+            window.setTimeout(() => this.queueReaderReentryRefit(460, 2), 420);
+            window.setTimeout(() => this.queueReaderReentryRefit(620, 1), 620);
 
             const canRunForcedLayoutRecovery =
                 typeof this.scheduleLayout === 'function' &&
@@ -614,6 +616,21 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                     this.clearLayoutTimers();
                     this.scheduleLayout({ revealDelayMs: 170, maxAttempts: 5 });
                 }, 280);
+
+                window.setTimeout(() => {
+                    if (this.openModalCount() > 0 || this._modalNavigationCloseGuardActive) {
+                        return;
+                    }
+
+                    if (!this.hasRenderablePage()) {
+                        return;
+                    }
+
+                    this._bypassNextFitCache = true;
+                    this.isFittingPage = true;
+                    this.clearLayoutTimers();
+                    this.scheduleLayout({ revealDelayMs: 190, maxAttempts: 6 });
+                }, 620);
             }
 
             const normalizedModalId = String(modalId ?? '').trim();

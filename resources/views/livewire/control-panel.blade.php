@@ -451,6 +451,8 @@
                     return;
                 }
         
+                const useWesternNumerals = this.resolveControlPanelWesternNumeralState();
+                const preserveHarakat = this.resolveControlPanelPreserveHarakatState();
                 const immersiveCaptionSettingToggle = modalWindow.querySelector(
                     `input[type='checkbox'][name*='does_quran_show_immersive_mobile_edge_captions'],input[type='checkbox'][wire\\:model*='does_quran_show_immersive_mobile_edge_captions']`,
                 );
@@ -458,20 +460,11 @@
                     immersiveCaptionSettingToggle?.closest(
                         '.fi-fo-field-wrp, .fi-field-wrp, [data-field-wrapper]',
                     ) ?? null;
-                const shouldUseSixthOrdinal = (() => {
-                    if (!(immersiveCaptionSettingWrapper instanceof HTMLElement)) {
-                        return Boolean(this.$store?.bp?.is?.('base'));
-                    }
-        
-                    return immersiveCaptionSettingWrapper.offsetParent !== null;
-                })();
         
                 labelElement.dataset.quranWirdBaseLabel = computedBaseLabel;
                 labelElement.dataset.controlPanelOrdinalManaged = 'true';
-                const resolvedOrdinal = shouldUseSixthOrdinal ? '6.' : '5.';
+                const resolvedOrdinal = '5.';
                 const nextLabel = `${resolvedOrdinal} ${computedBaseLabel}`;
-                const useWesternNumerals = this.resolveControlPanelWesternNumeralState();
-                const preserveHarakat = this.resolveControlPanelPreserveHarakatState();
                 const nextLabelVisual = this.convertControlPanelDisplayText(nextLabel, {
                     useWesternNumerals,
                     preserveHarakat,
@@ -480,6 +473,55 @@
         
                 if (String(leadingLabelTextNode.nodeValue ?? '').trim() !== nextLabelVisual) {
                     leadingLabelTextNode.nodeValue = ` ${nextLabelVisual} `;
+                }
+        
+                if (!(immersiveCaptionSettingWrapper instanceof Element)) {
+                    return;
+                }
+        
+                const immersiveLabelElement = immersiveCaptionSettingWrapper.querySelector(
+                    '.fi-fo-field-wrp-label, .fi-field-wrp-label, label, legend',
+                );
+        
+                if (!(immersiveLabelElement instanceof HTMLElement)) {
+                    return;
+                }
+        
+                const immersiveLeadingTextNode = resolveLeadingLabelTextNode(immersiveLabelElement);
+        
+                if (!(immersiveLeadingTextNode instanceof window.Text)) {
+                    return;
+                }
+        
+                const savedImmersiveBaseLabel = String(
+                    immersiveLabelElement.dataset.immersiveBaseLabel ?? '',
+                ).trim();
+                const computedImmersiveBaseLabel = savedImmersiveBaseLabel !== '' ?
+                    savedImmersiveBaseLabel :
+                    String(immersiveLeadingTextNode.nodeValue ?? '')
+                    .replace(/^\s*[0-9٠-٩]+\.\s*/u, '')
+                    .trim();
+        
+                if (computedImmersiveBaseLabel === '') {
+                    return;
+                }
+        
+                immersiveLabelElement.dataset.immersiveBaseLabel = computedImmersiveBaseLabel;
+        
+                if (immersiveCaptionSettingWrapper.offsetParent === null) {
+                    return;
+                }
+        
+                const immersiveLabelVisual = this.convertControlPanelDisplayText(
+                    `6. ${computedImmersiveBaseLabel}`, {
+                        useWesternNumerals,
+                        preserveHarakat,
+                        preserveFixedSamples: true,
+                    },
+                );
+        
+                if (String(immersiveLeadingTextNode.nodeValue ?? '').trim() !== immersiveLabelVisual) {
+                    immersiveLeadingTextNode.nodeValue = ` ${immersiveLabelVisual} `;
                 }
             },
             teardownControlPanelSliderNumeralsObserver() {

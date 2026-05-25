@@ -832,6 +832,7 @@ export const createSelectionCopyComposeAndPointerModule = (deps) => {
                     isSecondTap || (hasRecentTapWindow && hasPreviousTap);
 
                 this.wordPress.isSecondTap = shouldTreatAsSecondTap;
+                this.wordPress.dragActive = shouldTreatAsSecondTap;
 
                 return;
             }
