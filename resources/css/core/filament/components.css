@@ -1552,6 +1552,13 @@
         row-gap: 0.62rem;
     }
 
+    .quran-wird-frequency-field--hide-label > .fi-fo-field-wrp-label,
+    .quran-wird-frequency-field--hide-label > .fi-field-wrp-label,
+    .quran-wird-frequency-field--hide-label > label,
+    .quran-wird-frequency-field--hide-label > legend {
+        display: none;
+    }
+
     .quran-wird-khatmat-field .fi-input-wrp {
         min-height: 3.18rem;
         width: 100%;
@@ -1573,5 +1580,37 @@
     .quran-wird-khatmat-field .fi-select-input .ts-wrapper.single .ts-control > *,
     .quran-wird-khatmat-field .fi-select-input .ts-control > * {
         align-self: center;
+    }
+
+    .quran-support-unlock-links-panel {
+        border: 1px solid color-mix(in srgb, var(--primary-300) 36%, transparent);
+        background: color-mix(in srgb, var(--fi-surface-bg-light) 88%, white 12%);
+        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary-200) 20%, transparent);
+    }
+
+    :where(.dark, .dark *) .quran-support-unlock-links-panel {
+        border-color: color-mix(in srgb, var(--primary-300) 46%, transparent);
+        background: color-mix(in srgb, var(--fi-surface-bg-dark) 84%, black 16%);
+        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary-200) 24%, transparent);
+    }
+
+    .quran-support-unlock-link {
+        border: 1px solid color-mix(in srgb, var(--primary-500) 45%, transparent);
+        background: color-mix(in srgb, var(--primary-100) 74%, white 26%);
+        color: color-mix(in srgb, var(--primary-800) 88%, var(--quran-panel-text));
+    }
+
+    .quran-support-unlock-link:hover {
+        background: color-mix(in srgb, var(--primary-100) 90%, white 10%);
+    }
+
+    :where(.dark, .dark *) .quran-support-unlock-link {
+        border-color: color-mix(in srgb, var(--primary-300) 50%, transparent);
+        background: color-mix(in srgb, var(--primary-900) 36%, transparent);
+        color: color-mix(in srgb, var(--primary-100) 92%, white 8%);
+    }
+
+    :where(.dark, .dark *) .quran-support-unlock-link:hover {
+        background: color-mix(in srgb, var(--primary-800) 50%, transparent);
     }
 }

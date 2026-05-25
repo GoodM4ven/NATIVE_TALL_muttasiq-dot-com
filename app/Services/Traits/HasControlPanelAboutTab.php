@@ -19,7 +19,7 @@ trait HasControlPanelAboutTab
             ->key('about')
             ->icon('phosphor.warning-diamond-fill')
             ->schema([
-                Text::make('تطبيق متسق')
+                Text::make('منصة متسق')
                     ->size(TextSize::Large)
                     ->color('black')
                     ->extraAttributes(['class' => 'block w-full text-center -mb-5']),
@@ -58,7 +58,7 @@ trait HasControlPanelAboutTab
 
                 $this->developmentLinkAction(
                     name: 'open_main_missions',
-                    label: 'المهام الرئيسية للتطبيق',
+                    label: 'المهام الرئيسية للمنصة',
                     url: 'https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com/?tab=readme-ov-file#%D8%A7%D9%84%D9%85%D9%87%D8%A7%D9%85',
                     icon: 'heroicon-s-clipboard-document-list',
                 ),

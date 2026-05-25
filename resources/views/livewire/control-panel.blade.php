@@ -292,6 +292,10 @@
                                 return window.NodeFilter.FILTER_REJECT;
                             }
         
+                            if (parent.closest('[data-control-panel-ordinal-managed=\'true\']')) {
+                                return window.NodeFilter.FILTER_REJECT;
+                            }
+        
                             const rawText = String(node.nodeValue ?? '');
         
                             if (rawText.trim() === '') {
@@ -380,35 +384,67 @@
                     return;
                 }
         
-                const wirdFrequencyInput = modalWindow.querySelector(
-                    `input[type='radio'][name*='quran_wird_frequency_mode'],input[type='radio'][wire\\:model*='quran_wird_frequency_mode']`,
-                );
+                const managedWirdWrapper = modalWindow.querySelector('.quran-wird-group-field');
         
-                if (!(wirdFrequencyInput instanceof Element)) {
+                if (!(managedWirdWrapper instanceof Element)) {
                     return;
                 }
         
-                const fieldWrapper = wirdFrequencyInput.closest(
-                    '.fi-fo-field-wrp, .fi-field-wrp, [data-field-wrapper]',
+                const labelCandidates = Array.from(
+                    managedWirdWrapper.querySelectorAll(
+                        '.fi-fo-field-wrp-label, .fi-field-wrp-label, label, legend',
+                    ),
                 );
+                const labelElement =
+                    labelCandidates.find((candidate) => {
+                        if (!(candidate instanceof HTMLElement)) {
+                            return false;
+                        }
         
-                if (!(fieldWrapper instanceof Element)) {
-                    return;
-                }
-        
-                const labelElement = fieldWrapper.querySelector(
-                    '.fi-fo-field-wrp-label, .fi-field-wrp-label, label',
-                );
+                        return (
+                            !candidate.closest('.quran-wird-frequency-field') &&
+                            !candidate.closest('.quran-wird-khatmat-field')
+                        );
+                    }) ?? null;
         
                 if (!(labelElement instanceof HTMLElement)) {
+                    return;
+                }
+        
+                const resolveLeadingLabelTextNode = (element) => {
+                    if (!(element instanceof Element)) {
+                        return null;
+                    }
+        
+                    const directTextNode = Array.from(element.childNodes).find((node) =>
+                        node?.nodeType === window.Node.TEXT_NODE &&
+                        String(node.nodeValue ?? '').trim() !== ''
+                    );
+        
+                    if (directTextNode) {
+                        return directTextNode;
+                    }
+        
+                    return Array.from(element.querySelectorAll('*'))
+                        .map((candidate) => Array.from(candidate.childNodes))
+                        .flat()
+                        .find((node) =>
+                            node?.nodeType === window.Node.TEXT_NODE &&
+                            String(node.nodeValue ?? '').trim() !== ''
+                        ) ?? null;
+                };
+        
+                const leadingLabelTextNode = resolveLeadingLabelTextNode(labelElement);
+        
+                if (!(leadingLabelTextNode instanceof window.Text)) {
                     return;
                 }
         
                 const savedBaseLabel = String(labelElement.dataset.quranWirdBaseLabel ?? '').trim();
                 const computedBaseLabel = savedBaseLabel !== '' ?
                     savedBaseLabel :
-                    String(labelElement.textContent ?? '')
-                    .replace(/^\s*\d+\.\s*/u, '')
+                    String(leadingLabelTextNode.nodeValue ?? '')
+                    .replace(/^\s*[0-9٠-٩]+\.\s*/u, '')
                     .trim();
         
                 if (computedBaseLabel === '') {
@@ -416,16 +452,19 @@
                 }
         
                 labelElement.dataset.quranWirdBaseLabel = computedBaseLabel;
-        
-                const shouldKeepImmersiveCaptionSettingVisible = Boolean(
-                    document.documentElement.classList.contains('native-platform') ||
-                    this.$store?.bp?.is?.('base'),
-                );
-                const resolvedOrdinal = shouldKeepImmersiveCaptionSettingVisible ? '6.' : '5.';
+                labelElement.dataset.controlPanelOrdinalManaged = 'true';
+                const resolvedOrdinal = Boolean(this.$store?.bp?.is?.('base')) ? '6.' : '5.';
                 const nextLabel = `${resolvedOrdinal} ${computedBaseLabel}`;
+                const useWesternNumerals = this.resolveControlPanelWesternNumeralState();
+                const preserveHarakat = this.resolveControlPanelPreserveHarakatState();
+                const nextLabelVisual = this.convertControlPanelDisplayText(nextLabel, {
+                    useWesternNumerals,
+                    preserveHarakat,
+                    preserveFixedSamples: true,
+                });
         
-                if (labelElement.textContent !== nextLabel) {
-                    labelElement.textContent = nextLabel;
+                if (String(leadingLabelTextNode.nodeValue ?? '').trim() !== nextLabelVisual) {
+                    leadingLabelTextNode.nodeValue = ` ${nextLabelVisual} `;
                 }
             },
             teardownControlPanelSliderNumeralsObserver() {

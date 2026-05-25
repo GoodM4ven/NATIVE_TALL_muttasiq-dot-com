@@ -225,6 +225,11 @@ export const createCompletionModule = (deps) => {
                 'does_automatically_switch_completed_athkar',
                 true,
             );
+            const shouldDeferCountPulseForImmediateAdvance =
+                required <= 1 &&
+                autoSwitch &&
+                current + 1 >= required &&
+                index < this.activeList.length - 1;
             let didIncrementCount = false;
             const shouldAnimateTapFeedback = !this.shouldUseRapidTapSafeMode(required);
 
@@ -235,7 +240,9 @@ export const createCompletionModule = (deps) => {
                 this.setCount(index, nextCount, { allowOvercount });
                 didIncrementCount = true;
                 if (shouldAnimateTapFeedback) {
-                    this.triggerCountPulse(index, previousCount, nextCount);
+                    if (!shouldDeferCountPulseForImmediateAdvance) {
+                        this.triggerCountPulse(index, previousCount, nextCount);
+                    }
                     this.triggerTotalPulse(previousTotal, previousTotal + 1);
                 }
 
@@ -311,7 +318,7 @@ export const createCompletionModule = (deps) => {
 
         incrementCurrentForSwipe() {
             if (!this.activeMode) {
-                return { didFinish: false, didUpdate: false };
+                return { didFinish: false, didUpdate: false, didAdvance: false };
             }
 
             const index = this.activeIndex;
@@ -319,13 +326,17 @@ export const createCompletionModule = (deps) => {
             const current = this.countAt(index);
             const wasComplete = current >= required;
             const allowOvercount = this.shouldAllowOvercount({ wasComplete });
+            const shouldDeferCountPulseForImmediateAdvance =
+                required <= 1 && this.canAdvance(index);
             let didUpdate = false;
 
             if (current < required || allowOvercount) {
                 const previousTotal = this.totalCompletedCount;
                 const nextCount = current + 1;
                 this.setCount(index, nextCount, { allowOvercount });
-                this.triggerCountPulse(index, current, nextCount);
+                if (!shouldDeferCountPulseForImmediateAdvance) {
+                    this.triggerCountPulse(index, current, nextCount);
+                }
                 this.triggerTotalPulse(previousTotal, previousTotal + 1);
 
                 if (required > 1) {
@@ -335,13 +346,22 @@ export const createCompletionModule = (deps) => {
                 didUpdate = true;
             }
 
+            const justCompleted = !wasComplete && this.isItemComplete(index);
+
+            if (justCompleted && index < this.activeList.length - 1) {
+                this.closeHint();
+                this.startTopUiCompletionTransition(index, index + 1);
+
+                return { didFinish: false, didUpdate, didAdvance: true };
+            }
+
             if (!wasComplete && this.isAllComplete() && index === this.activeList.length - 1) {
                 this.finishActiveMode();
 
-                return { didFinish: true, didUpdate };
+                return { didFinish: true, didUpdate, didAdvance: false };
             }
 
-            return { didFinish: false, didUpdate };
+            return { didFinish: false, didUpdate, didAdvance: false };
         },
 
         advanceAfterCompletion(index) {

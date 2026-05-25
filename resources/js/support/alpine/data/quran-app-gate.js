@@ -36,6 +36,7 @@ document.addEventListener('alpine:init', () => {
         touchStartClientY: null,
         didTouchOrbitMove: false,
         suppressNextOpenMode: null,
+        touchReleaseArmedMode: null,
         orbitAnimationFrameId: null,
         orbitLastFrameAt: 0,
         isLaunchTransitioning: false,
@@ -263,6 +264,7 @@ document.addEventListener('alpine:init', () => {
             this.activeTransitionDirection = null;
             this.armedMode = null;
             this.suppressNextOpenMode = null;
+            this.touchReleaseArmedMode = null;
             this.clearTouchGestureState();
 
             const shellElement = this.quranShellElement();
@@ -352,6 +354,7 @@ document.addEventListener('alpine:init', () => {
 
             const previouslyArmedMode = this.armedMode;
             this.armMode(this.projectedMode);
+            this.touchReleaseArmedMode = this.projectedMode;
             this.suppressNextOpenMode =
                 previouslyArmedMode !== this.projectedMode ? this.projectedMode : null;
         },
@@ -690,8 +693,15 @@ document.addEventListener('alpine:init', () => {
             const isAvailable = this.isModeAvailable(mode);
 
             if (this.requiresArmedActivation()) {
+                if (this.touchReleaseArmedMode && this.touchReleaseArmedMode !== mode) {
+                    this.armMode(mode);
+                    this.touchReleaseArmedMode = mode;
+                    return;
+                }
+
                 if (this.armedMode !== mode) {
                     this.armMode(mode);
+                    this.touchReleaseArmedMode = mode;
                     return;
                 }
             }
@@ -701,6 +711,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             this.clearArmedMode();
+            this.touchReleaseArmedMode = null;
 
             const modeViewMap = {
                 tilawa: 'quran-app-tilawa',

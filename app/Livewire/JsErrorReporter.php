@@ -72,7 +72,7 @@ class JsErrorReporter extends Component implements HasActions, HasSchemas
     public function reportJsErrorAction(): Action
     {
         return Action::make('reportJsError')
-            ->modalHeading('حدث خلل غير متوقع في التطبيق')
+            ->modalHeading('حدث خلل غير متوقع في المنصة')
             ->modalDescription('من فضلك اكتب وصفًا لما حصل قبل المشكلة لنتمكن من تتبع السبب بشكل أسرع...')
             ->modalAutofocus(false)
             ->modalWidth(Width::ThreeExtraLarge)

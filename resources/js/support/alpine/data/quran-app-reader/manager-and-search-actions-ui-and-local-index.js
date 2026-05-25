@@ -624,6 +624,10 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             return this.search.modalOpen || this.isSearchModalWindowVisible();
         },
 
+        shouldUseSmPlusWebFastModalRecovery() {
+            return !this.nativeRuntime && !this.shouldUseImmersiveReaderChrome();
+        },
+
         prepareManagerModalOpenLifecycle(modalIds = []) {
             const normalizedModalIds = (Array.isArray(modalIds) ? modalIds : [modalIds])
                 .map((value) => String(value ?? '').trim())
@@ -692,6 +696,7 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
         },
 
         async openHistoryModal() {
+            this._historyModalOpenRequestedAt = Date.now();
             return await this.openManagerModalAction('navigationHistory', [this.historyModalId]);
         },
 
@@ -761,6 +766,7 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
         },
 
         async openBookmarksModal() {
+            this._bookmarksModalOpenRequestedAt = Date.now();
             return await this.openManagerModalAction('bookmarksManager', [this.bookmarksModalId]);
         },
 
@@ -977,6 +983,9 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             this.search.preserveActiveSurahOnNextOpen = true;
             this.searchDestinationScaleBoostPageNumber = pageNumber;
             this.searchDestinationScaleBoostSource = 'surah-directory';
+            const shouldUseFastSmPlusRecovery =
+                typeof this.shouldUseSmPlusWebFastModalRecovery === 'function' &&
+                this.shouldUseSmPlusWebFastModalRecovery();
 
             try {
                 this.cancelActiveSearchProcessing();
@@ -986,7 +995,11 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                 this.beginModalNavigationCloseGuard(searchModalLifecycleIds);
                 await this.requestSearchModalClose();
                 await this.waitForModalLifecycleToSettle();
-                await wait(modalCloseTransitionDelayMs);
+                await wait(
+                    shouldUseFastSmPlusRecovery
+                        ? Math.min(60, modalCloseTransitionDelayMs)
+                        : modalCloseTransitionDelayMs,
+                );
 
                 if (!this.isSearchModalWindowVisible() && this.search.modalOpen) {
                     this.handleSearchModalClosed();
@@ -1000,19 +1013,38 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                     settleDelayMs: 0,
                 });
 
-                await this.stabilizeModalDrivenLayout({
-                    revealDelayMs: 160,
-                    maxAttempts: 4,
-                    maxFrames: 18,
-                    requiredStableFrames: 3,
-                    tolerancePx: 0.8,
-                });
+                if (shouldUseFastSmPlusRecovery) {
+                    this.queueReaderReentryRefit(40, 3);
+                    await wait(64);
 
-                await this.ensureModalDrivenPageVisible(pageNumber, {
-                    revealDelayMs: 190,
-                    maxAttempts: 5,
-                    fallbackReason: 'surah-directory-post-close-visibility-recovery',
-                });
+                    if (!this.isCurrentPageVisiblyReady() && this.hasRenderablePage()) {
+                        const recoveryModalId = this.resolveSearchModalCloseTargetId();
+
+                        if (typeof this.runSecondaryModalExitRecoveryPulse === 'function') {
+                            await this.runSecondaryModalExitRecoveryPulse(recoveryModalId);
+                        }
+
+                        await this.ensureModalDrivenPageVisible(pageNumber, {
+                            revealDelayMs: 170,
+                            maxAttempts: 4,
+                            fallbackReason: 'surah-directory-fast-post-close-visibility-recovery',
+                        });
+                    }
+                } else {
+                    await this.stabilizeModalDrivenLayout({
+                        revealDelayMs: 160,
+                        maxAttempts: 4,
+                        maxFrames: 18,
+                        requiredStableFrames: 3,
+                        tolerancePx: 0.8,
+                    });
+
+                    await this.ensureModalDrivenPageVisible(pageNumber, {
+                        revealDelayMs: 190,
+                        maxAttempts: 5,
+                        fallbackReason: 'surah-directory-post-close-visibility-recovery',
+                    });
+                }
 
                 this.search.activeSurahNumber = surahNumber;
                 this.activeAyahIndex = 0;

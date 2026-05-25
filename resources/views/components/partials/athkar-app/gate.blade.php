@@ -441,7 +441,7 @@
     x-transition:leave-start="opacity-100 blur-0 athkar-shift-center"
     x-transition:leave-end="opacity-0! blur-[2px] athkar-shift-away"
 >
-    <div class="relative flex select-none flex-col items-center sm:zoom-[1.15] md:zoom-[1.0]">
+    <div class="sm:zoom-[1.15] md:zoom-[1.0] relative flex select-none flex-col items-center">
         <div
             class="athkar-gate-wrap relative w-full"
             x-data="athkarAppGate"

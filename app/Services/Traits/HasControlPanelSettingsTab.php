@@ -149,7 +149,7 @@ trait HasControlPanelSettingsTab
                         Components\Checkbox::make(Setting::DOES_QURAN_SHOW_IMMERSIVE_MOBILE_EDGE_CAPTIONS)
                             ->default((bool) ($quranDefinitions[Setting::DOES_QURAN_SHOW_IMMERSIVE_MOBILE_EDGE_CAPTIONS]['default'] ?? true))
                             ->extraFieldWrapperAttributes([
-                                'class' => is_platform('native') ? 'relative z-20' : 'relative z-20 sm:hidden',
+                                'class' => 'relative z-20 sm:hidden',
                             ])
                             ->label($quranDefinitions[Setting::DOES_QURAN_SHOW_IMMERSIVE_MOBILE_EDGE_CAPTIONS]['label']),
 
@@ -161,7 +161,7 @@ trait HasControlPanelSettingsTab
                                 ->inline()
                                 ->live()
                                 ->extraFieldWrapperAttributes([
-                                    'class' => 'quran-support-lock-target quran-wird-frequency-field',
+                                    'class' => 'quran-support-lock-target quran-wird-frequency-field quran-wird-frequency-field--hide-label',
                                     'data-support-lock-target' => 'wird-frequency-mode',
                                     'data-support-lock-caption' => arabic_text('هذا الخيار يحتاج تأكيد دعم المشروع'),
                                     'x-on:pointerdown.capture' => 'if (!$el.classList.contains(`quran-support-lock-target--locked`)) { return; } $event.preventDefault(); $event.stopPropagation(); window.dispatchEvent(new CustomEvent(`open-support-unlock-modal`));',
@@ -209,6 +209,7 @@ trait HasControlPanelSettingsTab
                                 ->columnSpan(1),
                         ])
                             ->label($quranDefinitions[Setting::QURAN_WIRD_FREQUENCY_MODE]['label'])
+                            ->extraAttributes(['class' => 'quran-wird-group-field'])
                             ->columns(2)
                             ->columnSpanFull(),
 

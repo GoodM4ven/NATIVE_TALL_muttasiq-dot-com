@@ -604,6 +604,9 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
             this.searchDestinationScaleBoostSource = isSurahNameResult
                 ? 'surah-directory'
                 : 'search-result';
+            const shouldUseFastSmPlusRecovery =
+                typeof this.shouldUseSmPlusWebFastModalRecovery === 'function' &&
+                this.shouldUseSmPlusWebFastModalRecovery();
 
             try {
                 this.resetNavigationQueueForPriorityJump();
@@ -613,19 +616,50 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                 this.beginModalNavigationCloseGuard(searchModalLifecycleIds);
                 await this.requestSearchModalClose();
                 await this.waitForModalLifecycleToSettle();
-                await wait(modalCloseTransitionDelayMs);
+                await wait(
+                    shouldUseFastSmPlusRecovery
+                        ? Math.min(60, modalCloseTransitionDelayMs)
+                        : modalCloseTransitionDelayMs,
+                );
 
                 if (!this.isSearchModalWindowVisible() && this.search.modalOpen) {
                     this.handleSearchModalClosed();
                 }
 
-                await this.navigateFromManagerModalRecord({
-                    targetPage,
-                    ayahIndex: highlightAyahIndex,
-                    source: 'search-result',
-                    modalId: this.resolveSearchModalCloseTargetId(),
-                    ensureVisibleAfterModalClose: true,
-                });
+                if (shouldUseFastSmPlusRecovery) {
+                    this._bypassNextFitCache = true;
+                    await this.goToPageFromChevron(targetPage, {
+                        activeAyahIndex: highlightAyahIndex,
+                        searchHighlightAyahIndex: highlightAyahIndex,
+                        source: 'search-result',
+                        commitNow: true,
+                        settleDelayMs: 0,
+                    });
+                    this.queueReaderReentryRefit(40, 3);
+                    await wait(64);
+
+                    if (!this.isCurrentPageVisiblyReady() && this.hasRenderablePage()) {
+                        const recoveryModalId = this.resolveSearchModalCloseTargetId();
+
+                        if (typeof this.runSecondaryModalExitRecoveryPulse === 'function') {
+                            await this.runSecondaryModalExitRecoveryPulse(recoveryModalId);
+                        }
+
+                        await this.ensureModalDrivenPageVisible(targetPage, {
+                            revealDelayMs: 170,
+                            maxAttempts: 4,
+                            fallbackReason: 'search-result-fast-post-close-visibility-recovery',
+                        });
+                    }
+                } else {
+                    await this.navigateFromManagerModalRecord({
+                        targetPage,
+                        ayahIndex: highlightAyahIndex,
+                        source: 'search-result',
+                        modalId: this.resolveSearchModalCloseTargetId(),
+                        ensureVisibleAfterModalClose: true,
+                    });
+                }
 
                 if (highlightAyahIndex > 0) {
                     this.activeAyahIndex = highlightAyahIndex;

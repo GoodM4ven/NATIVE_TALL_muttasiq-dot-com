@@ -672,6 +672,14 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
 
             if (
                 this.wordPress?.active &&
+                this.usesMobileDoubleTapCopyMode() &&
+                this.wordPress?.isSecondTap
+            ) {
+                return;
+            }
+
+            if (
+                this.wordPress?.active &&
                 String(point.pointerType ?? this.swipe.pointerType ?? '').toLowerCase() ===
                     'mouse' &&
                 (!this.usesMobileDoubleTapCopyMode() || this.wordPress?.isSecondTap)
@@ -741,6 +749,16 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
             }
 
             if (this.wordPress?.holdTriggered || this.wordPress?.dragActive) {
+                this.resetSwipeState();
+
+                return;
+            }
+
+            if (
+                this.wordPress?.active &&
+                this.usesMobileDoubleTapCopyMode() &&
+                this.wordPress?.isSecondTap
+            ) {
                 this.resetSwipeState();
 
                 return;

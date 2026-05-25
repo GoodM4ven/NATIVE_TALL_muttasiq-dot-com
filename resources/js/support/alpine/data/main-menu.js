@@ -918,6 +918,22 @@ document.addEventListener('alpine:init', () => {
                 event.preventDefault();
             }
 
+            const touchPoint = event?.changedTouches?.[0] ?? event?.touches?.[0] ?? null;
+            const releaseX = Number(touchPoint?.clientX);
+            const releaseY = Number(touchPoint?.clientY);
+            const hasReleasePoint = Number.isFinite(releaseX) && Number.isFinite(releaseY);
+
+            if (hasReleasePoint) {
+                const releaseElement = document.elementFromPoint(releaseX, releaseY);
+                const releaseButton = releaseElement?.closest?.('.main-menu-insights-row--button');
+                const currentButton =
+                    event?.currentTarget instanceof Element ? event.currentTarget : null;
+
+                if (!(releaseButton instanceof Element) || releaseButton !== currentButton) {
+                    return;
+                }
+            }
+
             if (this.isInsightsTouchRowsLocked()) {
                 return;
             }
@@ -1348,11 +1364,20 @@ document.addEventListener('alpine:init', () => {
 
             this.broadcastTouchState();
 
-            const x = this.touchLastX ?? this.touchStartX;
-            const y = this.touchLastY ?? this.touchStartY;
+            const touchPoint = event?.changedTouches?.[0] ?? event?.touches?.[0] ?? null;
+            const releaseX = Number(touchPoint?.clientX);
+            const releaseY = Number(touchPoint?.clientY);
+            const hasReleaseCoordinates = Number.isFinite(releaseX) && Number.isFinite(releaseY);
+            const x = hasReleaseCoordinates ? releaseX : (this.touchLastX ?? this.touchStartX);
+            const y = hasReleaseCoordinates ? releaseY : (this.touchLastY ?? this.touchStartY);
 
             if (x === null || y === null) {
                 return;
+            }
+
+            if (hasReleaseCoordinates) {
+                this.touchLastX = releaseX;
+                this.touchLastY = releaseY;
             }
 
             if (!this.isPointInsideGrid(x, y)) {
@@ -1364,6 +1389,11 @@ document.addEventListener('alpine:init', () => {
             const item = this.getItemFromPoint(x, y);
 
             if (!item) {
+                if (this.touchMoved) {
+                    this.setTouchActiveElement(null, true);
+                    this.handleOutside(true);
+                }
+
                 return;
             }
 

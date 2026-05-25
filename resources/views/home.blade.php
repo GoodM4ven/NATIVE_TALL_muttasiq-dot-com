@@ -219,7 +219,7 @@
                     this.quranBootstrap.requiresRestart = true;
                     this.quranBootstrap.isRestarting = false;
                     this.quranBootstrap.statusMessage = String(
-                        @js(arabic_text('اكتمل تنزيل بيانات القرآن بنجاح. يلزم إعادة تشغيل التطبيق الآن.')),
+                        @js(arabic_text('اكتمل تنزيل بيانات القرآن بنجاح. يلزم إعادة تشغيل المنصة الآن.')),
                     );
         
                     return;
@@ -263,7 +263,7 @@
         
                 this.quranBootstrap.isRestarting = true;
                 this.quranBootstrap.statusMessage = String(
-                    @js(arabic_text('جاري إعادة تشغيل التطبيق...')),
+                    @js(arabic_text('جاري إعادة تشغيل المنصة...')),
                 );
         
                 if (
@@ -278,10 +278,10 @@
         
                 this.quranBootstrap.isRestarting = false;
                 this.quranBootstrap.errorMessage = String(
-                    @js(arabic_text('تعذر إرسال أمر إعادة التشغيل. أعد بناء التطبيق ثم حاول مرة أخرى.')),
+                    @js(arabic_text('تعذر إرسال أمر إعادة التشغيل. أعد بناء المنصة ثم حاول مرة أخرى.')),
                 );
                 this.quranBootstrap.statusMessage = String(
-                    @js(arabic_text('يلزم إعادة تشغيل التطبيق يدويًا.')),
+                    @js(arabic_text('يلزم إعادة تشغيل المنصة يدويًا.')),
                 );
                 window.dispatchEvent(
                     new CustomEvent('quran-bootstrap-restart-unavailable', {
@@ -596,7 +596,7 @@
                             x-show="quranBootstrap.requiresRestart"
                             x-transition.opacity.duration.180ms
                         >
-                            {{ arabic_text('يرجى إعادة تشغيل التطبيق ليتمّ اعتماد البيانات.') }}
+                            {{ arabic_text('يرجى إعادة تشغيل المنصة ليتمّ اعتماد البيانات.') }}
                         </span>
                     </p>
                     <div class="relative min-h-[3.1rem] w-full">
@@ -628,7 +628,7 @@
                                 x-on:click="restartNativeAppAfterQuranBootstrap('success-button')"
                             >
                                 <span
-                                    x-show="!quranBootstrap.isRestarting">{{ arabic_text('إعادة تشغيل التطبيق الآن') }}</span>
+                                    x-show="!quranBootstrap.isRestarting">{{ arabic_text('إعادة تشغيل المنصة الآن') }}</span>
                                 <span
                                     x-show="quranBootstrap.isRestarting">{{ arabic_text('جاري إعادة التشغيل...') }}</span>
                             </button>

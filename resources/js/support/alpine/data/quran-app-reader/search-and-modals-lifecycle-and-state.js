@@ -537,6 +537,12 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                 .map((value) => String(value ?? '').trim())
                 .filter((value) => value !== '');
             const matchedKnownId = modalId !== '' && knownIds.includes(modalId);
+            const historyOpenRequestAgeMs =
+                Date.now() - Number(this._historyModalOpenRequestedAt ?? 0);
+            const hasRecentHistoryOpenRequest =
+                Number.isFinite(historyOpenRequestAgeMs) &&
+                historyOpenRequestAgeMs >= 0 &&
+                historyOpenRequestAgeMs <= 2000;
 
             if (matchedKnownId) {
                 return true;
@@ -546,7 +552,7 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                 return this.isModalWindowVisibleById(this.historyModalId);
             }
 
-            return this.historyModalOpen;
+            return this.historyModalOpen || hasRecentHistoryOpenRequest;
         },
 
         isBookmarksModalEvent(kind, event) {
@@ -555,6 +561,12 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                 .map((value) => String(value ?? '').trim())
                 .filter((value) => value !== '');
             const matchedKnownId = modalId !== '' && knownIds.includes(modalId);
+            const bookmarksOpenRequestAgeMs =
+                Date.now() - Number(this._bookmarksModalOpenRequestedAt ?? 0);
+            const hasRecentBookmarksOpenRequest =
+                Number.isFinite(bookmarksOpenRequestAgeMs) &&
+                bookmarksOpenRequestAgeMs >= 0 &&
+                bookmarksOpenRequestAgeMs <= 2000;
 
             if (matchedKnownId) {
                 return true;
@@ -564,7 +576,79 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                 return this.isModalWindowVisibleById(this.bookmarksModalId);
             }
 
-            return this.bookmarksModalOpen;
+            return this.bookmarksModalOpen || hasRecentBookmarksOpenRequest;
+        },
+
+        queueSmPlusWebModalCloseRefit(modalId = '') {
+            const shouldRefitAfterModalClose =
+                !this.nativeRuntime &&
+                !this.shouldUseImmersiveReaderChrome() &&
+                typeof this.queueReaderReentryRefit === 'function';
+
+            if (!shouldRefitAfterModalClose) {
+                return;
+            }
+
+            // Modal transitions can leave stale fit snapshots on sm+ web.
+            this.queueReaderReentryRefit(72, 5);
+            window.setTimeout(() => this.queueReaderReentryRefit(180, 3), 120);
+            window.setTimeout(() => this.queueReaderReentryRefit(300, 2), 240);
+
+            const canRunForcedLayoutRecovery =
+                typeof this.scheduleLayout === 'function' &&
+                typeof this.clearLayoutTimers === 'function' &&
+                typeof this.hasRenderablePage === 'function';
+
+            if (canRunForcedLayoutRecovery) {
+                window.setTimeout(() => {
+                    if (this.openModalCount() > 0 || this._modalNavigationCloseGuardActive) {
+                        return;
+                    }
+
+                    if (!this.hasRenderablePage()) {
+                        return;
+                    }
+
+                    this._bypassNextFitCache = true;
+                    this.isFittingPage = true;
+                    this.clearLayoutTimers();
+                    this.scheduleLayout({ revealDelayMs: 170, maxAttempts: 5 });
+                }, 280);
+            }
+
+            const normalizedModalId = String(modalId ?? '').trim();
+            const canRunSecondaryRecoveryPulse =
+                normalizedModalId !== '' &&
+                typeof this.runSecondaryModalExitRecoveryPulse === 'function';
+            const canRunVisibilityRecovery =
+                typeof this.ensureModalDrivenPageVisible === 'function' &&
+                typeof this.hasRenderablePage === 'function';
+
+            if (canRunSecondaryRecoveryPulse) {
+                window.setTimeout(async () => {
+                    if (this.openModalCount() > 0 || this._modalNavigationCloseGuardActive) {
+                        return;
+                    }
+
+                    await this.runSecondaryModalExitRecoveryPulse(normalizedModalId);
+
+                    if (!canRunVisibilityRecovery || !this.hasRenderablePage()) {
+                        return;
+                    }
+
+                    const targetPage = clampPage(Number(this.pageNumber ?? 0), this.maxPage);
+
+                    if (targetPage <= 0) {
+                        return;
+                    }
+
+                    await this.ensureModalDrivenPageVisible(targetPage, {
+                        revealDelayMs: 170,
+                        maxAttempts: 5,
+                        fallbackReason: `${normalizedModalId}-post-close-visibility-recovery`,
+                    });
+                }, 160);
+            }
         },
 
         isJumpPageModalEvent(kind, event) {
@@ -682,6 +766,7 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
             const nativeLifecycleEventName = String(event?.type ?? '').trim();
             const normalizedKind =
                 kind === 'opened' && nativeLifecycleEventName === 'open-modal' ? 'opening' : kind;
+            const eventModalId = String(event?.detail?.id ?? '').trim();
 
             this.trackModalLifecycle(normalizedKind, event);
             const isSearchModalEvent = this.isSearchModalEvent(normalizedKind, event);
@@ -693,7 +778,7 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
             this.traceSearchModalLifecycle('lifecycle-event', {
                 kind: normalizedKind,
                 nativeLifecycleEventName,
-                modalId: String(event?.detail?.id ?? '').trim(),
+                modalId: eventModalId,
                 isSearchModalEvent,
                 isHistoryModalEvent,
                 isBookmarksModalEvent,
@@ -792,6 +877,7 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                 if (normalizedKind === 'closed') {
                     this.historyModalOpen = false;
                     this.teardownHistoryRowsAnimations();
+                    this.queueSmPlusWebModalCloseRefit(this.historyModalId);
                 }
 
                 shouldSyncManagerModalsVisibility = true;
@@ -813,15 +899,7 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                 if (normalizedKind === 'closed') {
                     this.bookmarksModalOpen = false;
                     this.teardownBookmarksRowsAnimations();
-
-                    const shouldRefitAfterBookmarksModalClose =
-                        !this.nativeRuntime &&
-                        !this.shouldUseImmersiveReaderChrome() &&
-                        typeof this.queueReaderReentryRefit === 'function';
-
-                    if (shouldRefitAfterBookmarksModalClose) {
-                        this.queueReaderReentryRefit(36, 4);
-                    }
+                    this.queueSmPlusWebModalCloseRefit(this.bookmarksModalId);
                 }
 
                 shouldSyncManagerModalsVisibility = true;
@@ -829,6 +907,10 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
 
             if (shouldSyncManagerModalsVisibility) {
                 this.dispatchManagerModalsVisibilityState();
+            }
+
+            if (normalizedKind === 'closed' && eventModalId !== '' && !isSearchModalEvent) {
+                this.queueSmPlusWebModalCloseRefit(eventModalId);
             }
 
             if (isSearchModalEvent) {

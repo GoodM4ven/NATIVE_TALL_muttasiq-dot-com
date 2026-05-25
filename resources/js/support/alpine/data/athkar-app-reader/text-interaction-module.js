@@ -834,6 +834,13 @@ export const createTextInteractionModule = (deps) => {
                     return;
                 }
 
+                if (increment.didAdvance) {
+                    didHandleSwipe = true;
+                    this.swipe.ignoreClick = true;
+
+                    return;
+                }
+
                 didHandleSwipe = increment.didUpdate;
             }
 

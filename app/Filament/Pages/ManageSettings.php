@@ -29,7 +29,7 @@ class ManageSettings extends Page
 
     protected static ?int $navigationSort = 99;
 
-    protected static ?string $title = 'إعدادات التطبيق الافتراضية';
+    protected static ?string $title = 'إعدادات المنصة الافتراضية';
 
     protected static ?string $slug = 'iedadat-iftiradiyya';
 
@@ -66,10 +66,10 @@ class ManageSettings extends Page
         return $schema
             ->components([
                 Form::make([
-                    Section::make('التطبيق')
+                    Section::make('المنصة')
                         ->schema([
                             Components\TextInput::make(Setting::APP_VERSION)
-                                ->label('نسخة التطبيق المعروضة')
+                                ->label('نسخة المنصة المعروضة')
                                 ->maxLength(32)
                                 ->placeholder((string) config('app.custom.app_version')),
                         ]),

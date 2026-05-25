@@ -3806,6 +3806,7 @@
                                     'ready')"
                                 x-bind:style="pageContentStyle()"
                                 x-on:click="clearAyahSelectionOnBackground($event)"
+                                x-on:pointermove.window.passive="onWordPointerMove($event)"
                                 x-on:pointerup.window.passive="onWordPointerUp($event)"
                                 x-on:pointercancel.window.passive="onWordPointerCancel()"
                                 x-on:mouseleave="clearHoveredSegment()"

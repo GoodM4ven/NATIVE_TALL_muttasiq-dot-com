@@ -611,6 +611,20 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
                 this.onSwipeStart(event);
             };
             this._onPanelPointerMove = (event) => {
+                if (
+                    this.usesMobileDoubleTapCopyMode() &&
+                    this.wordPress?.active &&
+                    this.wordPress?.isSecondTap
+                ) {
+                    if (event && typeof event === 'object') {
+                        event.__quranReaderInputHandled = true;
+                    }
+
+                    this.onWordPointerMove(event);
+
+                    return;
+                }
+
                 void this.onSwipeMove(event);
             };
             this._onPanelPointerUp = (event) => {
@@ -666,6 +680,20 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
                 this.onSwipeStart(event);
             };
             this._onPanelTouchMove = (event) => {
+                if (
+                    this.usesMobileDoubleTapCopyMode() &&
+                    this.wordPress?.active &&
+                    this.wordPress?.isSecondTap
+                ) {
+                    if (event && typeof event === 'object') {
+                        event.__quranReaderInputHandled = true;
+                    }
+
+                    this.onWordPointerMove(event);
+
+                    return;
+                }
+
                 void this.onSwipeMove(event);
             };
             this._onPanelTouchEnd = (event) => {

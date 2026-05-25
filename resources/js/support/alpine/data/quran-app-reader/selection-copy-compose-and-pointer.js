@@ -36,7 +36,6 @@ export const createSelectionCopyComposeAndPointerModule = (deps) => {
         managerRowReplaceAnimationDurationMs,
         managerRowUpdateAnimationDurationMs,
         mobileDoubleTapCopyWindowMs,
-        mobileDoubleTapHoldDelayMs,
         modalCloseTransitionDelayMs,
         modalLifecycleSuppressionDurationMs,
         navigationBurstInputThresholdMs,
@@ -819,30 +818,20 @@ export const createSelectionCopyComposeAndPointerModule = (deps) => {
 
             if (useMobileDoubleTapCopyMode) {
                 const now = Date.now();
+                const hasRecentTapWindow =
+                    now - this._lastMobileCopyTapAt <= mobileDoubleTapCopyWindowMs;
+                const hasPreviousTap =
+                    this._lastMobileCopyTapAt > 0 && this._lastMobileCopyTapWordKey !== null;
                 const isSecondTap =
                     typeof wordSelectionKey === 'string' &&
                     wordSelectionKey !== '' &&
                     this._lastMobileCopyTapWordKey === wordSelectionKey &&
-                    now - this._lastMobileCopyTapAt <= mobileDoubleTapCopyWindowMs;
+                    hasRecentTapWindow;
 
-                this.wordPress.isSecondTap = isSecondTap;
+                const shouldTreatAsSecondTap =
+                    isSecondTap || (hasRecentTapWindow && hasPreviousTap);
 
-                if (isSecondTap) {
-                    this._wordPressHoldTimer = window.setTimeout(() => {
-                        if (!this.wordPress.active || !this.wordPress.word) {
-                            return;
-                        }
-
-                        this.wordPress.holdTriggered = true;
-                        this.setWordClickSuppression(true);
-                        this._lastWordHoldAt = Date.now();
-                        this.selectHoldSegment(this.wordPress.word, {
-                            x: this.wordPress.startX,
-                            y: this.wordPress.startY,
-                            target: this.wordPress.target,
-                        });
-                    }, mobileDoubleTapHoldDelayMs);
-                }
+                this.wordPress.isSecondTap = shouldTreatAsSecondTap;
 
                 return;
             }

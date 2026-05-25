@@ -153,7 +153,7 @@ test('control panel keeps base-only setting visibility and compact base spacing 
         )
         ->and($controlPanelSettingsTabSource)->toContain("'class' => 'relative z-20 mt-0 sm:mt-0'")
         ->and($controlPanelSettingsTabSource)->toContain(
-            "'class' => is_platform('native') ? 'relative z-20' : 'relative z-20 sm:hidden'",
+            "'class' => 'relative z-20 sm:hidden'",
         );
 });
 
@@ -162,8 +162,10 @@ test('control panel syncs quran wird setting ordinal with runtime visibility rul
 
     expect($controlPanelSource)->not->toBeFalse()
         ->and($controlPanelSource)->toContain('syncQuranWirdSettingOrdinalLabel()')
-        ->and($controlPanelSource)->toContain("const resolvedOrdinal = shouldKeepImmersiveCaptionSettingVisible ? '6.' : '5.';")
-        ->and($controlPanelSource)->toContain('labelElement.dataset.quranWirdBaseLabel = computedBaseLabel;');
+        ->and($controlPanelSource)->toContain("const resolvedOrdinal = Boolean(this.\$store?.bp?.is?.('base')) ? '6.' : '5.';")
+        ->and($controlPanelSource)->toContain('!candidate.closest(\'.quran-wird-frequency-field\')')
+        ->and($controlPanelSource)->toContain('labelElement.dataset.quranWirdBaseLabel = computedBaseLabel;')
+        ->and($controlPanelSource)->toContain("labelElement.dataset.controlPanelOrdinalManaged = 'true';");
 });
 
 test('quran reader requests sm+ web refit after bookmarks modal closes', function () {
@@ -172,8 +174,13 @@ test('quran reader requests sm+ web refit after bookmarks modal closes', functio
     );
 
     expect($source)->not->toBeFalse()
-        ->and($source)->toContain('const shouldRefitAfterBookmarksModalClose =')
+        ->and($source)->toContain('queueSmPlusWebModalCloseRefit(modalId = \'\')')
         ->and($source)->toContain('!this.nativeRuntime &&')
         ->and($source)->toContain('!this.shouldUseImmersiveReaderChrome() &&')
-        ->and($source)->toContain('this.queueReaderReentryRefit(36, 4);');
+        ->and($source)->toContain('this.queueReaderReentryRefit(72, 5);')
+        ->and($source)->toContain('window.setTimeout(() => this.queueReaderReentryRefit(180, 3), 120);')
+        ->and($source)->toContain('await this.runSecondaryModalExitRecoveryPulse(normalizedModalId);')
+        ->and($source)->toContain('await this.ensureModalDrivenPageVisible(targetPage, {')
+        ->and($source)->toContain('this.queueSmPlusWebModalCloseRefit(this.historyModalId);')
+        ->and($source)->toContain('this.queueSmPlusWebModalCloseRefit(this.bookmarksModalId);');
 });

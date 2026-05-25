@@ -43,7 +43,7 @@ class ControlPanel extends Component implements HasActions, HasSchemas
     {
         return Action::make('controlPanel')
             ->label(arabic_text('لوحة التحكم'))
-            ->modalDescription(arabic_text('بعض المعلومات والتفضيلات في كيفية عمل التطبيق'))
+            ->modalDescription(arabic_text('بعض المعلومات والتفضيلات في كيفية عمل المنصة'))
             ->modalSubmitActionLabel(arabic_text('حفظ'))
             ->extraModalWindowAttributes([
                 'id' => 'control-panel-modal',
@@ -94,7 +94,7 @@ class ControlPanel extends Component implements HasActions, HasSchemas
     {
         return Action::make('supportUnlock')
             ->modalHeading(arabic_text('دعم المشروع'))
-            ->modalDescription(arabic_text('قبل استخدام بعض الخصائص المميّزة في التطبيق، نحتاج منك تأكيد دعم تطوير المشروع.'))
+            ->modalDescription(arabic_text('قبل استخدام بعض الخصائص المميّزة في المنصة، نحتاج منك تأكيد دعم تطوير المشروع.'))
             ->modalWidth(Width::ThreeExtraLarge)
             ->modalSubmitActionLabel(arabic_text('قمت بالدعم'))
             ->modalCancelAction(false)
@@ -187,23 +187,23 @@ class ControlPanel extends Component implements HasActions, HasSchemas
     private function supportUnlockModalContent(): HtmlString
     {
         $introBeforeStrong = arabic_text(
-            'تطوير المزايا المتقدمة، وإتاحة التطبيق على المخدّمات والمنصات بأجهزتها المختلفة، كل هذا يتطلب ',
+            'تطوير المزايا المتقدمة، وإتاحة المنصة على المخدّمات والمنصات بأجهزتها المختلفة، كل هذا يتطلب ',
         );
         $introStrong = arabic_text('وقتًا وجهدًا وتكلفة مستمرة');
         $introAfterStrong = arabic_text(
-            '، بارك الله فيكم... ولذلك نودّ منكم على الأقلّ محاولة التبرع لتطوير تطبيق متسق باستخدام إحدى المنصات المتاحة لذلك، وجزاكم الله خيرا.',
+            '، بارك الله فيكم... ولذلك نودّ منكم على الأقلّ محاولة التبرع لتطوير منصة متسق باستخدام إحدى المنصات المتاحة لذلك، وجزاكم الله خيرا.',
         );
         $supportLinksCaption = arabic_text('روابط منصات الدعم:');
 
         return new HtmlString(
-            '<div class="space-y-4 text-right text-base! leading-7">'
+            '<div class="space-y-4 text-right text-base! leading-7 text-gray-800 dark:text-gray-100">'
                 .'<p class="text-center">'
                 .e($introBeforeStrong)
                 .'<strong>'.e($introStrong).'</strong>'
                 .e($introAfterStrong)
                 .'</p>'
-                .'<div class="rounded-xl border border-gray-200/70 bg-white/70 p-3 text-sm">'
-                .'<p class="mb-2 font-semibold text-gray-900">'.e($supportLinksCaption).'</p>'
+                .'<div class="quran-support-unlock-links-panel rounded-xl p-3 text-sm">'
+                .'<p class="mb-2 font-semibold text-gray-900 dark:text-gray-100">'.e($supportLinksCaption).'</p>'
                 .'<div class="flex flex-wrap items-center justify-end gap-2">'
                 .$this->supportUnlockLinkMarkup('Buy Me a Coffee', 'https://buymeacoffee.com/goodm4ven')
                 .$this->supportUnlockLinkMarkup('Patreon', 'https://patreon.com/GoodM4ven')
@@ -219,7 +219,7 @@ class ControlPanel extends Component implements HasActions, HasSchemas
         $openLinkNativeAware = htmlspecialchars(open_link_native_aware($url), ENT_QUOTES, 'UTF-8');
         $safeLabel = e($label);
 
-        return '<button type="button" class="rounded-lg border border-primary-300/70 bg-primary-50/70 px-3 py-1.5 text-xs font-medium text-primary-800 transition hover:bg-primary-100/80"'
+        return '<button type="button" class="quran-support-unlock-link rounded-lg px-3 py-1.5 text-xs font-medium transition"'
             .' x-on:click.prevent="'.$openLinkNativeAware.'"'
             .' x-on:keydown.enter.prevent="'.$openLinkNativeAware.'"'
             .' x-on:keydown.space.prevent="'.$openLinkNativeAware.'">'

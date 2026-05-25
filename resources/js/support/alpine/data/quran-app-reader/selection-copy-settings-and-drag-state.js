@@ -517,7 +517,7 @@ export const createSelectionCopySettingsAndDragStateModule = (deps) => {
 
         usesMobileDoubleTapCopyMode() {
             if (typeof this.$store?.bp?.isTouch === 'function') {
-                return Boolean(this.$store.bp.isTouch());
+                return Boolean(this.$store.bp.isTouch() || this.$store.bp.hasTouch);
             }
 
             return Boolean(this.$store?.bp?.hasTouch);

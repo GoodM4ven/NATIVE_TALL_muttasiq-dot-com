@@ -566,7 +566,11 @@ export const createLifecycleModule = (deps) => {
             this.topUi.pulseActive = false;
         },
 
-        startTopUiCompletionTransition(completedIndex, nextIndex) {
+        startTopUiCompletionTransition(
+            completedIndex,
+            nextIndex,
+            { skipIndexSwitch = false } = {},
+        ) {
             if (!this.activeMode) {
                 return;
             }
@@ -574,21 +578,25 @@ export const createLifecycleModule = (deps) => {
             const completedCount = this.countAt(completedIndex);
             const completedRequired = this.requiredCount(completedIndex);
             const nextRequired = this.requiredCount(nextIndex);
+            const shouldDelayCountMorphUntilPanelPulse =
+                completedRequired <= 1 && nextRequired <= 1 && !this.isMobileViewport();
 
             this.resetTopUiTransition();
-            this.setActiveIndex({
-                index: nextIndex,
-                preserveTopUiTransition: true,
-            });
 
-            if (completedRequired <= 1 && nextRequired <= 1) {
+            if (!skipIndexSwitch) {
+                this.setActiveIndex({
+                    index: nextIndex,
+                    preserveTopUiTransition: true,
+                });
+            }
+
+            if (completedRequired <= 1 && nextRequired <= 1 && this.isMobileViewport()) {
                 return;
             }
 
             const nextCount = this.countAt(nextIndex);
 
             this.topUi.progressOverride = 100;
-            this.triggerCountPulse(nextIndex, completedCount, nextCount);
 
             this.topUi.lingerTimer = setTimeout(() => {
                 this.topUi.lingerTimer = null;
@@ -597,9 +605,16 @@ export const createLifecycleModule = (deps) => {
                 this.topUi.pulseTimer = setTimeout(() => {
                     this.topUi.pulseTimer = null;
                     this.topUi.pulseActive = false;
+                    if (shouldDelayCountMorphUntilPanelPulse) {
+                        this.triggerCountPulse(nextIndex, completedCount, nextCount);
+                    }
                     this.topUi.progressOverride = null;
                 }, this.topUiPulseDurationMs);
             }, this.topUiCompletionLingerMs);
+
+            if (!shouldDelayCountMorphUntilPanelPulse) {
+                this.triggerCountPulse(nextIndex, completedCount, nextCount);
+            }
         },
 
         isHintOpen(index) {

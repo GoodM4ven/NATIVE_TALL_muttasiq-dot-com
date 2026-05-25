@@ -767,6 +767,10 @@ export const createInitialState = (config, deps) => {
 
         _searchModalOpenRequestedAt: 0,
 
+        _historyModalOpenRequestedAt: 0,
+
+        _bookmarksModalOpenRequestedAt: 0,
+
         _searchModalLifecycleToken: 0,
 
         _lastKnownModalOpenState: false,

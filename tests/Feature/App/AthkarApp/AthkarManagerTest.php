@@ -96,7 +96,19 @@ it('passes native mobile runtime flag to the manager card interaction bridge', f
     expect($source)->not->toBeFalse()
         ->and($source)->toContain('nativeMobileRuntime: @js(')
         ->and($source)->toContain("config('nativephp-internal.running', false)")
-        ->and($source)->toContain("is_platform('mobile')");
+        ->and($source)->toContain("is_platform('mobile')")
+        ->and($source)->toContain('wire:model.live.debounce.520ms="athkarSearchQuery"');
+});
+
+it('keeps athkar manager search plan bounded to avoid heavy runtime spikes', function () {
+    $source = file_get_contents(app_path('Livewire/AthkarManager.php'));
+
+    expect($source)->not->toBeFalse()
+        ->and($source)->toContain('private array $normalizedAthkarSearchValueCache = [];')
+        ->and($source)->toContain('private array $athkarSearchPlanCache = [];')
+        ->and($source)->toContain('if (mb_strlen($normalized) > 1200) {')
+        ->and($source)->toContain('$terms = [$normalized];')
+        ->and($source)->not->toContain('buildComprehensiveSearchPlan');
 });
 
 it('configures athkar edit modal submit and delete buttons with explicit icons', function () {

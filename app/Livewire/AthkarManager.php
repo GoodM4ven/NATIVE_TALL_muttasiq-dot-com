@@ -16,7 +16,6 @@ use Filament\Actions\Contracts\HasActions;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Support\Enums\Width;
-use GoodMaven\Arabicable\Facades\Arabic;
 use GoodMaven\Arabicable\Facades\ArabicFilter;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Arr;
@@ -50,6 +49,16 @@ class AthkarManager extends Component implements HasActions, HasSchemas
     public array $athkarOverrides = [];
 
     public bool $hasHydratedOverrides = false;
+
+    /**
+     * @var array<string, string>
+     */
+    private array $normalizedAthkarSearchValueCache = [];
+
+    /**
+     * @var array<string, array{normalized: string, terms: array<int, string>}>
+     */
+    private array $athkarSearchPlanCache = [];
 
     public function openManageAthkar(bool $isMobile = false): void
     {
@@ -100,6 +109,7 @@ class AthkarManager extends Component implements HasActions, HasSchemas
     public function clearAthkarSearchQuery(): void
     {
         $this->athkarSearchQuery = '';
+        $this->athkarSearchPlanCache = [];
     }
 
     public function editAthkarAction(): Action
@@ -1326,11 +1336,33 @@ class AthkarManager extends Component implements HasActions, HasSchemas
             return '';
         }
 
+        $cacheKey = sha1($normalized);
+
+        if (array_key_exists($cacheKey, $this->normalizedAthkarSearchValueCache)) {
+            return $this->normalizedAthkarSearchValueCache[$cacheKey];
+        }
+
+        if (mb_strlen($normalized) > 1200) {
+            $normalized = mb_substr($normalized, 0, 1200);
+        }
+
         $strippedWrappers = $this->stripAthkarSearchWrappers($normalized);
         $searchable = trim((string) ArabicFilter::forSearch($strippedWrappers));
         $collapsed = preg_replace('/\s+/u', ' ', $searchable) ?? $searchable;
 
-        return trim($collapsed);
+        $resolved = trim($collapsed);
+        $this->normalizedAthkarSearchValueCache[$cacheKey] = $resolved;
+
+        if (count($this->normalizedAthkarSearchValueCache) > 512) {
+            $this->normalizedAthkarSearchValueCache = array_slice(
+                $this->normalizedAthkarSearchValueCache,
+                -320,
+                null,
+                true,
+            );
+        }
+
+        return $resolved;
     }
 
     private function stripAthkarSearchWrappers(string $value): string
@@ -1373,18 +1405,11 @@ class AthkarManager extends Component implements HasActions, HasSchemas
             ];
         }
 
-        $terms = [$normalized];
-
-        try {
-            /** @var array{terms?: array<int, string>} $plan */
-            $plan = Arabic::buildComprehensiveSearchPlan($normalized, 32);
-
-            foreach ($plan['terms'] ?? [] as $term) {
-                $terms[] = $term;
-            }
-        } catch (\Throwable) {
-            // Fall through with normalized-only matching.
+        if (array_key_exists($normalized, $this->athkarSearchPlanCache)) {
+            return $this->athkarSearchPlanCache[$normalized];
         }
+
+        $terms = [$normalized];
 
         $terms = collect($terms)
             ->map(fn (string $term): string => $this->normalizeAthkarSearchValue($term))
@@ -1396,10 +1421,23 @@ class AthkarManager extends Component implements HasActions, HasSchemas
             ->values()
             ->all();
 
-        return [
+        $resolvedPlan = [
             'normalized' => $normalized,
             'terms' => $terms,
         ];
+
+        $this->athkarSearchPlanCache[$normalized] = $resolvedPlan;
+
+        if (count($this->athkarSearchPlanCache) > 80) {
+            $this->athkarSearchPlanCache = array_slice(
+                $this->athkarSearchPlanCache,
+                -48,
+                null,
+                true,
+            );
+        }
+
+        return $resolvedPlan;
     }
 
     /**
