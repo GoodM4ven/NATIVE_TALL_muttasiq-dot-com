@@ -10,6 +10,7 @@
         const maxSourceLength = 2048;
         const maxStackLength = 20000;
         const maxTimeLength = 50;
+        const knownBreakpoints = ['base', 'sm', 'md', 'lg', 'xl', '2xl', '3xl', '4xl'];
         let lastOpenedAt = 0;
         let lastModalMode = 'auto';
         let isModalOpen = false;
@@ -243,6 +244,34 @@
             return cssBreakpoint || null;
         };
 
+        const resolveBreakpointFromViewportWidth = () => {
+            const viewportWidth = Number(window.innerWidth ?? document.documentElement?.clientWidth ?? 0);
+
+            if (!Number.isFinite(viewportWidth) || viewportWidth <= 0) {
+                return null;
+            }
+
+            if (viewportWidth >= 2560) return '4xl';
+            if (viewportWidth >= 1920) return '3xl';
+            if (viewportWidth >= 1536) return '2xl';
+            if (viewportWidth >= 1280) return 'xl';
+            if (viewportWidth >= 1024) return 'lg';
+            if (viewportWidth >= 768) return 'md';
+            if (viewportWidth >= 640) return 'sm';
+
+            return 'base';
+        };
+
+        const resolveBreakpointLabel = () => {
+            const normalizedBreakpoint = trimTo(readBreakpoint(), 8);
+
+            if (normalizedBreakpoint && knownBreakpoints.includes(normalizedBreakpoint)) {
+                return normalizedBreakpoint;
+            }
+
+            return resolveBreakpointFromViewportWidth() ?? normalizedBreakpoint;
+        };
+
         const buildPlatformLabel = () => {
             const prefix = isNativeRuntime ? 'Native' : 'Web';
             const resolvedNativePlatform = trimTo(nativePlatform, 32);
@@ -262,7 +291,7 @@
                 user_agent: trimTo(window.navigator?.userAgent ?? null, 1000),
                 language: trimTo(window.navigator?.language ?? null, 32),
                 platform: buildPlatformLabel(),
-                breakpoint: isNativeRuntime ? null : trimTo(readBreakpoint(), 8),
+                breakpoint: resolveBreakpointLabel(),
             };
         };
 

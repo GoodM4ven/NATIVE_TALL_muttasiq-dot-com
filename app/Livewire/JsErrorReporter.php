@@ -103,12 +103,12 @@ class JsErrorReporter extends Component implements HasActions, HasSchemas
             )
             ->fillForm(fn (): array => [
                 'user_note' => '',
-                'screen_breakpoint' => $this->clientContext['breakpoint'] ?? arabic_text('غير محدد'),
+                'screen_breakpoint' => $this->resolveScreenBreakpointDisplayLabel(),
                 'technical_snapshot' => $this->formatErrorsForDisplay(),
             ])
             ->schema([
                 TextInput::make('screen_breakpoint')
-                    ->label(arabic_text('المقاس الحالي للجهاز (Breakpoint)'))
+                    ->label(arabic_text('المقاس الحالي للجهاز'))
                     ->disabled()
                     ->dehydrated(false)
                     ->extraInputAttributes(['dir' => 'ltr']),
@@ -279,6 +279,23 @@ class JsErrorReporter extends Component implements HasActions, HasSchemas
                 return $summary."\n".$entry['stack'];
             })
             ->implode("\n\n");
+    }
+
+    private function resolveScreenBreakpointDisplayLabel(): string
+    {
+        $breakpoint = trim((string) ($this->clientContext['breakpoint'] ?? ''));
+
+        return match ($breakpoint) {
+            'base' => arabic_text('جوال'),
+            'sm' => arabic_text('صغير'),
+            'md' => arabic_text('متوسط'),
+            'lg' => arabic_text('كبير'),
+            'xl' => arabic_text('كبير جدا'),
+            '2xl' => arabic_text('كبير جدا مقاس 2'),
+            '3xl' => arabic_text('كبير جدا مقاس 3'),
+            '4xl' => arabic_text('كبير جدا مقاس 4'),
+            default => arabic_text('غير محدد'),
+        };
     }
 
     private function trimToLength(mixed $value, int $length): ?string

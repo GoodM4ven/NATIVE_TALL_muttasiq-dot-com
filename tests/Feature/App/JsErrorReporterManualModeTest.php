@@ -8,6 +8,15 @@ test('manual js error reporting mode exposes breakpoint and hides technical snap
     expect($componentSource)->not->toBeFalse()
         ->and($componentSource)->toContain('public bool $isManualReport = false;')
         ->and($componentSource)->toContain("TextInput::make('screen_breakpoint')")
+        ->and($componentSource)->toContain("->label(arabic_text('المقاس الحالي للجهاز'))")
+        ->and($componentSource)->toContain('private function resolveScreenBreakpointDisplayLabel(): string')
+        ->and($componentSource)->toContain("'base' => arabic_text('جوال')")
+        ->and($componentSource)->toContain("'sm' => arabic_text('صغير')")
+        ->and($componentSource)->toContain("'md' => arabic_text('متوسط')")
+        ->and($componentSource)->toContain("'lg' => arabic_text('كبير')")
+        ->and($componentSource)->toContain("'xl' => arabic_text('كبير جدا')")
+        ->and($componentSource)->toContain("'2xl' => arabic_text('كبير جدا مقاس 2')")
+        ->and($componentSource)->not->toContain('(Breakpoint)')
         ->and($componentSource)->toContain('->hidden(fn (): bool => $this->isManualReport || $this->capturedErrors === [])');
 });
 
@@ -30,5 +39,8 @@ test('manual js error report trigger avoids automatic reload on close', function
         ->and($scriptSource)->toContain("if (lastModalMode === 'manual') {")
         ->and($scriptSource)->toContain('sessionStorage.removeItem(successfulSubmissionFlag);')
         ->and($scriptSource)->toContain("window.Livewire.dispatchTo('js-error-reporter', 'show-submitted-toast');")
-        ->and($scriptSource)->toContain("sessionStorage.setItem(successfulSubmissionFlag, '1');");
+        ->and($scriptSource)->toContain("sessionStorage.setItem(successfulSubmissionFlag, '1');")
+        ->and($scriptSource)->toContain('const resolveBreakpointLabel = () => {')
+        ->and($scriptSource)->toContain('return resolveBreakpointFromViewportWidth() ?? normalizedBreakpoint;')
+        ->and($scriptSource)->not->toContain('breakpoint: isNativeRuntime ? null : trimTo(readBreakpoint(), 8),');
 });
