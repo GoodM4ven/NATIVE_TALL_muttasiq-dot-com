@@ -453,21 +453,22 @@
 
             .quran-page-lines--dense {
                 --quran-page-dense-leading-multiplier: 1;
-                --quran-page-dense-gap-multiplier: 1;
+                --quran-page-dense-gap-multiplier: 0.9;
                 --quran-page-dense-type-multiplier: 1;
                 --quran-page-dense-y-offset: 0rem;
                 --quran-page-y-offset: 0rem;
                 --quran-page-scale: 0.35;
                 --quran-page-type-scale: 2.7;
                 --quran-page-leading-multiplier: 1.1;
-                --quran-page-gap-multiplier: 3.35;
+                --quran-page-gap-multiplier: 3.33;
                 --quran-page-surah-header-scale: 1.01;
                 --quran-basmallah-bottom-gap-scale: -0.28;
+                --quran-page-postfit-gap-tune: 0.98;
             }
 
             .quran-page-lines--dense-short {
                 --quran-page-dense-short-leading-tune: 1.09;
-                --quran-page-dense-short-gap-tune: 1.15;
+                --quran-page-dense-short-gap-tune: 1.19;
                 --quran-page-dense-short-y-offset-tune: 0rem;
             }
 
@@ -500,8 +501,8 @@
                 --quran-page-gap-multiplier: 3.02;
                 --quran-page-surah-header-scale: 0.81;
                 --quran-basmallah-bottom-gap-scale: -0.28;
-                --quran-page-postfit-type-tune: 0.9;
-                --quran-page-postfit-gap-tune: 1.1;
+                --quran-page-postfit-type-tune: 0.95;
+                --quran-page-postfit-gap-tune: 1;
             }
         }
 

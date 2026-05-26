@@ -2507,8 +2507,12 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                         : isSmOrLargerBreakpoint;
                 const isDenseShortLinePage =
                     typeof this.isDenseShortLinePage === 'function' && this.isDenseShortLinePage();
+                const recentlyRevealedPage =
+                    this._lastPageRevealAt > 0 &&
+                    Date.now() - this._lastPageRevealAt <
+                        Math.max(120, Number(postModalFitRevealSettleDelayMs ?? 240));
                 const shouldHonorPostFitTuningDuringSanity =
-                    isSmOrLargerViewport || isDenseShortLinePage;
+                    isSmOrLargerViewport || isDenseShortLinePage || recentlyRevealedPage;
                 const resolvePostFitTuneNumber = (effectivePropertyName, propertyName) => {
                     if (!pageLinesComputedStyle) {
                         return 1;
@@ -2616,10 +2620,6 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                     !isPageScaleAtFloor &&
                     (fillWidth < normalizedMinimumFillWidth ||
                         fillHeight < normalizedMinimumFillHeight);
-                const recentlyRevealedPage =
-                    this._lastPageRevealAt > 0 &&
-                    Date.now() - this._lastPageRevealAt <
-                        Math.max(120, Number(postModalFitRevealSettleDelayMs ?? 240));
 
                 if (!hasOverflow && hasSuspiciousUnderfill && recentlyRevealedPage) {
                     this._fitSanityCheckTimer = window.setTimeout(() => {
