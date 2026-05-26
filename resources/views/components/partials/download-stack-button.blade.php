@@ -30,9 +30,9 @@
             x-show="isExpanded"
             x-transition:enter="transition-[opacity,transform] duration-180 ease-out"
             x-transition:enter-start="opacity-0 -translate-y-1/2"
-            x-transition:enter-end="opacity-100 -translate-y-0"
+            x-transition:enter-end="opacity-100 translate-y-0"
             x-transition:leave="transition-[opacity,transform] duration-140 ease-in"
-            x-transition:leave-start="opacity-100 -translate-y-0"
+            x-transition:leave-start="opacity-100 translate-y-0"
             x-transition:leave-end="opacity-0 -translate-y-1/2"
         >
             <x-action-button
