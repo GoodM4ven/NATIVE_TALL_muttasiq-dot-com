@@ -2980,6 +2980,9 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
 
             this.pageScale = nextScale;
             this.setCurrentPageScale(nextScale, { forFitting: true });
+            // Re-apply non-fitting scale write so post-fit tuning vars
+            // are restored after the safety shrink pass.
+            this.setCurrentPageScale(nextScale);
 
             return true;
         },

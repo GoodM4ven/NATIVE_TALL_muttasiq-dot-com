@@ -15,7 +15,7 @@
         x-bind:class="!$store.colorScheme.isDarkModeOn ? 'opacity-30!' : ''"
     >
         <div
-            class="absolute inset-0 transition-opacity duration-500 will-change-[opacity] delay-300"
+            class="absolute inset-0 transition-opacity delay-300 duration-500 will-change-[opacity]"
             data-testid="main-menu-bg-light-layer"
             x-cloak
             x-show="views[`main-menu`].isOpen && !$store.colorScheme.isDarkModeOn && !views[`quran-app-tilawa`].isOpen && !views[`quran-app-hifth`].isOpen && !views[`quran-app-tadabbur`].isOpen"
@@ -30,7 +30,7 @@
         </div>
 
         <div
-            class="absolute inset-0 transition-opacity duration-500 will-change-[opacity] delay-300"
+            class="absolute inset-0 transition-opacity delay-300 duration-500 will-change-[opacity]"
             data-testid="main-menu-bg-dark-layer"
             x-cloak
             x-show="views[`main-menu`].isOpen && $store.colorScheme.isDarkModeOn && !views[`quran-app-tilawa`].isOpen && !views[`quran-app-hifth`].isOpen && !views[`quran-app-tadabbur`].isOpen"
