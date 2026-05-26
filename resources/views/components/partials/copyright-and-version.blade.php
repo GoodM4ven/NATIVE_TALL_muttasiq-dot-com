@@ -273,9 +273,8 @@
     x-effect="syncRevealLoop()"
 >
     <div
-        class="3xl:text-[1rem] relative w-fit max-w-[90vw] cursor-default select-none rounded-lg border border-white/70 bg-gray-100/40 px-2.5 py-2 text-[clamp(0.55rem,2.65vw,0.8rem)] text-gray-600 opacity-0 shadow-2xl ring-1 ring-gray-200/70 transition-all duration-500 ease-out sm:max-w-none sm:rounded-2xl sm:px-4 sm:py-3 sm:text-[0.82rem] md:px-5 md:py-3 md:text-[0.88rem] lg:px-4 lg:py-3 lg:text-[0.85rem] xl:px-6 xl:py-4 xl:text-[1rem] 2xl:text-[0.9rem] dark:border-white/10 dark:bg-gray-900/20 dark:text-gray-300 dark:ring-white/10"
+        class="3xl:text-[1rem] relative w-fit max-w-[90vw] cursor-default select-none rounded-lg border border-white/70 bg-gray-100/40 px-2.5 py-2 text-[clamp(0.4rem,2.5vw,0.8rem)] text-gray-600 opacity-0 shadow-2xl ring-1 ring-gray-200/70 transition-all duration-500 ease-out sm:max-w-none sm:rounded-2xl sm:px-4 sm:py-3 sm:text-[0.82rem] md:px-5 md:py-3 md:text-[0.88rem] lg:px-4 lg:py-3 lg:text-[0.85rem] xl:px-6 xl:py-4 xl:text-[1rem] 2xl:text-[0.9rem] dark:border-white/10 dark:bg-gray-900/20 dark:text-gray-300 dark:ring-white/10"
         data-testid="copyright-version-panel"
-        data-fitty-box
         x-bind:class="{
             'opacity-100!': isVisible,
             'pointer-events-auto!': (isHoverRevealEnabled() || isVisible || isTouching) && (views['main-menu'].isOpen ||
@@ -289,19 +288,11 @@
     >
         <p
             class="inline-flex max-w-full items-center justify-center gap-1 overflow-hidden whitespace-nowrap text-center leading-tight [text-wrap:nowrap]"
-            data-fitty-target
-            data-fitty-step="0.5"
-            data-fitty-safe-padding-x="2"
-            data-fitty-safe-padding-y="1"
-            x-bind:data-fitty-enabled="$store.bp?.is?.('base').toString()"
-            x-bind:data-fitty-min-size-override="$store.bp?.is?.('base') ? 6 : 0"
-            x-bind:data-fitty-max-size-override="$store.bp?.is?.('base') ? 12 : 0"
         >
             <span class="min-w-0 shrink overflow-hidden text-ellipsis whitespace-nowrap">
                 {{ arabic_text('جميع الحقوق محفوظة') }} • {{ arabic_text('متسق') }} @ <span
                     x-text="window.dayjs().calendar('hijri').format('YYYY')"
                 ></span> {{ arabic_text('هـ') }} •
-                {{ arabic_text('النسخة') }}
             </span>
             <button
                 class="inline shrink-0 whitespace-nowrap rounded-sm font-semibold text-gray-800 underline decoration-gray-400/80 underline-offset-4 transition-colors hover:text-gray-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400/60 dark:text-gray-100 dark:decoration-gray-400/60 dark:hover:text-white dark:focus-visible:ring-gray-200/40"
