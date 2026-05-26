@@ -196,3 +196,29 @@ it('renders expected icon and markup contracts while resetting app version to co
         ->and($content)->toContain('data-testid="main-menu-insights-panel"')
         ->and($content)->toContain('data-quran-app-reader-root');
 });
+
+it('renders the download stack controls on web runtime only', function () {
+    config([
+        'nativephp-internal.running' => false,
+        'nativephp-internal.platform' => null,
+    ]);
+
+    $webResponse = get('/');
+
+    $webResponse->assertSuccessful()
+        ->assertSee('data-testid="download-button"', false)
+        ->assertSee('data-testid="download-android-button"', false)
+        ->assertSee('data-testid="download-ios-button"', false);
+
+    config([
+        'nativephp-internal.running' => true,
+        'nativephp-internal.platform' => 'android',
+    ]);
+
+    $nativeResponse = get('/');
+
+    $nativeResponse->assertSuccessful()
+        ->assertDontSee('data-testid="download-button"', false)
+        ->assertDontSee('data-testid="download-android-button"', false)
+        ->assertDontSee('data-testid="download-ios-button"', false);
+});

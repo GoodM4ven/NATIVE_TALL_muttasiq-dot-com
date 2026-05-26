@@ -500,6 +500,9 @@
             <livewire:color-scheme-switcher />
             <livewire:control-panel />
             <x-quran-reader-font-scale-button />
+            @if (!is_platform('native'))
+                <x-partials.download-stack-button />
+            @endif
         </x-buttons-stack>
 
         <x-partials.colorful-background />
