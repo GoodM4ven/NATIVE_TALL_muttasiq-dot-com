@@ -135,6 +135,27 @@ export const createReaderNavigationFitPageAdjustAndChromeModule = (deps) => {
             });
         },
 
+        applyPageTypeScaleAdjustValue(value, { persist = true, refit = false } = {}) {
+            this.quranPageTypeScaleAdjustValue = this.normalizePageTypeScaleAdjustValue(value, 0);
+
+            if (persist) {
+                this.persistPageTypeScaleAdjustValue(this.quranPageTypeScaleAdjustValue);
+            }
+
+            this.setCurrentPageScale(this.pageScale);
+
+            if (refit) {
+                this.schedulePageScaleAdjustRefit();
+            }
+        },
+
+        handlePageTypeScaleAdjustInput(event = null) {
+            this.applyPageTypeScaleAdjustValue(event?.target?.value ?? 0, {
+                persist: false,
+                refit: false,
+            });
+        },
+
         applyPageGapAdjustValue(value, { persist = true, refit = false } = {}) {
             this.quranPageGapAdjustValue = this.normalizePageGapAdjustValue(value, 0);
 
@@ -179,6 +200,7 @@ export const createReaderNavigationFitPageAdjustAndChromeModule = (deps) => {
 
         commitPageLayoutAdjustments() {
             this.persistPageScaleAdjustValue(this.quranPageScaleAdjustValue);
+            this.persistPageTypeScaleAdjustValue(this.quranPageTypeScaleAdjustValue);
             this.persistPageGapAdjustValue(this.quranPageGapAdjustValue);
             this.persistPageYOffsetAdjustValue(this.quranPageYOffsetAdjustValue);
             this.schedulePageScaleAdjustRefit();

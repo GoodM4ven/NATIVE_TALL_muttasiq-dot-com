@@ -95,14 +95,6 @@ trait HasControlPanelSettingsTab
                             ->extraFieldWrapperAttributes(['class' => 'relative z-20 mt-0 sm:mt-0'])
                             ->label($generalDefinitions[Setting::DOES_PRESERVE_HARAKAT_IN_DISPLAY]['label']),
 
-                        Components\Checkbox::make(Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION)
-                            ->default((bool) ($generalDefinitions[Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION]['default'] ?? false))
-                            ->visible(fn (): bool => is_platform('native'))
-                            ->extraFieldWrapperAttributes(['class' => 'relative z-20 mt-3 sm:mt-0'])
-                            ->label($generalDefinitions[Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION]['label'])
-                            ->belowContent([
-                                Text::make((string) ($generalDefinitions[Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION]['help'] ?? ''))->size(TextSize::ExtraSmall),
-                            ]),
                     ]),
 
                 Text::make(new HtmlString('<hr class="border-0 h-px bg-linear-to-r from-transparent via-gray-400 to-transparent mt-5">'))
@@ -212,6 +204,17 @@ trait HasControlPanelSettingsTab
                             ->extraAttributes(['class' => 'quran-wird-group-field'])
                             ->columns(2)
                             ->columnSpanFull(),
+
+                        Components\Checkbox::make(Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION)
+                            ->default((bool) ($generalDefinitions[Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION]['default'] ?? false))
+                            ->visible(fn (): bool => is_platform('native'))
+                            ->extraFieldWrapperAttributes([
+                                'class' => 'relative z-20 mt-3 sm:mt-0 quran-volume-navigation-field',
+                            ])
+                            ->label($generalDefinitions[Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION]['label'])
+                            ->belowContent([
+                                Text::make((string) ($generalDefinitions[Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION]['help'] ?? ''))->size(TextSize::ExtraSmall),
+                            ]),
 
                     ]),
 

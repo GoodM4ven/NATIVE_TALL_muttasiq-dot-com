@@ -140,6 +140,22 @@
             text-align: center;
         }
 
+        .dark .quran-font-scale-overlay__backdrop {
+            background: rgb(2 6 23 / 0.54);
+        }
+
+        .dark .quran-font-scale-overlay__panel {
+            border-color: color-mix(in srgb, var(--primary-600) 50%, rgb(15 23 42 / 0.72));
+            background: color-mix(in srgb, rgb(15 23 42) 84%, transparent);
+            box-shadow: 0 0.95rem 2.2rem rgb(2 6 23 / 0.62);
+        }
+
+        .dark .quran-font-scale-overlay__title {
+            border-color: color-mix(in srgb, var(--primary-500) 46%, transparent);
+            background: color-mix(in srgb, rgb(30 41 59) 76%, transparent);
+            color: color-mix(in srgb, var(--primary-100) 84%, white);
+        }
+
         /* baseShared */
         @media (min-width: 320px) and (max-width: 639px) {
             main:has(.within-quran-app) {
@@ -676,8 +692,8 @@
 
             .quran-page-lines--dense {
                 --quran-page-dense-leading-multiplier: 1.3;
-                --quran-page-dense-gap-multiplier: 1.6;
-                --quran-page-dense-type-multiplier: 0.92;
+                --quran-page-dense-gap-multiplier: 2.1;
+                --quran-page-dense-type-multiplier: 1.32;
                 --quran-page-dense-y-offset: 0.1rem;
                 --quran-page-y-offset: -0.57rem;
                 --quran-page-scale: 0.55;
@@ -4146,6 +4162,23 @@
                                 step="1"
                                 x-bind:value="quranPageScaleAdjustValue"
                                 x-on:input="handlePageScaleAdjustInput($event)"
+                                x-on:change="commitPageLayoutAdjustments()"
+                            />
+                            <button
+                                class="quran-page-slider-chip quran-font-scale-overlay__value select-none rounded-full px-2 py-[0.18rem] text-[0.72rem] font-semibold"
+                                type="button"
+                                x-text="pageTypeScaleAdjustDisplayValue()"
+                                x-on:click="applyPageTypeScaleAdjustValue(0); commitPageLayoutAdjustments()"
+                            ></button>
+                            <input
+                                class="quran-page-slider min-w-42 h-[0.56rem] w-[min(70vw,15rem)] outline-none"
+                                type="range"
+                                aria-label="{{ arabic_text('التحكم في مقياس حروف المصحف') }}"
+                                min="-100"
+                                max="100"
+                                step="1"
+                                x-bind:value="quranPageTypeScaleAdjustValue"
+                                x-on:input="handlePageTypeScaleAdjustInput($event)"
                                 x-on:change="commitPageLayoutAdjustments()"
                             />
                             <button

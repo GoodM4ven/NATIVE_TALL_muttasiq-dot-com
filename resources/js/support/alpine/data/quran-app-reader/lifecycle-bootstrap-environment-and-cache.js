@@ -139,6 +139,7 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
                     : (defaults = {}) => defaults;
             this.applyControlPanelSettings(resolveControlPanelSettings(this.initialSettings));
             this.quranPageScaleAdjustValue = this.readPersistedPageScaleAdjustValue();
+            this.quranPageTypeScaleAdjustValue = this.readPersistedPageTypeScaleAdjustValue();
             this.quranPageGapAdjustValue = this.readPersistedPageGapAdjustValue();
             this.quranPageYOffsetAdjustValue = this.readPersistedPageYOffsetAdjustValue();
             this.syncSupportUnlockState({ persist: false });

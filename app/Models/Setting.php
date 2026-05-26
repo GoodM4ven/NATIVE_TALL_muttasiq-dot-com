@@ -174,7 +174,7 @@ class Setting extends Model
             ],
             self::QURAN_WIRD_FREQUENCY_MODE => [
                 'default' => self::QURAN_WIRD_FREQUENCY_MONTHLY,
-                'label' => '6. إعداد الوِرد اليومي.',
+                'label' => '5. إعداد الوِرد اليومي.',
                 'group' => self::GROUP_QURAN,
                 'type' => 'integer',
                 'min' => self::QURAN_WIRD_FREQUENCY_MONTHLY,

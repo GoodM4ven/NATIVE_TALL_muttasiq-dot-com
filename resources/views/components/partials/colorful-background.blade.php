@@ -2,7 +2,7 @@
 <div
     class="pointer-events-none fixed inset-0 z-0 overflow-hidden"
     x-cloak
-    x-transition:enter="transition ease-out duration-300 delay-300"
+    x-transition:enter="transition ease-out duration-220 delay-300"
     x-transition:enter-start="opacity-0"
     x-transition:enter-end="opacity-100"
     x-transition:leave="transition ease-in duration-300"
@@ -15,7 +15,7 @@
         x-bind:class="!$store.colorScheme.isDarkModeOn ? 'opacity-30!' : ''"
     >
         <div
-            class="absolute inset-0 transition-opacity duration-500 will-change-[opacity]"
+            class="absolute inset-0 transition-opacity duration-500 will-change-[opacity] delay-300"
             data-testid="main-menu-bg-light-layer"
             x-cloak
             x-show="views[`main-menu`].isOpen && !$store.colorScheme.isDarkModeOn && !views[`quran-app-tilawa`].isOpen && !views[`quran-app-hifth`].isOpen && !views[`quran-app-tadabbur`].isOpen"
@@ -30,7 +30,7 @@
         </div>
 
         <div
-            class="absolute inset-0 transition-opacity duration-500 will-change-[opacity]"
+            class="absolute inset-0 transition-opacity duration-500 will-change-[opacity] delay-300"
             data-testid="main-menu-bg-dark-layer"
             x-cloak
             x-show="views[`main-menu`].isOpen && $store.colorScheme.isDarkModeOn && !views[`quran-app-tilawa`].isOpen && !views[`quran-app-hifth`].isOpen && !views[`quran-app-tadabbur`].isOpen"

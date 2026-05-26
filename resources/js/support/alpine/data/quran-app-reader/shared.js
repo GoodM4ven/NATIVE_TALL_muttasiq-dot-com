@@ -224,6 +224,10 @@ const quranPageScaleAdjustStorageKey = 'quran-reader-page-scale-adjust-v1';
 const quranPageScaleAdjustMin = -100;
 const quranPageScaleAdjustMax = 100;
 const quranPageScaleAdjustMultiplierStep = 0.015;
+const quranPageTypeScaleAdjustStorageKey = 'quran-reader-page-type-scale-adjust-v1';
+const quranPageTypeScaleAdjustMin = -100;
+const quranPageTypeScaleAdjustMax = 100;
+const quranPageTypeScaleAdjustAdditiveStep = 0.005;
 const quranPageGapAdjustStorageKey = 'quran-reader-page-gap-adjust-v1';
 const quranPageGapAdjustMin = -100;
 const quranPageGapAdjustMax = 100;
@@ -855,6 +859,10 @@ export {
     quranPageScaleAdjustMin,
     quranPageScaleAdjustMultiplierStep,
     quranPageScaleAdjustStorageKey,
+    quranPageTypeScaleAdjustAdditiveStep,
+    quranPageTypeScaleAdjustMax,
+    quranPageTypeScaleAdjustMin,
+    quranPageTypeScaleAdjustStorageKey,
     quranPageYOffsetAdjustMax,
     quranPageYOffsetAdjustMin,
     quranPageYOffsetAdjustRemStep,

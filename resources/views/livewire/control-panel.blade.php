@@ -460,69 +460,92 @@
                     immersiveCaptionSettingToggle?.closest(
                         '.fi-fo-field-wrp, .fi-field-wrp, [data-field-wrapper]',
                     ) ?? null;
+                const volumeNavigationSettingToggle = modalWindow.querySelector(
+                    `input[type='checkbox'][name*='does_quran_use_volume_buttons_navigation'],input[type='checkbox'][wire\\:model*='does_quran_use_volume_buttons_navigation']`,
+                );
+                const volumeNavigationSettingWrapper =
+                    volumeNavigationSettingToggle?.closest(
+                        '.fi-fo-field-wrp, .fi-field-wrp, [data-field-wrapper]',
+                    ) ?? null;
         
-                labelElement.dataset.quranWirdBaseLabel = computedBaseLabel;
-                labelElement.dataset.controlPanelOrdinalManaged = 'true';
-                const resolvedOrdinal = '5.';
-                const nextLabel = `${resolvedOrdinal} ${computedBaseLabel}`;
-                const nextLabelVisual = this.convertControlPanelDisplayText(nextLabel, {
-                    useWesternNumerals,
-                    preserveHarakat,
-                    preserveFixedSamples: true,
+                const applyOrdinalToFieldLabel = (fieldWrapper, datasetKey, ordinal) => {
+                    if (!(fieldWrapper instanceof Element) || fieldWrapper.offsetParent === null) {
+                        return;
+                    }
+        
+                    const currentLabelElement = fieldWrapper.querySelector(
+                        '.fi-fo-field-wrp-label, .fi-field-wrp-label, label, legend',
+                    );
+        
+                    if (!(currentLabelElement instanceof HTMLElement)) {
+                        return;
+                    }
+        
+                    const currentLeadingTextNode = resolveLeadingLabelTextNode(currentLabelElement);
+        
+                    if (!(currentLeadingTextNode instanceof window.Text)) {
+                        return;
+                    }
+        
+                    const savedBaseLabel = String(currentLabelElement.dataset[datasetKey] ?? '').trim();
+                    const computedBaseLabelValue = savedBaseLabel !== '' ?
+                        savedBaseLabel :
+                        String(currentLeadingTextNode.nodeValue ?? '')
+                        .replace(/^\s*[0-9٠-٩]+\.\s*/u, '')
+                        .trim();
+        
+                    if (computedBaseLabelValue === '') {
+                        return;
+                    }
+        
+                    currentLabelElement.dataset[datasetKey] = computedBaseLabelValue;
+                    currentLabelElement.dataset.controlPanelOrdinalManaged = 'true';
+        
+                    const nextLabelVisual = this.convertControlPanelDisplayText(
+                        `${ordinal}. ${computedBaseLabelValue}`, {
+                            useWesternNumerals,
+                            preserveHarakat,
+                            preserveFixedSamples: true,
+                        },
+                    );
+        
+                    if (String(currentLeadingTextNode.nodeValue ?? '').trim() !== nextLabelVisual) {
+                        currentLeadingTextNode.nodeValue = ` ${nextLabelVisual} `;
+                    }
+                };
+        
+                const orderedOptionalWrappers = [];
+        
+                if (
+                    immersiveCaptionSettingWrapper instanceof Element &&
+                    immersiveCaptionSettingWrapper.offsetParent !== null
+                ) {
+                    orderedOptionalWrappers.push({
+                        wrapper: immersiveCaptionSettingWrapper,
+                        datasetKey: 'immersiveBaseLabel',
+                    });
+                }
+        
+                orderedOptionalWrappers.push({
+                    wrapper: managedWirdWrapper,
+                    datasetKey: 'quranWirdBaseLabel',
                 });
         
-                if (String(leadingLabelTextNode.nodeValue ?? '').trim() !== nextLabelVisual) {
-                    leadingLabelTextNode.nodeValue = ` ${nextLabelVisual} `;
+                if (
+                    volumeNavigationSettingWrapper instanceof Element &&
+                    volumeNavigationSettingWrapper.offsetParent !== null
+                ) {
+                    orderedOptionalWrappers.push({
+                        wrapper: volumeNavigationSettingWrapper,
+                        datasetKey: 'quranVolumeNavigationBaseLabel',
+                    });
                 }
         
-                if (!(immersiveCaptionSettingWrapper instanceof Element)) {
-                    return;
-                }
-        
-                const immersiveLabelElement = immersiveCaptionSettingWrapper.querySelector(
-                    '.fi-fo-field-wrp-label, .fi-field-wrp-label, label, legend',
-                );
-        
-                if (!(immersiveLabelElement instanceof HTMLElement)) {
-                    return;
-                }
-        
-                const immersiveLeadingTextNode = resolveLeadingLabelTextNode(immersiveLabelElement);
-        
-                if (!(immersiveLeadingTextNode instanceof window.Text)) {
-                    return;
-                }
-        
-                const savedImmersiveBaseLabel = String(
-                    immersiveLabelElement.dataset.immersiveBaseLabel ?? '',
-                ).trim();
-                const computedImmersiveBaseLabel = savedImmersiveBaseLabel !== '' ?
-                    savedImmersiveBaseLabel :
-                    String(immersiveLeadingTextNode.nodeValue ?? '')
-                    .replace(/^\s*[0-9٠-٩]+\.\s*/u, '')
-                    .trim();
-        
-                if (computedImmersiveBaseLabel === '') {
-                    return;
-                }
-        
-                immersiveLabelElement.dataset.immersiveBaseLabel = computedImmersiveBaseLabel;
-        
-                if (immersiveCaptionSettingWrapper.offsetParent === null) {
-                    return;
-                }
-        
-                const immersiveLabelVisual = this.convertControlPanelDisplayText(
-                    `6. ${computedImmersiveBaseLabel}`, {
-                        useWesternNumerals,
-                        preserveHarakat,
-                        preserveFixedSamples: true,
-                    },
-                );
-        
-                if (String(immersiveLeadingTextNode.nodeValue ?? '').trim() !== immersiveLabelVisual) {
-                    immersiveLeadingTextNode.nodeValue = ` ${immersiveLabelVisual} `;
-                }
+                let ordinal = 5;
+                orderedOptionalWrappers.forEach((entry) => {
+                    applyOrdinalToFieldLabel(entry.wrapper, entry.datasetKey, ordinal);
+                    ordinal += 1;
+                });
             },
             teardownControlPanelSliderNumeralsObserver() {
                 if (this.sliderNumeralsObserver) {

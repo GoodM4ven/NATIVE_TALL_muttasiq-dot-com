@@ -72,6 +72,10 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
         quranPageScaleAdjustMin,
         quranPageScaleAdjustMultiplierStep,
         quranPageScaleAdjustStorageKey,
+        quranPageTypeScaleAdjustAdditiveStep,
+        quranPageTypeScaleAdjustMax,
+        quranPageTypeScaleAdjustMin,
+        quranPageTypeScaleAdjustStorageKey,
         quranPageYOffsetAdjustMax,
         quranPageYOffsetAdjustMin,
         quranPageYOffsetAdjustRemStep,
@@ -807,6 +811,8 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
         hasManualPageLayoutAdjustments() {
             return (
                 this.normalizePageScaleAdjustValue(this.quranPageScaleAdjustValue, 0) !== 0 ||
+                this.normalizePageTypeScaleAdjustValue(this.quranPageTypeScaleAdjustValue, 0) !==
+                    0 ||
                 this.normalizePageGapAdjustValue(this.quranPageGapAdjustValue, 0) !== 0 ||
                 this.normalizePageYOffsetAdjustValue(this.quranPageYOffsetAdjustValue, 0) !== 0
             );
@@ -826,6 +832,17 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
             const candidate = Number.isFinite(parsedValue) ? parsedValue : normalizedFallback;
 
             return Math.max(quranPageGapAdjustMin, Math.min(quranPageGapAdjustMax, candidate));
+        },
+
+        normalizePageTypeScaleAdjustValue(value, fallback = 0) {
+            const parsedValue = Math.trunc(Number(value));
+            const normalizedFallback = Math.trunc(Number(fallback) || 0);
+            const candidate = Number.isFinite(parsedValue) ? parsedValue : normalizedFallback;
+
+            return Math.max(
+                quranPageTypeScaleAdjustMin,
+                Math.min(quranPageTypeScaleAdjustMax, candidate),
+            );
         },
 
         normalizePageYOffsetAdjustValue(value, fallback = 0) {
@@ -850,6 +867,20 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
             writeLocalStorage(
                 quranPageScaleAdjustStorageKey,
                 this.normalizePageScaleAdjustValue(value, 0),
+            );
+        },
+
+        readPersistedPageTypeScaleAdjustValue() {
+            return this.normalizePageTypeScaleAdjustValue(
+                readLocalStorage(quranPageTypeScaleAdjustStorageKey, 0),
+                0,
+            );
+        },
+
+        persistPageTypeScaleAdjustValue(value = this.quranPageTypeScaleAdjustValue) {
+            writeLocalStorage(
+                quranPageTypeScaleAdjustStorageKey,
+                this.normalizePageTypeScaleAdjustValue(value, 0),
             );
         },
 
@@ -892,6 +923,22 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
 
         pageScaleAdjustDisplayValue() {
             const value = this.normalizePageScaleAdjustValue(this.quranPageScaleAdjustValue, 0);
+
+            return value > 0 ? `+${value}` : String(value);
+        },
+
+        pageTypeScaleAdjustOffset() {
+            return (
+                this.normalizePageTypeScaleAdjustValue(this.quranPageTypeScaleAdjustValue, 0) *
+                quranPageTypeScaleAdjustAdditiveStep
+            );
+        },
+
+        pageTypeScaleAdjustDisplayValue() {
+            const value = this.normalizePageTypeScaleAdjustValue(
+                this.quranPageTypeScaleAdjustValue,
+                0,
+            );
 
             return value > 0 ? `+${value}` : String(value);
         },
@@ -1037,13 +1084,27 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
             const effectiveYOffset = forFitting
                 ? '0rem'
                 : `${this.pageYOffsetAdjustRemValue().toFixed(3)}rem`;
-            const readTypeScaleValue = Number(
+            const pageLinesScaleElement =
+                pageLinesTargets.find((element) => element instanceof HTMLElement) ?? scaleElement;
+            const pageLinesTypeScaleValue = Number.parseFloat(
+                getComputedStyle(pageLinesScaleElement)
+                    .getPropertyValue('--quran-page-type-scale')
+                    .trim(),
+            );
+            const fallbackTypeScaleValue = Number.parseFloat(
                 getComputedStyle(scaleElement).getPropertyValue('--quran-page-type-scale').trim(),
             );
-            const baseTypeScale = Number.isFinite(readTypeScaleValue) ? readTypeScaleValue : 1;
+            const baseTypeScale = Number.isFinite(pageLinesTypeScaleValue)
+                ? pageLinesTypeScaleValue
+                : Number.isFinite(fallbackTypeScaleValue)
+                  ? fallbackTypeScaleValue
+                  : 1;
+            const manualTypeScaleOffset = this.pageTypeScaleAdjustOffset();
             const boostedTypeScale = Math.max(
                 0.2,
-                baseTypeScale + this.searchDestinationTypeScaleBoostAmount(),
+                baseTypeScale +
+                    manualTypeScaleOffset +
+                    this.searchDestinationTypeScaleBoostAmount(),
             );
 
             scaleTargets.forEach((targetElement) => {

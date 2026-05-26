@@ -162,12 +162,15 @@ test('control panel syncs quran wird setting ordinal with runtime visibility rul
 
     expect($controlPanelSource)->not->toBeFalse()
         ->and($controlPanelSource)->toContain('syncQuranWirdSettingOrdinalLabel()')
-        ->and($controlPanelSource)->toContain("const resolvedOrdinal = '5.';")
-        ->and($controlPanelSource)->toContain('immersiveLabelElement.dataset.immersiveBaseLabel = computedImmersiveBaseLabel;')
-        ->and($controlPanelSource)->toContain('`6. ${computedImmersiveBaseLabel}`')
+        ->and($controlPanelSource)->toContain('const orderedOptionalWrappers = [];')
+        ->and($controlPanelSource)->toContain('let ordinal = 5;')
+        ->and($controlPanelSource)->toContain('applyOrdinalToFieldLabel(entry.wrapper, entry.datasetKey, ordinal);')
+        ->and($controlPanelSource)->toContain('datasetKey: \'immersiveBaseLabel\'')
+        ->and($controlPanelSource)->toContain('datasetKey: \'quranWirdBaseLabel\'')
+        ->and($controlPanelSource)->toContain('datasetKey: \'quranVolumeNavigationBaseLabel\'')
         ->and($controlPanelSource)->toContain('!candidate.closest(\'.quran-wird-frequency-field\')')
-        ->and($controlPanelSource)->toContain('labelElement.dataset.quranWirdBaseLabel = computedBaseLabel;')
-        ->and($controlPanelSource)->toContain("labelElement.dataset.controlPanelOrdinalManaged = 'true';");
+        ->and($controlPanelSource)->toContain('immersiveCaptionSettingWrapper.offsetParent !== null')
+        ->and($controlPanelSource)->toContain('volumeNavigationSettingWrapper.offsetParent !== null');
 });
 
 test('quran reader requests sm+ web refit after bookmarks modal closes', function () {

@@ -2,7 +2,7 @@
     class="3xl:zoom-[1.15] 4xl:zoom-[1.25] -top-40! sm:top-0! zoom-[0.625] sm:zoom-[0.85] md:zoom-[0.85] lg:zoom-[1] xl:zoom-[0.8] 2xl:zoom-[1] absolute inset-0 flex items-center justify-center"
     x-cloak
     x-show="views['main-menu'].isOpen"
-    x-transition:enter="transition-all ease-out duration-1000 delay-400"
+    x-transition:enter="transition-all ease-out duration-650"
     x-transition:enter-start="opacity-0 blur-[2px]"
     x-transition:enter-end="opacity-100 blur-0"
     x-transition:leave="transition-all ease-in duration-150"

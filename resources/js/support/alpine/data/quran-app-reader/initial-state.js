@@ -72,6 +72,10 @@ export const createInitialState = (config, deps) => {
         quranPageScaleAdjustMin,
         quranPageScaleAdjustMultiplierStep,
         quranPageScaleAdjustStorageKey,
+        quranPageTypeScaleAdjustAdditiveStep,
+        quranPageTypeScaleAdjustMax,
+        quranPageTypeScaleAdjustMin,
+        quranPageTypeScaleAdjustStorageKey,
         quranPageYOffsetAdjustMax,
         quranPageYOffsetAdjustMin,
         quranPageYOffsetAdjustRemStep,
@@ -382,6 +386,8 @@ export const createInitialState = (config, deps) => {
         isFontScaleOverlayVisible: false,
 
         quranPageScaleAdjustValue: 0,
+
+        quranPageTypeScaleAdjustValue: 0,
 
         quranPageGapAdjustValue: 0,
 
