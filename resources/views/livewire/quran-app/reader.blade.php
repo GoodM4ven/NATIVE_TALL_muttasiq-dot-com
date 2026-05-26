@@ -692,16 +692,16 @@
 
             .quran-page-lines--dense {
                 --quran-page-dense-leading-multiplier: 1.3;
-                --quran-page-dense-gap-multiplier: 2.1;
-                --quran-page-dense-type-multiplier: 1.32;
+                --quran-page-dense-gap-multiplier: 1.6;
+                --quran-page-dense-type-multiplier: 0.92;
                 --quran-page-dense-y-offset: 0.1rem;
                 --quran-page-y-offset: -0.57rem;
                 --quran-page-scale: 0.55;
+                --quran-page-type-scale: 1.18;
+                --quran-page-leading-multiplier: 1.2;
+                --quran-page-gap-multiplier: 0.69;
                 --quran-page-surah-header-scale: 1.02;
                 --quran-basmallah-bottom-gap-scale: -0.295;
-                --quran-page-type-scale: 1.58;
-                --quran-page-leading-multiplier: 1.2;
-                --quran-page-gap-multiplier: 0.75;
             }
 
             .quran-page-lines--headered-long {
