@@ -2489,6 +2489,91 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                     return;
                 }
 
+                const pageLinesElement = contentElement?.classList?.contains('quran-page-lines')
+                    ? contentElement
+                    : contentElement?.querySelector?.('.quran-page-lines');
+                const hasPageLinesElement = pageLinesElement instanceof HTMLElement;
+                const pageLinesComputedStyle = hasPageLinesElement
+                    ? window.getComputedStyle(pageLinesElement)
+                    : null;
+                const breakpointName = String(this.resolveCurrentBreakpointName?.() ?? '').trim();
+                const isSmOrLargerBreakpoint =
+                    breakpointName !== '' &&
+                    breakpointName !== 'base' &&
+                    ['sm', 'md', 'lg', 'xl', '2xl', '3xl', '4xl'].includes(breakpointName);
+                const isSmOrLargerViewport =
+                    typeof window.matchMedia === 'function'
+                        ? window.matchMedia('(min-width: 640px)').matches
+                        : isSmOrLargerBreakpoint;
+                const resolvePostFitTuneNumber = (effectivePropertyName, propertyName) => {
+                    if (!pageLinesComputedStyle) {
+                        return 1;
+                    }
+
+                    const effectiveValue = Number.parseFloat(
+                        pageLinesComputedStyle.getPropertyValue(effectivePropertyName).trim(),
+                    );
+
+                    if (Number.isFinite(effectiveValue)) {
+                        return effectiveValue;
+                    }
+
+                    const value = Number.parseFloat(
+                        pageLinesComputedStyle.getPropertyValue(propertyName).trim(),
+                    );
+
+                    return Number.isFinite(value) ? value : 1;
+                };
+                const resolvePostFitYOffsetTunePx = () => {
+                    if (!hasPageLinesElement || !pageLinesComputedStyle) {
+                        return 0;
+                    }
+
+                    const effectivePixels = this.cssCustomLengthPixels(
+                        pageLinesComputedStyle,
+                        '--quran-page-postfit-y-offset-tune-effective',
+                        pageLinesElement,
+                        Number.NaN,
+                    );
+
+                    if (Number.isFinite(effectivePixels)) {
+                        return effectivePixels;
+                    }
+
+                    const fallbackPixels = this.cssCustomLengthPixels(
+                        pageLinesComputedStyle,
+                        '--quran-page-postfit-y-offset-tune',
+                        pageLinesElement,
+                        0,
+                    );
+
+                    return Number.isFinite(fallbackPixels) ? fallbackPixels : 0;
+                };
+                const postFitTypeTune = resolvePostFitTuneNumber(
+                    '--quran-page-postfit-type-tune-effective',
+                    '--quran-page-postfit-type-tune',
+                );
+                const postFitLeadingTune = resolvePostFitTuneNumber(
+                    '--quran-page-postfit-leading-tune-effective',
+                    '--quran-page-postfit-leading-tune',
+                );
+                const postFitGapTune = resolvePostFitTuneNumber(
+                    '--quran-page-postfit-gap-tune-effective',
+                    '--quran-page-postfit-gap-tune',
+                );
+                const postFitYOffsetTunePx = resolvePostFitYOffsetTunePx();
+                const hasNonNeutralPostFitTuning =
+                    Math.abs(postFitTypeTune - 1) > 0.0005 ||
+                    Math.abs(postFitLeadingTune - 1) > 0.0005 ||
+                    Math.abs(postFitGapTune - 1) > 0.0005 ||
+                    Math.abs(postFitYOffsetTunePx) > 0.1;
+
+                if (isSmOrLargerViewport && hasNonNeutralPostFitTuning) {
+                    this.resetFitSanityRecoveryState();
+
+                    return;
+                }
+
                 const currentTargetMetrics = this.currentFitTargetMetrics({
                     rootElement,
                     frameElement,
@@ -3785,15 +3870,12 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             this.applyFitLayoutVariables(rootElement, bestLayout);
             this.pageScale = finalEvaluation.scale;
             this.setCurrentPageScale(finalEvaluation.scale);
-            const safetyAdjustedScale = this.applySafetyScaleForCurrentPageOverflow()
-                ? this.pageScale
-                : finalEvaluation.scale;
 
             this.rememberFitResult(
                 fitCacheKey,
                 {
                     layout: { ...bestLayout },
-                    scale: safetyAdjustedScale,
+                    scale: finalEvaluation.scale,
                 },
                 {
                     persist: !shouldSuppressPersistedCacheWrite,

@@ -638,15 +638,19 @@
                 --quran-page-gap-multiplier: 0.68;
                 --quran-page-surah-header-scale: 0.98;
                 --quran-basmallah-bottom-gap-scale: -0.39;
+                --quran-page-postfit-type-tune: 0.95;
+                --quran-page-postfit-leading-tune: 1;
+                --quran-page-postfit-gap-tune: 1.25;
+                --quran-page-postfit-y-offset-tune: 0.5rem;
             }
 
             .quran-page-lines--headered-long {
                 --quran-page-headered-type-multiplier: 0.9;
                 --quran-page-headered-leading-multiplier: 1.28;
                 --quran-page-headered-gap-multiplier: 1.5;
-                --quran-page-postfit-type-tune: 1.06;
+                --quran-page-postfit-type-tune: 1.07;
                 --quran-page-postfit-leading-tune: 1;
-                --quran-page-postfit-gap-tune: 1.1;
+                --quran-page-postfit-gap-tune: 1.11;
                 --quran-page-postfit-y-offset-tune: 0rem;
                 --quran-surah-header-no-basmallah-first-ayah-gap-scale: -0.1;
                 --quran-page-scale: 0.78;
@@ -669,6 +673,7 @@
                 --quran-page-surah-header-scale: 0.58;
                 --quran-basmallah-bottom-gap-scale: -0.49;
                 --quran-page-y-offset: -0.2rem;
+                --quran-page-postfit-gap-tune: 1.2;
             }
         }
 
@@ -1697,6 +1702,10 @@
             animation-delay: calc(var(--quran-line-index, 0) * 10ms);
             backface-visibility: hidden;
             will-change: opacity, transform;
+        }
+
+        .quran-reader--visual-enhancements-disabled .quran-page-lines[data-fit-state='ready'] [data-quran-line] {
+            animation: none;
         }
 
         @media (max-width: 639px) {
