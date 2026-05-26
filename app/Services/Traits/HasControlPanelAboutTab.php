@@ -70,12 +70,7 @@ trait HasControlPanelAboutTab
                     icon: 'heroicon-s-chat-bubble-left-right',
                 ),
 
-                $this->developmentLinkAction(
-                    name: 'open_bug_reports',
-                    label: 'التبليغ عن الأخطاء',
-                    url: 'https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com/issues',
-                    icon: 'bootstrap.x-circle-fill',
-                ),
+                $this->reportErrorsAction(),
 
                 $this->developmentLinkAction(
                     name: 'open_current_development',
@@ -101,5 +96,15 @@ trait HasControlPanelAboutTab
             ->link()
             ->extraAttributes(['class' => 'flex w-fit mx-auto text-[0.8rem]! items-center gap-1.5 whitespace-nowrap text-center -mt-3'])
             ->actionJs(open_link_native_aware(url: $url));
+    }
+
+    private function reportErrorsAction(): Action
+    {
+        return Action::make('open_bug_reports')
+            ->label('التبليغ عن الأخطاء')
+            ->icon('bootstrap.x-circle-fill')
+            ->link()
+            ->extraAttributes(['class' => 'flex w-fit mx-auto text-[0.8rem]! items-center gap-1.5 whitespace-nowrap text-center -mt-3'])
+            ->actionJs("window.dispatchEvent(new CustomEvent('trigger-js-error-report-modal'));");
     }
 }

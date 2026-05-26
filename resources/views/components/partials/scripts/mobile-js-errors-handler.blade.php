@@ -11,6 +11,7 @@
         const maxStackLength = 20000;
         const maxTimeLength = 50;
         let lastOpenedAt = 0;
+        let lastModalMode = 'auto';
         let isModalOpen = false;
         let hasTriggeredReload = false;
         const successfulSubmissionFlag = 'jsErrorReportSubmitted';
@@ -265,7 +266,11 @@
             };
         };
 
-        const dispatchModal = () => {
+        const dispatchModal = ({
+            mode = 'auto',
+            force = false,
+            entries = null
+        } = {}) => {
             if (isReportingDisabled()) {
                 return;
             }
@@ -274,22 +279,26 @@
                 return;
             }
 
-            const entries = loadEntries();
-            if (entries.length === 0) {
+            const normalizedMode = mode === 'manual' ? 'manual' : 'auto';
+            const payloadEntries = Array.isArray(entries) ? entries : loadEntries();
+
+            if (!force && payloadEntries.length === 0) {
                 return;
             }
 
             const now = Date.now();
-            if (now - lastOpenedAt < openCooldownInMs) {
+            if (!force && now - lastOpenedAt < openCooldownInMs) {
                 return;
             }
 
             lastOpenedAt = now;
+            lastModalMode = normalizedMode;
 
             window.dispatchEvent(
                 new CustomEvent('open-js-error-report-modal', {
                     detail: {
-                        errors: entries,
+                        mode: normalizedMode,
+                        errors: normalizedMode === 'manual' ? [] : payloadEntries,
                         context: collectContext(),
                     },
                 }),
@@ -379,6 +388,18 @@
             window.__jsErrorReportingInProgress = false;
 
             try {
+                if (lastModalMode === 'manual') {
+                    sessionStorage.removeItem(successfulSubmissionFlag);
+
+                    queueMicrotask(() => {
+                        if (window.Livewire?.dispatchTo) {
+                            window.Livewire.dispatchTo('js-error-reporter', 'show-submitted-toast');
+                        }
+                    });
+
+                    return;
+                }
+
                 sessionStorage.setItem(successfulSubmissionFlag, '1');
             } catch (error) {}
         });
@@ -391,7 +412,21 @@
             isModalOpen = false;
             saveEntries([]);
             window.__jsErrorReportingInProgress = false;
+
+            if (lastModalMode === 'manual') {
+                lastModalMode = 'auto';
+                return;
+            }
+
             reloadApplicationWithBlink();
+        });
+
+        window.addEventListener('trigger-js-error-report-modal', () => {
+            dispatchModal({
+                mode: 'manual',
+                force: true,
+                entries: [],
+            });
         });
 
         document.addEventListener('livewire:init', () => {

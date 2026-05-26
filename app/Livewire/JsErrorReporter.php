@@ -11,6 +11,7 @@ use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Support\Enums\Width;
@@ -55,11 +56,14 @@ class JsErrorReporter extends Component implements HasActions, HasSchemas
         'breakpoint' => null,
     ];
 
+    public bool $isManualReport = false;
+
     public function openReportModal(array $payload = []): void
     {
+        $this->isManualReport = ($payload['mode'] ?? null) === 'manual';
         $errors = $this->normalizeErrors($payload['errors'] ?? []);
 
-        if ($errors === []) {
+        if (! $this->isManualReport && $errors === []) {
             return;
         }
 
@@ -73,7 +77,9 @@ class JsErrorReporter extends Component implements HasActions, HasSchemas
     {
         return Action::make('reportJsError')
             ->modalHeading('حدث خلل غير متوقع في المنصة')
-            ->modalDescription('من فضلك اكتب وصفًا لما حصل قبل المشكلة لنتمكن من تتبع السبب بشكل أسرع...')
+            ->modalDescription(fn (): string => $this->isManualReport
+                ? arabic_text('اكتب وصفًا واضحًا لما لاحظته وسنراجع البلاغ بإذن الله.')
+                : arabic_text('من فضلك اكتب وصفًا لما حصل قبل المشكلة لنتمكن من تتبع السبب بشكل أسرع...'))
             ->modalAutofocus(false)
             ->modalWidth(Width::ThreeExtraLarge)
             ->modalSubmitActionLabel('إرسال البلاغ')
@@ -97,9 +103,16 @@ class JsErrorReporter extends Component implements HasActions, HasSchemas
             )
             ->fillForm(fn (): array => [
                 'user_note' => '',
+                'screen_breakpoint' => $this->clientContext['breakpoint'] ?? arabic_text('غير محدد'),
                 'technical_snapshot' => $this->formatErrorsForDisplay(),
             ])
             ->schema([
+                TextInput::make('screen_breakpoint')
+                    ->label(arabic_text('المقاس الحالي للجهاز (Breakpoint)'))
+                    ->disabled()
+                    ->dehydrated(false)
+                    ->extraInputAttributes(['dir' => 'ltr']),
+
                 Textarea::make('user_note')
                     ->label('ماذا كنت تفعل قبل ظهور المشكلة؟')
                     ->required()
@@ -112,6 +125,7 @@ class JsErrorReporter extends Component implements HasActions, HasSchemas
                 Textarea::make('technical_snapshot')
                     ->label('تفاصيل تقنية مرفقة')
                     ->rows(5)
+                    ->hidden(fn (): bool => $this->isManualReport || $this->capturedErrors === [])
                     ->disabled()
                     ->dehydrated(false)
                     ->extraInputAttributes([
@@ -179,6 +193,7 @@ class JsErrorReporter extends Component implements HasActions, HasSchemas
 
     private function resetCapturedData(): void
     {
+        $this->isManualReport = false;
         $this->capturedErrors = [];
         $this->clientContext = [
             'url' => null,
