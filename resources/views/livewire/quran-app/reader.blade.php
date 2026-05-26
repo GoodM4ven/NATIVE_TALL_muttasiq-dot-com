@@ -569,7 +569,7 @@
                 --quran-fit-height-ratio: 0.945;
                 --quran-fit-target-width-ratio: 0.84;
                 --quran-min-page-gap-multiplier: 0.85;
-                --quran-line-gap: 1.69rem;
+                --quran-line-gap: 1.49rem;
                 --quran-gap-scale: 0.88;
                 --quran-page-gap-multiplier: 0.56;
                 --quran-min-page-leading-multiplier: 0.91;
