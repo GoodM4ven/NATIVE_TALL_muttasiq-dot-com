@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Livewire\QuranApp;
 
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
 use Filament\Forms\Components\TagsInput;
@@ -14,6 +15,7 @@ use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
+use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Contracts\View\View;
@@ -56,8 +58,9 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
     public function table(Table $table): Table
     {
         return $table
-            ->defaultSort('sort_order')
+            ->defaultSortOptionLabel('-')
             ->selectable(false)
+            ->stackedOnMobile()
             ->defaultPaginationPageOption(100)
             ->paginationPageOptions([100])
             ->reorderable('sort_order')
@@ -98,24 +101,14 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
                     ])
                     ->sortable(),
                 TextColumn::make('page_number')
-                    ->label(arabic_text('الصفحة'))
-                    ->badge()
+                    ->label(arabic_text('الموضع'))
+                    ->state(fn (array $record): string => $this->resolveHistoryLocationDescription($record))
+                    ->description(fn (array $record): string => arabic_text(sprintf('صفحة %d', max(1, (int) ($record['page_number'] ?? 1)))))
                     ->sortable(),
-                TextColumn::make('surah_label')
-                    ->label(arabic_text('السورة'))
-                    ->state(fn (array $record): string => (string) ($record['surah_label'] ?? '-'))
-                    ->searchable()
-                    ->sortable(),
-                TextColumn::make('source_label')
-                    ->label(arabic_text('النوع'))
-                    ->badge()
-                    ->state(fn (array $record): string => $this->resolveSourceLabel($record)),
                 TextColumn::make('tags_text')
-                    ->label(arabic_text('الوسوم'))
-                    ->state(fn (array $record): string => $this->resolveTagsText($record))
-                    ->wrap(),
-                TextColumn::make('note')
-                    ->label(arabic_text('الملاحظة'))
+                    ->label(arabic_text('الوسوم والملاحظة'))
+                    ->state(fn (array $record): string => $this->resolveHistoryTagsSummary($record))
+                    ->description(fn (array $record): string => $this->resolveHistoryNoteSummary($record))
                     ->wrap(),
             ])
             ->filters([
@@ -132,53 +125,57 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
             ])
             ->searchable()
             ->recordActions([
-                Action::make('go')
-                    ->label(arabic_text('انتقال'))
-                    ->icon('heroicon-s-arrow-up-right')
-                    ->action(fn (array $record): mixed => $this->dispatch(
-                        'quran-history-manager-go',
-                        id: (string) ($record['id'] ?? ''),
-                    )),
-                Action::make('edit')
-                    ->label(arabic_text('تعديل'))
-                    ->icon('heroicon-s-pencil-square')
-                    ->modalSubmitActionLabel(arabic_text('تعديل'))
-                    ->modalSubmitAction(fn (Action $action): Action => $action->icon('heroicon-o-pencil-square'))
-                    ->fillForm(fn (array $record): array => [
-                        'note' => (string) ($record['note'] ?? ''),
-                        'tags' => array_values(array_filter(
-                            array_map(
-                                static fn (mixed $tag): string => trim((string) $tag),
-                                is_array($record['tags'] ?? null) ? $record['tags'] : [],
-                            ),
-                            static fn (string $tag): bool => $tag !== '',
+                ActionGroup::make([
+                    Action::make('go')
+                        ->label(arabic_text('انتقال'))
+                        ->icon('heroicon-s-arrow-up-right')
+                        ->action(fn (array $record): mixed => $this->dispatch(
+                            'quran-history-manager-go',
+                            id: (string) ($record['id'] ?? ''),
                         )),
-                    ])
-                    ->schema([
-                        TextInput::make('note')
-                            ->label(arabic_text('الملاحظة'))
-                            ->maxLength(300),
-                        TagsInput::make('tags')
-                            ->label(arabic_text('الوسوم'))
-                            ->separator(',')
-                            ->nestedRecursiveRules(['min:1', 'max:60']),
-                    ])
-                    ->action(fn (array $data, array $record): mixed => $this->dispatch(
-                        'quran-history-manager-updated',
-                        id: (string) ($record['id'] ?? ''),
-                        note: (string) ($data['note'] ?? ''),
-                        tags: $this->normalizeTagsInput($data['tags'] ?? []),
-                    )),
-                Action::make('remove')
-                    ->label(arabic_text('حذف'))
-                    ->icon('heroicon-o-x-mark')
-                    ->color('danger')
-                    ->requiresConfirmation()
-                    ->action(fn (array $record): mixed => $this->dispatch(
-                        'quran-history-manager-removed',
-                        id: (string) ($record['id'] ?? ''),
-                    )),
-            ])
+                    Action::make('edit')
+                        ->label(arabic_text('تعديل'))
+                        ->icon('heroicon-s-pencil-square')
+                        ->modalSubmitActionLabel(arabic_text('تعديل'))
+                        ->modalSubmitAction(fn (Action $action): Action => $action->icon('heroicon-o-pencil-square'))
+                        ->fillForm(fn (array $record): array => [
+                            'note' => (string) ($record['note'] ?? ''),
+                            'tags' => array_values(array_filter(
+                                array_map(
+                                    static fn (mixed $tag): string => trim((string) $tag),
+                                    is_array($record['tags'] ?? null) ? $record['tags'] : [],
+                                ),
+                                static fn (string $tag): bool => $tag !== '',
+                            )),
+                        ])
+                        ->schema([
+                            TextInput::make('note')
+                                ->label(arabic_text('الملاحظة'))
+                                ->maxLength(300),
+                            TagsInput::make('tags')
+                                ->label(arabic_text('الوسوم'))
+                                ->separator(',')
+                                ->nestedRecursiveRules(['min:1', 'max:60']),
+                        ])
+                        ->action(fn (array $data, array $record): mixed => $this->dispatch(
+                            'quran-history-manager-updated',
+                            id: (string) ($record['id'] ?? ''),
+                            note: (string) ($data['note'] ?? ''),
+                            tags: $this->normalizeTagsInput($data['tags'] ?? []),
+                        )),
+                    Action::make('remove')
+                        ->label(arabic_text('حذف'))
+                        ->icon('heroicon-o-x-mark')
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->action(fn (array $record): mixed => $this->dispatch(
+                            'quran-history-manager-removed',
+                            id: (string) ($record['id'] ?? ''),
+                        )),
+                ])
+                    ->label(arabic_text('إجراءات'))
+                    ->iconButton(),
+            ], position: RecordActionsPosition::BeforeColumns)
             ->headerActions([
                 Action::make('clearUntagged')
                     ->label(arabic_text('مسح غير المميّز'))
@@ -227,6 +224,7 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
                 'note' => trim((string) ($record['note'] ?? '')),
                 'tags' => $tags,
                 'tags_text' => implode(', ', $tags),
+                'created_at' => $this->resolveTimestampValue($record['created_at'] ?? null),
                 'surah_label' => $this->resolveSurahLabel($record),
                 'source_label' => $this->resolveSourceLabel($record),
             ];
@@ -334,21 +332,86 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
     private function applySorting(Collection $records, ?string $sortColumn, ?string $sortDirection): Collection
     {
         $column = trim((string) $sortColumn);
-        $descending = trim((string) $sortDirection) === 'desc';
+        $direction = trim((string) $sortDirection);
+        $descending = $direction === 'desc';
 
         $resolvedColumn = in_array(
             $column,
-            ['sort_order', 'page_number', 'surah_label', 'note', 'tags_text'],
+            ['sort_order', 'page_number', 'surah_label', 'source_label', 'note', 'tags_text'],
             true,
         )
             ? $column
-            : 'sort_order';
+            : null;
 
-        return $records
+        /** @var Collection<int, array<string, mixed>> $savedRecords */
+        $savedRecords = $records
+            ->filter(fn (array $record): bool => $this->recordHasPersistenceMeta($record))
+            ->values();
+
+        /** @var Collection<int, array<string, mixed>> $unsavedRecords */
+        $unsavedRecords = $records
+            ->reject(fn (array $record): bool => $this->recordHasPersistenceMeta($record))
+            ->values();
+
+        if ($resolvedColumn === null) {
+            return $savedRecords
+                ->sortBy(
+                    fn (array $record): int => $this->resolveTimestampValue($record['created_at'] ?? null),
+                    SORT_NUMERIC,
+                    true,
+                )
+                ->values()
+                ->concat(
+                    $unsavedRecords
+                        ->sortBy(
+                            fn (array $record): int => $this->resolveTimestampValue(
+                                $record['created_at'] ?? null,
+                            ),
+                            SORT_NUMERIC,
+                            true,
+                        )
+                        ->values(),
+                )
+                ->values();
+        }
+
+        if ($resolvedColumn === 'sort_order') {
+            return $savedRecords
+                ->sortBy(
+                    fn (array $record): int => max(1, (int) ($record['sort_order'] ?? 1)),
+                    SORT_NUMERIC,
+                    $descending,
+                )
+                ->values()
+                ->concat(
+                    $unsavedRecords
+                        ->sortBy(
+                            fn (array $record): int => max(1, (int) ($record['sort_order'] ?? 1)),
+                            SORT_NUMERIC,
+                            $descending,
+                        )
+                        ->values(),
+                )
+                ->values();
+        }
+
+        return $savedRecords
             ->sortBy(
                 static fn (array $record): mixed => $record[$resolvedColumn] ?? null,
                 SORT_NATURAL,
                 $descending,
+            )
+            ->values()
+            ->concat(
+                $unsavedRecords
+                    ->sortBy(
+                        fn (array $record): int => $this->resolveTimestampValue(
+                            $record['created_at'] ?? null,
+                        ),
+                        SORT_NUMERIC,
+                        true,
+                    )
+                    ->values(),
             )
             ->values();
     }
@@ -401,6 +464,46 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
     }
 
     /**
+     * @param  array<string, mixed>  $record
+     */
+    private function resolveHistoryLocationDescription(array $record): string
+    {
+        $surah = (string) ($record['surah_label'] ?? '-');
+        $source = $this->resolveSourceLabel($record);
+        $sortOrder = max(1, (int) ($record['sort_order'] ?? 1));
+
+        return arabic_text(sprintf('%d • %s • %s', $sortOrder, $surah, $source));
+    }
+
+    /**
+     * @param  array<string, mixed>  $record
+     */
+    private function resolveHistoryTagsSummary(array $record): string
+    {
+        $tags = $this->resolveTagsText($record);
+
+        if ($tags !== '') {
+            return $tags;
+        }
+
+        return arabic_text('بدون وسوم');
+    }
+
+    /**
+     * @param  array<string, mixed>  $record
+     */
+    private function resolveHistoryNoteSummary(array $record): string
+    {
+        $note = trim((string) ($record['note'] ?? ''));
+
+        if ($note !== '') {
+            return $note;
+        }
+
+        return arabic_text('بدون ملاحظة');
+    }
+
+    /**
      * @return array<int, string>
      */
     private function normalizeTagsInput(mixed $value): array
@@ -422,5 +525,27 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
         }
 
         return $index + 1;
+    }
+
+    /**
+     * @param  array<string, mixed>  $record
+     */
+    private function recordHasPersistenceMeta(array $record): bool
+    {
+        $tags = is_array($record['tags'] ?? null) ? $record['tags'] : [];
+        $note = trim((string) ($record['note'] ?? ''));
+
+        return $tags !== [] || $note !== '';
+    }
+
+    private function resolveTimestampValue(mixed $value): int
+    {
+        $parsed = (int) $value;
+
+        if ($parsed > 0) {
+            return $parsed;
+        }
+
+        return 0;
     }
 }

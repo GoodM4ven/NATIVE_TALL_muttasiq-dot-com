@@ -923,6 +923,10 @@ export const createWirdAndHistoryNavigationAndManagerSyncModule = (deps) => {
         syncBookmarksManagerTableRecords() {
             const payload = {
                 records: this.bookmarks,
+                surahNames: this.search?.surahNames ?? {},
+                surahDirectory: Array.isArray(this.search?.surahDirectory)
+                    ? this.search.surahDirectory
+                    : [],
             };
 
             this.emitLivewireManagerEvent('quran-bookmarks-manager-sync', payload);
