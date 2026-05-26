@@ -212,6 +212,13 @@ export const createReaderNavigationFitPageAdjustAndChromeModule = (deps) => {
             }
 
             this.isFontScaleOverlayVisible = !this.isFontScaleOverlayVisible;
+            window.dispatchEvent(
+                new CustomEvent('quran-reader-font-scale-overlay-state-changed', {
+                    detail: {
+                        open: this.isFontScaleOverlayVisible,
+                    },
+                }),
+            );
             this.syncReaderChromeDocumentClass();
         },
 

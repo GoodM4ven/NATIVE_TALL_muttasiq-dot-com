@@ -569,7 +569,7 @@
                 --quran-fit-height-ratio: 0.945;
                 --quran-fit-target-width-ratio: 0.84;
                 --quran-min-page-gap-multiplier: 0.85;
-                --quran-line-gap: 1.49rem;
+                --quran-line-gap: 1.69rem;
                 --quran-gap-scale: 0.88;
                 --quran-page-gap-multiplier: 0.56;
                 --quran-min-page-leading-multiplier: 0.91;
@@ -579,7 +579,7 @@
                 --quran-page-surah-header-scale: 1.015;
                 --quran-min-basmallah-bottom-gap-scale: -0.35;
                 --quran-basmallah-bottom-gap-scale: -0.29;
-                --quran-type-scale: 1;
+                --quran-type-scale: 1.15;
                 --quran-page-type-scale: 1.03;
                 --quran-font-size-rect: 1.98rem;
                 --quran-font-size-center: 1.94rem;

@@ -33,6 +33,7 @@
     x-cloak
     x-on:quran-reader-calibration-finished.window="hasReaderRenderedOnce = true"
     x-on:quran-reader-font-scale-overlay-visibility.window="if (Boolean($event.detail?.open)) { dismissRipplePermanently() }"
+    x-on:quran-reader-font-scale-overlay-state-changed.window="if (Boolean($event.detail?.open)) { dismissRipplePermanently() }"
     x-show="!isControlPanelOpen && !isAthkarManagerOpen &&
         !document.body.classList.contains('quran-reader-font-scale-overlay-open') && (
         views['quran-app-tilawa'].isOpen ||
