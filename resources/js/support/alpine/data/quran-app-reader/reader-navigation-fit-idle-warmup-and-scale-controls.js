@@ -991,6 +991,12 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
                 return 0;
             }
 
+            const breakpointName = String(this.resolveCurrentBreakpointName?.() ?? '').trim();
+
+            if (breakpointName === 'base') {
+                return 0;
+            }
+
             const boostPageNumber = Math.max(
                 0,
                 Math.trunc(Number(this.searchDestinationScaleBoostPageNumber ?? 0)),
@@ -1020,6 +1026,12 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
                 typeof this.shouldShowImmersiveMobileEdgeCaptions === 'function' &&
                 !this.shouldShowImmersiveMobileEdgeCaptions()
             ) {
+                return 0;
+            }
+
+            const breakpointName = String(this.resolveCurrentBreakpointName?.() ?? '').trim();
+
+            if (breakpointName === 'base') {
                 return 0;
             }
 
