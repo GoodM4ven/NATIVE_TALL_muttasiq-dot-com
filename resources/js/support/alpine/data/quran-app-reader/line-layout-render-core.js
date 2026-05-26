@@ -176,6 +176,33 @@ export const createLineLayoutRenderCoreModule = (deps) => {
             );
         },
 
+        isDenseShortLinePage() {
+            const lines = Array.isArray(this.mushafLines) ? this.mushafLines : [];
+
+            if (lines.length < 1) {
+                return false;
+            }
+
+            const ayahLineCount = lines.filter(
+                (line) => String(line?.line_type ?? '') === 'ayah',
+            ).length;
+
+            if (ayahLineCount !== 14) {
+                return false;
+            }
+
+            const renderedSurahHeaderCount = lines.filter(
+                (line) =>
+                    String(line?.line_type ?? '') === 'surah_name' && this.shouldRenderLine(line),
+            ).length;
+            const renderedBasmallahCount = lines.filter(
+                (line) =>
+                    String(line?.line_type ?? '') === 'basmallah' && this.shouldRenderLine(line),
+            ).length;
+
+            return renderedSurahHeaderCount === 0 && renderedBasmallahCount === 0;
+        },
+
         isAyahLineWithWords(line) {
             return (
                 String(line?.line_type ?? '') === 'ayah' &&

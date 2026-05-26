@@ -1127,7 +1127,9 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
                 typeof window.matchMedia === 'function'
                     ? window.matchMedia('(min-width: 640px)').matches
                     : isSmOrLargerBreakpoint;
-            const shouldApplyPostFitTuning = !forFitting && isSmOrLargerViewport;
+            const isDenseShortLinePage =
+                typeof this.isDenseShortLinePage === 'function' && this.isDenseShortLinePage();
+            const shouldApplyPostFitTuning = isSmOrLargerViewport || isDenseShortLinePage;
             const pageLinesComputedStyle = getComputedStyle(pageLinesScaleElement);
             const parsePostFitTuneValue = (propertyName, fallbackValue) => {
                 const parsedValue = Number.parseFloat(
@@ -1167,24 +1169,6 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
                     String(effectiveGapFactor),
                 );
                 targetElement.style.setProperty('--quran-page-y-offset-adjust', effectiveYOffset);
-                if (forFitting) {
-                    targetElement.style.setProperty(
-                        '--quran-page-postfit-type-tune-effective',
-                        '1',
-                    );
-                    targetElement.style.setProperty(
-                        '--quran-page-postfit-leading-tune-effective',
-                        '1',
-                    );
-                    targetElement.style.setProperty('--quran-page-postfit-gap-tune-effective', '1');
-                    targetElement.style.setProperty(
-                        '--quran-page-postfit-y-offset-tune-effective',
-                        '0rem',
-                    );
-
-                    return;
-                }
-
                 if (shouldApplyPostFitTuning) {
                     targetElement.style.setProperty(
                         '--quran-page-postfit-type-tune-effective',

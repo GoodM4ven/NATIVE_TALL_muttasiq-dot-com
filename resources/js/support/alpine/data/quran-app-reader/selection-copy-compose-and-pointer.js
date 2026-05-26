@@ -1230,11 +1230,54 @@ export const createSelectionCopyComposeAndPointerModule = (deps) => {
                 return;
             }
 
+            const rebalanceComputedStyle = window.getComputedStyle(contentElement);
+            const parseRebalanceNumber = (propertyName, fallbackValue, minValue, maxValue) => {
+                const parsedValue = Number.parseFloat(
+                    rebalanceComputedStyle.getPropertyValue(propertyName).trim(),
+                );
+                const normalizedValue = Number.isFinite(parsedValue) ? parsedValue : fallbackValue;
+
+                return Math.max(minValue, Math.min(maxValue, normalizedValue));
+            };
+            const denseFullLinePage =
+                typeof this.isDenseFullLinePage === 'function' && this.isDenseFullLinePage();
+            const ayahLineCount = ayahLinesByNumber.size;
+            const defaultTargetQuantile = denseFullLinePage
+                ? ayahLineCount <= 14
+                    ? 0.96
+                    : 0.92
+                : 0.88;
+            const defaultMaxGapEm = denseFullLinePage ? (ayahLineCount <= 14 ? 0.22 : 0.18) : 0.16;
+            const targetQuantile = parseRebalanceNumber(
+                '--quran-line-rebalance-target-quantile',
+                defaultTargetQuantile,
+                0.5,
+                1,
+            );
+            const maxGapEm = parseRebalanceNumber(
+                '--quran-line-rebalance-max-gap-em',
+                defaultMaxGapEm,
+                0,
+                0.4,
+            );
+            const minGapEm = parseRebalanceNumber(
+                '--quran-line-rebalance-min-gap-em',
+                0.003,
+                0,
+                0.08,
+            );
+            const minDeficitPx = parseRebalanceNumber(
+                '--quran-line-rebalance-min-deficit-px',
+                2,
+                0,
+                20,
+            );
+
             const sortedWidths = measurements
                 .map((entry) => entry.width)
                 .sort((first, second) => first - second);
             const targetWidth =
-                sortedWidths[Math.floor((sortedWidths.length - 1) * 0.88)] ??
+                sortedWidths[Math.floor((sortedWidths.length - 1) * targetQuantile)] ??
                 sortedWidths[sortedWidths.length - 1] ??
                 0;
             const gapAdjustments = {};
@@ -1242,14 +1285,17 @@ export const createSelectionCopyComposeAndPointerModule = (deps) => {
             measurements.forEach((entry) => {
                 const widthDeficit = targetWidth - entry.width;
 
-                if (widthDeficit <= 2) {
+                if (widthDeficit <= minDeficitPx) {
                     return;
                 }
 
                 const extraGapPx = widthDeficit / entry.gapCount;
-                const normalizedGapEm = Math.max(0, Math.min(0.16, extraGapPx / entry.fontSize));
+                const normalizedGapEm = Math.max(
+                    0,
+                    Math.min(maxGapEm, extraGapPx / entry.fontSize),
+                );
 
-                if (normalizedGapEm <= 0.003) {
+                if (normalizedGapEm <= minGapEm) {
                     return;
                 }
 

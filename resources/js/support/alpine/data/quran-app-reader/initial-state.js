@@ -215,7 +215,7 @@ export const createInitialState = (config, deps) => {
 
         hoveredWordIndex: 0,
 
-        doesEnableVisualEnhancements: true,
+        doesEnableVisualEnhancements: false,
 
         doesTargetWordsByDefault: false,
 

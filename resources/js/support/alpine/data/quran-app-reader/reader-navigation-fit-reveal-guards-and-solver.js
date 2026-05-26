@@ -2505,6 +2505,10 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                     typeof window.matchMedia === 'function'
                         ? window.matchMedia('(min-width: 640px)').matches
                         : isSmOrLargerBreakpoint;
+                const isDenseShortLinePage =
+                    typeof this.isDenseShortLinePage === 'function' && this.isDenseShortLinePage();
+                const shouldHonorPostFitTuningDuringSanity =
+                    isSmOrLargerViewport || isDenseShortLinePage;
                 const resolvePostFitTuneNumber = (effectivePropertyName, propertyName) => {
                     if (!pageLinesComputedStyle) {
                         return 1;
@@ -2568,7 +2572,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                     Math.abs(postFitGapTune - 1) > 0.0005 ||
                     Math.abs(postFitYOffsetTunePx) > 0.1;
 
-                if (isSmOrLargerViewport && hasNonNeutralPostFitTuning) {
+                if (shouldHonorPostFitTuningDuringSanity && hasNonNeutralPostFitTuning) {
                     this.resetFitSanityRecoveryState();
 
                     return;
