@@ -3024,6 +3024,10 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             const breakpointName = this.resolveCurrentBreakpointName();
             const isBaseBreakpoint = breakpointName === 'base';
             const isTabletBreakpoint = ['sm', 'md', 'lg'].includes(breakpointName);
+            const hasManualLayoutAdjustments =
+                typeof this.hasManualPageLayoutAdjustments === 'function' &&
+                this.hasManualPageLayoutAdjustments();
+            const shouldPreferCssBaselineLayout = !hasManualLayoutAdjustments;
             const canUseGlobalFitCalibration = ['xl', '2xl', '3xl', '4xl'].includes(
                 String(breakpointName ?? '').trim(),
             );
@@ -3044,6 +3048,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 ),
             };
             const calibrationLayout =
+                !shouldPreferCssBaselineLayout &&
                 canUseGlobalFitCalibration &&
                 this._globalFitCalibrationLayout &&
                 typeof this._globalFitCalibrationLayout === 'object'
@@ -3238,10 +3243,13 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             const activeFitProfile = this.resolveFitProfile();
             const profileMaxScaleMultiplier = Math.max(
                 0.1,
-                Number(activeFitProfile?.maxScaleMultiplier ?? 1),
+                Number(
+                    shouldPreferCssBaselineLayout ? 1 : (activeFitProfile?.maxScaleMultiplier ?? 1),
+                ),
             );
             maxScale = Math.max(minScale, maxScale * profileMaxScaleMultiplier);
             const hasGlobalCalibrationProfile =
+                !shouldPreferCssBaselineLayout &&
                 canUseGlobalFitCalibration &&
                 this._globalFitCalibrationLayout &&
                 typeof this._globalFitCalibrationLayout === 'object' &&
@@ -3366,6 +3374,9 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 isFontLayoutPending ? 'fonts-pending' : 'fonts-loaded',
                 this.useCenteredAyahLayout ? 'centered' : 'rect',
                 'scale-only-v4',
+                shouldPreferCssBaselineLayout
+                    ? 'layout-mode-css-baseline-v1'
+                    : 'layout-mode-adaptive-v1',
                 Number(fitTargetWidthRatio).toFixed(3),
                 Number(fitAreaPaddingX).toFixed(2),
                 Number(fitAreaPaddingY).toFixed(2),
@@ -3474,11 +3485,9 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 };
             };
 
-            const cachedFitResult = isModalLayoutContext
+            const cachedFitResult = shouldBypassFitCache
                 ? null
-                : isFontLayoutPending
-                  ? null
-                  : this._fitResultByContext.get(fitCacheKey);
+                : this._fitResultByContext.get(fitCacheKey);
 
             if (
                 cachedFitResult &&
@@ -3599,17 +3608,16 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 0,
                 Math.min(1, Number(activeFitProfile?.minimumCompressionLevel ?? 0)),
             );
-            const profileLayoutCandidates = Array.from(
-                { length: profileCandidateCount },
-                (_, index) => {
-                    const denominator = Math.max(1, profileCandidateCount - 1);
-                    const level =
-                        profileMinimumCompression +
-                        ((1 - profileMinimumCompression) * index) / denominator;
+            const profileLayoutCandidates = shouldPreferCssBaselineLayout
+                ? []
+                : Array.from({ length: profileCandidateCount }, (_, index) => {
+                      const denominator = Math.max(1, profileCandidateCount - 1);
+                      const level =
+                          profileMinimumCompression +
+                          ((1 - profileMinimumCompression) * index) / denominator;
 
-                    return this.fitLayoutFromCompressionLevel(level);
-                },
-            );
+                      return this.fitLayoutFromCompressionLevel(level);
+                  });
             const layoutCandidates = [
                 baselineLayout,
                 expandedLayout,
@@ -3650,6 +3658,9 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                       return index % 2 === 0;
                   })
                 : layoutCandidates;
+            const effectiveLayoutCandidatesToEvaluate = shouldPreferCssBaselineLayout
+                ? [baselineLayout]
+                : layoutCandidatesToEvaluate;
             const solveBestScaleForCurrentLayout = () => {
                 // 1. Read natural (scale=1) size using actual line width rather than
                 //    container width, so the geometric scale is height-limited when text
@@ -3702,7 +3713,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             let relaxedFallbackEvaluation = null;
             let relaxedFallbackScore = Number.NEGATIVE_INFINITY;
 
-            layoutCandidatesToEvaluate.forEach((candidateLayout) => {
+            effectiveLayoutCandidatesToEvaluate.forEach((candidateLayout) => {
                 this.applyFitLayoutVariables(rootElement, candidateLayout);
                 const evaluation = solveBestScaleForCurrentLayout();
                 const relaxedScore =
