@@ -176,6 +176,32 @@ export const createLineLayoutRenderCoreModule = (deps) => {
             );
         },
 
+        isSingleHeaderLongCompactPage() {
+            const lines = Array.isArray(this.mushafLines) ? this.mushafLines : [];
+
+            if (lines.length < 1) {
+                return false;
+            }
+
+            const renderedSurahHeaderCount = lines.filter(
+                (line) =>
+                    String(line?.line_type ?? '') === 'surah_name' && this.shouldRenderLine(line),
+            ).length;
+            const renderedBasmallahCount = lines.filter(
+                (line) =>
+                    String(line?.line_type ?? '') === 'basmallah' && this.shouldRenderLine(line),
+            ).length;
+            const ayahLineCount = lines.filter(
+                (line) => String(line?.line_type ?? '') === 'ayah',
+            ).length;
+
+            return (
+                renderedSurahHeaderCount === 1 &&
+                renderedBasmallahCount <= 1 &&
+                ayahLineCount === 13
+            );
+        },
+
         isDenseShortLinePage() {
             const lines = Array.isArray(this.mushafLines) ? this.mushafLines : [];
 
@@ -404,22 +430,38 @@ export const createLineLayoutRenderCoreModule = (deps) => {
             );
         },
 
-        surahHeaderTopPaddingWhenFollowingPreviousSurahAyahValue() {
+        surahHeaderTopPaddingWhenFollowingPreviousSurahAyahValue(line = null) {
             const configuredPadding = String(
                 this.surahHeaderTopPaddingWhenFollowingPreviousSurahAyah ?? '',
             ).trim();
+            const defaultPadding =
+                'var(--quran-surah-section-gap, calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * 0.56))';
+            const basePadding = configuredPadding !== '' ? configuredPadding : defaultPadding;
+            const isHeaderedLongCompactPage =
+                typeof this.isSingleHeaderLongCompactPage === 'function' &&
+                this.isSingleHeaderLongCompactPage();
+            const isHeaderedLongPage =
+                typeof this.isSingleHeaderLongContentPage === 'function' &&
+                this.isSingleHeaderLongContentPage();
+            const isTargetLineSurahHeader =
+                line !== null &&
+                typeof this.isSurahHeaderLine === 'function' &&
+                this.isSurahHeaderLine(line);
+            const gapScaleProperty =
+                isHeaderedLongCompactPage && isTargetLineSurahHeader
+                    ? '--quran-page-headered-long-compact-surah-section-gap-scale'
+                    : isHeaderedLongPage && isTargetLineSurahHeader
+                      ? '--quran-page-headered-long-surah-section-gap-scale'
+                      : '--quran-surah-section-gap-scale';
+            const gapScaleValue = `var(${gapScaleProperty}, 1)`;
 
-            if (configuredPadding !== '') {
-                return configuredPadding;
-            }
-
-            return 'var(--quran-surah-section-gap, calc(var(--quran-line-gap) * var(--quran-gap-scale) * var(--quran-page-gap-multiplier, 1) * 0.56))';
+            return `calc((${basePadding}) * ${gapScaleValue})`;
         },
 
         lineMarginBlockStart(line) {
             if (this.isSurahHeaderLine(line)) {
                 if (this.isSurahHeaderFollowingPreviousSurahAyahOnSamePage(line)) {
-                    return this.surahHeaderTopPaddingWhenFollowingPreviousSurahAyahValue();
+                    return this.surahHeaderTopPaddingWhenFollowingPreviousSurahAyahValue(line);
                 }
 
                 return '0px';
