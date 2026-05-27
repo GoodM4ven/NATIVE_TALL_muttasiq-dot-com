@@ -19,10 +19,15 @@ it('keeps native touch interaction contracts for quran gate and main menu insigh
 
     expect($mainMenuSource)->not->toBeFalse()
         ->and($mainMenuSource)->toContain('insightsTouchRowsUnlockDelayMs: 120')
+        ->and($mainMenuSource)->toContain('hasTouchInput()')
+        ->and($mainMenuSource)->toContain('refreshTouchCapability({ resetTouchState = true } = {})')
         ->and($mainMenuSource)->toContain('handleInsightsTouchStart(event = null)')
         ->and($mainMenuSource)->toContain('handleInsightsRowTouchEnd(mode, event = null)')
         ->and($mainMenuSource)->toContain("event.target.closest('.main-menu-insights-row--button')")
-        ->and($mainMenuSource)->toContain('const releaseElement = document.elementFromPoint(releaseX, releaseY);');
+        ->and($mainMenuSource)->toContain('const releaseElement = document.elementFromPoint(releaseX, releaseY);')
+        ->and($mainMenuSource)->toContain(
+            'if (isActiveItem && this.touchStartWasActive && !this.touchLeftStartItem) {',
+        );
 
     expect($mainMenuViewSource)->not->toBeFalse()
         ->and($mainMenuViewSource)->toContain(

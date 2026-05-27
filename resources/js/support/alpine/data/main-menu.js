@@ -73,13 +73,61 @@ document.addEventListener('alpine:init', () => {
         _quranWirdAutoEntryTimer: null,
         _quranWirdAutoEntryDeadlineAt: 0,
         shouldAutoEnterQuranWirdMode: false,
+        detectTouchInputFallback() {
+            return (
+                'ontouchstart' in window ||
+                window.matchMedia?.('(pointer: coarse)')?.matches ||
+                window.matchMedia?.('(any-pointer: coarse)')?.matches ||
+                navigator.maxTouchPoints > 0
+            );
+        },
+        hasTouchInput() {
+            const breakpointStore = window.Alpine?.store?.('bp');
+
+            if (typeof breakpointStore?.isTouch === 'function') {
+                return Boolean(breakpointStore.isTouch() || breakpointStore.hasTouch);
+            }
+
+            if (Object.prototype.hasOwnProperty.call(breakpointStore ?? {}, 'hasTouch')) {
+                return Boolean(breakpointStore?.hasTouch);
+            }
+
+            return this.detectTouchInputFallback();
+        },
+        resetTouchInteractionState({ clearActiveElement = false } = {}) {
+            this.isTouching = false;
+            this.touchStartItem = null;
+            this.touchStartWasActive = false;
+            this.touchLeftStartItem = false;
+            this.touchMoved = false;
+            this.touchStartX = null;
+            this.touchStartY = null;
+            this.touchLastX = null;
+            this.touchLastY = null;
+
+            if (clearActiveElement) {
+                this.setTouchActiveElement(null, true);
+            }
+
+            this.broadcastTouchState();
+        },
+        refreshTouchCapability({ resetTouchState = true } = {}) {
+            const nextIsTouchDevice = this.hasTouchInput();
+
+            if (this.isTouchDevice === nextIsTouchDevice) {
+                return;
+            }
+
+            this.isTouchDevice = nextIsTouchDevice;
+
+            if (!nextIsTouchDevice && resetTouchState) {
+                this.resetTouchInteractionState({ clearActiveElement: true });
+            }
+        },
         init() {
             this.captionShadow = window.makeBoxShadowFromColor?.('--primary-500') ?? 'none';
             this.captionShadowDark = window.makeBoxShadowFromColor?.('--primary-100') ?? 'none';
-            this.isTouchDevice =
-                'ontouchstart' in window ||
-                window.matchMedia?.('(pointer: coarse)')?.matches ||
-                navigator.maxTouchPoints > 0;
+            this.refreshTouchCapability({ resetTouchState: false });
             this.refreshVisualEnhancementsSetting();
             el.addEventListener('mouseenter', () => (this.containerHovered = true));
             el.addEventListener('mouseleave', () => (this.containerHovered = false));
@@ -95,7 +143,7 @@ document.addEventListener('alpine:init', () => {
             });
 
             this._onWindowMouseMove = (event) => {
-                if (this.isTouchDevice || this.isTouching || !this.containerHovered) {
+                if (this.hasTouchInput() || this.isTouching || !this.containerHovered) {
                     return;
                 }
 
@@ -160,6 +208,7 @@ document.addEventListener('alpine:init', () => {
                 });
             };
             this._onWindowResize = () => {
+                this.refreshTouchCapability();
                 this.measureInsightsPanelHeight();
             };
 
@@ -271,7 +320,7 @@ document.addEventListener('alpine:init', () => {
         isInsightsZoneHoveredNow() {
             const insightsZone = this.getInsightsZoneElement();
 
-            if (!(insightsZone instanceof Element) || this.isTouchDevice) {
+            if (!(insightsZone instanceof Element) || this.hasTouchInput()) {
                 return false;
             }
 
@@ -282,7 +331,7 @@ document.addEventListener('alpine:init', () => {
             }
         },
         handleRootOutsideClick() {
-            if (!this.isTouchDevice && this.isInsightsExpanded) {
+            if (!this.hasTouchInput() && this.isInsightsExpanded) {
                 this.collapseInsightsForNavigation();
             }
 
@@ -306,7 +355,7 @@ document.addEventListener('alpine:init', () => {
             this.collapseInsightsForNavigation();
         },
         handleMainMenuBackgroundPointerDown(event) {
-            if (!this.isTouchDevice || !this.isInsightsExpanded) {
+            if (!this.hasTouchInput() || !this.isInsightsExpanded) {
                 return;
             }
 
@@ -544,13 +593,15 @@ document.addEventListener('alpine:init', () => {
         },
         isInsightsTouchRowsLocked() {
             return (
-                this.isTouchDevice && this.isInsightsExpanded && !this.insightsTouchRowsInteractive
+                this.hasTouchInput() &&
+                this.isInsightsExpanded &&
+                !this.insightsTouchRowsInteractive
             );
         },
         scheduleInsightsTouchRowsUnlock() {
             this.clearInsightsTouchRowsUnlockTimer();
 
-            if (!this.isTouchDevice || !this.isInsightsExpanded) {
+            if (!this.hasTouchInput() || !this.isInsightsExpanded) {
                 this.insightsTouchRowsInteractive = true;
 
                 return;
@@ -910,7 +961,7 @@ document.addEventListener('alpine:init', () => {
             });
         },
         handleInsightsRowTouchEnd(mode, event = null) {
-            if (!this.isTouchDevice) {
+            if (!this.hasTouchInput()) {
                 return;
             }
 
@@ -947,7 +998,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             if (
-                this.isTouchDevice &&
+                this.hasTouchInput() &&
                 event?.type === 'click' &&
                 this.lastInsightsRowTouchActivationAt > 0 &&
                 Date.now() - this.lastInsightsRowTouchActivationAt < 420
@@ -1165,7 +1216,7 @@ document.addEventListener('alpine:init', () => {
             this.scheduleInsightsCollapse();
         },
         handleInsightsTouchStart(event = null) {
-            if (!this.isTouchDevice) {
+            if (!this.hasTouchInput()) {
                 return;
             }
 
@@ -1227,7 +1278,7 @@ document.addEventListener('alpine:init', () => {
             this.showInsightsPanel();
         },
         handleInsightsWindowPointerDown(event) {
-            if (!this.isTouchDevice || !this.isInsightsExpanded) {
+            if (!this.hasTouchInput() || !this.isInsightsExpanded) {
                 return;
             }
 
@@ -1302,6 +1353,8 @@ document.addEventListener('alpine:init', () => {
             );
         },
         handleTouchStart(event) {
+            this.refreshTouchCapability({ resetTouchState: false });
+
             if (!event.touches?.length) {
                 return;
             }
@@ -1380,15 +1433,15 @@ document.addEventListener('alpine:init', () => {
                 this.touchLastY = releaseY;
             }
 
-            if (!this.isPointInsideGrid(x, y)) {
-                this.setTouchActiveElement(null, true);
-                this.handleOutside(true);
-                return;
-            }
-
             const item = this.getItemFromPoint(x, y);
 
             if (!item) {
+                if (!this.isPointInsideGrid(x, y)) {
+                    this.setTouchActiveElement(null, true);
+                    this.handleOutside(true);
+                    return;
+                }
+
                 if (this.touchMoved) {
                     this.setTouchActiveElement(null, true);
                     this.handleOutside(true);
@@ -1415,6 +1468,20 @@ document.addEventListener('alpine:init', () => {
                 const detail = this.getItemDetailsFromElement(item);
                 this.attemptLockActivation(detail);
                 return;
+            }
+
+            if (isActiveItem && this.touchStartWasActive && !this.touchLeftStartItem) {
+                const detail = this.getItemDetailsFromElement(item);
+
+                if (detail?.locked) {
+                    this.attemptLockActivation(detail);
+                    return;
+                }
+
+                if (detail?.onClickCallback) {
+                    this.runItemCallback(detail.onClickCallback, detail.element);
+                    return;
+                }
             }
 
             if (!isActiveItem) {
@@ -1449,7 +1516,7 @@ document.addEventListener('alpine:init', () => {
             this.setActiveItem(detail, 'touch', true);
         },
         handleItemEnter(detail) {
-            if (this.isTouchDevice) {
+            if (this.hasTouchInput()) {
                 return;
             }
 
@@ -1463,7 +1530,7 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            if (this.isTouchDevice) {
+            if (this.hasTouchInput()) {
                 return;
             }
 
@@ -1558,7 +1625,7 @@ document.addEventListener('alpine:init', () => {
             this.syncUI();
         },
         handleItemLeave(fromTouch = false) {
-            if (this.isTouchDevice && !fromTouch) {
+            if (this.hasTouchInput() && !fromTouch) {
                 return;
             }
 
