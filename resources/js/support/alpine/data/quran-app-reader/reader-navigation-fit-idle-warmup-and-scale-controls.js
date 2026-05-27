@@ -1157,6 +1157,24 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
                     String(effectiveGapFactor),
                 );
                 targetElement.style.setProperty('--quran-page-y-offset-adjust', effectiveYOffset);
+                if (forFitting) {
+                    targetElement.style.setProperty(
+                        '--quran-page-postfit-type-tune-effective',
+                        '1',
+                    );
+                    targetElement.style.setProperty(
+                        '--quran-page-postfit-leading-tune-effective',
+                        '1',
+                    );
+                    targetElement.style.setProperty('--quran-page-postfit-gap-tune-effective', '1');
+                    targetElement.style.setProperty(
+                        '--quran-page-postfit-y-offset-tune-effective',
+                        '0rem',
+                    );
+
+                    return;
+                }
+
                 targetElement.style.setProperty(
                     '--quran-page-postfit-type-tune-effective',
                     String(postFitTypeTune),
