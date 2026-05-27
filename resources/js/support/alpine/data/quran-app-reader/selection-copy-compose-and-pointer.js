@@ -36,6 +36,7 @@ export const createSelectionCopyComposeAndPointerModule = (deps) => {
         managerRowReplaceAnimationDurationMs,
         managerRowUpdateAnimationDurationMs,
         mobileDoubleTapCopyWindowMs,
+        mobileDoubleTapHoldDelayMs,
         modalCloseTransitionDelayMs,
         modalLifecycleSuppressionDurationMs,
         navigationBurstInputThresholdMs,
@@ -832,7 +833,39 @@ export const createSelectionCopyComposeAndPointerModule = (deps) => {
                     isSecondTap || (hasRecentTapWindow && hasPreviousTap);
 
                 this.wordPress.isSecondTap = shouldTreatAsSecondTap;
-                this.wordPress.dragActive = shouldTreatAsSecondTap;
+
+                if (shouldTreatAsSecondTap) {
+                    const holdDelayMs = Math.max(
+                        0,
+                        Math.trunc(
+                            Number(
+                                mobileDoubleTapHoldDelayMs > 0
+                                    ? mobileDoubleTapHoldDelayMs
+                                    : wordPressHoldDelayMs,
+                            ),
+                        ),
+                    );
+
+                    this._wordPressHoldTimer = window.setTimeout(() => {
+                        if (
+                            !this.wordPress.active ||
+                            !this.wordPress.word ||
+                            !this.wordPress.isSecondTap ||
+                            this.wordPress.dragActive
+                        ) {
+                            return;
+                        }
+
+                        this.wordPress.holdTriggered = true;
+                        this.setWordClickSuppression(true);
+                        this._lastWordHoldAt = Date.now();
+                        this.selectHoldSegment(this.wordPress.word, {
+                            x: this.wordPress.startX,
+                            y: this.wordPress.startY,
+                            target: this.wordPress.target,
+                        });
+                    }, holdDelayMs);
+                }
 
                 return;
             }
