@@ -751,7 +751,7 @@ class Reader extends Component implements HasActions, HasSchemas
         return Action::make('searchQuran')
             ->modalHeading(arabic_text('البحث الشامل في القرآن الكريم'))
             ->modalDescription(
-                arabic_text('تظهر النتائج على دفعات: سور مطابقة أو قريبة أو صرفية، ثم آيات مطابقة أو قريبة أو صرفية أو جذرية.'),
+                arabic_text('بإمكانيّة البحث اللغوي، مطابقة تامة أو قريبة، مع نتائج متعلّقة صرفيًّا وجذريّا.'),
             )
             ->modalAutofocus(false)
             ->modalWidth(Width::FiveExtraLarge)
