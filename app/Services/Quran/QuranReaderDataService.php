@@ -19,7 +19,7 @@ class QuranReaderDataService
 
     private const MAX_PAGE_CACHE_KEY = 'quran-reader-max-page-v2';
 
-    private const SEARCH_RESULTS_CACHE_PREFIX = 'quran-reader-search-results-v8';
+    private const SEARCH_RESULTS_CACHE_PREFIX = 'quran-reader-search-results-v9';
 
     private const DISPLAYED_PAGE_CACHE_PREFIX = 'quran-reader-display-page-v2';
 
@@ -1443,10 +1443,37 @@ class QuranReaderDataService
             return false;
         }
 
+        if ($this->containsWholePhraseBounded($haystack, $needle)) {
+            return true;
+        }
+
+        $normalizedHaystack = $this->normalizeLeadingHamzatedAlifForExactPhrase($haystack);
+        $normalizedNeedle = $this->normalizeLeadingHamzatedAlifForExactPhrase($needle);
+
+        if ($normalizedHaystack === $haystack && $normalizedNeedle === $needle) {
+            return false;
+        }
+
+        return $this->containsWholePhraseBounded($normalizedHaystack, $normalizedNeedle);
+    }
+
+    private function containsWholePhraseBounded(string $haystack, string $needle): bool
+    {
         return $haystack === $needle
             || str_starts_with($haystack, $needle.' ')
             || str_ends_with($haystack, ' '.$needle)
             || str_contains($haystack, ' '.$needle.' ');
+    }
+
+    private function normalizeLeadingHamzatedAlifForExactPhrase(string $text): string
+    {
+        $trimmedText = trim($text);
+
+        if ($trimmedText === '') {
+            return '';
+        }
+
+        return trim((string) (preg_replace('/(^|\s)ءا(?=[\p{Arabic}])/u', '$1ا', $trimmedText) ?? $trimmedText));
     }
 
     /**

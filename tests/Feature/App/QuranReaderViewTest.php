@@ -784,6 +784,28 @@ it('matches quran orthography variants when the query drops the ra from al-quran
         ->and((string) ($items[0]['match_strategy'] ?? ''))->toBe('ayah_exact');
 });
 
+it('treats hamza-on-line alif phrase variants as exact quran matches', function () {
+    if (! Schema::hasTable('quran_verses')) {
+        $this->markTestSkipped('Quran verses table is unavailable.');
+    }
+
+    $response = $this->getJson(route('quran-reader-search-index', [
+        'q' => 'آمن الرسول بما',
+    ], false));
+
+    $response->assertSuccessful();
+
+    $items = $response->json('items', []);
+    $targetMatch = collect($items)->first(
+        static fn (array $item): bool => (int) ($item['surah_number'] ?? 0) === 2
+            && (int) ($item['ayah_number'] ?? 0) === 285,
+    );
+
+    expect($items)->toBeArray()->not->toBeEmpty()
+        ->and($targetMatch)->toBeArray()
+        ->and((string) ($targetMatch['match_strategy'] ?? ''))->toBe('ayah_exact');
+});
+
 it('exposes local quran search index payload for client-side instant preview', function () {
     if (! Schema::hasTable('quran_verses')) {
         $this->markTestSkipped('Quran verses table is unavailable.');

@@ -176,23 +176,46 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                 return false;
             }
 
-            let phraseOffset = normalizedText.indexOf(normalizedPhrase);
+            const containsWholePhraseBounded = (haystack, needle) => {
+                let phraseOffset = haystack.indexOf(needle);
 
-            while (phraseOffset !== -1) {
-                const beforeBoundary =
-                    phraseOffset === 0 || normalizedText[phraseOffset - 1] === ' ';
-                const afterIndex = phraseOffset + normalizedPhrase.length;
-                const afterBoundary =
-                    afterIndex === normalizedText.length || normalizedText[afterIndex] === ' ';
+                while (phraseOffset !== -1) {
+                    const beforeBoundary = phraseOffset === 0 || haystack[phraseOffset - 1] === ' ';
+                    const afterIndex = phraseOffset + needle.length;
+                    const afterBoundary =
+                        afterIndex === haystack.length || haystack[afterIndex] === ' ';
 
-                if (beforeBoundary && afterBoundary) {
-                    return true;
+                    if (beforeBoundary && afterBoundary) {
+                        return true;
+                    }
+
+                    phraseOffset = haystack.indexOf(needle, phraseOffset + 1);
                 }
 
-                phraseOffset = normalizedText.indexOf(normalizedPhrase, phraseOffset + 1);
+                return false;
+            };
+
+            if (containsWholePhraseBounded(normalizedText, normalizedPhrase)) {
+                return true;
             }
 
-            return false;
+            const normalizedHamzatedText = normalizedText.replace(
+                /(^|\s)ءا(?=[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF])/g,
+                '$1ا',
+            );
+            const normalizedHamzatedPhrase = normalizedPhrase.replace(
+                /(^|\s)ءا(?=[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF])/g,
+                '$1ا',
+            );
+
+            if (
+                normalizedHamzatedText === normalizedText &&
+                normalizedHamzatedPhrase === normalizedPhrase
+            ) {
+                return false;
+            }
+
+            return containsWholePhraseBounded(normalizedHamzatedText, normalizedHamzatedPhrase);
         },
 
         localSearchStrategyForRow(row, normalizedQuery, queryTokens) {
