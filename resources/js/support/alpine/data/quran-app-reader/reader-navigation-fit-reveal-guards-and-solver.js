@@ -1242,7 +1242,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                     );
 
                 if (canFitNow) {
-                    if (this.isCurrentPageVisiblyReady()) {
+                    if (this.isCurrentPageVisiblyReady() && this.isCurrentFitQualityHealthy()) {
                         this.clearPendingPostModalTargetFit();
 
                         return;

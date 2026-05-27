@@ -580,6 +580,23 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
         },
 
         queueSmPlusWebModalCloseRefit(modalId = '') {
+            const canQueuePostCloseTargetFit =
+                typeof this.schedulePendingModalCloseFit === 'function' &&
+                typeof this.hasRenderablePage === 'function';
+
+            if (canQueuePostCloseTargetFit && this.hasRenderablePage()) {
+                const targetPage = clampPage(Number(this.pageNumber ?? 0), this.maxPage);
+
+                if (targetPage > 0) {
+                    this.schedulePendingModalCloseFit(targetPage, {
+                        retries: this.nativeRuntime ? 44 : 30,
+                        delayMs: this.nativeRuntime ? 108 : 90,
+                        revealDelayMs: this.nativeRuntime ? 240 : 220,
+                        maxAttempts: this.nativeRuntime ? 6 : 5,
+                    });
+                }
+            }
+
             const shouldRefitAfterModalClose =
                 !this.nativeRuntime &&
                 !this.shouldUseImmersiveReaderChrome() &&
