@@ -168,7 +168,7 @@ class Setting extends Model
             ],
             self::DOES_QURAN_SHOW_IMMERSIVE_MOBILE_EDGE_CAPTIONS => [
                 'default' => true,
-                'label' => '5. إظهار اسم السورة ورقم الصفحة عند أطراف القارئ.',
+                'label' => '6. إظهار اسم السورة ورقم الصفحة عند أطراف القارئ.',
                 'group' => self::GROUP_QURAN,
                 'type' => 'boolean',
             ],

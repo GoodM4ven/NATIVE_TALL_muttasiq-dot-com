@@ -1118,18 +1118,6 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
                     manualTypeScaleOffset +
                     this.searchDestinationTypeScaleBoostAmount(),
             );
-            const breakpointName = String(this.resolveCurrentBreakpointName?.() ?? '').trim();
-            const isSmOrLargerBreakpoint =
-                breakpointName !== '' &&
-                breakpointName !== 'base' &&
-                ['sm', 'md', 'lg', 'xl', '2xl', '3xl', '4xl'].includes(breakpointName);
-            const isSmOrLargerViewport =
-                typeof window.matchMedia === 'function'
-                    ? window.matchMedia('(min-width: 640px)').matches
-                    : isSmOrLargerBreakpoint;
-            const isDenseShortLinePage =
-                typeof this.isDenseShortLinePage === 'function' && this.isDenseShortLinePage();
-            const shouldApplyPostFitTuning = isSmOrLargerViewport || isDenseShortLinePage;
             const pageLinesComputedStyle = getComputedStyle(pageLinesScaleElement);
             const parsePostFitTuneValue = (propertyName, fallbackValue) => {
                 const parsedValue = Number.parseFloat(
@@ -1169,31 +1157,22 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
                     String(effectiveGapFactor),
                 );
                 targetElement.style.setProperty('--quran-page-y-offset-adjust', effectiveYOffset);
-                if (shouldApplyPostFitTuning) {
-                    targetElement.style.setProperty(
-                        '--quran-page-postfit-type-tune-effective',
-                        String(postFitTypeTune),
-                    );
-                    targetElement.style.setProperty(
-                        '--quran-page-postfit-leading-tune-effective',
-                        String(postFitLeadingTune),
-                    );
-                    targetElement.style.setProperty(
-                        '--quran-page-postfit-gap-tune-effective',
-                        String(postFitGapTune),
-                    );
-                    targetElement.style.setProperty(
-                        '--quran-page-postfit-y-offset-tune-effective',
-                        postFitYOffsetTune,
-                    );
-
-                    return;
-                }
-
-                targetElement.style.removeProperty('--quran-page-postfit-type-tune-effective');
-                targetElement.style.removeProperty('--quran-page-postfit-leading-tune-effective');
-                targetElement.style.removeProperty('--quran-page-postfit-gap-tune-effective');
-                targetElement.style.removeProperty('--quran-page-postfit-y-offset-tune-effective');
+                targetElement.style.setProperty(
+                    '--quran-page-postfit-type-tune-effective',
+                    String(postFitTypeTune),
+                );
+                targetElement.style.setProperty(
+                    '--quran-page-postfit-leading-tune-effective',
+                    String(postFitLeadingTune),
+                );
+                targetElement.style.setProperty(
+                    '--quran-page-postfit-gap-tune-effective',
+                    String(postFitGapTune),
+                );
+                targetElement.style.setProperty(
+                    '--quran-page-postfit-y-offset-tune-effective',
+                    postFitYOffsetTune,
+                );
             });
         },
 

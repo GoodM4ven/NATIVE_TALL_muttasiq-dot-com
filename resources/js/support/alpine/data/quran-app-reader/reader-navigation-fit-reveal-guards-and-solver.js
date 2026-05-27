@@ -2496,23 +2496,6 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 const pageLinesComputedStyle = hasPageLinesElement
                     ? window.getComputedStyle(pageLinesElement)
                     : null;
-                const breakpointName = String(this.resolveCurrentBreakpointName?.() ?? '').trim();
-                const isSmOrLargerBreakpoint =
-                    breakpointName !== '' &&
-                    breakpointName !== 'base' &&
-                    ['sm', 'md', 'lg', 'xl', '2xl', '3xl', '4xl'].includes(breakpointName);
-                const isSmOrLargerViewport =
-                    typeof window.matchMedia === 'function'
-                        ? window.matchMedia('(min-width: 640px)').matches
-                        : isSmOrLargerBreakpoint;
-                const isDenseShortLinePage =
-                    typeof this.isDenseShortLinePage === 'function' && this.isDenseShortLinePage();
-                const recentlyRevealedPage =
-                    this._lastPageRevealAt > 0 &&
-                    Date.now() - this._lastPageRevealAt <
-                        Math.max(120, Number(postModalFitRevealSettleDelayMs ?? 240));
-                const shouldHonorPostFitTuningDuringSanity =
-                    isSmOrLargerViewport || isDenseShortLinePage || recentlyRevealedPage;
                 const resolvePostFitTuneNumber = (effectivePropertyName, propertyName) => {
                     if (!pageLinesComputedStyle) {
                         return 1;
@@ -2576,7 +2559,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                     Math.abs(postFitGapTune - 1) > 0.0005 ||
                     Math.abs(postFitYOffsetTunePx) > 0.1;
 
-                if (shouldHonorPostFitTuningDuringSanity && hasNonNeutralPostFitTuning) {
+                if (hasNonNeutralPostFitTuning) {
                     this.resetFitSanityRecoveryState();
 
                     return;
@@ -2620,6 +2603,9 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                     !isPageScaleAtFloor &&
                     (fillWidth < normalizedMinimumFillWidth ||
                         fillHeight < normalizedMinimumFillHeight);
+                const recentlyRevealedPage =
+                    this._lastPageRevealAt > 0 &&
+                    Date.now() - this._lastPageRevealAt < postModalFitRevealSettleDelayMs;
 
                 if (!hasOverflow && hasSuspiciousUnderfill && recentlyRevealedPage) {
                     this._fitSanityCheckTimer = window.setTimeout(() => {
