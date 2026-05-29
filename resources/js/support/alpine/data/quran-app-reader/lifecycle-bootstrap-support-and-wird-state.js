@@ -694,13 +694,48 @@ export const createLifecycleBootstrapSupportAndWirdStateModule = (deps) => {
             return normalized;
         },
 
-        openSupportUnlockModal() {
-            const hasMountAction = this.$wire && typeof this.$wire.mountAction === 'function';
+        async openSupportUnlockModal() {
+            if (typeof this.shouldCloseSearchModalBeforeManagerModalOpen === 'function') {
+                this._searchModalOpenRequestedAt = 0;
+                const shouldCloseSearchModal = this.shouldCloseSearchModalBeforeManagerModalOpen();
 
-            if (hasMountAction) {
-                this.$wire.mountAction('supportUnlock');
+                if (shouldCloseSearchModal) {
+                    if (typeof this.requestSearchModalClose === 'function') {
+                        await this.requestSearchModalClose({ skipLayout: true });
+                    }
 
-                return;
+                    if (typeof this.waitForModalLifecycleToSettle === 'function') {
+                        await this.waitForModalLifecycleToSettle();
+                    }
+
+                    await wait(modalCloseTransitionDelayMs);
+                }
+            }
+
+            if (typeof this.mountReaderAction === 'function') {
+                const mounted = await this.mountReaderAction('supportUnlock');
+
+                if (mounted) {
+                    return;
+                }
+            }
+
+            if (this.$wire && typeof this.$wire.mountAction === 'function') {
+                if (typeof this.$wire.unmountAction === 'function') {
+                    try {
+                        await this.$wire.unmountAction(false);
+                    } catch (_) {
+                        //
+                    }
+                }
+
+                try {
+                    await this.$wire.mountAction('supportUnlock');
+
+                    return;
+                } catch (_) {
+                    //
+                }
             }
 
             window.dispatchEvent(new CustomEvent('open-support-unlock-modal'));
