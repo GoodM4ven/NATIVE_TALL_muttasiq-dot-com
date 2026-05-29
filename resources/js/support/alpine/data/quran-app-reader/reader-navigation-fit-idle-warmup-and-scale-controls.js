@@ -1098,6 +1098,10 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
                 : `${this.pageYOffsetAdjustRemValue().toFixed(3)}rem`;
             const pageLinesScaleElement =
                 pageLinesTargets.find((element) => element instanceof HTMLElement) ?? scaleElement;
+            const breakpointName = String(this.resolveCurrentBreakpointName?.() ?? '').trim();
+            const shouldUseSegmentedSmOverrides =
+                breakpointName === 'sm' &&
+                pageLinesScaleElement?.classList?.contains?.('quran-page-lines--segmented');
             const pageLinesTypeScaleValue = Number.parseFloat(
                 getComputedStyle(pageLinesScaleElement)
                     .getPropertyValue('--quran-page-type-scale')
@@ -1157,7 +1161,49 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
                     String(effectiveGapFactor),
                 );
                 targetElement.style.setProperty('--quran-page-y-offset-adjust', effectiveYOffset);
-                if (forFitting) {
+                if (shouldUseSegmentedSmOverrides) {
+                    if (forFitting) {
+                        targetElement.style.setProperty(
+                            '--quran-page-postfit-type-tune-effective',
+                            '1',
+                        );
+                        targetElement.style.setProperty(
+                            '--quran-page-postfit-leading-tune-effective',
+                            '1',
+                        );
+                        targetElement.style.setProperty(
+                            '--quran-page-postfit-gap-tune-effective',
+                            '1',
+                        );
+                        targetElement.style.setProperty(
+                            '--quran-page-postfit-y-offset-tune-effective',
+                            '0rem',
+                        );
+
+                        return;
+                    }
+
+                    targetElement.style.setProperty(
+                        '--quran-page-postfit-type-tune-effective',
+                        'var(--quran-page-postfit-type-tune, 1)',
+                    );
+                    targetElement.style.setProperty(
+                        '--quran-page-postfit-leading-tune-effective',
+                        'var(--quran-page-postfit-leading-tune, 1)',
+                    );
+                    targetElement.style.setProperty(
+                        '--quran-page-postfit-gap-tune-effective',
+                        'var(--quran-page-postfit-gap-tune, 1)',
+                    );
+                    targetElement.style.setProperty(
+                        '--quran-page-postfit-y-offset-tune-effective',
+                        'var(--quran-page-postfit-y-offset-tune, 0rem)',
+                    );
+
+                    return;
+                }
+
+                if (forFitting && !shouldUseSegmentedSmOverrides) {
                     targetElement.style.setProperty(
                         '--quran-page-postfit-type-tune-effective',
                         '1',
