@@ -593,7 +593,7 @@ export const createSearchAndModalsStreamAndResultsModule = (deps) => {
         },
 
         setupSearchStreamObserver() {
-            if (this.usesFilamentNativeSearchSelect()) {
+            if (this.usesFilamentNativeSearchSelect() || this.nativeRuntime) {
                 return;
             }
 

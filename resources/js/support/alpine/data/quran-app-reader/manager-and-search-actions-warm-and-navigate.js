@@ -556,56 +556,59 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                     this.ensureSearchResultAnimations();
                 });
             };
-            const runWorkerFallbackSearch = () =>
-                new Promise((resolve) => {
-                    const workers = [
-                        () => this.$wire.searchSurahExact(normalizedQuery, requestSerial, 24),
-                        () => this.$wire.searchSurahClose(normalizedQuery, requestSerial, 24),
-                        () => this.$wire.searchSurahSarf(normalizedQuery, requestSerial, 24),
-                        () => this.$wire.searchAyahExact(normalizedQuery, requestSerial, 24),
-                        () => this.$wire.searchAyahClose(normalizedQuery, requestSerial, 24),
-                        () => this.$wire.searchAyahSarf(normalizedQuery, requestSerial, 24),
-                        () => this.$wire.searchAyahJathr(normalizedQuery, requestSerial, 24),
-                    ];
-                    let pendingWorkers = workers.length;
-                    const finishWorker = () => {
-                        pendingWorkers = Math.max(0, pendingWorkers - 1);
+            const runWorkerFallbackSearch = async () => {
+                const workers = [
+                    () => this.$wire.searchSurahExact(normalizedQuery, requestSerial, 24),
+                    () => this.$wire.searchAyahExact(normalizedQuery, requestSerial, 24),
+                    () => this.$wire.searchSurahClose(normalizedQuery, requestSerial, 24),
+                    () => this.$wire.searchAyahClose(normalizedQuery, requestSerial, 24),
+                    () => this.$wire.searchSurahSarf(normalizedQuery, requestSerial, 24),
+                    () => this.$wire.searchAyahSarf(normalizedQuery, requestSerial, 24),
+                    () => this.$wire.searchAyahJathr(normalizedQuery, requestSerial, 24),
+                ];
 
-                        if (pendingWorkers > 0 || requestSerial !== this._searchRequestSerial) {
+                if (this.nativeRuntime) {
+                    // Native WebView is more sensitive to overlapping heavy search requests.
+                    for (const runWorker of workers) {
+                        if (requestSerial !== this._searchRequestSerial) {
                             return;
                         }
 
-                        resolve();
-                    };
+                        try {
+                            const results = await runWorker();
 
-                    workers.forEach((runWorker) => {
-                        window.setTimeout(() => {
-                            if (requestSerial !== this._searchRequestSerial) {
-                                finishWorker();
+                            appendWorkerResults(results);
+                        } catch (_) {
+                            //
+                        }
+                    }
 
-                                return;
-                            }
+                    return;
+                }
 
-                            runWorker()
-                                .then((results) => {
-                                    appendWorkerResults(results);
-                                })
-                                .catch(() => {
-                                    //
-                                })
-                                .finally(() => {
-                                    finishWorker();
-                                });
-                        }, 0);
-                    });
-                });
+                await Promise.all(
+                    workers.map(async (runWorker) => {
+                        if (requestSerial !== this._searchRequestSerial) {
+                            return;
+                        }
+
+                        try {
+                            const results = await runWorker();
+
+                            appendWorkerResults(results);
+                        } catch (_) {
+                            //
+                        }
+                    }),
+                );
+            };
 
             void this.applyLocalSearchPreview(normalizedQuery, requestSerial).catch(() => {
                 //
             });
 
             try {
-                if (typeof this.$wire?.streamSearch === 'function') {
+                if (!this.nativeRuntime && typeof this.$wire?.streamSearch === 'function') {
                     const streamedResults = await this.$wire.streamSearch(
                         normalizedQuery,
                         requestSerial,

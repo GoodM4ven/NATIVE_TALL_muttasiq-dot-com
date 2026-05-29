@@ -77,10 +77,13 @@ test('quran search endpoint returns the rewritten ayah and surah stage names', f
         ], true)))->toBeTrue();
 });
 
-test('quran search prefers streamed pipeline while keeping stage worker fallback endpoints', function () {
+test('quran search prefers streamed pipeline on web while keeping a native-safe stage worker fallback', function () {
     $readerSource = file_get_contents(app_path('Livewire/QuranApp/Reader.php'));
     $searchWorkerScriptSource = file_get_contents(
         resource_path('js/support/alpine/data/quran-app-reader/manager-and-search-actions-warm-and-navigate.js'),
+    );
+    $searchStreamScriptSource = file_get_contents(
+        resource_path('js/support/alpine/data/quran-app-reader/search-and-modals-stream-and-results.js'),
     );
 
     expect($readerSource)->not->toBeFalse()
@@ -95,10 +98,11 @@ test('quran search prefers streamed pipeline while keeping stage worker fallback
 
     expect($searchWorkerScriptSource)->not->toBeFalse()
         ->and($searchWorkerScriptSource)->toContain('$wire.streamSearch(')
+        ->and($searchWorkerScriptSource)->toContain('if (!this.nativeRuntime && typeof this.$wire?.streamSearch === \'function\')')
         ->and($searchWorkerScriptSource)->toContain('runWorkerFallbackSearch')
-        ->and($searchWorkerScriptSource)->toContain('workers.forEach((runWorker) => {')
-        ->and($searchWorkerScriptSource)->toContain('runWorker()')
-        ->and($searchWorkerScriptSource)->toContain('.then((results) => {')
+        ->and($searchWorkerScriptSource)->toContain('if (this.nativeRuntime) {')
+        ->and($searchWorkerScriptSource)->toContain('for (const runWorker of workers)')
+        ->and($searchWorkerScriptSource)->toContain('await Promise.all(')
         ->and($searchWorkerScriptSource)->toContain('$wire.searchSurahExact(')
         ->and($searchWorkerScriptSource)->toContain('$wire.searchSurahClose(')
         ->and($searchWorkerScriptSource)->toContain('$wire.searchSurahSarf(')
@@ -106,4 +110,9 @@ test('quran search prefers streamed pipeline while keeping stage worker fallback
         ->and($searchWorkerScriptSource)->toContain('$wire.searchAyahClose(')
         ->and($searchWorkerScriptSource)->toContain('$wire.searchAyahSarf(')
         ->and($searchWorkerScriptSource)->toContain('$wire.searchAyahJathr(');
+
+    expect($searchStreamScriptSource)->not->toBeFalse()
+        ->and($searchStreamScriptSource)->toContain(
+            'if (this.usesFilamentNativeSearchSelect() || this.nativeRuntime) {',
+        );
 });

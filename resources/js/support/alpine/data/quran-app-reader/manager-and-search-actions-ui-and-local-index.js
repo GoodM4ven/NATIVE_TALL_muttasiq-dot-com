@@ -445,19 +445,6 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                 await wait(16);
 
                 if (!resolveModalVisibleState(modalId)) {
-                    if (
-                        forceLivewireUnmount &&
-                        allowLivewireUnmount &&
-                        typeof this.$wire?.unmountAction === 'function'
-                    ) {
-                        try {
-                            await this.$wire.unmountAction(false);
-                            await wait(16);
-                        } catch (_) {
-                            //
-                        }
-                    }
-
                     return true;
                 }
             }
@@ -488,6 +475,7 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                 this._skipNextSearchModalCloseLayout = true;
             }
 
+            const shouldAttemptLivewireUnmount = !Boolean(this._searchNavigationInFlight);
             const searchModalCloseTargetId = this.resolveSearchModalCloseTargetId();
             let didCloseSearchModal = await this.requestModalCloseByKnownIds(
                 [
@@ -500,8 +488,8 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                     onFallback: () => {},
                     isModalStillVisible: () => this.isSearchModalWindowVisible(),
                     quietly: false,
-                    allowLivewireUnmount: true,
-                    forceLivewireUnmount: true,
+                    allowLivewireUnmount: shouldAttemptLivewireUnmount,
+                    forceLivewireUnmount: shouldAttemptLivewireUnmount,
                 },
             );
 
