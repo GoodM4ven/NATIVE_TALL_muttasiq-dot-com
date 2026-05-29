@@ -3557,8 +3557,8 @@
         x-on:quran-bookmarks-manager-replaced.window="replaceBookmarkPage($event.detail?.id)"
         x-on:quran-bookmarks-manager-removed.window="removeBookmark($event.detail?.id)"
         x-on:quran-bookmarks-manager-reordered.window="applyBookmarksManagerReorder($event.detail ?? {})"
-        x-on:quran-history-manager-request-sync.window="syncHistoryManagerTableRecords()"
-        x-on:quran-bookmarks-manager-request-sync.window="syncBookmarksManagerTableRecords()"
+        x-on:quran-history-manager-request-sync.window="syncHistoryManagerTableRecords({ force: true, allowRecentOpenRequest: true })"
+        x-on:quran-bookmarks-manager-request-sync.window="syncBookmarksManagerTableRecords({ force: true, allowRecentOpenRequest: true })"
     >
         @if (!$ready)
             <section

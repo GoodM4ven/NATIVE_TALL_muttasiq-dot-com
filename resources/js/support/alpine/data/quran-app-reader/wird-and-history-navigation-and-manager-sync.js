@@ -1027,6 +1027,7 @@ export const createWirdAndHistoryNavigationAndManagerSyncModule = (deps) => {
 
         syncHistoryManagerTableRecords({ force = false, allowRecentOpenRequest = false } = {}) {
             if (
+                !force &&
                 !this.shouldSyncHistoryManagerTableNow({
                     allowRecentOpenRequest,
                 })
@@ -1044,6 +1045,7 @@ export const createWirdAndHistoryNavigationAndManagerSyncModule = (deps) => {
 
         syncBookmarksManagerTableRecords({ force = false, allowRecentOpenRequest = false } = {}) {
             if (
+                !force &&
                 !this.shouldSyncBookmarksManagerTableNow({
                     allowRecentOpenRequest,
                 })

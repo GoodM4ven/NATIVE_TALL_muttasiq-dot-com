@@ -1013,6 +1013,25 @@ JS,
         true,
         6_000,
     );
+    waitForScriptWithTimeout(
+        $page,
+        <<<'JS'
+(() => {
+  const modal = document.querySelector('#quran-reader-bookmarks-modal');
+  if (!modal) {
+    return false;
+  }
+
+  if (modal.querySelectorAll('.fi-ta-row').length > 0) {
+    return true;
+  }
+
+  return !String(modal.textContent ?? '').includes('لا توجد علامات محفوظة.');
+})()
+JS,
+        true,
+        6_000,
+    );
 
     $bookmarkIdForReplace = (string) $page->script(
         quranReaderDataScript(
