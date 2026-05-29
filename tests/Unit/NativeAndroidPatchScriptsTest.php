@@ -260,6 +260,9 @@ test('native patches plugin supports ios content view patching', function () {
     expect($iosTraitContents)->toContain('patchIosBackHandler');
     expect($iosTraitContents)->toContain('NativePHPBackEdgeGesture');
     expect($iosTraitContents)->toContain('WKWebsiteDataStore.default()');
+    expect($iosTraitContents)->toContain('ScreenAwakeBridgeHandler');
+    expect($iosTraitContents)->toContain('window.AndroidBridge.setScreenAwake = function(enabled)');
+    expect($iosTraitContents)->toContain('UIApplication.shared.isIdleTimerDisabled = enabled');
     expect($iosNativePhpAppTraitContents)->toContain('setenv("DB_CONNECTION", "sqlite", 1)');
     expect($iosNativePhpAppTraitContents)->toContain('app:native-bootstrap --no-interaction');
     expect($iosNativePhpAppTraitContents)->toContain('artisan migrate START (classic mode)');

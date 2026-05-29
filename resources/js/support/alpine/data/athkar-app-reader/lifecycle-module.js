@@ -1,3 +1,5 @@
+import { acquireScreenAwakeLock, releaseScreenAwakeLock } from '../../../screen-awake';
+
 export const createLifecycleModule = (deps) => {
     const {
         athkarOverridesStorageKey,
@@ -105,6 +107,7 @@ export const createLifecycleModule = (deps) => {
                         this.views['athkar-app-gate'].isReaderVisible = false;
                     }
                     this.resetReaderState();
+                    this.syncReaderScreenAwakeLock();
                     if (isRestoring) {
                         this.isRestoring = false;
                     }
@@ -118,6 +121,7 @@ export const createLifecycleModule = (deps) => {
                     }
                     this.isNoticeVisible = false;
                     this.softCloseMode();
+                    this.syncReaderScreenAwakeLock();
                     if (isRestoring) {
                         this.isRestoring = false;
                     }
@@ -128,10 +132,12 @@ export const createLifecycleModule = (deps) => {
                     this.isGateMenuTransition = false;
                     if (isRestoring && this.activeMode === 'sabah') {
                         this.restoreMode('sabah');
+                        this.syncReaderScreenAwakeLock();
                         this.isRestoring = false;
                         return;
                     }
                     this.startModeNotice('sabah', { respectLock: false });
+                    this.syncReaderScreenAwakeLock();
                     if (isRestoring) {
                         this.isRestoring = false;
                     }
@@ -142,10 +148,12 @@ export const createLifecycleModule = (deps) => {
                     this.isGateMenuTransition = false;
                     if (isRestoring && this.activeMode === 'masaa') {
                         this.restoreMode('masaa');
+                        this.syncReaderScreenAwakeLock();
                         this.isRestoring = false;
                         return;
                     }
                     this.startModeNotice('masaa', { respectLock: false });
+                    this.syncReaderScreenAwakeLock();
                     if (isRestoring) {
                         this.isRestoring = false;
                     }
@@ -167,6 +175,7 @@ export const createLifecycleModule = (deps) => {
                 this.cancelHoldCopy();
                 this.unregisterNativeVolumeNavigation();
                 this.clearOriginTransitionTimer();
+                this.releaseReaderScreenAwakeLock();
             });
 
             this.setupTextFit();
@@ -198,6 +207,7 @@ export const createLifecycleModule = (deps) => {
                 this.hideOrigin();
                 this.queueTextFit();
                 this.syncNativeVolumeNavigation();
+                this.syncReaderScreenAwakeLock();
             });
             this.$watch('activeIndex', () => {
                 this.resetMaintenanceTapTracking();
@@ -216,6 +226,7 @@ export const createLifecycleModule = (deps) => {
                     }
 
                     this.syncNativeVolumeNavigation();
+                    this.syncReaderScreenAwakeLock();
                 },
             );
             this.$watch('isNoticeVisible', (isNoticeVisible) => {
@@ -224,10 +235,14 @@ export const createLifecycleModule = (deps) => {
                 }
 
                 this.syncNativeVolumeNavigation();
+                this.syncReaderScreenAwakeLock();
             });
             this.$watch('isCompletionVisible', () => {
                 this.syncNativeVolumeNavigation();
+                this.syncReaderScreenAwakeLock();
             });
+
+            this.syncReaderScreenAwakeLock();
         },
 
         applyAthkarOverrides(nextOverrides, { persist = true } = {}) {
@@ -425,6 +440,36 @@ export const createLifecycleModule = (deps) => {
             this.$nextTick(() => {
                 this.setAndroidVolumeNavigationEnabled(this.canUseNativeVolumeButtonNavigation());
             });
+        },
+
+        shouldKeepAthkarReaderScreenAwake() {
+            return (
+                Boolean(this.activeMode) &&
+                Boolean(this.views?.['athkar-app-gate']?.isReaderVisible)
+            );
+        },
+
+        syncReaderScreenAwakeLock() {
+            if (!this.shouldKeepAthkarReaderScreenAwake()) {
+                this.releaseReaderScreenAwakeLock();
+
+                return;
+            }
+
+            if (this._readerScreenAwakeLockToken) {
+                return;
+            }
+
+            this._readerScreenAwakeLockToken = acquireScreenAwakeLock();
+        },
+
+        releaseReaderScreenAwakeLock() {
+            if (!this._readerScreenAwakeLockToken) {
+                return;
+            }
+
+            releaseScreenAwakeLock(this._readerScreenAwakeLockToken);
+            this._readerScreenAwakeLockToken = null;
         },
 
         registerNativeVolumeNavigation() {

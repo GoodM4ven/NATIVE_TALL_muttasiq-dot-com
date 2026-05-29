@@ -1,3 +1,5 @@
+import { acquireScreenAwakeLock, releaseScreenAwakeLock } from '../../../screen-awake';
+
 export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
     const {
         arabicHarakatPattern,
@@ -277,6 +279,8 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
                     this.clearPendingPostModalTargetFit();
 
                     this.resetSwipeState();
+                    this.syncReaderScreenAwakeLock();
+
                     return;
                 }
 
@@ -287,6 +291,7 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
                 this.clearLayoutTimers();
                 this.scheduleReaderPanelLayoutRefresh();
                 this.scheduleDeferredBootstrapCheck();
+                this.syncReaderScreenAwakeLock();
 
                 [80, 220, 420].forEach((delayMs) => {
                     window.setTimeout(() => this.scheduleReaderPanelLayoutRefresh(), delayMs);
@@ -335,9 +340,11 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
                     return;
                 }
 
+                this.syncReaderScreenAwakeLock();
                 this.queueReaderReentryRefit(80);
             };
             window.addEventListener('quran-native-lifecycle', this._onQuranNativeLifecycle);
+            this.syncReaderScreenAwakeLock();
             this.scheduleReaderPanelLayoutRefresh();
             this._onWirdSimulateDay = (event) => {
                 const deltaDays = normalizeDayOffsetDays(event?.detail?.days ?? 1, 1);
@@ -917,6 +924,31 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
             });
         },
 
+        syncReaderScreenAwakeLock() {
+            const shouldKeepScreenAwake = this.isAnyQuranReaderViewOpen();
+
+            if (!shouldKeepScreenAwake) {
+                this.releaseReaderScreenAwakeLock();
+
+                return;
+            }
+
+            if (this._readerScreenAwakeLockToken) {
+                return;
+            }
+
+            this._readerScreenAwakeLockToken = acquireScreenAwakeLock();
+        },
+
+        releaseReaderScreenAwakeLock() {
+            if (!this._readerScreenAwakeLockToken) {
+                return;
+            }
+
+            releaseScreenAwakeLock(this._readerScreenAwakeLockToken);
+            this._readerScreenAwakeLockToken = null;
+        },
+
         setAndroidVolumeNavigationEnabled(enabled) {
             if (!this.nativeRuntime || !window.AndroidBridge) {
                 return;
@@ -1157,6 +1189,7 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
         },
 
         destroy() {
+            this.releaseReaderScreenAwakeLock();
             this.unregisterNativeInputListeners();
             this.clearSearchResultsUpdateQueue();
             this.unbindSearchModalInputSyncListener();

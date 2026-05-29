@@ -93,3 +93,35 @@ it('uses touch capability for quran double tap copy mode beyond base breakpoint'
             'x-on:pointermove.window.passive="onWordPointerMove($event)"',
         );
 });
+
+it('keeps the screen awake only while quran or athkar reader views are active', function () {
+    $screenAwakeSource = file_get_contents(resource_path('js/support/screen-awake.js'));
+    $appSource = file_get_contents(resource_path('js/app.js'));
+    $quranLifecycleSource = file_get_contents(
+        resource_path('js/support/alpine/data/quran-app-reader/lifecycle-bootstrap-environment-and-cache.js'),
+    );
+    $athkarLifecycleSource = file_get_contents(
+        resource_path('js/support/alpine/data/athkar-app-reader/lifecycle-module.js'),
+    );
+
+    expect($screenAwakeSource)->not->toBeFalse()
+        ->and($screenAwakeSource)->toContain('navigator.wakeLock.request(\'screen\')')
+        ->and($screenAwakeSource)->toContain("document.addEventListener('visibilitychange', () => {")
+        ->and($screenAwakeSource)->toContain('bridge.setScreenAwake')
+        ->and($screenAwakeSource)->toContain('releaseWebWakeLock()')
+        ->and($screenAwakeSource)->toContain('acquireScreenAwakeLock')
+        ->and($screenAwakeSource)->toContain('releaseScreenAwakeLock');
+
+    expect($appSource)->not->toBeFalse()
+        ->and($appSource)->toContain("import './support/screen-awake';");
+
+    expect($quranLifecycleSource)->not->toBeFalse()
+        ->and($quranLifecycleSource)->toContain('syncReaderScreenAwakeLock()')
+        ->and($quranLifecycleSource)->toContain('releaseReaderScreenAwakeLock()')
+        ->and($quranLifecycleSource)->toContain('this._readerScreenAwakeLockToken = acquireScreenAwakeLock();');
+
+    expect($athkarLifecycleSource)->not->toBeFalse()
+        ->and($athkarLifecycleSource)->toContain('shouldKeepAthkarReaderScreenAwake()')
+        ->and($athkarLifecycleSource)->toContain('syncReaderScreenAwakeLock()')
+        ->and($athkarLifecycleSource)->toContain('this._readerScreenAwakeLockToken = acquireScreenAwakeLock();');
+});
