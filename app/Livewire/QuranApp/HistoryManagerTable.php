@@ -95,20 +95,20 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
             ->columns([
                 TextColumn::make('sort_order')
                     ->label(arabic_text('الترتيب'))
-                    ->state(static fn (array $record): string => (string) max(1, (int) ($record['sort_order'] ?? 1)))
+                    ->state(fn (mixed $record): string => (string) max(1, (int) ($this->resolveTableRecord($record)['sort_order'] ?? 1)))
                     ->extraAttributes([
                         'lang' => 'en',
                     ])
                     ->sortable(),
                 TextColumn::make('page_number')
                     ->label(arabic_text('الموضع'))
-                    ->state(fn (array $record): string => $this->resolveHistoryLocationDescription($record))
-                    ->description(fn (array $record): string => arabic_text(sprintf('صفحة %d', max(1, (int) ($record['page_number'] ?? 1)))))
+                    ->state(fn (mixed $record): string => $this->resolveHistoryLocationDescription($this->resolveTableRecord($record)))
+                    ->description(fn (mixed $record): string => arabic_text(sprintf('صفحة %d', max(1, (int) ($this->resolveTableRecord($record)['page_number'] ?? 1)))))
                     ->sortable(),
                 TextColumn::make('tags_text')
                     ->label(arabic_text('الوسوم والملاحظة'))
-                    ->state(fn (array $record): string => $this->resolveHistoryTagsSummary($record))
-                    ->description(fn (array $record): string => $this->resolveHistoryNoteSummary($record))
+                    ->state(fn (mixed $record): string => $this->resolveHistoryTagsSummary($this->resolveTableRecord($record)))
+                    ->description(fn (mixed $record): string => $this->resolveHistoryNoteSummary($this->resolveTableRecord($record)))
                     ->wrap(),
             ])
             ->filters([
@@ -129,21 +129,21 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
                     Action::make('go')
                         ->label(arabic_text('انتقال'))
                         ->icon('heroicon-s-arrow-up-right')
-                        ->action(fn (array $record): mixed => $this->dispatch(
+                        ->action(fn (mixed $record): mixed => $this->dispatch(
                             'quran-history-manager-go',
-                            id: (string) ($record['id'] ?? ''),
+                            id: (string) ($this->resolveTableRecord($record)['id'] ?? ''),
                         )),
                     Action::make('edit')
                         ->label(arabic_text('تعديل'))
                         ->icon('heroicon-s-pencil-square')
                         ->modalSubmitActionLabel(arabic_text('تعديل'))
                         ->modalSubmitAction(fn (Action $action): Action => $action->icon('heroicon-o-pencil-square'))
-                        ->fillForm(fn (array $record): array => [
-                            'note' => (string) ($record['note'] ?? ''),
+                        ->fillForm(fn (mixed $record): array => [
+                            'note' => (string) ($this->resolveTableRecord($record)['note'] ?? ''),
                             'tags' => array_values(array_filter(
                                 array_map(
                                     static fn (mixed $tag): string => trim((string) $tag),
-                                    is_array($record['tags'] ?? null) ? $record['tags'] : [],
+                                    is_array($this->resolveTableRecord($record)['tags'] ?? null) ? $this->resolveTableRecord($record)['tags'] : [],
                                 ),
                                 static fn (string $tag): bool => $tag !== '',
                             )),
@@ -157,21 +157,43 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
                                 ->separator(',')
                                 ->nestedRecursiveRules(['min:1', 'max:60']),
                         ])
-                        ->action(fn (array $data, array $record): mixed => $this->dispatch(
-                            'quran-history-manager-updated',
-                            id: (string) ($record['id'] ?? ''),
-                            note: (string) ($data['note'] ?? ''),
-                            tags: $this->normalizeTagsInput($data['tags'] ?? []),
-                        )),
+                        ->action(function (array $data, mixed $record): void {
+                            $resolvedRecord = $this->resolveTableRecord($record);
+                            $recordId = trim((string) ($resolvedRecord['id'] ?? ''));
+                            $note = trim((string) ($data['note'] ?? ''));
+                            $tags = $this->normalizeTagsInput($data['tags'] ?? []);
+
+                            if ($recordId !== '') {
+                                $this->optimisticallyUpdateRecordMetadata(
+                                    recordId: $recordId,
+                                    note: $note,
+                                    tags: $tags,
+                                );
+                            }
+
+                            $this->resetTable();
+                            $this->dispatch(
+                                'quran-history-manager-updated',
+                                id: $recordId,
+                                note: $note,
+                                tags: $tags,
+                            );
+                        }),
                     Action::make('remove')
                         ->label(arabic_text('حذف'))
                         ->icon('heroicon-o-x-mark')
                         ->color('danger')
                         ->requiresConfirmation()
-                        ->action(fn (array $record): mixed => $this->dispatch(
-                            'quran-history-manager-removed',
-                            id: (string) ($record['id'] ?? ''),
-                        )),
+                        ->action(function (mixed $record): void {
+                            $recordId = trim((string) ($this->resolveTableRecord($record)['id'] ?? ''));
+
+                            if ($recordId !== '') {
+                                $this->optimisticallyRemoveRecord($recordId);
+                            }
+
+                            $this->resetTable();
+                            $this->dispatch('quran-history-manager-removed', id: $recordId);
+                        }),
                 ])
                     ->label(arabic_text('إجراءات'))
                     ->iconButton(),
@@ -516,6 +538,14 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
         ));
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    private function resolveTableRecord(mixed $record): array
+    {
+        return is_array($record) ? $record : [];
+    }
+
     private function resolveSortOrderValue(mixed $value, int $index): int
     {
         $parsed = (int) $value;
@@ -547,5 +577,35 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
         }
 
         return 0;
+    }
+
+    /**
+     * @param  array<int, string>  $tags
+     */
+    private function optimisticallyUpdateRecordMetadata(string $recordId, string $note, array $tags): void
+    {
+        $this->records = collect($this->records)
+            ->map(function (array $record) use ($recordId, $note, $tags): array {
+                if ((string) ($record['id'] ?? '') !== $recordId) {
+                    return $record;
+                }
+
+                return [
+                    ...$record,
+                    'note' => $note,
+                    'tags' => $tags,
+                    'tags_text' => implode(', ', $tags),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    private function optimisticallyRemoveRecord(string $recordId): void
+    {
+        $this->records = collect($this->records)
+            ->reject(fn (array $record): bool => (string) ($record['id'] ?? '') === $recordId)
+            ->values()
+            ->all();
     }
 }
