@@ -427,12 +427,16 @@ export const createWirdAndHistoryNavigationAndManagerSyncModule = (deps) => {
 
         persistNavigationHistory() {
             this.navigationHistory = writeNavigationHistory(this.navigationHistory);
-            this.syncHistoryManagerTableRecords();
+            this.syncHistoryManagerTableRecords({
+                allowRecentOpenRequest: false,
+            });
         },
 
         persistBookmarks() {
             this.bookmarks = writeBookmarks(this.bookmarks);
-            this.syncBookmarksManagerTableRecords();
+            this.syncBookmarksManagerTableRecords({
+                allowRecentOpenRequest: false,
+            });
         },
 
         normalizeHistoryEntryId(entryId) {
@@ -887,7 +891,7 @@ export const createWirdAndHistoryNavigationAndManagerSyncModule = (deps) => {
             );
         },
 
-        shouldSyncHistoryManagerTableNow({ allowRecentOpenRequest = true } = {}) {
+        shouldSyncHistoryManagerTableNow({ allowRecentOpenRequest = false } = {}) {
             if (this._modalNavigationCloseGuardActive) {
                 return false;
             }
@@ -917,7 +921,7 @@ export const createWirdAndHistoryNavigationAndManagerSyncModule = (deps) => {
             return this.hasRecentHistoryModalOpenRequest();
         },
 
-        shouldSyncBookmarksManagerTableNow({ allowRecentOpenRequest = true } = {}) {
+        shouldSyncBookmarksManagerTableNow({ allowRecentOpenRequest = false } = {}) {
             if (this._modalNavigationCloseGuardActive) {
                 return false;
             }
@@ -964,18 +968,27 @@ export const createWirdAndHistoryNavigationAndManagerSyncModule = (deps) => {
         queueHistoryManagerTableSync({ force = false } = {}) {
             this.clearHistoryManagerSyncQueue();
 
-            if (!force && !this.shouldSyncHistoryManagerTableNow()) {
+            const shouldAllowRecentOpenRequest = Boolean(force);
+
+            if (
+                !this.shouldSyncHistoryManagerTableNow({
+                    allowRecentOpenRequest: shouldAllowRecentOpenRequest,
+                })
+            ) {
                 return;
             }
 
-            const syncPulseDelays = force ? [0, 72, 180] : [0];
+            const syncPulseDelays = [0];
 
             syncPulseDelays.forEach((delayMs) => {
                 const timerId = window.setTimeout(() => {
                     this._historyManagerSyncTimers = this._historyManagerSyncTimers.filter(
                         (activeTimerId) => activeTimerId !== timerId,
                     );
-                    this.syncHistoryManagerTableRecords({ force });
+                    this.syncHistoryManagerTableRecords({
+                        force,
+                        allowRecentOpenRequest: shouldAllowRecentOpenRequest,
+                    });
                 }, delayMs);
 
                 this._historyManagerSyncTimers.push(timerId);
@@ -985,26 +998,39 @@ export const createWirdAndHistoryNavigationAndManagerSyncModule = (deps) => {
         queueBookmarksManagerTableSync({ force = false } = {}) {
             this.clearBookmarksManagerSyncQueue();
 
-            if (!force && !this.shouldSyncBookmarksManagerTableNow()) {
+            const shouldAllowRecentOpenRequest = Boolean(force);
+
+            if (
+                !this.shouldSyncBookmarksManagerTableNow({
+                    allowRecentOpenRequest: shouldAllowRecentOpenRequest,
+                })
+            ) {
                 return;
             }
 
-            const syncPulseDelays = force ? [0, 72, 180] : [0];
+            const syncPulseDelays = [0];
 
             syncPulseDelays.forEach((delayMs) => {
                 const timerId = window.setTimeout(() => {
                     this._bookmarksManagerSyncTimers = this._bookmarksManagerSyncTimers.filter(
                         (activeTimerId) => activeTimerId !== timerId,
                     );
-                    this.syncBookmarksManagerTableRecords({ force });
+                    this.syncBookmarksManagerTableRecords({
+                        force,
+                        allowRecentOpenRequest: shouldAllowRecentOpenRequest,
+                    });
                 }, delayMs);
 
                 this._bookmarksManagerSyncTimers.push(timerId);
             });
         },
 
-        syncHistoryManagerTableRecords({ force = false } = {}) {
-            if (!force && !this.shouldSyncHistoryManagerTableNow()) {
+        syncHistoryManagerTableRecords({ force = false, allowRecentOpenRequest = false } = {}) {
+            if (
+                !this.shouldSyncHistoryManagerTableNow({
+                    allowRecentOpenRequest,
+                })
+            ) {
                 return;
             }
 
@@ -1016,8 +1042,12 @@ export const createWirdAndHistoryNavigationAndManagerSyncModule = (deps) => {
             this.emitLivewireManagerEvent('quran-history-manager-sync', payload);
         },
 
-        syncBookmarksManagerTableRecords({ force = false } = {}) {
-            if (!force && !this.shouldSyncBookmarksManagerTableNow()) {
+        syncBookmarksManagerTableRecords({ force = false, allowRecentOpenRequest = false } = {}) {
+            if (
+                !this.shouldSyncBookmarksManagerTableNow({
+                    allowRecentOpenRequest,
+                })
+            ) {
                 return;
             }
 
