@@ -863,6 +863,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             maxFrames = 18,
             requiredStableFrames = 3,
             tolerancePx = 0.8,
+            deferReveal = false,
         } = {}) {
             if (!this.hasRenderablePage()) {
                 return;
@@ -881,6 +882,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 revealDelayMs,
                 maxAttempts,
                 useIdleFit: false,
+                deferReveal: Boolean(deferReveal),
             });
         },
 
@@ -1092,6 +1094,11 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             this._bypassNextFitCache = true;
             this.isFittingPage = true;
             this.clearLayoutTimers();
+            this.holdPageHiddenForModalLifecycle({
+                waitForModalLifecycle: false,
+                animateFadeOut: false,
+            });
+            this.clearSwipeRevealWatchdog();
 
             await this.nextTickAsync();
             await this.waitForStablePageFrame({
@@ -1104,10 +1111,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 revealDelayMs,
                 maxAttempts,
                 useIdleFit: false,
-            });
-            const initialRevealReady = await this.waitForPageRevealCycle(normalizedPageNumber, {
-                maxAttempts: 20,
-                delayMs: 24,
+                deferReveal: true,
             });
             const initialFitQualityHealthy = this.isCurrentFitQualityHealthy();
             this.traceReaderReveal('post-modal-fit-pass', {
@@ -1115,14 +1119,11 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 stage: 'initial',
                 fittedPage: this._lastFittedPageNumber,
                 isCurrentPageVisiblyReady: this.isCurrentPageVisiblyReady(),
-                initialRevealReady,
                 fitQualityHealthy: initialFitQualityHealthy,
             });
 
             const requiresRecoveryPass =
-                this._lastFittedPageNumber !== normalizedPageNumber ||
-                !initialRevealReady ||
-                !initialFitQualityHealthy;
+                this._lastFittedPageNumber !== normalizedPageNumber || !initialFitQualityHealthy;
 
             if (requiresRecoveryPass) {
                 this._bypassNextFitCache = true;
@@ -1132,21 +1133,14 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                     maxFrames: 20,
                     requiredStableFrames: 3,
                     tolerancePx: 0.7,
+                    deferReveal: true,
                 });
-                const recoveryRevealReady = await this.waitForPageRevealCycle(
-                    normalizedPageNumber,
-                    {
-                        maxAttempts: 20,
-                        delayMs: 24,
-                    },
-                );
                 const recoveryFitQualityHealthy = this.isCurrentFitQualityHealthy();
                 this.traceReaderReveal('post-modal-fit-pass', {
                     targetPage: normalizedPageNumber,
                     stage: 'recovery',
                     fittedPage: this._lastFittedPageNumber,
                     isCurrentPageVisiblyReady: this.isCurrentPageVisiblyReady(),
-                    recoveryRevealReady,
                     fitQualityHealthy: recoveryFitQualityHealthy,
                 });
             }
@@ -1168,10 +1162,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                     revealDelayMs: 150,
                     maxAttempts: 3,
                     useIdleFit: false,
-                });
-                const finalRevealReady = await this.waitForPageRevealCycle(normalizedPageNumber, {
-                    maxAttempts: 24,
-                    delayMs: 24,
+                    deferReveal: true,
                 });
                 const finalFitQualityHealthy = this.isCurrentFitQualityHealthy();
                 this.traceReaderReveal('post-modal-fit-pass', {
@@ -1179,8 +1170,20 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                     stage: 'final',
                     fittedPage: this._lastFittedPageNumber,
                     isCurrentPageVisiblyReady: this.isCurrentPageVisiblyReady(),
-                    finalRevealReady,
                     fitQualityHealthy: finalFitQualityHealthy,
+                });
+            }
+
+            if (
+                this.pageNumber === normalizedPageNumber &&
+                this._lastFittedPageNumber === normalizedPageNumber &&
+                this.isCurrentFitQualityHealthy()
+            ) {
+                this.clearStaleRevealGuards();
+                this.queuePageReveal(this._layoutToken, Math.min(130, Math.max(72, revealDelayMs)));
+                await this.waitForPageRevealCycle(normalizedPageNumber, {
+                    maxAttempts: 24,
+                    delayMs: 24,
                 });
             }
 
@@ -2903,6 +2906,10 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             const surfaceElement = this.$refs?.pageSurface;
             const frameElement = this.$refs?.pageFrame;
             const contentElement = this.$refs?.pageContent;
+            const pageLinesElement =
+                contentElement instanceof HTMLElement
+                    ? contentElement.querySelector('.quran-page-lines')
+                    : null;
 
             if (
                 !(surfaceElement instanceof HTMLElement) ||
@@ -2914,27 +2921,31 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
 
             const surfaceRect = surfaceElement.getBoundingClientRect();
             const frameRect = frameElement.getBoundingClientRect();
-            const contentRect = contentElement.getBoundingClientRect();
+            const measuredRect =
+                pageLinesElement instanceof HTMLElement
+                    ? pageLinesElement.getBoundingClientRect()
+                    : contentElement.getBoundingClientRect();
 
             if (
                 surfaceRect.width <= 0 ||
                 frameRect.width <= 0 ||
                 frameRect.height <= 0 ||
-                contentRect.width <= 0
+                measuredRect.width <= 0
             ) {
                 return null;
             }
 
             return {
                 frameSurfaceRatio: frameRect.width / surfaceRect.width,
-                lineFrameRatio: contentRect.width / frameRect.width,
-                lineHeightRatio: frameRect.height > 0 ? contentRect.height / frameRect.height : 0,
+                lineFrameRatio: measuredRect.width / frameRect.width,
+                lineHeightRatio: frameRect.height > 0 ? measuredRect.height / frameRect.height : 0,
             };
         },
 
         isCurrentFitQualityHealthy({
             minimumFrameSurfaceRatio = 0.58,
             minimumLineFrameRatio = 0.76,
+            maximumLineHeightRatio = 1.008,
         } = {}) {
             const fitQualitySnapshot = this.currentFitQualitySnapshot();
 
@@ -2946,7 +2957,9 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 Number(fitQualitySnapshot.frameSurfaceRatio ?? 0) >=
                     Math.max(0.1, Number(minimumFrameSurfaceRatio) || 0.58) &&
                 Number(fitQualitySnapshot.lineFrameRatio ?? 0) >=
-                    Math.max(0.1, Number(minimumLineFrameRatio) || 0.76)
+                    Math.max(0.1, Number(minimumLineFrameRatio) || 0.76) &&
+                Number(fitQualitySnapshot.lineHeightRatio ?? 0) <=
+                    Math.max(0.2, Number(maximumLineHeightRatio) || 1.008)
             );
         },
 

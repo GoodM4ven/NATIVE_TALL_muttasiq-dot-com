@@ -714,7 +714,11 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                     this.queueReaderReentryRefit(40, 3);
                     await wait(64);
 
-                    if (!this.isCurrentPageVisiblyReady() && this.hasRenderablePage()) {
+                    const requiresFastRecovery =
+                        this.hasRenderablePage() &&
+                        (!this.isCurrentPageVisiblyReady() || !this.isCurrentFitQualityHealthy());
+
+                    if (requiresFastRecovery) {
                         const recoveryModalId = this.resolveSearchModalCloseTargetId();
 
                         if (typeof this.runSecondaryModalExitRecoveryPulse === 'function') {

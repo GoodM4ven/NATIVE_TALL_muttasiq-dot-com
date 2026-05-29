@@ -357,14 +357,14 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
             };
             window.addEventListener('quran-reader-font-scale-toggle', this._onFontScaleToggle);
             this._onHistoryManagerRequestSync = () => {
-                this.queueHistoryManagerTableSync();
+                this.queueHistoryManagerTableSync({ force: true });
             };
             window.addEventListener(
                 'quran-history-manager-request-sync',
                 this._onHistoryManagerRequestSync,
             );
             this._onBookmarksManagerRequestSync = () => {
-                this.queueBookmarksManagerTableSync();
+                this.queueBookmarksManagerTableSync({ force: true });
             };
             window.addEventListener(
                 'quran-bookmarks-manager-request-sync',

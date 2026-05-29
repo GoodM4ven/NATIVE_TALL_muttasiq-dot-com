@@ -792,12 +792,15 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                 return false;
             }
 
+            const isVisibleAndHealthy = () =>
+                this.isCurrentPageVisiblyReady() && this.isCurrentFitQualityHealthy();
+
             const recovered = await this.fitSpecificPageAfterModalClose(normalizedPageNumber, {
                 revealDelayMs,
                 maxAttempts,
             });
 
-            if (recovered) {
+            if (recovered && isVisibleAndHealthy()) {
                 return true;
             }
 
@@ -811,12 +814,30 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                 tolerancePx: 0.8,
             });
 
+            if (!this.isCurrentFitQualityHealthy()) {
+                const appliedSafetyScale =
+                    typeof this.applySafetyScaleForCurrentPageOverflow === 'function' &&
+                    this.applySafetyScaleForCurrentPageOverflow();
+
+                if (appliedSafetyScale) {
+                    await this.nextTickAsync();
+                    await this.waitForStablePageFrame({
+                        maxFrames: 12,
+                        requiredStableFrames: 2,
+                        tolerancePx: 0.65,
+                    });
+                }
+            }
+
             if (!this.isCurrentPageVisiblyReady() && this.hasRenderablePage()) {
                 this.clearStaleRevealGuards();
                 this.forceRevealCurrentPage(fallbackReason);
             }
 
-            return this.isCurrentPageVisiblyReady() || this.isCurrentPageContentVisible(0.12);
+            return (
+                isVisibleAndHealthy() ||
+                (this.isCurrentPageContentVisible(0.12) && this.isCurrentFitQualityHealthy())
+            );
         },
 
         async runSecondaryModalExitRecoveryPulse(modalId = '') {
@@ -1021,7 +1042,11 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                     this.queueReaderReentryRefit(40, 3);
                     await wait(64);
 
-                    if (!this.isCurrentPageVisiblyReady() && this.hasRenderablePage()) {
+                    const requiresFastRecovery =
+                        this.hasRenderablePage() &&
+                        (!this.isCurrentPageVisiblyReady() || !this.isCurrentFitQualityHealthy());
+
+                    if (requiresFastRecovery) {
                         const recoveryModalId = this.resolveSearchModalCloseTargetId();
 
                         if (typeof this.runSecondaryModalExitRecoveryPulse === 'function') {
