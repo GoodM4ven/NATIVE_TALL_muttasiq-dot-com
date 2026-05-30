@@ -832,8 +832,8 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
 
             if (
                 (normalizedKind === 'opening' || normalizedKind === 'opened') &&
-                !isSearchModalEvent &&
-                this.searchDestinationCueActive
+                this.searchDestinationCueActive &&
+                !this._searchNavigationInFlight
             ) {
                 this.deactivateSearchDestinationCue();
             }

@@ -85,6 +85,9 @@ test('quran search prefers streamed pipeline on web while keeping a native-safe 
     $searchStreamScriptSource = file_get_contents(
         resource_path('js/support/alpine/data/quran-app-reader/search-and-modals-stream-and-results.js'),
     );
+    $searchLifecycleScriptSource = file_get_contents(
+        resource_path('js/support/alpine/data/quran-app-reader/search-and-modals-lifecycle-and-state.js'),
+    );
 
     expect($readerSource)->not->toBeFalse()
         ->and($readerSource)->toContain('#[Json]')
@@ -117,4 +120,12 @@ test('quran search prefers streamed pipeline on web while keeping a native-safe 
         ->and($searchStreamScriptSource)->toContain('shouldUseStreamSearchPipeline()')
         ->and($searchStreamScriptSource)->toContain('this.$store?.bp?.isTouch')
         ->and($searchStreamScriptSource)->toContain('if (!this.shouldUseStreamSearchPipeline()) {');
+
+    expect($searchLifecycleScriptSource)->not->toBeFalse()
+        ->and($searchLifecycleScriptSource)->toContain(
+            "(normalizedKind === 'opening' || normalizedKind === 'opened') &&",
+        )
+        ->and($searchLifecycleScriptSource)->toContain('this.searchDestinationCueActive &&')
+        ->and($searchLifecycleScriptSource)->toContain('!this._searchNavigationInFlight')
+        ->and($searchLifecycleScriptSource)->toContain('this.deactivateSearchDestinationCue();');
 });
