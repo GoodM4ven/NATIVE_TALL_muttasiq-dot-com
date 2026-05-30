@@ -236,7 +236,15 @@ export const createLifecycleModule = (deps) => {
                 this.resetMaintenanceTapTracking();
                 this.resetRapidTapMode();
                 this.closeHint();
-                this.clearTapAura();
+                if (
+                    this.tapAura?.isHolding ||
+                    this.tapAura?.clickActive ||
+                    this.tapAura?.releaseActive
+                ) {
+                    this.tapAura.index = this.activeIndex;
+                } else {
+                    this.clearTapAura();
+                }
                 this.hideOrigin();
                 this.queueTextFit();
             });

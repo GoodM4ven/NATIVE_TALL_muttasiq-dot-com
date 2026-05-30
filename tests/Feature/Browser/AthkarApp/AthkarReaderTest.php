@@ -116,6 +116,57 @@ it('shows hold-and-release tap aura only when visual enhancements are enabled', 
     expect(true)->toBeTrue();
 });
 
+it('shows tap aura on mobile for single-count auto-advance athkar', function () {
+    $page = visitMobile('/');
+
+    resetBrowserState($page, true);
+    openAthkarReader($page, 'sabah', true);
+
+    $settings = [
+        'does_automatically_switch_completed_athkar' => true,
+        'does_prevent_switching_athkar_until_completion' => false,
+        Setting::DOES_ENABLE_VISUAL_ENHANCEMENTS => true,
+    ];
+    setAthkarSettings($page, $settings);
+    waitForAthkarSettings($page, $settings);
+
+    $singleIndex = $page->script(
+        athkarReaderDataScript(
+            'data.activeList.findIndex((item, index) => Number(item.count ?? 1) === 1 && index < data.activeList.length - 1)',
+        ),
+    );
+
+    expect($singleIndex)->toBeGreaterThanOrEqual(0);
+
+    $page->script(
+        athkarReaderCommandScript(
+            "data.setActiveIndex({$singleIndex}); data.setCount({$singleIndex}, 0, { allowOvercount: true });",
+        ),
+    );
+
+    waitForScript($page, athkarReaderDataScript('data.activeIndex'), $singleIndex);
+
+    scriptClick($page, '[data-athkar-slide][data-active="true"] [data-athkar-tap]');
+
+    waitForScript($page, athkarReaderDataScript('data.activeIndex'), $singleIndex + 1);
+
+    waitForScriptWithTimeout(
+        $page,
+        athkarReaderDataScript('data.tapAura?.releaseActive === true'),
+        true,
+        2_000,
+    );
+
+    waitForScriptWithTimeout(
+        $page,
+        athkarReaderDataScript('data.tapAura?.releaseActive === false'),
+        true,
+        2_500,
+    );
+
+    expect(true)->toBeTrue();
+});
+
 it('keeps the shared top counter full briefly, pulses it, then resets it after auto-advance', function (bool $isMobile) {
     $page = $isMobile ? visitMobile('/') : visit('/', ['waitUntil' => 'domcontentloaded']);
 
