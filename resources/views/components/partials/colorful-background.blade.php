@@ -11,7 +11,7 @@
     x-show="views[`main-menu`].isOpen || views[`athkar-app-gate`].isReaderVisible || (views[`athkar-app-gate`].isOpen && ($store.bp?.is?.('base') || document.documentElement.classList.contains('native-platform'))) || views[`quran-app-tilawa`].isOpen || views[`quran-app-hifth`].isOpen || views[`quran-app-tadabbur`].isOpen"
 >
     <div
-        class="duration-400 absolute inset-0 opacity-10 transition-opacity will-change-[opacity] [--bg-athkar-gate-masaa-opacity:1] [--bg-athkar-gate-sabah-opacity:0.4] [--bg-athkar-masaa-opacity:1] [--bg-athkar-sabah-opacity:0.8] [--bg-main-dark-opacity:1] [--bg-main-light-opacity:0.6] [--bg-quran-hifth-dark-opacity:1] [--bg-quran-hifth-light-opacity:1] [--bg-quran-tadabbur-dark-opacity:1] [--bg-quran-tadabbur-light-opacity:1] [--bg-quran-tilawa-dark-opacity:1] [--bg-quran-tilawa-light-opacity:1]"
+        class="duration-400 absolute inset-0 opacity-10 transition-opacity will-change-[opacity] [--bg-athkar-gate-masaa-opacity:1] [--bg-athkar-gate-sabah-opacity:0.4] [--bg-athkar-masaa-opacity:1] [--bg-athkar-sabah-opacity:0.3] [--bg-main-dark-opacity:1] [--bg-main-light-opacity:0.6] [--bg-quran-hifth-dark-opacity:1] [--bg-quran-hifth-light-opacity:1] [--bg-quran-tadabbur-dark-opacity:1] [--bg-quran-tadabbur-light-opacity:1] [--bg-quran-tilawa-dark-opacity:1] [--bg-quran-tilawa-light-opacity:1]"
         x-bind:class="!$store.colorScheme.isDarkModeOn ? 'opacity-30!' : ''"
     >
         <div

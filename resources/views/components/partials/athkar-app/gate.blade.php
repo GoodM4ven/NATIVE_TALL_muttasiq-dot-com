@@ -325,8 +325,10 @@
             z-index: 15;
         }
 
-        .athkar-gate-shell.is-pinging .athkar-gate__ping {
-            animation: athkar-gate-ping 1.4s ease-out;
+        @media (min-width: 640px) {
+            .athkar-gate-shell.is-pinging .athkar-gate__ping {
+                animation: athkar-gate-ping 1.4s ease-out;
+            }
         }
 
         .athkar-gate__spill {

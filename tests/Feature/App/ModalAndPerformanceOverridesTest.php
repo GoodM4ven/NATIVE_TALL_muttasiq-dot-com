@@ -151,9 +151,9 @@ test('control panel keeps base-only setting visibility and compact base spacing 
         ->and($controlPanelSettingsTabSource)->toContain(
             'Components\\Checkbox::make(Setting::DOES_PRESERVE_HARAKAT_IN_DISPLAY)',
         )
-        ->and($controlPanelSettingsTabSource)->toContain("'class' => 'relative z-20 mt-0 sm:mt-0'")
+        ->and($controlPanelSettingsTabSource)->toContain("'class' => 'relative mt-0 sm:mt-0'")
         ->and($controlPanelSettingsTabSource)->toContain(
-            "'class' => 'relative z-20 sm:hidden'",
+            "'class' => 'relative sm:hidden'",
         );
 });
 

@@ -1488,7 +1488,6 @@
 
     .quran-support-lock-target {
         position: relative;
-        isolation: isolate;
         overflow: visible;
     }
 
@@ -1570,6 +1569,7 @@
 
     .quran-support-lock-target--locked {
         cursor: pointer;
+        isolation: isolate;
     }
 
     .quran-support-lock-target--locked:not(.quran-wird-progress-button)::after {

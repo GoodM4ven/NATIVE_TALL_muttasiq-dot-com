@@ -57,7 +57,7 @@ trait HasControlPanelSettingsTab
                         Components\Checkbox::make(Setting::DOES_ENABLE_VISUAL_ENHANCEMENTS)
                             ->default((bool) ($generalDefinitions[Setting::DOES_ENABLE_VISUAL_ENHANCEMENTS]['default'] ?? false))
                             ->extraFieldWrapperAttributes([
-                                'class' => 'quran-support-lock-target relative z-20 mt-1 sm:mt-3 md:mt-0',
+                                'class' => 'quran-support-lock-target relative mt-1 sm:mt-3 md:mt-0',
                                 'data-support-lock-target' => 'enable-visual-enhancements',
                                 'data-support-lock-caption' => arabic_text('هذا الخيار يحتاج تأكيد دعم المشروع'),
                                 'x-on:pointerdown.capture' => 'if (!$el.classList.contains(`quran-support-lock-target--locked`)) { return; } $event.preventDefault(); $event.stopPropagation(); window.dispatchEvent(new CustomEvent(`open-support-unlock-modal`));',
@@ -68,24 +68,24 @@ trait HasControlPanelSettingsTab
 
                         Components\Checkbox::make(Setting::DOES_SKIP_GUIDANCE_PANELS)
                             ->default((bool) ($generalDefinitions[Setting::DOES_SKIP_GUIDANCE_PANELS]['default'] ?? false))
-                            ->extraFieldWrapperAttributes(['class' => 'relative z-20 mt-3 sm:mt-0'])
+                            ->extraFieldWrapperAttributes(['class' => 'relative mt-3 sm:mt-0'])
                             ->label($generalDefinitions[Setting::DOES_SKIP_GUIDANCE_PANELS]['label']),
 
                         Components\Checkbox::make(Setting::DOES_USE_WESTERN_NUMERALS)
                             ->default((bool) ($generalDefinitions[Setting::DOES_USE_WESTERN_NUMERALS]['default'] ?? true))
-                            ->extraFieldWrapperAttributes(['class' => 'relative z-20 mt-3 sm:mt-0'])
+                            ->extraFieldWrapperAttributes(['class' => 'relative mt-3 sm:mt-0'])
                             ->label($generalDefinitions[Setting::DOES_USE_WESTERN_NUMERALS]['label']),
 
                         Components\Checkbox::make(Setting::DOES_PRESERVE_HARAKAT_IN_DISPLAY)
                             ->default((bool) ($generalDefinitions[Setting::DOES_PRESERVE_HARAKAT_IN_DISPLAY]['default'] ?? true))
-                            ->extraFieldWrapperAttributes(['class' => 'relative z-20 mt-0 sm:mt-0'])
+                            ->extraFieldWrapperAttributes(['class' => 'relative mt-0 sm:mt-0'])
                             ->label($generalDefinitions[Setting::DOES_PRESERVE_HARAKAT_IN_DISPLAY]['label']),
 
                         Components\Checkbox::make(Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION)
                             ->default((bool) ($generalDefinitions[Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION]['default'] ?? false))
                             ->visible(fn (): bool => is_platform('native'))
                             ->extraFieldWrapperAttributes([
-                                'class' => 'relative z-20 mt-3 sm:mt-0 quran-volume-navigation-field',
+                                'class' => 'relative mt-3 sm:mt-0 quran-volume-navigation-field',
                             ])
                             ->label($generalDefinitions[Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION]['label'])
                             ->belowContent([
@@ -198,7 +198,7 @@ trait HasControlPanelSettingsTab
                         Components\Checkbox::make(Setting::DOES_QURAN_SHOW_IMMERSIVE_MOBILE_EDGE_CAPTIONS)
                             ->default((bool) ($quranDefinitions[Setting::DOES_QURAN_SHOW_IMMERSIVE_MOBILE_EDGE_CAPTIONS]['default'] ?? true))
                             ->extraFieldWrapperAttributes([
-                                'class' => 'relative z-20 sm:hidden',
+                                'class' => 'relative sm:hidden',
                             ])
                             ->label($quranDefinitions[Setting::DOES_QURAN_SHOW_IMMERSIVE_MOBILE_EDGE_CAPTIONS]['label']),
 
