@@ -128,6 +128,26 @@ export const createSearchAndModalsStreamAndResultsModule = (deps) => {
     } = deps;
 
     return {
+        shouldUseStreamSearchPipeline() {
+            if (this.nativeRuntime) {
+                return false;
+            }
+
+            if (this.usesFilamentNativeSearchSelect()) {
+                return false;
+            }
+
+            if (typeof this.$wire?.streamSearch !== 'function') {
+                return false;
+            }
+
+            if (typeof this.$store?.bp?.isTouch === 'function' && this.$store.bp.isTouch()) {
+                return false;
+            }
+
+            return true;
+        },
+
         usesFilamentNativeSearchSelect() {
             const selectElement = this.searchResultsSelectElement();
             const attribute = String(selectElement?.dataset?.quranSearchNative ?? '').trim();
@@ -593,7 +613,7 @@ export const createSearchAndModalsStreamAndResultsModule = (deps) => {
         },
 
         setupSearchStreamObserver() {
-            if (this.usesFilamentNativeSearchSelect() || this.nativeRuntime) {
+            if (!this.shouldUseStreamSearchPipeline()) {
                 return;
             }
 

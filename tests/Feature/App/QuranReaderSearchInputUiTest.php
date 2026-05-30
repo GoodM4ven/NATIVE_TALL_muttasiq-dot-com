@@ -98,7 +98,9 @@ test('quran search prefers streamed pipeline on web while keeping a native-safe 
 
     expect($searchWorkerScriptSource)->not->toBeFalse()
         ->and($searchWorkerScriptSource)->toContain('$wire.streamSearch(')
-        ->and($searchWorkerScriptSource)->toContain('if (!this.nativeRuntime && typeof this.$wire?.streamSearch === \'function\')')
+        ->and($searchWorkerScriptSource)->toContain('const shouldUseStreamSearch =')
+        ->and($searchWorkerScriptSource)->toContain('this.shouldUseStreamSearchPipeline()')
+        ->and($searchWorkerScriptSource)->toContain('if (shouldUseStreamSearch)')
         ->and($searchWorkerScriptSource)->toContain('runWorkerFallbackSearch')
         ->and($searchWorkerScriptSource)->toContain('if (this.nativeRuntime) {')
         ->and($searchWorkerScriptSource)->toContain('for (const runWorker of workers)')
@@ -112,7 +114,7 @@ test('quran search prefers streamed pipeline on web while keeping a native-safe 
         ->and($searchWorkerScriptSource)->toContain('$wire.searchAyahJathr(');
 
     expect($searchStreamScriptSource)->not->toBeFalse()
-        ->and($searchStreamScriptSource)->toContain(
-            'if (this.usesFilamentNativeSearchSelect() || this.nativeRuntime) {',
-        );
+        ->and($searchStreamScriptSource)->toContain('shouldUseStreamSearchPipeline()')
+        ->and($searchStreamScriptSource)->toContain('this.$store?.bp?.isTouch')
+        ->and($searchStreamScriptSource)->toContain('if (!this.shouldUseStreamSearchPipeline()) {');
 });

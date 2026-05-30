@@ -607,8 +607,13 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                 //
             });
 
+            const shouldUseStreamSearch =
+                typeof this.shouldUseStreamSearchPipeline === 'function'
+                    ? this.shouldUseStreamSearchPipeline()
+                    : !this.nativeRuntime && typeof this.$wire?.streamSearch === 'function';
+
             try {
-                if (!this.nativeRuntime && typeof this.$wire?.streamSearch === 'function') {
+                if (shouldUseStreamSearch) {
                     const streamedResults = await this.$wire.streamSearch(
                         normalizedQuery,
                         requestSerial,
