@@ -63,15 +63,7 @@ class ControlPanel extends Component implements HasActions, HasSchemas
                     ]),
             ])
             ->action(function (array $data): void {
-                if (is_array($data[self::MAIN_TEXT_SIZE_RANGE] ?? null)) {
-                    $rangeValues = array_values($data[self::MAIN_TEXT_SIZE_RANGE]);
-                    $minimumSize = (int) ($rangeValues[0] ?? Setting::MIN_MAIN_TEXT_SIZE_DEFAULT);
-                    $maximumSize = (int) ($rangeValues[1] ?? Setting::MAX_MAIN_TEXT_SIZE_DEFAULT);
-                    $data[Setting::MINIMUM_MAIN_TEXT_SIZE] = min($minimumSize, $maximumSize);
-                    $data[Setting::MAXIMUM_MAIN_TEXT_SIZE] = max($minimumSize, $maximumSize);
-                }
-
-                $savedControlPanel = Setting::normalizeSettings($data);
+                $savedControlPanel = $this->filterControlPanel(Setting::normalizeSettings($data));
                 $isMaintenancePulse = $this->isMountedControlPanelMaintenancePulse();
 
                 $this->clientControlPanel = $savedControlPanel;
@@ -240,11 +232,6 @@ class ControlPanel extends Component implements HasActions, HasSchemas
         $normalizedControlPanelValues = Setting::normalizeSettings(
             array_replace(self::controlPanelDefaults(), $storedControlPanelValues, $this->clientControlPanel),
         );
-
-        $normalizedControlPanelValues[self::MAIN_TEXT_SIZE_RANGE] = [
-            (int) ($normalizedControlPanelValues[Setting::MINIMUM_MAIN_TEXT_SIZE] ?? Setting::MIN_MAIN_TEXT_SIZE_DEFAULT),
-            (int) ($normalizedControlPanelValues[Setting::MAXIMUM_MAIN_TEXT_SIZE] ?? Setting::MAX_MAIN_TEXT_SIZE_DEFAULT),
-        ];
 
         return $normalizedControlPanelValues;
     }

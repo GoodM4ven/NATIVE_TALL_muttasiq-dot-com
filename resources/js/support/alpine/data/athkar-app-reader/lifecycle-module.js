@@ -29,6 +29,9 @@ export const createLifecycleModule = (deps) => {
         readProgressFromStorage,
     } = deps;
 
+    const minimumMainTextSizeKey = 'minimum_main_text_size';
+    const maximumMainTextSizeKey = 'maximum_main_text_size';
+
     return {
         init() {
             if (this.isFastUiMode) {
@@ -93,6 +96,13 @@ export const createLifecycleModule = (deps) => {
 
                 this.completeThikr(index);
             });
+            this._onAthkarFontScaleToggle = () => {
+                this.toggleFontScaleOverlay();
+            };
+            window.addEventListener(
+                'athkar-reader-font-scale-toggle',
+                this._onAthkarFontScaleToggle,
+            );
             window.addEventListener('switch-view', (event) => {
                 const nextView = event?.detail?.to;
                 const isRestoring = Boolean(event?.detail?.restoring) || this.isRestoring;
@@ -103,6 +113,7 @@ export const createLifecycleModule = (deps) => {
 
                 if (nextView === 'main-menu') {
                     this.isGateMenuTransition = true;
+                    this.closeFontScaleOverlay();
                     if (this.views?.['athkar-app-gate']) {
                         this.views['athkar-app-gate'].isReaderVisible = false;
                     }
@@ -116,6 +127,7 @@ export const createLifecycleModule = (deps) => {
 
                 if (nextView === 'athkar-app-gate') {
                     this.isGateMenuTransition = !this.activeMode;
+                    this.closeFontScaleOverlay();
                     if (this.views?.['athkar-app-gate']) {
                         this.views['athkar-app-gate'].isReaderVisible = false;
                     }
@@ -130,6 +142,7 @@ export const createLifecycleModule = (deps) => {
 
                 if (nextView === 'athkar-app-sabah') {
                     this.isGateMenuTransition = false;
+                    this.closeFontScaleOverlay();
                     if (isRestoring && this.activeMode === 'sabah') {
                         this.restoreMode('sabah');
                         this.syncReaderScreenAwakeLock();
@@ -146,6 +159,7 @@ export const createLifecycleModule = (deps) => {
 
                 if (nextView === 'athkar-app-masaa') {
                     this.isGateMenuTransition = false;
+                    this.closeFontScaleOverlay();
                     if (isRestoring && this.activeMode === 'masaa') {
                         this.restoreMode('masaa');
                         this.syncReaderScreenAwakeLock();
@@ -174,6 +188,13 @@ export const createLifecycleModule = (deps) => {
                 this.hideCopyFeedback();
                 this.cancelHoldCopy();
                 this.unregisterNativeVolumeNavigation();
+                if (this._onAthkarFontScaleToggle) {
+                    window.removeEventListener(
+                        'athkar-reader-font-scale-toggle',
+                        this._onAthkarFontScaleToggle,
+                    );
+                    this._onAthkarFontScaleToggle = null;
+                }
                 this.clearOriginTransitionTimer();
                 this.releaseReaderScreenAwakeLock();
             });
@@ -223,6 +244,8 @@ export const createLifecycleModule = (deps) => {
                         this.closeHint();
                         this.resetSwipeState();
                         this.queueReaderTextFit();
+                    } else {
+                        this.closeFontScaleOverlay();
                     }
 
                     this.syncNativeVolumeNavigation();
@@ -230,6 +253,10 @@ export const createLifecycleModule = (deps) => {
                 },
             );
             this.$watch('isNoticeVisible', (isNoticeVisible) => {
+                if (isNoticeVisible) {
+                    this.closeFontScaleOverlay();
+                }
+
                 if (!isNoticeVisible && this.views?.['athkar-app-gate']?.isReaderVisible) {
                     this.queueReaderTextFit();
                 }
@@ -238,6 +265,10 @@ export const createLifecycleModule = (deps) => {
                 this.syncReaderScreenAwakeLock();
             });
             this.$watch('isCompletionVisible', () => {
+                if (this.isCompletionVisible) {
+                    this.closeFontScaleOverlay();
+                }
+
                 this.syncNativeVolumeNavigation();
                 this.syncReaderScreenAwakeLock();
             });
@@ -359,6 +390,207 @@ export const createLifecycleModule = (deps) => {
             this.queueTextFit();
             this.queueReaderTextFit();
             this.syncNativeVolumeNavigation();
+        },
+
+        resolveMainTextSizeLimitsFor(settingKey) {
+            const limits = this.mainTextSizeLimits?.[settingKey];
+            const fallbackMin = 14;
+            const fallbackMax = 28;
+            const fallbackDefault = settingKey === minimumMainTextSizeKey ? 24 : 25;
+            const minimum = Math.trunc(Number(limits?.min ?? fallbackMin));
+            const maximumSeed = Math.trunc(Number(limits?.max ?? fallbackMax));
+            const maximum = Math.max(minimum, maximumSeed);
+            const defaultSeed = Math.trunc(Number(limits?.default ?? fallbackDefault));
+
+            return {
+                min: minimum,
+                max: maximum,
+                default: Math.max(minimum, Math.min(maximum, defaultSeed)),
+            };
+        },
+
+        normalizeMainTextSizeValue(settingKey, value, fallback = null) {
+            const limits = this.resolveMainTextSizeLimitsFor(settingKey);
+            const fallbackValue = fallback === null ? limits.default : Number(fallback);
+            const numericValue = Number(value ?? fallbackValue);
+            const safeValue = Number.isFinite(numericValue)
+                ? Math.trunc(numericValue)
+                : Math.trunc(fallbackValue);
+
+            return Math.max(limits.min, Math.min(limits.max, safeValue));
+        },
+
+        resolveMainTextSizeRange() {
+            const minimumLimits = this.resolveMainTextSizeLimitsFor(minimumMainTextSizeKey);
+            const maximumLimits = this.resolveMainTextSizeLimitsFor(maximumMainTextSizeKey);
+            const minimumValue = this.normalizeMainTextSizeValue(
+                minimumMainTextSizeKey,
+                this.settings?.[minimumMainTextSizeKey],
+                minimumLimits.default,
+            );
+            const maximumValue = this.normalizeMainTextSizeValue(
+                maximumMainTextSizeKey,
+                this.settings?.[maximumMainTextSizeKey],
+                maximumLimits.default,
+            );
+            const minimum = Math.min(minimumValue, maximumValue);
+            const maximum = Math.max(maximumValue, minimumValue);
+
+            return {
+                minimum,
+                maximum,
+                minimumLimits,
+                maximumLimits,
+            };
+        },
+
+        mainTextSizeMinimumValue() {
+            return this.resolveMainTextSizeRange().minimum;
+        },
+
+        mainTextSizeMaximumValue() {
+            return this.resolveMainTextSizeRange().maximum;
+        },
+
+        updateMainTextSizeRange(
+            nextValue,
+            { target = minimumMainTextSizeKey, persist = false } = {},
+        ) {
+            const { minimum, maximum, minimumLimits, maximumLimits } =
+                this.resolveMainTextSizeRange();
+            let nextMinimum = minimum;
+            let nextMaximum = maximum;
+
+            if (target === maximumMainTextSizeKey) {
+                nextMaximum = this.normalizeMainTextSizeValue(
+                    maximumMainTextSizeKey,
+                    nextValue,
+                    maximum,
+                );
+                if (nextMaximum < nextMinimum) {
+                    nextMinimum = this.normalizeMainTextSizeValue(
+                        minimumMainTextSizeKey,
+                        nextMaximum,
+                        nextMinimum,
+                    );
+                }
+            } else {
+                nextMinimum = this.normalizeMainTextSizeValue(
+                    minimumMainTextSizeKey,
+                    nextValue,
+                    minimum,
+                );
+                if (nextMinimum > nextMaximum) {
+                    nextMaximum = this.normalizeMainTextSizeValue(
+                        maximumMainTextSizeKey,
+                        nextMinimum,
+                        nextMaximum,
+                    );
+                }
+            }
+
+            nextMinimum = Math.max(minimumLimits.min, Math.min(minimumLimits.max, nextMinimum));
+            nextMaximum = Math.max(maximumLimits.min, Math.min(maximumLimits.max, nextMaximum));
+            nextMinimum = Math.min(nextMinimum, nextMaximum);
+            nextMaximum = Math.max(nextMaximum, nextMinimum);
+
+            this.settings = {
+                ...(this.settings && typeof this.settings === 'object' ? this.settings : {}),
+                [minimumMainTextSizeKey]: nextMinimum,
+                [maximumMainTextSizeKey]: nextMaximum,
+            };
+
+            this.persistMainTextSizeRangeSnapshot();
+
+            if (persist) {
+                this.applySettings({
+                    [minimumMainTextSizeKey]: nextMinimum,
+                    [maximumMainTextSizeKey]: nextMaximum,
+                });
+                return;
+            }
+
+            this.queueTextFit();
+            this.queueReaderTextFit();
+        },
+
+        persistMainTextSizeRangeSnapshot() {
+            const { minimum, maximum } = this.resolveMainTextSizeRange();
+
+            writeUserSettingOverride(minimumMainTextSizeKey, minimum);
+            writeUserSettingOverride(maximumMainTextSizeKey, maximum);
+            writeAthkarSettingsToStorage(this.settings, this.settingsDefaults);
+        },
+
+        handleMinimumMainTextSizeInput(event = null) {
+            this.updateMainTextSizeRange(event?.target?.value ?? null, {
+                target: minimumMainTextSizeKey,
+                persist: false,
+            });
+        },
+
+        handleMaximumMainTextSizeInput(event = null) {
+            this.updateMainTextSizeRange(event?.target?.value ?? null, {
+                target: maximumMainTextSizeKey,
+                persist: false,
+            });
+        },
+
+        commitMainTextSizeRange() {
+            const { minimum, maximum } = this.resolveMainTextSizeRange();
+
+            this.applySettings({
+                [minimumMainTextSizeKey]: minimum,
+                [maximumMainTextSizeKey]: maximum,
+            });
+        },
+
+        resetMainTextSizeRangeToDefaults() {
+            const minimumLimits = this.resolveMainTextSizeLimitsFor(minimumMainTextSizeKey);
+            const maximumLimits = this.resolveMainTextSizeLimitsFor(maximumMainTextSizeKey);
+
+            this.settings = {
+                ...(this.settings && typeof this.settings === 'object' ? this.settings : {}),
+                [minimumMainTextSizeKey]: minimumLimits.default,
+                [maximumMainTextSizeKey]: Math.max(maximumLimits.default, minimumLimits.default),
+            };
+
+            this.commitMainTextSizeRange();
+        },
+
+        toggleFontScaleOverlay() {
+            if (
+                !this.activeMode ||
+                !this.views?.['athkar-app-gate']?.isReaderVisible ||
+                this.isNoticeVisible ||
+                this.isCompletionVisible
+            ) {
+                return;
+            }
+
+            this.isFontScaleOverlayVisible = !this.isFontScaleOverlayVisible;
+            window.dispatchEvent(
+                new CustomEvent('athkar-reader-font-scale-overlay-visibility', {
+                    detail: {
+                        open: this.isFontScaleOverlayVisible,
+                    },
+                }),
+            );
+        },
+
+        closeFontScaleOverlay() {
+            if (!this.isFontScaleOverlayVisible) {
+                return;
+            }
+
+            this.isFontScaleOverlayVisible = false;
+            window.dispatchEvent(
+                new CustomEvent('athkar-reader-font-scale-overlay-visibility', {
+                    detail: {
+                        open: false,
+                    },
+                }),
+            );
         },
 
         readSupportUnlockState() {

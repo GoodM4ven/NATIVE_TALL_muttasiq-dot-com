@@ -11,6 +11,7 @@
             isAthkarManagerOpen: false,
             isQuranReaderCalibrating: false,
             isQuranReaderFontScaleOverlayOpen: false,
+            isAthkarReaderFontScaleOverlayOpen: false,
             isNativeRuntime: @js(is_platform('native')),
             activeView: $persist('main-menu').as('app-active-view'),
             actionStatePulseToken: 0,
@@ -466,6 +467,7 @@
         x-on:quran-reader-calibration-started.window="isQuranReaderCalibrating = true"
         x-on:quran-reader-calibration-finished.window="isQuranReaderCalibrating = false"
         x-on:quran-reader-font-scale-overlay-visibility.window="isQuranReaderFontScaleOverlayOpen = Boolean($event.detail?.open)"
+        x-on:athkar-reader-font-scale-overlay-visibility.window="isAthkarReaderFontScaleOverlayOpen = Boolean($event.detail?.open)"
     >
         @php
             $quranReaderViewsCondition =
@@ -499,6 +501,7 @@
             <x-partials.home-button :jsShowCondition="$homeButtonShowCondition" />
             <livewire:color-scheme-switcher />
             <livewire:control-panel />
+            <x-athkar-reader-font-scale-button />
             <x-quran-reader-font-scale-button />
             @if (!is_platform('native'))
                 <x-partials.download-stack-button />

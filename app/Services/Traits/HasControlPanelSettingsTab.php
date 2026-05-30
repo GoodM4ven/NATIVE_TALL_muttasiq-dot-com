@@ -6,7 +6,6 @@ namespace App\Services\Traits;
 
 use App\Models\Setting;
 use Filament\Forms\Components;
-use Filament\Forms\Components\Slider\Enums\PipsMode;
 use Filament\Schemas\Components\FusedGroup;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Tabs\Tab;
@@ -19,14 +18,19 @@ use Illuminate\Support\HtmlString;
 
 trait HasControlPanelSettingsTab
 {
-    private const MAIN_TEXT_SIZE_RANGE = 'main_text_size_range';
-
     /**
      * @return array<string, bool|int>
      */
     public static function controlPanelDefaults(): array
     {
-        return Setting::defaults();
+        $defaults = Setting::defaults();
+
+        unset(
+            $defaults[Setting::MINIMUM_MAIN_TEXT_SIZE],
+            $defaults[Setting::MAXIMUM_MAIN_TEXT_SIZE],
+        );
+
+        return $defaults;
     }
 
     protected function controlPanelSettingsTab(): Tab
@@ -50,24 +54,6 @@ trait HasControlPanelSettingsTab
                         'md' => 2,
                     ])
                     ->schema([
-                        Components\Slider::make(self::MAIN_TEXT_SIZE_RANGE)
-                            ->label(arabic_text('1. نطاق حجم النصوص المحورية (الأدنى/الأقصى).'))
-                            ->extraFieldWrapperAttributes([
-                                'class' => 'pb-6 sm:pb-8 md:pb-0',
-                                'data-control-panel-main-text-size-slider' => '1',
-                            ])
-                            ->range(
-                                minValue: Setting::MIN_MAIN_TEXT_SIZE_MIN,
-                                maxValue: Setting::MAX_MAIN_TEXT_SIZE_MAX,
-                            )
-                            ->default([
-                                (int) ($generalDefinitions[Setting::MINIMUM_MAIN_TEXT_SIZE]['default'] ?? Setting::MIN_MAIN_TEXT_SIZE_DEFAULT),
-                                (int) ($generalDefinitions[Setting::MAXIMUM_MAIN_TEXT_SIZE]['default'] ?? Setting::MAX_MAIN_TEXT_SIZE_DEFAULT),
-                            ])
-                            ->step(1)
-                            ->fillTrack([false, true, false])
-                            ->pips(PipsMode::Steps, density: 1),
-
                         Components\Checkbox::make(Setting::DOES_ENABLE_VISUAL_ENHANCEMENTS)
                             ->default((bool) ($generalDefinitions[Setting::DOES_ENABLE_VISUAL_ENHANCEMENTS]['default'] ?? false))
                             ->extraFieldWrapperAttributes([

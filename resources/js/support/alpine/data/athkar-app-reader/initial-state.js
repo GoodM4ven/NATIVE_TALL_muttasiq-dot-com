@@ -211,6 +211,8 @@ export const createInitialState = (config, deps) => {
 
         isMobileCounterOpen: false,
 
+        isFontScaleOverlayVisible: false,
+
         readerLeaveMs: 300,
 
         slideDurationMs: 900,
@@ -278,6 +280,8 @@ export const createInitialState = (config, deps) => {
         _originTransitionTimer: null,
 
         _onWindowNativeVolumeButton: null,
+
+        _onAthkarFontScaleToggle: null,
 
         lastSeenDay: window.Alpine.$persist(null).as('athkar-last-day'),
 

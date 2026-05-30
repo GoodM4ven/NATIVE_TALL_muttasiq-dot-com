@@ -130,7 +130,7 @@ export const createReaderNavigationFitPageAdjustAndChromeModule = (deps) => {
     return {
         handlePageScaleAdjustInput(event = null) {
             this.applyPageScaleAdjustValue(event?.target?.value ?? 0, {
-                persist: false,
+                persist: true,
                 refit: false,
             });
         },
@@ -151,7 +151,7 @@ export const createReaderNavigationFitPageAdjustAndChromeModule = (deps) => {
 
         handlePageTypeScaleAdjustInput(event = null) {
             this.applyPageTypeScaleAdjustValue(event?.target?.value ?? 0, {
-                persist: false,
+                persist: true,
                 refit: false,
             });
         },
@@ -172,7 +172,7 @@ export const createReaderNavigationFitPageAdjustAndChromeModule = (deps) => {
 
         handlePageGapAdjustInput(event = null) {
             this.applyPageGapAdjustValue(event?.target?.value ?? 0, {
-                persist: false,
+                persist: true,
                 refit: false,
             });
         },
@@ -193,7 +193,7 @@ export const createReaderNavigationFitPageAdjustAndChromeModule = (deps) => {
 
         handlePageYOffsetAdjustInput(event = null) {
             this.applyPageYOffsetAdjustValue(event?.target?.value ?? 0, {
-                persist: false,
+                persist: true,
                 refit: false,
             });
         },

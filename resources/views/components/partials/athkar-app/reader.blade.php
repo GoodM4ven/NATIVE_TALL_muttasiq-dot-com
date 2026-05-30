@@ -897,6 +897,66 @@
             outline-offset: 2px;
         }
 
+        .athkar-font-scale-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 70;
+            display: grid;
+            place-items: center;
+            padding: 1rem;
+        }
+
+        .athkar-font-scale-overlay__backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgb(255 255 255 / 0.2);
+        }
+
+        .athkar-font-scale-overlay__panel {
+            position: relative;
+            display: grid;
+            width: min(92vw, 24rem);
+            gap: 0.9rem;
+            border-radius: 1.05rem;
+            border: 1px solid rgb(255 255 255 / 0.82);
+            padding: 0.9rem 0.85rem 0.8rem;
+            background: color-mix(in srgb, var(--background) 52%, transparent);
+            box-shadow: 0 0.85rem 2rem rgb(7 47 58 / 0.18);
+            justify-items: center;
+        }
+
+        .athkar-font-scale-overlay__title {
+            border: 1px solid color-mix(in srgb, var(--primary-300) 62%, transparent);
+            border-radius: 9999px;
+            background: color-mix(in srgb, white 88%, transparent);
+            color: color-mix(in srgb, var(--primary-900) 84%, var(--gray-900));
+            font-weight: 700;
+            line-height: 1.2;
+            font-size: 0.88rem;
+            padding: 0.44rem 0.9rem;
+        }
+
+        .athkar-font-scale-overlay__value {
+            min-width: 3.3rem;
+            text-align: center;
+        }
+
+        .dark .athkar-font-scale-overlay__backdrop {
+            background: rgb(2 6 23 / 0.54);
+        }
+
+        .dark .athkar-font-scale-overlay__panel {
+            border-color: color-mix(in srgb, var(--primary-600) 50%, rgb(15 23 42 / 0.72));
+            background: color-mix(in srgb, rgb(15 23 42) 84%, transparent);
+            box-shadow: 0 0.95rem 2.2rem rgb(2 6 23 / 0.62);
+        }
+
+        .dark .athkar-font-scale-overlay__title {
+            border-color: color-mix(in srgb, var(--primary-500) 46%, transparent);
+            background: color-mix(in srgb, rgb(30 41 59) 76%, transparent);
+            color: color-mix(in srgb, var(--primary-100) 84%, white);
+        }
+
         .quran-copy-popover {
             position: fixed;
             z-index: 90;
@@ -1665,6 +1725,66 @@
                 </svg>
             </button>
         </div>
+
+        <template x-teleport="body">
+            <div
+                class="athkar-font-scale-overlay"
+                data-no-swipe
+                x-cloak
+                x-show="isFontScaleOverlayVisible"
+                x-transition.opacity.duration.180ms
+                x-on:keydown.escape.window="closeFontScaleOverlay()"
+            >
+                <div
+                    class="athkar-font-scale-overlay__backdrop"
+                    x-on:click="closeFontScaleOverlay()"
+                ></div>
+                <section
+                    class="athkar-font-scale-overlay__panel"
+                    x-on:click.stop
+                >
+                    <p class="athkar-font-scale-overlay__title font-arabic-sans">
+                        {{ arabic_text('تحكم في حجم نص قارئ الأذكار') }}
+                    </p>
+
+                    <button
+                        class="quran-page-slider-chip athkar-font-scale-overlay__value select-none rounded-full px-2 py-[0.18rem] text-[0.72rem] font-semibold"
+                        type="button"
+                        x-text="mainTextSizeMinimumValue()"
+                        x-on:click="resetMainTextSizeRangeToDefaults()"
+                    ></button>
+                    <input
+                        class="quran-page-slider min-w-42 h-[0.56rem] w-[min(70vw,15rem)] outline-none"
+                        type="range"
+                        aria-label="{{ arabic_text('الحد الأدنى لحجم النص') }}"
+                        x-bind:min="resolveMainTextSizeLimitsFor('minimum_main_text_size').min"
+                        x-bind:max="mainTextSizeMaximumValue()"
+                        step="1"
+                        x-bind:value="mainTextSizeMinimumValue()"
+                        x-on:input="handleMinimumMainTextSizeInput($event)"
+                        x-on:change="commitMainTextSizeRange()"
+                    />
+
+                    <button
+                        class="quran-page-slider-chip athkar-font-scale-overlay__value select-none rounded-full px-2 py-[0.18rem] text-[0.72rem] font-semibold"
+                        type="button"
+                        x-text="mainTextSizeMaximumValue()"
+                        x-on:click="resetMainTextSizeRangeToDefaults()"
+                    ></button>
+                    <input
+                        class="quran-page-slider min-w-42 h-[0.56rem] w-[min(70vw,15rem)] outline-none"
+                        type="range"
+                        aria-label="{{ arabic_text('الحد الأقصى لحجم النص') }}"
+                        x-bind:min="mainTextSizeMinimumValue()"
+                        x-bind:max="resolveMainTextSizeLimitsFor('maximum_main_text_size').max"
+                        step="1"
+                        x-bind:value="mainTextSizeMaximumValue()"
+                        x-on:input="handleMaximumMainTextSizeInput($event)"
+                        x-on:change="commitMainTextSizeRange()"
+                    />
+                </section>
+            </div>
+        </template>
 
         <template x-teleport="body">
             <div

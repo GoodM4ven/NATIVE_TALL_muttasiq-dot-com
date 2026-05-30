@@ -65,13 +65,13 @@ class Setting extends Model
 
     public const MIN_MAIN_TEXT_SIZE_MAX = 28;
 
-    public const MIN_MAIN_TEXT_SIZE_DEFAULT = 21;
+    public const MIN_MAIN_TEXT_SIZE_DEFAULT = 24;
 
     public const MAX_MAIN_TEXT_SIZE_MIN = 14;
 
     public const MAX_MAIN_TEXT_SIZE_MAX = 28;
 
-    public const MAX_MAIN_TEXT_SIZE_DEFAULT = 22;
+    public const MAX_MAIN_TEXT_SIZE_DEFAULT = 25;
 
     /**
      * @return array<string, array{default: bool|int, label: string, group: string, type: 'boolean'|'integer', help?: string, min?: int, max?: int}>
@@ -117,25 +117,25 @@ class Setting extends Model
             ],
             self::DOES_ENABLE_VISUAL_ENHANCEMENTS => [
                 'default' => false,
-                'label' => '2. تحسين التأثيرات البصرية وتجميل النصوص المحورية.',
+                'label' => '1. تحسين التأثيرات البصرية وتجميل النصوص المحورية.',
                 'group' => self::GROUP_GENERAL,
                 'type' => 'boolean',
             ],
             self::DOES_SKIP_GUIDANCE_PANELS => [
                 'default' => false,
-                'label' => '3. تجاوز رسائل التعريف والتهنئة والتلميحات المساعدة.',
+                'label' => '2. تجاوز رسائل التعريف والتهنئة والتلميحات المساعدة.',
                 'group' => self::GROUP_GENERAL,
                 'type' => 'boolean',
             ],
             self::DOES_USE_WESTERN_NUMERALS => [
                 'default' => true,
-                'label' => '4. استخدام الأرقام العربية الغربية (__WESTERN_NUMERALS_SAMPLE__) بدل العربية الشرقية (__ARABIC_NUMERALS_SAMPLE__) في العرض.',
+                'label' => '3. استخدام الأرقام العربية الغربية (__WESTERN_NUMERALS_SAMPLE__) بدل العربية الشرقية (__ARABIC_NUMERALS_SAMPLE__) في العرض.',
                 'group' => self::GROUP_GENERAL,
                 'type' => 'boolean',
             ],
             self::DOES_PRESERVE_HARAKAT_IN_DISPLAY => [
                 'default' => true,
-                'label' => '5. إظهار الحركات في النصوص العربية المعروضة.',
+                'label' => '4. إظهار الحركات في النصوص العربية المعروضة.',
                 'group' => self::GROUP_GENERAL,
                 'type' => 'boolean',
             ],
@@ -191,7 +191,7 @@ class Setting extends Model
             ],
             self::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION => [
                 'default' => false,
-                'label' => '6. استخدام أزرار رفع وخفض الصوت للتنقل بين الأذكار وصفحات القرآن.',
+                'label' => '5. استخدام أزرار رفع وخفض الصوت للتنقل بين الأذكار وصفحات القرآن.',
                 'help' => 'عند التفعيل: زر رفع الصوت يعود للذكر/الصفحة السابقة، وزر خفض الصوت ينتقل للذكر/الصفحة التالية.',
                 'group' => self::GROUP_GENERAL,
                 'type' => 'boolean',
