@@ -3,6 +3,10 @@ document.addEventListener('alpine:init', () => {
     const launchCleanupDelayMs = 720;
     const returnNavigateDelayMs = 110;
     const returnCleanupDelayMs = 700;
+    const baseLaunchNavigateDelayMs = 96;
+    const baseLaunchCleanupDelayMs = 320;
+    const baseReturnNavigateDelayMs = 0;
+    const baseReturnCleanupDelayMs = 220;
     const defaultOrbitAngleDeg = 180;
     const modeOrbitAngles = Object.freeze({
         tilawa: 0,
@@ -44,9 +48,14 @@ document.addEventListener('alpine:init', () => {
         launchNavigateTimeoutId: null,
         launchCleanupTimeoutId: null,
         activeTransitionDirection: null,
+        geometryCache: null,
+        geometryCacheFrameId: null,
+        pendingOrbitUpdate: null,
+        orbitPointerFrameId: null,
         _onSwitchView: null,
         _onReaderGoGate: null,
         _onExternalGateOpen: null,
+        _onWindowResize: null,
         externalGateOpenTimerId: null,
         init() {
             this._onSwitchView = (event) => {
@@ -107,12 +116,21 @@ document.addEventListener('alpine:init', () => {
             window.addEventListener('quran-reader-go-gate', this._onReaderGoGate);
             window.addEventListener('quran-gate-open', this._onExternalGateOpen);
 
+            this._onWindowResize = () => {
+                this.scheduleGeometryCacheRefresh();
+            };
+            window.addEventListener('resize', this._onWindowResize, { passive: true });
+            window.addEventListener('orientationchange', this._onWindowResize, { passive: true });
+
             this.$nextTick(() => {
+                this.refreshGeometryCache();
                 this.positionPuckAtDefault();
             });
         },
         destroy() {
             this.clearLaunchTransitionState();
+            this.cancelPointerOrbitUpdate();
+            this.cancelGeometryCacheRefresh();
 
             if (typeof window !== 'undefined' && this._onSwitchView) {
                 window.removeEventListener('switch-view', this._onSwitchView);
@@ -132,6 +150,12 @@ document.addEventListener('alpine:init', () => {
             if (this.externalGateOpenTimerId !== null) {
                 clearTimeout(this.externalGateOpenTimerId);
                 this.externalGateOpenTimerId = null;
+            }
+
+            if (typeof window !== 'undefined' && this._onWindowResize) {
+                window.removeEventListener('resize', this._onWindowResize);
+                window.removeEventListener('orientationchange', this._onWindowResize);
+                this._onWindowResize = null;
             }
         },
         isFastUiMode() {
@@ -225,13 +249,16 @@ document.addEventListener('alpine:init', () => {
 
             const resolvedMode =
                 typeof mode === 'string' && mode.length > 0 ? mode : this.activeReaderMode();
-            const didApplyTransitionState = this.applyTransitionState(resolvedMode);
+            const isMobileBasePerfMode = this.shouldUseMobileBasePerfMode();
+            const didApplyTransitionState = !isMobileBasePerfMode
+                ? this.applyTransitionState(resolvedMode)
+                : false;
 
             this.isLaunchTransitioning = true;
             this.launchMode = resolvedMode;
             this.activeTransitionDirection = 'backward';
 
-            if (didApplyTransitionState) {
+            if (didApplyTransitionState && !isMobileBasePerfMode) {
                 const shellElement = this.quranShellElement();
 
                 if (shellElement) {
@@ -246,19 +273,27 @@ document.addEventListener('alpine:init', () => {
 
                     const shellElement = this.quranShellElement();
 
-                    if (shellElement) {
+                    if (shellElement && !isMobileBasePerfMode) {
                         shellElement.classList.add('quran-app-shell--gate-returning');
                     }
                 },
-                didApplyTransitionState ? returnNavigateDelayMs : 0,
+                isMobileBasePerfMode
+                    ? baseReturnNavigateDelayMs
+                    : didApplyTransitionState
+                      ? returnNavigateDelayMs
+                      : 0,
             );
 
-            this.launchCleanupTimeoutId = window.setTimeout(() => {
-                this.clearLaunchTransitionState();
-            }, returnCleanupDelayMs);
+            this.launchCleanupTimeoutId = window.setTimeout(
+                () => {
+                    this.clearLaunchTransitionState();
+                },
+                isMobileBasePerfMode ? baseReturnCleanupDelayMs : returnCleanupDelayMs,
+            );
         },
         clearLaunchTransitionState() {
             this.clearLaunchTransitionTimers();
+            this.cancelPointerOrbitUpdate();
             this.isLaunchTransitioning = false;
             this.launchMode = null;
             this.activeTransitionDirection = null;
@@ -277,12 +312,115 @@ document.addEventListener('alpine:init', () => {
             shellElement.classList.remove('quran-app-shell--reader-entering');
             shellElement.classList.remove('quran-app-shell--reader-leaving');
             shellElement.classList.remove('quran-app-shell--gate-returning');
+            shellElement.classList.remove('quran-app-shell--reader-launching-base');
             shellElement.removeAttribute('data-quran-launch-mode');
             shellElement.style.removeProperty('--quran-gate-launch-origin-x');
             shellElement.style.removeProperty('--quran-gate-launch-origin-y');
         },
         hasTouchInput() {
             return Boolean(this.$store?.bp?.hasTouch);
+        },
+        shouldUseMobileBasePerfMode() {
+            if (typeof document !== 'undefined') {
+                if (document.documentElement.classList.contains('native-platform')) {
+                    return true;
+                }
+            }
+
+            if (typeof this.$store?.bp?.is === 'function') {
+                return this.$store.bp.is('base');
+            }
+
+            return false;
+        },
+        cancelGeometryCacheRefresh() {
+            if (this.geometryCacheFrameId === null) {
+                return;
+            }
+
+            cancelAnimationFrame(this.geometryCacheFrameId);
+            this.geometryCacheFrameId = null;
+        },
+        scheduleGeometryCacheRefresh() {
+            if (!this.shouldUseMobileBasePerfMode()) {
+                return;
+            }
+
+            if (this.geometryCacheFrameId !== null) {
+                return;
+            }
+
+            this.geometryCacheFrameId = requestAnimationFrame(() => {
+                this.geometryCacheFrameId = null;
+                this.refreshGeometryCache();
+            });
+        },
+        refreshGeometryCache() {
+            if (!this.shouldUseMobileBasePerfMode()) {
+                this.geometryCache = null;
+                return;
+            }
+
+            const shellElement = this.$refs?.shell;
+            const anchorCircle = this.$refs?.anchorCircle;
+
+            if (!shellElement || !anchorCircle) {
+                this.geometryCache = null;
+                return;
+            }
+
+            const shellRect = shellElement.getBoundingClientRect();
+            const anchorRect = anchorCircle.getBoundingClientRect();
+
+            if (!shellRect.width || !shellRect.height || !anchorRect.width || !anchorRect.height) {
+                this.geometryCache = null;
+                return;
+            }
+
+            const anchorCenterX = anchorRect.left + anchorRect.width / 2;
+            const anchorCenterY = anchorRect.top + anchorRect.height / 2;
+
+            this.geometryCache = {
+                shellRect,
+                anchorCenterX,
+                anchorCenterY,
+                radius: anchorRect.width / 2,
+            };
+        },
+        resolveGeometryCache() {
+            if (!this.shouldUseMobileBasePerfMode()) {
+                return null;
+            }
+
+            if (this.geometryCache) {
+                return this.geometryCache;
+            }
+
+            this.refreshGeometryCache();
+
+            return this.geometryCache;
+        },
+        resolveGeometryFromDom() {
+            const shellElement = this.$refs?.shell;
+            const anchorCircle = this.$refs?.anchorCircle;
+
+            if (!shellElement || !anchorCircle) {
+                return null;
+            }
+
+            const shellRect = shellElement.getBoundingClientRect();
+            const anchorRect = anchorCircle.getBoundingClientRect();
+
+            if (!shellRect.width || !shellRect.height || !anchorRect.width || !anchorRect.height) {
+                return null;
+            }
+
+            return {
+                shellRect,
+                anchorCenterX: anchorRect.left + anchorRect.width / 2,
+                anchorCenterY: anchorRect.top + anchorRect.height / 2,
+                radius: anchorRect.width / 2,
+            };
         },
         normalizeAngle(angle) {
             const fullTurn = Math.PI * 2;
@@ -383,38 +521,50 @@ document.addEventListener('alpine:init', () => {
             this.armedMode = null;
         },
         resolveModeFromOrbitAngleDeg(orbitAngleDeg) {
-            const shellElement = this.$refs?.shell;
-            const anchorCircle = this.$refs?.anchorCircle;
+            const geometry = this.shouldUseMobileBasePerfMode()
+                ? this.resolveGeometryCache()
+                : this.resolveGeometryFromDom();
 
-            if (!shellElement || !anchorCircle) {
+            if (!geometry) {
                 return 'tilawa';
             }
-
-            const shellRect = shellElement.getBoundingClientRect();
-            const anchorRect = anchorCircle.getBoundingClientRect();
-
-            if (!shellRect.width || !shellRect.height || !anchorRect.width || !anchorRect.height) {
-                return 'tilawa';
-            }
-
-            const anchorCenterX = anchorRect.left + anchorRect.width / 2;
-            const anchorCenterY = anchorRect.top + anchorRect.height / 2;
             const projectedAngle = ((orbitAngleDeg - 90) * Math.PI) / 180;
 
             return (
                 this.resolveModeFromAngle(
                     projectedAngle,
-                    anchorCenterX,
-                    anchorCenterY,
-                    shellRect,
+                    geometry.anchorCenterX,
+                    geometry.anchorCenterY,
+                    geometry.shellRect,
                 ) ?? 'tilawa'
             );
         },
         syncProjectedModeWithOrbitAngle(orbitAngleDeg = this.orbitRenderAngleDeg) {
-            this.projectedMode = this.resolveModeFromOrbitAngleDeg(orbitAngleDeg);
+            const nextProjectedMode = this.resolveModeFromOrbitAngleDeg(orbitAngleDeg);
+
+            if (nextProjectedMode === this.projectedMode) {
+                return;
+            }
+
+            this.projectedMode = nextProjectedMode;
         },
         setOrbitAngle(targetAngleDeg) {
             if (!Number.isFinite(targetAngleDeg)) {
+                return;
+            }
+
+            if (this.shouldUseMobileBasePerfMode() && this.isTouchPointerActive) {
+                this.orbitTargetAngleDeg = targetAngleDeg;
+                this.orbitRenderAngleDeg = targetAngleDeg;
+                this.orbitAngleDeg = targetAngleDeg;
+                this.syncProjectedModeWithOrbitAngle(targetAngleDeg);
+
+                if (this.orbitAnimationFrameId !== null) {
+                    cancelAnimationFrame(this.orbitAnimationFrameId);
+                    this.orbitAnimationFrameId = null;
+                    this.orbitLastFrameAt = 0;
+                }
+
                 return;
             }
 
@@ -491,6 +641,10 @@ document.addEventListener('alpine:init', () => {
         },
         handlePointerEnter() {
             this.isPointerInside = true;
+
+            if (this.shouldUseMobileBasePerfMode()) {
+                this.scheduleGeometryCacheRefresh();
+            }
         },
         handlePointerLeave() {
             this.isPointerInside = false;
@@ -503,6 +657,11 @@ document.addEventListener('alpine:init', () => {
             this.touchPointerId = event.pointerId;
             this.isTouchPointerActive = true;
             this.isPointerInside = true;
+
+            if (this.shouldUseMobileBasePerfMode()) {
+                this.scheduleGeometryCacheRefresh();
+            }
+
             this.touchStartClientX = event.clientX;
             this.touchStartClientY = event.clientY;
             this.didTouchOrbitMove = false;
@@ -538,6 +697,7 @@ document.addEventListener('alpine:init', () => {
                 this.armProjectedModeAfterTouchRelease();
             }
 
+            this.cancelPointerOrbitUpdate();
             this.clearTouchGestureState();
 
             if (this.$refs?.shell?.releasePointerCapture) {
@@ -573,6 +733,10 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            if (this.touchPointerId !== null) {
+                return;
+            }
+
             const touch =
                 this.resolveActiveTouch(event.changedTouches) ??
                 this.resolveActiveTouch(event.touches);
@@ -584,13 +748,28 @@ document.addEventListener('alpine:init', () => {
             this.activeTouchIdentifier = touch.identifier;
             this.isTouchPointerActive = true;
             this.isPointerInside = true;
+
+            if (this.shouldUseMobileBasePerfMode()) {
+                this.scheduleGeometryCacheRefresh();
+            }
+
             this.touchStartClientX = touch.clientX;
             this.touchStartClientY = touch.clientY;
             this.didTouchOrbitMove = false;
+
+            if (this.shouldUseMobileBasePerfMode()) {
+                this.queueOrbitUpdate(touch.clientX, touch.clientY);
+                return;
+            }
+
             this.updateOrbitFromClientPoint(touch.clientX, touch.clientY);
         },
         handleTouchMove(event) {
             if (!this.hasTouchInput() || !this.isTouchPointerActive) {
+                return;
+            }
+
+            if (this.touchPointerId !== null) {
                 return;
             }
 
@@ -603,10 +782,20 @@ document.addEventListener('alpine:init', () => {
             }
 
             this.markTouchGestureMovement(touch.clientX, touch.clientY);
+
+            if (this.shouldUseMobileBasePerfMode()) {
+                this.queueOrbitUpdate(touch.clientX, touch.clientY);
+                return;
+            }
+
             this.updateOrbitFromClientPoint(touch.clientX, touch.clientY);
         },
         handleTouchEnd(event) {
             if (!this.hasTouchInput()) {
+                return;
+            }
+
+            if (this.touchPointerId !== null) {
                 return;
             }
 
@@ -624,6 +813,7 @@ document.addEventListener('alpine:init', () => {
                 this.armProjectedModeAfterTouchRelease();
             }
 
+            this.cancelPointerOrbitUpdate();
             this.clearTouchGestureState();
         },
         handlePointerMove(event) {
@@ -639,25 +829,56 @@ document.addEventListener('alpine:init', () => {
                 this.markTouchGestureMovement(event.clientX, event.clientY);
             }
 
+            if (this.shouldUseMobileBasePerfMode()) {
+                this.queueOrbitUpdate(event.clientX, event.clientY);
+                return;
+            }
+
             this.updateOrbitFromClientPoint(event.clientX, event.clientY);
         },
-        updateOrbitFromClientPoint(clientX, clientY) {
-            const shellElement = this.$refs?.shell;
-            const anchorCircle = this.$refs?.anchorCircle;
+        cancelPointerOrbitUpdate() {
+            if (this.orbitPointerFrameId !== null) {
+                cancelAnimationFrame(this.orbitPointerFrameId);
+                this.orbitPointerFrameId = null;
+            }
 
-            if (!shellElement || !anchorCircle) {
+            this.pendingOrbitUpdate = null;
+        },
+        queueOrbitUpdate(clientX, clientY) {
+            this.pendingOrbitUpdate = {
+                clientX,
+                clientY,
+            };
+
+            if (this.orbitPointerFrameId !== null) {
+                return;
+            }
+
+            this.orbitPointerFrameId = requestAnimationFrame(() => {
+                this.orbitPointerFrameId = null;
+                const pendingUpdate = this.pendingOrbitUpdate;
+
+                if (!pendingUpdate) {
+                    return;
+                }
+
+                this.pendingOrbitUpdate = null;
+                this.updateOrbitFromClientPoint(pendingUpdate.clientX, pendingUpdate.clientY);
+            });
+        },
+        updateOrbitFromClientPoint(clientX, clientY) {
+            const geometry = this.shouldUseMobileBasePerfMode()
+                ? this.resolveGeometryCache()
+                : this.resolveGeometryFromDom();
+
+            if (!geometry) {
                 return;
             }
 
             this.isPointerInside = true;
 
-            const shellRect = shellElement.getBoundingClientRect();
-            const anchorRect = anchorCircle.getBoundingClientRect();
-            const anchorCenterX = anchorRect.left + anchorRect.width / 2;
-            const anchorCenterY = anchorRect.top + anchorRect.height / 2;
-            const radius = anchorRect.width / 2;
-            const deltaX = clientX - anchorCenterX;
-            const deltaY = clientY - anchorCenterY;
+            const deltaX = clientX - geometry.anchorCenterX;
+            const deltaY = clientY - geometry.anchorCenterY;
             const distance = Math.hypot(deltaX, deltaY);
 
             if (distance <= 0.001) {
@@ -665,13 +886,18 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            const projectedX = anchorCenterX + (deltaX / distance) * radius;
-            const projectedY = anchorCenterY + (deltaY / distance) * radius;
+            const projectedX = geometry.anchorCenterX + (deltaX / distance) * geometry.radius;
+            const projectedY = geometry.anchorCenterY + (deltaY / distance) * geometry.radius;
             const projectedAngle = Math.atan2(
-                projectedY - anchorCenterY,
-                projectedX - anchorCenterX,
+                projectedY - geometry.anchorCenterY,
+                projectedX - geometry.anchorCenterX,
             );
             const orbitAngleDeg = (projectedAngle * 180) / Math.PI + 90;
+
+            if (this.shouldUseMobileBasePerfMode() && this.isTouchPointerActive) {
+                this.setOrbitAngle(orbitAngleDeg);
+                return;
+            }
 
             // Keep touch-hover sector activation in sync with the pointer immediately,
             // without waiting for orbit easing frames.
@@ -728,13 +954,25 @@ document.addEventListener('alpine:init', () => {
             this.isLaunchTransitioning = true;
             this.activeTransitionDirection = 'forward';
             this.launchMode = mode;
-            const didApplyLaunchState = this.applyTransitionState(mode, event);
+            const isMobileBasePerfMode = this.shouldUseMobileBasePerfMode();
+            const didApplyLaunchState = !isMobileBasePerfMode
+                ? this.applyTransitionState(mode, event)
+                : false;
 
-            if (didApplyLaunchState) {
+            if (didApplyLaunchState && !isMobileBasePerfMode) {
                 const shellElement = this.quranShellElement();
 
                 if (shellElement) {
                     shellElement.classList.add('quran-app-shell--reader-launching');
+                }
+            }
+
+            if (isMobileBasePerfMode) {
+                const shellElement = this.quranShellElement();
+
+                if (shellElement) {
+                    shellElement.setAttribute('data-quran-launch-mode', mode);
+                    shellElement.classList.add('quran-app-shell--reader-launching-base');
                 }
             }
 
@@ -745,16 +983,23 @@ document.addEventListener('alpine:init', () => {
 
                     const shellElement = this.quranShellElement();
 
-                    if (shellElement) {
+                    if (shellElement && !isMobileBasePerfMode) {
                         shellElement.classList.add('quran-app-shell--reader-entering');
                     }
                 },
-                didApplyLaunchState ? launchNavigateDelayMs : 0,
+                isMobileBasePerfMode
+                    ? baseLaunchNavigateDelayMs
+                    : didApplyLaunchState
+                      ? launchNavigateDelayMs
+                      : 0,
             );
 
-            this.launchCleanupTimeoutId = window.setTimeout(() => {
-                this.clearLaunchTransitionState();
-            }, launchCleanupDelayMs);
+            this.launchCleanupTimeoutId = window.setTimeout(
+                () => {
+                    this.clearLaunchTransitionState();
+                },
+                isMobileBasePerfMode ? baseLaunchCleanupDelayMs : launchCleanupDelayMs,
+            );
         },
     }));
 });
