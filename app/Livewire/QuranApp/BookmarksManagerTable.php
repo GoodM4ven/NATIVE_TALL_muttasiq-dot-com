@@ -13,12 +13,14 @@ use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
+use Filament\Support\ArrayRecord;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\View\View;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -147,10 +149,15 @@ class BookmarksManagerTable extends Component implements HasActions, HasSchemas,
                     Action::make('go')
                         ->label(arabic_text('انتقال'))
                         ->icon('heroicon-s-arrow-up-right')
-                        ->action(fn (mixed $record): mixed => $this->dispatch(
-                            'quran-bookmarks-manager-go',
-                            id: (string) ($this->resolveTableRecord($record)['id'] ?? ''),
-                        )),
+                        ->action(function (mixed $record): void {
+                            $resolvedRecord = $this->resolveTableRecord($record);
+
+                            $this->dispatch(
+                                'quran-bookmarks-manager-go',
+                                id: (string) ($resolvedRecord['id'] ?? ''),
+                                page_number: max(1, (int) ($resolvedRecord['page_number'] ?? 1)),
+                            );
+                        }),
                     Action::make('edit')
                         ->label(arabic_text('تعديل'))
                         ->icon('heroicon-s-pencil-square')
@@ -494,7 +501,84 @@ class BookmarksManagerTable extends Component implements HasActions, HasSchemas,
      */
     private function resolveTableRecord(mixed $record): array
     {
-        return is_array($record) ? $record : [];
+        if (is_array($record)) {
+            return $this->normalizeActionRecord($record);
+        }
+
+        if ($record instanceof Arrayable) {
+            return $this->normalizeActionRecord($record->toArray());
+        }
+
+        if (is_object($record)) {
+            if (method_exists($record, 'toArray')) {
+                /** @var mixed $resolvedRecord */
+                $resolvedRecord = $record->toArray();
+
+                if (is_array($resolvedRecord)) {
+                    return $this->normalizeActionRecord($resolvedRecord);
+                }
+            }
+
+            $resolvedRecord = get_object_vars($record);
+
+            if ($resolvedRecord !== []) {
+                return $this->normalizeActionRecord($resolvedRecord);
+            }
+        }
+
+        $recordKey = trim((string) $record);
+
+        if ($recordKey === '') {
+            return [];
+        }
+
+        return $this->resolveRecordById($recordKey);
+    }
+
+    /**
+     * @param  array<string, mixed>  $record
+     * @return array<string, mixed>
+     */
+    private function normalizeActionRecord(array $record): array
+    {
+        $recordId = trim((string) ($record['id'] ?? ''));
+        $recordKey = trim((string) ($record[ArrayRecord::getKeyName()] ?? $record['key'] ?? ''));
+
+        if ($recordId === '' && $recordKey !== '') {
+            $recordId = $recordKey;
+        }
+
+        if ($recordId === '') {
+            return $record;
+        }
+
+        $resolvedRecord = $this->resolveRecordById($recordId);
+
+        if ($resolvedRecord === []) {
+            return [
+                ...$record,
+                'id' => $recordId,
+            ];
+        }
+
+        return [
+            ...$resolvedRecord,
+            ...$record,
+            'id' => $recordId,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function resolveRecordById(string $recordId): array
+    {
+        /** @var array<string, mixed>|null $resolvedRecord */
+        $resolvedRecord = collect($this->records)->first(
+            static fn (array $candidate): bool => (string) ($candidate['id'] ?? '') === $recordId,
+        );
+
+        return is_array($resolvedRecord) ? $resolvedRecord : [];
     }
 
     private function resolveSortOrderValue(mixed $value, int $index): int

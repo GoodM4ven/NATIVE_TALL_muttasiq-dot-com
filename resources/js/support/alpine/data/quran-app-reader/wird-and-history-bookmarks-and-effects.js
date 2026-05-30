@@ -131,11 +131,22 @@ export const createWirdAndHistoryBookmarksAndEffectsModule = (deps) => {
         async handleBookmarksManagerGoEvent(detail = {}) {
             const bookmark = this.bookmarkEntryById(detail?.id);
 
-            if (!bookmark) {
+            if (bookmark) {
+                await this.goToBookmark(bookmark);
+
                 return;
             }
 
-            await this.goToBookmark(bookmark);
+            const fallbackPageNumber = Math.max(
+                0,
+                Math.trunc(Number(detail?.page_number ?? detail?.pageNumber ?? 0)),
+            );
+
+            if (fallbackPageNumber < 1) {
+                return;
+            }
+
+            await this.goToBookmark({ page_number: fallbackPageNumber });
         },
 
         applyBookmarkManagerRecordUpdate(detail = {}) {
