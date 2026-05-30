@@ -5021,6 +5021,38 @@ JS,
     expect((int) ($persistedOverridesBeforeRefresh['quran_wird_frequency_mode'] ?? -1))->toBe(1);
     expect((int) ($persistedOverridesBeforeRefresh['quran_wird_khatmat_target'] ?? -1))->toBe(2);
 
+    $seededProgressBeforeRefresh = $page->script(
+        quranReaderDataScript(
+            <<<'JS'
+(() => {
+  data.wirdFrequencyMode = data.normalizeWirdFrequencyMode(1, 1);
+  data.wirdKhatmatTarget = data.normalizeWirdKhatmatTarget(2, 2, {
+    frequencyMode: data.wirdFrequencyMode,
+  });
+  const record = data.ensureWirdDailyRecord({ forceRebuild: true });
+  const targetStep = Math.max(0, Math.min(Number(record?.requiredPages ?? 1) - 1, 7));
+
+  record.currentStep = targetStep;
+  record.progressStep = targetStep;
+  record.completed = false;
+  record.updatedAt = Date.now();
+  data.wirdDailyRecord = record;
+  data.reconcileWirdNextAbsolutePage(record);
+  data.persistWirdState();
+
+  return {
+    currentStep: Number(record.currentStep ?? -1),
+    progressStep: Number(record.progressStep ?? -1),
+  };
+})()
+JS,
+        ),
+    );
+
+    expect($seededProgressBeforeRefresh)->toBeArray();
+    expect((int) ($seededProgressBeforeRefresh['currentStep'] ?? -1))->toBe(7);
+    expect((int) ($seededProgressBeforeRefresh['progressStep'] ?? -1))->toBe(7);
+
     $page->refresh();
     waitForAlpineReady($page);
     $persistedOverridesAfterRefresh = $page->script(
@@ -5051,6 +5083,8 @@ JS,
     khatmatTarget: Number(data.wirdKhatmatTarget ?? -1),
     requiredPages: Number(record?.requiredPages ?? 0),
     maxPage,
+    currentStep: Number(record?.currentStep ?? -1),
+    progressStep: Number(record?.progressStep ?? -1),
   };
 })()
 JS,
@@ -5063,6 +5097,8 @@ JS,
     expect((int) ($restoredState['maxPage'] ?? 0))->toBeGreaterThan(0);
     expect((int) ($restoredState['requiredPages'] ?? 0))
         ->toBe((int) ($restoredState['maxPage'] ?? 0) * 2);
+    expect((int) ($restoredState['currentStep'] ?? -1))->toBe(7);
+    expect((int) ($restoredState['progressStep'] ?? -1))->toBe(7);
 
     $page->assertNoJavaScriptErrors();
 });

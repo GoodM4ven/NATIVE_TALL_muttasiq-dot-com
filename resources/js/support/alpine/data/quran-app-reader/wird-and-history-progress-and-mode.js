@@ -128,7 +128,7 @@ export const createWirdAndHistoryProgressAndModeModule = (deps) => {
     } = deps;
 
     return {
-        ensureWirdDailyRecord({ forceRebuild = false } = {}) {
+        ensureWirdDailyRecord({ forceRebuild = false, preserveProgressOnRebuild = true } = {}) {
             this.syncWirdStorageState({
                 clearDailyRecord: true,
             });
@@ -168,7 +168,9 @@ export const createWirdAndHistoryProgressAndModeModule = (deps) => {
                     this.normalizeIntegerFlag(this.wirdState?.nextAbsolutePage, 1, { min: 1 }),
                 );
                 const canCarryExistingProgress =
-                    !forceRebuild && record && typeof record === 'object';
+                    record &&
+                    typeof record === 'object' &&
+                    (!forceRebuild || preserveProgressOnRebuild);
                 const startAbsolutePage = canCarryExistingProgress
                     ? Math.max(
                           1,
