@@ -189,3 +189,14 @@ test('quran reader requests sm+ web refit after bookmarks modal closes', functio
         ->and($source)->toContain('this.queueSmPlusWebModalCloseRefit(this.historyModalId);')
         ->and($source)->toContain('this.queueSmPlusWebModalCloseRefit(this.bookmarksModalId);');
 });
+
+test('control panel open preserves active view except quran reader which returns to gate first', function () {
+    $homeSource = file_get_contents(resource_path('views/home.blade.php'));
+
+    expect($homeSource)->not->toBeFalse()
+        ->and($homeSource)->toContain('requestControlPanelOpenFromAnywhere(detail = {})')
+        ->and($homeSource)->toContain('if (!isQuranReaderOpen) {')
+        ->and($homeSource)->toContain("window.addEventListener('switch-view', switchViewListener);")
+        ->and($homeSource)->toContain("window.dispatchEvent(new CustomEvent('quran-reader-go-gate'));")
+        ->and($homeSource)->not->toContain("this.\$dispatch('switch-view', { to: 'main-menu' });");
+});

@@ -345,17 +345,43 @@
                     );
                 };
         
-                if (Boolean(this.views?.['main-menu']?.isOpen)) {
+                const isQuranReaderOpen = Boolean(
+                    this.views?.['quran-app-tilawa']?.isOpen ||
+                    this.views?.['quran-app-hifth']?.isOpen ||
+                    this.views?.['quran-app-tadabbur']?.isOpen,
+                );
+        
+                if (!isQuranReaderOpen) {
                     dispatchOpenEvent();
         
                     return;
                 }
         
-                this.$dispatch('switch-view', { to: 'main-menu' });
+                let hasOpenedControlPanel = false;
+                const openControlPanelOnce = () => {
+                    if (hasOpenedControlPanel) {
+                        return;
+                    }
+        
+                    hasOpenedControlPanel = true;
+                    dispatchOpenEvent();
+                };
+                const switchViewListener = (event) => {
+                    if (String(event?.detail?.to ?? '').trim() !== 'quran-app-gate') {
+                        return;
+                    }
+        
+                    window.removeEventListener('switch-view', switchViewListener);
+                    openControlPanelOnce();
+                };
+        
+                window.addEventListener('switch-view', switchViewListener);
+                window.dispatchEvent(new CustomEvent('quran-reader-go-gate'));
         
                 window.setTimeout(() => {
-                    dispatchOpenEvent();
-                }, this.isNativeRuntime ? 260 : 120);
+                    window.removeEventListener('switch-view', switchViewListener);
+                    openControlPanelOnce();
+                }, this.isNativeRuntime ? 620 : 420);
             },
             pulseActionState(options = {}) {
                 if (this.isControlPanelOpen || this.isAthkarManagerOpen) {
