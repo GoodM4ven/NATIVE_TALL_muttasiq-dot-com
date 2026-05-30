@@ -11,6 +11,9 @@
             --athkar-panel-outline: color-mix(in srgb, var(--primary-500) 45%, transparent);
             --athkar-panel-pulse: color-mix(in srgb, var(--primary-400) 40%, transparent);
             --athkar-tap-pulse: color-mix(in srgb, var(--warning-400) 32%, transparent);
+            --athkar-tap-aura-core: color-mix(in srgb, var(--warning-300) 90%, transparent);
+            --athkar-tap-aura-halo: color-mix(in srgb, var(--warning-400) 82%, transparent);
+            --athkar-tap-aura-speck: color-mix(in srgb, var(--warning-200) 98%, transparent);
             --athkar-nav-active-fill: linear-gradient(90deg,
                     color-mix(in srgb, var(--success-500) 95%, transparent),
                     color-mix(in srgb, var(--success-400) 95%, transparent));
@@ -53,6 +56,9 @@
             --athkar-panel-outline: color-mix(in srgb, var(--primary-300) 55%, transparent);
             --athkar-panel-pulse: color-mix(in srgb, var(--primary-400) 50%, transparent);
             --athkar-tap-pulse: color-mix(in srgb, var(--warning-300) 35%, transparent);
+            --athkar-tap-aura-core: color-mix(in srgb, var(--warning-200) 96%, transparent);
+            --athkar-tap-aura-halo: color-mix(in srgb, var(--warning-300) 86%, transparent);
+            --athkar-tap-aura-speck: color-mix(in srgb, var(--warning-100) 98%, transparent);
             --athkar-nav-active-fill: linear-gradient(90deg,
                     color-mix(in srgb, var(--success-400) 92%, transparent),
                     color-mix(in srgb, var(--success-500) 92%, transparent));
@@ -249,6 +255,90 @@
             }
         }
 
+        @keyframes athkar-tap-ripple-core-click {
+            0% {
+                opacity: 0.34;
+                transform: translate(-50%, -50%) scale(0.72);
+            }
+
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(1.32);
+            }
+        }
+
+        @keyframes athkar-tap-ripple-hold-core {
+            0% {
+                opacity: 0.18;
+                transform: translate(-50%, -50%) scale(0.66);
+            }
+
+            100% {
+                opacity: 0.32;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+
+        @keyframes athkar-tap-ripple-click-ring {
+            0% {
+                opacity: 0.34;
+                transform: translate(-50%, -50%) scale(0.18);
+            }
+
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(1.18);
+            }
+        }
+
+        @keyframes athkar-tap-ripple-hold-ring-a {
+            0% {
+                opacity: 0.24;
+                transform: translate(-50%, -50%) scale(0.14);
+            }
+
+            100% {
+                opacity: 0.12;
+                transform: translate(-50%, -50%) scale(1.66);
+            }
+        }
+
+        @keyframes athkar-tap-ripple-hold-ring-b {
+            0% {
+                opacity: 0.2;
+                transform: translate(-50%, -50%) scale(0.1);
+            }
+
+            100% {
+                opacity: 0.08;
+                transform: translate(-50%, -50%) scale(2.26);
+            }
+        }
+
+        @keyframes athkar-tap-ripple-release-ring-a {
+            0% {
+                opacity: 0.2;
+                transform: translate(-50%, -50%) scale(0.9);
+            }
+
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(2.8);
+            }
+        }
+
+        @keyframes athkar-tap-ripple-release-ring-b {
+            0% {
+                opacity: 0.14;
+                transform: translate(-50%, -50%) scale(1.2);
+            }
+
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(3.7);
+            }
+        }
+
         @keyframes athkar-text-shimmer {
             0% {
                 background-position: -100% 50%, 0 0;
@@ -386,6 +476,95 @@
             -webkit-tap-highlight-color: transparent;
         }
 
+        .athkar-tap-aura {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            pointer-events: none;
+            opacity: inherit;
+            transition: opacity 180ms ease;
+            will-change: opacity;
+            filter: saturate(118%);
+        }
+
+        .athkar-tap-aura__core,
+        .athkar-tap-aura__ring {
+            position: absolute;
+            left: var(--athkar-tap-aura-x, 50%);
+            top: var(--athkar-tap-aura-y, 50%);
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+
+        .athkar-tap-aura__core {
+            width: 0.86rem;
+            height: 0.86rem;
+            border-radius: 9999px;
+            opacity: 0;
+            background: radial-gradient(circle,
+                    color-mix(in srgb, var(--athkar-tap-aura-core) 84%, transparent) 0%,
+                    color-mix(in srgb, var(--athkar-tap-aura-halo) 48%, transparent) 62%,
+                    transparent 100%);
+            box-shadow:
+                0 0 10px color-mix(in srgb, var(--athkar-tap-aura-core) 54%, transparent),
+                0 0 20px color-mix(in srgb, var(--athkar-tap-aura-halo) 42%, transparent);
+            filter: blur(0.3px);
+        }
+
+        .athkar-tap-aura__ring {
+            width: 3.5rem;
+            height: 3.5rem;
+            border-radius: 99999px;
+            border: 2px solid color-mix(in srgb, var(--athkar-tap-aura-halo) 86%, transparent);
+            opacity: 0;
+            box-shadow:
+                inset 0 0 0 1px color-mix(in srgb, var(--athkar-tap-aura-core) 52%, transparent),
+                0 0 22px color-mix(in srgb, var(--athkar-tap-aura-halo) 46%, transparent);
+            will-change: transform, opacity, border-color;
+        }
+
+        .athkar-tap-aura__ring--b {
+            width: 4.4rem;
+            height: 4.4rem;
+            border-color: color-mix(in srgb, var(--athkar-tap-aura-core) 76%, transparent);
+        }
+
+        .athkar-tap-aura.is-clicking .athkar-tap-aura__core {
+            animation: athkar-tap-ripple-core-click 220ms ease-out both;
+        }
+
+        .athkar-tap-aura.is-clicking .athkar-tap-aura__ring--a {
+            animation: athkar-tap-ripple-click-ring 360ms ease-out both;
+        }
+
+        .athkar-tap-aura.is-clicking .athkar-tap-aura__ring--b {
+            animation: athkar-tap-ripple-click-ring 430ms ease-out 40ms both;
+        }
+
+        .athkar-tap-aura.is-holding .athkar-tap-aura__core {
+            animation: athkar-tap-ripple-hold-core 1200ms ease-in-out infinite alternate;
+        }
+
+        .athkar-tap-aura.is-holding .athkar-tap-aura__ring--a {
+            animation: athkar-tap-ripple-hold-ring-a 1160ms cubic-bezier(0.22, 0.7, 0.34, 1) infinite;
+        }
+
+        .athkar-tap-aura.is-holding .athkar-tap-aura__ring--b {
+            animation: athkar-tap-ripple-hold-ring-b 1400ms cubic-bezier(0.2, 0.72, 0.32, 1) 120ms infinite;
+        }
+
+        .athkar-tap-aura.is-releasing .athkar-tap-aura__core {
+            animation: athkar-tap-ripple-core-click 180ms ease-out both;
+        }
+
+        .athkar-tap-aura.is-releasing .athkar-tap-aura__ring--a {
+            animation: athkar-tap-ripple-release-ring-a 560ms ease-out both;
+        }
+
+        .athkar-tap-aura.is-releasing .athkar-tap-aura__ring--b {
+            animation: athkar-tap-ripple-release-ring-b 640ms ease-out 60ms both;
+        }
+
         .athkar-tap.is-origin-active {
             border-color: color-mix(in srgb, var(--warning-400) 65%, transparent);
             background-color: color-mix(in srgb, var(--warning-400) 12%, transparent);
@@ -409,8 +588,7 @@
         }
 
         .athkar-tap:focus-visible {
-            outline: 2px solid color-mix(in srgb, var(--warning-400) 70%, transparent);
-            outline-offset: 2px;
+            outline: none;
         }
 
         .athkar-text {
@@ -1064,6 +1242,7 @@
                 class="athkar-chip athkar-chip--manager focus-visible:outline-primary-500 3xl:text-xs 3xl:px-4 3xl:py-3 relative inline-flex cursor-pointer items-center justify-center px-2.5 py-1.5 text-[0.65rem] font-semibold shadow-inner transition focus-visible:outline-2 focus-visible:outline-offset-2 sm:px-2 sm:py-1.5 sm:text-[0.52rem] md:px-2 md:py-[0.4rem] md:text-[0.525rem] lg:px-[0.6rem] lg:py-2 lg:text-[0.575rem] xl:px-[0.7rem] xl:py-[0.580rem] xl:text-[0.6rem] 2xl:px-3 2xl:py-2 2xl:text-[0.7rem]"
                 data-athkar-open-manager
                 type="button"
+                tabindex="-1"
                 x-on:click="$tippy.hide(); openGateAndManageAthkar()"
                 x-on:mouseenter="$tippy(@js(arabic_text('إدارة الأذكار')), 'bottom', 2000, { showWhenGuidancePanelsSkipped: true })"
                 x-on:mouseleave="$tippy.hide()"
@@ -1143,7 +1322,7 @@
             class="athkar-panel Xoutline-primary-500/80 dark:Xoutline-primary-200/25 Xoutline-offset-[-0.75rem] sm:Xoutline-4 3xl:max-h-[min(42svh,37rem)] 4xl:max-h-[min(39svh,33rem)] 3xl:rounded-4xl relative flex max-h-[min(80svh,24.5rem)] min-h-0 flex-1 touch-pan-y flex-col overflow-hidden rounded-[1.35rem] transition-all focus:outline-none active:outline-none sm:max-h-[min(68svh,17rem)] sm:rounded-[1.2rem] md:max-h-[min(71svh,23rem)] md:rounded-3xl lg:max-h-[min(65svh,25rem)] lg:rounded-[1.8rem] xl:max-h-[min(75svh,26rem)] xl:rounded-[1.75rem] 2xl:max-h-[min(53svh,25rem)] 2xl:rounded-[1.9rem]"
             role="region"
             aria-roledescription="carousel"
-            tabindex="0"
+            tabindex="-1"
             x-bind:aria-label="activeLabel"
             x-bind:class="{
                 'is-sliding': slide.isActive,
@@ -1161,6 +1340,7 @@
             x-on:keydown.arrow-right.prevent="prev()"
             x-on:keydown.home.prevent="setActiveIndex(0)"
             x-on:keydown.end.prevent="setActiveIndex(activeList.length - 1)"
+            x-on:keydown.tab.prevent.stop
             x-on:keydown.escape.window="if (hintIndex !== null) { closeHint(); }"
         >
             <div
@@ -1179,6 +1359,7 @@
                     <button
                         class="athkar-origin-indicator size-10 [--athkar-origin-inset:4px]"
                         type="button"
+                        tabindex="-1"
                         x-bind:class="isOriginVisible(activeIndex) && 'is-active'"
                         x-bind:aria-pressed="isOriginVisible(activeIndex)"
                         x-on:click.stop="toggleOrigin(activeIndex)"
@@ -1209,6 +1390,7 @@
                             data-hint-allow
                             type="button"
                             aria-label="{{ arabic_text('العدد') }}"
+                            tabindex="-1"
                             x-bind:class="isHintOpen(activeIndex) ? 'size-16! pointer-events-none' : ''"
                             x-on:click.stop="toggleHint(activeIndex)"
                             x-on:pointerdown.stop
@@ -1278,6 +1460,7 @@
                             data-hint-allow
                             type="button"
                             aria-label="{{ arabic_text('إتمام الذكر') }}"
+                            tabindex="-1"
                             x-show="isHintOpen(activeIndex) && requiredCount(activeIndex) > 1 && countAt(activeIndex) !== requiredCount(activeIndex)"
                             x-transition.opacity.duration.200ms
                             x-on:click.stop="requestSingleThikrCompletion(activeIndex)"
@@ -1377,6 +1560,7 @@
                                 class="bg-success-500/90 z-9999 absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-full text-white shadow-lg transition-all duration-200"
                                 type="button"
                                 aria-label="{{ arabic_text('إتمام الذكر') }}"
+                                tabindex="-1"
                                 x-show="countAt(activeIndex) !== requiredCount(activeIndex)"
                                 x-bind:class="completionHack.canHover && $store.bp.is('sm+') ?
                                     'pointer-events-none scale-95 opacity-0 group-hover:pointer-events-auto group-hover:scale-100 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:scale-100 group-focus-within:opacity-100' :
@@ -1406,6 +1590,7 @@
                     <button
                         class="athkar-origin-indicator 3xl:size-13 3xl:[--athkar-origin-inset:7px] 4xl:size-13.5 4xl:[--athkar-origin-inset:8px] md:size-9.5 2xl:size-12.5 left-4 size-7 [--athkar-origin-inset:1px] sm:size-7 sm:[--athkar-origin-inset:2px] md:[--athkar-origin-inset:4.5px] lg:size-10 lg:[--athkar-origin-inset:5px] xl:size-12 xl:[--athkar-origin-inset:6px] 2xl:[--athkar-origin-inset:6px]"
                         type="button"
+                        tabindex="-1"
                         x-show="hasOrigin(activeIndex)"
                         x-transition.opacity.duration.300ms
                         x-bind:class="{
@@ -1454,7 +1639,17 @@
                                         class="athkar-tap md:px-13 3xl:px-4 4xl:px-5 3xl:py-6 group relative flex min-h-0 w-full flex-1 touch-manipulation flex-col items-center justify-center gap-4 overflow-hidden rounded-sm border border-transparent px-0 py-1.5 text-center transition sm:px-10 sm:py-2.5 md:py-3 lg:px-12 xl:px-3 xl:py-5 2xl:px-3 2xl:py-5"
                                         data-athkar-tap
                                         type="button"
-                                        x-on:click="handleTap()"
+                                        tabindex="-1"
+                                        x-on:click="handleTap($event)"
+                                        x-on:pointerdown="beginTapAuraHold($event, index)"
+                                        x-on:pointermove="moveTapAuraHold($event)"
+                                        x-on:pointerup="endTapAuraHold($event)"
+                                        x-on:pointercancel="cancelTapAuraHold($event)"
+                                        x-on:pointerleave="cancelTapAuraHold($event)"
+                                        x-on:touchstart="beginTapAuraHold($event, index)"
+                                        x-on:touchmove="moveTapAuraHold($event)"
+                                        x-on:touchend="endTapAuraHold($event)"
+                                        x-on:touchcancel="cancelTapAuraHold($event)"
                                         x-bind:class="{
                                             'opacity-30!': isHintOpen(index),
                                             'athkar-tap--pulse': tapPulse.index === index && tapPulse.isActive,
@@ -1462,7 +1657,29 @@
                                         }"
                                     >
                                         <div
-                                            class="{{ twMerge('relative Xmt-8 flex flex-row w-full min-h-0 flex-1 justify-center gap-3 overflow-hidden px-[0.3rem] Xsm:mt-0 sm:justify-center sm:gap-4 sm:px-0 md:px-0 lg:px-0 xl:px-6 2xl:px-6 3xl:px-14 4xl:px-14.5 transition-opacity') }}"
+                                            class="pointer-events-none absolute inset-0 z-10"
+                                            data-athkar-tap-aura
+                                            x-bind:style="tapAuraStyle(index)"
+                                        >
+                                            <div
+                                                class="athkar-tap-aura"
+                                                x-bind:class="{
+                                                    'is-clicking': tapAura.index === index && tapAura.clickActive,
+                                                    'is-holding': tapAura.index === index && tapAura.isHolding,
+                                                    'is-releasing': tapAura.index === index && tapAura.releaseActive,
+                                                }"
+                                            >
+                                                <div class="athkar-tap-aura__core">
+                                                </div>
+                                                <div class="athkar-tap-aura__ring athkar-tap-aura__ring--a">
+                                                </div>
+                                                <div class="athkar-tap-aura__ring athkar-tap-aura__ring--b">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div
+                                            class="{{ twMerge('relative z-20 Xmt-8 flex flex-row w-full min-h-0 flex-1 justify-center gap-3 overflow-hidden px-[0.3rem] Xsm:mt-0 sm:justify-center sm:gap-4 sm:px-0 md:px-0 lg:px-0 xl:px-6 2xl:px-6 3xl:px-14 4xl:px-14.5 transition-opacity') }}"
                                             data-athkar-text-box
                                             data-fitty-box
                                             dir="rtl"
@@ -1639,6 +1856,7 @@
                 class="athkar-nav__arrow sm:h-4.5 sm:w-4.5 lg:h-5.5 lg:w-5.5 inline-flex h-6 w-6 items-center justify-center rounded-sm transition disabled:cursor-not-allowed disabled:opacity-60 md:h-5 md:w-5 xl:h-6 xl:w-6 2xl:h-7 2xl:w-7"
                 type="button"
                 aria-label="{{ arabic_text('السابق') }}"
+                tabindex="-1"
                 x-bind:disabled="activeIndex === 0"
                 x-on:click="prev()"
             >
@@ -1707,6 +1925,7 @@
                 class="athkar-nav__arrow sm:h-4.5 sm:w-4.5 lg:h-5.5 lg:w-5.5 inline-flex h-6 w-6 items-center justify-center rounded-sm transition disabled:cursor-not-allowed disabled:opacity-60 md:h-5 md:w-5 xl:h-6 xl:w-6 2xl:h-7 2xl:w-7"
                 type="button"
                 aria-label="{{ arabic_text('التالي') }}"
+                tabindex="-1"
                 x-bind:disabled="!canAdvance()"
                 x-on:click="next()"
             >
@@ -1750,6 +1969,7 @@
                     <button
                         class="quran-page-slider-chip athkar-font-scale-overlay__value select-none rounded-full px-2 py-[0.18rem] text-[0.72rem] font-semibold"
                         type="button"
+                        tabindex="-1"
                         x-text="mainTextSizeMinimumValue()"
                         x-on:click="resetMainTextSizeRangeToDefaults()"
                     ></button>
@@ -1757,6 +1977,7 @@
                         class="quran-page-slider min-w-42 h-[0.56rem] w-[min(70vw,15rem)] outline-none"
                         type="range"
                         aria-label="{{ arabic_text('الحد الأدنى لحجم النص') }}"
+                        tabindex="-1"
                         x-bind:min="resolveMainTextSizeLimitsFor('minimum_main_text_size').min"
                         x-bind:max="mainTextSizeMaximumValue()"
                         step="1"
@@ -1768,6 +1989,7 @@
                     <button
                         class="quran-page-slider-chip athkar-font-scale-overlay__value select-none rounded-full px-2 py-[0.18rem] text-[0.72rem] font-semibold"
                         type="button"
+                        tabindex="-1"
                         x-text="mainTextSizeMaximumValue()"
                         x-on:click="resetMainTextSizeRangeToDefaults()"
                     ></button>
@@ -1775,6 +1997,7 @@
                         class="quran-page-slider min-w-42 h-[0.56rem] w-[min(70vw,15rem)] outline-none"
                         type="range"
                         aria-label="{{ arabic_text('الحد الأقصى لحجم النص') }}"
+                        tabindex="-1"
                         x-bind:min="mainTextSizeMinimumValue()"
                         x-bind:max="resolveMainTextSizeLimitsFor('maximum_main_text_size').max"
                         step="1"

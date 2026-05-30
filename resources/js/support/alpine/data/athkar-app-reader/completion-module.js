@@ -199,7 +199,7 @@ export const createCompletionModule = (deps) => {
             );
         },
 
-        handleTap() {
+        handleTap(event = null) {
             if (!this.activeMode) {
                 return;
             }
@@ -254,6 +254,10 @@ export const createCompletionModule = (deps) => {
             if (didIncrementCount) {
                 this.trackRapidTapBurst(required);
                 this.trackMaintenanceTap(index, required);
+
+                if (shouldAnimateTapFeedback) {
+                    this.triggerTapAuraRelease(index, event);
+                }
             }
 
             if (!this.isItemComplete(index)) {

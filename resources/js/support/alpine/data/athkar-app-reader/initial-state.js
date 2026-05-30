@@ -130,6 +130,19 @@ export const createInitialState = (config, deps) => {
             timer: null,
         },
 
+        tapAura: {
+            index: null,
+            clickActive: false,
+            isHolding: false,
+            releaseActive: false,
+            source: null,
+            pointerId: null,
+            xPercent: 50,
+            yPercent: 50,
+            clickTimer: null,
+            releaseTimer: null,
+        },
+
         originToggle: {
             mode: null,
             index: null,
@@ -224,6 +237,10 @@ export const createInitialState = (config, deps) => {
         isGateMenuTransition: true,
 
         pulseDurationMs: 520,
+
+        tapAuraClickDurationMs: 180,
+
+        tapAuraReleaseDurationMs: 620,
 
         topUiCompletionLingerMs: 1000,
 

@@ -187,6 +187,7 @@ export const createLifecycleModule = (deps) => {
                 this.clearRapidTapReleaseTimer();
                 this.hideCopyFeedback();
                 this.cancelHoldCopy();
+                this.clearTapAura();
                 this.unregisterNativeVolumeNavigation();
                 if (this._onAthkarFontScaleToggle) {
                     window.removeEventListener(
@@ -225,6 +226,7 @@ export const createLifecycleModule = (deps) => {
                 this.resetRapidTapMode();
                 this.closeHint();
                 this.resetSwipeState();
+                this.clearTapAura();
                 this.hideOrigin();
                 this.queueTextFit();
                 this.syncNativeVolumeNavigation();
@@ -234,6 +236,7 @@ export const createLifecycleModule = (deps) => {
                 this.resetMaintenanceTapTracking();
                 this.resetRapidTapMode();
                 this.closeHint();
+                this.clearTapAura();
                 this.hideOrigin();
                 this.queueTextFit();
             });
@@ -373,6 +376,7 @@ export const createLifecycleModule = (deps) => {
 
             if (!this.shouldEnableVisualEnhancements()) {
                 this.stopTextShimmer();
+                this.clearTapAura();
             }
 
             const didTextFitSettingsChange =

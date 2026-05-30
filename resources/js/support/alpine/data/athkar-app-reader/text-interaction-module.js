@@ -223,6 +223,290 @@ export const createTextInteractionModule = (deps) => {
             return `left: ${normalizedX}px; top: ${normalizedY}px;`;
         },
 
+        tapAuraStyle(index) {
+            const xPercent = Number(this.tapAura?.xPercent ?? 50);
+            const yPercent = Number(this.tapAura?.yPercent ?? 50);
+            const normalizedX = Number.isFinite(xPercent)
+                ? Math.max(0, Math.min(100, xPercent))
+                : 50;
+            const normalizedY = Number.isFinite(yPercent)
+                ? Math.max(0, Math.min(100, yPercent))
+                : 50;
+            const isActiveIndex = this.tapAura?.index === index;
+            const clickActive = isActiveIndex && this.tapAura?.clickActive === true;
+            const isHolding = isActiveIndex && this.tapAura?.isHolding === true;
+            const releaseActive = isActiveIndex && this.tapAura?.releaseActive === true;
+            const opacity = clickActive || isHolding || releaseActive ? 1 : 0;
+
+            return `--athkar-tap-aura-x: ${normalizedX}%; --athkar-tap-aura-y: ${normalizedY}%; opacity: ${opacity};`;
+        },
+
+        tapAuraSource(event) {
+            return event?.type?.startsWith('touch') ? 'touch' : 'pointer';
+        },
+
+        resolveTapAuraTarget(event = null) {
+            const directTarget =
+                event?.currentTarget?.closest?.('[data-athkar-tap]') ??
+                event?.target?.closest?.('[data-athkar-tap]');
+
+            if (directTarget instanceof Element) {
+                return directTarget;
+            }
+
+            return (
+                this.$el?.querySelector?.(
+                    '[data-athkar-slide][data-active="true"] [data-athkar-tap]',
+                ) ?? null
+            );
+        },
+
+        resolveTapAuraPoint(event = null, target = null) {
+            if (!(target instanceof Element)) {
+                return null;
+            }
+
+            const rect = target.getBoundingClientRect();
+
+            if (
+                !Number.isFinite(rect.width) ||
+                !Number.isFinite(rect.height) ||
+                rect.width <= 0 ||
+                rect.height <= 0
+            ) {
+                return null;
+            }
+
+            const point = this.swipePoint(event) ?? {
+                x: rect.left + rect.width / 2,
+                y: rect.top + rect.height / 2,
+                pointerType: event?.pointerType ?? 'mouse',
+                pointerId: event?.pointerId ?? null,
+            };
+
+            const boundedX = Math.max(0, Math.min(rect.width, point.x - rect.left));
+            const boundedY = Math.max(0, Math.min(rect.height, point.y - rect.top));
+
+            return {
+                xPercent: (boundedX / rect.width) * 100,
+                yPercent: (boundedY / rect.height) * 100,
+                pointerId: point.pointerId ?? null,
+            };
+        },
+
+        clearTapAuraTimers() {
+            if (this.tapAura.clickTimer !== null) {
+                clearTimeout(this.tapAura.clickTimer);
+                this.tapAura.clickTimer = null;
+            }
+
+            if (this.tapAura.releaseTimer !== null) {
+                clearTimeout(this.tapAura.releaseTimer);
+                this.tapAura.releaseTimer = null;
+            }
+        },
+
+        clearTapAura({ keepIndex = false } = {}) {
+            this.tapAura.isHolding = false;
+            this.tapAura.clickActive = false;
+            this.tapAura.releaseActive = false;
+            this.tapAura.source = null;
+            this.tapAura.pointerId = null;
+
+            if (!keepIndex) {
+                this.tapAura.index = null;
+            }
+
+            this.clearTapAuraTimers();
+        },
+
+        startTapAuraClickPhase() {
+            this.tapAura.clickActive = true;
+
+            if (this.tapAura.clickTimer !== null) {
+                clearTimeout(this.tapAura.clickTimer);
+            }
+
+            this.tapAura.clickTimer = window.setTimeout(
+                () => {
+                    this.tapAura.clickActive = false;
+                    this.tapAura.clickTimer = null;
+
+                    if (!this.tapAura.isHolding && !this.tapAura.releaseActive) {
+                        this.tapAura.index = null;
+                    }
+                },
+                Number(this.tapAuraClickDurationMs ?? 180),
+            );
+        },
+
+        startTapAuraReleasePhase() {
+            this.tapAura.releaseActive = true;
+
+            if (this.tapAura.releaseTimer !== null) {
+                clearTimeout(this.tapAura.releaseTimer);
+            }
+
+            this.tapAura.releaseTimer = window.setTimeout(
+                () => {
+                    this.tapAura.releaseActive = false;
+                    this.tapAura.releaseTimer = null;
+
+                    if (!this.tapAura.isHolding && !this.tapAura.clickActive) {
+                        this.tapAura.index = null;
+                    }
+                },
+                Number(this.tapAuraReleaseDurationMs ?? 620),
+            );
+        },
+
+        beginTapAuraHold(event, index) {
+            if (
+                !this.activeMode ||
+                this.activeIndex !== index ||
+                !this.shouldEnableVisualEnhancements()
+            ) {
+                this.clearTapAura();
+                return;
+            }
+
+            if (event?.pointerType === 'mouse' && event.button !== 0) {
+                return;
+            }
+
+            const source = this.tapAuraSource(event);
+
+            if (this.tapAura.source && this.tapAura.source !== source) {
+                return;
+            }
+
+            const target = this.resolveTapAuraTarget(event);
+            const point = this.resolveTapAuraPoint(event, target);
+
+            if (!point) {
+                return;
+            }
+
+            this.tapAura.index = index;
+            this.tapAura.isHolding = true;
+            this.tapAura.source = source;
+            this.tapAura.pointerId = point.pointerId;
+            this.tapAura.xPercent = point.xPercent;
+            this.tapAura.yPercent = point.yPercent;
+            this.tapAura.clickActive = false;
+            this.tapAura.releaseActive = false;
+
+            if (this.tapAura.releaseTimer !== null) {
+                clearTimeout(this.tapAura.releaseTimer);
+                this.tapAura.releaseTimer = null;
+            }
+        },
+
+        moveTapAuraHold(event) {
+            if (!this.tapAura?.isHolding || !this.shouldEnableVisualEnhancements()) {
+                return;
+            }
+
+            const source = this.tapAuraSource(event);
+
+            if (this.tapAura.source && this.tapAura.source !== source) {
+                return;
+            }
+
+            const target = this.resolveTapAuraTarget(event);
+            const point = this.resolveTapAuraPoint(event, target);
+
+            if (!point) {
+                return;
+            }
+
+            if (this.tapAura.pointerId !== null && point.pointerId !== this.tapAura.pointerId) {
+                return;
+            }
+
+            this.tapAura.xPercent = point.xPercent;
+            this.tapAura.yPercent = point.yPercent;
+        },
+
+        endTapAuraHold(event = null) {
+            if (!this.tapAura?.isHolding) {
+                return;
+            }
+
+            const source = this.tapAuraSource(event);
+
+            if (this.tapAura.source && this.tapAura.source !== source) {
+                return;
+            }
+
+            const target = this.resolveTapAuraTarget(event);
+            const point = this.resolveTapAuraPoint(event, target);
+
+            if (
+                point &&
+                (this.tapAura.pointerId === null || point.pointerId === this.tapAura.pointerId)
+            ) {
+                this.tapAura.xPercent = point.xPercent;
+                this.tapAura.yPercent = point.yPercent;
+            }
+
+            this.tapAura.isHolding = false;
+            this.tapAura.source = null;
+            this.tapAura.pointerId = null;
+        },
+
+        cancelTapAuraHold(event = null) {
+            if (!this.tapAura?.isHolding) {
+                return;
+            }
+
+            if (event) {
+                const source = this.tapAuraSource(event);
+
+                if (this.tapAura.source && this.tapAura.source !== source) {
+                    return;
+                }
+            }
+
+            this.tapAura.isHolding = false;
+            this.tapAura.source = null;
+            this.tapAura.pointerId = null;
+        },
+
+        triggerTapAuraRelease(index, event = null) {
+            if (!this.shouldEnableVisualEnhancements()) {
+                this.clearTapAura();
+                return;
+            }
+
+            const shouldResolveInteractionPoint = Boolean(event) || this.tapAura.index !== index;
+
+            if (shouldResolveInteractionPoint) {
+                const target = this.resolveTapAuraTarget(event);
+                const point = this.resolveTapAuraPoint(event, target);
+
+                if (point) {
+                    this.tapAura.xPercent = point.xPercent;
+                    this.tapAura.yPercent = point.yPercent;
+                }
+            }
+
+            if (
+                !Number.isFinite(this.tapAura.xPercent) ||
+                !Number.isFinite(this.tapAura.yPercent)
+            ) {
+                this.tapAura.xPercent = 50;
+                this.tapAura.yPercent = 50;
+            }
+
+            this.tapAura.index = index;
+            this.tapAura.isHolding = false;
+            this.tapAura.source = null;
+            this.tapAura.pointerId = null;
+            this.startTapAuraClickPhase();
+            this.startTapAuraReleasePhase();
+        },
+
         copyPointFromElement(element) {
             if (!(element instanceof Element)) {
                 return null;

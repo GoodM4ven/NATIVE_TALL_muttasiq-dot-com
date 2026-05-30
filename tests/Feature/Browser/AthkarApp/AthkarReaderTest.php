@@ -62,6 +62,60 @@ it('honors auto-advance and overcount settings on tap', function () {
     waitForScript($page, athkarReaderDataScript('data.countAt(data.activeIndex)'), 2);
 });
 
+it('shows hold-and-release tap aura only when visual enhancements are enabled', function () {
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
+
+    resetBrowserState($page);
+    openAthkarReader($page, 'sabah', false);
+
+    $settings = [
+        'does_automatically_switch_completed_athkar' => false,
+        'does_prevent_switching_athkar_until_completion' => false,
+        Setting::DOES_ENABLE_VISUAL_ENHANCEMENTS => true,
+    ];
+    setAthkarSettings($page, $settings);
+    waitForAthkarSettings($page, $settings);
+
+    scriptClick($page, '[data-athkar-slide][data-active="true"] [data-athkar-tap]');
+
+    waitForScriptWithTimeout(
+        $page,
+        athkarReaderDataScript(
+            'data.tapAura?.releaseActive === true',
+        ),
+        true,
+        2_000,
+    );
+
+    waitForScriptWithTimeout(
+        $page,
+        athkarReaderDataScript(
+            'data.tapAura?.clickActive === false && data.tapAura?.releaseActive === false',
+        ),
+        true,
+        2_500,
+    );
+
+    $settings = [
+        Setting::DOES_ENABLE_VISUAL_ENHANCEMENTS => false,
+    ];
+    setAthkarSettings($page, $settings);
+    waitForAthkarSettings($page, $settings);
+
+    scriptClick($page, '[data-athkar-slide][data-active="true"] [data-athkar-tap]');
+
+    waitForScriptWithTimeout(
+        $page,
+        athkarReaderDataScript(
+            'data.tapAura?.clickActive === false && data.tapAura?.releaseActive === false && data.tapAura?.isHolding === false',
+        ),
+        true,
+        1_500,
+    );
+
+    expect(true)->toBeTrue();
+});
+
 it('keeps the shared top counter full briefly, pulses it, then resets it after auto-advance', function (bool $isMobile) {
     $page = $isMobile ? visitMobile('/') : visit('/', ['waitUntil' => 'domcontentloaded']);
 
