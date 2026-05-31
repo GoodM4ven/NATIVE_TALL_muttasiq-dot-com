@@ -1861,11 +1861,7 @@ it('executes hidden completion buttons on desktop for single thikr and all athka
     waitForScript($page, 'Boolean(document.querySelector(".fi-modal-window"))', true);
     clickModalAction($page, 'نعم، أكملت قراءته');
 
-    waitForScript(
-        $page,
-        athkarReaderDataScript('data.countAt('.$multiIndex.') === data.requiredCount('.$multiIndex.')'),
-        true,
-    );
+    waitForScript($page, athkarReaderDataScript('data.isItemComplete('.$multiIndex.')'), true);
 
     $page->script(athkarReaderCommandScript('data.showCompletionHack({ pinned: true })'));
 
