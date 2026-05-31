@@ -1838,11 +1838,17 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
             }
         },
 
-        normalizeLayoutRequest({ revealDelayMs = 180, maxAttempts = 4, deferReveal = false } = {}) {
+        normalizeLayoutRequest({
+            revealDelayMs = 180,
+            maxAttempts = 4,
+            deferReveal = false,
+            forceRebalanceWordSpacing = false,
+        } = {}) {
             return {
                 revealDelayMs: Math.max(0, Math.trunc(Number(revealDelayMs) || 180)),
                 maxAttempts: Math.max(2, Math.trunc(Number(maxAttempts) || 4)),
                 deferReveal: Boolean(deferReveal),
+                forceRebalanceWordSpacing: Boolean(forceRebalanceWordSpacing),
             };
         },
 
@@ -1879,6 +1885,9 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                 deferReveal:
                     Boolean(this._queuedLayoutRequest.deferReveal) &&
                     Boolean(normalizedRequest.deferReveal),
+                forceRebalanceWordSpacing:
+                    Boolean(this._queuedLayoutRequest.forceRebalanceWordSpacing) ||
+                    Boolean(normalizedRequest.forceRebalanceWordSpacing),
             };
         },
     };

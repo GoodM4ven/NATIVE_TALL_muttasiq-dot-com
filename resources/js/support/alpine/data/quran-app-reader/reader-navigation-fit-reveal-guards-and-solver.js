@@ -904,6 +904,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 revealDelayMs: 130,
                 maxAttempts: 4,
                 useIdleFit: false,
+                forceRebalanceWordSpacing: true,
             });
 
             await this.waitForStablePageFrame({
@@ -921,6 +922,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                     revealDelayMs: 110,
                     maxAttempts: 3,
                     useIdleFit: false,
+                    forceRebalanceWordSpacing: true,
                 });
             }
 
@@ -1772,14 +1774,19 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             }
         },
 
-        async layoutPage({ revealDelayMs = 120, useIdleFit = true, deferReveal = false } = {}) {
+        async layoutPage({
+            revealDelayMs = 120,
+            useIdleFit = true,
+            deferReveal = false,
+            forceRebalanceWordSpacing = false,
+        } = {}) {
             const layoutToken = this.beginLayoutCycle();
             const shouldUseImmersiveChrome = this.shouldUseImmersiveReaderChrome();
             const stableTextFrames = shouldUseImmersiveChrome ? 4 : 6;
             const shouldRebalanceWordSpacing =
                 !shouldUseImmersiveChrome &&
-                !this._startupCalibrationPending &&
-                !this.isCalibrating;
+                !this.isCalibrating &&
+                (!this._startupCalibrationPending || Boolean(forceRebalanceWordSpacing));
 
             await this.nextTickAsync();
             if (!this.areTrackedPageFontsLoaded()) {
@@ -1836,11 +1843,13 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             maxAttempts = 4,
             useIdleFit = true,
             deferReveal = false,
+            forceRebalanceWordSpacing = false,
         } = {}) {
             const layoutRequest = this.normalizeLayoutRequest({
                 revealDelayMs,
                 maxAttempts,
                 deferReveal,
+                forceRebalanceWordSpacing,
             });
 
             if (this._layoutActivePromise) {
@@ -1859,6 +1868,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                         revealDelayMs: attempt === 0 ? layoutRequest.revealDelayMs : 108,
                         useIdleFit: shouldUseIdleFit,
                         deferReveal: Boolean(layoutRequest.deferReveal),
+                        forceRebalanceWordSpacing: Boolean(layoutRequest.forceRebalanceWordSpacing),
                     });
 
                     if (
