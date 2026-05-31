@@ -1062,7 +1062,7 @@
                 --quran-page-postfit-leading-tune: 1;
                 --quran-page-postfit-gap-tune: 1.2;
                 --quran-page-postfit-y-offset-tune: 0rem;
-                --quran-surah-header-no-basmallah-first-ayah-gap-scale: 0.3;
+                --quran-surah-header-no-basmallah-first-ayah-gap-scale: 0.5;
                 --quran-page-scale: 0.36;
                 --quran-page-type-scale: 1.47;
                 --quran-page-leading-multiplier: 0.9;
