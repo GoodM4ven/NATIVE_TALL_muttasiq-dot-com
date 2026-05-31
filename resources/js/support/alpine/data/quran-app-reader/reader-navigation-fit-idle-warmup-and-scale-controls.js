@@ -1142,6 +1142,10 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
                 0,
                 parsePostFitTuneValue('--quran-page-postfit-gap-tune', 1),
             );
+            const postFitPageScaleTune = Math.max(
+                0.05,
+                parsePostFitTuneValue('--quran-page-postfit-page-scale-tune', 1),
+            );
             const rawPostFitYOffsetTune = pageLinesComputedStyle.getPropertyValue(
                 '--quran-page-postfit-y-offset-tune',
             );
@@ -1149,9 +1153,12 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
                 rawPostFitYOffsetTune && rawPostFitYOffsetTune.trim() !== ''
                     ? rawPostFitYOffsetTune.trim()
                     : '0rem';
+            const postFitScale = forFitting
+                ? effectiveScale
+                : Number((effectiveScale * postFitPageScaleTune).toFixed(4));
 
             scaleTargets.forEach((targetElement) => {
-                targetElement.style.setProperty('--quran-page-scale', String(effectiveScale));
+                targetElement.style.setProperty('--quran-page-scale', String(postFitScale));
                 targetElement.style.setProperty(
                     '--quran-page-type-scale-effective',
                     String(boostedTypeScale),

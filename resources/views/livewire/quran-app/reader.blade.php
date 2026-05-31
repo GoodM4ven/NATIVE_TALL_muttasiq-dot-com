@@ -134,6 +134,7 @@
 
         .quran-page-lines {
             transform: translate3d(0, calc(var(--quran-page-y-offset, 0rem) + var(--quran-page-y-offset-adjust, 0rem) + var(--quran-page-postfit-y-offset-tune-effective, var(--quran-page-postfit-y-offset-tune, 0rem)) + var(--quran-page-dense-short-y-offset-adjust, 0rem) + var(--quran-page-headered-long-compact-y-offset-adjust, 0rem)), 0);
+            --quran-page-postfit-page-scale-tune: 1;
         }
 
         .quran-font-scale-overlay {
@@ -913,6 +914,8 @@
                 --quran-page-surah-header-scale: 1;
                 --quran-basmallah-bottom-gap-scale: -0.295;
                 --quran-page-y-offset: 0rem;
+                --quran-page-postfit-type-tune: 1.2;
+                --quran-page-postfit-gap-tune: 1.1;
             }
 
             .quran-page-lines--dense {
@@ -921,17 +924,19 @@
                 --quran-page-dense-type-multiplier: 0.97;
                 --quran-page-dense-y-offset: 0.08rem;
                 --quran-page-y-offset: -0.52rem;
-                --quran-page-scale: 0.34;
+                --quran-page-scale: 0.3;
                 --quran-page-type-scale: 1.66;
                 --quran-page-leading-multiplier: 1;
                 --quran-page-gap-multiplier: 0.76;
                 --quran-page-surah-header-scale: 1;
                 --quran-basmallah-bottom-gap-scale: -0.295;
+                --quran-page-postfit-page-scale-tune: 0.65;
+                --quran-page-postfit-type-tune: 1.05;
             }
 
             .quran-page-lines--dense-short {
                 --quran-page-dense-short-leading-tune: 1.04;
-                --quran-page-dense-short-gap-tune: 1.05;
+                --quran-page-dense-short-gap-tune: 1.35;
                 --quran-page-dense-short-y-offset-tune: 0rem;
             }
 
@@ -939,24 +944,25 @@
                 --quran-page-headered-type-multiplier: 0.98;
                 --quran-page-headered-leading-multiplier: 1.24;
                 --quran-page-headered-gap-multiplier: 1.54;
-                --quran-page-postfit-type-tune: 1;
+                --quran-page-postfit-page-scale-tune: 0.75;
+                --quran-page-postfit-type-tune: 1.05;
                 --quran-page-postfit-leading-tune: 1;
-                --quran-page-postfit-gap-tune: 1;
+                --quran-page-postfit-gap-tune: 1.05;
                 --quran-page-postfit-y-offset-tune: 0rem;
-                --quran-surah-header-no-basmallah-first-ayah-gap-scale: -0.1;
-                --quran-page-scale: 0.38;
+                --quran-surah-header-no-basmallah-first-ayah-gap-scale: 0.5;
+                --quran-page-scale: 0.3;
                 --quran-page-type-scale: 1.4;
                 --quran-page-leading-multiplier: 0.6;
                 --quran-page-gap-multiplier: 0.65;
-                --quran-page-surah-header-scale: 0.7;
+                --quran-page-surah-header-scale: 0.6;
                 --quran-basmallah-bottom-gap-scale: -0.695;
-                --quran-page-y-offset: -0.5rem;
+                --quran-page-y-offset: -0.7rem;
             }
 
             .quran-page-lines--headered-long-compact {
                 --quran-page-headered-long-compact-type-tune: 1;
                 --quran-page-headered-long-compact-leading-tune: 1;
-                --quran-page-headered-long-compact-gap-tune: 1;
+                --quran-page-headered-long-compact-gap-tune: 1.3;
                 --quran-page-headered-long-compact-y-offset-tune: 0rem;
                 --quran-page-headered-long-compact-surah-section-gap-scale: 0.5;
             }
@@ -972,6 +978,8 @@
                 --quran-page-surah-header-scale: 0.7;
                 --quran-basmallah-bottom-gap-scale: -0.695;
                 --quran-page-y-offset: -0.5rem;
+                --quran-page-postfit-type-tune: 1.05;
+                --quran-page-postfit-gap-tune: 1.15;
             }
         }
 
@@ -1017,6 +1025,9 @@
                 --quran-page-surah-header-scale: 0.7;
                 --quran-basmallah-bottom-gap-scale: -0.3;
                 --quran-page-y-offset: -0.4rem;
+                --quran-page-postfit-page-scale-tune: 0.8;
+                --quran-page-postfit-type-tune: 1.05;
+                --quran-page-postfit-gap-tune: 1.1;
             }
 
             .quran-page-lines--dense {
@@ -1031,21 +1042,25 @@
                 --quran-page-gap-multiplier: 0.56;
                 --quran-page-surah-header-scale: 1;
                 --quran-basmallah-bottom-gap-scale: -0.3;
+                --quran-page-postfit-type-tune: 1.1;
+                --quran-page-postfit-gap-tune: 1.06;
             }
 
             .quran-page-lines--dense-short {
                 --quran-page-dense-short-leading-tune: 1.03;
-                --quran-page-dense-short-gap-tune: 1.04;
+                --quran-page-dense-short-gap-tune: 1.2;
                 --quran-page-dense-short-y-offset-tune: 0rem;
+                --quran-page-postfit-type-tune: 1.1;
             }
 
             .quran-page-lines--headered-long {
                 --quran-page-headered-type-multiplier: 1.034;
                 --quran-page-headered-leading-multiplier: 1.1;
                 --quran-page-headered-gap-multiplier: 1.2;
-                --quran-page-postfit-type-tune: 1;
+                --quran-page-postfit-page-scale-tune: 0.9;
+                --quran-page-postfit-type-tune: 1.32;
                 --quran-page-postfit-leading-tune: 1;
-                --quran-page-postfit-gap-tune: 1;
+                --quran-page-postfit-gap-tune: 1.2;
                 --quran-page-postfit-y-offset-tune: 0rem;
                 --quran-surah-header-no-basmallah-first-ayah-gap-scale: 0.3;
                 --quran-page-scale: 0.36;
@@ -1060,7 +1075,7 @@
             .quran-page-lines--headered-long-compact {
                 --quran-page-headered-long-compact-type-tune: 1;
                 --quran-page-headered-long-compact-leading-tune: 1;
-                --quran-page-headered-long-compact-gap-tune: 1;
+                --quran-page-headered-long-compact-gap-tune: 1.15;
                 --quran-page-headered-long-compact-y-offset-tune: 0rem;
                 --quran-page-headered-long-compact-surah-section-gap-scale: 0.5;
             }
@@ -1076,6 +1091,8 @@
                 --quran-page-surah-header-scale: 0.7;
                 --quran-basmallah-bottom-gap-scale: -0.3;
                 --quran-page-y-offset: -0.2rem;
+                --quran-page-postfit-type-tune: 1.13;
+                --quran-page-postfit-gap-tune: 1.16;
             }
         }
 
@@ -2935,7 +2952,7 @@
                 transform: translateX(0.5rem) scale(1);
             }
         }
-        
+
         @media (min-width: 1280px) and (max-width: 1535px) {
             .quran-top-strip:not(.quran-top-strip--wird-active) .quran-soorah-trigger:hover .quran-soorah-trigger-icon {
                 transform: translateX(0.1rem) scale(1);
@@ -3582,7 +3599,7 @@
             </section>
         @else
             <section
-                class="quran-reader-panel min-w-75 3xl:h-204 3xl:w-148 4xl:h-202 4xl:w-160 Xoverflow-hidden 2xl:w-124 2xl:h-166 xl:h-148 xl:w-108 relative flex h-[min(88svh,38rem)] w-[min(91vw,22rem)] flex-col rounded-t-2xl border sm:h-[min(82svh,50rem)] sm:w-[min(82vw,32rem)] sm:rounded-[1.75rem] md:h-[min(84svh,54rem)] md:w-[min(92vw,35rem)] lg:h-[min(92svh,44rem)] lg:w-[min(78vw,28rem)]"
+                class="quran-reader-panel min-w-75 3xl:h-204 3xl:w-148 4xl:h-202 4xl:w-160 Xoverflow-hidden 2xl:w-124 2xl:h-166 xl:h-148 xl:w-100 relative flex h-[min(88svh,38rem)] w-[min(91vw,22rem)] flex-col rounded-t-2xl border sm:h-[min(82svh,50rem)] sm:w-[min(82vw,32rem)] sm:rounded-[1.75rem] md:h-[min(84svh,54rem)] md:w-[min(92vw,35rem)] lg:h-[min(92svh,44rem)] lg:w-[min(78vw,28rem)]"
                 x-bind:style="readerPanelStyle()"
                 x-bind:class="{
                     'quran-reader-panel--calibrating': isCalibrating || _startupCalibrationPending,
@@ -3792,7 +3809,7 @@
                         x-on:pointerdown.outside="closeSurahQuickNavigator()"
                     >
                         <button
-                            class="quran-soorah-trigger 3xl:w-[12.4rem] 4xl:w-[13.4rem] 4xl:px-[2.35rem] 4xl:py-[0.42rem] 4xl:text-[0.95rem] 4xl:min-h-[2.2rem] w-29 md:w-47 3xl:min-h-[2.15rem] 3xl:px-[2.28rem] 2xl:w-35 3xl:text-[0.93rem] lg:w-31 min-h-[2.08rem] shrink-0 px-[1.7rem] py-[0.34rem] text-[0.7rem] outline-none sm:min-h-8 sm:w-44 sm:px-[1.95rem] sm:py-[0.36rem] sm:text-[0.84rem] md:min-h-9 md:px-[2.1rem] md:py-[0.38rem] md:text-[0.95rem] lg:min-h-[1.7rem] lg:px-[2.2rem] lg:py-[0.4rem] lg:text-[0.7rem] xl:min-h-[1.8rem] xl:w-32 xl:px-[1.9rem] xl:text-[0.66rem] 2xl:min-h-[1.85rem] 2xl:px-[1.95rem] 2xl:text-[0.7rem]"
+                            class="quran-soorah-trigger 3xl:w-[12.4rem] 4xl:w-[13.4rem] 4xl:px-[2.35rem] 4xl:py-[0.42rem] 4xl:text-[0.95rem] 4xl:min-h-[2.2rem] w-29 md:w-47 3xl:min-h-[2.15rem] 3xl:px-[2.28rem] 2xl:w-35 3xl:text-[0.93rem] lg:w-31 min-h-[2.08rem] shrink-0 px-[1.7rem] py-[0.34rem] text-[0.7rem] outline-none sm:min-h-8 sm:w-44 sm:px-[1.95rem] sm:py-[0.36rem] sm:text-[0.84rem] md:min-h-9 md:px-[2.1rem] md:py-[0.38rem] md:text-[0.95rem] lg:min-h-[1.7rem] lg:px-[2.2rem] lg:py-[0.4rem] lg:text-[0.7rem] xl:min-h-[1.8rem] xl:w-27 xl:px-[1.9rem] xl:text-[0.56rem] 2xl:min-h-[1.85rem] 2xl:px-[1.95rem] 2xl:text-[0.7rem]"
                             type="button"
                             dir="rtl"
                             x-show="($store.bp.is('base') && !wirdModeActive) || $store.bp.is('sm+')"
@@ -3833,7 +3850,7 @@
                             x-bind:inert="surahQuickNavigator.visible && !wirdModeActive ? null : ''"
                         >
                             <button
-                                class="quran-soorah-quick-nav-button quran-soorah-quick-nav-button--top inline-[2.1rem] md:inline-[2.3rem] lg:inline-[2.1rem] block-[1.72rem] md:block-[1.82rem] lg:block-[1.72rem] 3xl:inline-[2.1rem] 3xl:block-[1.72rem] 2xl:inline-8 2xl:block-[1.55rem] xl:block-[1.6rem] 3xl:inset-be-[calc(100%+1.4rem)] 3xl:transform-[translateX(-50%)] 4xl:inset-be-[calc(100%+1.5rem)] 4xl:transform-[translateX(-50%)] inset-bs-[calc(100%+1.35rem)] transform-[translateX(65%)] sm:inset-be-[calc(100%+1.4rem)] sm:transform-[translateX(10%)] md:inset-be-[calc(100%+1.65rem)] md:inset-bs-[calc(100%+1.65rem)] md:transform-[translateX(-100%)] lg:inset-be-[calc(100%+1.4rem)] lg:inset-bs-[calc(100%+1.35rem)] lg:transform-[translateX(30%)] xl:inset-be-[calc(100%+1.3rem)] xl:transform-[translateX(-50%)] 2xl:inset-be-[calc(100%+1.3rem)] 2xl:transform-[translateX(-50%)]"
+                                class="quran-soorah-quick-nav-button quran-soorah-quick-nav-button--top inline-[2.1rem] md:inline-[2.3rem] lg:inline-[2.1rem] block-[1.72rem] md:block-[1.82rem] lg:block-[1.72rem] 3xl:inline-[2.1rem] 3xl:block-[1.72rem] 2xl:inline-8 2xl:block-[1.55rem] xl:block-[1.6rem] 3xl:inset-be-[calc(100%+1.4rem)] 3xl:transform-[translateX(-50%)] 4xl:inset-be-[calc(100%+1.5rem)] 4xl:transform-[translateX(-50%)] inset-bs-[calc(100%+1.35rem)] transform-[translateX(65%)] sm:inset-be-[calc(100%+1.4rem)] sm:transform-[translateX(10%)] md:inset-be-[calc(100%+1.65rem)] md:inset-bs-[calc(100%+1.65rem)] md:transform-[translateX(-100%)] lg:inset-be-[calc(100%+1.4rem)] lg:inset-bs-[calc(100%+1.35rem)] lg:transform-[translateX(30%)] xl:inset-be-[calc(100%+1.3rem)] xl:inset-bs-[calc(100%+1.25rem)] xl:transform-[translateX(60%)] 2xl:inset-be-[calc(100%+1.3rem)] 2xl:inset-bs-[calc(100%+1.35rem)] 2xl:transform-[translateX(70%)]"
                                 type="button"
                                 aria-label="{{ arabic_text('السورة السابقة') }}"
                                 x-bind:disabled="isSurahQuickNavigatorPreviousDisabled()"

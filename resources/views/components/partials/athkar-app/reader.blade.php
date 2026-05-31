@@ -1557,7 +1557,7 @@
 
                         <template x-if="requiredCount(activeIndex) > 1">
                             <button
-                                class="bg-success-500/90 z-9999 absolute bottom-0 right-0 flex h-6 w-6 md:h-8 md:w-8 items-center justify-center rounded-full text-white shadow-lg transition-all duration-200"
+                                class="bg-success-500/90 z-9999 absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-full text-white shadow-lg transition-all duration-200 md:h-8 md:w-8"
                                 type="button"
                                 aria-label="{{ arabic_text('إتمام الذكر') }}"
                                 tabindex="-1"
