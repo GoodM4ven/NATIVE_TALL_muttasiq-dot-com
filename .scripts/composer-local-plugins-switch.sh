@@ -43,10 +43,7 @@ detect_local_forced_version() {
     echo "1.0.999999"
 }
 
-find_matching_repository_keys() {
-    local target_directory_name
-    target_directory_name="$(basename "${package_path}")"
-
+has_matching_repositories() {
     php -r '
         $composer = json_decode(file_get_contents("composer.json"), true);
         $repositories = $composer["repositories"] ?? [];
@@ -54,7 +51,7 @@ find_matching_repository_keys() {
         $repositoryKey = $argv[2];
         $targetDirectoryName = $argv[3];
 
-        foreach ($repositories as $key => $repository) {
+        foreach ($repositories as $repository) {
             if (! is_array($repository)) {
                 continue;
             }
@@ -67,31 +64,55 @@ find_matching_repository_keys() {
             $url = (string) ($repository["url"] ?? "");
             $urlDirectoryName = $url !== "" ? basename(rtrim($url, "/\\")) : "";
 
-            $matchesByKey = (string) $key === $repositoryKey;
             $matchesByName = ($repository["name"] ?? null) === $repositoryKey;
             $matchesByVersion = is_array($versions) && array_key_exists($packageName, $versions);
             $matchesByDirectory = $urlDirectoryName !== "" && $urlDirectoryName === $targetDirectoryName;
 
-            if ($matchesByKey || $matchesByName || $matchesByVersion || $matchesByDirectory) {
-                echo $key . PHP_EOL;
+            if ($matchesByName || $matchesByVersion || $matchesByDirectory) {
+                echo "1";
+                break;
             }
         }
-    ' "${package_name}" "${repository_key}" "${target_directory_name}"
+    ' "${package_name}" "${repository_key}" "$(basename "${package_path}")"
 }
 
 remove_matching_repositories() {
-    local matching_repository_keys="$1"
+    php -r '
+        $composerPath = "composer.json";
+        $composer = json_decode(file_get_contents($composerPath), true);
+        $repositories = $composer["repositories"] ?? [];
+        $packageName = $argv[1];
+        $repositoryKey = $argv[2];
+        $targetDirectoryName = $argv[3];
 
-    if [[ -z "${matching_repository_keys}" ]]; then
-        return 0
-    fi
+        $composer["repositories"] = array_values(array_filter(
+            $repositories,
+            function (mixed $repository) use ($packageName, $repositoryKey, $targetDirectoryName): bool {
+                if (! is_array($repository)) {
+                    return true;
+                }
 
-    while IFS= read -r matching_repository_key; do
-        if [[ -z "${matching_repository_key}" ]]; then
-            continue
-        fi
-        composer config --unset "repositories.${matching_repository_key}"
-    done <<<"${matching_repository_keys}"
+                if (($repository["type"] ?? null) !== "path") {
+                    return true;
+                }
+
+                $versions = $repository["options"]["versions"] ?? [];
+                $url = (string) ($repository["url"] ?? "");
+                $urlDirectoryName = $url !== "" ? basename(rtrim($url, "/\\")) : "";
+
+                $matchesByName = ($repository["name"] ?? null) === $repositoryKey;
+                $matchesByVersion = is_array($versions) && array_key_exists($packageName, $versions);
+                $matchesByDirectory = $urlDirectoryName !== "" && $urlDirectoryName === $targetDirectoryName;
+
+                return ! ($matchesByName || $matchesByVersion || $matchesByDirectory);
+            }
+        ));
+
+        file_put_contents(
+            $composerPath,
+            json_encode($composer, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . PHP_EOL
+        );
+    ' "${package_name}" "${repository_key}" "$(basename "${package_path}")"
 }
 
 enable_local_repository() {
@@ -119,28 +140,28 @@ cd "${root_dir}"
 
 package_constraint="$(php -r '$composer = json_decode(file_get_contents("composer.json"), true); $pkg = $argv[1]; echo $composer["require"][$pkg] ?? $composer["require-dev"][$pkg] ?? "";' "${package_name}")"
 local_forced_version="${forced_version_input:-$(detect_local_forced_version "${package_constraint}")}"
-matching_repository_keys="$(find_matching_repository_keys)"
+has_matching_repository="$(has_matching_repositories)"
 
 if [[ "${action}" == "off" ]]; then
-    if [[ -z "${matching_repository_keys}" ]]; then
+    if [[ -z "${has_matching_repository}" ]]; then
         echo "[composer-local-plugins-switch] already disabled for ${package_name}"
         exit 0
     fi
 
-    remove_matching_repositories "${matching_repository_keys}"
+    remove_matching_repositories
     run_package_update
     echo "[composer-local-plugins-switch] disabled local path repository for ${package_name}"
     exit 0
 fi
 
-if [[ "${action}" == "toggle" && -n "${matching_repository_keys}" ]]; then
-    remove_matching_repositories "${matching_repository_keys}"
+if [[ "${action}" == "toggle" && -n "${has_matching_repository}" ]]; then
+    remove_matching_repositories
     run_package_update
     echo "[composer-local-plugins-switch] disabled local path repository for ${package_name}"
     exit 0
 fi
 
-remove_matching_repositories "${matching_repository_keys}"
+remove_matching_repositories
 enable_local_repository
 run_package_update
 echo "[composer-local-plugins-switch] enabled local path repository for ${package_name}"
