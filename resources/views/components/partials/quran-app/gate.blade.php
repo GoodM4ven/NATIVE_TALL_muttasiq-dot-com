@@ -784,7 +784,7 @@
     x-transition:enter="transition-[opacity,transform] ease-out duration-380"
     x-transition:enter-start="opacity-0! scale-[0.985]"
     x-transition:enter-end="opacity-100 scale-100"
-    x-transition:leave="transition-[opacity] ease-in duration-180!"
+    x-transition:leave="transition-opacity ease-in duration-180!"
     x-transition:leave-start="opacity-100"
     x-transition:leave-end="opacity-0!"
 >
@@ -804,7 +804,7 @@
         x-on:touchcancel="handleTouchEnd($event)"
     >
         <p
-            class="quran-app-gate-caption 3xl:top-8 3xl:px-[1.05rem] 3xl:py-[0.6rem] 3xl:text-[1rem] 4xl:top-10 4xl:px-[1.05rem] 4xl:py-[0.65rem] 4xl:text-[1.3rem] xl:top-6.5 top-[1.76rem] px-[0.72rem] py-[0.26rem] text-[0.62rem] sm:top-[1.85rem] sm:px-[1.05rem] sm:py-[0.6rem] sm:text-[0.82rem] md:top-8 md:px-4 md:py-2 md:text-[0.9rem] lg:top-6 lg:px-[1.05rem] lg:py-[0.6rem] lg:text-[1rem] xl:px-[0.85rem] xl:py-[0.45rem] xl:text-[0.75rem] 2xl:top-[1.9rem] 2xl:px-3 2xl:py-2 2xl:text-[0.75rem]">
+            class="quran-app-gate-caption 3xl:top-8 3xl:px-[0.95rem] 3xl:py-2 3xl:text-[0.9rem] 4xl:top-10 4xl:px-[0.95rem] 4xl:py-[0.55rem] 4xl:text-[1.1rem] xl:top-6.5 top-[1.76rem] px-[0.72rem] py-[0.26rem] text-[0.62rem] sm:top-[1.85rem] sm:px-[1.05rem] sm:py-[0.6rem] sm:text-[0.82rem] md:top-8 md:px-4 md:py-2 md:text-[0.9rem] lg:top-6 lg:px-[0.925rem] lg:py-2 lg:text-[0.875rem] xl:px-[0.85rem] xl:py-[0.45rem] xl:text-[0.75rem] 2xl:top-[1.9rem] 2xl:px-3 2xl:py-2 2xl:text-[0.75rem]">
             {{ arabic_text('اختر نمط القراءة الذي يناسب مقصدك') }}</p>
 
         <button
@@ -909,7 +909,7 @@
                     class="quran-app-sector__chip-lock 3xl:gap-[0.46rem] 3xl:px-[0.72rem] 3xl:py-[0.38rem] 4xl:gap-[0.46rem] 4xl:px-[0.72rem] 4xl:py-[0.38rem] gap-[0.3rem] px-[0.52rem] py-[0.28rem] sm:gap-[0.46rem] sm:px-[0.72rem] sm:py-[0.38rem] md:gap-[0.46rem] md:px-[0.72rem] md:py-[0.38rem] lg:gap-[0.46rem] lg:px-[0.72rem] lg:py-[0.38rem] xl:gap-[0.46rem] xl:px-[0.72rem] xl:py-[0.38rem] 2xl:gap-[0.46rem] 2xl:px-[0.72rem] 2xl:py-[0.38rem]"
                 >
                     <x-icon
-                        class="quran-app-sector__chip-lock-icon 3xl:w-[1.55rem] 3xl:h-[1.55rem] 4xl:w-[1.7rem] 4xl:h-[1.7rem] h-[1.2rem] w-[1.2rem] sm:h-[1rem] sm:w-[1rem] md:h-[1rem] md:w-[1rem] lg:h-[0.93rem] lg:w-[0.93rem] xl:h-[1.1rem] xl:w-[1.1rem] 2xl:h-[1.05rem] 2xl:w-[1.05rem]"
+                        class="quran-app-sector__chip-lock-icon 3xl:w-[1.55rem] 3xl:h-[1.55rem] 4xl:w-[1.7rem] 4xl:h-[1.7rem] h-[1.2rem] w-[1.2rem] sm:h-4 sm:w-4 md:h-4 md:w-4 lg:h-[0.93rem] lg:w-[0.93rem] xl:h-[1.1rem] xl:w-[1.1rem] 2xl:h-[1.05rem] 2xl:w-[1.05rem]"
                         :name="'heroicon-o-lock-closed'"
                     />
                     <span
@@ -971,7 +971,7 @@
                     class="quran-app-sector__chip-lock 3xl:gap-[0.46rem] 3xl:px-[0.72rem] 3xl:py-[0.38rem] 4xl:gap-[0.46rem] 4xl:px-[0.72rem] 4xl:py-[0.38rem] gap-[0.3rem] px-[0.52rem] py-[0.28rem] sm:gap-[0.46rem] sm:px-[0.72rem] sm:py-[0.38rem] md:gap-[0.46rem] md:px-[0.72rem] md:py-[0.38rem] lg:gap-[0.46rem] lg:px-[0.72rem] lg:py-[0.38rem] xl:gap-[0.46rem] xl:px-[0.72rem] xl:py-[0.38rem] 2xl:gap-[0.46rem] 2xl:px-[0.72rem] 2xl:py-[0.38rem]"
                 >
                     <x-icon
-                        class="quran-app-sector__chip-lock-icon 3xl:w-[1.7rem] 3xl:h-[1.7rem] 4xl:w-[1.7rem] 4xl:h-[1.7rem] h-[1.2rem] w-[1.2rem] sm:h-[1rem] sm:w-[1rem] md:h-[1rem] md:w-[1rem] lg:h-[0.93rem] lg:w-[0.93rem] xl:h-[1.6rem] xl:w-[1.6rem] 2xl:h-[1.7rem] 2xl:w-[1.7rem]"
+                        class="quran-app-sector__chip-lock-icon 3xl:w-[1.7rem] 3xl:h-[1.7rem] 4xl:w-[1.7rem] 4xl:h-[1.7rem] h-[1.2rem] w-[1.2rem] sm:h-4 sm:w-4 md:h-4 md:w-4 lg:h-[0.93rem] lg:w-[0.93rem] xl:h-[1.6rem] xl:w-[1.6rem] 2xl:h-[1.7rem] 2xl:w-[1.7rem]"
                         :name="'heroicon-o-lock-closed'"
                     />
                     <span
