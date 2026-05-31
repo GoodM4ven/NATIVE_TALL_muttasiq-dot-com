@@ -640,8 +640,8 @@
                 --quran-page-surah-header-scale: 0.812;
                 --quran-basmallah-bottom-gap-scale: -0.285;
                 --quran-page-y-offset: -0.5rem;
-                --quran-page-postfit-type-tune: 1.19;
-                --quran-page-postfit-gap-tune: 1.2;
+                --quran-page-postfit-type-tune: 1.25;
+                --quran-page-postfit-gap-tune: 1.18;
             }
         }
 
@@ -738,9 +738,9 @@
             }
 
             .quran-page-lines--headered-long-compact {
-                --quran-page-headered-long-compact-type-tune: 1;
+                --quran-page-headered-long-compact-type-tune: 0.94;
                 --quran-page-headered-long-compact-leading-tune: 1;
-                --quran-page-headered-long-compact-gap-tune: 1;
+                --quran-page-headered-long-compact-gap-tune: 1.1;
                 --quran-page-headered-long-compact-y-offset-tune: 0rem;
                 --quran-page-headered-long-compact-surah-section-gap-scale: 0.5;
             }
@@ -818,23 +818,22 @@
                 --quran-page-gap-multiplier: 0.69;
                 --quran-page-surah-header-scale: 1.02;
                 --quran-basmallah-bottom-gap-scale: -0.295;
+                --quran-page-postfit-type-tune: 1.4;
+                --quran-page-postfit-gap-tune: 1;
             }
 
             .quran-page-lines--dense-short {
                 --quran-page-dense-short-leading-tune: 1.05;
-                --quran-page-dense-short-gap-tune: 1.06;
+                --quran-page-dense-short-gap-tune: 1.17;
                 --quran-page-dense-short-y-offset-tune: 0rem;
+                --quran-page-postfit-type-tune: 1.35;
             }
 
             .quran-page-lines--headered-long {
                 --quran-page-headered-type-multiplier: 0.92;
                 --quran-page-headered-leading-multiplier: 1.24;
                 --quran-page-headered-gap-multiplier: 1.44;
-                --quran-page-postfit-type-tune: 1;
-                --quran-page-postfit-leading-tune: 1;
-                --quran-page-postfit-gap-tune: 1;
-                --quran-page-postfit-y-offset-tune: 0rem;
-                --quran-surah-header-no-basmallah-first-ayah-gap-scale: -0.1;
+                --quran-surah-header-no-basmallah-first-ayah-gap-scale: 0.5;
                 --quran-page-scale: 0.46;
                 --quran-page-type-scale: 1.4;
                 --quran-page-leading-multiplier: 0.6;
@@ -842,12 +841,16 @@
                 --quran-page-surah-header-scale: 0.7;
                 --quran-basmallah-bottom-gap-scale: -0.5;
                 --quran-page-y-offset: -0.5rem;
+                --quran-page-postfit-type-tune: 1.37;
+                --quran-page-postfit-leading-tune: 1.16;
+                --quran-page-postfit-gap-tune: 1.1;
+                --quran-page-postfit-y-offset-tune: -0.4rem;
             }
 
             .quran-page-lines--headered-long-compact {
-                --quran-page-headered-long-compact-type-tune: 1;
+                --quran-page-headered-long-compact-type-tune: 0.9;
                 --quran-page-headered-long-compact-leading-tune: 1;
-                --quran-page-headered-long-compact-gap-tune: 1;
+                --quran-page-headered-long-compact-gap-tune: 1.1;
                 --quran-page-headered-long-compact-y-offset-tune: 0rem;
                 --quran-page-headered-long-compact-surah-section-gap-scale: 0.5;
             }
@@ -863,6 +866,8 @@
                 --quran-page-surah-header-scale: 0.58;
                 --quran-basmallah-bottom-gap-scale: -0.495;
                 --quran-page-y-offset: -0.5rem;
+                --quran-page-postfit-type-tune: 1.3;
+                --quran-page-postfit-gap-tune: 1.15;
             }
         }
 
@@ -2925,6 +2930,12 @@
             transform: translateX(-0.2rem) scale(1);
         }
 
+        @media (min-width: 1024px) and (max-width: 1279px) {
+            .quran-top-strip:not(.quran-top-strip--wird-active) .quran-soorah-trigger:hover .quran-soorah-trigger-icon {
+                transform: translateX(0.5rem) scale(1);
+            }
+        }
+        
         @media (min-width: 1280px) and (max-width: 1535px) {
             .quran-top-strip:not(.quran-top-strip--wird-active) .quran-soorah-trigger:hover .quran-soorah-trigger-icon {
                 transform: translateX(0.1rem) scale(1);
@@ -3571,7 +3582,7 @@
             </section>
         @else
             <section
-                class="quran-reader-panel min-w-75 3xl:h-204 3xl:w-148 4xl:h-202 4xl:w-160 Xoverflow-hidden 2xl:w-124 2xl:h-166 xl:h-148 xl:w-108 relative flex h-[min(88svh,38rem)] w-[min(91vw,22rem)] flex-col rounded-t-2xl border sm:h-[min(82svh,50rem)] sm:w-[min(82vw,32rem)] sm:rounded-[1.75rem] md:h-[min(84svh,54rem)] md:w-[min(92vw,35rem)] lg:h-[min(92svh,44rem)] lg:w-[min(92vw,31rem)]"
+                class="quran-reader-panel min-w-75 3xl:h-204 3xl:w-148 4xl:h-202 4xl:w-160 Xoverflow-hidden 2xl:w-124 2xl:h-166 xl:h-148 xl:w-108 relative flex h-[min(88svh,38rem)] w-[min(91vw,22rem)] flex-col rounded-t-2xl border sm:h-[min(82svh,50rem)] sm:w-[min(82vw,32rem)] sm:rounded-[1.75rem] md:h-[min(84svh,54rem)] md:w-[min(92vw,35rem)] lg:h-[min(92svh,44rem)] lg:w-[min(78vw,28rem)]"
                 x-bind:style="readerPanelStyle()"
                 x-bind:class="{
                     'quran-reader-panel--calibrating': isCalibrating || _startupCalibrationPending,
@@ -3781,7 +3792,7 @@
                         x-on:pointerdown.outside="closeSurahQuickNavigator()"
                     >
                         <button
-                            class="quran-soorah-trigger 3xl:w-[12.4rem] 4xl:w-[13.4rem] 4xl:px-[2.35rem] 4xl:py-[0.42rem] 4xl:text-[0.95rem] 4xl:min-h-[2.2rem] w-29 md:w-47 3xl:min-h-[2.15rem] 3xl:px-[2.28rem] 2xl:w-35 3xl:text-[0.93rem] lg:w-42 min-h-[2.08rem] shrink-0 px-[1.7rem] py-[0.34rem] text-[0.7rem] outline-none sm:min-h-8 sm:w-44 sm:px-[1.95rem] sm:py-[0.36rem] sm:text-[0.84rem] md:min-h-9 md:px-[2.1rem] md:py-[0.38rem] md:text-[0.95rem] lg:min-h-[2.1rem] lg:px-[2.2rem] lg:py-[0.4rem] lg:text-[0.8rem] xl:min-h-[1.8rem] xl:w-32 xl:px-[1.9rem] xl:text-[0.66rem] 2xl:min-h-[1.85rem] 2xl:px-[1.95rem] 2xl:text-[0.7rem]"
+                            class="quran-soorah-trigger 3xl:w-[12.4rem] 4xl:w-[13.4rem] 4xl:px-[2.35rem] 4xl:py-[0.42rem] 4xl:text-[0.95rem] 4xl:min-h-[2.2rem] w-29 md:w-47 3xl:min-h-[2.15rem] 3xl:px-[2.28rem] 2xl:w-35 3xl:text-[0.93rem] lg:w-31 min-h-[2.08rem] shrink-0 px-[1.7rem] py-[0.34rem] text-[0.7rem] outline-none sm:min-h-8 sm:w-44 sm:px-[1.95rem] sm:py-[0.36rem] sm:text-[0.84rem] md:min-h-9 md:px-[2.1rem] md:py-[0.38rem] md:text-[0.95rem] lg:min-h-[1.7rem] lg:px-[2.2rem] lg:py-[0.4rem] lg:text-[0.7rem] xl:min-h-[1.8rem] xl:w-32 xl:px-[1.9rem] xl:text-[0.66rem] 2xl:min-h-[1.85rem] 2xl:px-[1.95rem] 2xl:text-[0.7rem]"
                             type="button"
                             dir="rtl"
                             x-show="($store.bp.is('base') && !wirdModeActive) || $store.bp.is('sm+')"
@@ -3822,7 +3833,7 @@
                             x-bind:inert="surahQuickNavigator.visible && !wirdModeActive ? null : ''"
                         >
                             <button
-                                class="quran-soorah-quick-nav-button quran-soorah-quick-nav-button--top inline-[2.1rem] md:inline-[2.3rem] lg:inline-[2.1rem] block-[1.72rem] md:block-[1.82rem] lg:block-[1.72rem] 3xl:inline-[2.1rem] 3xl:block-[1.72rem] 2xl:inline-8 2xl:block-[1.55rem] xl:block-[1.6rem] 3xl:inset-be-[calc(100%+1.4rem)] 3xl:transform-[translateX(-50%)] 4xl:inset-be-[calc(100%+1.5rem)] 4xl:transform-[translateX(-50%)] inset-bs-[calc(100%+1.35rem)] transform-[translateX(65%)] sm:inset-be-[calc(100%+1.4rem)] sm:transform-[translateX(10%)] md:inset-be-[calc(100%+1.65rem)] md:transform-[translateX(-50%)] lg:inset-be-[calc(100%+1.4rem)] lg:transform-[translateX(-50%)] xl:inset-be-[calc(100%+1.3rem)] xl:transform-[translateX(-50%)] 2xl:inset-be-[calc(100%+1.3rem)] 2xl:transform-[translateX(-50%)]"
+                                class="quran-soorah-quick-nav-button quran-soorah-quick-nav-button--top inline-[2.1rem] md:inline-[2.3rem] lg:inline-[2.1rem] block-[1.72rem] md:block-[1.82rem] lg:block-[1.72rem] 3xl:inline-[2.1rem] 3xl:block-[1.72rem] 2xl:inline-8 2xl:block-[1.55rem] xl:block-[1.6rem] 3xl:inset-be-[calc(100%+1.4rem)] 3xl:transform-[translateX(-50%)] 4xl:inset-be-[calc(100%+1.5rem)] 4xl:transform-[translateX(-50%)] inset-bs-[calc(100%+1.35rem)] transform-[translateX(65%)] sm:inset-be-[calc(100%+1.4rem)] sm:transform-[translateX(10%)] md:inset-be-[calc(100%+1.65rem)] md:inset-bs-[calc(100%+1.65rem)] md:transform-[translateX(-100%)] lg:inset-be-[calc(100%+1.4rem)] lg:inset-bs-[calc(100%+1.35rem)] lg:transform-[translateX(30%)] xl:inset-be-[calc(100%+1.3rem)] xl:transform-[translateX(-50%)] 2xl:inset-be-[calc(100%+1.3rem)] 2xl:transform-[translateX(-50%)]"
                                 type="button"
                                 aria-label="{{ arabic_text('السورة السابقة') }}"
                                 x-bind:disabled="isSurahQuickNavigatorPreviousDisabled()"
@@ -3837,7 +3848,7 @@
                                 </svg>
                             </button>
                             <button
-                                class="quran-soorah-quick-nav-button quran-soorah-quick-nav-button--bottom inline-[2.1rem] md:inline-[2.3rem] lg:inline-[2.1rem] block-[1.72rem] md:block-[1.82rem] lg:block-[1.72rem] 3xl:inline-[2.1rem] 3xl:block-[1.72rem] 2xl:inline-8 2xl:block-[1.55rem] xl:block-[1.6rem] 3xl:inset-bs-[calc(100%+1.35rem)] 3xl:transform-[translateX(-50%)] 4xl:inset-bs-[calc(100%+1.45rem)] 4xl:transform-[translateX(-50%)] inset-bs-[calc(100%+1.35rem)] transform-[translateX(-50%)] sm:inset-bs-[calc(100%+1.35rem)] sm:transform-[translateX(-110%)] md:inset-bs-[calc(100%+1.65rem)] md:transform-[translateX(-50%)] lg:inset-bs-[calc(100%+1.35rem)] lg:transform-[translateX(-50%)] xl:inset-bs-[calc(100%+1.25rem)] xl:transform-[translateX(-50%)] 2xl:inset-bs-[calc(100%+1.35rem)] 2xl:transform-[translateX(-50%)]"
+                                class="quran-soorah-quick-nav-button quran-soorah-quick-nav-button--bottom inline-[2.1rem] md:inline-[2.3rem] lg:inline-[2.1rem] block-[1.72rem] md:block-[1.82rem] lg:block-[1.72rem] 3xl:inline-[2.1rem] 3xl:block-[1.72rem] 2xl:inline-8 2xl:block-[1.55rem] xl:block-[1.6rem] 3xl:inset-bs-[calc(100%+1.35rem)] 3xl:transform-[translateX(-50%)] 4xl:inset-bs-[calc(100%+1.45rem)] 4xl:transform-[translateX(-50%)] inset-bs-[calc(100%+1.35rem)] transform-[translateX(-50%)] sm:inset-bs-[calc(100%+1.35rem)] sm:transform-[translateX(-110%)] md:inset-bs-[calc(100%+1.65rem)] md:transform-[translateX(20%)] lg:inset-bs-[calc(100%+1.35rem)] lg:transform-[translateX(-80%)] xl:inset-bs-[calc(100%+1.25rem)] xl:transform-[translateX(-50%)] 2xl:inset-bs-[calc(100%+1.35rem)] 2xl:transform-[translateX(-50%)]"
                                 type="button"
                                 aria-label="{{ arabic_text('السورة التالية') }}"
                                 x-bind:disabled="isSurahQuickNavigatorNextDisabled()"
@@ -3859,7 +3870,7 @@
                     >
                         <!-- Credits: https://uiverse.io/vinodjangid07/tricky-bullfrog-41 -->
                         <button
-                            class="quran-history-toggle-button quran-top-actions-secondary 4xl:basis-[2.35rem] 4xl:inline-[2.35rem] 4xl:block-[2.35rem] 4xl:max-w-[2.35rem] block-[1.8rem] inline-[1.8rem] sm:block-[2.05rem] sm:inline-[2.05rem] md:block-[2.32rem] md:inline-[2.42rem] lg:block-[2.2rem] lg:inline-[2.2rem] xl:block-[1.9rem] xl:inline-[2.27rem] 2xl:block-[2.1rem] 3xl:block-[2.3rem] 2xl:inline-[2.3rem] 3xl:basis-[2.3rem] max-w-[1.8rem] shrink-0 basis-[1.8rem] outline-none sm:max-w-[2.05rem] sm:basis-[2.05rem] md:max-w-[2.52rem] md:basis-[2.36rem] lg:max-w-[2.2rem] lg:basis-[2.2rem] xl:max-w-[1.9rem] xl:basis-10 2xl:max-w-[2.3rem] 2xl:basis-[2.15rem]"
+                            class="quran-history-toggle-button quran-top-actions-secondary 4xl:basis-[2.35rem] 4xl:inline-[2.35rem] 4xl:block-[2.35rem] 4xl:max-w-[2.35rem] block-[1.8rem] inline-[1.8rem] sm:block-[2.05rem] sm:inline-[2.05rem] md:block-[2.32rem] md:inline-[2.42rem] lg:block-[1.8rem] lg:inline-[2.2rem] xl:block-[1.9rem] xl:inline-[2.27rem] 2xl:block-[2.1rem] 3xl:block-[2.3rem] 2xl:inline-[2.3rem] 3xl:basis-[2.3rem] max-w-[1.8rem] shrink-0 basis-[1.8rem] outline-none sm:max-w-[2.05rem] sm:basis-[2.05rem] md:max-w-[2.52rem] md:basis-[2.36rem] lg:max-w-[2.2rem] lg:basis-[1.8rem] xl:max-w-[1.9rem] xl:basis-10 2xl:max-w-[2.3rem] 2xl:basis-[2.15rem]"
                             id="quran-reader-history-toggle"
                             data-quran-open-history
                             type="button"
@@ -3867,13 +3878,13 @@
                             x-on:click="void openHistoryModal()"
                         >
                             <x-icon
-                                class="quran-history-toggle-icon 4xl:size-6 3xl:size-[1.45rem] size-[1.3rem] sm:size-[1.26rem] md:h-[1.64rem] md:w-[1.64rem] lg:size-[1.4rem] xl:size-[1.3rem] 2xl:size-[1.3rem]"
+                                class="quran-history-toggle-icon 4xl:size-6 3xl:size-[1.45rem] size-[1.3rem] sm:size-[1.26rem] md:h-[1.64rem] md:w-[1.64rem] lg:size-[1.2rem] xl:size-[1.3rem] 2xl:size-[1.3rem]"
                                 :name="'heroicon-o-clock'"
                             />
                         </button>
 
                         <button
-                            class="quran-support-lock-target quran-wird-progress-button 4xl:min-h-10 4xl:min-w-[min(13rem,50vw)] 3xl:min-h-[2.44rem] min-h-[1.85rem] min-w-[min(7rem,46vw)] outline-none sm:min-h-[2.2rem] sm:min-w-[min(11.4rem,50vw)] md:min-h-10 md:min-w-[min(11.9rem,50vw)] lg:min-h-[2.38rem] lg:min-w-[min(12.3rem,50vw)] xl:min-h-[2.1rem] xl:min-w-[min(10.7rem,50vw)] 2xl:min-h-[2.15rem] 2xl:min-w-[min(12.8rem,50vw)]"
+                            class="quran-support-lock-target quran-wird-progress-button 4xl:min-h-10 4xl:min-w-[min(13rem,50vw)] 3xl:min-h-[2.44rem] min-h-[1.85rem] min-w-[min(7rem,46vw)] outline-none sm:min-h-[2.2rem] sm:min-w-[min(11.4rem,50vw)] md:min-h-10 md:min-w-[min(11.9rem,50vw)] lg:min-h-[1.88rem] lg:min-w-[min(12.3rem,50vw)] xl:min-h-[2.1rem] xl:min-w-[min(10.7rem,50vw)] 2xl:min-h-[2.15rem] 2xl:min-w-[min(12.8rem,50vw)]"
                             data-quran-wird-toggle
                             data-support-lock-target="wird-progress"
                             type="button"
@@ -3927,8 +3938,7 @@
                                     class="text-primary-700 4xl:text-xs translate-y-1.5 text-[0.56rem] font-bold opacity-0 transition-all duration-500 sm:text-[0.7rem] md:text-[0.8rem] lg:text-[0.72rem] xl:text-[0.74rem]"
                                     x-bind:class="{
                                         'opacity-100! -translate-y-0.25!': (
-                                            $store.bp.is('base') ||
-                                            (hovered || wirdModeActive) &&
+                                            (wirdModeActive) &&
                                             !isSupportLockActive()
                                         ),
                                         'font-normal!': wirdModeActive,
@@ -3946,7 +3956,7 @@
 
                         <!-- Credits: https://uiverse.io/vinodjangid07/breezy-goose-71 -->
                         <button
-                            class="quran-bookmark-toggle-button quran-top-actions-secondary 4xl:basis-[2.35rem] 4xl:inline-[2.35rem] 4xl:block-[2.35rem] 4xl:max-w-[2.35rem] block-[1.8rem] inline-[1.8rem] sm:block-[2.05rem] sm:inline-[2.05rem] md:block-[2.62rem] md:inline-[2.12rem] lg:block-[2.2rem] lg:inline-[2.2rem] xl:block-[1.97rem] xl:inline-8.5 2xl:block-[2.1rem] 3xl:block-[2.3rem] 2xl:inline-[2.3rem] 3xl:basis-[2.3rem] 3xl:rounded-[0.625rem] max-w-[1.8rem] shrink-0 basis-[1.8rem] rounded-lg outline-none sm:max-w-[2.05rem] sm:basis-[2.05rem] sm:rounded-[0.625rem] md:max-w-[2.62rem] md:basis-[2.52rem] md:rounded-[0.625rem] lg:max-w-[2.2rem] lg:basis-[2.2rem] lg:rounded-[0.525rem] xl:max-w-10 xl:basis-9 xl:rounded-lg 2xl:max-w-[2.3rem] 2xl:basis-[2.2rem] 2xl:rounded-[0.6rem]"
+                            class="quran-bookmark-toggle-button quran-top-actions-secondary 4xl:basis-[2.35rem] 4xl:inline-[2.35rem] 4xl:block-[2.35rem] 4xl:max-w-[2.35rem] block-[1.8rem] inline-[1.8rem] sm:block-[2.05rem] sm:inline-[2.05rem] md:block-[2.62rem] md:inline-[2.12rem] lg:block-[1.8rem] lg:inline-[2.2rem] xl:block-[1.97rem] xl:inline-8.5 2xl:block-[2.1rem] 3xl:block-[2.3rem] 2xl:inline-[2.3rem] 3xl:basis-[2.3rem] 3xl:rounded-[0.625rem] max-w-[1.8rem] shrink-0 basis-[1.8rem] rounded-lg outline-none sm:max-w-[2.05rem] sm:basis-[2.05rem] sm:rounded-[0.625rem] md:max-w-[2.62rem] md:basis-[2.52rem] md:rounded-[0.625rem] lg:max-w-[2.2rem] lg:basis-[1.8rem] lg:rounded-[0.425rem] xl:max-w-10 xl:basis-9 xl:rounded-lg 2xl:max-w-[2.3rem] 2xl:basis-[2.2rem] 2xl:rounded-[0.6rem]"
                             id="quran-reader-bookmark-toggle"
                             data-quran-bookmark-toggle
                             type="button"
@@ -3964,7 +3974,7 @@
                                 aria-hidden="true"
                             ></span>
                             <svg
-                                class="quran-bookmark-toggle-icon 4xl:w-3.75 3xl:w-[0.92rem] w-[0.76rem] sm:w-[0.82rem] md:w-4 lg:w-[0.89rem] xl:w-[0.8rem] 2xl:w-[0.8rem]"
+                                class="quran-bookmark-toggle-icon 4xl:w-3.75 3xl:w-[0.92rem] w-[0.76rem] sm:w-[0.82rem] md:w-4 lg:w-[0.79rem] xl:w-[0.8rem] 2xl:w-[0.8rem]"
                                 aria-hidden="true"
                                 width="15"
                                 viewBox="0 0 50 70"
