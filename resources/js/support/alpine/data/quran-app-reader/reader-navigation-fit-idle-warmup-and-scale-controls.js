@@ -1099,6 +1099,11 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
             const pageLinesScaleElement =
                 pageLinesTargets.find((element) => element instanceof HTMLElement) ?? scaleElement;
             const breakpointName = String(this.resolveCurrentBreakpointName?.() ?? '').trim();
+            const normalizedCurrentPageNumber = Math.max(
+                1,
+                Math.trunc(Number(this.pageNumber ?? 1)),
+            );
+            const isPage187 = normalizedCurrentPageNumber === 187;
             const shouldUseSegmentedSmOverrides =
                 breakpointName === 'sm' &&
                 pageLinesScaleElement?.classList?.contains?.('quran-page-lines--segmented');
@@ -1146,6 +1151,21 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
                 0.05,
                 parsePostFitTuneValue('--quran-page-postfit-page-scale-tune', 1),
             );
+            const page187PostFitPageScaleTune = isPage187
+                ? Math.max(
+                      0.05,
+                      parsePostFitTuneValue('--quran-page-187-postfit-page-scale-tune', 1),
+                  )
+                : 1;
+            const page187PostFitTypeScaleTune = isPage187
+                ? Math.max(
+                      0.2,
+                      parsePostFitTuneValue('--quran-page-187-postfit-type-scale-tune', 1),
+                  )
+                : 1;
+            const page187PostFitGapScaleTune = isPage187
+                ? Math.max(0, parsePostFitTuneValue('--quran-page-187-postfit-gap-scale-tune', 1))
+                : 1;
             const rawPostFitYOffsetTune = pageLinesComputedStyle.getPropertyValue(
                 '--quran-page-postfit-y-offset-tune',
             );
@@ -1155,17 +1175,30 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
                     : '0rem';
             const postFitScale = forFitting
                 ? effectiveScale
-                : Number((effectiveScale * postFitPageScaleTune).toFixed(4));
+                : Number(
+                      (effectiveScale * postFitPageScaleTune * page187PostFitPageScaleTune).toFixed(
+                          4,
+                      ),
+                  );
+            const postFitTypeScaleEffective = forFitting
+                ? boostedTypeScale
+                : Math.max(
+                      0.2,
+                      Number((boostedTypeScale * page187PostFitTypeScaleTune).toFixed(4)),
+                  );
+            const postFitGapAdjustFactor = forFitting
+                ? effectiveGapFactor
+                : Math.max(0, Number((effectiveGapFactor * page187PostFitGapScaleTune).toFixed(4)));
 
             scaleTargets.forEach((targetElement) => {
                 targetElement.style.setProperty('--quran-page-scale', String(postFitScale));
                 targetElement.style.setProperty(
                     '--quran-page-type-scale-effective',
-                    String(boostedTypeScale),
+                    String(postFitTypeScaleEffective),
                 );
                 targetElement.style.setProperty(
                     '--quran-page-gap-adjust-factor',
-                    String(effectiveGapFactor),
+                    String(postFitGapAdjustFactor),
                 );
                 targetElement.style.setProperty('--quran-page-y-offset-adjust', effectiveYOffset);
                 if (shouldUseSegmentedSmOverrides) {
