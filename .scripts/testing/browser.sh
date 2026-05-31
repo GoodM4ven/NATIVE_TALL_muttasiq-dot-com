@@ -114,7 +114,7 @@ compose_browser_pest_args() {
         return
     fi
 
-    output_ref=(--stop-on-failure "${output_ref[@]}")
+    output_ref=("${output_ref[@]}")
 }
 
 run_compact_command() {

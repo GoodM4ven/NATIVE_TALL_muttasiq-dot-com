@@ -332,7 +332,7 @@
                     class="focus:border-primary-500 focus:ring-primary-500/35 w-full rounded-lg border border-gray-300 bg-white/90 py-2 pe-10 ps-9 text-sm text-gray-800 transition dark:border-gray-700 dark:bg-gray-900/80 dark:text-gray-100"
                     type="search"
                     dir="rtl"
-                    placeholder="{{ arabic_text('ابحث في نص الذكر أو المصدر...') }}"
+                    placeholder="{{ arabic_text('ابحث في نص الذكر...') }}"
                     wire:model.live.debounce.520ms="athkarSearchQuery"
                     x-on:keydown.enter.stop.prevent="$el.blur()"
                     x-on:search.stop.prevent="$el.blur()"
