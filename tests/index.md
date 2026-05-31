@@ -8,6 +8,7 @@ Generated on 2026-05-31 after full non-browser and browser test runs.
 - keeps dense-to-headered jump-page navigation to a single visible reveal on mobile
 - keeps modal jump-page header and basmallah geometry aligned with a subsequent regular render on mobile
 - keeps quran reader stable for layout, slider navigation, and modal refit timing
+- keeps the shared top counter full briefly, pulses it, then resets it after auto-advance
 - keeps quran text fitted and visible across all reader navigation paths
 - keeps wird committed progress monotonic and completion badge sticky while browsing back
 - lands on the final wird slider page and keeps the re-entered completed page visible
