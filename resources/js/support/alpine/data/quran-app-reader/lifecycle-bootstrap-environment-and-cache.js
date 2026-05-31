@@ -597,6 +597,18 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
 
                 if (key === 'ArrowRight') {
                     void this.onGlobalArrowNavigate('right', event);
+
+                    return;
+                }
+
+                if (key === 'ArrowUp') {
+                    void this.onGlobalArrowNavigate('up', event);
+
+                    return;
+                }
+
+                if (key === 'ArrowDown') {
+                    void this.onGlobalArrowNavigate('down', event);
                 }
             };
             window.addEventListener('keydown', this._onWindowKeydown, true);

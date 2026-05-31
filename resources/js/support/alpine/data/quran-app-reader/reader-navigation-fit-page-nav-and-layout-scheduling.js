@@ -697,6 +697,10 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
         },
 
         async onGlobalArrowNavigate(direction, event = null) {
+            const normalizedDirection = String(direction ?? '')
+                .trim()
+                .toLowerCase();
+
             if (event?.__quranReaderInputHandled) {
                 return;
             }
@@ -725,7 +729,21 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                 event.preventDefault();
             }
 
-            if (direction === 'left') {
+            if (normalizedDirection === 'up' || normalizedDirection === 'down') {
+                if (this.wirdModeActive) {
+                    return;
+                }
+
+                if (!this.surahQuickNavigator.visible) {
+                    this.openSurahQuickNavigator();
+                }
+
+                await this.navigateToAdjacentSurah(normalizedDirection === 'up' ? 'prev' : 'next');
+
+                return;
+            }
+
+            if (normalizedDirection === 'left') {
                 if (this.triggerChevronButtonClick('next', 'keyboard')) {
                     return;
                 }
@@ -735,7 +753,7 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                 return;
             }
 
-            if (direction === 'right') {
+            if (normalizedDirection === 'right') {
                 if (this.triggerChevronButtonClick('prev', 'keyboard')) {
                     return;
                 }
