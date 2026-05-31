@@ -86,7 +86,7 @@ it('uses touch capability for quran double tap copy mode beyond base breakpoint'
 
     expect($selectionPointerSource)->not->toBeFalse()
         ->and($selectionPointerSource)->toContain('this.wordPress.isSecondTap = shouldTreatAsSecondTap;')
-        ->and($selectionPointerSource)->not->toContain('mobileDoubleTapHoldDelayMs');
+        ->and($selectionPointerSource)->toContain('mobileDoubleTapHoldDelayMs');
 
     expect($readerViewSource)->not->toBeFalse()
         ->and($readerViewSource)->toContain(

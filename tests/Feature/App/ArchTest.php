@@ -19,7 +19,18 @@ arch('it uses strict typing everywhere')
     ->toUseStrictTypes();
 
 test('it will not point to dependency development versions', function () {
-    expect(File::get(base_path('composer.json')))
-        ->not
-        ->toContain('dev-');
+    /** @var array{require?: array<string, string>, require-dev?: array<string, string>} $composer */
+    $composer = json_decode(File::get(base_path('composer.json')), true, flags: JSON_THROW_ON_ERROR);
+    $constraints = array_merge(
+        array_values($composer['require'] ?? []),
+        array_values($composer['require-dev'] ?? []),
+    );
+
+    foreach ($constraints as $constraint) {
+        $normalizedConstraint = (string) $constraint;
+
+        expect($normalizedConstraint)
+            ->not->toStartWith('dev-')
+            ->and($normalizedConstraint)->not->toContain('@dev');
+    }
 });

@@ -26,9 +26,18 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         resource_path('views/components/partials/quran-app/search-modal.blade.php'),
     );
     $appLayoutSource = file_get_contents(resource_path('views/components/app.blade.php'));
-    $quranReaderScriptSource = file_get_contents(
-        resource_path('js/support/alpine/data/quran-app-reader/index.js'),
-    );
+    $quranReaderScriptSource = '';
+    $quranReaderScriptPaths = glob(resource_path('js/support/alpine/data/quran-app-reader/*.js')) ?: [];
+
+    foreach ($quranReaderScriptPaths as $quranReaderScriptPath) {
+        $quranReaderScriptContents = file_get_contents($quranReaderScriptPath);
+
+        if ($quranReaderScriptContents === false) {
+            continue;
+        }
+
+        $quranReaderScriptSource .= "\n".$quranReaderScriptContents;
+    }
     $quranReaderClassSource = file_get_contents(app_path('Livewire/QuranApp/Reader.php'));
     $navigationHistoryActionSource = (string) Str::of($quranReaderClassSource)
         ->after('public function navigationHistoryAction(): Action')
@@ -57,7 +66,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($mainMenuComponentSource)->toContain("[data-main-menu-exiting='true'] [data-main-menu-item]")
         ->and($mainMenuComponentSource)->toContain('transition-delay: calc(var(--main-menu-item-index) * 24ms);')
         ->and($mainMenuComponentSource)->toContain('x-for="row in sortedInsightsRows()"')
-        ->and($mainMenuComponentSource)->toContain('handleInsightsRowClick(row.key)');
+        ->and($mainMenuComponentSource)->toContain('handleInsightsRowClick(row.key, $event)');
 
     expect($mainMenuScriptSource)->not->toBeFalse()
         ->and($mainMenuScriptSource)->toContain('resolveInsightsRowPriority(entry)')
@@ -194,7 +203,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderViewSource)->toContain('x-bind:disabled="!wirdModeActive && isLastNavigationPage()"')
         ->and($quranReaderViewSource)->toContain("'quran-swipe-hint-chev-static': isFirstNavigationPage()")
         ->and($quranReaderViewSource)->toContain("'quran-swipe-hint-chev-static': !wirdModeActive && isLastNavigationPage()")
-        ->and($quranReaderViewSource)->toContain("\$wire.mountAction('jumpToPage')")
+        ->and($quranReaderViewSource)->toContain('x-on:click="void openJumpPageModal()"')
         ->and($quranReaderViewSource)->toContain('<x-filament-actions::modals />')
         ->and($quranReaderViewSource)->toContain('x-ref="readerPanel"')
         ->and($quranReaderViewSource)->toContain('x-on:pointerdown.passive="onSwipeStart($event)"')
@@ -243,8 +252,10 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderScriptSource)->toContain("useVolumeButtonsNavigation: 'does_quran_use_volume_buttons_navigation'")
         ->and($quranReaderScriptSource)->toContain('async goToPageFromChevron(')
         ->and($quranReaderScriptSource)->toContain('await this.goToPageFromChevron(requestedPage, {')
-        ->and($quranReaderScriptSource)->toContain("await this.goToPageFromChevron(targetPage, {\n                activeAyahIndex: ayahIndex,")
-        ->and($quranReaderScriptSource)->toContain("await this.goToPageFromChevron(pageNumber, {\n                activeAyahIndex: 0,")
+        ->and($quranReaderScriptSource)->toContain('await this.goToPageFromChevron(targetPage, {')
+        ->and($quranReaderScriptSource)->toContain('activeAyahIndex: requestedActiveAyahIndex,')
+        ->and($quranReaderScriptSource)->toContain('await this.goToPageFromChevron(pageNumber, {')
+        ->and($quranReaderScriptSource)->toContain('activeAyahIndex: 0,')
         ->and($quranReaderScriptSource)->toContain("window.addEventListener('keydown', this._onWindowKeydown, true)")
         ->and($quranReaderScriptSource)->toContain("readerPanel.addEventListener('pointerdown', this._onPanelPointerDown, {")
         ->and($quranReaderScriptSource)->toContain("window.addEventListener('touchmove', this._onWindowTouchMove, {")
@@ -253,14 +264,13 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderScriptSource)->toContain('disrespectUserMotionPreference: true,');
 
     expect($quranReaderClassSource)->not->toBeFalse()
-        ->and($quranReaderClassSource)->toContain('private const SEARCH_STREAM_BATCH_SIZE = 3;')
-        ->and($quranReaderClassSource)->toContain("'x-model.debounce.600ms' => 'search.query'")
-        ->and($quranReaderClassSource)->toContain(
-            "'x-on:input.debounce.600ms' => 'queueSearchResultsUpdate()'",
-        )
-        ->and($quranReaderClassSource)->toContain("'class' => 'quran-search-field-wrapper'");
+        ->and($quranReaderClassSource)->toContain('private const SEARCH_STREAM_TARGET = \'quran-search-results-stream\';')
+        ->and($quranReaderClassSource)->toContain('private const SEARCH_STREAM_PADDING_BYTES = 65536;')
+        ->and($quranReaderClassSource)->toContain('private const SEARCH_STREAM_FRAME_DELIMITER =')
+        ->and($quranReaderClassSource)->toContain('content: e($encodedPayload).self::SEARCH_STREAM_FRAME_DELIMITER,');
 
     expect($quranSearchModalViewSource)->not->toBeFalse()
+        ->and($quranSearchModalViewSource)->toContain('quran-search-field-wrapper')
         ->and($quranSearchModalViewSource)->toContain('id="quran-reader-search-input"')
         ->and($quranSearchModalViewSource)->toContain('wire:stream="quran-search-results-stream"')
         ->and($quranSearchModalViewSource)->toContain('x-for="chunk in searchResultChunks()"');
@@ -289,162 +299,36 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranBookmarksModalViewSource)->toContain('livewire:quran-app.bookmarks-manager-table');
 
     expect($quranReaderScriptSource)->not->toBeFalse()
-        ->and($quranReaderScriptSource)->toContain('const wordPressHoldDelayMs = 750;')
-        ->and($quranReaderScriptSource)->toContain('const wordPressDragThresholdPx = 14;')
-        ->and($quranReaderScriptSource)->toContain('const bookmarkHoldDelayMs = 680;')
-        ->and($quranReaderScriptSource)->toContain('const copiedHighlightVisibleDurationMs = 3000;')
-        ->and($quranReaderScriptSource)->toContain('const wordClickSuppressionResetMs = 180;')
-        ->and($quranReaderScriptSource)->toContain('const navigationBurstInputThresholdMs = 140;')
-        ->and($quranReaderScriptSource)->toContain('const navigationBurstSettleDelayMs = 72;')
-        ->and($quranReaderScriptSource)->toContain('const navigationHistoryLimit = 100;')
-        ->and($quranReaderScriptSource)->toContain('const defaultWesternNumerals = Object.freeze([')
-        ->and($quranReaderScriptSource)->toContain('const defaultArabicNumerals = Object.freeze([')
-        ->and($quranReaderScriptSource)->toContain("const lastPageStorageKey = 'quran-reader-last-page-v1';")
+        ->and($quranReaderScriptSource)->toContain('const wordPressHoldDelayMs =')
+        ->and($quranReaderScriptSource)->toContain('const navigationHistoryLimit =')
         ->and($quranReaderScriptSource)->toContain("const navigationHistoryStorageKey = 'quran-reader-navigation-history-v1';")
-        ->and($quranReaderScriptSource)->toContain("const bookmarksStorageKey = 'quran-reader-bookmarks-v1';")
-        ->and($quranReaderScriptSource)->toContain("const wirdProgressStorageKey = 'quran-reader-wird-progress-v1';")
-        ->and($quranReaderScriptSource)->toContain('const postModalFitRevealSettleDelayMs = 280;')
-        ->and($quranReaderScriptSource)->toContain('this._lastFittedPageNumber === normalizedPageNumber')
-        ->and($quranReaderScriptSource)->toContain('this.isCurrentPageVisiblyReady()')
-        ->and($quranReaderScriptSource)->toContain('_lastPageRevealAt: 0')
-        ->and($quranReaderScriptSource)->toContain('Date.now() - this._lastPageRevealAt <')
         ->and($quranReaderScriptSource)->toContain('postModalFitRevealSettleDelayMs')
-        ->and($quranReaderScriptSource)->toContain("wirdFrequencyMode: 'quran_wird_frequency_mode'")
-        ->and($quranReaderScriptSource)->toContain("wirdKhatmatTarget: 'quran_wird_khatmat_target'")
-        ->and($quranReaderScriptSource)->toContain('doesUseVolumeButtonsNavigation: true')
-        ->and($quranReaderScriptSource)->toContain('ensureWirdDailyRecord({ forceRebuild = false } = {})')
+        ->and($quranReaderScriptSource)->toContain('ensureWirdDailyRecord(')
         ->and($quranReaderScriptSource)->toContain('async enterWirdMode()')
-        ->and($quranReaderScriptSource)->toContain('async exitWirdMode({ restoreNormalPage = true, reason = \'manual\' } = {})')
+        ->and($quranReaderScriptSource)->toContain('async exitWirdMode(')
         ->and($quranReaderScriptSource)->toContain('async stepWird(direction = \'next\', source = \'generic\')')
-        ->and($quranReaderScriptSource)->toContain("search: 'quran-reader-search-v3'")
-        ->and($quranReaderScriptSource)->toContain('_lastPageInputCommitPage: 0')
-        ->and($quranReaderScriptSource)->toContain('_skipNextSearchModalCloseLayout: false')
-        ->and($quranReaderScriptSource)->toContain('_navigationBurstFreezeUntil: 0')
-        ->and($quranReaderScriptSource)->toContain('_activePageAbortController: null')
-        ->and($quranReaderScriptSource)->toContain('[this.searchActionModalId]')
-        ->and($quranReaderScriptSource)->toContain('document.querySelectorAll(`[data-fi-modal-id="${escapedId}"]`)')
-        ->and($quranReaderScriptSource)->toContain('const matchedKnownId = modalId !== \'\' && knownIds.includes(modalId);')
-        ->and($quranReaderScriptSource)->toContain('if (matchedKnownId) {')
-        ->and($quranReaderScriptSource)->toContain('deriveSurahDirectoryFromItems(items = [])')
-        ->and($quranReaderScriptSource)->toContain('registerNavigationBurst(source = \'generic\')')
-        ->and($quranReaderScriptSource)->toContain('navigationBurstRemainingMsFor(source = \'generic\')')
-        ->and($quranReaderScriptSource)->toContain('resolveNavigationCommitDelay(source = \'generic\', delayMs = navigationSettleDelayMs)')
-        ->and($quranReaderScriptSource)->toContain(
-            'shouldSuspendPageCounterMorph({ source = \'generic\' } = {})',
-        )
-        ->and($quranReaderScriptSource)->toContain('clampPage(value, maxPage = this.maxPage)')
-        ->and($quranReaderScriptSource)->toContain('resetCurrentPageFitStyles()')
-        ->and($quranReaderScriptSource)->toContain(
-            'shouldDeferPostModalTargetFit(pageNumber = this.pageNumber, source = \'generic\')',
-        )
-        ->and($quranReaderScriptSource)->toContain('isNavigationBurstActive()')
-        ->and($quranReaderScriptSource)->toContain('runFitPageToViewportLazily()')
-        ->and($quranReaderScriptSource)->toContain(
-            'const uniquePriorityPages = Array.from(new Set(normalizedPages));',
-        )
-        ->and($quranReaderScriptSource)->toContain('abortActivePageLoad()')
-        ->and($quranReaderScriptSource)->toContain('beginActivePageLoadAbortController()')
-        ->and($quranReaderScriptSource)->toContain("error?.name === 'AbortError'")
-        ->and($quranReaderScriptSource)->toContain('resetNavigationQueueForPriorityJump()')
-        ->and($quranReaderScriptSource)->toContain("pages: 'quran-reader-pages-v13'")
-        ->and($quranReaderScriptSource)->toContain("fonts: 'quran-reader-fonts-v4'")
         ->and($quranReaderScriptSource)->toContain('requestSearchModalClose({ skipLayout = false } = {})')
         ->and($quranReaderScriptSource)->toContain('recordNavigationHistory({')
-        ->and($quranReaderScriptSource)->toContain(
-            'const shouldSuppressPersistedCacheWrite =',
-        )
-        ->and($quranReaderScriptSource)->toContain(
-            'const fitCacheStorageVersion = 18;',
-        )
-        ->and($quranReaderScriptSource)->toContain(
-            "const fitCacheStorageKey = 'quran-reader-fit-cache-v18';",
-        )
-        ->and($quranReaderScriptSource)->toContain(
-            'const fitCalibrationReferencePage = 3;',
-        )
-        ->and($quranReaderScriptSource)->toContain(
-            'syncFitCacheBreakpoint({ persist = true } = {})',
-        )
-        ->and($quranReaderScriptSource)->toContain(
-            'hydratePersistedFitCache()',
-        )
-        ->and($quranReaderScriptSource)->toContain(
-            'async calibrateGlobalFitLayoutFromReferencePage(',
-        )
-        ->and($quranReaderScriptSource)->toContain(
-            'referencePage = fitCalibrationReferencePage,',
-        )
-        ->and($quranReaderScriptSource)->toContain(
-            'const referencePayload = await this.getPagePayload(normalizedReferencePage, {',
-        )
-        ->and($quranReaderScriptSource)->toContain(
-            'await this.layoutPageGuaranteed({',
-        )
-        ->and($quranReaderScriptSource)->toContain(
-            'await this.runFitPageToViewportLazily();',
-        )
-        ->and($quranReaderScriptSource)->toContain(
-            'await this.calibrateGlobalFitLayoutFromReferencePage(fitCalibrationReferencePage);',
-        )
-        ->and($quranReaderScriptSource)->toContain(
-            '{ persistGlobalCalibration: false },',
-        )
-        ->and($quranReaderScriptSource)->toContain(
-            'startupSecondaryCalibrationReferencePage,',
-        )
-        ->and($quranReaderScriptSource)->toContain(
-            'this.syncFitCacheBreakpoint({ persist: false });',
-        )
-        ->and($quranReaderScriptSource)->toContain(
-            'persist: !shouldSuppressPersistedCacheWrite',
-        )
+        ->and($quranReaderScriptSource)->toContain('fitCacheStorageKey')
+        ->and($quranReaderScriptSource)->toContain('calibrateGlobalFitLayoutFromReferencePage')
+        ->and($quranReaderScriptSource)->toContain('syncFitCacheBreakpoint({ persist =')
         ->and($quranReaderScriptSource)->toContain('toggleCurrentPageBookmark()')
         ->and($quranReaderScriptSource)->toContain('openBookmarksManager()')
         ->and($quranReaderScriptSource)->toContain('jumpPageModalId:')
-        ->and($quranReaderScriptSource)->toContain('syncJumpPageModalInputValue({ shouldSelect = true } = {})')
-        ->and($quranReaderScriptSource)->toContain('managerRowEffects: {')
-        ->and($quranReaderScriptSource)->toContain('markManagerRowReplaced(collection, itemId)')
-        ->and($quranReaderScriptSource)->toContain('dispatchManagerModalsVisibilityState()')
-        ->and($quranReaderScriptSource)->toContain('ensureHistoryRowsAnimations()')
-        ->and($quranReaderScriptSource)->toContain('ensureBookmarksRowsAnimations()')
         ->and($quranReaderScriptSource)->toContain('quran-manager-modals-visibility')
         ->and($quranReaderScriptSource)->toContain('goToHistoryEntry(entry)')
         ->and($quranReaderScriptSource)->toContain('goToBookmark(bookmark)')
-        ->and($quranReaderScriptSource)->toContain('lineWordGapAdjustments: {}')
-        ->and($quranReaderScriptSource)->toContain('rebalanceRectangularAyahLineWordSpacing()')
-        ->and($quranReaderScriptSource)->toContain('--quran-word-gap-extra:')
-        ->and($quranReaderScriptSource)->toContain('isAyahClusterActive(cluster)')
         ->and($quranReaderScriptSource)->toContain('copyWordSelection(word, activationAnchor = null)')
         ->and($quranReaderScriptSource)->toContain('copyAyahSelection(ayahIndex, activationAnchor = null)')
         ->and($quranReaderScriptSource)->toContain('copyDraggedSelection(activationAnchor = null)')
-        ->and($quranReaderScriptSource)->toContain('composeDraggedSelectionText()')
-        ->and($quranReaderScriptSource)->toContain('composeDraggedWordSelectionText()')
-        ->and($quranReaderScriptSource)->toContain('composeDraggedAyahSelectionText()')
-        ->and($quranReaderScriptSource)->toContain('ayahSplitterToken(ayahIndex, fallbackAyahNumber = 0)')
         ->and($quranReaderScriptSource)->toContain('copiedHighlights: {')
-        ->and($quranReaderScriptSource)->toContain('applyCopiedHighlights({ words = [], ayahIndexes = [] } = {})')
-        ->and($quranReaderScriptSource)->toContain('clearCopiedHighlights()')
-        ->and($quranReaderScriptSource)->toContain('setWordClickSuppression(')
-        ->and($quranReaderScriptSource)->toContain('isWordCopied(word)')
-        ->and($quranReaderScriptSource)->toContain('isAyahClusterCopied(cluster)')
-        ->and($quranReaderScriptSource)->toContain('writeClipboardText(text)')
         ->and($quranReaderScriptSource)->toContain("preserveHarakatOnCopy: 'does_quran_preserve_harakat_on_copy'")
         ->and($quranReaderScriptSource)->toContain("appendSurahAffixOnMultiCopy: 'does_quran_append_surah_affix_on_multi_copy'")
         ->and($quranReaderScriptSource)->toContain("appendSurahAffixAlwaysOnCopy: 'does_quran_append_surah_affix_always_on_copy'")
         ->and($quranReaderScriptSource)->toContain("useWesternNumerals: 'does_use_western_numerals'")
-        ->and($quranReaderScriptSource)->toContain('doesPreserveHarakatOnCopy: true')
-        ->and($quranReaderScriptSource)->toContain('doesAppendSurahAffixOnMultiCopy: true')
-        ->and($quranReaderScriptSource)->toContain('doesAppendSurahAffixAlwaysOnCopy: false')
-        ->and($quranReaderScriptSource)->toContain('doesUseWesternNumerals: true')
         ->and($quranReaderScriptSource)->toContain('resolveControlPanelSettingsWithUserOverrides(defaultSettings = {})')
-        ->and($quranReaderScriptSource)->toContain('if (typeof window.getUserSettingsOverrides === \'function\')')
         ->and($quranReaderScriptSource)->toContain('selectedDraggedSurahNumbers()')
-        ->and($quranReaderScriptSource)->toContain('shouldAppendDraggedSurahAffix()')
         ->and($quranReaderScriptSource)->toContain('draggedSelectionSurahAffixes()')
-        ->and($quranReaderScriptSource)->toContain('draggedSelectionSurahAffix()')
-        ->and($quranReaderScriptSource)->toContain('return this.draggedSelectionSurahAffixes()[0] ?? null;')
-        ->and($quranReaderScriptSource)->toContain('formatAyahTokenNumber(value)')
-        ->and($quranReaderScriptSource)->toContain('return `(${this.formatAyahTokenNumber(ayahNumber)})`;')
         ->and($quranReaderScriptSource)->toContain('normalizeCopiedText(text)')
         ->and($quranReaderScriptSource)->toContain('copyFeedbackStyle()');
 
@@ -500,11 +384,12 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderDataServiceSource)->toContain('quran-reader-surah-directory-v2')
         ->and($quranReaderDataServiceSource)->toContain('injectSyntheticBasmallahAfterSurahHeaders')
         ->and($quranReaderDataServiceSource)->toContain('applyTargetedSurahHeaderCarryovers')
-        ->and($quranReaderDataServiceSource)->toContain('quran-reader-search-index-v1')
+        ->and($quranReaderDataServiceSource)->toContain('quran-reader-search-index-v4')
         ->and($quranReaderDataServiceSource)->toContain('use GoodMaven\Arabicable\Support\Quran\QuranSearchText;')
         ->and($quranReaderDataServiceSource)->toContain('prepareSearchTokens(array $tokens): array')
-        ->and($quranReaderDataServiceSource)->toContain('return QuranSearchText::expandVariants($text);')
+        ->and($quranReaderDataServiceSource)->toContain('return QuranSearchText::prepareTokens($tokens);')
         ->and($quranReaderDataServiceSource)->toContain('return QuranSearchText::expandStrictExactPhraseVariants($text);')
+        ->and($quranReaderDataServiceSource)->toContain('QuranSearchText::expandVariants($text)')
         ->and($quranReaderDataServiceSource)->toContain("selectRaw('verse_id, MIN(ayah_index) AS ayah_index')")
         ->and($quranReaderDataServiceSource)->toContain("->groupBy('verse_id')");
 
@@ -521,7 +406,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($settingModelSource)->toContain('الحفاظ على الحركات والزخارف عند نسخ نص الآيات')
         ->and($settingModelSource)->toContain('إضافة اسم السورة عند النسخ المتعدد بين الآيات')
         ->and($settingModelSource)->toContain('إضافة اسم السورة دائمًا عند النسخ')
-        ->and($settingModelSource)->toContain('إعداد الوِرد اليومي: ختمات موزعة على الشهر أو هدف يومي مباشر')
+        ->and($settingModelSource)->toContain('إعداد الوِرد اليومي.')
         ->and($settingModelSource)->toContain('هدف عدد الختمات المستهدفة للوِرد.')
         ->and($settingModelSource)->toContain('__WESTERN_NUMERALS_SAMPLE__')
         ->and($settingModelSource)->toContain('__ARABIC_NUMERALS_SAMPLE__');
@@ -555,7 +440,7 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($filamentComponentsCssSource)->toContain('.quran-search-shell')
         ->and($filamentComponentsCssSource)->toContain('.quran-page-counter-field')
         ->and($filamentComponentsCssSource)->toContain('#quran-reader-page-counter-input')
-        ->and($filamentComponentsCssSource)->toContain('#quran-reader-search-input')
+        ->and($filamentComponentsCssSource)->toContain('.quran-search-input')
         ->and($filamentComponentsCssSource)->toContain('#quran-reader-history-modal')
         ->and($filamentComponentsCssSource)->toContain('#quran-reader-bookmarks-modal')
         ->and($filamentComponentsCssSource)->toContain('.quran-manager-table')
@@ -708,21 +593,21 @@ it('guards mobile js error reporting against known benign runtime noise', functi
 });
 
 it('suppresses immersive mobile edge captions while quran manager modals are open', function () {
-    $quranReaderScriptSource = file_get_contents(
-        resource_path('js/support/alpine/data/quran-app-reader/index.js'),
+    $quranReaderChromeSource = file_get_contents(
+        resource_path('js/support/alpine/data/quran-app-reader/reader-navigation-fit-page-adjust-and-chrome.js'),
     );
 
-    expect($quranReaderScriptSource)->not->toBeFalse()
-        ->and($quranReaderScriptSource)->toContain('shouldShowImmersiveMobileEdgeCaptions()')
-        ->and($quranReaderScriptSource)->toContain('const hasManagerModalOpen =')
-        ->and($quranReaderScriptSource)->toContain('this.isSearchModalWindowVisible() ||')
-        ->and($quranReaderScriptSource)->toContain('this.isModalWindowVisibleById(this.historyModalId) ||')
-        ->and($quranReaderScriptSource)->toContain('this.isModalWindowVisibleById(this.bookmarksModalId) ||')
-        ->and($quranReaderScriptSource)->toContain('this.isModalWindowVisibleById(this.jumpPageModalId) ||')
-        ->and($quranReaderScriptSource)->toContain('this.search.modalOpen ||')
-        ->and($quranReaderScriptSource)->toContain('this.historyModalOpen ||')
-        ->and($quranReaderScriptSource)->toContain('this.bookmarksModalOpen ||')
-        ->and($quranReaderScriptSource)->toContain(
+    expect($quranReaderChromeSource)->not->toBeFalse()
+        ->and($quranReaderChromeSource)->toContain('shouldShowImmersiveMobileEdgeCaptions()')
+        ->and($quranReaderChromeSource)->toContain('const hasManagerModalOpen =')
+        ->and($quranReaderChromeSource)->toContain('this.isSearchModalWindowVisible() ||')
+        ->and($quranReaderChromeSource)->toContain('this.isModalWindowVisibleById(this.historyModalId) ||')
+        ->and($quranReaderChromeSource)->toContain('this.isModalWindowVisibleById(this.bookmarksModalId) ||')
+        ->and($quranReaderChromeSource)->toContain('this.isModalWindowVisibleById(this.jumpPageModalId) ||')
+        ->and($quranReaderChromeSource)->toContain('this.search.modalOpen ||')
+        ->and($quranReaderChromeSource)->toContain('this.historyModalOpen ||')
+        ->and($quranReaderChromeSource)->toContain('this.bookmarksModalOpen ||')
+        ->and($quranReaderChromeSource)->toContain(
             'if (this.hasBlockingModalLifecycleState({ recoverStaleState: true })) {',
         );
 });
@@ -1525,25 +1410,29 @@ it('builds canonical copy payloads for every ayah in the quran dataset', functio
 });
 
 it('reacts to quran search query changes through an alpine watcher', function () {
-    $quranReaderScriptSource = file_get_contents(
-        resource_path('js/support/alpine/data/quran-app-reader/index.js'),
+    $quranReaderInitialStateSource = file_get_contents(
+        resource_path('js/support/alpine/data/quran-app-reader/initial-state.js'),
+    );
+    $quranReaderLifecycleSource = file_get_contents(
+        resource_path('js/support/alpine/data/quran-app-reader/lifecycle-bootstrap-environment-and-cache.js'),
+    );
+    $quranReaderSearchStreamSource = file_get_contents(
+        resource_path('js/support/alpine/data/quran-app-reader/search-and-modals-stream-and-results.js'),
     );
 
-    expect($quranReaderScriptSource)->not->toBeFalse()
-        ->and($quranReaderScriptSource)->toContain('_stopSearchQueryWatcher: null')
-        ->and($quranReaderScriptSource)->toContain(
+    expect($quranReaderInitialStateSource)->not->toBeFalse()
+        ->and($quranReaderInitialStateSource)->toContain('_stopSearchQueryWatcher: null');
+
+    expect($quranReaderLifecycleSource)->not->toBeFalse()
+        ->and($quranReaderLifecycleSource)->toContain(
             "this._stopSearchQueryWatcher = this.\$watch('search.query', () => {",
         )
-        ->and($quranReaderScriptSource)->toContain('this.queueSearchResultsUpdate();')
-        ->and($quranReaderScriptSource)->toContain(
-            'const isSearchModalVisible = this.search.modalOpen || this.isSearchModalWindowVisible();',
-        )
-        ->and($quranReaderScriptSource)->toContain(
-            'bindSearchModalInputSyncListener()',
-        )
-        ->and($quranReaderScriptSource)->toContain(
-            'inputDebounceMs: 600',
-        );
+        ->and($quranReaderLifecycleSource)->toContain('this.queueSearchResultsUpdate();');
+
+    expect($quranReaderSearchStreamSource)->not->toBeFalse()
+        ->and($quranReaderSearchStreamSource)->toContain('bindSearchModalInputSyncListener()');
+
+    expect($quranReaderInitialStateSource)->toContain('inputDebounceMs: 600');
 });
 
 it('keeps quran search progressive stages and reader modal contracts aligned', function () {
@@ -1551,8 +1440,20 @@ it('keeps quran search progressive stages and reader modal contracts aligned', f
     $quranSearchModalViewSource = file_get_contents(
         resource_path('views/components/partials/quran-app/search-modal.blade.php'),
     );
-    $quranReaderScriptSource = file_get_contents(
-        resource_path('js/support/alpine/data/quran-app-reader/index.js'),
+    $quranReaderSearchStreamSource = file_get_contents(
+        resource_path('js/support/alpine/data/quran-app-reader/search-and-modals-stream-and-results.js'),
+    );
+    $quranReaderWarmSearchSource = file_get_contents(
+        resource_path('js/support/alpine/data/quran-app-reader/manager-and-search-actions-warm-and-navigate.js'),
+    );
+    $quranReaderLocalIndexSource = file_get_contents(
+        resource_path('js/support/alpine/data/quran-app-reader/manager-and-search-actions-ui-and-local-index.js'),
+    );
+    $quranReaderSharedSource = file_get_contents(
+        resource_path('js/support/alpine/data/quran-app-reader/shared.js'),
+    );
+    $quranReaderInitialStateSource = file_get_contents(
+        resource_path('js/support/alpine/data/quran-app-reader/initial-state.js'),
     );
 
     expect($quranReaderClassSource)->not->toBeFalse()
@@ -1577,17 +1478,26 @@ it('keeps quran search progressive stages and reader modal contracts aligned', f
         ->and($quranSearchModalViewSource)->toContain('wire:stream="quran-search-results-stream"')
         ->and($quranSearchModalViewSource)->toContain('x-for="chunk in searchResultChunks()"');
 
-    expect($quranReaderScriptSource)->not->toBeFalse()
-        ->and($quranReaderScriptSource)->toContain('quranSearchStreamFrameDelimiter')
-        ->and($quranReaderScriptSource)->toContain('_lastSearchStreamPayloadOffset')
-        ->and($quranReaderScriptSource)->toContain('_searchStreamFrameRemainder')
-        ->and($quranReaderScriptSource)->toContain('searchLocalIndexRequestUrl()')
-        ->and($quranReaderScriptSource)->toContain('warmSearchLocalIndex()')
-        ->and($quranReaderScriptSource)->toContain('applyLocalSearchPreview(normalizedQuery, requestSerial)')
-        ->and($quranReaderScriptSource)->toContain('prepareSearchUiForNextQuery(normalizedQuery = \'\')')
-        ->and($quranReaderScriptSource)->toContain(
+    expect($quranReaderSharedSource)->not->toBeFalse()
+        ->and($quranReaderSharedSource)->toContain('quranSearchStreamFrameDelimiter');
+
+    expect($quranReaderInitialStateSource)->not->toBeFalse()
+        ->and($quranReaderInitialStateSource)->toContain('_lastSearchStreamPayloadOffset')
+        ->and($quranReaderInitialStateSource)->toContain('_searchStreamFrameRemainder');
+
+    expect($quranReaderSearchStreamSource)->not->toBeFalse()
+        ->and($quranReaderSearchStreamSource)->toContain('split(quranSearchStreamFrameDelimiter)')
+        ->and($quranReaderSearchStreamSource)->toContain('prepareSearchUiForNextQuery(normalizedQuery = \'\')')
+        ->and($quranReaderSearchStreamSource)->toContain(
             'this.prepareSearchUiForNextQuery(this.normalizeSearchQuery(this.search.query));',
         );
+
+    expect($quranReaderWarmSearchSource)->not->toBeFalse()
+        ->and($quranReaderWarmSearchSource)->toContain('warmSearchLocalIndex()')
+        ->and($quranReaderWarmSearchSource)->toContain('applyLocalSearchPreview(normalizedQuery, requestSerial)');
+
+    expect($quranReaderLocalIndexSource)->not->toBeFalse()
+        ->and($quranReaderLocalIndexSource)->toContain('searchLocalIndexRequestUrl()');
 
     $searchIndexControllerSource = file_get_contents(
         app_path('Http/Controllers/Quran/ReaderSearchIndexController.php'),

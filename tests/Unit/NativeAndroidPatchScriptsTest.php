@@ -254,7 +254,7 @@ test('native patches plugin supports ios content view patching', function () {
     expect($androidLaravelEnvironmentTraitContents)->not()->toContain('database/native-quran-reader.sqlite');
     expect($androidLaravelEnvironmentTraitContents)->not()->toContain('bundledQuranSnapshotFile.copyTo');
     expect($androidLaravelEnvironmentTraitContents)->toContain('dbFile.createNewFile()');
-    expect($androidLaravelEnvironmentTraitContents)->toContain('Skipping dormant Quran exegesis bundle entry');
+    expect($androidLaravelEnvironmentTraitContents)->toContain('skipsDormantQuranExegesis');
     expect($androidLaravelEnvironmentTraitContents)->toContain('resources/raw-data/quran/exegesis/');
     expect($iosTraitContents)->toContain('verifyIosSystemUi');
     expect($iosTraitContents)->toContain('patchIosBackHandler');
@@ -317,11 +317,11 @@ test('composer local plugin switch script toggles the muttasiq patches package b
     expect($script)->toContain('${HOME}/Code/LaravelPackages/NATIVE_PLUGIN_muttasiq-patches');
     expect($script)->toContain('action="toggle"');
     expect($script)->toContain('if [[ "${1:-}" == "on" || "${1:-}" == "off" || "${1:-}" == "toggle" ]]; then');
-    expect($script)->toContain('matching_repository_keys="$(find_matching_repository_keys)"');
-    expect($script)->toContain('while IFS= read -r matching_repository_key; do');
-    expect($script)->toContain('composer config --unset "repositories.${matching_repository_key}"');
+    expect($script)->toContain('has_matching_repositories() {');
+    expect($script)->toContain('remove_matching_repositories() {');
+    expect($script)->toContain('has_matching_repository="$(has_matching_repositories)"');
     expect($script)->toContain('if [[ "${action}" == "off" ]]; then');
-    expect($script)->toContain('if [[ "${action}" == "toggle" && -n "${matching_repository_keys}" ]]; then');
+    expect($script)->toContain('if [[ "${action}" == "toggle" && -n "${has_matching_repository}" ]]; then');
     expect($script)->toContain('composer config "repositories.${repository_key}" --json "$(cat <<JSON');
     expect($script)->toContain('"type": "path"');
     expect($script)->toContain('"${package_name}": "${local_forced_version}"');
@@ -342,11 +342,17 @@ test('android log script writes into storage logs', function () {
 
 test('native install scripts respect nativephp ICU configuration for mobile builds', function () {
     $root = dirname(__DIR__, 2);
-    $nativephpJson = file_get_contents($root.'/nativephp.json');
+    $nativephpLock = file_get_contents($root.'/nativephp.lock');
+    $nativephpJson = file_exists($root.'/nativephp.json')
+        ? file_get_contents($root.'/nativephp.json')
+        : null;
     $sharedPrepareScript = file_get_contents($root.'/.scripts/native/mobile/support/prepare-platform.sh');
     $iosPrepareScript = file_get_contents($root.'/.scripts/native/mobile/ios/support/prepare.sh');
 
-    expect($nativephpJson)->toContain('"icu":');
+    expect($nativephpLock)->toContain('"icu": true');
+    if (is_string($nativephpJson)) {
+        expect($nativephpJson)->toContain('"icu":');
+    }
     expect($sharedPrepareScript)->toContain('vendor/goodm4ven/nativephp-muttasiq-patches/src');
     expect($sharedPrepareScript)->toContain('native_prune_stale_build_assets');
     expect($sharedPrepareScript)->toContain('NATIVE_QURAN_SNAPSHOT_CLEAR_BEFORE_BUILD');
@@ -359,11 +365,11 @@ test('native install scripts respect nativephp ICU configuration for mobile buil
     expect($sharedPrepareScript)->toContain('nativephp directory missing');
     expect($sharedPrepareScript)->toContain('native_read_icu_preference');
     expect($sharedPrepareScript)->toContain('install_args+=(--with-icu)');
-    expect($sharedPrepareScript)->toContain('ICU-enabled PHP binaries are required by nativephp.json');
+    expect($sharedPrepareScript)->toContain('ICU-enabled PHP binaries are required by NativePHP lock/config');
     expect($sharedPrepareScript)->toContain('install signature changed');
     expect($iosPrepareScript)->toContain('native_read_icu_preference');
     expect($iosPrepareScript)->toContain('install_args+=(--with-icu)');
-    expect($iosPrepareScript)->toContain('ICU-enabled PHP binaries are required by nativephp.json');
+    expect($iosPrepareScript)->toContain('ICU-enabled PHP binaries are required by NativePHP lock/config');
 });
 
 test('android bundle pruning targets dormant quran exegesis and generated quran snapshots', function () {

@@ -55,20 +55,21 @@ it('composes and executes the control panel lifecycle without persisting runtime
 
     livewire(ControlPanel::class)
         ->callAction('controlPanel', data: [
-            'main_text_size_range' => [
-                Setting::MIN_MAIN_TEXT_SIZE_MIN - 1,
-                Setting::MAX_MAIN_TEXT_SIZE_MAX + 1,
-            ],
+            Setting::MINIMUM_MAIN_TEXT_SIZE => Setting::MIN_MAIN_TEXT_SIZE_MIN - 1,
+            Setting::MAXIMUM_MAIN_TEXT_SIZE => Setting::MAX_MAIN_TEXT_SIZE_MAX + 1,
         ])
-        ->assertHasFormErrors(['main_text_size_range.0', 'main_text_size_range.1']);
+        ->assertHasNoFormErrors()
+        ->assertSet('clientControlPanel.minimum_main_text_size', Setting::MIN_MAIN_TEXT_SIZE_DEFAULT)
+        ->assertSet('clientControlPanel.maximum_main_text_size', Setting::MAX_MAIN_TEXT_SIZE_DEFAULT);
 
     livewire(ControlPanel::class)
         ->callAction('controlPanel', data: [
-            'main_text_size_range' => [19, 16],
+            Setting::MINIMUM_MAIN_TEXT_SIZE => 19,
+            Setting::MAXIMUM_MAIN_TEXT_SIZE => 16,
         ])
         ->assertHasNoFormErrors()
-        ->assertSet('clientControlPanel.minimum_main_text_size', 16)
-        ->assertSet('clientControlPanel.maximum_main_text_size', 19);
+        ->assertSet('clientControlPanel.minimum_main_text_size', Setting::MIN_MAIN_TEXT_SIZE_DEFAULT)
+        ->assertSet('clientControlPanel.maximum_main_text_size', Setting::MAX_MAIN_TEXT_SIZE_DEFAULT);
 
     livewire(ControlPanel::class)
         ->call('triggerReaderMaintenancePulse')

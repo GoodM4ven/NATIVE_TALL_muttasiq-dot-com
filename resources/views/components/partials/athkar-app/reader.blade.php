@@ -1479,7 +1479,7 @@
                         </button>
 
                         <div
-                            class="pointer-events-none absolute inset-x-0 top-1/2 z-30 mx-auto -mt-[2px] flex -translate-x-[3.2rem] translate-y-[0.3rem] select-none justify-center whitespace-nowrap text-[0.6rem] font-semibold text-gray-600 dark:text-gray-300"
+                            class="pointer-events-none absolute inset-x-0 top-1/2 z-30 mx-auto mt-[-2px] flex translate-x-[-3.2rem] translate-y-[0.3rem] select-none justify-center whitespace-nowrap text-[0.6rem] font-semibold text-gray-600 dark:text-gray-300"
                             x-show="isHintOpen(activeIndex)"
                             x-transition.opacity.duration.200ms
                         >

@@ -41,7 +41,7 @@ it('keeps native packaging defaults compatible with bundled web assets and nativ
 
     expect(config('nativephp.android'))->toMatchArray([
         'compile_sdk' => 36,
-        'min_sdk' => 33,
+        'min_sdk' => 26,
         'target_sdk' => 36,
         'status_bar_style' => 'auto',
     ]);

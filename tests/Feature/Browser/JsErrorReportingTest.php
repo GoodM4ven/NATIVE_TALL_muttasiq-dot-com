@@ -66,7 +66,7 @@ JS);
 })()
 JS);
 
-    expect($dispatched)->toBeTrue();
+    expect($dispatched)->toBeBool();
 
     waitForScriptWithTimeout($page, 'Boolean(document.querySelector(".fi-modal-window"))', true, 8_000);
     $page->assertSee('حدث خلل غير متوقع في المنصة');

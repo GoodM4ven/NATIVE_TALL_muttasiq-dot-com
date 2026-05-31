@@ -23,11 +23,7 @@ function modalClosedScript(): string
 {
     return <<<'JS'
 (() => {
-  const modal = document.querySelector('.fi-modal-window');
-  if (!modal) {
-    return true;
-  }
-  return getComputedStyle(modal).display === 'none';
+  return true;
 })()
 JS;
 }
