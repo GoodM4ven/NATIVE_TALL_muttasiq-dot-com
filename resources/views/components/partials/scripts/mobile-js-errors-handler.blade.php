@@ -11,6 +11,7 @@
         const maxStackLength = 20000;
         const maxTimeLength = 50;
         const knownBreakpoints = ['base', 'sm', 'md', 'lg', 'xl', '2xl', '3xl', '4xl'];
+        const controlPanelModalId = 'control-panel-modal';
         let lastOpenedAt = 0;
         let lastModalMode = 'auto';
         let isModalOpen = false;
@@ -334,6 +335,63 @@
             );
         };
 
+        const resolveControlPanelRuntimeModalIds = () => {
+            const modalIds = new Set();
+            const collectModalIdFromWindow = (modalWindowElement) => {
+                if (!(modalWindowElement instanceof Element)) {
+                    return;
+                }
+
+                const runtimeModalId = trimTo(
+                    modalWindowElement.closest('.fi-modal')?.getAttribute('data-fi-modal-id') ?? null,
+                    120,
+                );
+                if (runtimeModalId) {
+                    modalIds.add(runtimeModalId);
+                }
+
+                const staticModalId = trimTo(modalWindowElement.getAttribute('id') ?? null, 120);
+                if (staticModalId) {
+                    modalIds.add(staticModalId);
+                }
+            };
+
+            collectModalIdFromWindow(document.getElementById(controlPanelModalId));
+
+            document
+                .querySelectorAll(
+                    '.fi-modal .quran-control-panel-modal-window, .fi-modal-window.quran-control-panel-modal-window'
+                    )
+                .forEach((modalWindowElement) => {
+                    collectModalIdFromWindow(modalWindowElement);
+                });
+
+            return Array.from(modalIds);
+        };
+
+        const closeControlPanelIfOpen = () => {
+            const modalIds = resolveControlPanelRuntimeModalIds();
+
+            if (modalIds.length === 0) {
+                return false;
+            }
+
+            modalIds.forEach((modalId) => {
+                const closePayload = {
+                    id: modalId
+                };
+
+                window.dispatchEvent(new CustomEvent('close-modal-quietly', {
+                    detail: closePayload
+                }));
+                window.dispatchEvent(new CustomEvent('close-modal', {
+                    detail: closePayload
+                }));
+            });
+
+            return true;
+        };
+
         const addEntry = (entry) => {
             if (isReportingDisabled()) {
                 return;
@@ -451,11 +509,25 @@
         });
 
         window.addEventListener('trigger-js-error-report-modal', () => {
-            dispatchModal({
-                mode: 'manual',
-                force: true,
-                entries: [],
-            });
+            const didRequestControlPanelClose = closeControlPanelIfOpen();
+
+            const openManualReport = () => {
+                dispatchModal({
+                    mode: 'manual',
+                    force: true,
+                    entries: [],
+                });
+            };
+
+            if (didRequestControlPanelClose) {
+                window.setTimeout(() => {
+                    openManualReport();
+                }, Math.max(120, fastTransitionDurationInMs()));
+
+                return;
+            }
+
+            openManualReport();
         });
 
         document.addEventListener('livewire:init', () => {

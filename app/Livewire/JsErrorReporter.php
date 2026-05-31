@@ -286,14 +286,14 @@ class JsErrorReporter extends Component implements HasActions, HasSchemas
         $breakpoint = trim((string) ($this->clientContext['breakpoint'] ?? ''));
 
         return match ($breakpoint) {
-            'base' => arabic_text('جوال'),
+            'base' => arabic_text('صغير جدًّا'),
             'sm' => arabic_text('صغير'),
             'md' => arabic_text('متوسط'),
             'lg' => arabic_text('كبير'),
-            'xl' => arabic_text('كبير جدا'),
-            '2xl' => arabic_text('كبير جدا مقاس 2'),
-            '3xl' => arabic_text('كبير جدا مقاس 3'),
-            '4xl' => arabic_text('كبير جدا مقاس 4'),
+            'xl' => arabic_text('كبير جدًّا 1'),
+            '2xl' => arabic_text('كبير جدًّا 2'),
+            '3xl' => arabic_text('كبير جدًّا 3'),
+            '4xl' => arabic_text('كبير جدًّا 4'),
             default => arabic_text('غير محدد'),
         };
     }
