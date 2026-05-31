@@ -804,7 +804,7 @@
         x-on:touchcancel="handleTouchEnd($event)"
     >
         <p
-            class="quran-app-gate-caption 3xl:top-8 3xl:px-[0.95rem] 3xl:py-2 3xl:text-[0.9rem] 4xl:top-10 4xl:px-[0.95rem] 4xl:py-[0.55rem] 4xl:text-[1.1rem] xl:top-6.5 top-[1.76rem] px-[0.72rem] py-[0.26rem] text-[0.62rem] sm:top-[1.85rem] sm:px-[1.05rem] sm:py-[0.6rem] sm:text-[0.82rem] md:top-8 md:px-4 md:py-2 md:text-[0.9rem] lg:top-6 lg:px-[0.925rem] lg:py-2 lg:text-[0.875rem] xl:px-[0.85rem] xl:py-[0.45rem] xl:text-[0.75rem] 2xl:top-[1.9rem] 2xl:px-3 2xl:py-2 2xl:text-[0.75rem]">
+            class="quran-app-gate-caption 3xl:top-8 3xl:px-[0.95rem] 3xl:py-2 3xl:text-[0.9rem] 4xl:top-10 4xl:px-[0.95rem] 4xl:py-[0.55rem] 4xl:text-[1.1rem] xl:top-6.5 top-[1.76rem] px-[0.72rem] py-[0.26rem] text-[0.62rem] sm:top-[1.85rem] sm:px-[0.85rem] sm:py-2 sm:text-[0.7rem] md:top-8 md:px-4 md:py-2 md:text-[0.9rem] lg:top-6 lg:px-[0.925rem] lg:py-2 lg:text-[0.875rem] xl:px-[0.85rem] xl:py-[0.45rem] xl:text-[0.75rem] 2xl:top-[1.9rem] 2xl:px-3 2xl:py-2 2xl:text-[0.75rem]">
             {{ arabic_text('اختر نمط القراءة الذي يناسب مقصدك') }}</p>
 
         <button
@@ -851,7 +851,7 @@
 
             <span class="quran-app-sector__veil"></span>
             <span
-                class="quran-app-sector__chip quran-app-sector__chip--tilawa font-arabic-serif 3xl:text-[2.2rem] 4xl:text-[2.6rem] 3xl:py-3 3xl:px-7 4xl:py-[0.9rem] 4xl:px-8 px-[0.9rem] py-[0.35rem] text-[1.25rem] sm:px-[1.15rem] sm:py-[0.52rem] sm:text-[1.5rem] md:px-[1.35rem] md:py-[0.6rem] md:text-[1.9rem] lg:px-[1.6rem] lg:py-[0.7rem] lg:text-[2.15rem] xl:px-[1.525rem] xl:py-[0.6rem] xl:text-[1.7rem] 2xl:px-[1.35rem] 2xl:py-[0.72rem] 2xl:text-[1.65rem]"
+                class="quran-app-sector__chip quran-app-sector__chip--tilawa font-arabic-serif 3xl:text-[2.2rem] 4xl:text-[2.6rem] 3xl:py-3 3xl:px-7 4xl:py-[0.9rem] 4xl:px-8 px-[0.9rem] py-[0.35rem] text-[1.25rem] sm:px-[1.15rem] sm:py-[0.52rem] sm:text-[1.5rem] md:px-[1.35rem] md:py-[0.6rem] md:text-[1.9rem] lg:px-[1.35rem] lg:py-[0.56rem] lg:text-[1.85rem] xl:px-[1.525rem] xl:py-[0.6rem] xl:text-[1.7rem] 2xl:px-[1.35rem] 2xl:py-[0.72rem] 2xl:text-[1.65rem]"
             >
                 <span class="quran-app-sector__chip-text">{{ arabic_text('تلاوة') }}</span>
             </span>
@@ -902,7 +902,7 @@
 
             <span class="quran-app-sector__veil"></span>
             <span
-                class="quran-app-sector__chip quran-app-sector__chip--tadabbur font-arabic-serif 3xl:text-[2.2rem] 4xl:text-[2.6rem] 3xl:py-3 3xl:px-7 4xl:py-[0.9rem] 4xl:px-8 px-[0.9rem] py-[0.35rem] text-[1.25rem] sm:px-[1.15rem] sm:py-[0.52rem] sm:text-[1.5rem] md:px-[1.35rem] md:py-[0.6rem] md:text-[1.9rem] lg:px-[1.6rem] lg:py-[0.7rem] lg:text-[2.15rem] xl:px-[1.525rem] xl:py-[0.6rem] xl:text-[1.7rem] 2xl:px-[1.35rem] 2xl:py-[0.72rem] 2xl:text-[1.65rem]"
+                class="quran-app-sector__chip quran-app-sector__chip--tadabbur font-arabic-serif 3xl:text-[2.2rem] 4xl:text-[2.6rem] 3xl:py-3 3xl:px-7 4xl:py-[0.9rem] 4xl:px-8 px-[0.9rem] py-[0.35rem] text-[1.25rem] sm:px-[1.15rem] sm:py-[0.52rem] sm:text-[1.5rem] md:px-[1.35rem] md:py-[0.6rem] md:text-[1.9rem] lg:px-[1.35rem] lg:py-[0.56rem] lg:text-[1.85rem] xl:px-[1.525rem] xl:py-[0.6rem] xl:text-[1.7rem] 2xl:px-[1.35rem] 2xl:py-[0.72rem] 2xl:text-[1.65rem]"
             >
                 <span class="quran-app-sector__chip-text">{{ arabic_text('تدبّر') }}</span>
                 <span
@@ -964,7 +964,7 @@
 
             <span class="quran-app-sector__veil"></span>
             <span
-                class="quran-app-sector__chip quran-app-sector__chip--hifth font-arabic-serif 3xl:text-[2.2rem] 4xl:text-[2.6rem] 3xl:py-3 3xl:px-7 4xl:py-[0.9rem] 4xl:px-8 px-[0.9rem] py-[0.35rem] text-[1.25rem] sm:px-[1.15rem] sm:py-[0.52rem] sm:text-[1.5rem] md:px-[1.35rem] md:py-[0.6rem] md:text-[1.9rem] lg:px-[1.6rem] lg:py-[0.7rem] lg:text-[2.15rem] xl:px-[1.525rem] xl:py-[0.6rem] xl:text-[1.7rem] 2xl:px-[1.35rem] 2xl:py-[0.72rem] 2xl:text-[1.65rem]"
+                class="quran-app-sector__chip quran-app-sector__chip--hifth font-arabic-serif 3xl:text-[2.2rem] 4xl:text-[2.6rem] 3xl:py-3 3xl:px-7 4xl:py-[0.9rem] 4xl:px-8 px-[0.9rem] py-[0.35rem] text-[1.25rem] sm:px-[1.15rem] sm:py-[0.52rem] sm:text-[1.5rem] md:px-[1.35rem] md:py-[0.6rem] md:text-[1.9rem] lg:px-[1.35rem] lg:py-[0.56rem] lg:text-[1.85rem] xl:px-[1.525rem] xl:py-[0.6rem] xl:text-[1.7rem] 2xl:px-[1.35rem] 2xl:py-[0.72rem] 2xl:text-[1.65rem]"
             >
                 <span class="quran-app-sector__chip-text">{{ arabic_text('حفظ') }}</span>
                 <span
