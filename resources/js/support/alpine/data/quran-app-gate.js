@@ -333,6 +333,17 @@ document.addEventListener('alpine:init', () => {
 
             return false;
         },
+        isBaseBreakpoint() {
+            if (typeof this.$store?.bp?.is === 'function') {
+                return this.$store.bp.is('base');
+            }
+
+            if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+                return window.matchMedia('(max-width: 639px)').matches;
+            }
+
+            return false;
+        },
         cancelGeometryCacheRefresh() {
             if (this.geometryCacheFrameId === null) {
                 return;

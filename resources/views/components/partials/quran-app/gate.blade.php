@@ -21,6 +21,40 @@
             contain: layout paint;
         }
 
+        .quran-app-gate-shell.quran-app-gate-shell--base-perf .quran-app-sector__media {
+            animation: none;
+            opacity: 1;
+        }
+
+        .quran-app-gate-shell.quran-app-gate-shell--base-perf img.quran-app-sector__image-img {
+            filter: none !important;
+            transform: none !important;
+            opacity: 1;
+            transition:
+                transform 130ms cubic-bezier(0.2, 0.9, 0.25, 1),
+                opacity 130ms ease;
+            will-change: transform;
+        }
+
+        .quran-app-gate-shell.quran-app-gate-shell--base-perf .quran-app-sector.is-active img.quran-app-sector__image-img {
+            transform: scale(1.015) translateZ(0) !important;
+        }
+
+        .quran-app-gate-shell.quran-app-gate-shell--base-perf .quran-app-sector.is-muted img.quran-app-sector__image-img {
+            transform: scale(1) !important;
+        }
+
+        .quran-app-gate-shell.quran-app-gate-shell--base-perf .quran-app-sector__chip,
+        .quran-app-gate-shell.quran-app-gate-shell--base-perf .quran-app-gate-anchor,
+        .quran-app-gate-shell.quran-app-gate-shell--base-perf .quran-app-gate-pointer {
+            -webkit-backdrop-filter: none !important;
+            backdrop-filter: none !important;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18) !important;
+            transition:
+                transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 150ms ease !important;
+        }
+
         .quran-app-gate-caption {
             position: absolute;
             left: 50%;
@@ -792,6 +826,7 @@
         class="quran-app-gate-shell relative h-full w-full"
         x-data="quranAppGate"
         x-ref="shell"
+        x-bind:class="{ 'quran-app-gate-shell--base-perf': shouldUseMobileBasePerfMode() }"
         x-on:pointerdown="handlePointerDown($event)"
         x-on:pointerup="handlePointerUp($event)"
         x-on:pointercancel="handlePointerUp($event)"
@@ -821,33 +856,51 @@
             x-on:blur="unpinMode('tilawa')"
             x-on:click="openMode('tilawa', $event)"
         >
-            <span class="quran-app-sector__media quran-app-sector__media--tilawa quran-app-sector__media--morning">
-                <x-goodmaven::blurred-image
-                    class="absolute inset-0"
-                    alt="{{ arabic_text('وضع التلاوة') }}"
-                    :imagePath="asset('images/background/quran/morning/tilawa.webp')"
-                    :thumbnailImagePath="asset('images/background/quran/morning/tilawa-blur-thumbnail.webp')"
-                    :isEagerLoaded="true"
-                    :isDisplayEnforced="true"
-                    :isObjectCentered="false"
-                    containerClasses="absolute inset-0 overflow-hidden bg-black/10 dark:bg-black/25"
-                    imageClasses="quran-app-sector__image-img quran-app-sector__image-img--tilawa select-none"
-                />
-            </span>
+            <template x-if="isBaseBreakpoint()">
+                <span class="quran-app-sector__media quran-app-sector__media--tilawa">
+                    <img
+                        class="quran-app-sector__image-img quran-app-sector__image-img--tilawa select-none"
+                        alt="{{ arabic_text('وضع التلاوة') }}"
+                        x-bind:src="$store.colorScheme?.isDark ? '{{ asset('images/background/quran/night/tilawa.webp') }}' :
+                            '{{ asset('images/background/quran/morning/tilawa.webp') }}'"
+                        loading="eager"
+                        decoding="async"
+                        draggable="false"
+                    >
+                </span>
+            </template>
 
-            <span class="quran-app-sector__media quran-app-sector__media--tilawa quran-app-sector__media--night">
-                <x-goodmaven::blurred-image
-                    class="absolute inset-0"
-                    alt="{{ arabic_text('وضع التلاوة') }}"
-                    :imagePath="asset('images/background/quran/night/tilawa.webp')"
-                    :thumbnailImagePath="asset('images/background/quran/night/tilawa-blur-thumbnail.webp')"
-                    :isEagerLoaded="true"
-                    :isDisplayEnforced="true"
-                    :isObjectCentered="false"
-                    containerClasses="absolute inset-0 overflow-hidden bg-black/10 dark:bg-black/25"
-                    imageClasses="quran-app-sector__image-img quran-app-sector__image-img--tilawa select-none"
-                />
-            </span>
+            <template x-if="!isBaseBreakpoint()">
+                <span class="quran-app-sector__media quran-app-sector__media--tilawa quran-app-sector__media--morning">
+                    <x-goodmaven::blurred-image
+                        class="absolute inset-0"
+                        alt="{{ arabic_text('وضع التلاوة') }}"
+                        :imagePath="asset('images/background/quran/morning/tilawa.webp')"
+                        :thumbnailImagePath="asset('images/background/quran/morning/tilawa-blur-thumbnail.webp')"
+                        :isEagerLoaded="true"
+                        :isDisplayEnforced="true"
+                        :isObjectCentered="false"
+                        containerClasses="absolute inset-0 overflow-hidden bg-black/10 dark:bg-black/25"
+                        imageClasses="quran-app-sector__image-img quran-app-sector__image-img--tilawa select-none"
+                    />
+                </span>
+            </template>
+
+            <template x-if="!isBaseBreakpoint()">
+                <span class="quran-app-sector__media quran-app-sector__media--tilawa quran-app-sector__media--night">
+                    <x-goodmaven::blurred-image
+                        class="absolute inset-0"
+                        alt="{{ arabic_text('وضع التلاوة') }}"
+                        :imagePath="asset('images/background/quran/night/tilawa.webp')"
+                        :thumbnailImagePath="asset('images/background/quran/night/tilawa-blur-thumbnail.webp')"
+                        :isEagerLoaded="true"
+                        :isDisplayEnforced="true"
+                        :isObjectCentered="false"
+                        containerClasses="absolute inset-0 overflow-hidden bg-black/10 dark:bg-black/25"
+                        imageClasses="quran-app-sector__image-img quran-app-sector__image-img--tilawa select-none"
+                    />
+                </span>
+            </template>
 
             <span class="quran-app-sector__veil"></span>
             <span
@@ -872,33 +925,52 @@
             x-on:blur="unpinMode('tadabbur')"
             x-on:click="openMode('tadabbur', $event)"
         >
-            <span class="quran-app-sector__media quran-app-sector__media--tadabbur quran-app-sector__media--morning">
-                <x-goodmaven::blurred-image
-                    class="absolute inset-0"
-                    alt="{{ arabic_text('وضع التدبّر') }}"
-                    :imagePath="asset('images/background/quran/morning/tadabbur.webp')"
-                    :thumbnailImagePath="asset('images/background/quran/morning/tadabbur-blur-thumbnail.webp')"
-                    :isEagerLoaded="true"
-                    :isDisplayEnforced="true"
-                    :isObjectCentered="false"
-                    containerClasses="absolute inset-0 overflow-hidden bg-black/10 dark:bg-black/25"
-                    imageClasses="quran-app-sector__image-img quran-app-sector__image-img--tadabbur select-none"
-                />
-            </span>
+            <template x-if="isBaseBreakpoint()">
+                <span class="quran-app-sector__media quran-app-sector__media--tadabbur">
+                    <img
+                        class="quran-app-sector__image-img quran-app-sector__image-img--tadabbur select-none"
+                        alt="{{ arabic_text('وضع التدبّر') }}"
+                        x-bind:src="$store.colorScheme?.isDark ? '{{ asset('images/background/quran/night/tadabbur.webp') }}' :
+                            '{{ asset('images/background/quran/morning/tadabbur.webp') }}'"
+                        loading="eager"
+                        decoding="async"
+                        draggable="false"
+                    >
+                </span>
+            </template>
 
-            <span class="quran-app-sector__media quran-app-sector__media--tadabbur quran-app-sector__media--night">
-                <x-goodmaven::blurred-image
-                    class="absolute inset-0"
-                    alt="{{ arabic_text('وضع التدبّر') }}"
-                    :imagePath="asset('images/background/quran/night/tadabbur.webp')"
-                    :thumbnailImagePath="asset('images/background/quran/night/tadabbur-blur-thumbnail.webp')"
-                    :isEagerLoaded="true"
-                    :isDisplayEnforced="true"
-                    :isObjectCentered="false"
-                    containerClasses="absolute inset-0 overflow-hidden bg-black/10 dark:bg-black/25"
-                    imageClasses="quran-app-sector__image-img quran-app-sector__image-img--tadabbur select-none"
-                />
-            </span>
+            <template x-if="!isBaseBreakpoint()">
+                <span
+                    class="quran-app-sector__media quran-app-sector__media--tadabbur quran-app-sector__media--morning">
+                    <x-goodmaven::blurred-image
+                        class="absolute inset-0"
+                        alt="{{ arabic_text('وضع التدبّر') }}"
+                        :imagePath="asset('images/background/quran/morning/tadabbur.webp')"
+                        :thumbnailImagePath="asset('images/background/quran/morning/tadabbur-blur-thumbnail.webp')"
+                        :isEagerLoaded="true"
+                        :isDisplayEnforced="true"
+                        :isObjectCentered="false"
+                        containerClasses="absolute inset-0 overflow-hidden bg-black/10 dark:bg-black/25"
+                        imageClasses="quran-app-sector__image-img quran-app-sector__image-img--tadabbur select-none"
+                    />
+                </span>
+            </template>
+
+            <template x-if="!isBaseBreakpoint()">
+                <span class="quran-app-sector__media quran-app-sector__media--tadabbur quran-app-sector__media--night">
+                    <x-goodmaven::blurred-image
+                        class="absolute inset-0"
+                        alt="{{ arabic_text('وضع التدبّر') }}"
+                        :imagePath="asset('images/background/quran/night/tadabbur.webp')"
+                        :thumbnailImagePath="asset('images/background/quran/night/tadabbur-blur-thumbnail.webp')"
+                        :isEagerLoaded="true"
+                        :isDisplayEnforced="true"
+                        :isObjectCentered="false"
+                        containerClasses="absolute inset-0 overflow-hidden bg-black/10 dark:bg-black/25"
+                        imageClasses="quran-app-sector__image-img quran-app-sector__image-img--tadabbur select-none"
+                    />
+                </span>
+            </template>
 
             <span class="quran-app-sector__veil"></span>
             <span
@@ -934,33 +1006,51 @@
             x-on:blur="unpinMode('hifth')"
             x-on:click="openMode('hifth', $event)"
         >
-            <span class="quran-app-sector__media quran-app-sector__media--hifth quran-app-sector__media--morning">
-                <x-goodmaven::blurred-image
-                    class="absolute inset-0"
-                    alt="{{ arabic_text('وضع الحفظ') }}"
-                    :imagePath="asset('images/background/quran/morning/hifth.webp')"
-                    :thumbnailImagePath="asset('images/background/quran/morning/hifth-blur-thumbnail.webp')"
-                    :isEagerLoaded="true"
-                    :isDisplayEnforced="true"
-                    :isObjectCentered="false"
-                    containerClasses="absolute inset-0 overflow-hidden bg-black/10 dark:bg-black/25"
-                    imageClasses="quran-app-sector__image-img quran-app-sector__image-img--hifth select-none"
-                />
-            </span>
+            <template x-if="isBaseBreakpoint()">
+                <span class="quran-app-sector__media quran-app-sector__media--hifth">
+                    <img
+                        class="quran-app-sector__image-img quran-app-sector__image-img--hifth select-none"
+                        alt="{{ arabic_text('وضع الحفظ') }}"
+                        x-bind:src="$store.colorScheme?.isDark ? '{{ asset('images/background/quran/night/hifth.webp') }}' :
+                            '{{ asset('images/background/quran/morning/hifth.webp') }}'"
+                        loading="eager"
+                        decoding="async"
+                        draggable="false"
+                    >
+                </span>
+            </template>
 
-            <span class="quran-app-sector__media quran-app-sector__media--hifth quran-app-sector__media--night">
-                <x-goodmaven::blurred-image
-                    class="absolute inset-0"
-                    alt="{{ arabic_text('وضع الحفظ') }}"
-                    :imagePath="asset('images/background/quran/night/hifth.webp')"
-                    :thumbnailImagePath="asset('images/background/quran/night/hifth-blur-thumbnail.webp')"
-                    :isEagerLoaded="true"
-                    :isDisplayEnforced="true"
-                    :isObjectCentered="false"
-                    containerClasses="absolute inset-0 overflow-hidden bg-black/10 dark:bg-black/25"
-                    imageClasses="quran-app-sector__image-img quran-app-sector__image-img--hifth select-none"
-                />
-            </span>
+            <template x-if="!isBaseBreakpoint()">
+                <span class="quran-app-sector__media quran-app-sector__media--hifth quran-app-sector__media--morning">
+                    <x-goodmaven::blurred-image
+                        class="absolute inset-0"
+                        alt="{{ arabic_text('وضع الحفظ') }}"
+                        :imagePath="asset('images/background/quran/morning/hifth.webp')"
+                        :thumbnailImagePath="asset('images/background/quran/morning/hifth-blur-thumbnail.webp')"
+                        :isEagerLoaded="true"
+                        :isDisplayEnforced="true"
+                        :isObjectCentered="false"
+                        containerClasses="absolute inset-0 overflow-hidden bg-black/10 dark:bg-black/25"
+                        imageClasses="quran-app-sector__image-img quran-app-sector__image-img--hifth select-none"
+                    />
+                </span>
+            </template>
+
+            <template x-if="!isBaseBreakpoint()">
+                <span class="quran-app-sector__media quran-app-sector__media--hifth quran-app-sector__media--night">
+                    <x-goodmaven::blurred-image
+                        class="absolute inset-0"
+                        alt="{{ arabic_text('وضع الحفظ') }}"
+                        :imagePath="asset('images/background/quran/night/hifth.webp')"
+                        :thumbnailImagePath="asset('images/background/quran/night/hifth-blur-thumbnail.webp')"
+                        :isEagerLoaded="true"
+                        :isDisplayEnforced="true"
+                        :isObjectCentered="false"
+                        containerClasses="absolute inset-0 overflow-hidden bg-black/10 dark:bg-black/25"
+                        imageClasses="quran-app-sector__image-img quran-app-sector__image-img--hifth select-none"
+                    />
+                </span>
+            </template>
 
             <span class="quran-app-sector__veil"></span>
             <span
