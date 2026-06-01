@@ -593,6 +593,7 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                         delayMs: this.nativeRuntime ? 108 : 90,
                         revealDelayMs: this.nativeRuntime ? 240 : 220,
                         maxAttempts: this.nativeRuntime ? 6 : 5,
+                        forceRefit: true,
                     });
                 }
             }

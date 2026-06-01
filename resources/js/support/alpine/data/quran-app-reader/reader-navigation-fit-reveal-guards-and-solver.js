@@ -1066,7 +1066,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
 
         async fitSpecificPageAfterModalClose(
             pageNumber,
-            { revealDelayMs = 240, maxAttempts = 6 } = {},
+            { revealDelayMs = 240, maxAttempts = 6, forceRefit = false } = {},
         ) {
             const normalizedPageNumber = clampPage(Number(pageNumber ?? 0), this.maxPage);
 
@@ -1088,7 +1088,11 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 return false;
             }
 
-            if (this.isCurrentPageVisiblyReady() && this.isCurrentFitQualityHealthy()) {
+            if (
+                !forceRefit &&
+                this.isCurrentPageVisiblyReady() &&
+                this.isCurrentFitQualityHealthy()
+            ) {
                 return true;
             }
 
@@ -1199,9 +1203,16 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
 
         schedulePendingModalCloseFit(
             pageNumber,
-            { retries = 36, delayMs = 90, revealDelayMs = 240, maxAttempts = 6 } = {},
+            {
+                retries = 36,
+                delayMs = 90,
+                revealDelayMs = 240,
+                maxAttempts = 6,
+                forceRefit = false,
+            } = {},
         ) {
             const normalizedPageNumber = clampPage(Number(pageNumber ?? 0), this.maxPage);
+            const shouldForceRefit = Boolean(forceRefit);
 
             if (normalizedPageNumber <= 0) {
                 this.clearPendingPostModalTargetFit();
@@ -1247,7 +1258,11 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                     );
 
                 if (canFitNow) {
-                    if (this.isCurrentPageVisiblyReady() && this.isCurrentFitQualityHealthy()) {
+                    if (
+                        !shouldForceRefit &&
+                        this.isCurrentPageVisiblyReady() &&
+                        this.isCurrentFitQualityHealthy()
+                    ) {
                         this.clearPendingPostModalTargetFit();
 
                         return;
@@ -1256,6 +1271,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                     void this.fitSpecificPageAfterModalClose(normalizedPageNumber, {
                         revealDelayMs,
                         maxAttempts,
+                        forceRefit: shouldForceRefit,
                     }).finally(() => {
                         if (this._postModalTargetFitPage === normalizedPageNumber) {
                             this.clearPendingPostModalTargetFit();

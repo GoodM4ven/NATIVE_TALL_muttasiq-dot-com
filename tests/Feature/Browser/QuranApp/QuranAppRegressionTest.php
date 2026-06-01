@@ -1356,6 +1356,157 @@ JS,
     $page->assertNoJavaScriptErrors();
 });
 
+it('preserves fitted quran tuning after opening and closing jump-page modal without navigation', function () {
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
+
+    $assertReaderRenderable = function (int $timeoutMs = 12_000) use ($page): void {
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript('data.ready && data.mushafLines.length > 0'),
+            true,
+            $timeoutMs,
+        );
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript('data._pendingNavigationRequest === null && !data._navigationRevealLocked && !data.isLoadingPage'),
+            true,
+            $timeoutMs,
+        );
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript('data.isFittingPage'),
+            false,
+            $timeoutMs,
+        );
+        waitForScriptWithTimeout(
+            $page,
+            quranReaderDataScript("typeof data.pageFitState === 'function' ? data.pageFitState() : 'ready'"),
+            'ready',
+            $timeoutMs,
+        );
+    };
+
+    $captureFitMetrics = function () use ($page): array {
+        $metrics = $page->script(
+            <<<'JS'
+(() => {
+  const frame = document.querySelector('[x-ref="pageFrame"]');
+  const lines = document.querySelector('.quran-page-lines');
+
+  if (!(frame instanceof HTMLElement) || !(lines instanceof HTMLElement)) {
+    return null;
+  }
+
+  const frameRect = frame.getBoundingClientRect();
+  const linesRect = lines.getBoundingClientRect();
+  const computed = window.getComputedStyle(lines);
+  const parseVar = (name, fallback = 0) => {
+    const value = Number.parseFloat(computed.getPropertyValue(name).trim());
+    return Number.isFinite(value) ? value : fallback;
+  };
+
+  return {
+    fillHeightRatio: Number((linesRect.height / frameRect.height).toFixed(4)),
+    fillWidthRatio: Number((linesRect.width / frameRect.width).toFixed(4)),
+    pageScale: parseVar('--quran-page-scale', 1),
+    typeScaleEffective: parseVar('--quran-page-type-scale-effective', 1),
+    leadingTuneEffective: parseVar('--quran-page-postfit-leading-tune-effective', 1),
+    gapTuneEffective: parseVar('--quran-page-postfit-gap-tune-effective', 1),
+    isOpening: lines.classList.contains('quran-page-lines--opening'),
+  };
+})()
+JS,
+        );
+
+        expect($metrics)->toBeArray();
+
+        return $metrics;
+    };
+
+    resetBrowserState($page);
+    safeBrowserResize($page, 2560, 1440);
+    waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
+    hashAction($page, '#quran-app-tilawa', true);
+    waitForScript($page, homeDataScript('data.activeView'), 'quran-app-tilawa');
+    waitForQuranReaderVisible($page);
+    $assertReaderRenderable();
+
+    $page->script(
+        quranReaderCommandScript("data.dispatchPageNavigationRequest(17, 'test-modal-fit-seed');"),
+    );
+    waitForScriptWithTimeout($page, quranReaderDataScript('Number(data.pageNumber ?? 0)'), 17, 8_000);
+    $assertReaderRenderable();
+
+    $beforeMetrics = $captureFitMetrics();
+    expect((bool) ($beforeMetrics['isOpening'] ?? true))->toBeFalse();
+
+    $page->script(
+        quranReaderCommandScript(
+            <<<'JS'
+if (typeof data.openJumpPageModal !== 'function') {
+  return false;
+}
+
+void data.openJumpPageModal();
+return true;
+JS,
+        ),
+    );
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('Boolean(data.isModalWindowVisibleById(data.jumpPageModalId))'),
+        true,
+        8_000,
+    );
+
+    $page->script(
+        quranReaderCommandScript(
+            <<<'JS'
+return (async () => {
+  if (typeof data.requestModalCloseByKnownIds === 'function') {
+    await data.requestModalCloseByKnownIds([data.jumpPageModalId], {
+      quietly: false,
+      allowLivewireUnmount: true,
+    });
+  } else {
+    window.dispatchEvent(
+      new CustomEvent('close-modal', {
+        detail: { id: data.jumpPageModalId },
+      }),
+    );
+  }
+
+  return true;
+})();
+JS,
+        ),
+    );
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('!data.isModalWindowVisibleById(data.jumpPageModalId) && data.openModalCount() <= 0'),
+        true,
+        8_000,
+    );
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('Number(data._postModalTargetFitPage ?? 0) === 0'),
+        true,
+        8_000,
+    );
+    $assertReaderRenderable();
+
+    $afterMetrics = $captureFitMetrics();
+
+    expect((bool) ($afterMetrics['isOpening'] ?? true))->toBeFalse();
+    expect(abs((float) ($beforeMetrics['fillHeightRatio'] ?? 0) - (float) ($afterMetrics['fillHeightRatio'] ?? 0)))->toBeLessThan(0.04);
+    expect(abs((float) ($beforeMetrics['fillWidthRatio'] ?? 0) - (float) ($afterMetrics['fillWidthRatio'] ?? 0)))->toBeLessThan(0.03);
+    expect(abs((float) ($beforeMetrics['typeScaleEffective'] ?? 0) - (float) ($afterMetrics['typeScaleEffective'] ?? 0)))->toBeLessThan(0.08);
+    expect(abs((float) ($beforeMetrics['leadingTuneEffective'] ?? 0) - (float) ($afterMetrics['leadingTuneEffective'] ?? 0)))->toBeLessThan(0.08);
+    expect(abs((float) ($beforeMetrics['gapTuneEffective'] ?? 0) - (float) ($afterMetrics['gapTuneEffective'] ?? 0)))->toBeLessThan(0.08);
+
+    $page->assertNoJavaScriptErrors();
+});
+
 it('keeps the reader visible on 4xl after rapid swipe-next then slider jump to page 604', function () {
     $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
