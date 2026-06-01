@@ -1,4 +1,4 @@
-# Removed Skipped Tests
+# Skipped Tests
 
 Generated on 2026-05-31 after full non-browser and browser test runs.
 
