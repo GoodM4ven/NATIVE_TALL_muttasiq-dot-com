@@ -994,60 +994,70 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
 
             this.search.activeSurahNumber = surahNumber;
             this.search.preserveActiveSurahOnNextOpen = true;
-            this.searchDestinationScaleBoostPageNumber = pageNumber;
-            this.searchDestinationScaleBoostSource = 'surah-directory';
-            const shouldUseFastSmPlusRecovery =
-                typeof this.shouldUseSmPlusWebFastModalRecovery === 'function' &&
-                this.shouldUseSmPlusWebFastModalRecovery();
+            const shouldUseStandardSmPlusNavigation =
+                !this.nativeRuntime && Boolean(this.$store?.bp?.is?.('sm+'));
+            const standardSmPlusSource = 'search-standard';
+            if (shouldUseStandardSmPlusNavigation) {
+                this.searchDestinationScaleBoostPageNumber = 0;
+                this.searchDestinationScaleBoostSource = '';
+                this.searchDestinationScaleBoostExpiresAt = 0;
+            } else {
+                this.searchDestinationScaleBoostPageNumber = pageNumber;
+                this.searchDestinationScaleBoostSource = 'surah-directory';
+            }
+            let usedStandardSmPlusNavigation = false;
+            let usedModalCloseGuard = false;
 
             try {
                 this.cancelActiveSearchProcessing();
                 this.resetNavigationQueueForPriorityJump();
                 this.clearPendingPostModalTargetFit();
-                this.holdPageHiddenForModalLifecycle({ animateFadeOut: false });
-                this.beginModalNavigationCloseGuard(searchModalLifecycleIds);
-                await this.requestSearchModalClose();
+                if (!shouldUseStandardSmPlusNavigation) {
+                    this.holdPageHiddenForModalLifecycle({ animateFadeOut: false });
+                    this.beginModalNavigationCloseGuard(searchModalLifecycleIds);
+                    usedModalCloseGuard = true;
+                } else {
+                    this.suppressModalLifecycleEffects(searchModalLifecycleIds, {
+                        durationMs: Math.max(
+                            modalLifecycleSuppressionDurationMs,
+                            postModalFitRevealSettleDelayMs + 560,
+                        ),
+                    });
+                }
+
+                await this.requestSearchModalClose({
+                    skipLayout: shouldUseStandardSmPlusNavigation,
+                });
                 await this.waitForModalLifecycleToSettle();
-                await wait(
-                    shouldUseFastSmPlusRecovery
-                        ? Math.min(60, modalCloseTransitionDelayMs)
-                        : modalCloseTransitionDelayMs,
-                );
+                await wait(modalCloseTransitionDelayMs);
 
                 if (!this.isSearchModalWindowVisible() && this.search.modalOpen) {
                     this.handleSearchModalClosed();
                 }
 
-                this._bypassNextFitCache = true;
-                await this.goToPageFromChevron(pageNumber, {
-                    activeAyahIndex: 0,
-                    source: 'surah-directory',
-                    commitNow: true,
-                    settleDelayMs: 0,
-                });
-
-                if (shouldUseFastSmPlusRecovery) {
-                    this.queueReaderReentryRefit(40, 3);
-                    await wait(64);
-
-                    const requiresFastRecovery =
-                        this.hasRenderablePage() &&
-                        (!this.isCurrentPageVisiblyReady() || !this.isCurrentFitQualityHealthy());
-
-                    if (requiresFastRecovery) {
-                        const recoveryModalId = this.resolveSearchModalCloseTargetId();
-
-                        if (typeof this.runSecondaryModalExitRecoveryPulse === 'function') {
-                            await this.runSecondaryModalExitRecoveryPulse(recoveryModalId);
-                        }
-
-                        await this.ensureModalDrivenPageVisible(pageNumber, {
-                            revealDelayMs: 170,
-                            maxAttempts: 4,
-                            fallbackReason: 'surah-directory-fast-post-close-visibility-recovery',
-                        });
-                    }
+                if (shouldUseStandardSmPlusNavigation) {
+                    usedStandardSmPlusNavigation = true;
+                    await this.nextTickAsync();
+                    await this.waitForStablePageFrame({
+                        maxFrames: 18,
+                        requiredStableFrames: 3,
+                        tolerancePx: 0.8,
+                    });
+                    this._bypassNextFitCache = true;
+                    this.dispatchPageNavigationRequest(pageNumber, standardSmPlusSource, {
+                        activeAyahIndex: 0,
+                        searchHighlightAyahIndex: 0,
+                    });
+                    await wait(24);
                 } else {
+                    this._bypassNextFitCache = true;
+                    await this.goToPageFromChevron(pageNumber, {
+                        activeAyahIndex: 0,
+                        source: 'surah-directory',
+                        commitNow: true,
+                        settleDelayMs: 0,
+                    });
+
                     await this.stabilizeModalDrivenLayout({
                         revealDelayMs: 160,
                         maxAttempts: 4,
@@ -1068,7 +1078,9 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                 this.activeWordIndex = 0;
                 this.searchHighlightedAyahIndex = 0;
                 this.activateSearchDestinationCue({
-                    source: 'surah-directory',
+                    source: shouldUseStandardSmPlusNavigation
+                        ? standardSmPlusSource
+                        : 'surah-directory',
                     surahNumber,
                     pageNumber,
                 });
@@ -1078,7 +1090,19 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                     surahNumber,
                 });
             } finally {
-                this.endModalNavigationCloseGuard();
+                if (usedModalCloseGuard) {
+                    this.endModalNavigationCloseGuard();
+                }
+
+                if (
+                    usedStandardSmPlusNavigation &&
+                    this.hasRenderablePage() &&
+                    this.openModalCount() <= 0
+                ) {
+                    this.clearStaleRevealGuards();
+                    this.scheduleLayout({ revealDelayMs: 96, maxAttempts: 4 });
+                }
+
                 this._searchNavigationInFlight = false;
             }
         },

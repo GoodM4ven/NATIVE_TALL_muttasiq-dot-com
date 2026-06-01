@@ -684,61 +684,63 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
             ]
                 .map((value) => String(value ?? '').trim())
                 .filter((value) => value !== '');
-            this.searchDestinationScaleBoostPageNumber = targetPage;
-            this.searchDestinationScaleBoostSource = isSurahNameResult
-                ? 'surah-directory'
-                : 'search-result';
-            const shouldUseFastSmPlusRecovery =
-                typeof this.shouldUseSmPlusWebFastModalRecovery === 'function' &&
-                this.shouldUseSmPlusWebFastModalRecovery();
+            const shouldUseStandardSmPlusNavigation =
+                !this.nativeRuntime && Boolean(this.$store?.bp?.is?.('sm+'));
+            const standardSmPlusSource = 'search-standard';
+            if (shouldUseStandardSmPlusNavigation) {
+                this.searchDestinationScaleBoostPageNumber = 0;
+                this.searchDestinationScaleBoostSource = '';
+                this.searchDestinationScaleBoostExpiresAt = 0;
+            } else {
+                this.searchDestinationScaleBoostPageNumber = targetPage;
+                this.searchDestinationScaleBoostSource = isSurahNameResult
+                    ? 'surah-directory'
+                    : 'search-result';
+            }
+            let usedStandardSmPlusNavigation = false;
+            let usedModalCloseGuard = false;
 
             try {
                 this.resetNavigationQueueForPriorityJump();
                 this.clearPendingPostModalTargetFit();
-                this.holdPageHiddenForModalLifecycle({ animateFadeOut: false });
                 this.cancelActiveSearchProcessing();
-                this.beginModalNavigationCloseGuard(searchModalLifecycleIds);
-                await this.requestSearchModalClose();
+                if (!shouldUseStandardSmPlusNavigation) {
+                    this.holdPageHiddenForModalLifecycle({ animateFadeOut: false });
+                    this.beginModalNavigationCloseGuard(searchModalLifecycleIds);
+                    usedModalCloseGuard = true;
+                } else {
+                    this.suppressModalLifecycleEffects(searchModalLifecycleIds, {
+                        durationMs: Math.max(
+                            modalLifecycleSuppressionDurationMs,
+                            postModalFitRevealSettleDelayMs + 560,
+                        ),
+                    });
+                }
+
+                await this.requestSearchModalClose({
+                    skipLayout: shouldUseStandardSmPlusNavigation,
+                });
                 await this.waitForModalLifecycleToSettle();
-                await wait(
-                    shouldUseFastSmPlusRecovery
-                        ? Math.min(60, modalCloseTransitionDelayMs)
-                        : modalCloseTransitionDelayMs,
-                );
+                await wait(modalCloseTransitionDelayMs);
 
                 if (!this.isSearchModalWindowVisible() && this.search.modalOpen) {
                     this.handleSearchModalClosed();
                 }
 
-                if (shouldUseFastSmPlusRecovery) {
+                if (shouldUseStandardSmPlusNavigation) {
+                    usedStandardSmPlusNavigation = true;
+                    await this.nextTickAsync();
+                    await this.waitForStablePageFrame({
+                        maxFrames: 18,
+                        requiredStableFrames: 3,
+                        tolerancePx: 0.8,
+                    });
                     this._bypassNextFitCache = true;
-                    await this.goToPageFromChevron(targetPage, {
+                    this.dispatchPageNavigationRequest(targetPage, standardSmPlusSource, {
                         activeAyahIndex: highlightAyahIndex,
                         searchHighlightAyahIndex: highlightAyahIndex,
-                        source: 'search-result',
-                        commitNow: true,
-                        settleDelayMs: 0,
                     });
-                    this.queueReaderReentryRefit(40, 3);
-                    await wait(64);
-
-                    const requiresFastRecovery =
-                        this.hasRenderablePage() &&
-                        (!this.isCurrentPageVisiblyReady() || !this.isCurrentFitQualityHealthy());
-
-                    if (requiresFastRecovery) {
-                        const recoveryModalId = this.resolveSearchModalCloseTargetId();
-
-                        if (typeof this.runSecondaryModalExitRecoveryPulse === 'function') {
-                            await this.runSecondaryModalExitRecoveryPulse(recoveryModalId);
-                        }
-
-                        await this.ensureModalDrivenPageVisible(targetPage, {
-                            revealDelayMs: 170,
-                            maxAttempts: 4,
-                            fallbackReason: 'search-result-fast-post-close-visibility-recovery',
-                        });
-                    }
+                    await wait(24);
                 } else {
                     await this.navigateFromManagerModalRecord({
                         targetPage,
@@ -758,7 +760,11 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                 }
                 this.activeWordIndex = 0;
                 this.activateSearchDestinationCue({
-                    source: isSurahNameResult ? 'surah-directory' : 'search-result',
+                    source: shouldUseStandardSmPlusNavigation
+                        ? standardSmPlusSource
+                        : isSurahNameResult
+                          ? 'surah-directory'
+                          : 'search-result',
                     surahNumber,
                     pageNumber: targetPage,
                     ayahText: this.searchResultAyahText(result),
@@ -772,7 +778,19 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                     query: activeQuery,
                 });
             } finally {
-                this.endModalNavigationCloseGuard();
+                if (usedModalCloseGuard) {
+                    this.endModalNavigationCloseGuard();
+                }
+
+                if (
+                    usedStandardSmPlusNavigation &&
+                    this.hasRenderablePage() &&
+                    this.openModalCount() <= 0
+                ) {
+                    this.clearStaleRevealGuards();
+                    this.scheduleLayout({ revealDelayMs: 96, maxAttempts: 4 });
+                }
+
                 this._searchNavigationInFlight = false;
             }
         },

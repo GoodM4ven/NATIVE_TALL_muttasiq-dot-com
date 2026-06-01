@@ -787,12 +787,18 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
             }
         },
 
-        dispatchPageNavigationRequest(targetPage, source = 'generic') {
+        dispatchPageNavigationRequest(targetPage, source = 'generic', detailExtras = {}) {
+            const normalizedExtras =
+                detailExtras && typeof detailExtras === 'object' && !Array.isArray(detailExtras)
+                    ? detailExtras
+                    : {};
+
             window.dispatchEvent(
                 new CustomEvent('quran-go-page', {
                     detail: {
                         page: clampPage(targetPage, this.maxPage),
                         source,
+                        ...normalizedExtras,
                     },
                 }),
             );
