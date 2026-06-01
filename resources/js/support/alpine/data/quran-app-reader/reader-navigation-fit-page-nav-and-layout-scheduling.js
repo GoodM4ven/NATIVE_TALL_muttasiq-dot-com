@@ -856,8 +856,12 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                 Number(searchHighlightAyahIndex) > 0
                     ? Math.trunc(Number(searchHighlightAyahIndex))
                     : 0;
-            const nextSearchHighlightedAyahIndex =
-                source === 'search-result' ? normalizedSearchHighlightAyahIndex : 0;
+            const shouldKeepSearchHighlightForSource =
+                source === 'search-result' ||
+                (source === 'search-standard' && normalizedSearchHighlightAyahIndex > 0);
+            const nextSearchHighlightedAyahIndex = shouldKeepSearchHighlightForSource
+                ? normalizedSearchHighlightAyahIndex
+                : 0;
             const shouldPreserveSearchDestinationCue =
                 source === 'search-result' || source === 'surah-directory';
 
