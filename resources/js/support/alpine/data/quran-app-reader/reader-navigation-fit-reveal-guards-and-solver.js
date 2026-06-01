@@ -1991,6 +1991,14 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
 
         resetCurrentPageFitStyles() {
             const rootElement = this.$el.firstElementChild;
+            const contentElement = this.$refs?.pageContent;
+            const frameElement = this.$refs?.pageFrame;
+            const pageLinesElement =
+                contentElement instanceof HTMLElement
+                    ? contentElement.classList.contains('quran-page-lines')
+                        ? contentElement
+                        : contentElement.querySelector('.quran-page-lines')
+                    : null;
 
             if (!(rootElement instanceof HTMLElement)) {
                 this.pageScale = 1;
@@ -2000,7 +2008,30 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
 
             this.resetFitLayoutVariables(rootElement);
             this.pageScale = 1;
-            this.setCurrentPageScale(1, { forFitting: true });
+
+            const neutralScaleTargets = [
+                rootElement,
+                contentElement instanceof HTMLElement ? contentElement : null,
+                frameElement instanceof HTMLElement ? frameElement : null,
+                pageLinesElement instanceof HTMLElement ? pageLinesElement : null,
+            ].filter(
+                (element, index, array) =>
+                    element instanceof HTMLElement && array.indexOf(element) === index,
+            );
+
+            neutralScaleTargets.forEach((targetElement) => {
+                targetElement.style.setProperty('--quran-page-scale', '1');
+                targetElement.style.setProperty('--quran-page-type-scale-effective', '1');
+                targetElement.style.setProperty('--quran-page-gap-adjust-factor', '1');
+                targetElement.style.setProperty('--quran-page-y-offset-adjust', '0rem');
+                targetElement.style.setProperty('--quran-page-postfit-type-tune-effective', '1');
+                targetElement.style.setProperty('--quran-page-postfit-leading-tune-effective', '1');
+                targetElement.style.setProperty('--quran-page-postfit-gap-tune-effective', '1');
+                targetElement.style.setProperty(
+                    '--quran-page-postfit-y-offset-tune-effective',
+                    '0rem',
+                );
+            });
         },
 
         applyFitLayoutVariables(rootElement, layout = {}) {

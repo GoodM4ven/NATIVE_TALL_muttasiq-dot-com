@@ -336,16 +336,24 @@ export const createWirdAndHistoryNavigationAndManagerSyncModule = (deps) => {
             }
 
             const range = this.wirdRangeState(record);
-            const normalizedStep = this.normalizeIntegerFlag(
-                step,
+            const previousActiveStep = this.normalizeIntegerFlag(
                 this.wirdActiveStepForNavigation(record),
+                0,
                 {
                     min: 0,
                     max: range.maxStep,
                 },
             );
+            const normalizedStep = this.normalizeIntegerFlag(step, previousActiveStep, {
+                min: 0,
+                max: range.maxStep,
+            });
             const targetPage = this.wirdTargetPageFromStep(normalizedStep, record);
             const direction = this.resolveNavigationDirection(targetPage);
+            const normalizedSourceProfile = this.wirdNavigationSourceProfile(source);
+            const effectiveSourceProfile = normalizedSourceProfile.startsWith('slider')
+                ? 'keyboard'
+                : normalizedSourceProfile;
 
             if (record?.completed) {
                 this.wirdBrowseStep = normalizedStep;
@@ -369,6 +377,11 @@ export const createWirdAndHistoryNavigationAndManagerSyncModule = (deps) => {
                 this.persistWirdState();
             }
 
+            this.applyWirdNavigationVisualState(targetPage, normalizedStep, {
+                source: normalizedSourceProfile,
+                previousStep: previousActiveStep,
+            });
+
             if (
                 navigationRequestSerial !== this._wirdNavigationRequestSerial ||
                 !this.wirdModeActive
@@ -390,7 +403,7 @@ export const createWirdAndHistoryNavigationAndManagerSyncModule = (deps) => {
                     return;
                 }
 
-                if (this.shouldScheduleWirdRevealRecovery(source)) {
+                if (this.shouldScheduleWirdRevealRecovery(effectiveSourceProfile)) {
                     this.queueWirdEntryRevealRecovery(targetPage, navigationRequestSerial);
                 }
 
@@ -401,7 +414,7 @@ export const createWirdAndHistoryNavigationAndManagerSyncModule = (deps) => {
                 direction,
                 animate: true,
                 forceRefit: true,
-                source: `wird-${source}`,
+                source: `wird-${effectiveSourceProfile}`,
             });
 
             if (
@@ -420,9 +433,39 @@ export const createWirdAndHistoryNavigationAndManagerSyncModule = (deps) => {
                 return;
             }
 
-            if (this.shouldScheduleWirdRevealRecovery(source)) {
+            if (this.shouldScheduleWirdRevealRecovery(effectiveSourceProfile)) {
                 this.queueWirdEntryRevealRecovery(targetPage, navigationRequestSerial);
             }
+        },
+
+        async navigateWirdToPageFromSliderCommit(targetPage, source = 'page-slider-commit') {
+            if (!this.wirdModeActive) {
+                return false;
+            }
+
+            const record = this.ensureWirdDailyRecord();
+
+            if (!record || typeof record !== 'object') {
+                return false;
+            }
+
+            const normalizedTargetPage = clampPage(targetPage, this.maxPage);
+            const activeStep = this.wirdActiveStepForNavigation(record);
+            const resolvedStep = this.wirdStepForPage(normalizedTargetPage, record, {
+                preferredStep: activeStep,
+            });
+
+            if (resolvedStep === null) {
+                return false;
+            }
+
+            const sourceProfile = this.wirdNavigationSourceProfile(source);
+            const navigationSource = sourceProfile.startsWith('slider')
+                ? 'keyboard'
+                : sourceProfile;
+            await this.navigateWirdToStep(resolvedStep, navigationSource);
+
+            return true;
         },
 
         persistNavigationHistory() {

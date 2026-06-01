@@ -481,6 +481,31 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
             const requestedSource = String(detail?.source ?? '').trim();
 
             if (this.wirdModeActive && kind === 'page') {
+                if (requestedSource === 'page-slider-commit') {
+                    const requestedPage = clampPage(detail?.page ?? this.pageInput, this.maxPage);
+
+                    if (this._navigationDebounceTimer !== null) {
+                        clearTimeout(this._navigationDebounceTimer);
+                        this._navigationDebounceTimer = null;
+                    }
+
+                    this._pendingNavigationRequest = null;
+                    this._navigationRevealLocked = false;
+                    this.clearSwipeRevealWatchdog();
+                    this._bypassNextFitCache = true;
+                    this.resetFitSanityRecoveryState();
+                    await this.navigateWirdToPageFromSliderCommit(requestedPage, requestedSource);
+
+                    if (!this.isCurrentPageVisiblyReady() && this.hasRenderablePage()) {
+                        this._bypassNextFitCache = true;
+                        await this.layoutPageGuaranteed({
+                            revealDelayMs: 90,
+                            maxAttempts: 4,
+                            useIdleFit: false,
+                        });
+                    }
+                }
+
                 return;
             }
 
@@ -1199,10 +1224,6 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
             this.wirdSliderVisualStep = step;
             this._wirdSliderLastInputStep = step;
             this._wirdSliderLastInputAt = Date.now();
-            this.queueWirdSliderCommit(step, {
-                source: 'slider-input-idle',
-                delayMs: 140,
-            });
         },
 
         async onSliderCommit(event = null) {
@@ -1232,23 +1253,10 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                     max: range.maxStep,
                 },
             );
-            const hasRecentInputStep =
-                Number.isFinite(Number(this._wirdSliderLastInputStep)) &&
-                Date.now() - this._wirdSliderLastInputAt <= 520;
-            const freshestInputStep = Number.isFinite(Number(this._wirdSliderPendingCommitStep))
-                ? this._wirdSliderPendingCommitStep
-                : this._wirdSliderLastInputStep;
-            const commitStep = hasRecentInputStep
-                ? this.normalizeIntegerFlag(freshestInputStep, directCommitStep, {
-                      min: 0,
-                      max: range.maxStep,
-                  })
-                : directCommitStep;
-
-            this.queueWirdSliderCommit(commitStep, {
-                source: 'slider',
-                delayMs: 0,
-            });
+            const targetPage = this.wirdTargetPageFromStep(directCommitStep, range.record);
+            this.pageInput = targetPage;
+            this._lastPageInputVisualValue = targetPage;
+            this.dispatchPageNavigationRequest(targetPage, 'page-slider-commit');
         },
 
         async onPageInputBlur() {
