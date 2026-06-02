@@ -3,44 +3,55 @@
 
 # مُتَّسِق
 
-تطبيق يهدف للاتساق مع الإسلام لله ربّ العالمين، خطوة بخطوة، وبيُسر وسهولة بإذن الله. تطبيق بترميز واحد لكل المنصات، مصنوع بتقنيات حديثة، ومصمم بواجهة جذابة؛ ولا حول ولا قوة إلا بالله...
+منصة تهدف للاتساق مع الإسلام لله ربّ العالمين، خطوة بخطوة، وبيُسر وسهولة بإذن الله. تطبيقات بترميز واحد لكل المنصات، مصنوعة بتقنيات حديثة، ومصممة بواجهة جذابة؛ ولا حول ولا قوة إلا بالله...
 
-<img width="100%" alt="screenshot of muttasiq app home and main menu buttons" src="public/docs/updates/images/v-0-1-0/web/home-main-menu.png" />
-
-(open daily processes instead, with a caption too)
+<img width="100%" alt="Home daily progress insight cards - light mode" src="public/docs/updates/images/v-1-2-0/web/home-daily-progress.webp" />
 
 ### المتصفح
 
-لتجربة التطبيق الآن من أي متصفح:<br>
+لتجربة التطبيق الآن من أي متصفح، على أي جهاز:<br>
 https://muttasiq.com
 
 <br>
 
-<img src="public/docs/updates/images/v-0-1-0/web/athkar-app-gate-light.png" alt="The athkar app gate - light mode" height="320"/>
+<img src="public/docs/updates/images/v-0-1-0/web/athkar-app-gate-light.webp" alt="The athkar app gate - light mode" height="320"/>
 <br><br>
-<img src="public/docs/updates/images/v-0-1-0/web/athkar-app-reader-light.png" alt="The athkar app reader - light mode" height="320"/>
-
-(quran reader image)
+<img src="public/docs/updates/images/v-0-1-0/web/athkar-app-reader-light.webp" alt="The athkar app reader - light mode" height="320"/>
+<br><br>
+<img src="public/docs/updates/images/v-1-2-0/web/quran-app-gate-dark.webp" alt="The quran app gate - dark mode" height="320"/>
+<br><br>
+<img src="public/docs/updates/images/v-1-2-0/web/quran-app-reader-light.webp" alt="The quran app reader - light mode" height="320"/>
 
 ### الأندرويد
 
-يتم الاختبار الآن من قبل متطوعين...
+يمكن تحميل التطبيق من متجر بلاي الرسميّ:
+
+<a href="https://play.google.com/store/apps/details?id=dev.goodm4ven.muttasiq" target="_blank">
+  <img src=".assets/images/stores/google-play.png" alt="Playstore download button" width="260" />
+</a>
 
 <br>
 
+<img src="public/docs/updates/images/v-1-2-0/android/mobile-quran-app-immersive-mode-light.webp" alt="Quran app reader - light mode" height="400"/>
+<span>&nbsp;&nbsp;</span>
+<img src=".assets/images/screenshots/android/quran-app-gate-light.png" alt="Quran app gate - light mode" height="400"/>
+<span>&nbsp;&nbsp;</span>
 <img src=".assets/images/screenshots/android/athkar-app-reader-dark.jpg" alt="A notification message showing in athkar app gate - light mode" height="400"/>
 <span>&nbsp;&nbsp;</span>
-<img src=".assets/images/screenshots/android/athkar-app-gate-light-notification.jpg" alt="Athkar app reader - dark mode" height="400"/>
+<img src=".assets/images/screenshots/android/athkar-app-gate-light-notification.jpg" alt="Athkar app gate notification screenshot - light mode" height="400"/>
 
-(quran reader image)
 
 ### الآي أو اس
 
-يتم الاختبار الآن من قبل متطوعين...
+يمكن تحميلي التطيبق من متجر آب ستور الرسميّ، بمجرّد اعتماده من قبل آبل:
+
+<a href="https://apps.apple.com/us/app/%D9%85%D8%AA%D8%B3%D9%82/id6759810123" target="_blank">
+  <img src=".assets/images/stores/app-store.png" alt="Appstore download button" width="260" />
+</a>
 
 <br>
 
-(الصور قريبًا إن شاء الله)
+(الصور قريبًا إن شاء الله...)
 
 
 ## المهام
@@ -60,6 +71,7 @@ https://muttasiq.com
 - ~~محرك للغة العربية، بحثًا وتحليلًا~~
 - ~~إخفاء الحركات~~
 - ~~نظام أرقام شرقيّ وغربيّ~~
+- ~~إتاحة نموذج لإرسال المشاكل مباشرة من التطبيق~~
 - القراءة بالعربية صوتيًّا
 - دعم اللغات الأجنبية بشكل مفتوح المصدر
 
@@ -67,12 +79,15 @@ https://muttasiq.com
 - ~~أذكار الصباح والمساء~~
 - ~~إمكانية تعديل الأذكار وترتيبها~~
 - ~~السماح باقتراح تعديل للأذكار الأساسية~~
+- ~~إمكانيّة نسخ الأذكار عند الضغط المطوّل عليها~~
+- ~~(الجوال) القدرة على التنقل بين الأذكار عن طريق أزرار صوت الجهاز~~
 
 ### الكتاب
 - ~~نمط للقراءة اليسيرة للقرآن الكريم~~
 - ~~نسخ الآيات بسهولة وبالرسم العثماني~~
 - ~~البحث الشامل واللغوي في القرآن الكريم~~
 - ~~متابعة الوِرد اليومي من القرآن الكريم~~
+- ~~(الجوال) القدرة على التنقل بين صفحات المصحف عن طريق أزرار صوت الجهاز~~
 
 ### التحديث الثاني
 - التاريخ الهجري
@@ -102,7 +117,7 @@ https://muttasiq.com
 </div>
 <div align="center">
 
-كما تعلم، بارك الله فيك، فجعل التطبيق متاحًا على المخدّمات، ومتوفّرًا في كافّة المنصات (بأنواع أجهزتها المختلفة) وبيُسر وسهولة، يحتاج إلى طاقة ومال وفيرين! وتطوير كل هذه الإمكانيات يأخذ تخطيطا بوقت كثير وبذل جهد كبير، وعلى حساب أيّ عمل أو صنعة أخرى... فلا تنسانا من الدعاء.
+كما تعلم، بارك الله فيك، فجعل المنصّة متاحًةً على المخدّمات، ومتوفّرةً في كافّة المنصات (بأنواع أجهزتها المختلفة) وبيُسر وسهولة، يحتاج إلى طاقة ومال وفيرين! وتطوير كل هذه الإمكانيات يأخذ تخطيطا بوقت كثير وبذل جهد كبير، وعلى حساب أيّ عمل أو صنعة أخرى... فلا تنسانا من الدعاء.
 
 وكذلك تستطيع دعم تطوير وصيانة المشروع هذا عن طريق الاشتراك ([بمبلغ شهري](https://github.com/sponsors/GoodM4ven))، أو عن طريق التبرّع [لمرّة واحدة](https://github.com/sponsors/GoodM4ven?frequency=one-time&sponsor=GoodM4ven)، وذلك في المنصات التالية:
 
@@ -161,6 +176,9 @@ https://muttasiq.com
 
 والله المستعان.
 
+</div>
+<div align="left">
+
 
 # Development
 
@@ -175,14 +193,14 @@ https://muttasiq.com
 - [https://filamentphp.com/docs](https://filamentphp.com/docs)
 - [https://pestphp.com/docs](https://pestphp.com/docs)
 
-**The native apps**, are built using [NativePHP](https://nativephp.com). And with their new mobile builder, all platforms are covered. It relies on a wide ecosystem of technologies — without requiring YOU to directly interact with them.
-- Check out their [desktop](https://nativephp.com/docs/desktop) AND [mobile](https://nativephp.com/docs/mobile) documentation please.
-- If you have experience with Kotlin or Swift, ElectronJS is communicating with them under the hood in NativePHP. You can implement those changes as PHP [plugins](https://nativephp.com/plugins) of course, and even make them paid to support yourself!
+**The native apps**, are built using [NativePHP](https://nativephp.com). And with their new mobile builder, all platforms are covered! It relies on a wide ecosystem of technologies — without requiring YOU to directly interact with them, all.
+- Check out their [desktop](https://nativephp.com/docs/desktop) AND [mobile](https://nativephp.com/docs/mobile) documentation if you're interested in contributing for that.
+- If you have experience with [Kotlin](https://kotlinlang.org) or [Swift](https://www.swift.org), [ElectronJS](https://www.electronjs.org) is communicating with them under the hood in NativePHP and onwards into PHP "bridges." Eventually implemented modifications are available as PHP [plugins](https://nativephp.com/plugins), and there are even lots of those already available to pay for!
 
 </div>
 
 > [!TIP]
-> You can also start learning about ALL of these technologies by using [Laravel Boost](https://laravel.com/docs/boost), which does almost everything for you if you give the AI agent well-engineered commands — including writing feature tests. I set it up in this project for [OpenAI - Codex CLI](https://developers.openai.com/codex/cli/) and [Anthropic - Claude CLI](https://code.claude.com/docs), but it can work with pretty much anything else.
+> You can also start learning about ALL of these technologies by using [Laravel Boost](https://laravel.com/docs/boost), which does almost everything for you if you give the AI agent well-engineered commands — including writing feature tests. I set it up in this project for [OpenAI - Codex CLI](https://developers.openai.com/codex/cli/) and [Anthropic - Claude CLI](https://code.claude.com/docs), but it can work with pretty much anything else...
 
 <div align="left">
 
@@ -191,35 +209,36 @@ https://muttasiq.com
 
 ### Rules
 
-0. Focus on the main [missions](#المهام) detailed in [discussions](https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com/discussions) and assigned in the [project](https://github.com/users/GoodM4ven/projects/5/views/1) view. So unless it's a bug fix, **do not work on any new feature without having an [issue](https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com/issues) and being assigned to**.
-1. Use and maintain the bash scripts found in [./.scripts] directory, providing utilities to run and watch all available platform applications, etc.
+0. Focus on the main [missions](#المهام) detailed in [discussions](https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com/discussions) and assigned in the [project](https://github.com/users/GoodM4ven/projects/5/views/1) view. So unless it's a bug fix, **do not work on any new feature without having an approved [issue](https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com/issues) for it first and being assigned to second**.
+1. Use and maintain the bash scripts found in [./.scripts] directory, providing utilities to run, watch and log all available platform applications, and more...
 2. Since any change to the `main` branch is going to **directly update the web app**, **PRs are NOT going to be directed to `main` branch, please, but rather to `dev` branch instead.**
 3. Use the `composer green` command before you do the PR in the first place. It will do the standard code formatting, linting, and testing altogether. Please trace what it does in [composer.json](./composer.json).
-   - The process runs [PestPHP browser tests](https://pestphp.com/docs/browser-testing) in `--compact` mode only (not `--parallel`) due to current bugs in the [Playwright](https://playwright.dev) and PestPHP integration, including direct mobile emulation support—this **may make tests slower locally**, though they work reliably (this limitation does not apply to CI, I think, since it’s ephemeral).
-4. We have [`muttasiq-patches` NativePHP plugin](https://github.com/GoodM4ven/NATIVE_PLUGIN_muttasiq-patches) that overrides the original NativePHP engine a bit. Make sure you account for what it does in mind, where (the PR you're going to do there) its modifications **do not conflict with one another when patching the same file and correctly patch the files they're targetting from the NativePHP version specified in [`composer.json`](./composer.json)** over here.
+   - The process runs [PestPHP browser tests](https://pestphp.com/docs/browser-testing) in `--compact` mode only (not `--parallel`) due to current bugs in the [Playwright](https://playwright.dev) and PestPHP integration, including direct mobile emulation support, which **may make tests slower locally**, though they work reliably (this limitation does not apply to CI, I think, since it’s ephemeral).
+4. We have [`muttasiq-patches` NativePHP plugin](https://github.com/GoodM4ven/NATIVE_PLUGIN_muttasiq-patches) that overrides the original NativePHP engine a bit, and add new native features, of course. Make sure you account for what it does in mind, where (the PR you're going to do there) its modifications **do not conflict with one another when patching the same file and correctly patch the files they're targetting from the NativePHP version specified in [`composer.json`](./composer.json)** over here.
     - Keep in mind that there is a Bash switching script for when you have the package locally and test its changes locally before the PR. [Check it out](./.scripts/composer-local-plugins-switch.sh).
-    - Quran data is delivered via the web API snapshot flow (`/api/quran-snapshot/meta` + `/api/quran-snapshot/download`) with in-app progress reporting. Watch scripts ([`watch-android.sh`](./.scripts/watch-android.sh), [`watch-ios.sh`](./.scripts/watch-ios.sh)) include local-source snapshot broadcasting by default, with shared logic in [`run-native-local-source-broadcast.sh`](./.scripts/support/run-native-local-source-broadcast.sh).
+    - Quran data is delivered via the web API snapshot flow (`/api/quran-snapshot/meta` + `/api/quran-snapshot/download`) with in-app progress reporting. Watch scripts ([`watch-android.sh`](./.scripts/watch-android.sh), [`watch-ios.sh`](./.scripts/watch-ios.sh)) include local-source snapshot broadcasting by default (via WiFi and "reverse-adb"), with shared logic in [`run-native-local-source-broadcast.sh`](./.scripts/support/run-native-local-source-broadcast.sh).
 5. **Ensure that your PR can be modified by the maintainers please.**
 
 ### Setup
 
-1. We recommend [Ubuntu](https://ubuntu.com) (LTS) for stable and upgradable development environment.
-2. Setting up your **development environment** could be easier using this [lara-stacker](https://github.com/GoodM4ven/CLI_LARAVEL_lara-stacker) CLI [Bash](https://www.gnu.org/software/bash) scripts, which utilizes [Docker](https://docker.com) to setup the main services, and leaving you to only care about few tools that are essential for [PHP](https://php.net) development.
+1. We recommend [Ubuntu](https://ubuntu.com) (LTS) for stable and upgradable development environment, or if you're comfertable with Linux already, then [EndeavorOS](https://endeavouros.com) is good option.
+2. Setting up your **development environment** could be easier using this [lara-stacker](https://github.com/GoodM4ven/CLI_LARAVEL_lara-stacker) CLI [Bash](https://www.gnu.org/software/bash) scripts, which utilizes [Docker](https://docker.com) to setup the main services, and leaving you to only care about few tools that are essential for [PHP](https://php.net) development...
    - We recommend using `git clone` into lara-stacker's apps-root directory and then using lara-stacker's "rewire" command on this project. 
    - Running `composer setup` command at the beginning, as for any Laravel of course.
 3. We strongly advocate for using [VSCodium](https://vscodium.com), especially for those who are new to the development world.
-4. Check out all of our VSC configurations set in this [TALL-STANDARDS](https://github.com/GoodM4ven/WIKI_NATIVE_tall-standards) wikipedia, which also contains a decent bit of tips for dealing with the tall-stack and some other related tools and technologies. (The project isn't complete)
+4. Check out all of our VSC configurations set in this [TALL-STANDARDS](https://github.com/GoodM4ven/WIKI_NATIVE_tall-standards) wikipedia, which also contains a decent bit of tips for dealing with the tall-stack and some other related tools and technologies. (The project isn't yet complete)
 5. And whatever we advised to do for quick learning about this stack, please make sure you read the [development section](#development) up top.
 6. For [Laravel Boost](https://laravel.com/docs/boost) installation, first, **if it doesn't exist already**, `cp boost.json.dist boost.json` and modify if necessary, then call `php artisan boost:install` to guide you in terminal.
 
 ### Tools and Guides
 
 - For reproducing the [favicon](./resources/views/partials/favicon.blade.php) variences, use this [favycon](https://github.com/ruisaraiva19/favycon) tool.
+- For responsive design, we recommend using [Polypane](https://polypane.app) amazing design software.
 
 
 ## Design
 
-If you're a designer, or perhaps you don't know much about coding, feel free to post in [discussions](https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com/discussions) any contributions to how you think visuals can be improved; supported by photos and videos, of course.
+If you're a designer, or perhaps you don't know much about coding, feel free to post in [discussions](https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com/discussions) any contributions to how you think visuals can be improved; supported by photos and videos, of course...
 
 - The icon is set to be a 1024x1024 pixels PNG:
 
@@ -234,7 +253,7 @@ If you're a designer, or perhaps you don't know much about coding, feel free to 
   </div>
 
   > [!NOTE]
-  > There is light and dark themed splash screen feature, but I'm not currently utilizing it because of the current poor brand anyway...
+  > There is light and dark themed splash screen feature, but I'm not currently utilizing it because of the lack of designers around; so looking for help...!
 
 <div align="left">
 
@@ -244,7 +263,7 @@ If you're a designer, or perhaps you don't know much about coding, feel free to 
 
   <br>
 
-The assets used for the app so far can be found in this over [here](https://design.penpot.app/#/view?file-id=ff5222bd-026b-80fd-8007-8c6597adff77&page-id=71bc4f81-468d-8163-8007-8a43ee7cd755&section=interactions&index=0&share-id=e7a86fff-661d-81c1-8008-1028011d91a3)** or edit it freely using this [[design.penpot](./.assets/design.penpot)] file.
+The assets used for the app so far can be found in this over [here](https://design.penpot.app/#/view?file-id=ff5222bd-026b-80fd-8007-8c6597adff77&page-id=71bc4f81-468d-8163-8007-8a43ee7cd755&section=interactions&index=0&share-id=e7a86fff-661d-81c1-8008-1028011d91a3)** or edit it freely using this [[design.penpot](./.assets/design.penpot)] file. (Both will be up-to-date soon, in sha'a Allah)
 
 
 ## Resources
