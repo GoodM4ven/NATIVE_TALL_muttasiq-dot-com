@@ -1,26 +1,60 @@
 <div align="right">
 
+## v1.2.0
+
+### المحرك
+
+- **إضافة محرك للغة العربية، ليتيح البحث والتحليل والتنسيق للنصوص**
+- **إضافة قسم متسق الرئيسي لمهامّ المسلم اليومية، ولله كل الحمد**
+- قابلية تجريد النصوص من الحركات
+- قابلية التبديل بين نظامَيِ الأرقام العربيّة الشرقيّ والغربيّ
+- تحسين سرعة أداء التطبيقات المحلية (الجوال) بالنسبة لتشغيلها الأوليّ واللّاحق، وكذا **عدد نسخ أنظمة التشغيل المدعومة**
+- فصل بعض الخصائص المميزة وراء إشعار لتأكيد القيام بـ[دعم تطوير التطبيق](https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com/?tab=readme-ov-file#%D8%A7%D9%84%D8%AF%D8%B9%D9%85)، **والذي يمكن تجاوزه لغير المقتدرين**...
+- إمكانية إرسال تقرير مشكلة بدون خطأ برمجي ومباشرة من داخل التطبيق
+- (لتطبيقات الجوال) عند التفعيل، يمكن استخدام أزرار رفع وخفض الصوت للتنقل (بين الأذكار وصفحات القرآن).
+
+### الأذكار
+
+- القدرة على نسخ النص بالضغط المطول على الذكر أو أثره
+- إمكانية البحث بين الأذكار في قسم إدارتها للتصفية والوصول السريع
+- القدرة على تقديم التغييرات المحلية للأذكار للاعتماد كأذكار افتراضية للمستخدمين كافة
+- تم نقل إعداد التحكم بالخط إلى زر مباشر لاستعراض التغيير أثناء القراءة
+
+### الكتاب
+
+- نمط التلاوة لكتاب الله عز وجل، يقوم بحفظ آخر صفحة وقفت عليها
+- الكفاءة في التنقل بين الصفحات، وكذا الانتقال عن طريق رقم الصفحة، أو اسم السورة (في قسم البحث)
+- **بحث تحليلي متكامل للقرآن الكريم، ولله الحمد**
+- القدرة على حفظ الصفحات وترتيبها بسمات مفتاحية وملاحظات ويمكن البحث عنها جميعا
+- إمكانية استرجاع آخر مئة انتقال بين الصفحات، مع حفظ المميز منها (بوسوم أو ملاحظات) دائمًا ما شاء الله، وكذا البحث عنها
+- إتاحة نسخ الآية الواحدة، وكذا الآيات المتعددة من الصفحة الواحدة حتى وإن اختلفت السور
+- إمكانية نسخ الكلمة الواحدة، بل وتحديد هذا النمط ليكون الافتراضي من الإعدادات
+- إعداد للتحكم بحجم الخط المعروض كليًّا وطولًا وعرضًا بشكل لحظي لاستعراض الفارق
+- **نمط الورد اليومي المحفوظ داخل نمط التلاوة العادي *(يتطلب أمانة القيام بالدعم)***
+
+<img src="images/v-1-2-0/web/home-daily-progress.webp" alt="Home daily progress insight cards - light mode" height="320"/>
+<img src="images/v-1-2-0/web/quran-app-gate-dark.webp" alt="The quran app gate - dark mode" height="320"/>
+<img src="images/v-1-2-0/web/quran-app-reader-light.webp" alt="The quran app reader - light mode" height="320"/>
+<img src="images/v-1-2-0/web/quran-app-search-dark.webp" alt="The quran app search - dark mode" height="320"/>
+<img src="images/v-1-2-0/web/settings-manual-report-light.webp" alt="Settings manual report feature - light mode" height="320"/>
+<img src="images/v-1-2-0/android/mobile-quran-app-immersive-mode-light.webp" alt="Mobile quran app immersive reading mode - light mode" width="170"/>
+<img src="images/v-1-2-0/android/quran-app-dynamic-scaling.webp" alt="Quran app dynamic scaling - mobile - light mode" width="170"/>
+<img src="images/v-1-2-0/android/harakat-and-arqam-settings.webp" alt="Settings harakat and arqam - dark mode" width="170"/>
+
+
 ## [v1.1.0](https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com/pull/112)
 
 ### المحرك
 
-- **تحسين أداء قارئ الأذكار بشكل استثنائي، ولله الحمد**
 - إضافة خيار للتحكم بتشغيل أو تعطيل المحسّنات البصرية وتأثيراتها، والتي قد تزعج بعض المستخدمين
 - **إمكانية التبليغ عن الأخطاء حين حدوثها**، مع نص مساعد اختياري، لكي تساعدنا على حلها بشكل أسرع، بإذن الله
-- إصلاح بعض الأخطاء، متضمنًا ذلك الخطأ الذي يسبب إعادة تشغيل التطبيق في بعض الحالات النادرة
-- لا زال يتم اختبار تصدير التطبيق إلى المتجر الرسميّ لمنصتيّ أندرويد وآي او اس من قبل بعض المتطوعين...
 
-<img src="images/v-1-1-0/web/js-error-reporting.png" alt="JS errors reporting modal fields" height="320"/>
-<img src="images/v-1-1-0/web/visual-enhancements-setting.png" alt="Visual enhancements checkbox in settings modal" height="320"/>
+### الأذكار
 
+- **تحسين أداء قارئ الأذكار بشكل استثنائي، ولله الحمد**
 
-## [v1.0.0](https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com/pull/62)
-
-### المحرك
-
-- **يتم اختبار تصدير التطبيق إلى المتجر الرسميّ لمنصتيّ أندرويد وآي او اس من قبل بعض المتطوعين...**
-- التحكم بالإعدادات الافتراضية من قبل المخدم، مع احترام إعدادات المستخدم **عند التعديل**
-- تحسين أداء التطبيق بعض الشيء وبشكل عام
+<img src="images/v-1-1-0/web/js-error-reporting.webp" alt="JS errors reporting modal fields" height="320"/>
+<img src="images/v-1-1-0/web/visual-enhancements-setting.webp" alt="Visual enhancements checkbox in settings modal" height="320"/>
 
 
 ## [v0.5.0](https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com/pull/73)
@@ -32,7 +66,7 @@
 - إضافة شريط مختف أسفل الشاشة لنسخة التطبيق الحالية والانتقال لإظهار التحديثات
 - تصميم لزر الخصائص التي تعمل (ليست مقفولة) في الواجهة الرئيسة
 
-<img src="images/v-0-5-0/web/changelogs-modal.png" alt="App changelogs (updates) modal - light mode" height="320"/>
+<img src="images/v-0-5-0/web/changelogs-modal.webp" alt="App changelogs (updates) modal - light mode" height="320"/>
 
 
 ## [v0.4.0](https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com/pull/70)
@@ -41,7 +75,7 @@
 
 - تعديل أحجام الخطوط المتاحة (التي يمكن التحكم بها من الإعدادات) لمناسبة شاشات أكثر واعتبار الصحة البصرية بإذن الله
 
-<img src="images/v-0-4-0/android/responsive-text-overflow-handling.png" alt="Responsive overflow handling for athar app reader - light mode" width="170"/>
+<img src="images/v-0-4-0/android/responsive-text-overflow-handling.webp" alt="Responsive overflow handling for athar app reader - light mode" width="170"/>
 
 
 ## [v0.3.0](https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com/pull/64)
@@ -50,27 +84,20 @@
 
 - إمكانية التحكم في حجم الخط للنصوص المحورية (كالأذكار وآثارها)
 
-<img src="images/v-0-3-0/web/settings-font-sizing.png" alt="App settings modal - including font sizing - light mode" height="320"/>
+<img src="images/v-0-3-0/web/settings-font-sizing.webp" alt="App settings modal - including font sizing - light mode" height="320"/>
 
 
 ## [v0.2.0](https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com/pull/35)
 
-### أذكار الصباح والمساء
+### الأذكار
 
-- إمكانية إدارة الأذكار لتحديثها من قبلنا
+- إمكانية إدارة الأذكار (صباح ومساء) لتحديثها من قبلنا
 - إمكانية تعديل الأذكار وتحديثاتها من قبل المستخدم
 - **اعتبار تعديلات المستخدم على حساب التغييرات من قبل المخدم حين التعارض**
 - إضافة "نوع" الذكر من أجل تسهيل الترتيب المعتبر (ثناء، فحمد، فاستغفار، فدعاء، فرقية...)
 - إتاحة إضافة الأثر المسند بالنسبة للذكر، وإظهار علامة لعرض "المأثور" أثناء القراءة
 
-<img src="images/v-0-2-0/web/athkar-app-manager.png" alt="The athkar app manager - light mode" height="320"/>
-
-
-## [v0.1.1](https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com/pull/4)
-
-### المحرك
-
-- إصلاح خطأ تعميم الإعدادات من قاعدة البيانات
+<img src="images/v-0-2-0/web/athkar-app-manager.webp" alt="The athkar app manager - light mode" height="320"/>
 
 
 ## [v0.1.0](https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com?tab=readme-ov-file#%D9%85%D9%8F%D8%AA%D9%91%D9%8E%D8%B3%D9%90%D9%82)
@@ -84,15 +111,15 @@
 - تصميم ليلي ونهاري، لراحة العين
 - خيار لتجاوز المنبثقات الإرشادية
 
-### أذكار الصباح والمساء
+### الأذكار
 
 - [**مجموعة من الأذكار**](https://t.me/Ruqyah011/4730) المرتبة للصباح والمساء
 - حفظ ما تمت قراءته خلال اليوم والليلة، حتى الزيادة في الذكر
 - إعادة حساب تلقائية للأذكار من جديد عند بداية كل يوم
 - بعض الإعدادات الخاصة بمستعرض الأذكار
 
-<img src="images/v-0-1-0/web/home-main-menu.png" alt="Home and main menu buttons - light mode" height="320"/>
-<img src="images/v-0-1-0/web/athkar-app-gate-light.png" alt="The athkar app gate - light mode" height="320"/>
-<img src="images/v-0-1-0/web/athkar-app-reader-light.png" alt="The athkar app reader - light mode" height="320"/>
+<img src="images/v-0-1-0/web/home-main-menu.webp" alt="Home and main menu buttons - light mode" height="320"/>
+<img src="images/v-0-1-0/web/athkar-app-gate-light.webp" alt="The athkar app gate - light mode" height="320"/>
+<img src="images/v-0-1-0/web/athkar-app-reader-light.webp" alt="The athkar app reader - light mode" height="320"/>
 
 </div>

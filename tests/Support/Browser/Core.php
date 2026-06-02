@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use Pest\Browser\Execution;
 use Pest\Browser\Playwright\Playwright;
 
-const BROWSER_SETUP_TIMEOUT_MS = 1500;
+const BROWSER_SETUP_TIMEOUT_MS = 5000;
+const BROWSER_SCRIPT_TIMEOUT_MS = 5000;
 const PLAYWRIGHT_SIGTERM_FALLBACK = 15;
 
 if (! defined('SIGTERM')) {
@@ -88,35 +88,38 @@ function testRetrySleepMicroseconds(): int
 
 function waitForScript($page, string $expression, mixed $expected = true): void
 {
-    Execution::instance()->waitForExpectation(
-        function () use ($page, $expression, $expected): void {
-            $actual = null;
+    $deadlineAt = microtime(true) + (max(Playwright::timeout(), BROWSER_SCRIPT_TIMEOUT_MS) / 1_000);
+    $actual = null;
+    $lastException = null;
 
-            for ($attempt = 1; $attempt <= 2; $attempt++) {
-                try {
-                    $actual = $page->script($expression);
+    while (microtime(true) < $deadlineAt) {
+        try {
+            $actual = $page->script($expression);
+            $lastException = null;
 
-                    break;
-                } catch (Throwable $exception) {
-                    if ($attempt === 2) {
-                        $underlyingMessage = trim((string) $exception->getMessage());
-                        $details = $underlyingMessage !== '' ? ' | cause: '.$underlyingMessage : '';
-
-                        throw new RuntimeException(
-                            'Browser script execution failed for expression: '.$expression.$details,
-                            previous: $exception,
-                        );
-                    }
-
-                    usleep(testRetrySleepMicroseconds());
-                }
+            if ($actual === $expected) {
+                return;
             }
-
-            expect($actual)->toBe(
-                $expected,
-                'JS: '.$expression.' | actual: '.var_export($actual, true),
-            );
+        } catch (Throwable $exception) {
+            $lastException = $exception;
         }
+
+        usleep(testRetrySleepMicroseconds());
+    }
+
+    if ($lastException !== null) {
+        $underlyingMessage = trim((string) $lastException->getMessage());
+        $details = $underlyingMessage !== '' ? ' | cause: '.$underlyingMessage : '';
+
+        throw new RuntimeException(
+            'Browser script execution failed for expression: '.$expression.$details,
+            previous: $lastException,
+        );
+    }
+
+    expect($actual)->toBe(
+        $expected,
+        'JS: '.$expression.' | actual: '.var_export($actual, true),
     );
 }
 
@@ -162,6 +165,13 @@ function applyTestSpeedups($page): void
     layoutData.isLayoutSetUp = true;
     layoutData.isBlinkerShown = false;
     layoutData.isBodyVisible = true;
+  }
+
+  // Some app features initialize on window "load", but browser tests can
+  // intentionally avoid waiting for a full resource-complete load event.
+  if (!window.__pestSyntheticLoadDispatched) {
+    window.__pestSyntheticLoadDispatched = true;
+    window.dispatchEvent(new Event('load'));
   }
 })();
 JS);
@@ -263,7 +273,7 @@ function enableTabletContext($page): void
 
 function visitMobile(string $path = '/')
 {
-    return visit($path);
+    return visit($path, ['waitUntil' => 'domcontentloaded']);
 }
 
 function resetBrowserState($page, bool $isMobile = false): void
@@ -277,14 +287,36 @@ function resetBrowserState($page, bool $isMobile = false): void
         }
 
         try {
-            $page->script('window.__disableJsErrorReporting = true;');
-            $page->script('localStorage.clear(); sessionStorage.clear(); window.history.replaceState({}, document.title, window.location.pathname + window.location.search);');
+            $page->script(<<<'JS'
+(() => {
+  window.__disableJsErrorReporting = true;
+  localStorage.clear();
+  sessionStorage.clear();
+
+  try {
+    Storage.prototype.setItem = () => {};
+    Storage.prototype.removeItem = () => {};
+    Storage.prototype.clear = () => {};
+  } catch (e) {
+    // ignore
+  }
+
+  window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+})()
+JS);
+            $page->refresh();
         } catch (Throwable) {
             //
         }
 
         waitForAlpineReady($page);
         applyTestSpeedups($page);
+
+        try {
+            $page->script('window.__disableJsErrorReporting = true;');
+        } catch (Throwable) {
+            //
+        }
 
         if ($isMobile) {
             enableMobileContext($page);

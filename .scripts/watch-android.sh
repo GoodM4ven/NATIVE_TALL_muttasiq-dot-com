@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-watchman shutdown-server
+project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-./.scripts/support/prepare.sh
-./.scripts/native/mobile/android/support/prepare.sh
-
-php artisan native:run android --watch
+"${project_root}/.scripts/support/run-native-local-source-broadcast.sh" android watch

@@ -18,8 +18,9 @@
         "blade-ui-kit/blade-heroicons": "^2.6",
         "blade-ui-kit/blade-icons": "^1.8",
         "filament/filament": "^5.0",
+        "goodm4ven/arabicable": "^1.0",
         "goodm4ven/blurred-image": "^1.1",
-        "goodm4ven/nativephp-muttasiq-patches": "^1.2.0",
+        "goodm4ven/nativephp-muttasiq-patches": "^1.5.0",
         "goodm4ven/tailwind-merge": "^1.1",
         "laravel/framework": "^12.0",
         "laravel/nightwatch": "^1.22",
@@ -29,7 +30,9 @@
         "nativephp/mobile": "^3.0",
         "nativephp/mobile-browser": "^1.0",
         "predis/predis": "^3.4",
-        "spatie/eloquent-sortable": "^4.5"
+        "spatie/eloquent-sortable": "^4.5",
+        "spatie/laravel-tags": "^4.11",
+        "wire-elements/spotlight": "^2.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
@@ -46,6 +49,9 @@
         "pestphp/pest-plugin-faker": "^4.0",
         "pestphp/pest-plugin-laravel": "^4.0",
         "pestphp/pest-plugin-livewire": "^4.0"
+    },
+    "suggest": {
+        "filament/blueprint": "Requires a commercial license from filamentphp.com — used for rapid resource scaffolding (dev-only)"
     },
     "autoload": {
         "files": [
@@ -79,6 +85,10 @@
             "@php artisan migrate:fresh --seed --force",
             "npm install",
             "npm run build"
+        ],
+        "paid-packages": [
+            "composer config repositories.filament composer https://packages.filamentphp.com/composer",
+            "composer require filament/blueprint --dev"
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
@@ -117,39 +127,48 @@
             "npm run format:prettier",
             "vendor/bin/pint"
         ],
-        "analyse": "vendor/bin/phpstan analyse --memory-limit=512M",
+        "analyse": "XDEBUG_MODE=off vendor/bin/phpstan analyse --memory-limit=512M",
         "lint": [
             "@format",
             "@analyse"
         ],
         "test": [
             "@optimize",
-            ".scripts/testing/test.sh"
+            "@test:raw"
         ],
+        "test:raw": ".scripts/testing/test.sh",
         "testparal": [
             "@optimize",
-            ".scripts/testing/paral.sh"
+            "@testparal:raw"
         ],
+        "testparal:raw": ".scripts/testing/paral.sh",
         "testcov": [
             "@optimize",
             ".scripts/testing/cov.sh"
         ],
         "testbrowser": [
             "@optimize",
-            "npx playwright install",
+            "@testbrowser:raw"
+        ],
+        "testbrowser:prepare": "sh -lc 'node_modules/.bin/playwright --version >/dev/null 2>&1 || npx playwright install'",
+        "testbrowser:raw": [
+            "@testbrowser:prepare",
             ".scripts/testing/browser.sh"
         ],
         "testall": [
             "@optimize",
-            "@testparal",
-            "@testbrowser"
+            "@testall:raw"
+        ],
+        "testall:raw": [
+            "@testparal:raw",
+            "@testbrowser:raw"
         ],
         "green": [
             "@optimize",
             "@php artisan app:verify-release-version",
             "@php artisan app:verify-local-plugin-switch",
             "@lint",
-            "@testall"
+            "@testall:raw"
         ]
     },
     "extra": {
@@ -168,6 +187,11 @@
     },
     "minimum-stability": "stable",
     "prefer-stable": true,
-    "repositories": {
-    }
+    "repositories": [
+        {
+            "name": "filament",
+            "type": "composer",
+            "url": "https://packages.filamentphp.com/composer"
+        }
+    ]
 }

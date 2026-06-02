@@ -13,7 +13,7 @@ class ListThikrs extends ListRecords
     protected static string $resource = ThikrResource::class;
 
     /**
-     * @return array<int, \Filament\Actions\CreateAction>
+     * @return array<int, CreateAction>
      */
     protected function getHeaderActions(): array
     {

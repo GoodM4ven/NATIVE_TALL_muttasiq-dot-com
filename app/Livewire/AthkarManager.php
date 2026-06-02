@@ -6,6 +6,7 @@ namespace App\Livewire;
 
 use App\Filament\Resources\Thikrs\Schemas\ThikrForm;
 use App\Models\Thikr;
+use App\Models\ThikrOverrideSubmission;
 use App\Services\Enums\ThikrTime;
 use App\Services\Enums\ThikrType;
 use BackedEnum;
@@ -15,7 +16,11 @@ use Filament\Actions\Contracts\HasActions;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Support\Enums\Width;
+use GoodMaven\Arabicable\Facades\ArabicFilter;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\HtmlString;
 use Livewire\Component;
 
 class AthkarManager extends Component implements HasActions, HasSchemas
@@ -24,6 +29,8 @@ class AthkarManager extends Component implements HasActions, HasSchemas
     use InteractsWithSchemas;
 
     public bool $isManageAthkarMobile = false;
+
+    public string $athkarSearchQuery = '';
 
     /**
      * @var array<int, array{
@@ -43,6 +50,16 @@ class AthkarManager extends Component implements HasActions, HasSchemas
 
     public bool $hasHydratedOverrides = false;
 
+    /**
+     * @var array<string, string>
+     */
+    private array $normalizedAthkarSearchValueCache = [];
+
+    /**
+     * @var array<string, array{normalized: string, terms: array<int, string>}>
+     */
+    private array $athkarSearchPlanCache = [];
+
     public function openManageAthkar(bool $isMobile = false): void
     {
         $this->isManageAthkarMobile = $isMobile;
@@ -54,10 +71,17 @@ class AthkarManager extends Component implements HasActions, HasSchemas
     {
         return Action::make('manageAthkar')
             ->modalHeading('إدارة أذكار الصباح والمساء')
-            ->modalDescription('يمكنك تخصيص الأذكار كما ترغب، مع إمكانية استعادة الأذكار الافتراضية عبر زر استعادة.')
+            ->modalDescription('يمكنك تخصيص الأذكار كما ترغب، مع إمكانية استعادة الأذكار الافتراضية، أو تقديم التعديلات للتعميم.')
             ->modalAutofocus(false)
             ->slideOver(! $this->isManageAthkarMobile)
             ->modalWidth($this->isManageAthkarMobile ? Width::FiveExtraLarge : Width::SevenExtraLarge)
+            ->extraModalWindowAttributes([
+                'id' => 'athkar-manager-modal',
+                'class' => 'muttasiq-modal-window',
+            ])
+            ->extraModalOverlayAttributes([
+                'class' => 'muttasiq-modal-overlay',
+            ])
             ->registerModalActions([
                 $this->editAthkarAction(),
                 $this->createAthkarAction(),
@@ -66,12 +90,26 @@ class AthkarManager extends Component implements HasActions, HasSchemas
             ])
             ->modalSubmitAction(false)
             ->modalCancelActionLabel('إغلاق')
-            ->modalContent(fn (): View => view('livewire.athkar-manager.slideover-content', [
-                'componentId' => $this->getId(),
-                'cards' => $this->resolvedAthkarCards(),
-                'isMobile' => $this->isManageAthkarMobile,
-            ]))
+            ->modalContent(
+                fn (): HtmlString => new HtmlString(
+                    Blade::render(
+                        '<x-partials.athkar-app.slideover-content :component-id="$componentId" :cards="$cards" :is-mobile="$isMobile" />',
+                        [
+                            'componentId' => $this->getId(),
+                            'cards' => $this->filteredAthkarCards(),
+                            'searchQuery' => $this->athkarSearchQuery,
+                            'isMobile' => $this->isManageAthkarMobile,
+                        ],
+                    ),
+                ),
+            )
             ->action(static fn (): null => null);
+    }
+
+    public function clearAthkarSearchQuery(): void
+    {
+        $this->athkarSearchQuery = '';
+        $this->athkarSearchPlanCache = [];
     }
 
     public function editAthkarAction(): Action
@@ -81,16 +119,89 @@ class AthkarManager extends Component implements HasActions, HasSchemas
             ->modalHeading('تعديل الذكر')
             ->modalAutofocus(false)
             ->modalSubmitActionLabel('حفظ التعديل')
+            ->modalSubmitAction(
+                fn (Action $action): Action => $action
+                    ->label(arabic_text('حفظ التعديل'))
+                    ->icon('heroicon-o-pencil-square'),
+            )
+            ->extraModalWindowAttributes([
+                'id' => 'athkar-edit-modal',
+                'class' => 'muttasiq-modal-window',
+            ])
+            ->extraModalOverlayAttributes([
+                'class' => 'muttasiq-modal-overlay',
+            ])
             ->extraModalFooterActions([
+                Action::make('submitOverrideForReview')
+                    ->label(arabic_text('إرسال التعديل للمراجعة'))
+                    ->color('warning')
+                    ->requiresConfirmation()
+                    ->modalHeading(arabic_text('إرسال التعديل للإدارة'))
+                    ->modalDescription(arabic_text('سيتم إرسال التعديل الحالي لمراجعته واعتماده على السجل الأصلي.'))
+                    ->visible(function (array $mountedActions): bool {
+                        $thikrId = $this->resolveMountedEditAthkarId($mountedActions);
+
+                        if ($thikrId < 1) {
+                            return false;
+                        }
+
+                        return $this->canSubmitOverrideForReview($thikrId);
+                    })
+                    ->extraAttributes([
+                        'class' => 'quran-support-lock-target',
+                        'data-support-lock-target' => 'submit-thikr-override',
+                        'data-support-lock-caption' => arabic_text('هذا الخيار يحتاج تأكيد دعم المشروع'),
+                        'x-on:click.capture' => 'if (window.guardMuttasiqSupportLockedAction && !window.guardMuttasiqSupportLockedAction($event)) { return; }',
+                        'x-on:keydown.capture' => 'if (![\'Enter\', \' \'].includes($event.key)) { return; } if (window.guardMuttasiqSupportLockedAction && !window.guardMuttasiqSupportLockedAction($event)) { return; }',
+                    ])
+                    ->action(function (array $mountedActions): void {
+                        $thikrId = $this->resolveMountedEditAthkarId($mountedActions);
+
+                        if ($thikrId < 1) {
+                            return;
+                        }
+
+                        $editAthkarAction = collect($mountedActions)
+                            ->first(fn (Action $mountedAction): bool => $mountedAction->getName() === 'editAthkar');
+                        $rawData = $editAthkarAction?->getRawData();
+
+                        if (is_array($rawData) && $rawData !== []) {
+                            $didSave = $this->saveOverrideById($thikrId, $rawData);
+                            $didReorder = $this->applyRequestedOrderToCard($thikrId, $rawData);
+
+                            if ($didSave || $didReorder) {
+                                notify(
+                                    'heroicon-o-check-circle',
+                                    arabic_text('تم حفظ آخر تعديل محليًا'),
+                                );
+                            }
+                        }
+
+                        if ($this->submitOverrideForReviewById($thikrId)) {
+                            notify(
+                                'heroicon-o-paper-airplane',
+                                arabic_text('تم إرسال التعديل للمراجعة'),
+                                arabic_text('سيظهر في لوحة الإدارة حتى يتم اعتماده أو رفضه.'),
+                            );
+
+                            return;
+                        }
+
+                        notify(
+                            'heroicon-o-information-circle',
+                            arabic_text('لا يوجد تعديل جديد لإرساله'),
+                            arabic_text('جرّب تعديل النص أو البيانات أولًا ثم أعد الإرسال.'),
+                        );
+                    }),
+
                 Action::make('deleteAthkarFromEdit')
-                    ->label('حذف الذكر')
+                    ->label(arabic_text('حذف الذكر'))
+                    ->icon('heroicon-o-x-mark')
                     ->color('danger')
                     ->requiresConfirmation()
                     ->modalAutofocus(false)
                     ->action(function (array $mountedActions): void {
-                        $editAthkarAction = collect($mountedActions)
-                            ->first(fn (Action $mountedAction): bool => $mountedAction->getName() === 'editAthkar');
-                        $thikrId = (int) ($editAthkarAction?->getArguments()['thikrId'] ?? 0);
+                        $thikrId = $this->resolveMountedEditAthkarId($mountedActions);
 
                         if ($thikrId < 1) {
                             return;
@@ -129,6 +240,13 @@ class AthkarManager extends Component implements HasActions, HasSchemas
             ->modalHeading('إضافة ذكر جديد')
             ->modalAutofocus(false)
             ->modalSubmitActionLabel('إضافة')
+            ->extraModalWindowAttributes([
+                'id' => 'athkar-create-modal',
+                'class' => 'muttasiq-modal-window',
+            ])
+            ->extraModalOverlayAttributes([
+                'class' => 'muttasiq-modal-overlay',
+            ])
             ->fillForm(fn (): array => [
                 'order' => max(1, $this->maxResolvedOrder() + 1),
                 'time' => ThikrTime::Shared->value,
@@ -172,6 +290,13 @@ class AthkarManager extends Component implements HasActions, HasSchemas
             ->modalHeading('حذف الذكر')
             ->modalAutofocus(false)
             ->modalDescription('سيتم إخفاء الذكر محليًا ويمكن استعادته عبر زر استعادة الكل.')
+            ->extraModalWindowAttributes([
+                'id' => 'athkar-delete-modal',
+                'class' => 'muttasiq-modal-window',
+            ])
+            ->extraModalOverlayAttributes([
+                'class' => 'muttasiq-modal-overlay',
+            ])
             ->action(function (array $arguments): void {
                 $thikrId = (int) ($arguments['thikrId'] ?? 0);
 
@@ -194,6 +319,13 @@ class AthkarManager extends Component implements HasActions, HasSchemas
             ->modalAutofocus(false)
             ->modalDescription('سيتم حذف كل التعديلات المحلية، بما فيها الأذكار المضافة.')
             ->modalSubmitActionLabel('نعم، استعادة الكل')
+            ->extraModalWindowAttributes([
+                'id' => 'athkar-reset-modal',
+                'class' => 'muttasiq-modal-window',
+            ])
+            ->extraModalOverlayAttributes([
+                'class' => 'muttasiq-modal-overlay',
+            ])
             ->action(function (): void {
                 if ($this->resetAllAthkarOverrides()) {
                     notify('heroicon-o-arrow-path', 'تمت الاستعادة', 'أُعيدت جميع الأذكار للحالة الافتراضية.');
@@ -466,6 +598,79 @@ class AthkarManager extends Component implements HasActions, HasSchemas
         });
 
         return $this->attachOverrideFlags($cards, $normalizedOverrides);
+    }
+
+    /**
+     * @return array<int, array{
+     *     id: int,
+     *     time: string,
+     *     type: string,
+     *     text: string,
+     *     origin: string|null,
+     *     is_aayah: bool,
+     *     is_original: bool,
+     *     count: int,
+     *     order: int,
+     *     is_overridden: bool,
+     *     is_custom: bool
+     * }>
+     */
+    public function filteredAthkarCards(): array
+    {
+        $cards = $this->resolvedAthkarCards();
+        $searchPlan = $this->buildAthkarSearchPlan($this->athkarSearchQuery);
+        $normalizedQuery = $searchPlan['normalized'];
+        $normalizedTerms = $searchPlan['terms'];
+
+        if ($normalizedQuery === '') {
+            return $cards;
+        }
+
+        $textMatches = [];
+
+        foreach ($cards as $card) {
+            $normalizedCardText = $this->normalizeAthkarSearchValue($card['text']);
+            $textScore = $this->scoreAthkarSearchNormalizedText(
+                $normalizedCardText,
+                $normalizedQuery,
+                $normalizedTerms,
+            );
+
+            if ($textScore > 0) {
+                $textMatches[] = [
+                    'card' => $card,
+                    'score' => $textScore,
+                ];
+
+                continue;
+            }
+
+        }
+
+        $sortByScoreThenOrder = static function (array $left, array $right): int {
+            $scoreComparison = ((int) $right['score']) <=> ((int) $left['score']);
+
+            if ($scoreComparison !== 0) {
+                return $scoreComparison;
+            }
+
+            $leftCard = is_array($left['card']) ? $left['card'] : [];
+            $rightCard = is_array($right['card']) ? $right['card'] : [];
+            $orderComparison = ((int) ($leftCard['order'] ?? 0)) <=> ((int) ($rightCard['order'] ?? 0));
+
+            if ($orderComparison !== 0) {
+                return $orderComparison;
+            }
+
+            return ((int) ($leftCard['id'] ?? 0)) <=> ((int) ($rightCard['id'] ?? 0));
+        };
+
+        usort($textMatches, $sortByScoreThenOrder);
+
+        return collect($textMatches)
+            ->map(fn (array $match): array => $match['card'])
+            ->values()
+            ->all();
     }
 
     /**
@@ -1105,6 +1310,159 @@ class AthkarManager extends Component implements HasActions, HasSchemas
         return $normalized !== '' ? $normalized : null;
     }
 
+    private function normalizeAthkarSearchValue(mixed $value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+
+        $normalized = trim((string) $value);
+
+        if ($normalized === '') {
+            return '';
+        }
+
+        $cacheKey = sha1($normalized);
+
+        if (array_key_exists($cacheKey, $this->normalizedAthkarSearchValueCache)) {
+            return $this->normalizedAthkarSearchValueCache[$cacheKey];
+        }
+
+        if (mb_strlen($normalized) > 1200) {
+            $normalized = mb_substr($normalized, 0, 1200);
+        }
+
+        $strippedWrappers = $this->stripAthkarSearchWrappers($normalized);
+        $searchable = trim((string) ArabicFilter::forSearch($strippedWrappers));
+        $collapsed = preg_replace('/\s+/u', ' ', $searchable) ?? $searchable;
+
+        $resolved = trim($collapsed);
+        $this->normalizedAthkarSearchValueCache[$cacheKey] = $resolved;
+
+        if (count($this->normalizedAthkarSearchValueCache) > 512) {
+            $this->normalizedAthkarSearchValueCache = array_slice(
+                $this->normalizedAthkarSearchValueCache,
+                -320,
+                null,
+                true,
+            );
+        }
+
+        return $resolved;
+    }
+
+    private function stripAthkarSearchWrappers(string $value): string
+    {
+        $normalized = str_replace(
+            [
+                Thikr::AAYAH_OPENING_MARK,
+                Thikr::AAYAH_CLOSING_MARK,
+                '(',
+                ')',
+                '[',
+                ']',
+                '{',
+                '}',
+                '«',
+                '»',
+                '‹',
+                '›',
+            ],
+            ' ',
+            $value,
+        );
+
+        $collapsed = preg_replace('/\s+/u', ' ', $normalized) ?? $normalized;
+
+        return trim($collapsed);
+    }
+
+    /**
+     * @return array{normalized: string, terms: array<int, string>}
+     */
+    private function buildAthkarSearchPlan(mixed $value): array
+    {
+        $normalized = $this->normalizeAthkarSearchValue($value);
+
+        if ($normalized === '') {
+            return [
+                'normalized' => '',
+                'terms' => [],
+            ];
+        }
+
+        if (array_key_exists($normalized, $this->athkarSearchPlanCache)) {
+            return $this->athkarSearchPlanCache[$normalized];
+        }
+
+        $terms = [$normalized];
+
+        $terms = collect($terms)
+            ->map(fn (string $term): string => $this->normalizeAthkarSearchValue($term))
+            ->flatMap(
+                static fn (string $term): array => preg_split('/\s+/u', $term, -1, PREG_SPLIT_NO_EMPTY) ?: [],
+            )
+            ->unique()
+            ->take(48)
+            ->values()
+            ->all();
+
+        $resolvedPlan = [
+            'normalized' => $normalized,
+            'terms' => $terms,
+        ];
+
+        $this->athkarSearchPlanCache[$normalized] = $resolvedPlan;
+
+        if (count($this->athkarSearchPlanCache) > 80) {
+            $this->athkarSearchPlanCache = array_slice(
+                $this->athkarSearchPlanCache,
+                -48,
+                null,
+                true,
+            );
+        }
+
+        return $resolvedPlan;
+    }
+
+    /**
+     * @param  array<int, string>  $terms
+     */
+    private function scoreAthkarSearchNormalizedText(
+        string $normalizedValue,
+        string $normalizedQuery,
+        array $terms,
+    ): int {
+        if ($normalizedValue === '') {
+            return 0;
+        }
+
+        $score = 0;
+
+        if (str_contains($normalizedValue, $normalizedQuery)) {
+            $score += 120;
+        }
+
+        foreach ($terms as $term) {
+            if ($term === '') {
+                continue;
+            }
+
+            if ($normalizedValue === $term) {
+                $score += 70;
+
+                continue;
+            }
+
+            if (str_contains($normalizedValue, $term)) {
+                $score += 36;
+            }
+        }
+
+        return $score;
+    }
+
     private function hasOrigin(mixed $origin): bool
     {
         return $this->normalizeNullableText($origin) !== null;
@@ -1198,6 +1556,156 @@ class AthkarManager extends Component implements HasActions, HasSchemas
         $this->dispatchOverridesPersisted(changedThikrId: $thikrId, hasOrderChange: true);
 
         return true;
+    }
+
+    /**
+     * @param  array<int, Action>  $mountedActions
+     */
+    private function resolveMountedEditAthkarId(array $mountedActions): int
+    {
+        $editAthkarAction = collect($mountedActions)
+            ->first(fn (Action $mountedAction): bool => $mountedAction->getName() === 'editAthkar');
+
+        return max(0, (int) ($editAthkarAction?->getArguments()['thikrId'] ?? 0));
+    }
+
+    private function canSubmitOverrideForReview(int $thikrId): bool
+    {
+        if (! $this->defaultCardById($thikrId)) {
+            return false;
+        }
+
+        $override = collect($this->normalizeOverrides($this->athkarOverrides))
+            ->firstWhere('thikr_id', $thikrId);
+
+        if (! $override) {
+            return false;
+        }
+
+        return $this->hasMeaningfulOverride($override);
+    }
+
+    /**
+     * @return array{
+     *     proposed: array{order: int, time: string, type: string, text: string, origin: string|null, count: int, is_aayah: bool},
+     *     current: array{order: int, time: string, type: string, text: string, origin: string|null, count: int, is_aayah: bool},
+     *     changed_keys: array<int, string>,
+     *     submitted_at: string
+     * }|null
+     */
+    private function buildOverrideSubmissionPayload(int $thikrId): ?array
+    {
+        $resolvedCard = $this->resolvedCardById($thikrId);
+        $defaultCard = $this->defaultCardById($thikrId);
+
+        if (! $resolvedCard || ! $defaultCard) {
+            return null;
+        }
+
+        $proposed = [
+            'order' => max(1, (int) $resolvedCard['order']),
+            'time' => (string) $resolvedCard['time'],
+            'type' => (string) $resolvedCard['type'],
+            'text' => Thikr::normalizeAayahText(
+                (string) $resolvedCard['text'],
+                (bool) $resolvedCard['is_aayah'],
+            ),
+            'origin' => $this->normalizeNullableText($resolvedCard['origin'] ?? null),
+            'count' => max(1, (int) $resolvedCard['count']),
+            'is_aayah' => (bool) $resolvedCard['is_aayah'],
+        ];
+        $current = [
+            'order' => max(1, (int) $defaultCard['order']),
+            'time' => (string) $defaultCard['time'],
+            'type' => (string) $defaultCard['type'],
+            'text' => Thikr::normalizeAayahText(
+                (string) $defaultCard['text'],
+                (bool) $defaultCard['is_aayah'],
+            ),
+            'origin' => $this->normalizeNullableText($defaultCard['origin'] ?? null),
+            'count' => max(1, (int) $defaultCard['count']),
+            'is_aayah' => (bool) $defaultCard['is_aayah'],
+        ];
+        $changedKeys = collect(array_keys($proposed))
+            ->filter(fn (string $key): bool => Arr::get($proposed, $key) !== Arr::get($current, $key))
+            ->values()
+            ->all();
+
+        if ($changedKeys === []) {
+            return null;
+        }
+
+        return [
+            'proposed' => $proposed,
+            'current' => $current,
+            'changed_keys' => $changedKeys,
+            'submitted_at' => now()->toIso8601String(),
+        ];
+    }
+
+    private function submitOverrideForReviewById(int $thikrId): bool
+    {
+        if (! $this->canSubmitOverrideForReview($thikrId)) {
+            return false;
+        }
+
+        $payload = $this->buildOverrideSubmissionPayload($thikrId);
+
+        if (! $payload) {
+            return false;
+        }
+
+        $submissionData = [
+            'override_payload' => $payload,
+            'submitted_from_ip' => request()->ip(),
+            'submitted_at' => now(),
+            'reviewed_at' => null,
+            'reviewed_by_user_id' => null,
+            'reviewed_note' => null,
+        ];
+        $pendingSubmission = ThikrOverrideSubmission::query()
+            ->where('thikr_id', $thikrId)
+            ->where('status', ThikrOverrideSubmission::STATUS_PENDING)
+            ->latest('id')
+            ->first();
+
+        if ($pendingSubmission) {
+            $pendingPayload = $this->normalizeSubmissionPayload($pendingSubmission->override_payload);
+
+            if ($pendingPayload === $payload) {
+                return false;
+            }
+
+            $pendingSubmission->fill($submissionData)->save();
+
+            return true;
+        }
+
+        ThikrOverrideSubmission::query()->create([
+            'thikr_id' => $thikrId,
+            'status' => ThikrOverrideSubmission::STATUS_PENDING,
+            ...$submissionData,
+        ]);
+
+        return true;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function normalizeSubmissionPayload(mixed $payload): array
+    {
+        if (is_array($payload)) {
+            return $payload;
+        }
+
+        if (! is_string($payload) || trim($payload) === '') {
+            return [];
+        }
+
+        $decodedPayload = json_decode($payload, true);
+
+        return is_array($decodedPayload) ? $decodedPayload : [];
     }
 
     private function nextCustomThikrId(): int

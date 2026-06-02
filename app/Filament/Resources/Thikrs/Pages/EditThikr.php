@@ -15,7 +15,7 @@ class EditThikr extends EditRecord
     protected static string $resource = ThikrResource::class;
 
     /**
-     * @return array<int, \Filament\Actions\DeleteAction>
+     * @return array<int, DeleteAction>
      */
     protected function getHeaderActions(): array
     {

@@ -1,3 +1,7 @@
+if (typeof window.isRecordSelected !== 'function') {
+    window.isRecordSelected = () => false;
+}
+
 document.addEventListener('livewire:initialized', () => {
     const matches = (node) =>
         node?.tagName === 'STYLE' &&

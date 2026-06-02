@@ -4,4 +4,4 @@ set -euo pipefail
 ./.scripts/support/prepare.sh
 ./.scripts/native/mobile/android/support/prepare.sh
 
-php artisan native:run android
+COMPOSER_NO_DEV=1 php artisan native:run android

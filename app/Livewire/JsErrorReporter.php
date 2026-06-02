@@ -5,14 +5,19 @@ declare(strict_types=1);
 namespace App\Livewire;
 
 use App\Services\JsErrorReports\JsErrorReportRecorder;
+use App\Services\JsErrorReports\NativeJsErrorReportRelay;
 use App\Services\Support\Enums\NotificationType;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Support\Enums\Width;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\HtmlString;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -51,11 +56,14 @@ class JsErrorReporter extends Component implements HasActions, HasSchemas
         'breakpoint' => null,
     ];
 
+    public bool $isManualReport = false;
+
     public function openReportModal(array $payload = []): void
     {
+        $this->isManualReport = ($payload['mode'] ?? null) === 'manual';
         $errors = $this->normalizeErrors($payload['errors'] ?? []);
 
-        if ($errors === []) {
+        if (! $this->isManualReport && $errors === []) {
             return;
         }
 
@@ -68,24 +76,44 @@ class JsErrorReporter extends Component implements HasActions, HasSchemas
     public function reportJsErrorAction(): Action
     {
         return Action::make('reportJsError')
-            ->modalHeading('حدث خلل غير متوقع في التطبيق')
-            ->modalDescription('من فضلك اكتب وصفًا لما حصل قبل المشكلة لنتمكن من تتبع السبب بشكل أسرع...')
+            ->modalHeading('حدث خلل غير متوقع في المنصة')
+            ->modalDescription(fn (): string => $this->isManualReport
+                ? arabic_text('اكتب وصفًا واضحًا لما لاحظته وسنراجع البلاغ بإذن الله.')
+                : arabic_text('من فضلك اكتب وصفًا لما حصل قبل المشكلة لنتمكن من تتبع السبب بشكل أسرع...'))
             ->modalAutofocus(false)
             ->modalWidth(Width::ThreeExtraLarge)
             ->modalSubmitActionLabel('إرسال البلاغ')
             ->modalCancelActionLabel('إغلاق')
+            ->extraModalWindowAttributes([
+                'id' => 'js-error-report-modal',
+                'class' => 'muttasiq-modal-window',
+            ])
+            ->extraModalOverlayAttributes([
+                'class' => 'muttasiq-modal-overlay',
+            ])
             ->registerModalActions([
                 $this->openGithubIssueAction(),
             ])
             ->modalContentFooter(
-                fn (Action $action): View => view('livewire.js-error-reporter.modal-footer', ['action' => $action]),
+                fn (Action $action): HtmlString => new HtmlString(
+                    Blade::render('<x-partials.js-error-reporter.modal-footer :action="$action" />', [
+                        'action' => $action,
+                    ]),
+                ),
             )
             ->fillForm(fn (): array => [
                 'user_note' => '',
+                'screen_breakpoint' => $this->resolveScreenBreakpointDisplayLabel(),
                 'technical_snapshot' => $this->formatErrorsForDisplay(),
             ])
             ->schema([
-                \Filament\Forms\Components\Textarea::make('user_note')
+                TextInput::make('screen_breakpoint')
+                    ->label(arabic_text('المقاس الحالي للجهاز'))
+                    ->disabled()
+                    ->dehydrated(false)
+                    ->extraInputAttributes(['dir' => 'rtl']),
+
+                Textarea::make('user_note')
                     ->label('ماذا كنت تفعل قبل ظهور المشكلة؟')
                     ->required()
                     ->minLength(8)
@@ -94,9 +122,10 @@ class JsErrorReporter extends Component implements HasActions, HasSchemas
                     ->trim()
                     ->helperText('الوصف يفيدنا أكثر من التفاصيل التقنية المرفقة تلقائيا'),
 
-                \Filament\Forms\Components\Textarea::make('technical_snapshot')
+                Textarea::make('technical_snapshot')
                     ->label('تفاصيل تقنية مرفقة')
                     ->rows(5)
+                    ->hidden(fn (): bool => $this->isManualReport || $this->capturedErrors === [])
                     ->disabled()
                     ->dehydrated(false)
                     ->extraInputAttributes([
@@ -104,13 +133,23 @@ class JsErrorReporter extends Component implements HasActions, HasSchemas
                         'class' => 'font-mono text-xs leading-6',
                     ]),
             ])
-            ->action(function (array $data, JsErrorReportRecorder $recorder): void {
+            ->action(function (
+                array $data,
+                JsErrorReportRecorder $recorder,
+                NativeJsErrorReportRelay $relay,
+            ): void {
                 try {
-                    $report = $recorder->store([
+                    $payload = [
                         'user_note' => (string) ($data['user_note'] ?? ''),
                         'errors' => $this->capturedErrors,
                         'context' => $this->clientContext,
-                    ], request());
+                    ];
+
+                    $report = $recorder->store($payload, request());
+
+                    if (is_platform('mobile')) {
+                        $relay->relay($payload);
+                    }
 
                     $this->dispatch('js-error-report-submitted', reportId: $report->id);
                     $this->resetCapturedData();
@@ -154,6 +193,7 @@ class JsErrorReporter extends Component implements HasActions, HasSchemas
 
     private function resetCapturedData(): void
     {
+        $this->isManualReport = false;
         $this->capturedErrors = [];
         $this->clientContext = [
             'url' => null,
@@ -239,6 +279,23 @@ class JsErrorReporter extends Component implements HasActions, HasSchemas
                 return $summary."\n".$entry['stack'];
             })
             ->implode("\n\n");
+    }
+
+    private function resolveScreenBreakpointDisplayLabel(): string
+    {
+        $breakpoint = trim((string) ($this->clientContext['breakpoint'] ?? ''));
+
+        return match ($breakpoint) {
+            'base' => arabic_text('صغير جدًّا'),
+            'sm' => arabic_text('صغير'),
+            'md' => arabic_text('متوسط'),
+            'lg' => arabic_text('كبير'),
+            'xl' => arabic_text('كبير جدًّا 1'),
+            '2xl' => arabic_text('كبير جدًّا 2'),
+            '3xl' => arabic_text('كبير جدًّا 3'),
+            '4xl' => arabic_text('كبير جدًّا 4'),
+            default => arabic_text('غير محدد'),
+        };
     }
 
     private function trimToLength(mixed $value, int $length): ?string

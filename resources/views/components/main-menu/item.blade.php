@@ -8,6 +8,7 @@
 
 @php
     $locked = !$onClickCallback;
+    $resolvedCaption = arabic_text((string) $caption);
 @endphp
 
 @once
@@ -102,7 +103,7 @@
                 0%,
                 44% {
                     opacity: 0;
-                    transform: translateX(-175%) skewX(-18deg);
+                    transform: translateX(175%) skewX(45deg);
                 }
 
                 58% {
@@ -111,12 +112,12 @@
 
                 76% {
                     opacity: 0;
-                    transform: translateX(175%) skewX(-18deg);
+                    transform: translateX(-175%) skewX(45deg);
                 }
 
                 100% {
                     opacity: 0;
-                    transform: translateX(175%) skewX(-18deg);
+                    transform: translateX(-175%) skewX(45deg);
                 }
             }
         </style>
@@ -130,7 +131,7 @@
         $buttonClasses,
     ]) }}"
     data-main-menu-item
-    data-caption="{{ $caption }}"
+    data-caption="{{ $resolvedCaption }}"
     data-icon-name="{{ $iconName }}"
     data-on-click-callback="{{ $onClickCallback ?? '' }}"
     data-locked="{{ $locked ? 'true' : 'false' }}"
@@ -145,7 +146,7 @@
         },
         shadow: makeBoxShadowFromColor('--primary-500'),
         shadowDark: makeBoxShadowFromColor('--primary-100'),
-        caption: @js($caption),
+        caption: @js($resolvedCaption),
         iconName: @js($iconName),
         onClickCallback: @js($onClickCallback),
         locked: @js($locked),
@@ -183,7 +184,7 @@
         <x-icon
             class="{{ twMerge('will-change-[transform,opacity,filter] relative z-10 fill-primary-500 dark:fill-primary-200 h-8 w-8 transform-gpu transition-[opacity,scale,filter]', $iconClasses) }}"
             x-bind:class="{
-                'scale-[0.88]! opacity-[0.48] grayscale-[1]': containerHovered && !isActive,
+                'scale-[0.88]! opacity-[0.48] grayscale-[1]': containerHovered && isItemActive && !isActive,
                 'opacity-0 scale-[0.92]': isLockedActive,
             }"
             :name="$iconName"

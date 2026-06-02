@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Livewire\AthkarManager;
 use App\Models\Thikr;
+use App\Models\ThikrOverrideSubmission;
 use App\Services\Enums\ThikrTime;
 use App\Services\Enums\ThikrType;
 
@@ -20,8 +21,10 @@ it('loads default athkar cards and keeps origin badge semantics correct', functi
     ]);
 
     $cards = livewire(AthkarManager::class)->instance()->defaultAthkarCards();
+    $resolvedCard = collect($cards)->firstWhere('id', $thikr->id);
 
-    expect(collect($cards)->contains(fn (array $card): bool => $card['text'] === $defaultText))->toBeTrue()
+    expect($resolvedCard)->not->toBeNull()
+        ->and($resolvedCard['text'])->toBe(arabic_text($defaultText))
         ->and(collect($cards)->contains(fn (array $card): bool => $card['id'] === $thikr->id))->toBeTrue()
         ->and(collect($cards)->contains(fn (array $card): bool => array_key_exists('is_aayah', $card)))->toBeTrue()
         ->and(collect($cards)->contains(fn (array $card): bool => $card['type'] === ThikrType::Repentance->value))->toBeTrue()
@@ -41,6 +44,39 @@ it('loads default athkar cards and keeps origin badge semantics correct', functi
         ->and($resolvedCards->firstWhere('id', $withoutOrigin->id)['is_original'])->toBeFalse();
 });
 
+it('searches athkar manager by thikr text only and ignores origin-only matches', function () {
+    $textMatchOne = Thikr::factory()->create([
+        'text' => 'لَيْسَ كَمِثْلِهِ شَيْءٌ',
+        'origin' => 'القرآن الكريم',
+    ]);
+
+    $textMatchTwo = Thikr::factory()->create([
+        'text' => 'فَلَيْسَ عَلَيْكُمْ جُنَاحٌ',
+        'origin' => null,
+    ]);
+
+    $originOnlyMatch = Thikr::factory()->create([
+        'text' => 'ذكر بلا تطابق مباشر',
+        'origin' => 'مرجع فيه كلمة ليس',
+    ]);
+
+    $results = collect(
+        livewire(AthkarManager::class)
+            ->set('athkarSearchQuery', 'ليس')
+            ->instance()
+            ->filteredAthkarCards(),
+    );
+
+    $resultIds = $results->pluck('id')->values();
+    $textMatchOneIndex = $resultIds->search($textMatchOne->id);
+    $textMatchTwoIndex = $resultIds->search($textMatchTwo->id);
+    $originOnlyMatchIndex = $resultIds->search($originOnlyMatch->id);
+
+    expect($textMatchOneIndex)->not->toBeFalse()
+        ->and($textMatchTwoIndex)->not->toBeFalse()
+        ->and($originOnlyMatchIndex)->toBeFalse();
+});
+
 it('opens athkar manager in slide-over mode on desktop and modal mode on mobile', function () {
     livewire(AthkarManager::class)
         ->call('openManageAthkar', false)
@@ -54,51 +90,52 @@ it('opens athkar manager in slide-over mode on desktop and modal mode on mobile'
 });
 
 it('passes native mobile runtime flag to the manager card interaction bridge', function () {
-    config()->set('nativephp-internal.running', true);
-    config()->set('nativephp-internal.platform', 'ios');
+    $source = file_get_contents(resource_path('views/components/partials/athkar-app/slideover-content.blade.php'));
 
-    $cards = collect(livewire(AthkarManager::class)->instance()->resolvedAthkarCards())
-        ->take(1)
-        ->values()
-        ->all();
+    expect($source)->not->toBeFalse()
+        ->and($source)->toContain('nativeMobileRuntime: @js(')
+        ->and($source)->toContain("config('nativephp-internal.running', false)")
+        ->and($source)->toContain("is_platform('mobile')")
+        ->and($source)->toContain('wire:model.live.debounce.520ms="athkarSearchQuery"');
+});
 
-    expect($cards)->not->toBeEmpty();
+it('keeps athkar manager search plan bounded to avoid heavy runtime spikes', function () {
+    $source = file_get_contents(app_path('Livewire/AthkarManager.php'));
 
-    $rendered = view('livewire.athkar-manager.slideover-content', [
-        'componentId' => 'athkar-manager-native-test',
-        'cards' => $cards,
-        'isMobile' => true,
-    ])->render();
+    expect($source)->not->toBeFalse()
+        ->and($source)->toContain('private array $normalizedAthkarSearchValueCache = [];')
+        ->and($source)->toContain('private array $athkarSearchPlanCache = [];')
+        ->and($source)->toContain('if (mb_strlen($normalized) > 1200) {')
+        ->and($source)->toContain('$terms = [$normalized];')
+        ->and($source)->not->toContain('buildComprehensiveSearchPlan');
+});
 
-    expect($rendered)->toContain('nativeMobileRuntime: true');
+it('configures athkar edit modal submit and delete buttons with explicit icons', function () {
+    $source = file_get_contents(app_path('Livewire/AthkarManager.php'));
+
+    expect($source)->not->toBeFalse()
+        ->and($source)->toContain("->modalSubmitActionLabel('حفظ التعديل')")
+        ->and($source)->toContain("->icon('heroicon-o-pencil-square')")
+        ->and($source)->toContain("Action::make('deleteAthkarFromEdit')")
+        ->and($source)->toContain("->icon('heroicon-o-x-mark')");
 });
 
 it('renders explicit sortable config and dedicated drag handle markup for manager cards', function () {
-    $cards = collect(livewire(AthkarManager::class)->instance()->resolvedAthkarCards())
-        ->take(1)
-        ->values()
-        ->all();
+    $source = file_get_contents(resource_path('views/components/partials/athkar-app/slideover-content.blade.php'));
 
-    expect($cards)->not->toBeEmpty();
-
-    $rendered = view('livewire.athkar-manager.slideover-content', [
-        'componentId' => 'athkar-manager-sort-config-test',
-        'cards' => $cards,
-        'isMobile' => false,
-    ])->render();
-
-    expect($rendered)->toContain('wire:sort:config="managerSortConfig()"')
-        ->and($rendered)->toContain('athkar-manager-cards-grid flex flex-wrap content-start gap-4')
-        ->and($rendered)->toContain('dir="ltr"')
-        ->and($rendered)->toContain('data-athkar-manager-card')
-        ->and($rendered)->toContain('data-athkar-order-index')
-        ->and($rendered)->toContain('dir="rtl"')
-        ->and($rendered)->toContain('data-athkar-sort-handle')
-        ->and($rendered)->toContain('wire:loading.delay.class="opacity-100 pointer-events-auto"')
-        ->and($rendered)->toContain('wire:loading.delay.class.remove="opacity-0 pointer-events-none"')
-        ->and($rendered)->not->toContain('wire:sort:handle')
-        ->and($rendered)->not->toContain('x-bind:data-athkar-touch-drag')
-        ->and($rendered)->not->toContain('wire:click.preserve-scroll="openEditAthkar(');
+    expect($source)->not->toBeFalse()
+        ->and($source)->toContain('wire:sort:config="managerSortConfig()"')
+        ->and($source)->toContain('athkar-manager-cards-grid flex flex-wrap content-start gap-4')
+        ->and($source)->toContain('dir="ltr"')
+        ->and($source)->toContain('data-athkar-manager-card')
+        ->and($source)->toContain('data-athkar-order-index')
+        ->and($source)->toContain('dir="rtl"')
+        ->and($source)->toContain('data-athkar-sort-handle')
+        ->and($source)->toContain('wire:loading.delay.class="opacity-100 pointer-events-auto"')
+        ->and($source)->toContain('wire:loading.delay.class.remove="opacity-0 pointer-events-none"')
+        ->and($source)->not->toContain('wire:sort:handle')
+        ->and($source)->not->toContain('x-bind:data-athkar-touch-drag')
+        ->and($source)->not->toContain('wire:click.preserve-scroll="openEditAthkar(');
 });
 
 it('mounts edit action and configures manage action presentation by breakpoint', function () {
@@ -528,4 +565,103 @@ it('normalizes enum and legacy payloads when syncing overrides', function () {
         ->and($override['is_aayah'])->toBeTrue()
         ->and($card)->not->toBeNull()
         ->and($card['is_aayah'])->toBeTrue();
+});
+
+it('creates a pending override submission for a modified default thikr and skips exact duplicates', function () {
+    $thikr = Thikr::factory()->create([
+        'time' => ThikrTime::Sabah,
+        'type' => ThikrType::Glorification,
+        'text' => 'ذكر أصلي للاختبار',
+        'origin' => 'مرجع أصلي',
+        'count' => 3,
+        'is_aayah' => false,
+    ]);
+
+    $component = livewire(AthkarManager::class)
+        ->set('athkarOverrides', [
+            [
+                'thikr_id' => $thikr->id,
+                'text' => 'ذكر معدل للاعتماد',
+                'origin' => 'مرجع معدل',
+                'count' => 4,
+                'is_aayah' => false,
+                'is_deleted' => false,
+                'is_custom' => false,
+            ],
+        ])
+        ->instance();
+
+    $submitOverride = Closure::bind(
+        static fn (AthkarManager $instance, int $thikrId): bool => $instance->submitOverrideForReviewById($thikrId),
+        null,
+        AthkarManager::class,
+    );
+
+    $firstSubmit = $submitOverride($component, $thikr->id);
+    $secondSubmit = $submitOverride($component, $thikr->id);
+
+    $submission = ThikrOverrideSubmission::query()
+        ->where('thikr_id', $thikr->id)
+        ->where('status', ThikrOverrideSubmission::STATUS_PENDING)
+        ->first();
+
+    expect($firstSubmit)->toBeTrue()
+        ->and($secondSubmit)->toBeFalse()
+        ->and($submission)->not->toBeNull()
+        ->and($submission?->status)->toBe(ThikrOverrideSubmission::STATUS_PENDING)
+        ->and(collect($submission?->override_payload['changed_keys'] ?? [])->contains('text'))->toBeTrue()
+        ->and((string) ($submission?->override_payload['proposed']['text'] ?? ''))->toContain('ذكر معدل للاعتماد');
+});
+
+it('updates the existing pending submission payload when override changes', function () {
+    $thikr = Thikr::factory()->create([
+        'time' => ThikrTime::Masaa,
+        'type' => ThikrType::Supplication,
+        'text' => 'ذكر أساسي',
+        'origin' => null,
+        'count' => 1,
+        'is_aayah' => false,
+    ]);
+
+    $component = livewire(AthkarManager::class)
+        ->set('athkarOverrides', [
+            [
+                'thikr_id' => $thikr->id,
+                'text' => 'صياغة أولى',
+                'count' => 1,
+                'is_deleted' => false,
+                'is_custom' => false,
+            ],
+        ])
+        ->instance();
+
+    $submitOverride = Closure::bind(
+        static fn (AthkarManager $instance, int $thikrId): bool => $instance->submitOverrideForReviewById($thikrId),
+        null,
+        AthkarManager::class,
+    );
+
+    expect($submitOverride($component, $thikr->id))->toBeTrue();
+
+    $component->athkarOverrides = [
+        [
+            'thikr_id' => $thikr->id,
+            'text' => 'صياغة ثانية',
+            'count' => 2,
+            'is_deleted' => false,
+            'is_custom' => false,
+        ],
+    ];
+
+    expect($submitOverride($component, $thikr->id))->toBeTrue();
+
+    $pendingSubmissions = ThikrOverrideSubmission::query()
+        ->where('thikr_id', $thikr->id)
+        ->where('status', ThikrOverrideSubmission::STATUS_PENDING)
+        ->get();
+    $latestSubmission = $pendingSubmissions->first();
+
+    expect($pendingSubmissions)->toHaveCount(1)
+        ->and((string) ($latestSubmission?->override_payload['proposed']['text'] ?? ''))->toContain('صياغة ثانية')
+        ->and((int) ($latestSubmission?->override_payload['proposed']['count'] ?? 0))->toBe(2);
 });

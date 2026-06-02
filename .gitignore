@@ -8,6 +8,7 @@
 /node_modules
 /public/build
 /public/hot
+/public/hot.browser-tests.bak
 /public/android-hot
 /public/storage
 /storage/*.key
@@ -18,7 +19,8 @@
 /.codex
 /.claude
 /.agents
-/credentials
+/.credentials
+/.playwright-mcp
 /build
 /public/css
 /public/fonts
@@ -27,3 +29,6 @@
 AGENTS.md
 boost.json
 CLAUDE.md
+nativephp.json
+/database/native-quran-reader.sqlite
+/database/native-quran-reader.json

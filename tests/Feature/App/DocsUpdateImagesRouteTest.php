@@ -6,12 +6,12 @@ function changelogImagesDirectory(): string
 }
 
 it('keeps changelog images accessible and constrained to the public docs images directory across runtimes', function () {
-    $imagePath = changelogImagesDirectory().'/v-0-5-0/web/changelogs-modal.png';
+    $imagePath = changelogImagesDirectory().'/v-0-5-0/web/changelogs-modal.webp';
 
     expect($imagePath)
         ->toBeFile()
         ->and(mime_content_type($imagePath))
-        ->toBe('image/png');
+        ->toBe('image/webp');
 
     $imagesDirectory = realpath(changelogImagesDirectory());
     $requestedPath = realpath(changelogImagesDirectory().'/../changelogs.md');
@@ -24,10 +24,10 @@ it('keeps changelog images accessible and constrained to the public docs images 
         'nativephp-internal.platform' => 'ios',
     ]);
 
-    $imagePath = changelogImagesDirectory().'/v-0-4-0/android/responsive-text-overflow-handling.png';
+    $imagePath = changelogImagesDirectory().'/v-0-4-0/android/responsive-text-overflow-handling.webp';
 
     expect($imagePath)
         ->toBeFile()
         ->and(mime_content_type($imagePath))
-        ->toBe('image/png');
+        ->toBe('image/webp');
 });

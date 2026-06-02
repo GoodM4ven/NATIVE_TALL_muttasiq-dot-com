@@ -1,0 +1,24 @@
+{
+    "mcp": true,
+    "herd_mcp": false,
+    "nightwatch_mcp": false,
+    "sail": false,
+    "agents": [
+        "claude_code",
+        "codex"
+    ],
+    "editors": [
+        "vscode"
+    ],
+    "guidelines": true,
+    "skills": [
+        "livewire-development",
+        "pest-testing",
+        "tailwindcss-development"
+    ],
+    "packages": [
+        "filament/filament",
+        "nativephp/mobile",
+        "nativephp/mobile-browser"
+    ]
+}

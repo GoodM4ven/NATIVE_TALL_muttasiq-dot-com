@@ -113,6 +113,10 @@ return [
         '*_SECRET',
         'DB_PASSWORD',
         'DB_USERNAME',
+        'ADMIN_*',
+        'ANDROID_KEYSTORE_PASSWORD',
+        'ANDROID_KEY_PASSWORD',
+        'IOS_DISTRIBUTION_CERTIFICATE_PASSWORD',
     ],
 
     /*
@@ -128,20 +132,31 @@ return [
 
     'cleanup_exclude_files' => [
         '.agents',
+        '.ai',
         '.assets',
         '.claude',
         '.codex',
+        '.credentials',
         '.git',
         '.github',
+        '.playwright-mcp',
         '.scripts',
         '.vscode',
         'build/phpstan',
+        'nativephp',
+        'node_modules',
         'tests',
-        'credentials',
+        'storage/app',
         'storage/framework/sessions',
         'storage/framework/cache',
         'storage/framework/testing',
         'storage/logs',
+        'vendor/goodm4ven/arabicable/resources/raw-data/quran/exegesis',
+        'database/native-quran-reader.sqlite',
+        'database/native-quran-reader.sqlite.gz',
+        'database/native-quran-reader.json',
+        'public/build/assets/*.map',
+        'public/build/assets/*.LICENSE.txt',
         '.bladeformatterrc',
         '.editorconfig',
         '.eslintrc.cjs',
@@ -153,8 +168,28 @@ return [
         'boost.json',
         'CLAUDE.md',
         'laravel-boost-mcp.sh',
+        'nativephp.json',
         'phpstan-baseline.neon',
         'phpstan.neon.dist',
+        'phpunit.xml',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Runtime Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Controls the persistent PHP runtime behavior. In 'persistent' mode,
+    | Laravel boots once and the kernel is reused across requests (~5-30ms
+    | per dispatch instead of ~200-300ms). Falls back to 'classic' mode
+    | (full init/shutdown per request) if persistent boot fails.
+    |
+    */
+
+    'runtime' => [
+        'mode' => 'persistent', // 'classic' or 'persistent'
+        'reset_instances' => true,
+        'gc_between_dispatches' => false,
     ],
 
     'android' => [
@@ -162,6 +197,23 @@ return [
         'android_sdk_path' => env('NATIVEPHP_ANDROID_SDK_LOCATION'),
         'emulator_path' => env('ANDROID_EMULATOR'),
         '7zip-location' => env('NATIVEPHP_7ZIP_LOCATION', 'C:\\Program Files\\7-Zip\\7z.exe'),
+
+        /*
+        |--------------------------------------------------------------------------
+        | Android SDK Versions
+        |--------------------------------------------------------------------------
+        |
+        | Configure the Android SDK versions for your app build. These control
+        | which Android versions your app can run on and which APIs are available.
+        |
+        | compile_sdk: The SDK version used to compile your app (latest features)
+        | min_sdk:     The minimum Android version your app supports
+        | target_sdk:  The SDK version your app is designed and tested for
+        |
+        */
+        'compile_sdk' => env('NATIVEPHP_ANDROID_COMPILE_SDK', 36),
+        'min_sdk' => env('NATIVEPHP_ANDROID_MIN_SDK', 26),
+        'target_sdk' => env('NATIVEPHP_ANDROID_TARGET_SDK', 36),
 
         /*
         |--------------------------------------------------------------------------
@@ -210,6 +262,33 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Development Server Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for the NativePHP development server that allows hot
+    | reloading of mobile applications during development.
+    |
+    */
+
+    'server' => [
+        'http_port' => env('NATIVEPHP_HTTP_PORT', 3000),
+        'ws_port' => env('NATIVEPHP_WS_PORT', 8081),
+        'service_name' => env('NATIVEPHP_SERVICE_NAME', 'NativePHP Server'),
+        'service_type' => '_http._tcp',
+        'public_path' => env('NATIVEPHP_PUBLIC_PATH', 'public'),
+        'build_path' => env('NATIVEPHP_BUILD_PATH', 'storage/app/native-build'),
+        'open_browser' => env('NATIVEPHP_OPEN_BROWSER', true),
+        'watch_paths' => [
+            'app',
+            'resources',
+            'routes',
+            'public/build',
+        ],
+        'watch_extensions' => ['php', 'blade.php', 'js', 'css', 'ts', 'vue', 'json'],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Hot Reload Configuration
     |--------------------------------------------------------------------------
     */
@@ -227,7 +306,7 @@ return [
             'storage',
             'tests',
             'nativephp',
-            'credentials',
+            '.credentials',
             'node_modules',
             '\.swp',
             '\.tmp',

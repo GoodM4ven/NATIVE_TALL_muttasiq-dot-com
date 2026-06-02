@@ -1,0 +1,208 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Lightweight compatibility shim for environments where `watchman` exists
+ * but `watchman-wait` is not installed.
+ *
+ * Supported options (others are ignored for compatibility):
+ *   -m <value>
+ *   -t <value>
+ *   --relative <path>
+ *   -- <watch-root>
+ */
+
+function stderr(string $message): void
+{
+    fwrite(STDERR, "[watchman-wait-shim] {$message}\n");
+}
+
+function fail(string $message, int $code = 1): never
+{
+    stderr($message);
+    exit($code);
+}
+
+function parseArguments(array $argv): array
+{
+    $relativeBase = null;
+    $watchTarget = null;
+    $count = count($argv);
+
+    for ($index = 1; $index < $count; $index++) {
+        $argument = $argv[$index];
+
+        if ($argument === '--') {
+            if (isset($argv[$index + 1])) {
+                $watchTarget = $argv[$index + 1];
+            }
+
+            break;
+        }
+
+        if ($argument === '--relative') {
+            $index++;
+            if (! isset($argv[$index])) {
+                fail('missing value for --relative');
+            }
+
+            $relativeBase = $argv[$index];
+            continue;
+        }
+
+        if ($argument === '-m' || $argument === '-t') {
+            $index++;
+        }
+    }
+
+    if ($watchTarget === null || $watchTarget === '') {
+        fail('missing watch target path');
+    }
+
+    $resolvedTarget = realpath($watchTarget);
+    if ($resolvedTarget === false || ! is_dir($resolvedTarget)) {
+        fail("watch target does not exist or is not a directory: {$watchTarget}");
+    }
+
+    if ($relativeBase === null || $relativeBase === '') {
+        $relativeBase = $resolvedTarget;
+    }
+
+    $resolvedRelativeBase = realpath($relativeBase);
+    if ($resolvedRelativeBase === false || ! is_dir($resolvedRelativeBase)) {
+        fail("invalid --relative base path: {$relativeBase}");
+    }
+
+    return [$resolvedTarget, $resolvedRelativeBase];
+}
+
+function runWatchmanJson(array $commandPayload): array
+{
+    $command = ['watchman', '-j', '--no-pretty', '--output-encoding=json'];
+    $descriptorSpec = [
+        0 => ['pipe', 'r'],
+        1 => ['pipe', 'w'],
+        2 => ['pipe', 'w'],
+    ];
+
+    $process = proc_open($command, $descriptorSpec, $pipes);
+    if (! is_resource($process)) {
+        fail('failed to start watchman process');
+    }
+
+    $input = json_encode($commandPayload, JSON_THROW_ON_ERROR);
+    if (! is_string($input)) {
+        fail('failed to encode watchman command payload');
+    }
+    fwrite($pipes[0], $input.PHP_EOL);
+    fclose($pipes[0]);
+    $stdout = stream_get_contents($pipes[1]);
+    $stderr = stream_get_contents($pipes[2]);
+    fclose($pipes[1]);
+    fclose($pipes[2]);
+
+    $exitCode = proc_close($process);
+    if ($exitCode !== 0) {
+        $stderr = trim($stderr);
+        fail($stderr === '' ? 'watchman command failed' : $stderr);
+    }
+
+    $decoded = json_decode($stdout, true);
+    if (! is_array($decoded)) {
+        fail('failed to decode watchman response');
+    }
+
+    if (isset($decoded['error']) && is_string($decoded['error']) && $decoded['error'] !== '') {
+        fail($decoded['error']);
+    }
+
+    return $decoded;
+}
+
+function buildQueryPayload(string $clock): array
+{
+    return [
+        'since' => $clock,
+        'fields' => ['name', 'exists'],
+        'expression' => ['type', 'f'],
+        'case_sensitive' => false,
+    ];
+}
+
+[$watchTarget, $relativeBase] = parseArguments($argv);
+
+$watchProject = runWatchmanJson(['watch-project', $watchTarget]);
+$watchRoot = $watchProject['watch'] ?? null;
+if (! is_string($watchRoot) || $watchRoot === '') {
+    fail('watchman watch-project did not return a valid watch root');
+}
+
+$relativeRoot = $watchProject['relative_path'] ?? '';
+if (! is_string($relativeRoot)) {
+    $relativeRoot = '';
+}
+$relativeRoot = trim($relativeRoot, '/');
+$normalizedBase = rtrim(str_replace('\\', '/', $relativeBase), '/');
+
+$clockResponse = runWatchmanJson(['clock', $watchRoot]);
+$clock = $clockResponse['clock'] ?? null;
+if (! is_string($clock) || $clock === '') {
+    fail('watchman clock response is missing clock token');
+}
+
+while (true) {
+    $queryPayload = buildQueryPayload($clock);
+    $queryResponse = runWatchmanJson(['query', $watchRoot, $queryPayload]);
+
+    if (isset($queryResponse['clock']) && is_string($queryResponse['clock']) && $queryResponse['clock'] !== '') {
+        $clock = $queryResponse['clock'];
+    }
+
+    $files = $queryResponse['files'] ?? [];
+    if (! is_array($files)) {
+        usleep(300_000);
+        continue;
+    }
+
+    foreach ($files as $fileEntry) {
+        $name = null;
+        if (is_array($fileEntry)) {
+            $name = $fileEntry['name'] ?? null;
+        } elseif (is_string($fileEntry)) {
+            $name = $fileEntry;
+        }
+
+        if (! is_string($name) || $name === '') {
+            continue;
+        }
+
+        $projectRelativePath = $name;
+        if ($relativeRoot !== '') {
+            if ($name === $relativeRoot) {
+                $projectRelativePath = '';
+            } elseif (str_starts_with($name, $relativeRoot.'/')) {
+                $projectRelativePath = substr($name, strlen($relativeRoot) + 1);
+            } else {
+                continue;
+            }
+        }
+
+        if ($projectRelativePath === '') {
+            continue;
+        }
+
+        $absolutePath = $relativeBase.DIRECTORY_SEPARATOR.$projectRelativePath;
+        $normalized = str_replace('\\', '/', $absolutePath);
+
+        if (! str_starts_with($normalized, $normalizedBase.'/')) {
+            continue;
+        }
+
+        echo $projectRelativePath, PHP_EOL;
+    }
+
+    flush();
+    usleep(300_000);
+}

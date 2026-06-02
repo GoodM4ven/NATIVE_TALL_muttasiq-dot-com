@@ -58,11 +58,11 @@ return new class extends Migration
         $now = now();
 
         foreach ($canonicalThikrs as $index => $thikr) {
-            $time = $thikr['time'] instanceof \BackedEnum
+            $time = $thikr['time'] instanceof BackedEnum
                 ? $thikr['time']->value
                 : (string) $thikr['time'];
 
-            $type = ($thikr['type'] ?? null) instanceof \BackedEnum
+            $type = ($thikr['type'] ?? null) instanceof BackedEnum
                 ? $thikr['type']->value
                 : (string) ($thikr['type'] ?? ThikrType::Glorification->value);
 
@@ -128,13 +128,13 @@ return new class extends Migration
             return [];
         }
 
-        $resolver = \Closure::bind(
+        $resolver = Closure::bind(
             fn (): array => method_exists($this, $functionName = 'thikrData') ? (array) $this->$functionName() : [],
             $seedMigration,
             $seedMigration,
         );
 
-        if (! $resolver instanceof \Closure) {
+        if (! $resolver instanceof Closure) {
             return [];
         }
 

@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
+use Throwable;
 
 class LogRepeatedUnmatchedRouteHits
 {
@@ -43,10 +44,10 @@ class LogRepeatedUnmatchedRouteHits
         $alertThreshold = max(1, (int) config('app.custom.security.unmatched_routes.alert_threshold', 25));
         $alertRepeatEvery = max(1, (int) config('app.custom.security.unmatched_routes.alert_repeat_every', 25));
 
-        $attempts = RateLimiter::increment(
-            key: $this->rateLimitKey($ipAddress),
-            decaySeconds: $windowSeconds,
-        );
+        $attempts = $this->incrementUnmatchedRouteAttempts($ipAddress, $windowSeconds);
+        if ($attempts === null) {
+            return;
+        }
 
         Context::add('unmatched_route', [
             'ip' => $ipAddress,
@@ -78,6 +79,20 @@ class LogRepeatedUnmatchedRouteHits
     private function rateLimitKey(string $ipAddress): string
     {
         return 'unmatched-route-ip:'.hash('sha256', $ipAddress);
+    }
+
+    private function incrementUnmatchedRouteAttempts(string $ipAddress, int $windowSeconds): ?int
+    {
+        try {
+            return (int) RateLimiter::increment(
+                key: $this->rateLimitKey($ipAddress),
+                decaySeconds: $windowSeconds,
+            );
+        } catch (Throwable $throwable) {
+            report($throwable);
+
+            return null;
+        }
     }
 
     private function shouldTrackUnmatchedRouteAttempts(): bool

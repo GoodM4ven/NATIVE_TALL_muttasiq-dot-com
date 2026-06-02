@@ -14,10 +14,12 @@ trait HasControlPanelAboutTab
 {
     protected function controlPanelAboutTab(): Tab
     {
-        return Tab::make('حولنا')
+        return Tab::make('about')
+            ->label(arabic_text('حولنا'))
+            ->key('about')
             ->icon('phosphor.warning-diamond-fill')
             ->schema([
-                Text::make('تطبيق متسق')
+                Text::make('منصة متسق')
                     ->size(TextSize::Large)
                     ->color('black')
                     ->extraAttributes(['class' => 'block w-full text-center -mb-5']),
@@ -28,7 +30,7 @@ trait HasControlPanelAboutTab
                     ->extraAttributes(['class' => 'block w-full text-center mt-2']),
 
                 Image::make(
-                    url: fn () => asset(is_dark_mode_on() ? 'icon-dark.png' : 'icon.png'),
+                    url: fn () => asset(is_dark_mode_on() ? 'about-icon-dark.png' : 'about-icon.png'),
                     alt: 'Muttasiq application icono',
                 )
                     ->imageSize('10rem')
@@ -56,7 +58,7 @@ trait HasControlPanelAboutTab
 
                 $this->developmentLinkAction(
                     name: 'open_main_missions',
-                    label: 'المهام الرئيسية للتطبيق',
+                    label: 'المهام الرئيسية للمنصة',
                     url: 'https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com/?tab=readme-ov-file#%D8%A7%D9%84%D9%85%D9%87%D8%A7%D9%85',
                     icon: 'heroicon-s-clipboard-document-list',
                 ),
@@ -68,12 +70,7 @@ trait HasControlPanelAboutTab
                     icon: 'heroicon-s-chat-bubble-left-right',
                 ),
 
-                $this->developmentLinkAction(
-                    name: 'open_bug_reports',
-                    label: 'التبليغ عن الأخطاء',
-                    url: 'https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com/issues',
-                    icon: 'bootstrap.x-circle-fill',
-                ),
+                $this->reportErrorsAction(),
 
                 $this->developmentLinkAction(
                     name: 'open_current_development',
@@ -99,5 +96,15 @@ trait HasControlPanelAboutTab
             ->link()
             ->extraAttributes(['class' => 'flex w-fit mx-auto text-[0.8rem]! items-center gap-1.5 whitespace-nowrap text-center -mt-3'])
             ->actionJs(open_link_native_aware(url: $url));
+    }
+
+    private function reportErrorsAction(): Action
+    {
+        return Action::make('open_bug_reports')
+            ->label('التبليغ عن الأخطاء')
+            ->icon('bootstrap.x-circle-fill')
+            ->link()
+            ->extraAttributes(['class' => 'flex w-fit mx-auto text-[0.8rem]! items-center gap-1.5 whitespace-nowrap text-center -mt-3'])
+            ->actionJs("window.dispatchEvent(new CustomEvent('trigger-js-error-report-modal'));");
     }
 }

@@ -82,7 +82,7 @@ class ThikrForm
             Textarea::make('text')
                 ->label('النص')
                 ->required()
-                ->rows($fromManager ? 4 : 8)
+                ->rows($fromManager ? 3 : 8)
                 ->extraInputAttributes([
                     'style' => 'font-family: var(--font-arabic-serif); font-size: 1.25rem; line-height: 2;',
                 ])
@@ -94,7 +94,7 @@ class ThikrForm
             Textarea::make('origin')
                 ->label('الأصل')
                 ->afterLabel('الأثر الوارد في السنة الذي يتضمن النص')
-                ->rows($fromManager ? 4 : 8)
+                ->rows($fromManager ? 3 : 8)
                 ->extraInputAttributes([
                     'style' => 'font-family: var(--font-arabic-serif); font-size: 1.25rem; line-height: 2;',
                 ])

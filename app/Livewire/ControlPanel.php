@@ -14,6 +14,8 @@ use Filament\Actions\Contracts\HasActions;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
+use Filament\Support\Enums\Width;
+use Illuminate\Support\HtmlString;
 use Illuminate\View\View;
 use Livewire\Component;
 use Throwable;
@@ -40,9 +42,16 @@ class ControlPanel extends Component implements HasActions, HasSchemas
     public function controlPanelAction(): Action
     {
         return Action::make('controlPanel')
-            ->label('لوحة التحكم')
-            ->modalDescription('بعض المعلومات والتفضيلات في كيفية عمل التطبيق')
-            ->modalSubmitActionLabel('حفظ')
+            ->label(arabic_text('لوحة التحكم'))
+            ->modalDescription(arabic_text('بعض المعلومات والتفضيلات في كيفية عمل المنصة'))
+            ->modalSubmitActionLabel(arabic_text('حفظ'))
+            ->extraModalWindowAttributes([
+                'id' => 'control-panel-modal',
+                'class' => 'muttasiq-modal-window quran-control-panel-modal-window',
+            ])
+            ->extraModalOverlayAttributes([
+                'class' => 'muttasiq-modal-overlay quran-control-panel-modal-overlay',
+            ])
             ->fillForm(fn (): array => $this->loadControlPanel())
             ->schema([
                 Tabs::make('Tabs')
@@ -54,15 +63,7 @@ class ControlPanel extends Component implements HasActions, HasSchemas
                     ]),
             ])
             ->action(function (array $data): void {
-                if (is_array($data[self::MAIN_TEXT_SIZE_RANGE] ?? null)) {
-                    $rangeValues = array_values($data[self::MAIN_TEXT_SIZE_RANGE]);
-                    $minimumSize = (int) ($rangeValues[0] ?? Setting::MIN_MAIN_TEXT_SIZE_DEFAULT);
-                    $maximumSize = (int) ($rangeValues[1] ?? Setting::MAX_MAIN_TEXT_SIZE_DEFAULT);
-                    $data[Setting::MINIMUM_MAIN_TEXT_SIZE] = min($minimumSize, $maximumSize);
-                    $data[Setting::MAXIMUM_MAIN_TEXT_SIZE] = max($minimumSize, $maximumSize);
-                }
-
-                $savedControlPanel = Setting::normalizeSettings($data);
+                $savedControlPanel = $this->filterControlPanel(Setting::normalizeSettings($data));
                 $isMaintenancePulse = $this->isMountedControlPanelMaintenancePulse();
 
                 $this->clientControlPanel = $savedControlPanel;
@@ -73,8 +74,54 @@ class ControlPanel extends Component implements HasActions, HasSchemas
                 );
 
                 if (! $isMaintenancePulse) {
-                    notify(iconName: 'mdi.content-save-check', title: 'تم حفظ الإعدادات بنجاح');
+                    notify(
+                        iconName: 'mdi.content-save-check',
+                        title: arabic_text('تم حفظ الإعدادات بنجاح'),
+                    );
                 }
+            });
+    }
+
+    public function supportUnlockAction(): Action
+    {
+        return Action::make('supportUnlock')
+            ->modalHeading(arabic_text('دعم المشروع'))
+            ->modalDescription(arabic_text('قبل استخدام بعض الخصائص المميّزة في المنصة، نحتاج منك تأكيد دعم تطوير المشروع.'))
+            ->modalWidth(Width::ThreeExtraLarge)
+            ->modalSubmitActionLabel(arabic_text('قمت بالدعم'))
+            ->modalCancelAction(false)
+            ->extraModalWindowAttributes([
+                'id' => 'support-unlock-modal',
+                'class' => 'muttasiq-modal-window quran-support-unlock-modal-window',
+            ])
+            ->extraModalOverlayAttributes([
+                'class' => 'muttasiq-modal-overlay quran-support-unlock-modal-overlay',
+            ])
+            ->modalContent(fn (): HtmlString => $this->supportUnlockModalContent())
+            ->extraModalFooterActions(fn (Action $action): array => [
+                $action
+                    ->makeModalSubmitAction('supportUnlockWeeklyBypass', arguments: ['mode' => 'weekly'])
+                    ->label(arabic_text('أشهد الله أني لا أستطيع دعمكم الآن'))
+                    ->color('gray'),
+            ])
+            ->action(function (array $data, array $arguments): void {
+                $mode = ($arguments['mode'] ?? null) === 'weekly'
+                    ? 'weekly'
+                    : 'permanent';
+
+                $this->dispatch('support-unlock-updated', mode: $mode);
+
+                notify(
+                    iconName: $mode === 'weekly'
+                        ? 'heroicon-o-clock'
+                        : 'heroicon-o-lock-open',
+                    title: $mode === 'weekly'
+                        ? arabic_text('تمت إتاحة الميّزات لأسبوع واحد')
+                        : arabic_text('تمت إتاحة الميّزات بشكل دائم'),
+                    body: $mode === 'weekly'
+                        ? arabic_text('رزقك الله...')
+                        : arabic_text('أحسن الله إليك...'),
+                );
             });
     }
 
@@ -129,6 +176,49 @@ class ControlPanel extends Component implements HasActions, HasSchemas
         return view('livewire.control-panel');
     }
 
+    private function supportUnlockModalContent(): HtmlString
+    {
+        $introBeforeStrong = arabic_text(
+            'تطوير المزايا المتقدمة، وإتاحة المنصة على المخدّمات والمنصات بأجهزتها المختلفة، كل هذا يتطلب ',
+        );
+        $introStrong = arabic_text('وقتًا وجهدًا وتكلفة مستمرة');
+        $introAfterStrong = arabic_text(
+            '، بارك الله فيكم... ولذلك نودّ منكم على الأقلّ محاولة التبرع لتطوير منصة متسق باستخدام إحدى المنصات المتاحة لذلك، وجزاكم الله خيرا.',
+        );
+        $supportLinksCaption = arabic_text('روابط منصات الدعم:');
+
+        return new HtmlString(
+            '<div class="space-y-4 text-right text-base! leading-7 text-gray-800 dark:text-gray-100">'
+                .'<p class="text-center">'
+                .e($introBeforeStrong)
+                .'<strong>'.e($introStrong).'</strong>'
+                .e($introAfterStrong)
+                .'</p>'
+                .'<div class="quran-support-unlock-links-panel rounded-xl p-3 text-sm">'
+                .'<p class="mb-2 font-semibold text-gray-900 dark:text-gray-100">'.e($supportLinksCaption).'</p>'
+                .'<div class="flex flex-wrap items-center justify-end gap-2">'
+                .$this->supportUnlockLinkMarkup('Buy Me a Coffee', 'https://buymeacoffee.com/goodm4ven')
+                .$this->supportUnlockLinkMarkup('Patreon', 'https://patreon.com/GoodM4ven')
+                .$this->supportUnlockLinkMarkup('GitHub Sponsors', 'https://github.com/sponsors/GoodM4ven')
+                .'</div>'
+                .'</div>'
+                .'</div>',
+        );
+    }
+
+    private function supportUnlockLinkMarkup(string $label, string $url): string
+    {
+        $openLinkNativeAware = htmlspecialchars(open_link_native_aware($url), ENT_QUOTES, 'UTF-8');
+        $safeLabel = e($label);
+
+        return '<button type="button" class="quran-support-unlock-link rounded-lg px-3 py-1.5 text-xs font-medium transition"'
+            .' x-on:click.prevent="'.$openLinkNativeAware.'"'
+            .' x-on:keydown.enter.prevent="'.$openLinkNativeAware.'"'
+            .' x-on:keydown.space.prevent="'.$openLinkNativeAware.'">'
+            .$safeLabel
+            .'</button>';
+    }
+
     /**
      * @return array<string, bool|int|list<int>>
      */
@@ -142,11 +232,6 @@ class ControlPanel extends Component implements HasActions, HasSchemas
         $normalizedControlPanelValues = Setting::normalizeSettings(
             array_replace(self::controlPanelDefaults(), $storedControlPanelValues, $this->clientControlPanel),
         );
-
-        $normalizedControlPanelValues[self::MAIN_TEXT_SIZE_RANGE] = [
-            (int) ($normalizedControlPanelValues[Setting::MINIMUM_MAIN_TEXT_SIZE] ?? Setting::MIN_MAIN_TEXT_SIZE_DEFAULT),
-            (int) ($normalizedControlPanelValues[Setting::MAXIMUM_MAIN_TEXT_SIZE] ?? Setting::MAX_MAIN_TEXT_SIZE_DEFAULT),
-        ];
 
         return $normalizedControlPanelValues;
     }

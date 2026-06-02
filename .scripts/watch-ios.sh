@@ -1,13 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-watchman shutdown-server
+project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-./.scripts/support/prepare.sh
-./.scripts/native/mobile/ios/support/prepare.sh
-
-simulator_udid="$("./.scripts/native/mobile/ios/support/select-simulator.sh")"
-echo "[native-watch:ios] using simulator ${simulator_udid}"
-xcrun simctl shutdown "${simulator_udid}" >/dev/null 2>&1 || true
-
-php artisan native:run ios "${simulator_udid}" --build=debug --watch
+"${project_root}/.scripts/support/run-native-local-source-broadcast.sh" ios watch

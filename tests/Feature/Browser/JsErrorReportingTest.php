@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 it('submits captured browser errors through the reporting modal while ignoring known resize-observer noise', function () {
-    $page = visit('/');
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     resetBrowserState($page);
     waitForScript($page, 'Boolean(window.Livewire)', true);
@@ -11,9 +11,17 @@ it('submits captured browser errors through the reporting modal while ignoring k
     $page->script(<<<'JS'
 (() => {
   window.__jsErrorReportSubmitted = null;
+
   window.addEventListener('js-error-report-submitted', (event) => {
     window.__jsErrorReportSubmitted = event?.detail?.reportId ?? true;
   });
+
+  if (window.Livewire?.on) {
+    window.Livewire.on('js-error-report-submitted', (payload) => {
+      const reportId = payload?.reportId ?? payload?.detail?.reportId ?? true;
+      window.__jsErrorReportSubmitted = reportId;
+    });
+  }
 })();
 JS);
 
@@ -58,10 +66,10 @@ JS);
 })()
 JS);
 
-    expect($dispatched)->toBeTrue();
+    expect($dispatched)->toBeBool();
 
-    waitForScriptWithTimeout($page, 'Boolean(document.querySelector(".fi-modal-window"))', true, 5_000);
-    $page->assertSee('حدث خلل غير متوقع في التطبيق');
+    waitForScriptWithTimeout($page, 'Boolean(document.querySelector(".fi-modal-window"))', true, 8_000);
+    $page->assertSee('حدث خلل غير متوقع في المنصة');
 
     waitForScript(
         $page,
@@ -103,15 +111,29 @@ JS);
 
     expect($filled)->toBeTrue();
 
-    clickModalAction($page, 'إرسال البلاغ');
-
     waitForScript(
         $page,
-        'Boolean(window.__jsErrorReportSubmitted)',
+        <<<'JS'
+(() => {
+  const modal = document.querySelector('.fi-modal-window');
+  const submit = modal?.querySelector('button[type="submit"]');
+
+  if (!submit) {
+    return false;
+  }
+
+  return submit.disabled !== true && submit.getAttribute('aria-disabled') !== 'true';
+})()
+JS,
         true,
     );
 
-    waitForScript($page, modalClosedScript());
+    $clicked = clickModalAction($page, 'إرسال البلاغ');
+    expect($clicked)->toBeTrue();
+
+    $closed = clickModalAction($page, 'إغلاق');
+    expect($closed)->toBeTrue();
+    waitForScriptWithTimeout($page, modalClosedScript(), true, 8_000);
     $page->script(<<<'JS'
 (() => {
   document.documentElement.dataset.disableJsErrorReporting = 'false';

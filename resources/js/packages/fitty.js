@@ -1,30 +1,38 @@
-import fitty from 'fitty';
-
-window.fitty = fitty;
-
 // IMPORTANT:
-// Fitty requires measurable layout dimensions. Do not pair fit targets with display:none
+// Text fitting requires measurable layout dimensions. Do not pair fit targets with display:none
 // containers (e.g. raw x-show=false while hidden) if you need immediate refits.
 // Prefer opacity/visibility transitions for hidden states, then trigger `fitty-refit`.
 
 const athkarSettingsStorageKey = 'athkar-settings-v1';
 const minimumMainTextSizeKey = 'minimum_main_text_size';
 const maximumMainTextSizeKey = 'maximum_main_text_size';
+const minimumMainTextDisplaySizePx = 6;
+const breakpointMainTextSizeReductions = Object.freeze({
+    '4xl': 0,
+    '3xl': 1,
+    '2xl': 2,
+    xl: 3,
+    lg: 5,
+    md: 7,
+    sm: 10,
+    base: 7,
+});
 const fallbackMainTextSizeLimits = Object.freeze({
     [minimumMainTextSizeKey]: Object.freeze({
         min: 10,
-        max: 24,
+        max: 28,
         default: 16,
     }),
     [maximumMainTextSizeKey]: Object.freeze({
         min: 10,
-        max: 24,
+        max: 28,
         default: 24,
     }),
 });
 const fittyTargetSelector = '[data-fitty-target]';
 const fittyBoxSelector = '[data-fitty-box]';
 const fittyRefitEventName = 'fitty-refit';
+const fittyRefitCompleteEventName = 'fitty-refit-complete';
 const deferredRetryDelayMs = 64;
 const maxDeferredRetries = 2;
 const postFitRetryDelayMs = 72;
@@ -96,6 +104,21 @@ const parseNumber = (value, fallback = null) => {
     return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const readBreakpoint = () => {
+    const raw = getComputedStyle(document.documentElement)
+        .getPropertyValue('--breakpoint')
+        .trim()
+        .replace(/['"]+/g, '');
+
+    return raw || 'base';
+};
+
+const resolveMainTextSizeBreakpointReduction = () => {
+    const breakpoint = readBreakpoint();
+
+    return breakpointMainTextSizeReductions[breakpoint] ?? 0;
+};
+
 const toFiniteInteger = (value, fallback) => {
     const numeric = Number(value);
 
@@ -145,6 +168,13 @@ const normalizeMainTextSize = (value, fallback, limits) => {
     return Math.min(limits.max, Math.max(limits.min, rounded));
 };
 
+const normalizeDisplayMainTextSize = (value, fallback, limits) => {
+    const numeric = Number.isFinite(Number(value)) ? Number(value) : Number(fallback);
+    const rounded = Number.isFinite(numeric) ? Math.trunc(numeric) : Number(fallback);
+
+    return Math.min(limits.max, Math.max(minimumMainTextDisplaySizePx, rounded));
+};
+
 const readStoredSettings = () => {
     if (typeof localStorage === 'undefined') {
         return {};
@@ -162,6 +192,7 @@ const resolveMainTextSizeSettings = () => {
     const mainTextSizeLimits = resolveMainTextSizeLimits();
     const minimumLimits = mainTextSizeLimits[minimumMainTextSizeKey];
     const maximumLimits = mainTextSizeLimits[maximumMainTextSizeKey];
+    const breakpointReduction = resolveMainTextSizeBreakpointReduction();
     const stored = readStoredSettings();
     const source =
         latestSettingsOverride && typeof latestSettingsOverride === 'object'
@@ -177,10 +208,20 @@ const resolveMainTextSizeSettings = () => {
         maximumLimits.default,
         maximumLimits,
     );
+    const breakpointAdjustedMinimum = normalizeDisplayMainTextSize(
+        minimum - breakpointReduction,
+        minimumLimits.default,
+        minimumLimits,
+    );
+    const breakpointAdjustedMaximum = normalizeDisplayMainTextSize(
+        maximum - breakpointReduction,
+        maximumLimits.default,
+        maximumLimits,
+    );
 
     return {
-        minimum: Math.min(minimum, maximum),
-        maximum: Math.max(minimum, maximum),
+        minimum: Math.min(breakpointAdjustedMinimum, breakpointAdjustedMaximum),
+        maximum: Math.max(breakpointAdjustedMinimum, breakpointAdjustedMaximum),
         minimumLimits,
         maximumLimits,
     };
@@ -229,31 +270,20 @@ const isMeasurable = (textElement, boxElement) => {
     return boxElement.clientWidth > 0 && boxElement.clientHeight > 0;
 };
 
-const ensureFittyInstance = (textElement, minSize, maxSize) => {
-    const storedMin = Number.parseFloat(textElement.dataset.fittyMinSize ?? '');
-    const storedMax = Number.parseFloat(textElement.dataset.fittyMaxSize ?? '');
-
-    if (textElement._fittyInstance && storedMin === minSize && storedMax === maxSize) {
-        return textElement._fittyInstance;
+const destroyFittyInstance = (textElement) => {
+    if (!textElement?._fittyInstance?.unsubscribe) {
+        return;
     }
 
-    if (textElement._fittyInstance?.unsubscribe) {
+    try {
         textElement._fittyInstance.unsubscribe();
+    } catch (_) {
+        // Ignore teardown errors from detached nodes.
     }
 
-    const instance = window.fitty(textElement, {
-        minSize,
-        maxSize,
-        multiLine: true,
-        observeMutations: false,
-        observeWindow: false,
-    });
-
-    textElement._fittyInstance = instance;
-    textElement.dataset.fittyMinSize = String(minSize);
-    textElement.dataset.fittyMaxSize = String(maxSize);
-
-    return instance;
+    delete textElement._fittyInstance;
+    delete textElement.dataset.fittyMinSize;
+    delete textElement.dataset.fittyMaxSize;
 };
 
 const fitToHeight = ({ textElement, minSize, maxSize, availableWidth, availableHeight, step }) => {
@@ -521,6 +551,7 @@ const clearPostFitRetry = (textElement) => {
 
 const processTextElement = (textElement) => {
     if (!textElement || !document.contains(textElement)) {
+        destroyFittyInstance(textElement);
         fitQueue.delete(textElement);
         return null;
     }
@@ -553,7 +584,7 @@ const processTextElement = (textElement) => {
         }
     }
 
-    if (!isMeasurable(target, boxElement) || !window.fitty) {
+    if (!isMeasurable(target, boxElement)) {
         queueDeferredRetry(textElement);
 
         return null;
@@ -574,15 +605,9 @@ const processTextElement = (textElement) => {
     deferredRetryCounts.delete(textElement);
     target.style.maxWidth = `${availableWidth}px`;
 
-    const instance = ensureFittyInstance(target, minSize, maxSize);
+    destroyFittyInstance(target);
 
-    if (instance?.fit) {
-        // Force synchronous fit so fitty does not apply a delayed nowrap pass
-        // after we compute overflow and touch-scroll behavior.
-        instance.fit({ sync: true });
-    }
-
-    // Keep multiline wrapping deterministic after fitty's internal measuring.
+    // Keep multiline wrapping deterministic before manual binary fitting.
     target.style.whiteSpace = 'break-spaces';
 
     fitToHeight({
@@ -636,7 +661,10 @@ const runFitQueue = () => {
 
     if (fitQueue.size > 0) {
         scheduleFitQueue();
+        return;
     }
+
+    window.dispatchEvent(new CustomEvent(fittyRefitCompleteEventName));
 };
 
 const scheduleFitQueue = () => {

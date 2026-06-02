@@ -11,8 +11,12 @@ use Filament\Forms\Components;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Actions;
+use Filament\Schemas\Components\Component as SchemaComponent;
 use Filament\Schemas\Components\Form;
+use Filament\Schemas\Components\FusedGroup;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 
@@ -25,7 +29,7 @@ class ManageSettings extends Page
 
     protected static ?int $navigationSort = 99;
 
-    protected static ?string $title = 'إعدادات التطبيق الافتراضية';
+    protected static ?string $title = 'إعدادات المنصة الافتراضية';
 
     protected static ?string $slug = 'iedadat-iftiradiyya';
 
@@ -57,14 +61,15 @@ class ManageSettings extends Page
     {
         $generalDefinitions = Setting::definitionsForGroup(Setting::GROUP_GENERAL);
         $athkarDefinitions = Setting::definitionsForGroup(Setting::GROUP_ATHKAR);
+        $quranDefinitions = Setting::definitionsForGroup(Setting::GROUP_QURAN);
 
         return $schema
             ->components([
                 Form::make([
-                    Section::make('التطبيق')
+                    Section::make('المنصة')
                         ->schema([
                             Components\TextInput::make(Setting::APP_VERSION)
-                                ->label('نسخة التطبيق المعروضة')
+                                ->label('نسخة المنصة المعروضة')
                                 ->maxLength(32)
                                 ->placeholder((string) config('app.custom.app_version')),
                         ]),
@@ -77,6 +82,11 @@ class ManageSettings extends Page
                     Section::make('الأذكار')
                         ->schema(
                             $this->buildFieldsFromDefinitions($athkarDefinitions),
+                        ),
+
+                    Section::make('القرآن')
+                        ->schema(
+                            $this->buildFieldsFromDefinitions($quranDefinitions),
                         ),
                 ])
                     ->livewireSubmitHandler('save')
@@ -115,16 +125,30 @@ class ManageSettings extends Page
 
     /**
      * @param  array<string, array{default: bool|int, label: string, group: string, type: 'boolean'|'integer', help?: string, min?: int, max?: int}>  $definitions
-     * @return array<int, Components\Checkbox|Components\TextInput>
+     * @return array<int, SchemaComponent>
      */
     private function buildFieldsFromDefinitions(array $definitions): array
     {
         $fields = [];
+        $hasWirdFrequency = array_key_exists(Setting::QURAN_WIRD_FREQUENCY_MODE, $definitions);
+        $hasWirdKhatmat = array_key_exists(Setting::QURAN_WIRD_KHATMAT_TARGET, $definitions);
 
         foreach ($definitions as $name => $definition) {
+            if ($name === Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION && ! is_platform('native')) {
+                continue;
+            }
+
+            if (
+                $name === Setting::QURAN_WIRD_FREQUENCY_MODE ||
+                $name === Setting::QURAN_WIRD_KHATMAT_TARGET
+            ) {
+                continue;
+            }
+
             if ($definition['type'] === 'boolean') {
                 $fields[] = Components\Checkbox::make($name)
-                    ->label($definition['label']);
+                    ->label($definition['label'])
+                    ->helperText($definition['help'] ?? null);
             }
 
             if ($definition['type'] === 'integer') {
@@ -132,12 +156,76 @@ class ManageSettings extends Page
                     ->label($definition['label'])
                     ->numeric()
                     ->minValue($definition['min'] ?? 0)
-                    ->maxValue($definition['max'] ?? 100);
+                    ->maxValue($definition['max'] ?? 100)
+                    ->helperText($definition['help'] ?? null);
 
                 $fields[] = $field;
             }
         }
 
+        if ($hasWirdFrequency && $hasWirdKhatmat) {
+            $wirdFrequencyDefinition = $definitions[Setting::QURAN_WIRD_FREQUENCY_MODE];
+            $wirdKhatmatDefinition = $definitions[Setting::QURAN_WIRD_KHATMAT_TARGET];
+
+            $fields[] = FusedGroup::make([
+                Components\Radio::make(Setting::QURAN_WIRD_FREQUENCY_MODE)
+                    ->label($wirdFrequencyDefinition['label'])
+                    ->options(Setting::quranWirdFrequencyModeOptions())
+                    ->inline()
+                    ->live()
+                    ->extraFieldWrapperAttributes(['class' => 'quran-wird-frequency-field'])
+                    ->extraAttributes(['class' => 'quran-wird-frequency-options'])
+                    ->afterStateUpdated(function (Set $set, Get $get, mixed $state): void {
+                        $maximum = Setting::quranWirdKhatmatMaxForFrequency((int) $state);
+                        $current = (int) $get(Setting::QURAN_WIRD_KHATMAT_TARGET);
+
+                        if ($current > $maximum) {
+                            $set(Setting::QURAN_WIRD_KHATMAT_TARGET, $maximum);
+                        }
+                    })
+                    ->helperText($wirdFrequencyDefinition['help'] ?? null)
+                    ->columnSpan(1),
+
+                Components\Select::make(Setting::QURAN_WIRD_KHATMAT_TARGET)
+                    ->label($wirdKhatmatDefinition['label'])
+                    ->options(
+                        fn (Get $get): array => Setting::quranWirdKhatmatOptionsForFrequency(
+                            (int) $get(Setting::QURAN_WIRD_FREQUENCY_MODE),
+                        ),
+                    )
+                    ->native(false)
+                    ->live()
+                    ->extraFieldWrapperAttributes(['class' => 'quran-wird-khatmat-field'])
+                    ->extraAttributes(['class' => 'quran-wird-khatmat-select'])
+                    ->selectablePlaceholder(false)
+                    ->helperText(
+                        fn (Get $get): string => $this->wirdKhatmatHelperText(
+                            (int) $get(Setting::QURAN_WIRD_FREQUENCY_MODE),
+                            $wirdKhatmatDefinition['help'] ?? '',
+                        ),
+                    )
+                    ->columnSpan(1),
+            ])
+                ->label($wirdFrequencyDefinition['label'])
+                ->columns(2);
+        }
+
         return $fields;
+    }
+
+    private function wirdKhatmatHelperText(int $frequencyMode, string $baseHelp): string
+    {
+        $maximum = Setting::quranWirdKhatmatMaxForFrequency($frequencyMode);
+        $limitSummary = $frequencyMode === Setting::QURAN_WIRD_FREQUENCY_DAILY
+            ? 'الحد الأقصى في الوضع اليومي: 4 ختمات.'
+            : sprintf('الحد الأقصى في الوضع الشهري: %d ختمة.', $maximum);
+
+        $normalizedBaseHelp = trim($baseHelp);
+
+        if ($normalizedBaseHelp === '') {
+            return $limitSummary;
+        }
+
+        return sprintf('%s %s', $normalizedBaseHelp, $limitSummary);
     }
 }

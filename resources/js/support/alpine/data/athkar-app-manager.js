@@ -7,6 +7,7 @@ document.addEventListener('alpine:init', () => {
     window.Alpine.data('athkarAppManager', (config) => ({
         componentId: String(config.componentId ?? ''),
         nativeMobileRuntime: Boolean(config.nativeMobileRuntime ?? false),
+        hasActiveSearch: Boolean(config.hasActiveSearch ?? false),
         cardRepelHoldDurationInMs: 700,
         cardRepelReleaseDurationInMs: 420,
         cardPressHoldDelayInMs: 700,
@@ -46,6 +47,10 @@ document.addEventListener('alpine:init', () => {
             };
         },
         handleManagerSort(event) {
+            if (this.hasActiveSearch) {
+                return;
+            }
+
             const item = event?.item;
             const cardId = Number(
                 item?.dataset?.athkarCardId ?? item?.getAttribute?.('wire:sort:item') ?? 0,

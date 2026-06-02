@@ -1,3 +1,4 @@
-import { tailspin } from 'ldrs';
+import { jellyTriangle, squircle } from 'ldrs';
 
-tailspin.register();
+squircle.register();
+jellyTriangle.register();

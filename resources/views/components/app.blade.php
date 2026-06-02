@@ -46,6 +46,7 @@
 <body
     class="{{ twMerge([
         'mobile-platform' => is_platform('mobile'),
+        'native-platform' => is_platform('native'),
         'nativephp-safe-area font-arabic-sans relative h-full min-h-dvh antialiased transition-[color,background-color,border-color,text-decoration-color,fill,stroke] ease-in will-change-[color,background-color,border-color,text-decoration-color,fill,stroke]',
         'test-fast-ui' => config('app.browser_test_fast_mode'),
     ]) }}"
@@ -64,7 +65,7 @@
 >
     <x-partials.blinker />
 
-    <div class="flex min-h-[calc(100dvh-var(--inset-top,0px)-var(--inset-bottom,0px))] flex-col">
+    <div class="flex min-h-[calc(100dvh-var(--inset-top,0)-var(--inset-bottom,0))] flex-col">
         {{ $slot }}
     </div>
 

@@ -1,13 +1,14 @@
 <?php
 
 declare(strict_types=1);
+use Filament\Support\Colors\Color;
 
 return [
 
     'custom' => [
 
-        'app_description' => 'تطبيق يعين على الإسلام والالتزام باتساق ويسر بإذن الله...',
-        'app_keywords' => 'islam, muslim, thikr, athkar',
+        'app_description' => 'تطبيقات تعين على الإسلام والالتزام باتساق ويسر بإذن الله...',
+        'app_keywords' => 'islam, muslim, platform, thikr, athkar, quran, reader',
         'app_version' => env('NATIVEPHP_APP_VERSION'),
 
         'admin_path' => env('ADMIN_PATH', 'admin'),
@@ -22,6 +23,9 @@ return [
             'retries' => 8,
             'athkar' => env('NATIVE_ATHKAR_ENDPOINT', 'https://muttasiq.com/api/athkar'),
             'settings' => env('NATIVE_SETTINGS_ENDPOINT', 'https://muttasiq.com/api/settings'),
+            'quran_snapshot_meta' => env('NATIVE_QURAN_SNAPSHOT_META_ENDPOINT', 'https://muttasiq.com/api/quran-snapshot/meta'),
+            'quran_snapshot_download' => env('NATIVE_QURAN_SNAPSHOT_DOWNLOAD_ENDPOINT', 'https://muttasiq.com/api/quran-snapshot/download'),
+            'js_error_reports' => env('NATIVE_JS_ERROR_REPORTS_ENDPOINT', 'https://muttasiq.com/api/js-error-reports'),
         ],
 
         'security' => [
@@ -39,7 +43,7 @@ return [
         ],
 
         'colors' => [
-            'gray' => \Filament\Support\Colors\Color::Slate,
+            'gray' => Color::Slate,
             'primary' => [
                 50 => '#ebf0f1',
                 100 => '#d8e1e4',
@@ -53,8 +57,8 @@ return [
                 900 => '#041b22',
                 950 => '#020f14',
             ],
-            'success' => \Filament\Support\Colors\Color::Emerald,
-            'info' => \Filament\Support\Colors\Color::Purple,
+            'success' => Color::Emerald,
+            'info' => Color::Purple,
             'warning' => [
                 50 => '#fff9ef',
                 100 => '#fef4df',
@@ -68,7 +72,7 @@ return [
                 900 => '#634916',
                 950 => '#392a0d',
             ],
-            'danger' => \Filament\Support\Colors\Color::Rose,
+            'danger' => Color::Rose,
         ],
 
         'filament' => [

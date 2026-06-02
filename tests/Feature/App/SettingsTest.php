@@ -17,6 +17,12 @@ it('composes and executes the control panel lifecycle without persisting runtime
         ->toContain(HasControlPanelChangelogsTab::class)
         ->toContain(HasControlPanelAboutTab::class);
 
+    expect(Setting::definitionsForGroup(Setting::GROUP_QURAN))
+        ->toHaveKey(Setting::DOES_QURAN_TARGET_WORDS_BY_DEFAULT)
+        ->toHaveKey(Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ON_MULTI_COPY)
+        ->toHaveKey(Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ALWAYS_ON_COPY)
+        ->toHaveKey(Setting::DOES_QURAN_SHOW_IMMERSIVE_MOBILE_EDGE_CAPTIONS);
+
     Setting::query()->firstOrCreate(
         ['name' => Setting::DOES_SKIP_GUIDANCE_PANELS],
         ['value' => false],
@@ -30,6 +36,10 @@ it('composes and executes the control panel lifecycle without persisting runtime
         Setting::DOES_PREVENT_SWITCHING_ATHKAR_UNTIL_COMPLETION => false,
         Setting::DOES_SKIP_GUIDANCE_PANELS => true,
         Setting::DOES_ENABLE_VISUAL_ENHANCEMENTS => false,
+        Setting::DOES_PRESERVE_HARAKAT_IN_DISPLAY => false,
+        Setting::DOES_QURAN_TARGET_WORDS_BY_DEFAULT => true,
+        Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ON_MULTI_COPY => false,
+        Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ALWAYS_ON_COPY => true,
         Setting::MINIMUM_MAIN_TEXT_SIZE => 18,
         Setting::MAXIMUM_MAIN_TEXT_SIZE => 20,
     ];
@@ -45,20 +55,21 @@ it('composes and executes the control panel lifecycle without persisting runtime
 
     livewire(ControlPanel::class)
         ->callAction('controlPanel', data: [
-            'main_text_size_range' => [
-                Setting::MIN_MAIN_TEXT_SIZE_MIN - 1,
-                Setting::MAX_MAIN_TEXT_SIZE_MAX + 1,
-            ],
+            Setting::MINIMUM_MAIN_TEXT_SIZE => Setting::MIN_MAIN_TEXT_SIZE_MIN - 1,
+            Setting::MAXIMUM_MAIN_TEXT_SIZE => Setting::MAX_MAIN_TEXT_SIZE_MAX + 1,
         ])
-        ->assertHasFormErrors(['main_text_size_range.0', 'main_text_size_range.1']);
+        ->assertHasNoFormErrors()
+        ->assertSet('clientControlPanel.minimum_main_text_size', Setting::MIN_MAIN_TEXT_SIZE_DEFAULT)
+        ->assertSet('clientControlPanel.maximum_main_text_size', Setting::MAX_MAIN_TEXT_SIZE_DEFAULT);
 
     livewire(ControlPanel::class)
         ->callAction('controlPanel', data: [
-            'main_text_size_range' => [19, 16],
+            Setting::MINIMUM_MAIN_TEXT_SIZE => 19,
+            Setting::MAXIMUM_MAIN_TEXT_SIZE => 16,
         ])
         ->assertHasNoFormErrors()
-        ->assertSet('clientControlPanel.minimum_main_text_size', 16)
-        ->assertSet('clientControlPanel.maximum_main_text_size', 19);
+        ->assertSet('clientControlPanel.minimum_main_text_size', Setting::MIN_MAIN_TEXT_SIZE_DEFAULT)
+        ->assertSet('clientControlPanel.maximum_main_text_size', Setting::MAX_MAIN_TEXT_SIZE_DEFAULT);
 
     livewire(ControlPanel::class)
         ->call('triggerReaderMaintenancePulse')
@@ -96,6 +107,8 @@ it('renders changelog image urls correctly across native ios, native android, an
 
     expect($html)
         ->toContain('src="/_assets/docs/updates/images/')
+        ->toContain('.webp')
+        ->not->toContain('.png')
         ->not->toContain('src="data:image/png;base64,')
         ->not->toContain('src="php://127.0.0.1/docs/updates/images/');
 
@@ -112,6 +125,8 @@ it('renders changelog image urls correctly across native ios, native android, an
 
     expect($html)
         ->toContain('src="/_assets/docs/updates/images/')
+        ->toContain('.webp')
+        ->not->toContain('.png')
         ->not->toContain('src="/docs/updates/image-proxy/')
         ->not->toContain('src="data:image/png;base64,');
 
@@ -127,5 +142,7 @@ it('renders changelog image urls correctly across native ios, native android, an
 
     expect($html)
         ->toContain('src="/docs/updates/images/')
+        ->toContain('.webp')
+        ->not->toContain('.png')
         ->not->toContain('src="/_assets/docs/updates/images/');
 });

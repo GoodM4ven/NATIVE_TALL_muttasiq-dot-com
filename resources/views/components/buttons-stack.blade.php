@@ -4,6 +4,7 @@
     'inactiveGap' => 1.2,
     'activeGap' => 1.6,
     'activeNeighborGap' => 2.4,
+    'stackTopOffset' => null,
 ])
 
 <div
@@ -14,19 +15,23 @@
         inactiveGap: @js($inactiveGap),
         activeGap: @js($activeGap),
         activeNeighborGap: @js($activeNeighborGap),
+        stackTopOffset: @js($stackTopOffset),
         respectingStack: false,
         isQuickStackOpen: false,
         activeIndex: 0,
         items: [],
         observer: null,
         attributeObserver: null,
+        modalObserver: null,
         layoutFrameId: null,
         isLayoutQueued: false,
         pendingLayoutPasses: 0,
         shouldWaitForNextTick: false,
         interactionUnlockId: null,
+        actionStateRecoveryId: null,
         isInteractionLocked: false,
         actionOpenState: false,
+        isQuranManagerModalOpen: false,
         stackTransitionMs: 200,
         shouldManageDisplay(item) {
             if (!item) {
@@ -56,7 +61,9 @@
             this.bindClickHandler();
             this.observeItems();
             this.observeRespecting();
+            this.observeModalVisibility();
             this.setRespectingStack();
+            this.syncQuranManagerModalStateFromDom();
             this.scheduleLayout(3);
         },
         destroy() {
@@ -68,12 +75,21 @@
                 this.attributeObserver.disconnect();
             }
     
+            if (this.modalObserver) {
+                this.modalObserver.disconnect();
+            }
+    
             if (this.$refs.stack) {
                 this.$refs.stack.removeEventListener('click', this.handleClick, true);
             }
     
             if (this.layoutFrameId !== null) {
                 window.cancelAnimationFrame(this.layoutFrameId);
+            }
+    
+            if (this.actionStateRecoveryId !== null) {
+                window.clearTimeout(this.actionStateRecoveryId);
+                this.actionStateRecoveryId = null;
             }
     
             this.releaseInteractionLock();
@@ -101,6 +117,41 @@
             this.attributeObserver.observe(this.$el, {
                 attributes: true,
                 attributeFilter: ['data-respecting-stack'],
+            });
+        },
+        observeModalVisibility() {
+            if (typeof MutationObserver === 'undefined' || !(document.body instanceof Element)) {
+                return;
+            }
+    
+            this.modalObserver = new MutationObserver((mutations) => {
+                const hasModalMutation = mutations.some((mutation) => {
+                    if (!(mutation.target instanceof Element)) {
+                        return false;
+                    }
+    
+                    if (
+                        mutation.target.classList.contains('fi-modal') ||
+                        mutation.target.classList.contains('fi-modal-window')
+                    ) {
+                        return true;
+                    }
+    
+                    return mutation.target.closest('.fi-modal') !== null;
+                });
+    
+                if (!hasModalMutation) {
+                    return;
+                }
+    
+                this.scheduleQuranManagerModalStateSync();
+            });
+    
+            this.modalObserver.observe(document.body, {
+                subtree: true,
+                childList: true,
+                attributes: true,
+                attributeFilter: ['class', 'style'],
             });
         },
         refreshItems() {
@@ -238,10 +289,30 @@
     
             this.isInteractionLocked = false;
         },
+        scheduleActionStateRecovery() {
+            if (this.actionStateRecoveryId !== null) {
+                window.clearTimeout(this.actionStateRecoveryId);
+            }
+    
+            this.actionStateRecoveryId = window.setTimeout(() => {
+                this.actionStateRecoveryId = null;
+    
+                if (!this.actionOpenState || this.hasAnyOpenFilamentModal()) {
+                    return;
+                }
+    
+                this.actionOpenState = false;
+                this.scheduleLayout(2);
+            }, 220);
+        },
         syncActionState(isActionOpen) {
             const nextState = isActionOpen === true;
     
             if (this.actionOpenState === nextState) {
+                if (nextState) {
+                    this.scheduleActionStateRecovery();
+                }
+    
                 return;
             }
     
@@ -250,9 +321,143 @@
             if (this.actionOpenState) {
                 this.closeQuickStack();
                 this.releaseInteractionLock();
+                this.scheduleActionStateRecovery();
+            } else if (this.actionStateRecoveryId !== null) {
+                window.clearTimeout(this.actionStateRecoveryId);
+                this.actionStateRecoveryId = null;
             }
     
             this.scheduleLayout(3);
+        },
+        syncQuranManagerModalState(isOpen) {
+            const nextState = isOpen === true;
+    
+            if (this.isQuranManagerModalOpen === nextState) {
+                return;
+            }
+    
+            this.isQuranManagerModalOpen = nextState;
+    
+            if (this.isQuranManagerModalOpen) {
+                this.closeQuickStack();
+                this.releaseInteractionLock();
+            }
+    
+            this.scheduleLayout(2);
+        },
+        shouldHideStackItems() {
+            return this.isQuranManagerModalOpen || (this.actionOpenState && this.hasAnyOpenFilamentModal());
+        },
+        applyStackItemVisibility(item) {
+            if (!(item instanceof Element)) {
+                return;
+            }
+    
+            const shouldHide = this.shouldHideStackItems();
+    
+            item.style.opacity = shouldHide ? '0' : '1';
+            item.style.pointerEvents = shouldHide ? 'none' : '';
+        },
+        hasAnyOpenFilamentModal() {
+            const modal = document.querySelector('.fi-modal.fi-modal-open');
+            if (!modal) return false;
+            const rect = modal.getBoundingClientRect();
+            if (rect.width === 0 && rect.height === 0) return false;
+            const styles = window.getComputedStyle(modal);
+            return styles.display !== 'none' && styles.visibility !== 'hidden';
+        },
+        scheduleQuranManagerModalStateSync() {
+            [0, 24, 64, 140].forEach((delayMs) => {
+                window.setTimeout(() => {
+                    this.syncQuranManagerModalStateFromDom();
+                }, delayMs);
+            });
+        },
+        isQuranManagerModalWindowVisible(modalWindowId) {
+            const normalizedId = String(modalWindowId ?? '').trim();
+    
+            if (normalizedId === '') {
+                return false;
+            }
+    
+            const resolveModalWindowFromElement = (element) => {
+                if (!(element instanceof Element)) {
+                    return null;
+                }
+    
+                if (element.classList.contains('fi-modal-window')) {
+                    return element;
+                }
+    
+                const nestedModalWindow = element.querySelector('.fi-modal-window');
+    
+                return nestedModalWindow instanceof Element ? nestedModalWindow : null;
+            };
+            const directElement = document.getElementById(normalizedId);
+            const directModalWindow = resolveModalWindowFromElement(directElement);
+            const escapedId = window.CSS?.escape ? window.CSS.escape(normalizedId) : normalizedId;
+            const modalByDataId = document.querySelector(`[data-fi-modal-id='${escapedId}']`);
+            const modalWindowFromDataId = resolveModalWindowFromElement(modalByDataId);
+            const modalWindowElement = directModalWindow ?? modalWindowFromDataId ?? null;
+    
+            if (!(modalWindowElement instanceof Element)) {
+                return false;
+            }
+    
+            const modalElement = modalWindowElement.closest('.fi-modal');
+    
+            if (modalElement && !modalElement.classList.contains('fi-modal-open')) {
+                return false;
+            }
+    
+            const styles = window.getComputedStyle(modalWindowElement);
+    
+            return styles.display !== 'none' && styles.visibility !== 'hidden';
+        },
+        isJumpPageInputVisible() {
+            const inputElement = document.getElementById('quran-reader-page-counter-input');
+    
+            if (!(inputElement instanceof HTMLInputElement) || !inputElement.isConnected) {
+                return false;
+            }
+    
+            const modalElement = inputElement.closest('.fi-modal');
+    
+            if (modalElement && !modalElement.classList.contains('fi-modal-open')) {
+                return false;
+            }
+    
+            const styles = window.getComputedStyle(inputElement);
+    
+            return (
+                inputElement.clientHeight > 8 &&
+                inputElement.clientWidth > 8 &&
+                styles.display !== 'none' &&
+                styles.visibility !== 'hidden'
+            );
+        },
+        syncQuranManagerModalStateFromDom() {
+            const isOpen =
+                this.hasAnyOpenFilamentModal() ||
+                this.isQuranManagerModalWindowVisible('quran-reader-search-modal') ||
+                this.isQuranManagerModalWindowVisible('quran-reader-history-modal') ||
+                this.isQuranManagerModalWindowVisible('quran-reader-bookmarks-modal') ||
+                this.isQuranManagerModalWindowVisible('quran-reader-jump-page-modal') ||
+                this.isJumpPageInputVisible();
+    
+            this.syncQuranManagerModalState(isOpen);
+        },
+        rootClasses() {
+            return this.anchorClasses();
+        },
+        stackStyle() {
+            const normalizedOffset = String(this.stackTopOffset ?? '').trim();
+    
+            if (normalizedOffset === '') {
+                return '';
+            }
+    
+            return `top: ${normalizedOffset};`;
         },
         bindClickHandler() {
             this.handleClick = (event) => {
@@ -273,19 +478,19 @@
                 }
     
                 if (!this.isQuickStackOpen) {
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
                     this.isQuickStackOpen = true;
                     this.activeIndex = index;
                     this.scheduleLayout(2);
-                    event.preventDefault();
-                    event.stopImmediatePropagation();
                     return;
                 }
     
                 if (this.activeIndex !== index) {
-                    this.activeIndex = index;
-                    this.scheduleLayout(2);
                     event.preventDefault();
                     event.stopImmediatePropagation();
+                    this.activeIndex = index;
+                    this.scheduleLayout(2);
                     return;
                 }
     
@@ -321,10 +526,10 @@
             }
     
             return [
-                'fixed',
+                'fixed app-action-buttons-stack',
                 'z-40',
-                this.horizontal === 'left' ? 'end-10' : 'start-10',
-                this.vertical === 'bottom' ? 'bottom-7' : 'top-7',
+                this.horizontal === 'left' ? 'end-10 sm:end-10' : 'start-10 sm:start-10',
+                this.vertical === 'bottom' ? 'bottom-7' : 'top-5',
             ].join(' ');
         },
         direction() {
@@ -364,14 +569,20 @@
             }
     
             if (!this.respectingStack) {
-                this.items.forEach((item) => this.resetItem(item));
+                this.items.forEach((item) => {
+                    this.resetItem(item);
+                    this.applyStackItemVisibility(item);
+                });
                 return;
             }
     
             const visibleItems = this.visibleItems();
     
             if (!visibleItems.length) {
-                this.items.forEach((item) => this.resetItem(item));
+                this.items.forEach((item) => {
+                    this.resetItem(item);
+                    this.applyStackItemVisibility(item);
+                });
                 return;
             }
     
@@ -395,12 +606,13 @@
                 item.style.left = '0';
                 item.style.right = 'auto';
                 item.style.transform = `translateX(${translateX}rem)`;
-                item.style.transition = `transform ${this.stackTransitionMs}ms ease`;
+                item.style.transition = `transform ${this.stackTransitionMs}ms ease, opacity ${this.stackTransitionMs}ms ease`;
                 item.style.willChange = 'transform';
                 item.style.zIndex = String(this.itemZIndex(index));
                 if (this.shouldManageDisplay(item)) {
                     item.style.display = 'block';
                 }
+                this.applyStackItemVisibility(item);
             });
         },
         resetItem(item) {
@@ -421,14 +633,19 @@
     x-init="init();
     return () => destroy();"
     x-effect="syncActionState($store?.layoutManager?.isActionOpen === true)"
-    x-on:switch-view.window="closeQuickStack(); releaseInteractionLock(); scheduleLayout(3)"
+    x-on:switch-view.window="closeQuickStack(); releaseInteractionLock(); syncQuranManagerModalState(false); scheduleLayout(3)"
     x-on:hashchange.window="scheduleLayout(3)"
     x-on:resize.window="scheduleLayout(2, { afterDom: false })"
     x-on:orientationchange.window="scheduleLayout(2, { afterDom: false })"
-    x-on:open-modal.window="closeQuickStack(); releaseInteractionLock(); scheduleLayout(3)"
-    x-on:x-modal-opened.window="scheduleLayout(3)"
-    x-on:close-modal.window="scheduleLayout(4)"
-    x-on:close-modal-quietly.window="scheduleLayout(4)"
+    x-on:open-modal.window="closeQuickStack(); releaseInteractionLock(); scheduleLayout(3); scheduleQuranManagerModalStateSync()"
+    x-on:x-modal-opened.window="scheduleLayout(3); scheduleQuranManagerModalStateSync()"
+    x-on:opened-form-component-action-modal.window="scheduleLayout(3); scheduleQuranManagerModalStateSync()"
+    x-on:close-modal.window="scheduleLayout(4); scheduleQuranManagerModalStateSync()"
+    x-on:close-modal-quietly.window="scheduleLayout(4); scheduleQuranManagerModalStateSync()"
+    x-on:x-modal-closed.window="scheduleLayout(4); scheduleQuranManagerModalStateSync()"
+    x-on:closing-form-component-action-modal.window="scheduleLayout(4); scheduleQuranManagerModalStateSync()"
+    x-on:closed-form-component-action-modal.window="scheduleLayout(4); scheduleQuranManagerModalStateSync()"
+    x-on:quran-manager-modals-visibility.window="syncQuranManagerModalState($event.detail?.open === true)"
     x-on:click.window="
         if (!respectingStack) return;
         if ($refs.stack && $refs.stack.contains($event.target)) return;
@@ -442,11 +659,12 @@
         releaseInteractionLock();
         scheduleLayout(2, { afterDom: false });
     "
-    x-bind:class="anchorClasses()"
+    x-bind:class="rootClasses()"
 >
     <div
         class="relative"
         x-ref="stack"
+        x-bind:style="stackStyle()"
     >
         {{ $slot }}
     </div>

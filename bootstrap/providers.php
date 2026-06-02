@@ -1,12 +1,21 @@
 <?php
 
+use App\Providers\AppServiceProvider;
+use App\Providers\AthkarAppServiceProvider;
+use App\Providers\FilamentServiceProvider;
+use App\Providers\InereshServiceProvider;
+use App\Providers\LazyCssServiceProvider;
+use App\Providers\NativeServiceProvider;
+use App\Providers\RateLimitServiceProvider;
+use Goodm4ven\NativePatches\NativePatchesServiceProvider;
+
 return [
-    App\Providers\AppServiceProvider::class,
-    App\Providers\AthkarAppServiceProvider::class,
-    App\Providers\FilamentServiceProvider::class,
-    Goodm4ven\NativePatches\NativePatchesServiceProvider::class,
-    App\Providers\InereshServiceProvider::class,
-    App\Providers\LazyCssServiceProvider::class,
-    App\Providers\NativeServiceProvider::class,
-    App\Providers\RateLimitServiceProvider::class,
+    AppServiceProvider::class,
+    AthkarAppServiceProvider::class,
+    FilamentServiceProvider::class,
+    NativePatchesServiceProvider::class,
+    InereshServiceProvider::class,
+    LazyCssServiceProvider::class,
+    NativeServiceProvider::class,
+    RateLimitServiceProvider::class,
 ];

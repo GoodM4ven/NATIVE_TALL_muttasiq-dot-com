@@ -44,9 +44,11 @@
     property="og:image:height"
     content="630"
 />
-<meta
-    name="theme-color"
-    x-bind:content="$store.colorScheme.isDarkModeOn ?
-        $store.colorScheme.bodyBackgroundHexes.dark :
-        $store.colorScheme.bodyBackgroundHexes.light"
->
+@if (!is_platform('native'))
+    <meta
+        name="theme-color"
+        x-bind:content="$store.colorScheme.isDarkModeOn ?
+            $store.colorScheme.bodyBackgroundHexes.dark :
+            $store.colorScheme.bodyBackgroundHexes.light"
+    >
+@endif

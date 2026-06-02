@@ -31,3 +31,15 @@
         --breakpoint: 2xl;
     }
 }
+@media (min-width: 120rem) {
+    /* * >= 1920px [1080p] (2k) */
+    :root {
+        --breakpoint: 3xl;
+    }
+}
+@media (min-width: 160rem) {
+    /* * >= 2560px [1440p] (4k) */
+    :root {
+        --breakpoint: 4xl;
+    }
+}

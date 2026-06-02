@@ -10,7 +10,10 @@
         const maxSourceLength = 2048;
         const maxStackLength = 20000;
         const maxTimeLength = 50;
+        const knownBreakpoints = ['base', 'sm', 'md', 'lg', 'xl', '2xl', '3xl', '4xl'];
+        const controlPanelModalId = 'control-panel-modal';
         let lastOpenedAt = 0;
+        let lastModalMode = 'auto';
         let isModalOpen = false;
         let hasTriggeredReload = false;
         const successfulSubmissionFlag = 'jsErrorReportSubmitted';
@@ -109,6 +112,21 @@
             return knownNoiseMessagePatterns.some((pattern) => pattern.test(normalizedMessage));
         };
 
+        const isLikelyOpaqueLivewireThrow = (entry) => {
+            const normalizedMessage = normalizeNoiseMessage(entry?.message);
+
+            if (!normalizedMessage || normalizedMessage !== 'Uncaught [object Object]') {
+                return false;
+            }
+
+            const normalizedSource = trimTo(entry?.source, maxSourceLength);
+            const normalizedStack = trimTo(entry?.stack, maxStackLength);
+            const hasLivewireSource = Boolean(normalizedSource && normalizedSource.includes('/livewire'));
+            const hasLivewireStack = Boolean(normalizedStack && normalizedStack.includes('/livewire'));
+
+            return hasLivewireSource || hasLivewireStack;
+        };
+
         const isLikelyExternalOnlyNoise = (message) => {
             const normalizedMessage = normalizeNoiseMessage(message);
             if (!normalizedMessage) {
@@ -154,10 +172,6 @@
         };
 
         const shouldIgnoreEntry = (entry) => {
-            if (isMobileRuntime) {
-                return false;
-            }
-
             const sameOriginSource = isSameOriginSource(entry.source);
             const hasAppOwnedStack = isLikelyAppOwnedStack(entry.stack);
             const hasAppSignal = sameOriginSource || hasAppOwnedStack;
@@ -180,11 +194,23 @@
                 return true;
             }
 
+            if (isLikelyOpaqueLivewireThrow(entry)) {
+                return true;
+            }
+
             if (!entry.source && !hasAppOwnedStack) {
                 return true;
             }
 
             return false;
+        };
+
+        const shouldPreventDefaultErrorEvent = (entry) => {
+            if (isLikelyBrowserNoise(entry?.message)) {
+                return true;
+            }
+
+            return isLikelyOpaqueLivewireThrow(entry);
         };
 
         const normalizeEntry = (entry) => {
@@ -219,6 +245,34 @@
             return cssBreakpoint || null;
         };
 
+        const resolveBreakpointFromViewportWidth = () => {
+            const viewportWidth = Number(window.innerWidth ?? document.documentElement?.clientWidth ?? 0);
+
+            if (!Number.isFinite(viewportWidth) || viewportWidth <= 0) {
+                return null;
+            }
+
+            if (viewportWidth >= 2560) return '4xl';
+            if (viewportWidth >= 1920) return '3xl';
+            if (viewportWidth >= 1536) return '2xl';
+            if (viewportWidth >= 1280) return 'xl';
+            if (viewportWidth >= 1024) return 'lg';
+            if (viewportWidth >= 768) return 'md';
+            if (viewportWidth >= 640) return 'sm';
+
+            return 'base';
+        };
+
+        const resolveBreakpointLabel = () => {
+            const normalizedBreakpoint = trimTo(readBreakpoint(), 8);
+
+            if (normalizedBreakpoint && knownBreakpoints.includes(normalizedBreakpoint)) {
+                return normalizedBreakpoint;
+            }
+
+            return resolveBreakpointFromViewportWidth() ?? normalizedBreakpoint;
+        };
+
         const buildPlatformLabel = () => {
             const prefix = isNativeRuntime ? 'Native' : 'Web';
             const resolvedNativePlatform = trimTo(nativePlatform, 32);
@@ -238,11 +292,15 @@
                 user_agent: trimTo(window.navigator?.userAgent ?? null, 1000),
                 language: trimTo(window.navigator?.language ?? null, 32),
                 platform: buildPlatformLabel(),
-                breakpoint: isNativeRuntime ? null : trimTo(readBreakpoint(), 8),
+                breakpoint: resolveBreakpointLabel(),
             };
         };
 
-        const dispatchModal = () => {
+        const dispatchModal = ({
+            mode = 'auto',
+            force = false,
+            entries = null
+        } = {}) => {
             if (isReportingDisabled()) {
                 return;
             }
@@ -251,26 +309,87 @@
                 return;
             }
 
-            const entries = loadEntries();
-            if (entries.length === 0) {
+            const normalizedMode = mode === 'manual' ? 'manual' : 'auto';
+            const payloadEntries = Array.isArray(entries) ? entries : loadEntries();
+
+            if (!force && payloadEntries.length === 0) {
                 return;
             }
 
             const now = Date.now();
-            if (now - lastOpenedAt < openCooldownInMs) {
+            if (!force && now - lastOpenedAt < openCooldownInMs) {
                 return;
             }
 
             lastOpenedAt = now;
+            lastModalMode = normalizedMode;
 
             window.dispatchEvent(
                 new CustomEvent('open-js-error-report-modal', {
                     detail: {
-                        errors: entries,
+                        mode: normalizedMode,
+                        errors: normalizedMode === 'manual' ? [] : payloadEntries,
                         context: collectContext(),
                     },
                 }),
             );
+        };
+
+        const resolveControlPanelRuntimeModalIds = () => {
+            const modalIds = new Set();
+            const collectModalIdFromWindow = (modalWindowElement) => {
+                if (!(modalWindowElement instanceof Element)) {
+                    return;
+                }
+
+                const runtimeModalId = trimTo(
+                    modalWindowElement.closest('.fi-modal')?.getAttribute('data-fi-modal-id') ?? null,
+                    120,
+                );
+                if (runtimeModalId) {
+                    modalIds.add(runtimeModalId);
+                }
+
+                const staticModalId = trimTo(modalWindowElement.getAttribute('id') ?? null, 120);
+                if (staticModalId) {
+                    modalIds.add(staticModalId);
+                }
+            };
+
+            collectModalIdFromWindow(document.getElementById(controlPanelModalId));
+
+            document
+                .querySelectorAll(
+                    '.fi-modal .quran-control-panel-modal-window, .fi-modal-window.quran-control-panel-modal-window'
+                )
+                .forEach((modalWindowElement) => {
+                    collectModalIdFromWindow(modalWindowElement);
+                });
+
+            return Array.from(modalIds);
+        };
+
+        const closeControlPanelIfOpen = () => {
+            const modalIds = resolveControlPanelRuntimeModalIds();
+
+            if (modalIds.length === 0) {
+                return false;
+            }
+
+            modalIds.forEach((modalId) => {
+                const closePayload = {
+                    id: modalId
+                };
+
+                window.dispatchEvent(new CustomEvent('close-modal-quietly', {
+                    detail: closePayload
+                }));
+                window.dispatchEvent(new CustomEvent('close-modal', {
+                    detail: closePayload
+                }));
+            });
+
+            return true;
         };
 
         const addEntry = (entry) => {
@@ -315,7 +434,7 @@
         };
 
         window.addEventListener('error', (event) => {
-            addEntry({
+            const candidateEntry = {
                 type: 'error',
                 time: new Date().toISOString(),
                 message: event.message,
@@ -323,12 +442,18 @@
                 line: event.lineno,
                 column: event.colno,
                 stack: event.error ? event.error.stack : null,
-            });
+            };
+
+            if (shouldPreventDefaultErrorEvent(candidateEntry)) {
+                event.preventDefault();
+            }
+
+            addEntry(candidateEntry);
         });
 
         window.addEventListener('unhandledrejection', (event) => {
             const reason = event.reason;
-            addEntry({
+            const candidateEntry = {
                 type: 'promise',
                 time: new Date().toISOString(),
                 message: reason && reason.message ? reason.message : String(reason),
@@ -336,7 +461,13 @@
                 line: null,
                 column: null,
                 stack: reason && reason.stack ? reason.stack : null,
-            });
+            };
+
+            if (shouldPreventDefaultErrorEvent(candidateEntry)) {
+                event.preventDefault();
+            }
+
+            addEntry(candidateEntry);
         });
 
         window.addEventListener('js-error-report-submitted', () => {
@@ -344,6 +475,18 @@
             window.__jsErrorReportingInProgress = false;
 
             try {
+                if (lastModalMode === 'manual') {
+                    sessionStorage.removeItem(successfulSubmissionFlag);
+
+                    queueMicrotask(() => {
+                        if (window.Livewire?.dispatchTo) {
+                            window.Livewire.dispatchTo('js-error-reporter', 'show-submitted-toast');
+                        }
+                    });
+
+                    return;
+                }
+
                 sessionStorage.setItem(successfulSubmissionFlag, '1');
             } catch (error) {}
         });
@@ -356,7 +499,35 @@
             isModalOpen = false;
             saveEntries([]);
             window.__jsErrorReportingInProgress = false;
+
+            if (lastModalMode === 'manual') {
+                lastModalMode = 'auto';
+                return;
+            }
+
             reloadApplicationWithBlink();
+        });
+
+        window.addEventListener('trigger-js-error-report-modal', () => {
+            const didRequestControlPanelClose = closeControlPanelIfOpen();
+
+            const openManualReport = () => {
+                dispatchModal({
+                    mode: 'manual',
+                    force: true,
+                    entries: [],
+                });
+            };
+
+            if (didRequestControlPanelClose) {
+                window.setTimeout(() => {
+                    openManualReport();
+                }, Math.max(120, fastTransitionDurationInMs()));
+
+                return;
+            }
+
+            openManualReport();
         });
 
         document.addEventListener('livewire:init', () => {

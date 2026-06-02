@@ -4,7 +4,7 @@ set -euo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 project_root="$(cd "${script_dir}/.." && pwd)"
 output_dir="${project_root}/storage/logs"
-output_file="${output_dir}/log-android.txt"
+output_file="${output_dir}/native-log-android.txt"
 
 read_env_var() {
     local key="$1"
@@ -74,10 +74,15 @@ append_run_as_tail() {
 
     append_section "${title}"
 
-    local command="if [ -f '${relative_path}' ]; then tail -n ${lines} '${relative_path}'; else echo 'Missing file: ${relative_path}'; fi"
-    printf '+ adb -s %s shell run-as %s sh -c "%s"\n' "${serial}" "${app_id}" "${command}" >>"${output_file}"
+    local escaped_app_id
+    escaped_app_id="$(printf '%s' "${app_id}" | sed "s/'/'\\\\''/g")"
+    local escaped_relative_path
+    escaped_relative_path="$(printf '%s' "${relative_path}" | sed "s/'/'\\\\''/g")"
+    local command="run-as '${escaped_app_id}' sh -c 'tail -n ${lines} \"${escaped_relative_path}\" 2>/dev/null || echo \"Missing file: ${escaped_relative_path}\"'"
 
-    if adb -s "${serial}" shell run-as "${app_id}" sh -c "${command}" >>"${output_file}" 2>&1; then
+    printf '+ adb -s %s shell %s\n' "${serial}" "${command}" >>"${output_file}"
+
+    if adb -s "${serial}" shell "${command}" >>"${output_file}" 2>&1; then
         return 0
     fi
 

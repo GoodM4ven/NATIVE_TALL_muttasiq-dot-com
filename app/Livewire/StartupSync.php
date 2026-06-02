@@ -6,6 +6,7 @@ namespace App\Livewire;
 
 use App\Models\Setting;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
@@ -40,7 +41,7 @@ class StartupSync extends Component
 
         if ($url !== null) {
             try {
-                /** @var \Illuminate\Http\Client\Response $response */
+                /** @var Response $response */
                 $response = Http::acceptJson()
                     ->connectTimeout($connectTimeoutInSeconds)
                     ->timeout($timeoutInSeconds)

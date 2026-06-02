@@ -56,6 +56,18 @@ function buttonsStackClasses(string $content): string
     return $classMatches[1];
 }
 
+function buttonsStackCount(string $content): int
+{
+    $matched = preg_match_all(
+        '/<div\b[^>]*x-bind:data-respecting-stack=[^>]*>/',
+        $content,
+    );
+
+    expect($matched)->not->toBeFalse();
+
+    return (int) $matched;
+}
+
 it('uses local athkar payload and runtime-specific shell/layout classes without remote sync', function () {
     config([
         'nativephp-internal.running' => true,
@@ -125,7 +137,8 @@ it('uses local athkar payload and runtime-specific shell/layout classes without 
     $shellClasses = copyrightVersionShellClasses($response->getContent());
 
     expect($shellClasses)
-        ->toContain('bottom-3')
+        ->toContain('bottom-4')
+        ->not->toContain('bottom-3')
         ->not->toContain('bottom-7');
 
     Http::assertNothingSent();
@@ -140,6 +153,7 @@ it('uses local athkar payload and runtime-specific shell/layout classes without 
         ->toContain('mt-22')
         ->not->toContain('mt-16');
     expect(buttonsStackClasses($iosResponse->getContent()))->toContain('mt-8');
+    expect(buttonsStackCount($iosResponse->getContent()))->toBe(1);
 
     config([
         'nativephp-internal.platform' => 'android',
@@ -149,9 +163,10 @@ it('uses local athkar payload and runtime-specific shell/layout classes without 
     $androidResponse->assertSuccessful();
 
     expect(homeMainClasses($androidResponse->getContent()))
-        ->toContain('mt-16')
+        ->toContain('mt-15')
         ->not->toContain('mt-22');
     expect(buttonsStackClasses($androidResponse->getContent()))->not->toContain('mt-8');
+    expect(buttonsStackCount($androidResponse->getContent()))->toBe(1);
 });
 
 it('renders expected icon and markup contracts while resetting app version to configured runtime value', function () {
@@ -175,6 +190,35 @@ it('renders expected icon and markup contracts while resetting app version to co
 
     expect(substr_count($content, 'athkar-origin-indicator__icon'))->toBeGreaterThanOrEqual(2)
         ->and($content)->not->toContain('-left-px -top-px')
-        ->and($content)->toContain('relative grid h-10 w-10 rotate-45 place-items-center overflow-hidden')
-        ->and($content)->toContain('absolute top-1/2 left-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 -rotate-45 shrink-0');
+        ->and($content)->toContain('relative grid h-8 w-8 rotate-45 place-items-center overflow-hidden')
+        ->and($content)->toContain('absolute top-1/2 left-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 -rotate-45 shrink-0')
+        ->and($content)->toContain('data-testid="main-menu-insights-trigger"')
+        ->and($content)->toContain('data-testid="main-menu-insights-panel"')
+        ->and($content)->toContain('data-quran-app-reader-root');
+});
+
+it('renders the download stack controls on web runtime only', function () {
+    config([
+        'nativephp-internal.running' => false,
+        'nativephp-internal.platform' => null,
+    ]);
+
+    $webResponse = get('/');
+
+    $webResponse->assertSuccessful()
+        ->assertSee('data-testid="download-button"', false)
+        ->assertSee('data-testid="download-android-button"', false)
+        ->assertSee('data-testid="download-ios-button"', false);
+
+    config([
+        'nativephp-internal.running' => true,
+        'nativephp-internal.platform' => 'android',
+    ]);
+
+    $nativeResponse = get('/');
+
+    $nativeResponse->assertSuccessful()
+        ->assertDontSee('data-testid="download-button"', false)
+        ->assertDontSee('data-testid="download-android-button"', false)
+        ->assertDontSee('data-testid="download-ios-button"', false);
 });

@@ -11,6 +11,7 @@ use App\Filament\Resources\Thikrs\Schemas\ThikrForm;
 use App\Filament\Resources\Thikrs\Tables\ThikrsTable;
 use App\Models\Thikr;
 use BackedEnum;
+use Filament\Resources\Pages\PageRegistration;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -48,7 +49,7 @@ class ThikrResource extends Resource
     }
 
     /**
-     * @return array<string, \Filament\Resources\Pages\PageRegistration>
+     * @return array<string, PageRegistration>
      */
     public static function getPages(): array
     {

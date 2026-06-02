@@ -9,7 +9,7 @@ use Filament\Widgets\ChartWidget;
 
 class WebHomeActivityChart extends ChartWidget
 {
-    protected ?string $heading = 'نشاط الزيارات';
+    protected ?string $heading = 'نشاط زيارات الواجهة الرئيسية';
 
     protected int|string|array $columnSpan = 'full';
 
@@ -22,7 +22,10 @@ class WebHomeActivityChart extends ChartWidget
     protected function getData(): array
     {
         $tracker = app(WebHomeActivityTracker::class);
-        $activity = $tracker->dailySeries(days: $tracker->chartDays());
+        $activity = $tracker->dailySeries(
+            days: $tracker->chartDays(),
+            context: WebHomeActivityTracker::CONTEXT_HOME,
+        );
 
         return [
             'datasets' => [
@@ -35,7 +38,7 @@ class WebHomeActivityChart extends ChartWidget
                     'tension' => 0.3,
                 ],
                 [
-                    'label' => 'زائرون مميّزون',
+                    'label' => 'زائرون نشطون',
                     'data' => $activity['unique_visitors'],
                     'borderColor' => '#fbb937',
                     'backgroundColor' => 'rgba(251, 185, 55, 0.16)',
@@ -55,11 +58,11 @@ class WebHomeActivityChart extends ChartWidget
     public function getDescription(): ?string
     {
         $tracker = app(WebHomeActivityTracker::class);
-        $today = $tracker->todaySummary();
-        $last24Hours = $tracker->last24HoursSummary();
+        $today = $tracker->todaySummary(WebHomeActivityTracker::CONTEXT_HOME);
+        $last24Hours = $tracker->last24HoursSummary(WebHomeActivityTracker::CONTEXT_HOME);
 
         return sprintf(
-            'اليوم: %d مميّزة / %d زيارات. آخر 24 ساعة: %d مميّزة / %d زيارات.',
+            'اليوم: %d نشط / %d زيارات. آخر 24 ساعة: %d نشط / %d زيارات.',
             $today['unique_visitors'],
             $today['hits'],
             $last24Hours['unique_visitors'],

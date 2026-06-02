@@ -1,8 +1,12 @@
 document.addEventListener('alpine:init', () => {
+    const visualEnhancementsSettingKey = 'enable_visual_enhancements';
+    const athkarGateBackgroundPreviewEventName = 'athkar-gate-background-preview';
+
     window.Alpine.data('athkarAppGate', () => ({
         isFastUiMode: window.__APP_BROWSER_TEST_FAST_UI === true,
         hoverSide: null,
         activeSide: null,
+        isVisualEnhancementsEnabled: true,
         isHovering: false,
         isPinging: false,
         splitValue: 50,
@@ -24,6 +28,13 @@ document.addEventListener('alpine:init', () => {
         pingDelay: 650,
         init() {
             if (!this.isFastUiMode) {
+                this.syncVisualEnhancementsSetting();
+                this.dispatchBackgroundPreview();
+                window.addEventListener('control-panel-updated', (event) => {
+                    this.syncVisualEnhancementsSetting(event?.detail?.controlPanel ?? null);
+                    this.dispatchBackgroundPreview();
+                });
+
                 return;
             }
 
@@ -35,6 +46,87 @@ document.addEventListener('alpine:init', () => {
             this.pingDuration = 0;
             this.pingDelay = 0;
             this.isSpillReady = true;
+            this.syncVisualEnhancementsSetting();
+            this.dispatchBackgroundPreview();
+            window.addEventListener('control-panel-updated', (event) => {
+                this.syncVisualEnhancementsSetting(event?.detail?.controlPanel ?? null);
+                this.dispatchBackgroundPreview();
+            });
+        },
+        normalizeBooleanSettingValue(value, fallback = true) {
+            if (typeof value === 'boolean') {
+                return value;
+            }
+
+            if (value === 1 || value === '1') {
+                return true;
+            }
+
+            if (value === 0 || value === '0') {
+                return false;
+            }
+
+            if (value === undefined || value === null || value === '') {
+                return Boolean(fallback);
+            }
+
+            const normalizedValue = String(value).trim().toLowerCase();
+
+            if (
+                normalizedValue === 'true' ||
+                normalizedValue === 'yes' ||
+                normalizedValue === 'on'
+            ) {
+                return true;
+            }
+
+            if (
+                normalizedValue === 'false' ||
+                normalizedValue === 'no' ||
+                normalizedValue === 'off'
+            ) {
+                return false;
+            }
+
+            return Boolean(fallback);
+        },
+        resolveVisualEnhancementsSetting(settings = null) {
+            if (
+                settings &&
+                typeof settings === 'object' &&
+                Object.prototype.hasOwnProperty.call(settings, visualEnhancementsSettingKey)
+            ) {
+                return this.normalizeBooleanSettingValue(
+                    settings[visualEnhancementsSettingKey],
+                    true,
+                );
+            }
+
+            const storedSettings = window.getAthkarSettingsFromStorage?.() ?? {};
+
+            return this.normalizeBooleanSettingValue(
+                storedSettings?.[visualEnhancementsSettingKey],
+                true,
+            );
+        },
+        syncVisualEnhancementsSetting(settings = null) {
+            this.isVisualEnhancementsEnabled = this.resolveVisualEnhancementsSetting(settings);
+        },
+        dispatchBackgroundPreview() {
+            const previewSide =
+                this.isVisualEnhancementsEnabled &&
+                (this.activeSide === 'morning' || this.activeSide === 'night')
+                    ? this.activeSide
+                    : null;
+
+            window.dispatchEvent(
+                new CustomEvent(athkarGateBackgroundPreviewEventName, {
+                    detail: {
+                        side: previewSide,
+                        isVisualEnhancementsEnabled: this.isVisualEnhancementsEnabled,
+                    },
+                }),
+            );
         },
         setScrollLock(locked) {
             document.documentElement.style.overflow = locked ? 'hidden' : '';
@@ -50,6 +142,11 @@ document.addEventListener('alpine:init', () => {
 
             this.isEnhanced = nextEnhanced;
             this.spillTargetOpacity = this.isEnhanced ? 0.55 : 0.45;
+
+            if (!this.isEnhanced) {
+                this.spillOpacity = 0;
+                this.isSpillReady = false;
+            }
         },
         animateSplit(value) {
             if (this.splitAnimation?.pause) {
@@ -96,15 +193,18 @@ document.addEventListener('alpine:init', () => {
 
             if (side === 'morning') {
                 this.animateSplit(40);
+                this.dispatchBackgroundPreview();
                 return;
             }
 
             if (side === 'night') {
                 this.animateSplit(60);
+                this.dispatchBackgroundPreview();
                 return;
             }
 
             this.animateSplit(50);
+            this.dispatchBackgroundPreview();
         },
         deactivateSide() {
             if (!this.activeSide) {
@@ -114,8 +214,14 @@ document.addEventListener('alpine:init', () => {
             this.activeSide = null;
             this.hoverSide = null;
             this.animateSplit(50);
+            this.dispatchBackgroundPreview();
         },
         handleOutsideActivation() {
+            if (this.hasTouchInput()) {
+                this.deactivateSide();
+                return;
+            }
+
             if (this.isEnhanced) {
                 return;
             }
@@ -133,7 +239,18 @@ document.addEventListener('alpine:init', () => {
 
             return mode;
         },
+        hasTouchInput() {
+            return Boolean(this.$store?.bp?.hasTouch);
+        },
         syncSpillState(isActive) {
+            if (!this.isEnhanced) {
+                this.spillOpacity = 0;
+                this.setScrollLock(Boolean(isActive));
+                this.lastSpillState = isActive;
+
+                return;
+            }
+
             if (this.lastSpillState === isActive) {
                 return;
             }
@@ -209,12 +326,23 @@ document.addEventListener('alpine:init', () => {
             }, this.pingDuration);
         },
         requestOpenMode(mode) {
+            const side = this.sideForMode(mode);
+
+            if (this.hasTouchInput()) {
+                if (this.activeSide === side) {
+                    this.deactivateSide();
+                    this.$dispatch('athkar-gate-open', { mode });
+                    return;
+                }
+
+                this.activateSide(side);
+                return;
+            }
+
             if (this.isEnhanced) {
                 this.$dispatch('athkar-gate-open', { mode });
                 return;
             }
-
-            const side = this.sideForMode(mode);
 
             if (this.activeSide === side) {
                 this.deactivateSide();

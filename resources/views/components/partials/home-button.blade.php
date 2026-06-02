@@ -1,9 +1,13 @@
+@props([
+    'jsShowCondition' => "!views['main-menu'].isOpen && !isControlPanelOpen && !isAthkarManagerOpen",
+])
+
 <div
-    class="inset-e-10 fixed bottom-11 z-30 sm:bottom-7 md:bottom-12"
+    class="inset-e-10 sm:inset-e-6.5 md:inset-e-6.5 lg:inset-e-6.5 xl:inset-e-8 2xl:inset-e-10 fixed bottom-7 z-30 sm:bottom-7 md:bottom-7 lg:bottom-7 xl:bottom-10 2xl:bottom-12"
     data-stack-item
     x-transition
     x-cloak
-    x-show="!views['main-menu'].isOpen && !isControlPanelOpen && !isAthkarManagerOpen"
+    x-show="{{ $jsShowCondition }}"
 >
     <x-action-button
         data-testid="control-panel-button"

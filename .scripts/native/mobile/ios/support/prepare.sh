@@ -2,6 +2,7 @@
 set -euo pipefail
 
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../../../" && pwd)"
+source "${root_dir}/.scripts/native/mobile/support/prepare-platform.sh"
 ios_dir="${root_dir}/nativephp/ios"
 binaries_url="${NATIVEPHP_IOS_BINARIES_URL:-https://bin.nativephp.com/nativephp-ios-2.0.0-php8.4.zip}"
 
@@ -90,10 +91,17 @@ if [[ "$(uname -s)" != "Darwin" ]]; then
     exit 1
 fi
 
-echo "[native-prepare:ios] forcing native:install ios --force --no-interaction"
+install_args=()
+
+if [[ "$(native_read_icu_preference)" == "1" ]]; then
+    install_args+=(--with-icu)
+    echo "[native-prepare:ios] ICU-enabled PHP binaries are required by NativePHP lock/config"
+fi
+
+echo "[native-prepare:ios] forcing native:install ios ${install_args[*]} --force --no-interaction"
 (
     cd "${root_dir}"
-    php artisan native:install ios --force --no-interaction
+    php artisan native:install ios "${install_args[@]}" --force --no-interaction
 )
 
 if [[ ! -d "${ios_dir}/Include" || ! -d "${ios_dir}/Libraries" ]]; then

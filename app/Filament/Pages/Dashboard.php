@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
+use App\Filament\Widgets\WebAthkarGateActivityChart;
 use App\Filament\Widgets\WebHomeActivityChart;
+use App\Filament\Widgets\WebQuranGateActivityChart;
 use BackedEnum;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Widgets\Widget;
@@ -24,6 +26,8 @@ class Dashboard extends BaseDashboard
     {
         return [
             WebHomeActivityChart::class,
+            WebAthkarGateActivityChart::class,
+            WebQuranGateActivityChart::class,
         ];
     }
 
