@@ -19,3 +19,4 @@ Generated on 2026-05-31 after full non-browser and browser test runs.
 - swipes only navigate without counting when setting 2 is disabled
 - navigates to the athkar gate, persists restored state, and handles native back to main menu then exit
 - shows tap aura on mobile for single-count auto-advance athkar
+- executes hidden completion buttons on desktop for single thikr and all athkar

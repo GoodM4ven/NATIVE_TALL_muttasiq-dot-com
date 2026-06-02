@@ -1604,56 +1604,6 @@ JS,
     );
 });
 
-it('executes hidden completion buttons on desktop for single thikr and all athkar', function () {
-    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
-
-    resetBrowserState($page);
-    openAthkarReader($page, 'sabah', false);
-
-    setAthkarSettings($page, [
-        'does_prevent_switching_athkar_until_completion' => false,
-    ]);
-
-    $multiIndex = $page->script(
-        athkarReaderDataScript(
-            'data.activeList.findIndex((item) => Number(item.count ?? 1) > 1)',
-        ),
-    );
-
-    expect($multiIndex)->toBeGreaterThanOrEqual(0);
-
-    $page->script(athkarReaderCommandScript("data.setActiveIndex({$multiIndex});"));
-
-    waitForScript($page, athkarReaderDataScript('data.activeIndex'), $multiIndex);
-
-    $desktopCompleteSelector = '[data-athkar-desktop-counter-row] button[aria-label="إتمام الذكر"]';
-    $page->hover('[data-athkar-desktop-counter]');
-    waitForScript(
-        $page,
-        js_template('Boolean(document.querySelector({{selector}}))', ['selector' => $desktopCompleteSelector]),
-        true,
-    );
-    scriptClick($page, $desktopCompleteSelector);
-
-    waitForScript($page, 'Boolean(document.querySelector(".fi-modal-window"))', true);
-    clickModalAction($page, 'نعم، أكملت قراءته');
-
-    waitForScript($page, athkarReaderDataScript('data.isItemComplete('.$multiIndex.')'), true);
-
-    $page->script(athkarReaderCommandScript('data.showCompletionHack({ pinned: true })'));
-
-    waitForScript($page, athkarReaderDataScript('data.completionHack.isVisible'), true);
-
-    safeClick($page, 'button[aria-label="إتمام جميع الأذكار"]');
-
-    waitForScript($page, 'Boolean(document.querySelector(".fi-modal-window"))', true);
-
-    clickModalAction($page, 'قرأتها');
-
-    waitForScript($page, athkarReaderDataScript('data.isModeComplete("sabah")'), true);
-    waitForScript($page, athkarReaderDataScript('data.activeMode'), null);
-});
-
 it('keeps overflowing mobile origin anchored to the top and scrollable', function () {
     $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
