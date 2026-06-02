@@ -36,7 +36,6 @@
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
-        "filament/blueprint": "^2.1",
         "larastan/larastan": "^3.0",
         "laravel-lang/lang": "^15.26",
         "laravel/boost": "^2.0",
@@ -86,6 +85,10 @@
             "@php artisan migrate:fresh --seed --force",
             "npm install",
             "npm run build"
+        ],
+        "paid-packages": [
+            "composer config repositories.filament composer https://packages.filamentphp.com/composer",
+            "composer require filament/blueprint --dev"
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",

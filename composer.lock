@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "f8a944fb4ae613230f88722f476e2a8b",
+    "content-hash": "78bc71a56d81d9cf3f3f35ece41392c8",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -12076,28 +12076,6 @@
                 }
             ],
             "time": "2025-08-14T07:29:31+00:00"
-        },
-        {
-            "name": "filament/blueprint",
-            "version": "v2.1.2",
-            "dist": {
-                "type": "zip",
-                "url": "https://packages.filamentphp.com/composer/10/552/download"
-            },
-            "require": {
-                "filament/support": "^5.0",
-                "laravel/boost": "^1.8|^2.0"
-            },
-            "type": "library",
-            "license": [
-                "proprietary"
-            ],
-            "description": "Guidelines for AI agents to produce detailed Filament implementation plans.",
-            "homepage": "https://github.com/filamentphp/filament",
-            "support": {
-                "issues": "https://github.com/filamentphp/filament/issues",
-                "source": "https://github.com/filamentphp/filament"
-            }
         },
         {
             "name": "filp/whoops",
