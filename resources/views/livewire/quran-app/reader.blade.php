@@ -1242,18 +1242,14 @@
                 --quran-page-dense-short-leading-tune: 1.02;
                 --quran-page-dense-short-gap-tune: 1.03;
                 --quran-page-dense-short-y-offset-tune: 0rem;
-                --quran-page-postfit-type-tune: 0.97;
-                --quran-page-postfit-gap-tune: 1.19;
+                --quran-page-postfit-type-tune: 0.995;
+                --quran-page-postfit-gap-tune: 1.17;
             }
 
             .quran-page-lines--headered-long {
                 --quran-page-headered-type-multiplier: 1.038;
                 --quran-page-headered-leading-multiplier: 1.11;
                 --quran-page-headered-gap-multiplier: 1.22;
-                --quran-page-postfit-type-tune: 1.17;
-                --quran-page-postfit-leading-tune: 1;
-                --quran-page-postfit-gap-tune: 1.08;
-                --quran-page-postfit-y-offset-tune: 0rem;
                 --quran-surah-header-no-basmallah-first-ayah-gap-scale: 0.3;
                 --quran-page-scale: 0.595;
                 --quran-page-type-scale: 1.1;
@@ -1262,6 +1258,10 @@
                 --quran-page-surah-header-scale: 0.8;
                 --quran-basmallah-bottom-gap-scale: -0.3;
                 --quran-page-y-offset: -0.1rem;
+                --quran-page-postfit-type-tune: 1.17;
+                --quran-page-postfit-leading-tune: 1;
+                --quran-page-postfit-gap-tune: 1.08;
+                --quran-page-postfit-y-offset-tune: 0.1rem;
             }
 
             .quran-page-lines--headered-long-compact {
@@ -1272,7 +1272,7 @@
                 --quran-page-headered-long-compact-surah-section-gap-scale: 0.5;
                 --quran-page-postfit-leading-tune: 1;
                 --quran-page-postfit-type-tune: 1.2;
-                --quran-page-postfit-gap-tune: 1.1;
+                --quran-page-postfit-gap-tune: 1.06;
             }
 
             .quran-page-lines--segmented {
@@ -1286,8 +1286,8 @@
                 --quran-page-surah-header-scale: 0.7;
                 --quran-basmallah-bottom-gap-scale: -0.4;
                 --quran-page-y-offset: 0rem;
-                --quran-page-postfit-type-tune: 1.1;
-                --quran-page-postfit-gap-tune: 1.18;
+                --quran-page-postfit-type-tune: 1.17;
+                --quran-page-postfit-gap-tune: 1.08;
             }
         }
 
