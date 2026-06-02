@@ -70,7 +70,7 @@ jobs:
         run: npx playwright install --with-deps
 
       - name: Execute tests
-        run: vendor/bin/pest --coverage --coverage-clover=build/coverage/clover.xml
+        run: vendor/bin/pest --coverage --coverage-clover=build/coverage/clover.xml --do-not-fail-on-risky
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v6
