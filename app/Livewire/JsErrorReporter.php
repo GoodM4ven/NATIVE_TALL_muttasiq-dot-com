@@ -111,7 +111,7 @@ class JsErrorReporter extends Component implements HasActions, HasSchemas
                     ->label(arabic_text('المقاس الحالي للجهاز'))
                     ->disabled()
                     ->dehydrated(false)
-                    ->extraInputAttributes(['dir' => 'ltr']),
+                    ->extraInputAttributes(['dir' => 'rtl']),
 
                 Textarea::make('user_note')
                     ->label('ماذا كنت تفعل قبل ظهور المشكلة؟')

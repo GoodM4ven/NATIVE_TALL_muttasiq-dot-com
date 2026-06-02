@@ -107,6 +107,8 @@ it('renders changelog image urls correctly across native ios, native android, an
 
     expect($html)
         ->toContain('src="/_assets/docs/updates/images/')
+        ->toContain('.webp')
+        ->not->toContain('.png')
         ->not->toContain('src="data:image/png;base64,')
         ->not->toContain('src="php://127.0.0.1/docs/updates/images/');
 
@@ -123,6 +125,8 @@ it('renders changelog image urls correctly across native ios, native android, an
 
     expect($html)
         ->toContain('src="/_assets/docs/updates/images/')
+        ->toContain('.webp')
+        ->not->toContain('.png')
         ->not->toContain('src="/docs/updates/image-proxy/')
         ->not->toContain('src="data:image/png;base64,');
 
@@ -138,5 +142,7 @@ it('renders changelog image urls correctly across native ios, native android, an
 
     expect($html)
         ->toContain('src="/docs/updates/images/')
+        ->toContain('.webp')
+        ->not->toContain('.png')
         ->not->toContain('src="/_assets/docs/updates/images/');
 });
