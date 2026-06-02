@@ -18,3 +18,4 @@ Generated on 2026-05-31 after full non-browser and browser test runs.
 - handles athkar notice selection, confirmation/swipe transitions, and restored mobile back flow
 - swipes only navigate without counting when setting 2 is disabled
 - navigates to the athkar gate, persists restored state, and handles native back to main menu then exit
+- shows tap aura on mobile for single-count auto-advance athkar
