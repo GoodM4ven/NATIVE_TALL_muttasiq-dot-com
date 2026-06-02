@@ -1147,6 +1147,10 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
                 0,
                 parsePostFitTuneValue('--quran-page-postfit-gap-tune', 1),
             );
+            const postFitSurahGapTune = Math.max(
+                0,
+                parsePostFitTuneValue('--quran-page-postfit-surah-gap-tune', 1),
+            );
             const postFitPageScaleTune = Math.max(
                 0.05,
                 parsePostFitTuneValue('--quran-page-postfit-page-scale-tune', 1),
@@ -1216,6 +1220,10 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
                             '1',
                         );
                         targetElement.style.setProperty(
+                            '--quran-page-postfit-surah-gap-tune-effective',
+                            '1',
+                        );
+                        targetElement.style.setProperty(
                             '--quran-page-postfit-y-offset-tune-effective',
                             '0rem',
                         );
@@ -1236,6 +1244,10 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
                         'var(--quran-page-postfit-gap-tune, 1)',
                     );
                     targetElement.style.setProperty(
+                        '--quran-page-postfit-surah-gap-tune-effective',
+                        'var(--quran-page-postfit-surah-gap-tune, 1)',
+                    );
+                    targetElement.style.setProperty(
                         '--quran-page-postfit-y-offset-tune-effective',
                         'var(--quran-page-postfit-y-offset-tune, 0rem)',
                     );
@@ -1253,6 +1265,10 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
                         '1',
                     );
                     targetElement.style.setProperty('--quran-page-postfit-gap-tune-effective', '1');
+                    targetElement.style.setProperty(
+                        '--quran-page-postfit-surah-gap-tune-effective',
+                        '1',
+                    );
                     targetElement.style.setProperty(
                         '--quran-page-postfit-y-offset-tune-effective',
                         '0rem',
@@ -1272,6 +1288,10 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
                 targetElement.style.setProperty(
                     '--quran-page-postfit-gap-tune-effective',
                     String(postFitGapTune),
+                );
+                targetElement.style.setProperty(
+                    '--quran-page-postfit-surah-gap-tune-effective',
+                    String(postFitSurahGapTune),
                 );
                 targetElement.style.setProperty(
                     '--quran-page-postfit-y-offset-tune-effective',

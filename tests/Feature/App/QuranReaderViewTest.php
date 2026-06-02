@@ -38,6 +38,19 @@ it('wires quran reader entry points from main menu to hash navigation and view m
 
         $quranReaderScriptSource .= "\n".$quranReaderScriptContents;
     }
+    $quranReaderFitControlsSource = file_get_contents(
+        resource_path(
+            'js/support/alpine/data/quran-app-reader/reader-navigation-fit-idle-warmup-and-scale-controls.js',
+        ),
+    );
+    $quranReaderFitSolverSource = file_get_contents(
+        resource_path(
+            'js/support/alpine/data/quran-app-reader/reader-navigation-fit-reveal-guards-and-solver.js',
+        ),
+    );
+    $quranReaderLineLayoutSource = file_get_contents(
+        resource_path('js/support/alpine/data/quran-app-reader/line-layout-render-core.js'),
+    );
     $quranReaderClassSource = file_get_contents(app_path('Livewire/QuranApp/Reader.php'));
     $navigationHistoryActionSource = (string) Str::of($quranReaderClassSource)
         ->after('public function navigationHistoryAction(): Action')
@@ -232,6 +245,31 @@ it('wires quran reader entry points from main menu to hash navigation and view m
         ->and($quranReaderViewSource)->not->toContain('x-on:click="nextPage()"')
         ->and($quranReaderViewSource)->not->toContain('x-on:click="previousPage()"')
         ->and($quranReaderViewSource)->not->toContain("x-on:click=\"\$viewNav('quran-app-gate')\"");
+
+    expect($quranReaderFitControlsSource)->not->toBeFalse()
+        ->and($quranReaderFitControlsSource)->toContain('--quran-page-postfit-surah-gap-tune')
+        ->and($quranReaderFitControlsSource)->toContain(
+            '--quran-page-postfit-surah-gap-tune-effective',
+        )
+        ->and($quranReaderFitControlsSource)->toContain(
+            'var(--quran-page-postfit-surah-gap-tune, 1)',
+        );
+
+    expect($quranReaderFitSolverSource)->not->toBeFalse()
+        ->and($quranReaderFitSolverSource)->toContain('--quran-page-postfit-surah-gap-tune')
+        ->and($quranReaderFitSolverSource)->toContain(
+            '--quran-page-postfit-surah-gap-tune-effective',
+        )
+        ->and($quranReaderFitSolverSource)->toContain('postFitSurahGapTune')
+        ->and($quranReaderFitSolverSource)->toContain(
+            'postFitSurahGapTuneEffective: readRootVar',
+        );
+
+    expect($quranReaderLineLayoutSource)->not->toBeFalse()
+        ->and($quranReaderLineLayoutSource)->toContain(
+            'var(--quran-page-postfit-surah-gap-tune-effective, var(--quran-page-postfit-surah-gap-tune, 1))',
+        )
+        ->and($quranReaderLineLayoutSource)->toContain('surahGapTuneValue');
 
     expect($quranReaderScriptSource)->not->toBeFalse()
         ->and($quranReaderScriptSource)->toContain('registerNativeInputListeners()')

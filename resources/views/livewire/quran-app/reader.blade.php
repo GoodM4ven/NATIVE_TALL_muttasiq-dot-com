@@ -10,6 +10,7 @@
             --quran-page-187-postfit-page-scale-tune: 1;
             --quran-page-187-postfit-type-scale-tune: 1;
             --quran-page-187-postfit-gap-scale-tune: 1;
+            --quran-page-postfit-surah-gap-tune: 1;
             --quran-panel-bg: color-mix(in srgb, hsl(38.18 64.71% 98.87%) 80%, transparent);
             --quran-panel-border: color-mix(in srgb, var(--warning-50) 38%, transparent);
             --quran-panel-shadow: 0 22px 40px color-mix(in srgb, var(--gray-900) 18%, transparent);
@@ -104,6 +105,7 @@
             --quran-page-headered-leading-multiplier: 1;
             --quran-page-headered-gap-multiplier: 1;
             --quran-page-headered-long-surah-section-gap-scale: 1;
+            --quran-page-postfit-surah-gap-tune: 1;
             --quran-page-postfit-type-tune: 1;
             --quran-page-postfit-leading-tune: 1;
             --quran-page-postfit-gap-tune: 1;
@@ -122,12 +124,14 @@
             --quran-page-headered-long-compact-y-offset-adjust: var(--quran-page-headered-long-compact-y-offset-tune,
                     0rem);
             --quran-page-headered-long-compact-surah-section-gap-scale: 0.5;
+            --quran-page-postfit-surah-gap-tune: 1;
         }
 
         .quran-page-lines--segmented {
             --quran-page-segmented-type-multiplier: 1;
             --quran-page-segmented-leading-multiplier: 1;
             --quran-page-segmented-gap-multiplier: 1;
+            --quran-page-postfit-surah-gap-tune: 1;
             --quran-page-postfit-type-tune: var(--quran-page-segmented-type-tune, 1);
             --quran-page-postfit-leading-tune: var(--quran-page-segmented-leading-tune, 1);
             --quran-page-postfit-gap-tune: var(--quran-page-segmented-gap-tune, 1);
@@ -541,6 +545,8 @@
                 --quran-basmallah-bottom-gap-scale: -0.28;
                 --quran-page-postfit-type-tune: 0.95;
                 --quran-page-postfit-gap-tune: 1;
+                --quran-page-postfit-surah-gap-tune: 0.3;
+                --quran-page-postfit-y-offset-tune: -0.3rem;
             }
         }
 

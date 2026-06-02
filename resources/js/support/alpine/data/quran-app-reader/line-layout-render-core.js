@@ -454,8 +454,10 @@ export const createLineLayoutRenderCoreModule = (deps) => {
                       ? '--quran-page-headered-long-surah-section-gap-scale'
                       : '--quran-surah-section-gap-scale';
             const gapScaleValue = `var(${gapScaleProperty}, 1)`;
+            const surahGapTuneValue =
+                'var(--quran-page-postfit-surah-gap-tune-effective, var(--quran-page-postfit-surah-gap-tune, 1))';
 
-            return `calc((${basePadding}) * ${gapScaleValue})`;
+            return `calc((${basePadding}) * ${gapScaleValue} * ${surahGapTuneValue})`;
         },
 
         lineMarginBlockStart(line) {

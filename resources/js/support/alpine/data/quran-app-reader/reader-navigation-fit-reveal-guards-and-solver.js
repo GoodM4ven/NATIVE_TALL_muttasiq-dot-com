@@ -372,6 +372,9 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                     pageLeadingMultiplier: readRootVar('--quran-page-leading-multiplier'),
                     pageGapMultiplier: readRootVar('--quran-page-gap-multiplier'),
                     pageSurahHeaderScale: readRootVar('--quran-page-surah-header-scale'),
+                    postFitSurahGapTuneEffective: readRootVar(
+                        '--quran-page-postfit-surah-gap-tune-effective',
+                    ),
                     basmallahBottomGapScale: readRootVar('--quran-basmallah-bottom-gap-scale'),
                     surahHeaderBasmallahOverlap: readRootVar(
                         '--quran-surah-header-basmallah-overlap',
@@ -2044,6 +2047,10 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 targetElement.style.setProperty('--quran-page-postfit-leading-tune-effective', '1');
                 targetElement.style.setProperty('--quran-page-postfit-gap-tune-effective', '1');
                 targetElement.style.setProperty(
+                    '--quran-page-postfit-surah-gap-tune-effective',
+                    '1',
+                );
+                targetElement.style.setProperty(
                     '--quran-page-postfit-y-offset-tune-effective',
                     '0rem',
                 );
@@ -2612,11 +2619,16 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                     '--quran-page-postfit-gap-tune-effective',
                     '--quran-page-postfit-gap-tune',
                 );
+                const postFitSurahGapTune = resolvePostFitTuneNumber(
+                    '--quran-page-postfit-surah-gap-tune-effective',
+                    '--quran-page-postfit-surah-gap-tune',
+                );
                 const postFitYOffsetTunePx = resolvePostFitYOffsetTunePx();
                 const hasNonNeutralPostFitTuning =
                     Math.abs(postFitTypeTune - 1) > 0.0005 ||
                     Math.abs(postFitLeadingTune - 1) > 0.0005 ||
                     Math.abs(postFitGapTune - 1) > 0.0005 ||
+                    Math.abs(postFitSurahGapTune - 1) > 0.0005 ||
                     Math.abs(postFitYOffsetTunePx) > 0.1;
 
                 if (hasNonNeutralPostFitTuning) {
@@ -3521,6 +3533,10 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                     baselineLayout.basmallahBottomGapScale - 0.12,
                 ),
             );
+            const postFitSurahGapTune = Math.max(
+                0,
+                readCssNumber('--quran-page-postfit-surah-gap-tune', 1),
+            );
             const normalizedPageNumber = Math.max(1, Math.trunc(Number(this.pageNumber ?? 1)));
             const isModalLayoutContext =
                 this._bypassNextFitCache ||
@@ -3562,6 +3578,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 Number(minimumGapMultiplier).toFixed(3),
                 Number(minimumSurahHeaderScale).toFixed(3),
                 Number(minimumBasmallahBottomGapScale).toFixed(3),
+                Number(postFitSurahGapTune).toFixed(3),
                 this._globalFitCalibrationPageNumber > 0
                     ? `cal-${this._globalFitCalibrationPageNumber}`
                     : 'cal-none',

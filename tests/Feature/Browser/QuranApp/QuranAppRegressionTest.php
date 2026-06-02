@@ -1412,6 +1412,7 @@ it('preserves fitted quran tuning after opening and closing jump-page modal with
     typeScaleEffective: parseVar('--quran-page-type-scale-effective', 1),
     leadingTuneEffective: parseVar('--quran-page-postfit-leading-tune-effective', 1),
     gapTuneEffective: parseVar('--quran-page-postfit-gap-tune-effective', 1),
+    surahGapTuneEffective: parseVar('--quran-page-postfit-surah-gap-tune-effective', 1),
     isOpening: lines.classList.contains('quran-page-lines--opening'),
   };
 })()
@@ -1503,6 +1504,7 @@ JS,
     expect(abs((float) ($beforeMetrics['typeScaleEffective'] ?? 0) - (float) ($afterMetrics['typeScaleEffective'] ?? 0)))->toBeLessThan(0.08);
     expect(abs((float) ($beforeMetrics['leadingTuneEffective'] ?? 0) - (float) ($afterMetrics['leadingTuneEffective'] ?? 0)))->toBeLessThan(0.08);
     expect(abs((float) ($beforeMetrics['gapTuneEffective'] ?? 0) - (float) ($afterMetrics['gapTuneEffective'] ?? 0)))->toBeLessThan(0.08);
+    expect(abs((float) ($beforeMetrics['surahGapTuneEffective'] ?? 0) - (float) ($afterMetrics['surahGapTuneEffective'] ?? 0)))->toBeLessThan(0.08);
 
     $page->assertNoJavaScriptErrors();
 });
