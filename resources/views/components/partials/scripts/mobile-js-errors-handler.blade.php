@@ -361,7 +361,7 @@
             document
                 .querySelectorAll(
                     '.fi-modal .quran-control-panel-modal-window, .fi-modal-window.quran-control-panel-modal-window'
-                    )
+                )
                 .forEach((modalWindowElement) => {
                     collectModalIdFromWindow(modalWindowElement);
                 });

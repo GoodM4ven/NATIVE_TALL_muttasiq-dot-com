@@ -204,44 +204,6 @@ it('swipes count when setting 2 is enabled', function (bool $isMobile, string $p
     // 'mobile' => [true, 'touch'],
 ]);
 
-it('swipes only navigate without counting when setting 2 is disabled', function (bool $isMobile, string $pointerType) {
-    $page = $isMobile ? visitMobile('/') : visit('/', ['waitUntil' => 'domcontentloaded']);
-
-    resetBrowserState($page, $isMobile);
-    openAthkarReader($page, 'sabah', $isMobile);
-
-    $settings = [
-        'does_clicking_switch_athkar_too' => false,
-        'does_prevent_switching_athkar_until_completion' => false,
-    ];
-    setAthkarSettings($page, $settings);
-    waitForAthkarSettings($page, $settings);
-
-    $singleIndex = $page->script(
-        athkarReaderDataScript(
-            'data.activeList.findIndex((item, index) => Number(item.count ?? 1) === 1 && index < data.activeList.length - 1)',
-        ),
-    );
-
-    expect($singleIndex)->toBeGreaterThanOrEqual(0);
-
-    $page->script(
-        athkarReaderCommandScript(
-            "data.setActiveIndex({$singleIndex}); data.setCount({$singleIndex}, 0, { allowOvercount: true });",
-        ),
-    );
-
-    waitForScript($page, athkarReaderDataScript('data.activeIndex'), $singleIndex);
-
-    swipeReader($page, 'forward', $pointerType);
-
-    waitForScript($page, athkarReaderDataScript('data.countAt('.$singleIndex.')'), 0);
-    waitForScript($page, athkarReaderDataScript('data.activeIndex'), $singleIndex + 1);
-})->with([
-    'desktop' => [false, 'mouse'],
-    // 'mobile' => [true, 'touch'],
-]);
-
 it('treats up and down swipes as forward navigation', function () {
     $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 

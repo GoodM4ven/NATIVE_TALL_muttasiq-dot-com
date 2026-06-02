@@ -15,3 +15,5 @@ Generated on 2026-05-31 after full non-browser and browser test runs.
 - persists local reader state for last page, navigation history, and bookmarks
 - resolves a canonical navigation target for local quran search preview rows
 - restores the prior page and keeps it rendered when exiting wird after rapid navigation
+- handles athkar notice selection, confirmation/swipe transitions, and restored mobile back flow
+- swipes only navigate without counting when setting 2 is disabled
