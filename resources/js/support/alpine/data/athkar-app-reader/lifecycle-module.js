@@ -196,6 +196,10 @@ export const createLifecycleModule = (deps) => {
                     );
                     this._onAthkarFontScaleToggle = null;
                 }
+                if (this._onNativeBridgeReady) {
+                    window.removeEventListener('native-bridge-ready', this._onNativeBridgeReady);
+                    this._onNativeBridgeReady = null;
+                }
                 this.clearOriginTransitionTimer();
                 this.releaseReaderScreenAwakeLock();
             });
@@ -203,6 +207,10 @@ export const createLifecycleModule = (deps) => {
             this.setupTextFit();
             this.registerNativeVolumeNavigation();
             this.syncNativeVolumeNavigation();
+            this._onNativeBridgeReady = () => {
+                this.syncNativeVolumeNavigation();
+            };
+            window.addEventListener('native-bridge-ready', this._onNativeBridgeReady);
             window.isMuttasiqSupportUnlocked = () => this.isSupportUnlocked();
             window.guardMuttasiqSupportLockedAction = (event = null) =>
                 this.guardSupportLockedAction(event);

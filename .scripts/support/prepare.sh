@@ -19,4 +19,23 @@ if [[ "${NATIVE_PREPARE_CLEAR_CACHE:-0}" == "1" ]]; then
     (cd "$root_dir" && php artisan optimize:clear)
 fi
 
-(cd "$root_dir" && php artisan migrate --force --no-interaction)
+(cd "$root_dir" && php -r '
+$path = $argv[1] ?? "";
+if ($path === "" || ! is_file($path)) {
+    exit(0);
+}
+
+$contents = file_get_contents($path);
+$updated = str_replace(
+    ["        '\''*.md'\'',", "        '\''docs'\'',"],
+    ["        '\''vendor/*/*/*.md'\'',", "        '\''/docs'\'',"],
+    $contents,
+    $count,
+);
+
+if ($count > 0) {
+    file_put_contents($path, $updated);
+}
+' vendor/nativephp/mobile/src/Support/BundleExclusions.php)
+
+(cd "$root_dir" && php artisan app:native-bootstrap --no-interaction)

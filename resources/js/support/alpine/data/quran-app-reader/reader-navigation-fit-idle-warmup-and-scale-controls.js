@@ -512,7 +512,7 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
                 return null;
             }
 
-            return deltaX > 0 ? 'next' : 'prev';
+            return deltaX > 0 ? 'prev' : 'next';
         },
 
         async dispatchSwipeNavigation(direction) {

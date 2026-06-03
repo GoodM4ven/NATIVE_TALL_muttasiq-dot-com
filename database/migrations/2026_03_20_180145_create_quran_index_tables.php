@@ -16,6 +16,10 @@ return new class extends Migration
             return;
         }
 
+        if ($this->quranReaderTablesExist()) {
+            return;
+        }
+
         Schema::create('quran_verses', function (Blueprint $table): void {
             $table->id();
             $table->unsignedTinyInteger('surah_number');
@@ -92,6 +96,13 @@ return new class extends Migration
             $table->index(['page_number', 'line_number']);
             $table->index(['first_word_index', 'last_word_index']);
         });
+    }
+
+    private function quranReaderTablesExist(): bool
+    {
+        return Schema::hasTable('quran_verses')
+            && Schema::hasTable('quran_words')
+            && Schema::hasTable('quran_mushaf_lines');
     }
 
     private function importQuranIndexData(): void

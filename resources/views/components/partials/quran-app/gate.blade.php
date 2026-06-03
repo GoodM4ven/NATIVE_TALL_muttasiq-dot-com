@@ -834,7 +834,7 @@
         x-on:pointerleave="handlePointerLeave()"
         x-on:pointermove="handlePointerMove($event)"
         x-on:touchstart.passive="handleTouchStart($event)"
-        x-on:touchmove.prevent="handleTouchMove($event)"
+        x-on:touchmove="handleTouchMove($event)"
         x-on:touchend="handleTouchEnd($event)"
         x-on:touchcancel="handleTouchEnd($event)"
     >

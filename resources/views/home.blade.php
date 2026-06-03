@@ -499,7 +499,7 @@
             $quranReaderViewsCondition =
                 'views[`quran-app-tilawa`].isOpen || views[`quran-app-hifth`].isOpen || views[`quran-app-tadabbur`].isOpen';
             $returnButtonShowCondition = is_platform('mobile')
-                ? $quranReaderViewsCondition
+                ? 'false'
                 : 'views[`athkar-app-gate`].isReaderVisible || ' . $quranReaderViewsCondition;
             $returnButtonClickCallback = is_platform('mobile')
                 ? 'if (' .
@@ -509,9 +509,7 @@
                     $quranReaderViewsCondition .
                     ') { window.dispatchEvent(new CustomEvent(`quran-reader-go-gate`)); }';
             $homeButtonShowCondition = is_platform('mobile')
-                ? '(views[`quran-app-gate`].isOpen || ' .
-                    $quranReaderViewsCondition .
-                    ') && !isControlPanelOpen && !isAthkarManagerOpen'
+                ? 'false'
                 : "!views['main-menu'].isOpen && !isControlPanelOpen && !isAthkarManagerOpen";
         @endphp
         <x-buttons-stack

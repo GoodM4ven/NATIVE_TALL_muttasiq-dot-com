@@ -18,6 +18,7 @@ document.addEventListener('alpine:init', () => {
         hifth: { x: 74, y: 73 },
         tadabbur: { x: 26, y: 73 },
     });
+    const nativeBackEdgeTouchThresholdPx = 28;
 
     window.Alpine.data('quranAppGate', () => ({
         modeAvailability: Object.freeze({
@@ -38,6 +39,10 @@ document.addEventListener('alpine:init', () => {
         isTouchPointerActive: false,
         touchStartClientX: null,
         touchStartClientY: null,
+        nativeBackTouchIdentifier: null,
+        nativeBackTouchStartClientX: null,
+        nativeBackTouchStartClientY: null,
+        nativeBackTouchCommitted: false,
         didTouchOrbitMove: false,
         suppressNextOpenMode: null,
         touchReleaseArmedMode: null,
@@ -320,6 +325,17 @@ document.addEventListener('alpine:init', () => {
         hasTouchInput() {
             return Boolean(this.$store?.bp?.hasTouch);
         },
+        isIosNativePlatform() {
+            return Boolean(document.body?.classList.contains('nativephp-ios'));
+        },
+        isNativeBackEdgeTouch(clientX) {
+            const normalizedClientX = Number(clientX);
+
+            return (
+                Number.isFinite(normalizedClientX) &&
+                normalizedClientX <= nativeBackEdgeTouchThresholdPx
+            );
+        },
         shouldUseMobileBasePerfMode() {
             if (typeof document !== 'undefined') {
                 if (document.documentElement.classList.contains('native-platform')) {
@@ -512,6 +528,71 @@ document.addEventListener('alpine:init', () => {
             this.touchStartClientY = null;
             this.didTouchOrbitMove = false;
         },
+        clearNativeBackTouchState() {
+            this.nativeBackTouchIdentifier = null;
+            this.nativeBackTouchStartClientX = null;
+            this.nativeBackTouchStartClientY = null;
+            this.nativeBackTouchCommitted = false;
+        },
+        beginNativeBackTouchGesture(touch) {
+            this.nativeBackTouchIdentifier = touch.identifier;
+            this.nativeBackTouchStartClientX = touch.clientX;
+            this.nativeBackTouchStartClientY = touch.clientY;
+            this.nativeBackTouchCommitted = false;
+        },
+        markNativeBackTouchMovement(clientX, clientY) {
+            const startX = Number(this.nativeBackTouchStartClientX);
+            const startY = Number(this.nativeBackTouchStartClientY);
+
+            if (!Number.isFinite(startX) || !Number.isFinite(startY)) {
+                return;
+            }
+
+            const deltaX = Number(clientX) - startX;
+            const deltaY = Number(clientY) - startY;
+
+            if (deltaX >= 18 && Math.abs(deltaY) <= 42) {
+                this.nativeBackTouchCommitted = true;
+            }
+        },
+        triggerNativeBackAction() {
+            try {
+                if (typeof window.__nativeBackAction !== 'function') {
+                    return false;
+                }
+
+                return window.__nativeBackAction();
+            } catch (_) {
+                return false;
+            }
+        },
+        requestNativeAppExit() {
+            try {
+                if (typeof window.AndroidBridge?.exitApplication === 'function') {
+                    window.AndroidBridge.exitApplication();
+                }
+            } catch (_) {
+                // No-op: native exit bridge unavailable.
+            }
+        },
+        finishNativeBackTouchGesture(event) {
+            const shouldAttemptBack =
+                this.nativeBackTouchIdentifier !== null && this.nativeBackTouchCommitted;
+
+            this.clearNativeBackTouchState();
+
+            if (!shouldAttemptBack || event.type === 'touchcancel') {
+                return false;
+            }
+
+            const nativeBackResult = this.triggerNativeBackAction();
+
+            if (nativeBackResult === 'exit') {
+                this.requestNativeAppExit();
+            }
+
+            return Boolean(nativeBackResult);
+        },
         markTouchGestureMovement(clientX, clientY) {
             const startX = Number(this.touchStartClientX);
             const startY = Number(this.touchStartClientY);
@@ -665,6 +746,10 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            if (this.isNativeBackEdgeTouch(event.clientX)) {
+                return;
+            }
+
             this.touchPointerId = event.pointerId;
             this.isTouchPointerActive = true;
             this.isPointerInside = true;
@@ -756,12 +841,21 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            if (this.isIosNativePlatform() && this.isNativeBackEdgeTouch(touch.clientX)) {
+                this.beginNativeBackTouchGesture(touch);
+                return;
+            }
+
             this.activeTouchIdentifier = touch.identifier;
             this.isTouchPointerActive = true;
             this.isPointerInside = true;
 
             if (this.shouldUseMobileBasePerfMode()) {
                 this.scheduleGeometryCacheRefresh();
+            }
+
+            if (event.cancelable) {
+                event.preventDefault();
             }
 
             this.touchStartClientX = touch.clientX;
@@ -777,6 +871,22 @@ document.addEventListener('alpine:init', () => {
         },
         handleTouchMove(event) {
             if (!this.hasTouchInput() || !this.isTouchPointerActive) {
+                if (this.nativeBackTouchIdentifier !== null) {
+                    const touch =
+                        this.resolveActiveTouch(event.touches) ??
+                        this.resolveActiveTouch(event.changedTouches);
+
+                    if (!touch || touch.identifier !== this.nativeBackTouchIdentifier) {
+                        return;
+                    }
+
+                    if (event.cancelable) {
+                        event.preventDefault();
+                    }
+
+                    this.markNativeBackTouchMovement(touch.clientX, touch.clientY);
+                }
+
                 return;
             }
 
@@ -789,6 +899,16 @@ document.addEventListener('alpine:init', () => {
                 this.resolveActiveTouch(event.changedTouches);
 
             if (!touch) {
+                return;
+            }
+
+            if (event.cancelable) {
+                event.preventDefault();
+            }
+
+            if (this.nativeBackTouchIdentifier !== null) {
+                this.markNativeBackTouchMovement(touch.clientX, touch.clientY);
+
                 return;
             }
 
@@ -811,6 +931,20 @@ document.addEventListener('alpine:init', () => {
             }
 
             const touch = this.resolveActiveTouch(event.changedTouches);
+
+            if (this.nativeBackTouchIdentifier !== null) {
+                if (
+                    touch &&
+                    touch.identifier !== this.nativeBackTouchIdentifier &&
+                    event.type !== 'touchcancel'
+                ) {
+                    return;
+                }
+
+                this.finishNativeBackTouchGesture(event);
+
+                return;
+            }
 
             if (!touch && this.isTouchPointerActive) {
                 return;

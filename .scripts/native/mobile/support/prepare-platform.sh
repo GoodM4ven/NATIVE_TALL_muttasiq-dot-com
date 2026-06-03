@@ -214,6 +214,7 @@ native_prepare_bundle_inputs() {
 native_read_bundle_signature() {
     native_hash_paths_signature \
         "${native_root_dir}/nativephp.json" \
+        "${native_root_dir}/public/docs/updates" \
         "${native_root_dir}/vendor/goodm4ven/nativephp-muttasiq-patches/src" \
         "${native_root_dir}/vendor/goodm4ven/nativephp-muttasiq-patches/composer.json"
 }

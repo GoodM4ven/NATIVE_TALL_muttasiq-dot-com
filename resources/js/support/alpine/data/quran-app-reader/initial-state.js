@@ -557,6 +557,10 @@ export const createInitialState = (config, deps) => {
 
         _fitResultByContext: new Map(),
 
+        _dynamicFontFaceRecords: new Map(),
+
+        _dynamicFontFaceLoadPromises: new Map(),
+
         _fitSanityCheckTimer: null,
 
         _fitSanityContextKey: '',

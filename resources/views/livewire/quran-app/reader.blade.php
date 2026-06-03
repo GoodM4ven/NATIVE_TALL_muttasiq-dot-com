@@ -1,11 +1,62 @@
 @assets
+    @if ($qpcPageFontFamily !== null && $qpcPageFontUrl !== null && $qpcPageFontFormat !== null)
+        <link
+            type="font/{{ $qpcPageFontFormat === 'truetype' ? 'ttf' : $qpcPageFontFormat }}"
+            href="{{ $qpcPageFontUrl }}"
+            rel="preload"
+            as="font"
+            crossorigin
+        >
+    @endif
+
+    @if ($surahHeaderFontFamily !== null && $surahHeaderFontUrl !== null && $surahHeaderFontFormat !== null)
+        <link
+            type="font/{{ $surahHeaderFontFormat === 'truetype' ? 'ttf' : $surahHeaderFontFormat }}"
+            href="{{ $surahHeaderFontUrl }}"
+            rel="preload"
+            as="font"
+            crossorigin
+        >
+    @endif
+
+    @if ($basmallahFontFamily !== null && $basmallahFontUrl !== null && $basmallahFontFormat !== null)
+        <link
+            type="font/{{ $basmallahFontFormat === 'truetype' ? 'ttf' : $basmallahFontFormat }}"
+            href="{{ $basmallahFontUrl }}"
+            rel="preload"
+            as="font"
+            crossorigin
+        >
+    @endif
+
     <style>
         @font-face {
             font-family: 'MadinaQuran';
-            src: url('/vendor/arabicable/madina.woff2') format('woff2');
+            src: url('{{ asset('vendor/arabicable/madina.woff2') }}') format('woff2');
             font-display: swap;
         }
 
+        @if ($qpcPageFontFamily !== null && $qpcPageFontUrl !== null && $qpcPageFontFormat !== null)
+            @font-face {
+                font-family: '{{ $qpcPageFontFamily }}';
+                src: url('{{ $qpcPageFontUrl }}') format('{{ $qpcPageFontFormat }}');
+                font-display: block;
+            }
+        @endif
+        @if ($surahHeaderFontFamily !== null && $surahHeaderFontUrl !== null && $surahHeaderFontFormat !== null)
+            @font-face {
+                font-family: '{{ $surahHeaderFontFamily }}';
+                src: url('{{ $surahHeaderFontUrl }}') format('{{ $surahHeaderFontFormat }}');
+                font-display: swap;
+            }
+        @endif
+        @if ($basmallahFontFamily !== null && $basmallahFontUrl !== null && $basmallahFontFormat !== null)
+            @font-face {
+                font-family: '{{ $basmallahFontFamily }}';
+                src: url('{{ $basmallahFontUrl }}') format('{{ $basmallahFontFormat }}');
+                font-display: swap;
+            }
+        @endif
         .quran-reader {
             --quran-page-187-postfit-page-scale-tune: 1;
             --quran-page-187-postfit-type-scale-tune: 1;
@@ -323,6 +374,7 @@
                     opacity 190ms ease,
                     transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
             }
+
 
             body.quran-reader-immersive-active.quran-reader-immersive-chrome-visible .app-action-buttons-stack {
                 pointer-events: auto;
@@ -1610,12 +1662,28 @@
         }
 
         .quran-word-button {
+            font: inherit;
+            font-family: inherit;
+            font-size: inherit;
+            font-weight: inherit;
+            font-style: inherit;
+            font-variant: inherit;
+            font-feature-settings: inherit;
+            font-kerning: inherit;
+            font-stretch: inherit;
+            font-optical-sizing: inherit;
+            font-variant-ligatures: inherit;
+            text-rendering: optimizeLegibility;
             display: inline-flex;
             align-items: baseline;
             white-space: nowrap;
             line-height: 1.02;
             border-radius: 0;
             padding-inline: 0;
+            background: none;
+            border: 0;
+            appearance: none;
+            -webkit-appearance: none;
             cursor: default;
             transition:
                 background-color 440ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -1708,6 +1776,12 @@
         .quran-ayah-marker {
             font-family: 'IBM Plex Sans Arabic', 'Manrope', ui-sans-serif, system-ui, sans-serif;
             line-height: 1;
+        }
+
+        .quran-basmallah-word,
+        .quran-surah-header-glyph,
+        .quran-meta-line {
+            font-family: inherit;
         }
 
         .quran-surah-header-line {
@@ -3618,6 +3692,14 @@
             }
         }
     </style>
+
+    @if (is_platform('ios'))
+        <style>
+            body.quran-reader-immersive-active.quran-reader-immersive-chrome-visible .app-action-buttons-stack {
+                top: 3.5rem !important;
+            }
+        </style>
+    @endif
 @endassets
 
 @php
@@ -3669,8 +3751,11 @@
     x-effect="syncReaderChromeDocumentClass()"
 >
     <div
-        class="quran-reader relative grid h-full w-full place-items-center items-center"
         dir="rtl"
+        @class([
+            'mt-[1.2rem]' => is_platform('ios'),
+            'quran-reader relative grid h-full w-full place-items-center items-center',
+        ])
         x-bind:class="{
             'quran-reader--visual-enhancements-disabled': !doesEnableVisualEnhancements,
             'quran-reader--wird-active': wirdModeActive,
@@ -3909,7 +3994,11 @@
                     </div>
                 </template>
                 <header
-                    class="quran-top-strip gap-[0.4rem] rounded-t-2xl px-[0.6rem] pb-2 pt-[0.45rem] sm:gap-[0.65rem] sm:rounded-[1.75rem] sm:px-4 sm:pb-2 sm:pt-[0.8rem]"
+                    @class([
+                        'pt-[0.45rem]' => !is_platform('ios'),
+                        'pt-[1.2rem]' => is_platform('ios'),
+                        'quran-top-strip gap-[0.4rem] rounded-t-2xl px-[0.6rem] pb-2 sm:gap-[0.65rem] sm:rounded-[1.75rem] sm:px-4 sm:pb-2 sm:pt-[0.8rem]',
+                    ])
                     data-quran-reader-chrome
                     x-bind:class="{
                         'quran-top-strip--wird-active': wirdModeActive,
@@ -4135,36 +4224,6 @@
                         x-on:click="clearAyahSelectionOnBackground($event)"
                         x-ref="pageSurface"
                     >
-                        @if ($qpcPageFontFamily !== null && $qpcPageFontUrl !== null && $qpcPageFontFormat !== null)
-                            <style>
-                                @font-face {
-                                    font-family: '{{ $qpcPageFontFamily }}';
-                                    src: url('{{ $qpcPageFontUrl }}') format('{{ $qpcPageFontFormat }}');
-                                    font-display: block;
-                                }
-                            </style>
-                        @endif
-
-                        @if ($surahHeaderFontFamily !== null && $surahHeaderFontUrl !== null && $surahHeaderFontFormat !== null)
-                            <style>
-                                @font-face {
-                                    font-family: '{{ $surahHeaderFontFamily }}';
-                                    src: url('{{ $surahHeaderFontUrl }}') format('{{ $surahHeaderFontFormat }}');
-                                    font-display: swap;
-                                }
-                            </style>
-                        @endif
-
-                        @if ($basmallahFontFamily !== null && $basmallahFontUrl !== null && $basmallahFontFormat !== null)
-                            <style>
-                                @font-face {
-                                    font-family: '{{ $basmallahFontFamily }}';
-                                    src: url('{{ $basmallahFontUrl }}') format('{{ $basmallahFontFormat }}');
-                                    font-display: swap;
-                                }
-                            </style>
-                        @endif
-
                         <div
                             class="Xoverflow-hidden mx-auto grid h-full w-fit max-w-full place-items-center items-center"
                             x-ref="pageFrame"

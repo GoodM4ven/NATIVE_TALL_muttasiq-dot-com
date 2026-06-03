@@ -4888,9 +4888,33 @@ class QuranReaderDataService
                 continue;
             }
 
+            $fontExtension = $fontFormat === 'truetype' ? 'ttf' : 'woff2';
+            $publishedAssetRelativePath = 'qpc-v2/p'.$pageNumber.'.'.$fontExtension;
+
+            $publishedAssetUrl = $this->resolvePublishedQuranVendorAssetUrl($publishedAssetRelativePath);
+            if ($publishedAssetUrl !== null) {
+                return [
+                    'family' => 'QpcPage'.$pageNumber,
+                    'url' => $publishedAssetUrl,
+                    'format' => $fontFormat,
+                ];
+            }
+
+            if ($this->ensurePublishedQuranVendorAsset($fontPath, $publishedAssetRelativePath)) {
+                $materializedAssetUrl = $this->resolvePublishedQuranVendorAssetUrl($publishedAssetRelativePath);
+
+                if ($materializedAssetUrl !== null) {
+                    return [
+                        'family' => 'QpcPage'.$pageNumber,
+                        'url' => $materializedAssetUrl,
+                        'format' => $fontFormat,
+                    ];
+                }
+            }
+
             return [
                 'family' => 'QpcPage'.$pageNumber,
-                'url' => route('qpc-v2-font', ['page' => $pageNumber]),
+                'url' => route('qpc-v2-font', ['page' => $pageNumber], false),
                 'format' => $fontFormat,
             ];
         }
@@ -4957,7 +4981,7 @@ class QuranReaderDataService
 
             return [
                 'family' => $family,
-                'url' => route('quran-surah-header-font'),
+                'url' => route('quran-surah-header-font', [], false),
                 'format' => in_array($format, ['ttf', 'truetype'], true) ? 'truetype' : 'woff2',
             ];
         }
@@ -5078,7 +5102,7 @@ class QuranReaderDataService
 
             return [
                 'family' => $family,
-                'url' => route($routeName, $routeParameters),
+                'url' => route($routeName, $routeParameters, false),
                 'format' => in_array($format, ['ttf', 'truetype'], true) ? 'truetype' : 'woff2',
                 'text' => $text !== '' ? $text : null,
             ];
@@ -5087,25 +5111,67 @@ class QuranReaderDataService
         return null;
     }
 
-    private function resolvePublishedQuranVendorAssetUrl(string $filename): ?string
+    private function resolvePublishedQuranVendorAssetUrl(string $relativePath): ?string
     {
-        $normalizedFilename = trim($filename);
+        $normalizedRelativePath = $this->normalizeQuranVendorAssetRelativePath($relativePath);
 
-        if (
-            $normalizedFilename === ''
-            || str_contains($normalizedFilename, '/')
-            || str_contains($normalizedFilename, '\\')
-        ) {
+        if ($normalizedRelativePath === null) {
             return null;
         }
 
-        $publicAssetPath = public_path('vendor/arabicable/'.$normalizedFilename);
+        $publicAssetPath = public_path('vendor/arabicable/'.$normalizedRelativePath);
 
         if (! is_file($publicAssetPath)) {
             return null;
         }
 
-        return url('/vendor/arabicable/'.$normalizedFilename);
+        return asset('vendor/arabicable/'.$normalizedRelativePath);
+    }
+
+    private function ensurePublishedQuranVendorAsset(string $sourcePath, string $relativePath): bool
+    {
+        if (! is_platform('native') || ! is_file($sourcePath)) {
+            return false;
+        }
+
+        $normalizedRelativePath = $this->normalizeQuranVendorAssetRelativePath($relativePath);
+
+        if ($normalizedRelativePath === null) {
+            return false;
+        }
+
+        $publicAssetPath = public_path('vendor/arabicable/'.$normalizedRelativePath);
+
+        if (is_file($publicAssetPath)) {
+            return true;
+        }
+
+        $publicAssetDirectory = dirname($publicAssetPath);
+
+        if (! is_dir($publicAssetDirectory) && ! @mkdir($publicAssetDirectory, 0755, true) && ! is_dir($publicAssetDirectory)) {
+            return false;
+        }
+
+        return @copy($sourcePath, $publicAssetPath);
+    }
+
+    private function normalizeQuranVendorAssetRelativePath(string $relativePath): ?string
+    {
+        $normalizedRelativePath = trim($relativePath, " \t\n\r\0\x0B/");
+
+        if ($normalizedRelativePath === '' || str_contains($normalizedRelativePath, '\\')) {
+            return null;
+        }
+
+        $segments = explode('/', $normalizedRelativePath);
+
+        foreach ($segments as $segment) {
+            if ($segment === '' || $segment === '.' || $segment === '..') {
+                return null;
+            }
+        }
+
+        return implode('/', $segments);
     }
 
     private function basmallahConfigFingerprint(): string

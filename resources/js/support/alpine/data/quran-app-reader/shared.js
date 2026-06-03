@@ -631,6 +631,25 @@ const openCacheSafely = async (cacheName) => {
     }
 };
 
+const resolveCacheRequestUrl = (url) => {
+    if (!url || typeof window === 'undefined') {
+        return null;
+    }
+
+    try {
+        const resolvedUrl = new URL(String(url), window.location.href);
+        const protocol = resolvedUrl.protocol.toLowerCase();
+
+        if (protocol !== 'http:' && protocol !== 'https:') {
+            return null;
+        }
+
+        return resolvedUrl.toString();
+    } catch (_) {
+        return null;
+    }
+};
+
 const fetchJsonWithCache = async ({
     url,
     cacheName,
@@ -639,9 +658,10 @@ const fetchJsonWithCache = async ({
     signal = null,
 }) => {
     const cache = await openCacheSafely(cacheName);
+    const cacheRequestUrl = resolveCacheRequestUrl(url);
 
-    if (cache && preferCache && !forceNetwork) {
-        const cached = await cache.match(url);
+    if (cache && cacheRequestUrl && preferCache && !forceNetwork) {
+        const cached = await cache.match(cacheRequestUrl);
 
         if (cached) {
             return await cached.json();
@@ -659,8 +679,8 @@ const fetchJsonWithCache = async ({
             throw new Error(`Unexpected response ${response.status} for ${url}`);
         }
 
-        if (cache) {
-            await cache.put(url, response.clone());
+        if (cache && cacheRequestUrl) {
+            await cache.put(cacheRequestUrl, response.clone());
         }
 
         return await response.json();
@@ -669,8 +689,8 @@ const fetchJsonWithCache = async ({
             throw error;
         }
 
-        if (cache) {
-            const stale = await cache.match(url);
+        if (cache && cacheRequestUrl) {
+            const stale = await cache.match(cacheRequestUrl);
 
             if (stale) {
                 return await stale.json();
@@ -687,12 +707,13 @@ const cacheAssetResponse = async ({ url, cacheName }) => {
     }
 
     const cache = await openCacheSafely(cacheName);
+    const cacheRequestUrl = resolveCacheRequestUrl(url);
 
-    if (!cache) {
+    if (!cache || !cacheRequestUrl) {
         return;
     }
 
-    const cached = await cache.match(url);
+    const cached = await cache.match(cacheRequestUrl);
 
     if (cached) {
         return;
@@ -708,7 +729,7 @@ const cacheAssetResponse = async ({ url, cacheName }) => {
             return;
         }
 
-        await cache.put(url, response);
+        await cache.put(cacheRequestUrl, response);
     } catch (_) {
         // Ignore cache misses in offline / flaky network states.
     }

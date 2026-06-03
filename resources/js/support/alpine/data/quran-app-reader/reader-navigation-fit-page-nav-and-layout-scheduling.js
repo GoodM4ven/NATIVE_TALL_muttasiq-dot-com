@@ -1391,6 +1391,7 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
             this.syncPageFontFace();
             this.syncBasmallahFontFace();
             this.syncSurahHeaderFontFace();
+            void this.primeTrackedPageFontFaces();
 
             if (
                 this.pageNumber !== previousPageNumber ||
@@ -1547,6 +1548,8 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                 return;
             }
 
+            await this.primeTrackedPageFontFaces();
+
             const family = String(this.qpcPageFontFamily ?? '').trim();
             const basmallahFamily = String(this.basmallahFontFamily ?? '').trim();
             const surahHeaderFamily = String(this.surahHeaderFontFamily ?? '').trim();
@@ -1644,9 +1647,87 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                         this._fontReadyRecoveryTimer = null;
                     }
                 }
+
+                this.logTrackedPageFontState(
+                    didTimeout ? 'font-state-timeout' : 'font-state-ready',
+                );
             } catch (_) {
                 // Ignore font loading failures and continue with fallback glyphs.
             }
+        },
+
+        logTrackedPageFontState(context = 'font-state') {
+            if (!this.isQrDebugLoggingEnabled) {
+                return;
+            }
+
+            const trackedFamilies = this.trackedPageFontFamilies();
+            const documentFontFaces = Array.from(document.fonts ?? []).map((fontFace) => ({
+                family: String(fontFace?.family ?? ''),
+                status: String(fontFace?.status ?? ''),
+                stretch: String(fontFace?.stretch ?? ''),
+                style: String(fontFace?.style ?? ''),
+                weight: String(fontFace?.weight ?? ''),
+            }));
+            const fontFamilyChecks = trackedFamilies.map((fontFamily) => ({
+                family: fontFamily,
+                check:
+                    typeof document.fonts?.check === 'function'
+                        ? document.fonts.check(
+                              `32px '${fontFamily}'`,
+                              fontFamily === this.qpcPageFontFamily
+                                  ? this.preferredPageProbeText()
+                                  : fontFamily === this.surahHeaderFontFamily
+                                    ? 'الفاتحة'
+                                    : fontFamily === this.basmallahFontFamily
+                                      ? this.preferredBasmallahText()
+                                      : this.preferredPageProbeText(),
+                          )
+                        : null,
+            }));
+            const summarizeComputedStyle = (element) => {
+                if (!element) {
+                    return null;
+                }
+
+                const computedStyle = getComputedStyle(element);
+
+                return {
+                    fontFamily: computedStyle.fontFamily,
+                    fontSize: computedStyle.fontSize,
+                    fontWeight: computedStyle.fontWeight,
+                    fontStyle: computedStyle.fontStyle,
+                    fontFeatureSettings: computedStyle.fontFeatureSettings,
+                    fontVariantLigatures: computedStyle.fontVariantLigatures,
+                };
+            };
+
+            console.log('[quran-reader][fonts]', context, {
+                pageNumber: this.pageNumber,
+                qpcPageFontFamily: this.qpcPageFontFamily,
+                qpcPageFontUrl: this.qpcPageFontUrl,
+                qpcPageFontFormat: this.qpcPageFontFormat,
+                basmallahFontFamily: this.basmallahFontFamily,
+                basmallahFontUrl: this.basmallahFontUrl,
+                basmallahFontFormat: this.basmallahFontFormat,
+                surahHeaderFontFamily: this.surahHeaderFontFamily,
+                surahHeaderFontUrl: this.surahHeaderFontUrl,
+                surahHeaderFontFormat: this.surahHeaderFontFormat,
+                trackedFamilies,
+                fontFamilyChecks,
+                documentFontFaces,
+                sampleStyles: {
+                    wordButton: summarizeComputedStyle(
+                        document.querySelector('[data-quran-word-button]'),
+                    ),
+                    basmallah: summarizeComputedStyle(
+                        document.querySelector('.quran-basmallah-line'),
+                    ),
+                    surahHeader: summarizeComputedStyle(
+                        document.querySelector('.quran-surah-header-line'),
+                    ),
+                },
+            });
         },
 
         normalizeFontFamilyToken(value) {
@@ -1776,6 +1857,136 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
             }
 
             styleTag.textContent = `@font-face { font-family: '${normalizedFamily}'; src: url('${normalizedUrl}') format('${normalizedFormat}'); font-display: block; }`;
+            void this.ensureDynamicFontFace({
+                styleId,
+                family: normalizedFamily,
+                url: normalizedUrl,
+                format: normalizedFormat,
+            });
+        },
+
+        trackedPageFontFaceSpecs() {
+            return [
+                {
+                    styleId: 'quran-reader-dynamic-page-font',
+                    family: this.qpcPageFontFamily,
+                    url: this.qpcPageFontUrl,
+                    format: this.qpcPageFontFormat,
+                },
+                {
+                    styleId: 'quran-reader-dynamic-basmallah-font',
+                    family: this.basmallahFontFamily,
+                    url: this.basmallahFontUrl,
+                    format: this.basmallahFontFormat,
+                },
+                {
+                    styleId: 'quran-reader-dynamic-surah-header-font',
+                    family: this.surahHeaderFontFamily,
+                    url: this.surahHeaderFontUrl,
+                    format: this.surahHeaderFontFormat,
+                },
+            ];
+        },
+
+        async primeTrackedPageFontFaces() {
+            if (typeof document === 'undefined' || !document.fonts) {
+                return;
+            }
+
+            const fontFaceTasks = this.trackedPageFontFaceSpecs().map((spec) =>
+                this.ensureDynamicFontFace(spec),
+            );
+
+            if (fontFaceTasks.length === 0) {
+                return;
+            }
+
+            await Promise.allSettled(fontFaceTasks);
+        },
+
+        async ensureDynamicFontFace({ styleId, family, url, format = 'woff2' }) {
+            const normalizedStyleId = String(styleId ?? '').trim();
+            const normalizedFamily = String(family ?? '').trim();
+            const normalizedUrl = String(url ?? '').trim();
+            const normalizedFormat = String(format ?? 'woff2').trim() || 'woff2';
+
+            if (
+                !normalizedStyleId ||
+                !normalizedFamily ||
+                !normalizedUrl ||
+                typeof document === 'undefined' ||
+                typeof FontFace !== 'function' ||
+                !document.fonts?.add ||
+                typeof fetch !== 'function'
+            ) {
+                return null;
+            }
+
+            const loadKey = [
+                normalizedStyleId,
+                normalizedFamily,
+                normalizedUrl,
+                normalizedFormat,
+            ].join('|');
+
+            const existingPromise = this._dynamicFontFaceLoadPromises.get(loadKey);
+            if (existingPromise) {
+                return existingPromise;
+            }
+
+            const loadPromise = (async () => {
+                try {
+                    const previousFontFace = this._dynamicFontFaceRecords.get(normalizedStyleId);
+
+                    if (previousFontFace instanceof FontFace) {
+                        try {
+                            document.fonts.delete(previousFontFace);
+                        } catch (_) {
+                            //
+                        }
+                    }
+
+                    const response = await fetch(normalizedUrl, {
+                        cache: 'force-cache',
+                        credentials: 'same-origin',
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Font request failed with status ${response.status}`);
+                    }
+
+                    const fontData = await response.arrayBuffer();
+                    const fontFace = new FontFace(normalizedFamily, fontData, {
+                        style: 'normal',
+                        weight: '400',
+                        stretch: 'normal',
+                    });
+
+                    await fontFace.load();
+                    document.fonts.add(fontFace);
+                    this._dynamicFontFaceRecords.set(normalizedStyleId, fontFace);
+
+                    return fontFace;
+                } catch (error) {
+                    this.qrDebugLog?.(
+                        '[QR:fonts] dynamic font load failed:',
+                        normalizedStyleId,
+                        normalizedFamily,
+                        normalizedUrl,
+                        String(error?.message ?? error ?? ''),
+                    );
+
+                    return null;
+                } finally {
+                    if (this._dynamicFontFaceLoadPromises.get(loadKey) === loadPromise) {
+                        this._dynamicFontFaceLoadPromises.delete(loadKey);
+                    }
+                }
+            })();
+
+            this._dynamicFontFaceLoadPromises.set(loadKey, loadPromise);
+
+            return loadPromise;
         },
 
         syncPageFontFace() {
