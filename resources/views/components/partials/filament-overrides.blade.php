@@ -52,7 +52,7 @@
         --fi-surface-muted-bg-dark: {{ $fiSurfaceMutedBackgroundDark }};
     }
 
-    .mobile-platform .fi-modal-window {
-        margin-top: {{ is_platform('ios') ? '3rem' : '0' }};
+    .nativephp-ios.mobile-platform .fi-modal-window {
+        margin-top: 0 !important;
     }
 </style>

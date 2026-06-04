@@ -370,6 +370,28 @@
         z-index: 2147481003 !important;
     }
 
+    .nativephp-ios.mobile-platform .fi-modal > .fi-modal-window-ctn {
+        overflow-y: auto !important;
+        align-items: flex-start !important;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+        padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
+        padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+    }
+
+    .nativephp-ios.mobile-platform
+        .fi-modal:not(.fi-modal-slide-over):not(.fi-width-screen)
+        > .fi-modal-window-ctn
+        > .fi-modal-window {
+        margin-top: 0 !important;
+        margin-bottom: auto !important;
+    }
+
+    .nativephp-ios.mobile-platform .fi-modal .fi-modal-content {
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+
     .quran-search-shell {
         display: flex;
         flex-direction: column;

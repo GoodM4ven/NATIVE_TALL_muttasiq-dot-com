@@ -302,24 +302,44 @@
                 right: 0;
                 left: 0;
                 z-index: 55;
+                visibility: hidden;
                 pointer-events: none;
                 opacity: 0 !important;
+                isolation: isolate;
+                contain: paint;
+                -webkit-backface-visibility: hidden;
+                backface-visibility: hidden;
+                will-change: opacity, transform;
                 transition:
                     opacity 240ms ease,
-                    transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
+                    transform 240ms cubic-bezier(0.16, 1, 0.3, 1),
+                    visibility 0ms linear 240ms;
             }
 
             .quran-reader-panel--immersive.quran-reader-panel--chrome-visible .quran-top-strip,
             .quran-reader-panel--immersive.quran-reader-panel--chrome-visible .quran-bottom-strip {
+                visibility: visible;
                 pointer-events: auto;
                 opacity: 1 !important;
                 transform: translate3d(0, 0, 0);
+                transition:
+                    opacity 240ms ease,
+                    transform 240ms cubic-bezier(0.16, 1, 0.3, 1),
+                    visibility 0ms linear 0ms;
             }
 
             .quran-reader-panel--immersive.quran-reader-panel--font-overlay-open .quran-top-strip,
             .quran-reader-panel--immersive.quran-reader-panel--font-overlay-open .quran-bottom-strip {
+                visibility: hidden;
                 pointer-events: none;
                 opacity: 0 !important;
+            }
+
+            .quran-reader-panel--immersive .quran-top-strip>*,
+            .quran-reader-panel--immersive .quran-bottom-strip>* {
+                pointer-events: auto;
+                transform: translateZ(0);
+                -webkit-transform: translateZ(0);
             }
 
             .quran-reader-panel--immersive .quran-top-strip {
@@ -374,7 +394,6 @@
                     opacity 190ms ease,
                     transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
             }
-
 
             body.quran-reader-immersive-active.quran-reader-immersive-chrome-visible .app-action-buttons-stack {
                 pointer-events: auto;
@@ -3811,10 +3830,13 @@
                         isReaderChromeVisible,
                 }"
                 x-on:click="handleReaderChromeToggleTap($event)"
+                x-on:contextmenu.prevent
+                x-on:dragstart.prevent
                 x-on:pointerdown.passive="onSwipeStart($event)"
                 x-on:pointermove.window.passive="onSwipeMove($event)"
                 x-on:pointerup.window.passive="onSwipeEnd($event)"
                 x-on:pointercancel.window.passive="onSwipeCancel()"
+                x-on:selectstart.prevent
                 x-on:touchstart.passive="onSwipeStart($event)"
                 x-on:touchmove.window.passive="onSwipeMove($event)"
                 x-on:touchend.window.passive="onSwipeEnd($event)"
@@ -3994,12 +4016,12 @@
                     </div>
                 </template>
                 <header
-                    @class([
-                        'pt-[0.45rem]' => !is_platform('ios'),
-                        'pt-[1.2rem]' => is_platform('ios'),
-                        'quran-top-strip gap-[0.4rem] rounded-t-2xl px-[0.6rem] pb-2 sm:gap-[0.65rem] sm:rounded-[1.75rem] sm:px-4 sm:pb-2 sm:pt-[0.8rem]',
-                    ])
                     data-quran-reader-chrome
+                    @class([
+                        'pt-[0.45rem]!' => !is_platform('ios'),
+                        'pt-[2.2rem]!' => is_platform('ios'),
+                        'quran-top-strip gap-[0.4rem] rounded-t-2xl px-[0.6rem] pb-2 sm:gap-[0.65rem] sm:rounded-[1.75rem] sm:px-4 sm:pb-2 sm:pt-[0.8rem]!',
+                    ])
                     x-bind:class="{
                         'quran-top-strip--wird-active': wirdModeActive,
                         'quran-top-strip--initial-loading': isCalibrating || _startupCalibrationPending || !
@@ -4158,12 +4180,8 @@
                                     x-text="wirdProgressPercentLabel()"
                                 ></span>
                                 <span
-                                    class="text-primary-700 4xl:text-xs translate-y-1.5 text-[0.56rem] font-bold opacity-0 transition-all duration-500 sm:text-[0.7rem] md:text-[0.8rem] lg:text-[0.72rem] xl:text-[0.74rem]"
+                                    class="text-primary-700 4xl:text-xs -translate-y-0.25 text-[0.56rem] font-bold transition-all duration-500 sm:text-[0.7rem] md:text-[0.8rem] lg:text-[0.72rem] xl:text-[0.74rem]"
                                     x-bind:class="{
-                                        'opacity-100! -translate-y-0.25!': (
-                                            (wirdModeActive) &&
-                                            !isSupportLockActive()
-                                        ),
                                         'font-normal!': wirdModeActive,
                                         'text-[0.5rem]!': $store.bp.is('base') && !wirdModeActive,
                                     }"

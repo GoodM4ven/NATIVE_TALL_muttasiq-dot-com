@@ -22,6 +22,12 @@
             height: 100dvh !important;
             transform: none !important;
             isolation: isolate;
+            overflow-y: auto !important;
+            align-items: flex-start !important;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+            padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
+            padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
         }
 
         .quran-control-panel-modal-overlay,
