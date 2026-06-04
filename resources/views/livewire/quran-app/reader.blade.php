@@ -3908,7 +3908,6 @@
                     ></p>
                 </div>
                 <div
-                    class="quran-search-destination-frame-wrap sm:hidden"
                     @class([
                         'top-[5rem]' => is_platform('ios'),
                         'top-[3rem]' => !is_platform('ios'),
