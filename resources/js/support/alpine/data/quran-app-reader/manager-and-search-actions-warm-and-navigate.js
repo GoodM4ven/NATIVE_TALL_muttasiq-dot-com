@@ -745,7 +745,7 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                     await this.navigateFromManagerModalRecord({
                         targetPage,
                         ayahIndex: highlightAyahIndex,
-                        source: 'page-jump',
+                        source: 'search-result',
                         modalId: this.resolveSearchModalCloseTargetId(),
                         ensureVisibleAfterModalClose: true,
                     });
@@ -774,7 +774,12 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                         ayahText: this.searchResultAyahText(result),
                     });
                 } else {
-                    this.deactivateSearchDestinationCue();
+                    this.activateSearchDestinationCue({
+                        source: 'search-result',
+                        surahNumber,
+                        pageNumber: targetPage,
+                        ayahText: this.searchResultAyahText(result),
+                    });
                 }
                 this.recordNavigationHistory({
                     source: 'search-result',
