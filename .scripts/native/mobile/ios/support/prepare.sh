@@ -91,12 +91,12 @@ if [[ "$(uname -s)" != "Darwin" ]]; then
     exit 1
 fi
 
+native_ensure_icu_preference
+
 install_args=()
 
-if [[ "$(native_read_icu_preference)" == "1" ]]; then
-    install_args+=(--with-icu)
-    echo "[native-prepare:ios] ICU-enabled PHP binaries are required by NativePHP lock/config"
-fi
+install_args+=(--with-icu)
+echo "[native-prepare:ios] ICU-enabled PHP binaries are required by NativePHP lock/config"
 
 install_args_display="${install_args[*]-}"
 echo "[native-prepare:ios] forcing native:install ios ${install_args_display} --force --no-interaction"

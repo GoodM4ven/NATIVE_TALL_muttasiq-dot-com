@@ -260,7 +260,7 @@ test('native patches plugin supports ios content view patching', function () {
     expect($iosTraitContents)->toContain('patchIosBackHandler');
     expect($iosTraitContents)->toContain('NativePHPBackEdgeGesture');
     expect($iosTraitContents)->toContain('WKWebsiteDataStore.default()');
-    expect($iosTraitContents)->toContain('ScreenAwakeBridgeHandler');
+    expect($iosTraitContents)->toContain('window.webkit.messageHandlers.screenAwake.postMessage');
     expect($iosTraitContents)->toContain('window.AndroidBridge.setScreenAwake = function(enabled)');
     expect($iosTraitContents)->toContain('UIApplication.shared.isIdleTimerDisabled = enabled');
     expect($iosNativePhpAppTraitContents)->toContain('setenv("DB_CONNECTION", "sqlite", 1)');
@@ -363,11 +363,11 @@ test('native install scripts respect nativephp ICU configuration for mobile buil
     expect($sharedPrepareScript)->not()->toContain('app:build-native-quran-database --no-interaction');
     expect($sharedPrepareScript)->toContain('public/build/manifest.json');
     expect($sharedPrepareScript)->toContain('nativephp directory missing');
-    expect($sharedPrepareScript)->toContain('native_read_icu_preference');
+    expect($sharedPrepareScript)->toContain('native_ensure_icu_preference');
     expect($sharedPrepareScript)->toContain('install_args+=(--with-icu)');
     expect($sharedPrepareScript)->toContain('ICU-enabled PHP binaries are required by NativePHP lock/config');
     expect($sharedPrepareScript)->toContain('install signature changed');
-    expect($iosPrepareScript)->toContain('native_read_icu_preference');
+    expect($iosPrepareScript)->toContain('native_ensure_icu_preference');
     expect($iosPrepareScript)->toContain('install_args+=(--with-icu)');
     expect($iosPrepareScript)->toContain('ICU-enabled PHP binaries are required by NativePHP lock/config');
 });

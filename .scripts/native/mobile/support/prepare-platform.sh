@@ -28,31 +28,40 @@ native_read_mobile_version() {
     native_read_locked_package_version "nativephp/mobile"
 }
 
-native_read_icu_preference() {
+native_ensure_icu_preference() {
     php -r '
-$lockPath = $argv[1] ?? null;
-$legacyJsonPath = $argv[2] ?? null;
+array_shift($argv);
 
-if ($lockPath && file_exists($lockPath)) {
-    $lock = json_decode(file_get_contents($lockPath), true);
-
-    if (is_array($lock) && array_key_exists("php", $lock) && is_array($lock["php"]) && array_key_exists("icu", $lock["php"])) {
-        echo ! empty($lock["php"]["icu"]) ? "1" : "0";
-        exit(0);
+foreach ($argv as $path) {
+    if ($path === "" || ! is_file($path)) {
+        continue;
     }
-}
 
-if ($legacyJsonPath && file_exists($legacyJsonPath)) {
-    $json = json_decode(file_get_contents($legacyJsonPath), true);
+    $contents = file_get_contents($path);
 
-    if (is_array($json)) {
-        echo ! empty($json["php"]["icu"]) ? "1" : "0";
-        exit(0);
+    if (! is_string($contents) || $contents === "") {
+        continue;
     }
-}
 
-echo "0";
-' "${native_root_dir}/nativephp.lock" "${native_root_dir}/nativephp.json"
+    $json = json_decode($contents, true);
+
+    if (! is_array($json)) {
+        continue;
+    }
+
+    $json["php"] = is_array($json["php"] ?? null) ? $json["php"] : [];
+
+    if (($json["php"]["icu"] ?? null) === true) {
+        continue;
+    }
+
+    $json["php"]["icu"] = true;
+    file_put_contents($path, json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL);
+    fwrite(STDOUT, "[native-prepare] enforced ICU in {$path}\n");
+}
+' \
+        "${native_root_dir}/nativephp.lock" \
+        "${native_root_dir}/nativephp.json"
 }
 
 native_hash_paths_signature() {
@@ -230,8 +239,8 @@ native_prepare_platform_install() {
     current_version="$(native_read_mobile_version || true)"
     local plugin_version=""
     plugin_version="$(native_read_locked_package_version "goodm4ven/nativephp-muttasiq-patches" || true)"
-    local desired_icu="0"
-    desired_icu="$(native_read_icu_preference)"
+    local desired_icu="1"
+    native_ensure_icu_preference
     native_prepare_bundle_inputs
     local bundle_signature=""
     bundle_signature="$(native_read_bundle_signature)"
