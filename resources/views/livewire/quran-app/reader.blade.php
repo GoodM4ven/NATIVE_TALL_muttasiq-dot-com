@@ -1576,7 +1576,6 @@
         .quran-search-destination-frame-wrap {
             position: absolute;
             inset-inline: 0;
-            top: 3rem;
             bottom: 4rem;
             display: flex;
             justify-content: center;
@@ -3865,7 +3864,11 @@
                 >
                 </div>
                 <div
-                    class="z-54 pointer-events-none absolute inset-x-0 top-2 flex justify-center px-3 sm:hidden"
+                    @class([
+                        'top-[2.5rem]' => is_platform('ios'),
+                        'top-2' => !is_platform('ios'),
+                        'z-54 pointer-events-none absolute inset-x-0 top-2 flex justify-center px-3 sm:hidden'
+                    ])
                     x-cloak
                     x-show="shouldShowImmersiveMobileEdgeCaptions()"
                     x-transition:enter="transition-opacity ease-out duration-280 delay-500"
@@ -3883,7 +3886,11 @@
                     ></p>
                 </div>
                 <div
-                    class="z-54 pointer-events-none absolute inset-x-0 top-[1.92rem] flex justify-center px-3 sm:hidden"
+                    @class([
+                        'top-[3.75rem]' => is_platform('ios'),
+                        'top-[1.92rem]' => !is_platform('ios'),
+                        'z-54 pointer-events-none absolute inset-x-0 flex justify-center px-3 sm:hidden'
+                    ])
                     x-cloak
                     x-show="typeof shouldShowSearchDestinationCueCaption === 'function' && shouldShowSearchDestinationCueCaption()"
                     x-transition:enter="transition-opacity ease-out duration-360 delay-150"
@@ -3901,6 +3908,11 @@
                     ></p>
                 </div>
                 <div
+                    @class([
+                        'top-[5rem]' => is_platform('ios'),
+                        'top-[3rem]' => !is_platform('ios'),
+                        'quran-search-destination-frame-wrap sm:hidden',
+                    ])
                     class="quran-search-destination-frame-wrap sm:hidden"
                     x-cloak
                     x-show="typeof shouldShowSearchDestinationCueFrame === 'function' && shouldShowSearchDestinationCueFrame()"
