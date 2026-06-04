@@ -63,7 +63,7 @@ class ControlPanel extends Component implements HasActions, HasSchemas
                     ]),
             ])
             ->action(function (array $data): void {
-                $savedControlPanel = $this->filterControlPanel(Setting::normalizeSettings($data));
+                $savedControlPanel = $this->filterControlPanel($data);
                 $isMaintenancePulse = $this->isMountedControlPanelMaintenancePulse();
 
                 $this->clientControlPanel = $savedControlPanel;
@@ -242,9 +242,12 @@ class ControlPanel extends Component implements HasActions, HasSchemas
      */
     private function filterControlPanel(array $controlPanel): array
     {
-        return Setting::normalizeSettings(
-            array_intersect_key($controlPanel, self::controlPanelDefaults()),
+        $defaults = self::controlPanelDefaults();
+        $normalized = Setting::normalizeSettings(
+            array_replace($defaults, array_intersect_key($controlPanel, $defaults)),
         );
+
+        return array_intersect_key($normalized, $defaults);
     }
 
     private function runSaveLikeControlPanelPulse(): void

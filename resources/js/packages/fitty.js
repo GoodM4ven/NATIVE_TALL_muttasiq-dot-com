@@ -194,10 +194,12 @@ const resolveMainTextSizeSettings = () => {
     const maximumLimits = mainTextSizeLimits[maximumMainTextSizeKey];
     const breakpointReduction = resolveMainTextSizeBreakpointReduction();
     const stored = readStoredSettings();
-    const source =
-        latestSettingsOverride && typeof latestSettingsOverride === 'object'
+    const source = {
+        ...stored,
+        ...(latestSettingsOverride && typeof latestSettingsOverride === 'object'
             ? latestSettingsOverride
-            : stored;
+            : {}),
+    };
     const minimum = normalizeMainTextSize(
         source?.[minimumMainTextSizeKey] ?? defaults?.[minimumMainTextSizeKey],
         minimumLimits.default,

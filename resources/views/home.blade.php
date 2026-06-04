@@ -15,6 +15,7 @@
             isNativeRuntime: @js(is_platform('native')),
             activeView: $persist('main-menu').as('app-active-view'),
             actionStatePulseToken: 0,
+            controlPanelGateReturnTimerId: null,
             quranBootstrap: {
                 isVisible: false,
                 isPreparing: false,
@@ -423,6 +424,62 @@
                     openControlPanelOnce();
                 }, this.isNativeRuntime ? 620 : 420);
             },
+            clearControlPanelGateReturnTimer() {
+                if (this.controlPanelGateReturnTimerId === null) {
+                    return;
+                }
+
+                window.clearTimeout(this.controlPanelGateReturnTimerId);
+                this.controlPanelGateReturnTimerId = null;
+            },
+            handleControlPanelSaveGateReturn(detail = {}) {
+                if (Boolean(detail?.maintenancePulse)) {
+                    return;
+                }
+
+                const currentView = String(this.activeView ?? '').trim();
+                let targetView = null;
+
+                if (currentView === 'athkar-app-sabah' || currentView === 'athkar-app-masaa') {
+                    targetView = 'athkar-app-gate';
+                } else if (
+                    currentView === 'quran-app-tilawa' ||
+                    currentView === 'quran-app-hifth' ||
+                    currentView === 'quran-app-tadabbur'
+                ) {
+                    targetView = 'quran-app-gate';
+                }
+
+                if (targetView === null) {
+                    return;
+                }
+
+                this.clearControlPanelGateReturnTimer();
+
+                const runGateReturn = (attempt = 0) => {
+                    if (this.isControlPanelOpen && attempt < 10) {
+                        this.controlPanelGateReturnTimerId = window.setTimeout(() => {
+                            runGateReturn(attempt + 1);
+                        }, 40);
+
+                        return;
+                    }
+
+                    this.controlPanelGateReturnTimerId = null;
+
+                    if (targetView === 'athkar-app-gate') {
+                        this.$viewNav('athkar-app-gate', { force: true });
+
+                        return;
+                    }
+
+                    window.dispatchEvent(new CustomEvent('quran-reader-go-gate'));
+                };
+
+                this.controlPanelGateReturnTimerId = window.setTimeout(() => {
+                    runGateReturn(0);
+                }, 60);
+            },
             pulseActionState(options = {}) {
                 if (this.isControlPanelOpen || this.isAthkarManagerOpen) {
                     return;
@@ -525,6 +582,7 @@
         }"
         x-on:switch-view.window="applyViewState($event.detail?.to)"
         x-on:request-open-control-panel-modal.window="requestControlPanelOpenFromAnywhere($event.detail ?? {})"
+        x-on:control-panel-updated.window="handleControlPanelSaveGateReturn($event.detail ?? {})"
         x-on:athkar-action-state-pulse.window="pulseActionState($event.detail ?? {})"
         x-on:quran-bootstrap-started.window="handleQuranBootstrapStarted()"
         x-on:quran-bootstrap-progress.window="handleQuranBootstrapProgress($event.detail ?? {})"
