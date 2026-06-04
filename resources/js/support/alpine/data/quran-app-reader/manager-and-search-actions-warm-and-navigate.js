@@ -745,7 +745,7 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                     await this.navigateFromManagerModalRecord({
                         targetPage,
                         ayahIndex: highlightAyahIndex,
-                        source: 'surah-directory',
+                        source: 'page-jump',
                         modalId: this.resolveSearchModalCloseTargetId(),
                         ensureVisibleAfterModalClose: true,
                     });
@@ -759,16 +759,23 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                     this.searchHighlightedAyahIndex = 0;
                 }
                 this.activeWordIndex = 0;
-                this.activateSearchDestinationCue({
-                    source: shouldUseStandardSmPlusNavigation
-                        ? standardSmPlusSource
-                        : isSurahNameResult
-                          ? 'surah-directory'
-                          : 'surah-directory',
-                    surahNumber,
-                    pageNumber: targetPage,
-                    ayahText: this.searchResultAyahText(result),
-                });
+                if (shouldUseStandardSmPlusNavigation) {
+                    this.activateSearchDestinationCue({
+                        source: standardSmPlusSource,
+                        surahNumber,
+                        pageNumber: targetPage,
+                        ayahText: this.searchResultAyahText(result),
+                    });
+                } else if (isSurahNameResult) {
+                    this.activateSearchDestinationCue({
+                        source: 'surah-directory',
+                        surahNumber,
+                        pageNumber: targetPage,
+                        ayahText: this.searchResultAyahText(result),
+                    });
+                } else {
+                    this.deactivateSearchDestinationCue();
+                }
                 this.recordNavigationHistory({
                     source: 'search-result',
                     pageNumber: targetPage,
