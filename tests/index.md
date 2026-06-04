@@ -21,3 +21,107 @@ Generated on 2026-05-31 after full non-browser and browser test runs.
 - shows tap aura on mobile for single-count auto-advance athkar
 - executes hidden completion buttons on desktop for single thikr and all athkar
 - publishes android bundles from the bundled credentials
+- honors auto-advance and overcount settings on tap
+
+# Removed Tests
+
+Generated on 2026-06-04 after verbose backend and browser runs.
+
+## Frontend Browser: Risky Zero-Assertion Tests
+
+- treats up and down swipes as forward navigation
+- prevents swiping past incomplete athkar and allows quick navigation when disabled
+- returns to gate then opens athkar manager from the reader top mode button
+- opens athkar manager as a modal on tablet layouts while using the dedicated drag handle
+- limits card dragging to dedicated handles on base breakpoint touch layouts
+- does not open a card modal when releasing the dedicated drag handle
+- opens a card modal after a still long press release
+- does not open a card modal after a long press that moves
+- preserves athkar manager scroll after opening and closing a card modal
+- restores the notice on reload and allows continuing to the reader when notice panels are enabled
+- locks completed modes on the gate unless setting 3 is disabled
+- enables touch-only scrolling for overflowing athkar text
+- applies scrollability per active layer between text and origin
+- keeps multiline wrapping and scroll detection when min and max text sizes differ
+- disables shimmer animation when visual enhancements are turned off
+- disables the nav flow animation when visual enhancements are turned off
+- keeps text scrollable after toggling origin on and back off
+- shows completion flow return-to-gate behavior and resets progress when the day changes
+- restores the saved last page across quran modes and refresh
+
+## Backend App: Source-Contract And Static Checks
+
+- it will not use debugging functions
+- it uses strict typing everywhere
+- it will not point to dependency development versions
+- ships a public privacy policy file for store listings
+- registers application rate limiters only through the dedicated provider
+- native performance overrides stay scoped to base breakpoint css blocks
+- filament modal actions opt into muttasiq modal color override classes
+- colorful background layers are conditionally shown instead of opacity-only toggled
+- quran wird mushaf page indicator keeps responsive tailwind chip sizing classes
+- quran reader keeps fit reserve variables across sm md lg and avoids sm+ strip dark shades
+- athkar gate spill visuals remain available on sm+ while containment stays base-only
+- control panel keeps base-only setting visibility and compact base spacing for general settings
+- control panel syncs quran wird setting ordinal with runtime visibility rules
+- quran reader requests sm+ web refit after bookmarks modal closes
+- control panel open preserves active view except quran reader which returns to gate first
+- keeps native touch interaction contracts for quran gate and main menu insights
+- keeps athkar gate touch flow as tap-to-arm then tap-to-enter
+- handles athkar native volume next actions through tap-completion flow
+- uses touch capability for quran double tap copy mode beyond base breakpoint
+- keeps the screen awake only while quran or athkar reader views are active
+- publishes android bundles using the upload certificate alias and current version code
+- keeps manager button styling and mobile counter expansion layout contracts in the reader view
+- persists and reuses athkar notice bypass flags after first acknowledged display
+- uses the shared athkar-agnostic shimmer helper from the reader script
+- guards progress stats getters when reader data is inspected without method bindings
+- manual js error reporting mode exposes breakpoint and hides technical snapshot field
+- about tab report errors action dispatches manual js error report modal event
+- manual js error report trigger avoids automatic reload on close
+- renders teleported css jelly triangle loader indicator for quran calibration overlay
+- keeps native packaging defaults compatible with bundled web assets and native runtime fallbacks
+- keeps changelog images accessible and constrained to the public docs images directory across runtimes
+- wires home route/dashboard to web home metrics middleware and widget
+- passes native mobile runtime flag to the manager card interaction bridge
+- keeps athkar manager search plan bounded to avoid heavy runtime spikes
+- configures athkar edit modal submit and delete buttons with explicit icons
+- renders explicit sortable config and dedicated drag handle markup for manager cards
+- quran reader search uses a reader-owned filament modal and custom chunked search partial
+- quran reader triggers the search modal through the reader action flow
+- quran search prefers streamed pipeline on web while keeping a native-safe stage worker fallback
+- wires quran reader entry points from main menu to hash navigation and view mount
+- registers qpc page font route contract used by quran reader pages
+- keeps quran manager table defaults for pagination filters and replace confirmation
+- guards mobile js error reporting against known benign runtime noise
+- suppresses immersive mobile edge captions while quran manager modals are open
+- reacts to quran search query changes through an alpine watcher
+- keeps quran search progressive stages and reader modal contracts aligned
+- shows native quran bootstrap progress through home and reader events
+- keeps native quran bootstrap modal in restart-required mode after successful download flow
+- quran search stages run in surah exact close sarf then ayah exact close sarf and jathr order
+
+## Unit Tests Removed
+
+- it imports quran snapshot tables without dropping attached source tables
+- composer local plugin switch script is syntactically valid
+- native patches plugin is registered for android builds
+- native patches hook command is registered with artisan
+- native run script relies on plugin patches
+- native ios scripts rely on plugin patches
+- native watch scripts include local quran broadcast via shared support runner with endpoint overrides
+- native patches plugin supports ios content view patching
+- app service provider leaves livewire routes untouched
+- native patches package stays pinned in app dependencies
+- composer local plugin switch script toggles the muttasiq patches package by default
+- android log script writes into storage logs
+- native install scripts respect nativephp ICU configuration for mobile builds
+- android bundle pruning targets dormant quran exegesis and generated quran snapshots
+- native back action climbs the view tree instead of browser history
+- athkar setting defaults are available for the home payload
+- it exposes main text size limits for frontend consumers
+- it resolves translated setting definitions without recursive arabic text lookup
+- it keeps explicit numeral samples fixed in western numeral setting label
+- it normalizes settings payload values by their definitions
+- it caps wird khatamat target to fixed daily and monthly maxima
+- volume buttons navigation setting key is shared by quran and athkar readers

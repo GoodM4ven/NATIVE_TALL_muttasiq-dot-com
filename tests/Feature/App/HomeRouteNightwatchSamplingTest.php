@@ -27,23 +27,6 @@ afterEach(function () {
     CarbonImmutable::setTestNow();
 });
 
-it('wires home route/dashboard to web home metrics middleware and widget', function () {
-    $homeRoute = app('router')->getRoutes()->getByName('home');
-
-    expect($homeRoute)->not->toBeNull()
-        ->and($homeRoute?->gatherMiddleware())->toContain(TrackWebHomeMetrics::class)
-        ->and($homeRoute?->gatherMiddleware())->not->toContain('App\Http\Middleware\SampleWebHomeRouteForNightwatch');
-    $dashboard = app(Dashboard::class);
-    $providerSource = file_get_contents(app_path('Providers/FilamentServiceProvider.php'));
-
-    expect($dashboard->getWidgets())
-        ->toContain(WebHomeActivityChart::class)
-        ->toContain(WebAthkarGateActivityChart::class)
-        ->toContain(WebQuranGateActivityChart::class)
-        ->and($providerSource)->not->toBeFalse()
-        ->and($providerSource)->toContain('Dashboard::class');
-});
-
 it('tracks hits and unique visitors for web requests when metrics are enabled', function () {
     config([
         'app.custom.security.web_home_metrics.enabled' => true,

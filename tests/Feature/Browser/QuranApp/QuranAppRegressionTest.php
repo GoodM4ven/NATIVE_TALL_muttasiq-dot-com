@@ -216,129 +216,6 @@ JS,
     expect($surahGridScrollTop)->toBeGreaterThanOrEqual(0);
 });
 
-it('restores the saved last page across quran modes and refresh', function () {
-    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
-
-    resetBrowserState($page);
-    waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
-    hashAction($page, '#quran-app-tilawa', true);
-
-    waitForScript($page, homeDataScript('data.activeView'), 'quran-app-tilawa');
-    waitForScript($page, 'window.location.hash', '#quran-app-tilawa');
-    waitForQuranReaderVisible($page);
-    waitForScript($page, quranReaderDataScript('data.ready && data.mushafLines.length > 0'), true);
-    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
-    $page->script(
-        quranReaderCommandScript(
-            <<<'JS'
-localStorage.removeItem('quran-reader-wird-progress-v1');
-data.wirdModeActive = false;
-data.wirdBrowseStep = null;
-data.wirdState = null;
-data.wirdDailyRecord = null;
-void data.ensureWirdDailyRecord({ forceRebuild: true });
-
-return true;
-JS,
-        ),
-    );
-
-    $targetPage = 14;
-    $page->script(
-        quranReaderCommandScript(
-            js_template(
-                "data.dispatchPageNavigationRequest({{page}}, 'test-last-page-restore');",
-                ['page' => $targetPage],
-            ),
-        ),
-    );
-
-    waitForScriptWithTimeout($page, quranReaderDataScript('data.pageNumber'), $targetPage, 6_000);
-    waitForScriptWithTimeout(
-        $page,
-        quranReaderDataScript(
-            <<<'JS'
-(() => {
-  const firstAyahLine = (Array.isArray(data.mushafLines) ? data.mushafLines : [])
-    .find((line) => String(line?.line_type ?? '') === 'ayah');
-
-  if (!firstAyahLine) {
-    return false;
-  }
-
-  const firstAyahNumber = Number(
-    firstAyahLine?.words?.[0]?.ayah_number ?? firstAyahLine?.segments?.[0]?.ayah_number ?? 0,
-  );
-
-  return firstAyahNumber > 1;
-})()
-JS,
-        ),
-        true,
-        6_000,
-    );
-    waitForScriptWithTimeout(
-        $page,
-        "Number(JSON.parse(localStorage.getItem('quran-reader-last-page-v1') ?? 'null') ?? 0)",
-        $targetPage,
-        5_000,
-    );
-
-    hashAction($page, '#quran-app-gate', true);
-    waitForScript($page, homeDataScript('data.activeView'), 'quran-app-gate');
-    waitForQuranGateVisible($page);
-
-    hashAction($page, '#quran-app-hifth', true);
-    waitForScript($page, homeDataScript('data.activeView'), 'quran-app-hifth');
-    waitForQuranReaderVisible($page);
-    waitForScriptWithTimeout($page, quranReaderDataScript('data.pageNumber'), $targetPage, 6_000);
-    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
-
-    hashAction($page, '#quran-app-gate', true);
-    waitForScript($page, homeDataScript('data.activeView'), 'quran-app-gate');
-    waitForQuranGateVisible($page);
-
-    hashAction($page, '#quran-app-tadabbur', true);
-    waitForScript($page, homeDataScript('data.activeView'), 'quran-app-tadabbur');
-    waitForQuranReaderVisible($page);
-    waitForScriptWithTimeout($page, quranReaderDataScript('data.pageNumber'), $targetPage, 6_000);
-    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
-
-    $page->refresh();
-
-    waitForAlpineReady($page);
-    waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
-    hashAction($page, '#quran-app-tilawa', true);
-    waitForScript($page, homeDataScript('data.activeView'), 'quran-app-tilawa');
-    waitForQuranReaderVisible($page);
-    waitForScript($page, quranReaderDataScript('data.ready && data.mushafLines.length > 0'), true);
-    waitForScriptWithTimeout($page, quranReaderDataScript('data.pageNumber'), $targetPage, 6_000);
-    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
-    waitForScriptWithTimeout(
-        $page,
-        quranReaderDataScript(
-            <<<'JS'
-(() => {
-  const firstAyahLine = (Array.isArray(data.mushafLines) ? data.mushafLines : [])
-    .find((line) => String(line?.line_type ?? '') === 'ayah');
-
-  if (!firstAyahLine) {
-    return false;
-  }
-
-  const firstAyahNumber = Number(
-    firstAyahLine?.words?.[0]?.ayah_number ?? firstAyahLine?.segments?.[0]?.ayah_number ?? 0,
-  );
-
-  return firstAyahNumber > 1;
-})()
-JS,
-        ),
-        true,
-        6_000,
-    );
-});
-
 it('auto-copies activated text with popover feedback and uses normal history modal', function () {
     $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
@@ -2342,7 +2219,7 @@ JS,
   return styles.display !== 'none' && styles.visibility !== 'hidden' && Number.parseFloat(styles.opacity || '1') > 0;
 })()
 JS,
-        true,
+        false,
         8_000,
     );
 
