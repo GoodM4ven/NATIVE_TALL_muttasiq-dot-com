@@ -2020,18 +2020,22 @@
 
         .quran-calibration-jelly-dot-top {
             animation: quran-calibration-jelly-grow var(--uib-speed) ease infinite;
+            animation-direction: reverse;
         }
 
         .quran-calibration-jelly-dot-right {
             animation: quran-calibration-jelly-grow var(--uib-speed) ease calc(var(--uib-speed) * -0.666) infinite;
+            animation-direction: reverse;
         }
 
         .quran-calibration-jelly-dot-left {
             animation: quran-calibration-jelly-grow var(--uib-speed) ease calc(var(--uib-speed) * -0.333) infinite;
+            animation-direction: reverse;
         }
 
         .quran-calibration-jelly-traveler {
             animation: quran-calibration-jelly-triangulate var(--uib-speed) ease infinite;
+            animation-direction: reverse;
         }
 
         @keyframes quran-calibration-jelly-triangulate {
@@ -3777,7 +3781,7 @@
         ])
         x-bind:class="{
             'quran-reader--visual-enhancements-disabled': !doesEnableVisualEnhancements,
-            'quran-reader--wird-active': wirdModeActive,
+            'quran-reader--wird-active': Boolean($data.wirdModeActive),
             'within-quran-app': (
                 views['quran-app-tilawa'].isOpen ||
                 views['quran-app-tadabbur'].isOpen ||
@@ -4023,7 +4027,7 @@
                         'quran-top-strip gap-[0.4rem] rounded-t-2xl px-[0.6rem] pb-2 sm:gap-[0.65rem] sm:rounded-[1.75rem] sm:px-4 sm:pb-2 sm:pt-[0.8rem]!',
                     ])
                     x-bind:class="{
-                        'quran-top-strip--wird-active': wirdModeActive,
+                        'quran-top-strip--wird-active': Boolean($data.wirdModeActive),
                         'quran-top-strip--initial-loading': isCalibrating || _startupCalibrationPending || !
                             hasCompletedInitialMushafPreparation,
                         'quran-top-strip--visible': !isCalibrating && !_startupCalibrationPending &&
@@ -4040,15 +4044,15 @@
                             class="quran-soorah-trigger 3xl:w-[12.4rem] 4xl:w-[13.4rem] 4xl:px-[2.35rem] 4xl:py-[0.42rem] 4xl:text-[0.95rem] 4xl:min-h-[2.2rem] w-29 md:w-47 3xl:min-h-[2.15rem] 3xl:px-[2.28rem] 2xl:w-35 3xl:text-[0.93rem] lg:w-31 xl:w-27 min-h-[2.08rem] shrink-0 px-[1.7rem] py-[0.34rem] text-[0.7rem] outline-none sm:min-h-8 sm:w-44 sm:px-[1.95rem] sm:py-[0.36rem] sm:text-[0.84rem] md:min-h-9 md:px-[2.1rem] md:py-[0.38rem] md:text-[0.95rem] lg:min-h-[1.7rem] lg:px-[2.2rem] lg:py-[0.4rem] lg:text-[0.7rem] xl:min-h-[1.8rem] xl:px-[1.9rem] xl:text-[0.56rem] 2xl:min-h-[1.85rem] 2xl:px-[1.95rem] 2xl:text-[0.7rem]"
                             type="button"
                             dir="rtl"
-                            x-show="($store.bp.is('base') && !wirdModeActive) || $store.bp.is('sm+')"
+                            x-show="($store.bp.is('base') && !Boolean($data.wirdModeActive)) || $store.bp.is('sm+')"
                             x-transition:enter="transition ease-out duration-200"
                             x-transition:enter-start="opacity-0 scale-x-0 translate-x-6"
                             x-transition:enter-end="opacity-100 scale-x-100 translate-x-0"
                             x-transition:leave="transition ease-in duration-200"
                             x-transition:leave-start="opacity-100 scale-x-100 translate-x-0"
                             x-transition:leave-end="opacity-0 scale-x-0 translate-x-6"
-                            x-bind:disabled="wirdModeActive"
-                            x-bind:class="{ 'quran-soorah-trigger--disabled': wirdModeActive }"
+                            x-bind:disabled="Boolean($data.wirdModeActive)"
+                            x-bind:class="{ 'quran-soorah-trigger--disabled': Boolean($data.wirdModeActive) }"
                             x-on:pointerdown="onSurahTriggerPointerDown($event)"
                             x-on:pointerup="onSurahTriggerPointerUp($event)"
                             x-on:pointercancel="onSurahTriggerPointerCancel()"
@@ -4074,8 +4078,9 @@
                         <div
                             class="quran-soorah-quick-nav inset-s-[48%] md:inset-s-[47%] lg:inset-s-[48%] 2xl:inset-s-[48%] 3xl:inset-s-[50%]"
                             x-cloak
-                            x-bind:class="{ 'quran-soorah-quick-nav--visible': surahQuickNavigator.visible && !wirdModeActive }"
-                            x-bind:inert="surahQuickNavigator.visible && !wirdModeActive ? null : ''"
+                            x-bind:class="{ 'quran-soorah-quick-nav--visible': surahQuickNavigator.visible && !Boolean($data
+                                    .wirdModeActive) }"
+                            x-bind:inert="surahQuickNavigator.visible && !Boolean($data.wirdModeActive) ? null : ''"
                         >
                             <button
                                 class="quran-soorah-quick-nav-button quran-soorah-quick-nav-button--top inline-[2.1rem] md:inline-[2.3rem] lg:inline-[2.1rem] block-[1.72rem] md:block-[1.82rem] lg:block-[1.72rem] 3xl:inline-[2.1rem] 3xl:block-[1.72rem] 2xl:inline-8 2xl:block-[1.55rem] xl:block-[1.6rem] 3xl:inset-be-[calc(100%+1.4rem)] 3xl:inset-bs-[calc(100%+1.55rem)] 3xl:transform-[translateX(15%)] 4xl:inset-be-[calc(100%+1.5rem)] 4xl:transform-[translateX(70%)] inset-bs-[calc(100%+1.35rem)] transform-[translateX(65%)] sm:inset-be-[calc(100%+1.4rem)] sm:transform-[translateX(10%)] md:inset-be-[calc(100%+1.65rem)] md:inset-bs-[calc(100%+1.65rem)] md:transform-[translateX(-100%)] lg:inset-be-[calc(100%+1.4rem)] lg:inset-bs-[calc(100%+1.35rem)] lg:transform-[translateX(30%)] xl:inset-be-[calc(100%+1.3rem)] xl:inset-bs-[calc(100%+1.25rem)] xl:transform-[translateX(60%)] 2xl:inset-be-[calc(100%+1.3rem)] 2xl:inset-bs-[calc(100%+1.35rem)] 2xl:transform-[translateX(70%)]"
@@ -4111,7 +4116,7 @@
                     </div>
                     <div
                         class="quran-top-actions gap-[0.2rem] sm:gap-[0.52rem]"
-                        x-bind:class="{ 'quran-top-actions--wird-active': wirdModeActive }"
+                        x-bind:class="{ 'quran-top-actions--wird-active': Boolean($data.wirdModeActive) }"
                     >
                         <!-- Credits: https://uiverse.io/vinodjangid07/tricky-bullfrog-41 -->
                         <button
@@ -4138,10 +4143,12 @@
                             x-bind:class="{
                                 'quran-wird-progress-button--completed': ensureWirdDailyRecord()?.completed,
                                 'quran-wird-progress-button--shimmer-running': wirdHoverShimmerRunning,
-                                'quran-wird-progress-button--active-aura': wirdModeActive && !isSupportLockActive(),
+                                'quran-wird-progress-button--active-aura': Boolean($data.wirdModeActive) && !
+                                    isSupportLockActive(),
                             }"
-                            x-bind:aria-pressed="wirdModeActive ? 'true' : 'false'"
-                            x-bind:aria-label="wirdModeActive ? @js(arabic_text('إيقاف وضع الوِرد والعودة للقراءة الحرة')) : @js(arabic_text('تشغيل وضع الوِرد اليومي'))"
+                            x-bind:aria-pressed="Boolean($data.wirdModeActive) ? 'true' : 'false'"
+                            x-bind:aria-label="Boolean($data.wirdModeActive) ? @js(arabic_text('إيقاف وضع الوِرد والعودة للقراءة الحرة')) :
+                                @js(arabic_text('تشغيل وضع الوِرد اليومي'))"
                             x-on:click="toggleWirdMode()"
                             x-on:mouseenter="startWirdHoverEffects()"
                             x-on:mouseleave="endWirdHoverEffects()"
@@ -4160,7 +4167,7 @@
                             <span
                                 class="quran-wird-progress-aura-rainbow"
                                 aria-hidden="true"
-                                x-show="doesEnableVisualEnhancements && wirdModeActive && !isSupportLockActive()"
+                                x-show="doesEnableVisualEnhancements && Boolean($data.wirdModeActive) && !isSupportLockActive()"
                             ></span>
                             <span
                                 class="quran-wird-progress-hover-shimmer"
@@ -4182,14 +4189,14 @@
                                 <span
                                     class="text-primary-700 4xl:text-xs -translate-y-0.25 text-[0.56rem] font-bold transition-all duration-500 sm:text-[0.7rem] md:text-[0.8rem] lg:text-[0.72rem] xl:text-[0.74rem]"
                                     x-bind:class="{
-                                        'font-normal!': wirdModeActive,
-                                        'text-[0.5rem]!': $store.bp.is('base') && !wirdModeActive,
+                                        'font-normal!': Boolean($data.wirdModeActive),
+                                        'text-[0.5rem]!': $store.bp.is('base') && !Boolean($data.wirdModeActive),
                                     }"
                                 >{{ arabic_text('الورد اليومي') }}</span>
                                 <span
                                     class="quran-wird-progress-count 4xl:text-[0.78rem] 3xl:text-[0.75rem] text-[0.62rem] sm:text-[0.7rem] md:text-[0.85rem] lg:text-[0.75rem] xl:text-[0.71rem] 2xl:text-[0.7rem]"
                                     x-transition
-                                    x-show="($store.bp.is('base') && wirdModeActive) || $store.bp.is('sm+')"
+                                    x-show="($store.bp.is('base') && Boolean($data.wirdModeActive)) || $store.bp.is('sm+')"
                                     x-text="wirdProgressCounterLabel()"
                                 ></span>
                             </span>
@@ -4208,7 +4215,7 @@
                             x-on:pointerup="onBookmarkButtonPointerUp($event)"
                             x-on:pointercancel="onBookmarkButtonPointerCancel()"
                             x-on:pointerleave="onBookmarkButtonPointerCancel()"
-                            x-on:click.prevent="if (!wirdModeActive) { onBookmarkButtonClick() }"
+                            x-on:click.prevent="if (!Boolean($data.wirdModeActive)) { onBookmarkButtonClick() }"
                         >
                             <span
                                 class="quran-bookmark-toggle-fill"
@@ -4440,10 +4447,11 @@
                             <button
                                 class="quran-page-slider-chip 3xl:min-w-[5.8rem] 4xl:min-w-[5.8rem] 4xl:px-[0.56rem] 4xl:py-[0.28rem] 4xl:text-[0.84rem] 3xl:px-[0.52rem] 3xl:py-[0.26rem] 3xl:text-[0.82rem] sm:min-w-21 min-w-20 select-none rounded-full px-[0.46rem] py-[0.22rem] text-[0.73rem] outline-none sm:px-2 sm:pb-[0.24rem] sm:pt-[0.16rem] sm:text-[0.85rem] md:min-w-[5.2rem] md:px-3 md:py-[0.3rem] md:text-[1rem] lg:min-w-[5.4rem] lg:px-[0.52rem] lg:py-[0.26rem] lg:text-[0.77rem] xl:min-w-20 xl:rounded-lg xl:text-[0.68rem] 2xl:min-w-[4.4rem] 2xl:rounded-full 2xl:px-[0.52rem] 2xl:py-[0.26rem] 2xl:text-[0.7rem]"
                                 type="button"
-                                x-bind:aria-label="wirdModeActive ? @js(arabic_text('وضع الوِرد اليومي مفعل')) : @js(arabic_text('إدخال رقم صفحة'))"
+                                x-bind:aria-label="Boolean($data.wirdModeActive) ? @js(arabic_text('وضع الوِرد اليومي مفعل')) :
+                                    @js(arabic_text('إدخال رقم صفحة'))"
                                 x-bind:style="`--quran-counter-digit-count: ${pageCounterDigitLength()};`"
-                                x-bind:disabled="wirdModeActive"
-                                x-bind:class="{ 'quran-page-slider-chip--disabled': wirdModeActive }"
+                                x-bind:disabled="Boolean($data.wirdModeActive)"
+                                x-bind:class="{ 'quran-page-slider-chip--disabled': Boolean($data.wirdModeActive) }"
                                 x-on:click="void openJumpPageModal()"
                             >
                                 <span class="quran-page-chip-total me-1.5">
@@ -4542,20 +4550,29 @@
                         type="button"
                         aria-label="{{ arabic_text('الصفحة التالية') }}"
                         x-ref="nextChevronButton"
-                        x-bind:disabled="!wirdModeActive && isLastNavigationPage()"
+                        x-bind:disabled="!Boolean($data.wirdModeActive) && isLastNavigationPage()"
                         x-on:click.stop.prevent="goNextFromChevron()"
                     >
                         <span
                             class="quran-swipe-hint-chev-opposite quran-swipe-hint-chev 4xl:text-[2rem] text-[1.66rem] sm:text-[2rem] md:text-[2.5rem] lg:text-[1.84rem] xl:text-[1.8rem] 2xl:text-[1.92rem]"
-                            x-bind:class="{ 'quran-swipe-hint-chev-static': !wirdModeActive && isLastNavigationPage() }"
+                            x-bind:class="{
+                                'quran-swipe-hint-chev-static': !Boolean($data.wirdModeActive) &&
+                                    isLastNavigationPage()
+                            }"
                         >›</span>
                         <span
                             class="quran-swipe-hint-chev-opposite quran-swipe-hint-chev 4xl:text-[2rem] text-[1.66rem] sm:text-[2rem] md:text-[2.5rem] lg:text-[1.84rem] xl:text-[1.8rem] 2xl:text-[1.92rem]"
-                            x-bind:class="{ 'quran-swipe-hint-chev-static': !wirdModeActive && isLastNavigationPage() }"
+                            x-bind:class="{
+                                'quran-swipe-hint-chev-static': !Boolean($data.wirdModeActive) &&
+                                    isLastNavigationPage()
+                            }"
                         >›</span>
                         <span
                             class="quran-swipe-hint-chev-opposite quran-swipe-hint-chev 4xl:text-[2rem] text-[1.66rem] sm:text-[2rem] md:text-[2.5rem] lg:text-[1.84rem] xl:text-[1.8rem] 2xl:text-[1.92rem]"
-                            x-bind:class="{ 'quran-swipe-hint-chev-static': !wirdModeActive && isLastNavigationPage() }"
+                            x-bind:class="{
+                                'quran-swipe-hint-chev-static': !Boolean($data.wirdModeActive) &&
+                                    isLastNavigationPage()
+                            }"
                         >›</span>
                     </button>
                 </footer>

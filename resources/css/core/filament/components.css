@@ -1123,6 +1123,11 @@
         border-color: color-mix(in srgb, var(--warning-500) 72%, transparent);
     }
 
+    .animate-spin,
+    .fi-loading-indicator {
+        animation-direction: reverse;
+    }
+
     .quran-manager-table-shell {
         border: 1px solid color-mix(in srgb, var(--quran-chip-border) 30%, transparent);
         border-radius: 0.92rem;
@@ -1155,6 +1160,32 @@
     #quran-reader-history-modal .quran-manager-table-shell .fi-ta-actions,
     #quran-reader-bookmarks-modal .quran-manager-table-shell .fi-ta-actions {
         gap: 0.2rem;
+    }
+
+    #quran-reader-history-modal .quran-manager-table-shell .fi-ta-ctn,
+    #quran-reader-history-modal .quran-manager-table-shell .fi-ta-main,
+    #quran-reader-history-modal .quran-manager-table-shell .fi-ta-content-ctn,
+    #quran-reader-history-modal .quran-manager-table-shell .fi-ta-content,
+    #quran-reader-history-modal .quran-manager-table-shell .fi-ta-record,
+    #quran-reader-history-modal .quran-manager-table-shell .fi-ta-record-content-ctn,
+    #quran-reader-history-modal .quran-manager-table-shell .fi-ta-cell,
+    #quran-reader-history-modal .quran-manager-table-shell .fi-ta-actions,
+    #quran-reader-history-modal .quran-manager-table-shell .fi-dropdown,
+    #quran-reader-bookmarks-modal .quran-manager-table-shell .fi-ta-ctn,
+    #quran-reader-bookmarks-modal .quran-manager-table-shell .fi-ta-main,
+    #quran-reader-bookmarks-modal .quran-manager-table-shell .fi-ta-content-ctn,
+    #quran-reader-bookmarks-modal .quran-manager-table-shell .fi-ta-content,
+    #quran-reader-bookmarks-modal .quran-manager-table-shell .fi-ta-record,
+    #quran-reader-bookmarks-modal .quran-manager-table-shell .fi-ta-record-content-ctn,
+    #quran-reader-bookmarks-modal .quran-manager-table-shell .fi-ta-cell,
+    #quran-reader-bookmarks-modal .quran-manager-table-shell .fi-ta-actions,
+    #quran-reader-bookmarks-modal .quran-manager-table-shell .fi-dropdown {
+        overflow: visible !important;
+    }
+
+    #quran-reader-history-modal .quran-manager-table-shell .fi-dropdown-panel,
+    #quran-reader-bookmarks-modal .quran-manager-table-shell .fi-dropdown-panel {
+        z-index: 2147481500 !important;
     }
 
     #quran-reader-history-modal .quran-manager-table-shell .fi-ta-text,

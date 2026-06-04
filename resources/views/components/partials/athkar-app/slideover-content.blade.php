@@ -429,7 +429,7 @@
                             class="athkar-manager-card__drag-handle"
                             data-athkar-sort-handle
                             title="اسحب لإعادة الترتيب"
-                            x-bind:class="{ 'opacity-45 pointer-events-none': hasActiveSearch }"
+                            @class(['opacity-45 pointer-events-none' => $hasActiveSearch])
                             wire:click.stop
                             x-on:click.stop
                         >

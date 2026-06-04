@@ -576,6 +576,7 @@
                     <div class="relative mx-auto h-10 w-10">
                         <div
                             class="border-3 border-primary-200 border-t-primary-600 duration-220 absolute inset-0 rounded-full transition-[opacity,transform]"
+                            style="animation-direction: reverse;"
                             x-bind:class="quranBootstrap.requiresRestart ? 'opacity-0 scale-[0.92]' :
                                 'opacity-100 scale-100 animate-spin'"
                         ></div>

@@ -830,15 +830,6 @@ export const createTextInteractionModule = (deps) => {
                 target: event?.target instanceof Element ? event.target : null,
             };
 
-            if (
-                typeof document !== 'undefined' &&
-                document.body instanceof HTMLElement &&
-                document.body.classList.contains('nativephp-ios') &&
-                event?.type?.startsWith?.('touch')
-            ) {
-                event.preventDefault?.();
-            }
-
             this._copyHoldTimer = window.setTimeout(async () => {
                 if (!this.copyHold.active || this.copyHold.triggered) {
                     return;
