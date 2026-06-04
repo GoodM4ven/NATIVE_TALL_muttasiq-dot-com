@@ -609,7 +609,7 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
         },
 
         shouldCloseSearchModalBeforeManagerModalOpen() {
-            return this.search.modalOpen || this.isSearchModalWindowVisible();
+            return this.isSearchModalWindowVisible();
         },
 
         shouldUseSmPlusWebFastModalRecovery() {

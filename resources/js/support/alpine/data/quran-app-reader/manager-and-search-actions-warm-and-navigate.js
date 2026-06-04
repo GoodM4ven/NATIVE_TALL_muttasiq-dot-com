@@ -745,7 +745,7 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                     await this.navigateFromManagerModalRecord({
                         targetPage,
                         ayahIndex: highlightAyahIndex,
-                        source: 'search-result',
+                        source: 'surah-directory',
                         modalId: this.resolveSearchModalCloseTargetId(),
                         ensureVisibleAfterModalClose: true,
                     });
@@ -764,7 +764,7 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                         ? standardSmPlusSource
                         : isSurahNameResult
                           ? 'surah-directory'
-                          : 'search-result',
+                          : 'surah-directory',
                     surahNumber,
                     pageNumber: targetPage,
                     ayahText: this.searchResultAyahText(result),

@@ -1002,8 +1002,7 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
                 Math.trunc(Number(this.searchDestinationScaleBoostPageNumber ?? 0)),
             );
             const boostSource = String(this.searchDestinationScaleBoostSource ?? '').trim();
-            const isSearchDestinationSource =
-                boostSource === 'search-result' || boostSource === 'surah-directory';
+            const isSearchDestinationSource = boostSource === 'surah-directory';
             const boostExpiresAt = Math.max(
                 0,
                 Math.trunc(Number(this.searchDestinationScaleBoostExpiresAt ?? 0)),
@@ -1040,8 +1039,7 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
                 Math.trunc(Number(this.searchDestinationScaleBoostPageNumber ?? 0)),
             );
             const boostSource = String(this.searchDestinationScaleBoostSource ?? '').trim();
-            const isSearchDestinationSource =
-                boostSource === 'search-result' || boostSource === 'surah-directory';
+            const isSearchDestinationSource = boostSource === 'surah-directory';
             const boostExpiresAt = Math.max(
                 0,
                 Math.trunc(Number(this.searchDestinationScaleBoostExpiresAt ?? 0)),
