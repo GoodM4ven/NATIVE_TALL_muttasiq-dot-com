@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "93f6e26fff459c19d735a26d4d2bf766",
+    "content-hash": "daea67edcb551cf0f6fded807f07c7bd",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -2002,11 +2002,17 @@
         },
         {
             "name": "goodm4ven/nativephp-muttasiq-patches",
-            "version": "1.6.999999",
+            "version": "v1.6.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/GoodM4ven/NATIVE_PLUGIN_muttasiq-patches.git",
+                "reference": "4ffe5aec39d2418c02ee2fee9b79038834835b50"
+            },
             "dist": {
-                "type": "path",
-                "url": "/Users/admin/Code/LaravelPackages/NATIVE_PLUGIN_muttasiq-patches",
-                "reference": "fed87c1f9e736506dba0062ef1a577a8302b8da9"
+                "type": "zip",
+                "url": "https://api.github.com/repos/GoodM4ven/NATIVE_PLUGIN_muttasiq-patches/zipball/4ffe5aec39d2418c02ee2fee9b79038834835b50",
+                "reference": "4ffe5aec39d2418c02ee2fee9b79038834835b50",
+                "shasum": ""
             },
             "require": {
                 "nativephp/mobile": "^3.2",
@@ -2028,6 +2034,7 @@
                     "Goodm4ven\\NativePatches\\": "src/"
                 }
             },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "AGPL-3.0-only"
             ],
@@ -2051,14 +2058,25 @@
                 "nativephp-plugin"
             ],
             "support": {
+                "email": "goodm4ven@proton.me",
                 "issues": "https://github.com/GoodM4ven/nativephp-muttasiq-patches/issues",
-                "source": "https://github.com/GoodM4ven/nativephp-muttasiq-patches",
-                "email": "goodm4ven@proton.me"
+                "source": "https://github.com/GoodM4ven/nativephp-muttasiq-patches"
             },
-            "transport-options": {
-                "symlink": true,
-                "relative": false
-            }
+            "funding": [
+                {
+                    "url": "https://www.buymeacoffee.com/GoodM4ven",
+                    "type": "buy_me_a_coffee"
+                },
+                {
+                    "url": "https://github.com/GoodM4ven",
+                    "type": "github"
+                },
+                {
+                    "url": "https://www.patreon.com/GoodM4ven",
+                    "type": "patreon"
+                }
+            ],
+            "time": "2026-06-04T03:08:14+00:00"
         },
         {
             "name": "goodm4ven/tailwind-merge",
