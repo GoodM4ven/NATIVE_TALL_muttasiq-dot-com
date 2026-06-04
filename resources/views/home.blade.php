@@ -26,7 +26,9 @@
                 progressPercent: 0,
                 displayProgressPercent: 0,
                 statusMessage: null,
+                stage: 'preparing',
                 closeTimeoutId: null,
+                restartRevealTimeoutId: null,
                 progressAnimationFrameId: null,
             },
             viewTree: {
@@ -119,6 +121,14 @@
                 window.clearTimeout(this.quranBootstrap.closeTimeoutId);
                 this.quranBootstrap.closeTimeoutId = null;
             },
+            clearQuranBootstrapRestartRevealTimeout() {
+                if (this.quranBootstrap.restartRevealTimeoutId === null) {
+                    return;
+                }
+
+                window.clearTimeout(this.quranBootstrap.restartRevealTimeoutId);
+                this.quranBootstrap.restartRevealTimeoutId = null;
+            },
             stopQuranBootstrapProgressAnimation() {
                 if (this.quranBootstrap.progressAnimationFrameId === null) {
                     return;
@@ -126,6 +136,20 @@
         
                 window.cancelAnimationFrame(this.quranBootstrap.progressAnimationFrameId);
                 this.quranBootstrap.progressAnimationFrameId = null;
+            },
+            setQuranBootstrapStage(stage = 'preparing') {
+                this.quranBootstrap.stage = String(stage ?? 'preparing').trim() || 'preparing';
+            },
+            isQuranBootstrapStage(stage) {
+                return this.quranBootstrap.stage === stage;
+            },
+            quranBootstrapStageClasses(stage) {
+                return this.isQuranBootstrapStage(stage) ?
+                    'opacity-100 translate-y-0 scale-100 blur-0' :
+                    'pointer-events-none opacity-0 translate-y-2 scale-[0.985] blur-[2px]';
+            },
+            quranBootstrapStageStyle(stage) {
+                return this.isQuranBootstrapStage(stage) ? 'transition-delay: 70ms;' : 'transition-delay: 0ms;';
             },
             animateQuranBootstrapProgress() {
                 const targetPercent = this.normalizeQuranBootstrapProgressPercent(
@@ -179,6 +203,7 @@
             },
             handleQuranBootstrapStarted() {
                 this.clearQuranBootstrapCloseTimeout();
+                this.clearQuranBootstrapRestartRevealTimeout();
                 this.stopQuranBootstrapProgressAnimation();
                 this.quranBootstrap.isVisible = true;
                 this.quranBootstrap.isPreparing = true;
@@ -192,6 +217,7 @@
                 this.quranBootstrap.statusMessage = String(
                     @js(arabic_text('يجري تنزيل بيانات القرآن لأول مرة...')),
                 );
+                this.setQuranBootstrapStage('preparing');
             },
             handleQuranBootstrapProgress(detail = {}) {
                 if (!this.quranBootstrap.isVisible || this.quranBootstrap.errorMessage !== null) {
@@ -208,26 +234,34 @@
             },
             handleQuranBootstrapFinished(detail = {}) {
                 this.clearQuranBootstrapCloseTimeout();
+                this.clearQuranBootstrapRestartRevealTimeout();
                 this.setQuranBootstrapProgress(100, { allowDecrease: true });
                 this.quranBootstrap.isPreparing = false;
                 this.quranBootstrap.isFinishing = false;
                 this.quranBootstrap.errorMessage = null;
                 const shouldOpenGate = detail?.openGateOnSuccess !== false;
+                this.setQuranBootstrapStage('success');
         
                 if (this.quranBootstrap.didStartDownloadFlow) {
                     this.stopQuranBootstrapProgressAnimation();
                     this.quranBootstrap.displayProgressPercent = 100;
-                    this.quranBootstrap.requiresRestart = true;
+                    this.quranBootstrap.requiresRestart = false;
                     this.quranBootstrap.isRestarting = false;
                     this.quranBootstrap.statusMessage = String(
                         @js(arabic_text('اكتمل تنزيل بيانات القرآن بنجاح. يلزم إعادة تشغيل المنصة الآن.')),
                     );
+
+                    this.quranBootstrap.restartRevealTimeoutId = window.setTimeout(() => {
+                        this.quranBootstrap.requiresRestart = true;
+                        this.quranBootstrap.restartRevealTimeoutId = null;
+                        this.setQuranBootstrapStage('restart');
+                    }, 360);
         
                     return;
                 }
         
                 this.quranBootstrap.isFinishing = true;
-                const holdAtHundredMs = 100;
+                const holdAtHundredMs = 280;
                 const closeAnimationDurationMs = 220;
         
                 this.quranBootstrap.closeTimeoutId = window.setTimeout(() => {
@@ -281,9 +315,11 @@
                 this.quranBootstrap.errorMessage = String(
                     @js(arabic_text('تعذر إرسال أمر إعادة التشغيل. أعد بناء المنصة ثم حاول مرة أخرى.')),
                 );
+                this.quranBootstrap.requiresRestart = false;
                 this.quranBootstrap.statusMessage = String(
                     @js(arabic_text('يلزم إعادة تشغيل المنصة يدويًا.')),
                 );
+                this.setQuranBootstrapStage('error');
                 window.dispatchEvent(
                     new CustomEvent('quran-bootstrap-restart-unavailable', {
                         detail: {
@@ -294,6 +330,7 @@
             },
             handleQuranBootstrapFailed(detail = {}) {
                 this.clearQuranBootstrapCloseTimeout();
+                this.clearQuranBootstrapRestartRevealTimeout();
                 this.stopQuranBootstrapProgressAnimation();
                 this.quranBootstrap.isVisible = true;
                 this.quranBootstrap.isPreparing = false;
@@ -302,9 +339,11 @@
                 this.quranBootstrap.isRestarting = false;
                 this.quranBootstrap.errorMessage =
                     String(detail?.message ?? @js(arabic_text('تعذر تجهيز بيانات القرآن الآن. حاول مرة أخرى بعد قليل.')));
+                this.setQuranBootstrapStage('error');
             },
             dismissQuranBootstrapState() {
                 this.clearQuranBootstrapCloseTimeout();
+                this.clearQuranBootstrapRestartRevealTimeout();
                 this.stopQuranBootstrapProgressAnimation();
                 this.quranBootstrap.isVisible = false;
                 this.quranBootstrap.isPreparing = false;
@@ -316,6 +355,7 @@
                 this.quranBootstrap.progressPercent = 0;
                 this.quranBootstrap.displayProgressPercent = 0;
                 this.quranBootstrap.statusMessage = null;
+                this.setQuranBootstrapStage('preparing');
             },
             runHashAction(callback) {
                 if (window.__hashActionBypassLock) {
@@ -570,129 +610,211 @@
                 x-transition:leave-end="opacity-0 scale-[0.97]"
             >
                 <div
-                    class="min-h-53 max-w-73 relative mx-auto flex w-full flex-col items-center justify-center gap-4"
-                    x-show="!quranBootstrap.errorMessage"
+                    class="relative mx-auto w-full max-w-73"
                 >
-                    <div class="relative mx-auto h-10 w-10">
-                        <div
-                            class="border-3 border-primary-200 border-t-primary-600 duration-220 absolute inset-0 rounded-full transition-[opacity,transform]"
-                            style="animation-direction: reverse;"
-                            x-bind:class="quranBootstrap.requiresRestart ? 'opacity-0 scale-[0.92]' :
-                                'opacity-100 scale-100 animate-spin'"
-                        ></div>
-                        <div
-                            class="dark:bg-emerald-500/18 duration-220 absolute inset-0 grid place-items-center rounded-full border border-emerald-300/70 bg-emerald-100/80 text-emerald-700 transition-[opacity,transform] dark:border-emerald-400/60 dark:text-emerald-300"
-                            x-bind:class="quranBootstrap.requiresRestart ? 'opacity-100 scale-100' : 'opacity-0 scale-[0.92]'"
-                        >
-                            <svg
-                                class="h-6 w-6"
-                                aria-hidden="true"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="2.2"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                            >
-                                <path d="M20 6L9 17l-5-5"></path>
-                            </svg>
+                    <div
+                        aria-hidden="true"
+                        class="pointer-events-none invisible"
+                    >
+                        <div class="grid min-h-53 w-full grid-rows-[auto_auto_minmax(5.6rem,1fr)_auto] items-center gap-4">
+                            <div class="mx-auto h-10 w-10 rounded-full"></div>
+                            <div class="min-h-[1.85rem] w-full text-base/8 sm:text-lg/9">
+                                {{ arabic_text('تعذر تجهيز بيانات القرآن') }}
+                            </div>
+                            <div class="w-full text-sm/8 sm:text-base/9">
+                                {{ arabic_text('اكتمل تنزيل بيانات القرآن بنجاح. يلزم إعادة تشغيل المنصة الآن. تعذر إرسال أمر إعادة التشغيل. أعد بناء المنصة ثم حاول مرة أخرى.') }}
+                            </div>
+                            <div class="flex flex-wrap items-center justify-center gap-3">
+                                <span class="rounded-xl px-4 py-2 text-sm font-semibold">
+                                    {{ arabic_text('إعادة المحاولة') }}
+                                </span>
+                                <span class="rounded-xl px-4 py-2 text-sm font-semibold">
+                                    {{ arabic_text('إغلاق') }}
+                                </span>
+                            </div>
                         </div>
                     </div>
-                    <h2
-                        class="relative mx-auto min-h-[1.85rem] w-full text-base/8 font-semibold sm:text-lg/9"
-                        x-bind:class="quranBootstrap.requiresRestart ?
-                            'text-emerald-700 dark:text-emerald-300' :
-                            'text-primary-950 dark:text-primary-50'"
-                    >
-                        <span
-                            class="duration-220 absolute inset-0 transition-opacity"
-                            x-bind:class="quranBootstrap.requiresRestart ? 'opacity-0' : 'opacity-100'"
-                        >{{ arabic_text('تحميل بيانات المصحف') }}</span>
-                        <span
-                            class="duration-220 absolute inset-0 transition-opacity"
-                            x-bind:class="quranBootstrap.requiresRestart ? 'opacity-100' : 'opacity-0'"
-                        >{{ arabic_text('تم بحمد الله') }}</span>
-                    </h2>
-                    <p
-                        class="text-primary-900/78 dark:text-primary-100/82 relative min-h-[4.9rem] w-full text-sm/8 sm:text-base/9">
-                        <span
-                            class="duration-220 block w-full transition-opacity"
-                            x-show="!quranBootstrap.requiresRestart"
-                            x-transition.opacity.duration.180ms
-                        >
-                            {{ arabic_text('يتم تجهيز المصحف بشكل أنيق ومحرك اللغة العربية لبحث متقدم...') }}
-                        </span>
-                        <span
-                            class="duration-220 block w-full transition-opacity"
-                            x-show="quranBootstrap.requiresRestart"
-                            x-transition.opacity.duration.180ms
-                        >
-                            {{ arabic_text('يرجى إعادة تشغيل المنصة ليتمّ اعتماد البيانات.') }}
-                        </span>
-                    </p>
-                    <div class="relative min-h-[3.1rem] w-full">
+
+                    <div class="absolute inset-0">
                         <div
-                            class="duration-220 absolute inset-0 space-y-2 transition-opacity"
-                            x-bind:class="quranBootstrap.requiresRestart ? 'opacity-0 pointer-events-none' : 'opacity-100'"
+                            class="absolute inset-0 grid min-h-53 w-full grid-rows-[auto_auto_minmax(5.6rem,1fr)_auto] items-center gap-4 transition-[opacity,transform,filter] duration-260 ease-[cubic-bezier(0.22,1,0.36,1)]"
+                            x-bind:aria-hidden="!isQuranBootstrapStage('preparing')"
+                            x-bind:inert="!isQuranBootstrapStage('preparing')"
+                            x-bind:class="quranBootstrapStageClasses('preparing')"
+                            x-bind:style="quranBootstrapStageStyle('preparing')"
                         >
-                            <div class="h-2.5 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-700/60">
+                            <div class="relative mx-auto h-10 w-10">
                                 <div
-                                    class="from-primary-500 to-primary-700 bg-linear-to-r h-full rounded-full transition-[width] duration-150"
-                                    x-bind:style="`width: ${Math.max(0, Math.min(100, Number(quranBootstrap.displayProgressPercent ?? 0)))}%`"
+                                    class="border-3 border-primary-200 border-t-primary-600 absolute inset-0 rounded-full animate-spin"
+                                    style="animation-direction: reverse;"
                                 ></div>
                             </div>
-                            <p class="text-primary-900/70 dark:text-primary-100/70 text-xs font-semibold">
-                                <span
-                                    x-text="`${Math.max(0, Math.min(100, Math.round(Number(quranBootstrap.displayProgressPercent ?? 0))))}%`"
-                                ></span>
-                            </p>
+                            <h2 class="text-primary-950 dark:text-primary-50 min-h-[1.85rem] w-full text-base/8 font-semibold sm:text-lg/9">
+                                {{ arabic_text('تحميل بيانات المصحف') }}
+                            </h2>
+                            <div class="text-primary-900/78 dark:text-primary-100/82 flex w-full flex-col justify-center gap-2 text-sm/8 sm:text-base/9">
+                                <p>{{ arabic_text('يتم تجهيز المصحف بشكل أنيق ومحرك اللغة العربية لبحث متقدم...') }}</p>
+                                <p
+                                    class="text-primary-800/70 dark:text-primary-100/65 text-xs/6 font-medium sm:text-sm/7"
+                                    x-show="Boolean(quranBootstrap.statusMessage)"
+                                    x-transition.opacity.duration.220ms
+                                    x-text="quranBootstrap.statusMessage"
+                                ></p>
+                            </div>
+                            <div class="space-y-2">
+                                <div class="h-2.5 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-700/60">
+                                    <div
+                                        class="from-primary-500 to-primary-700 bg-linear-to-r h-full rounded-full transition-[width] duration-150"
+                                        x-bind:style="`width: ${Math.max(0, Math.min(100, Number(quranBootstrap.displayProgressPercent ?? 0)))}%`"
+                                    ></div>
+                                </div>
+                                <p class="text-primary-900/70 dark:text-primary-100/70 text-xs font-semibold">
+                                    <span
+                                        x-text="`${Math.max(0, Math.min(100, Math.round(Number(quranBootstrap.displayProgressPercent ?? 0))))}%`"
+                                    ></span>
+                                </p>
+                            </div>
                         </div>
-                        <div
-                            class="duration-220 absolute inset-0 flex items-center justify-center transition-opacity"
-                            x-show="quranBootstrap.requiresRestart"
-                            x-bind:class="quranBootstrap.requiresRestart ? 'opacity-100' : 'opacity-0 pointer-events-none'"
-                        >
-                            <button
-                                class="bg-primary-600 hover:bg-primary-700 disabled:bg-primary-300 rounded-xl px-4 py-2 text-sm font-semibold text-white transition disabled:cursor-not-allowed"
-                                type="button"
-                                x-bind:disabled="quranBootstrap.isRestarting"
-                                x-on:click="restartNativeAppAfterQuranBootstrap('success-button')"
-                            >
-                                <span
-                                    x-show="!quranBootstrap.isRestarting">{{ arabic_text('إعادة تشغيل المنصة الآن') }}</span>
-                                <span
-                                    x-show="quranBootstrap.isRestarting">{{ arabic_text('جاري إعادة التشغيل...') }}</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
 
-                <div
-                    class="space-y-4"
-                    x-show="Boolean(quranBootstrap.errorMessage)"
-                >
-                    <h2 class="text-danger-700 dark:text-danger-300 text-base font-semibold">
-                        {{ arabic_text('تعذر تجهيز بيانات القرآن') }}</h2>
-                    <p
-                        class="text-sm leading-7 text-slate-700 dark:text-slate-200"
-                        x-text="quranBootstrap.errorMessage"
-                    ></p>
-                    <div class="flex items-center justify-center gap-3">
-                        <button
-                            class="bg-primary-600 hover:bg-primary-700 rounded-xl px-4 py-2 text-sm font-semibold text-white transition"
-                            type="button"
-                            x-on:click="dismissQuranBootstrapState(); openQuranEntry();"
+                        <div
+                            class="absolute inset-0 grid min-h-53 w-full grid-rows-[auto_auto_minmax(5.6rem,1fr)_auto] items-center gap-4 transition-[opacity,transform,filter] duration-260 ease-[cubic-bezier(0.22,1,0.36,1)]"
+                            x-bind:aria-hidden="!isQuranBootstrapStage('success')"
+                            x-bind:inert="!isQuranBootstrapStage('success')"
+                            x-bind:class="quranBootstrapStageClasses('success')"
+                            x-bind:style="quranBootstrapStageStyle('success')"
                         >
-                            {{ arabic_text('إعادة المحاولة') }}
-                        </button>
-                        <button
-                            class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-                            type="button"
-                            x-show="!quranBootstrap.didStartDownloadFlow"
-                            x-on:click="dismissQuranBootstrapState()"
+                            <div class="dark:bg-emerald-500/18 mx-auto grid h-10 w-10 place-items-center rounded-full border border-emerald-300/70 bg-emerald-100/80 text-emerald-700 dark:border-emerald-400/60 dark:text-emerald-300">
+                                <svg
+                                    class="h-6 w-6"
+                                    aria-hidden="true"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2.2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <path d="M20 6L9 17l-5-5"></path>
+                                </svg>
+                            </div>
+                            <h2 class="text-emerald-700 dark:text-emerald-300 min-h-[1.85rem] w-full text-base/8 font-semibold sm:text-lg/9">
+                                {{ arabic_text('تم بحمد الله') }}
+                            </h2>
+                            <div class="text-primary-900/78 dark:text-primary-100/82 flex w-full flex-col justify-center gap-2 text-sm/8 sm:text-base/9">
+                                <p>{{ arabic_text('اكتمل تنزيل بيانات القرآن بنجاح.') }}</p>
+                                <p class="text-emerald-700/80 dark:text-emerald-300/80 text-xs/6 font-semibold sm:text-sm/7">
+                                    {{ arabic_text('يتم تهيئة الخطوة الأخيرة...') }}
+                                </p>
+                            </div>
+                            <div class="space-y-2">
+                                <div class="h-2.5 w-full overflow-hidden rounded-full bg-emerald-100/80 dark:bg-emerald-950/45">
+                                    <div class="h-full w-full rounded-full bg-linear-to-r from-emerald-400 via-emerald-500 to-emerald-600"></div>
+                                </div>
+                                <p class="text-emerald-700/80 dark:text-emerald-300/80 text-xs font-semibold">100%</p>
+                            </div>
+                        </div>
+
+                        <div
+                            class="absolute inset-0 grid min-h-53 w-full grid-rows-[auto_auto_minmax(5.6rem,1fr)_auto] items-center gap-4 transition-[opacity,transform,filter] duration-260 ease-[cubic-bezier(0.22,1,0.36,1)]"
+                            x-bind:aria-hidden="!isQuranBootstrapStage('restart')"
+                            x-bind:inert="!isQuranBootstrapStage('restart')"
+                            x-bind:class="quranBootstrapStageClasses('restart')"
+                            x-bind:style="quranBootstrapStageStyle('restart')"
                         >
-                            {{ arabic_text('إغلاق') }}
-                        </button>
+                            <div class="dark:bg-emerald-500/18 mx-auto grid h-10 w-10 place-items-center rounded-full border border-emerald-300/70 bg-emerald-100/80 text-emerald-700 dark:border-emerald-400/60 dark:text-emerald-300">
+                                <svg
+                                    class="h-6 w-6"
+                                    aria-hidden="true"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2.2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <path d="M20 6L9 17l-5-5"></path>
+                                </svg>
+                            </div>
+                            <h2 class="text-emerald-700 dark:text-emerald-300 min-h-[1.85rem] w-full text-base/8 font-semibold sm:text-lg/9">
+                                {{ arabic_text('تم بحمد الله') }}
+                            </h2>
+                            <div class="text-primary-900/78 dark:text-primary-100/82 flex w-full flex-col justify-center gap-2 text-sm/8 sm:text-base/9">
+                                <p>{{ arabic_text('يرجى إعادة تشغيل المنصة ليتمّ اعتماد البيانات.') }}</p>
+                                <p
+                                    class="text-primary-800/70 dark:text-primary-100/65 text-xs/6 font-medium sm:text-sm/7"
+                                    x-show="Boolean(quranBootstrap.statusMessage)"
+                                    x-transition.opacity.duration.220ms
+                                    x-text="quranBootstrap.statusMessage"
+                                ></p>
+                            </div>
+                            <div class="flex items-center justify-center">
+                                <button
+                                    class="bg-primary-600 hover:bg-primary-700 disabled:bg-primary-300 relative min-w-50 rounded-xl px-4 py-2 text-sm font-semibold text-white transition disabled:cursor-not-allowed"
+                                    type="button"
+                                    x-bind:disabled="quranBootstrap.isRestarting"
+                                    x-on:click="restartNativeAppAfterQuranBootstrap('success-button')"
+                                >
+                                    <span
+                                        class="duration-220 block transition-[opacity,transform]"
+                                        x-bind:class="quranBootstrap.isRestarting ? 'opacity-0 translate-y-1' : 'opacity-100 translate-y-0'"
+                                    >{{ arabic_text('إعادة تشغيل المنصة الآن') }}</span>
+                                    <span
+                                        class="duration-220 absolute inset-0 grid place-items-center px-4 transition-[opacity,transform]"
+                                        x-bind:class="quranBootstrap.isRestarting ? 'opacity-100 translate-y-0' : 'pointer-events-none opacity-0 -translate-y-1'"
+                                    >{{ arabic_text('جاري إعادة التشغيل...') }}</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div
+                            class="absolute inset-0 grid min-h-53 w-full grid-rows-[auto_auto_minmax(5.6rem,1fr)_auto] items-center gap-4 transition-[opacity,transform,filter] duration-260 ease-[cubic-bezier(0.22,1,0.36,1)]"
+                            x-bind:aria-hidden="!isQuranBootstrapStage('error')"
+                            x-bind:inert="!isQuranBootstrapStage('error')"
+                            x-bind:class="quranBootstrapStageClasses('error')"
+                            x-bind:style="quranBootstrapStageStyle('error')"
+                        >
+                            <div class="dark:bg-danger-500/18 mx-auto grid h-10 w-10 place-items-center rounded-full border border-danger-300/75 bg-danger-100/80 text-danger-700 dark:border-danger-400/55 dark:text-danger-300">
+                                <svg
+                                    class="h-6 w-6"
+                                    aria-hidden="true"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2.2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <path d="M12 8v4"></path>
+                                    <path d="M12 16h.01"></path>
+                                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                                </svg>
+                            </div>
+                            <h2 class="text-danger-700 dark:text-danger-300 min-h-[1.85rem] w-full text-base/8 font-semibold sm:text-lg/9">
+                                {{ arabic_text('تعذر تجهيز بيانات القرآن') }}
+                            </h2>
+                            <p
+                                class="text-slate-700 dark:text-slate-200 flex w-full items-center justify-center text-sm/8 sm:text-base/9"
+                                x-text="quranBootstrap.errorMessage"
+                            ></p>
+                            <div class="flex flex-wrap items-center justify-center gap-3">
+                                <button
+                                    class="bg-primary-600 hover:bg-primary-700 rounded-xl px-4 py-2 text-sm font-semibold text-white transition"
+                                    type="button"
+                                    x-on:click="dismissQuranBootstrapState(); openQuranEntry();"
+                                >
+                                    {{ arabic_text('إعادة المحاولة') }}
+                                </button>
+                                <button
+                                    class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                                    type="button"
+                                    x-bind:class="quranBootstrap.didStartDownloadFlow ? 'pointer-events-none opacity-0' : 'opacity-100'"
+                                    x-bind:inert="quranBootstrap.didStartDownloadFlow"
+                                    x-on:click="dismissQuranBootstrapState()"
+                                >
+                                    {{ arabic_text('إغلاق') }}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
