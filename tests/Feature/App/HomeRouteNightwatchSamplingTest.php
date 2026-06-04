@@ -2,11 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Filament\Pages\Dashboard;
-use App\Filament\Widgets\WebAthkarGateActivityChart;
-use App\Filament\Widgets\WebHomeActivityChart;
-use App\Filament\Widgets\WebQuranGateActivityChart;
-use App\Http\Middleware\TrackWebHomeMetrics;
 use App\Livewire\WebHomeViewTracker;
 use App\Services\Monitoring\WebHomeActivityTracker;
 use Carbon\CarbonImmutable;

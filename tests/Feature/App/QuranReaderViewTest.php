@@ -6,7 +6,6 @@ use GoodMaven\Arabicable\Support\Quran\QuranWordCopyText;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Str;
 
 it('keeps sacred divine name tokens out of stem and root search stages', function () {
     /** @var QuranReaderDataService $service */
@@ -810,4 +809,3 @@ it('builds canonical copy payloads for every ayah in the quran dataset', functio
         ->and(array_slice($unexpectedAyahIndexes, 0, 20))->toBeEmpty()
         ->and(array_slice($mismatchedAyahs, 0, 10))->toBeEmpty();
 });
-

@@ -1707,4 +1707,3 @@ it('tracks progress semantics, exposes full mode athkar, and keeps the slide ren
         ->and($mountedAtMiddle)->toBeLessThanOrEqual(3)
         ->and($mountedAtEnd)->toBeLessThanOrEqual(2);
 });
-
