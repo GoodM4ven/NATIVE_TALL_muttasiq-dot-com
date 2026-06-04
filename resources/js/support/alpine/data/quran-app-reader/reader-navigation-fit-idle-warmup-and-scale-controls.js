@@ -993,7 +993,7 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
 
             const breakpointName = String(this.resolveCurrentBreakpointName?.() ?? '').trim();
 
-            if (breakpointName === 'base') {
+            if (breakpointName !== 'base') {
                 return 0;
             }
 
@@ -1031,7 +1031,7 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
 
             const breakpointName = String(this.resolveCurrentBreakpointName?.() ?? '').trim();
 
-            if (breakpointName === 'base') {
+            if (breakpointName !== 'base') {
                 return 0;
             }
 
