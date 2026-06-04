@@ -838,12 +838,11 @@
         x-on:touchend="handleTouchEnd($event)"
         x-on:touchcancel="handleTouchEnd($event)"
     >
-        <p
-            @class([
-                "top-[3.6rem]" => is_platform('ios'),
-                "top-[1.76rem]" => !is_platform('ios'),
-                "quran-app-gate-caption 3xl:top-8 3xl:px-[0.95rem] 3xl:py-2 3xl:text-[0.9rem] 4xl:top-10 4xl:px-[0.95rem] 4xl:py-[0.55rem] 4xl:text-[1.1rem] xl:top-6.5 px-[0.72rem] py-[0.26rem] text-[0.62rem] sm:top-[1.85rem] sm:px-[0.85rem] sm:py-2 sm:text-[0.7rem] md:top-8 md:px-4 md:py-2 md:text-[0.9rem] lg:top-6 lg:px-[0.925rem] lg:py-2 lg:text-[0.875rem] xl:px-[0.85rem] xl:py-[0.45rem] xl:text-[0.75rem] 2xl:top-[1.9rem] 2xl:px-3 2xl:py-2 2xl:text-[0.75rem]"
-            ])>
+        <p @class([
+            'top-[3.6rem]' => is_platform('ios'),
+            'top-[1.76rem]' => !is_platform('ios'),
+            'quran-app-gate-caption 3xl:top-8 3xl:px-[0.95rem] 3xl:py-2 3xl:text-[0.9rem] 4xl:top-10 4xl:px-[0.95rem] 4xl:py-[0.55rem] 4xl:text-[1.1rem] xl:top-6.5 px-[0.72rem] py-[0.26rem] text-[0.62rem] sm:top-[1.85rem] sm:px-[0.85rem] sm:py-2 sm:text-[0.7rem] md:top-8 md:px-4 md:py-2 md:text-[0.9rem] lg:top-6 lg:px-[0.925rem] lg:py-2 lg:text-[0.875rem] xl:px-[0.85rem] xl:py-[0.45rem] xl:text-[0.75rem] 2xl:top-[1.9rem] 2xl:px-3 2xl:py-2 2xl:text-[0.75rem]',
+        ])>
             {{ arabic_text('اختر نمط القراءة الذي يناسب مقصدك') }}</p>
 
         <button

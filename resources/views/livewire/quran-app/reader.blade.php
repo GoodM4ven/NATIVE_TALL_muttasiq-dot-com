@@ -3867,7 +3867,7 @@
                     @class([
                         'top-[2.5rem]' => is_platform('ios'),
                         'top-2' => !is_platform('ios'),
-                        'z-54 pointer-events-none absolute inset-x-0 top-2 flex justify-center px-3 sm:hidden'
+                        'z-54 pointer-events-none absolute inset-x-0 top-2 flex justify-center px-3 sm:hidden',
                     ])
                     x-cloak
                     x-show="shouldShowImmersiveMobileEdgeCaptions()"
@@ -3889,7 +3889,7 @@
                     @class([
                         'top-[3.75rem]' => is_platform('ios'),
                         'top-[1.92rem]' => !is_platform('ios'),
-                        'z-54 pointer-events-none absolute inset-x-0 flex justify-center px-3 sm:hidden'
+                        'z-54 pointer-events-none absolute inset-x-0 flex justify-center px-3 sm:hidden',
                     ])
                     x-cloak
                     x-show="typeof shouldShowSearchDestinationCueCaption === 'function' && shouldShowSearchDestinationCueCaption()"
@@ -3908,12 +3908,12 @@
                     ></p>
                 </div>
                 <div
+                    class="quran-search-destination-frame-wrap sm:hidden"
                     @class([
                         'top-[5rem]' => is_platform('ios'),
                         'top-[3rem]' => !is_platform('ios'),
                         'quran-search-destination-frame-wrap sm:hidden',
                     ])
-                    class="quran-search-destination-frame-wrap sm:hidden"
                     x-cloak
                     x-show="typeof shouldShowSearchDestinationCueFrame === 'function' && shouldShowSearchDestinationCueFrame()"
                     x-transition:enter="transition-opacity ease-out duration-420 delay-130"
@@ -4090,8 +4090,10 @@
                         <div
                             class="quran-soorah-quick-nav inset-s-[48%] md:inset-s-[47%] lg:inset-s-[48%] 2xl:inset-s-[48%] 3xl:inset-s-[50%]"
                             x-cloak
-                            x-bind:class="{ 'quran-soorah-quick-nav--visible': surahQuickNavigator.visible && !Boolean($data
-                                    .wirdModeActive) }"
+                            x-bind:class="{
+                                'quran-soorah-quick-nav--visible': surahQuickNavigator.visible && !Boolean($data
+                                    .wirdModeActive)
+                            }"
                             x-bind:inert="surahQuickNavigator.visible && !Boolean($data.wirdModeActive) ? null : ''"
                         >
                             <button
