@@ -448,7 +448,7 @@
                 this.controlPanelGateReturnTimerId = null;
             },
             handleControlPanelSaveGateReturn(detail = {}) {
-                if (Boolean(detail?.maintenancePulse)) {
+                if (!Boolean(detail?.returnToGate)) {
                     return;
                 }
         

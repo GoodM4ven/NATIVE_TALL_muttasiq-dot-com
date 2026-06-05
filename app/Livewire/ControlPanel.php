@@ -71,6 +71,7 @@ class ControlPanel extends Component implements HasActions, HasSchemas
                     'control-panel-updated',
                     controlPanel: $savedControlPanel,
                     maintenancePulse: $isMaintenancePulse,
+                    returnToGate: ! $isMaintenancePulse,
                 );
 
                 if (! $isMaintenancePulse) {
@@ -134,6 +135,7 @@ class ControlPanel extends Component implements HasActions, HasSchemas
             'control-panel-updated',
             controlPanel: $normalizedControlPanel,
             maintenancePulse: true,
+            returnToGate: false,
         );
 
         $this->runSaveLikeControlPanelPulse();
@@ -141,6 +143,7 @@ class ControlPanel extends Component implements HasActions, HasSchemas
             'control-panel-updated',
             controlPanel: $this->clientControlPanel,
             maintenancePulse: true,
+            returnToGate: false,
         );
 
         $this->forceRender();

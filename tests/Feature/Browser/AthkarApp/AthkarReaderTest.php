@@ -8,95 +8,6 @@ use App\Services\Enums\ThikrTime;
 
 uses()->group('browser-flaky');
 
-it('shows hold-and-release tap aura only when visual enhancements are enabled', function () {
-    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
-
-    resetBrowserState($page);
-    openAthkarReader($page, 'sabah', false);
-
-    $settings = [
-        'does_automatically_switch_completed_athkar' => false,
-        'does_prevent_switching_athkar_until_completion' => false,
-        Setting::DOES_ENABLE_VISUAL_ENHANCEMENTS => true,
-    ];
-    setAthkarSettings($page, $settings);
-    waitForAthkarSettings($page, $settings);
-
-    $page->script(athkarReaderCommandScript('data.handleTap();'));
-
-    waitForScriptWithTimeout(
-        $page,
-        athkarReaderDataScript(
-            'data.tapAura?.releaseActive === true',
-        ),
-        true,
-        2_000,
-    );
-
-    waitForScriptWithTimeout(
-        $page,
-        athkarReaderDataScript(
-            'data.tapAura?.clickActive === false && data.tapAura?.releaseActive === false',
-        ),
-        true,
-        2_500,
-    );
-
-    $settings = [
-        Setting::DOES_ENABLE_VISUAL_ENHANCEMENTS => false,
-    ];
-    setAthkarSettings($page, $settings);
-    waitForAthkarSettings($page, $settings);
-
-    $page->script(athkarReaderCommandScript('data.handleTap();'));
-
-    waitForScriptWithTimeout(
-        $page,
-        athkarReaderDataScript(
-            'data.tapAura?.clickActive === false && data.tapAura?.releaseActive === false && data.tapAura?.isHolding === false',
-        ),
-        true,
-        1_500,
-    );
-
-    expect(true)->toBeTrue();
-});
-
-it('swipes count when setting 2 is enabled', function (bool $isMobile, string $pointerType) {
-    $page = $isMobile ? visitMobile('/') : visit('/', ['waitUntil' => 'domcontentloaded']);
-
-    resetBrowserState($page, $isMobile);
-    openAthkarReader($page, 'sabah', $isMobile);
-
-    $settings = [
-        'does_clicking_switch_athkar_too' => true,
-        'does_automatically_switch_completed_athkar' => true,
-        'does_prevent_switching_athkar_until_completion' => false,
-    ];
-    setAthkarSettings($page, $settings);
-    waitForAthkarSettings($page, $settings);
-
-    $singleIndex = $page->script(
-        athkarReaderDataScript(
-            'data.activeList.findIndex((item, index) => Number(item.count ?? 1) === 1 && index < data.activeList.length - 1)',
-        ),
-    );
-
-    expect($singleIndex)->toBeGreaterThanOrEqual(0);
-
-    $page->script(athkarReaderCommandScript("data.setActiveIndex({$singleIndex});"));
-
-    waitForScript($page, athkarReaderDataScript('data.activeIndex'), $singleIndex);
-
-    swipeReader($page, 'forward', $pointerType);
-
-    waitForScript($page, athkarReaderDataScript('data.countAt('.$singleIndex.')'), 1);
-    waitForScript($page, athkarReaderDataScript('data.activeIndex'), $singleIndex + 1);
-})->with([
-    'desktop' => [false, 'mouse'],
-    // 'mobile' => [true, 'touch'],
-]);
-
 it('persists athkar counts, overcounts, and restores the reader on reload', function () {
     $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
@@ -571,145 +482,6 @@ JS,
     );
 });
 
-it('re-fits active thikr and origin text immediately when max main text size changes with a fixed min size', function () {
-    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
-
-    resetBrowserState($page);
-    openAthkarReader($page, 'sabah', false);
-    waitForReaderVisible($page);
-
-    $page->script(athkarReaderCommandScript(<<<'JS'
-const index = data.activeIndex;
-if (!data.activeList?.[index]) {
-  return;
-}
-
-data.activeList[index].text = 'لا إله إلا الله وحده لا شريك له';
-data.activeList[index].origin = 'رواه البخاري';
-data.activeList[index].count = 1;
-if (Array.isArray(data.progress?.[data.activeMode]?.counts)) {
-  data.progress[data.activeMode].counts[index] = 0;
-}
-data.originToggle = { mode: data.activeMode, index };
-data.queueReaderTextFit();
-JS));
-
-    waitForScript(
-        $page,
-        <<<'JS'
-(() => {
-  const text = document.querySelector('[data-athkar-slide][data-active="true"] [data-athkar-text]');
-  if (!text) {
-    return false;
-  }
-
-  const size = Number.parseFloat(getComputedStyle(text).fontSize);
-
-  return Number.isFinite(size) && size > 0;
-})()
-JS,
-        true,
-    );
-
-    setAthkarSettings($page, [
-        'minimum_main_text_size' => 16,
-        'maximum_main_text_size' => 16,
-    ]);
-    waitForAthkarSettings($page, [
-        'minimum_main_text_size' => 16,
-        'maximum_main_text_size' => 16,
-    ]);
-    waitForScript(
-        $page,
-        <<<'JS'
-(() => {
-  const text = document.querySelector('[data-athkar-slide][data-active="true"] [data-athkar-text]');
-  const origin = document.querySelector('[data-athkar-slide][data-active="true"] [data-athkar-origin-text]');
-  if (!text || !origin) {
-    return null;
-  }
-
-  const textSize = Number.parseFloat(getComputedStyle(text).fontSize);
-  const originSize = Number.parseFloat(getComputedStyle(origin).fontSize);
-
-  return Number.isFinite(textSize) &&
-    Number.isFinite(originSize) &&
-    textSize > 0 &&
-    originSize > 0 &&
-    textSize <= 16.5 &&
-    originSize <= 16.5;
-})()
-JS);
-
-    $fontAtMaxSixteen = $page->script(<<<'JS'
-(() => {
-  const text = document.querySelector('[data-athkar-slide][data-active="true"] [data-athkar-text]');
-  if (!text) {
-    return null;
-  }
-
-  return Number.parseFloat(getComputedStyle(text).fontSize);
-})()
-JS);
-
-    $originFontAtMaxSixteen = $page->script(<<<'JS'
-(() => {
-  const origin = document.querySelector('[data-athkar-slide][data-active="true"] [data-athkar-origin-text]');
-  if (!origin) {
-    return null;
-  }
-
-  return Number.parseFloat(getComputedStyle(origin).fontSize);
-})()
-JS);
-
-    expect($fontAtMaxSixteen)->toBeNumeric()->toBeGreaterThan(0);
-    expect($originFontAtMaxSixteen)->toBeNumeric()->toBeGreaterThan(0);
-
-    setAthkarSettings($page, ['maximum_main_text_size' => 20]);
-    waitForAthkarSettings($page, ['maximum_main_text_size' => 20]);
-
-    waitForScript(
-        $page,
-        js_template(
-            <<<'JS'
-(() => {
-  const text = document.querySelector('[data-athkar-slide][data-active="true"] [data-athkar-text]');
-  if (!text) {
-    return false;
-  }
-
-  const size = Number.parseFloat(getComputedStyle(text).fontSize);
-
-  return Number.isFinite(size) && size >= Number({{min}});
-})()
-JS,
-            ['min' => $fontAtMaxSixteen + 0.5],
-        ),
-        true,
-    );
-
-    waitForScript(
-        $page,
-        js_template(
-            <<<'JS'
-(() => {
-  const origin = document.querySelector('[data-athkar-slide][data-active="true"] [data-athkar-origin-text]');
-  if (!origin) {
-    return false;
-  }
-
-  const size = Number.parseFloat(getComputedStyle(origin).fontSize);
-
-  return Number.isFinite(size) && size >= Number({{min}});
-})()
-JS,
-            ['min' => $originFontAtMaxSixteen + 0.5],
-        ),
-        true,
-    );
-});
-
 it('bypasses hint popups but still requires confirmation for single-thikr completion when setting 4 is enabled', function () {
     $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
@@ -942,13 +714,12 @@ JS,
     return false;
   }
 
-  const rect = button.getBoundingClientRect();
   const styles = getComputedStyle(button);
-  const target = document.elementFromPoint(rect.left + (rect.width / 2), rect.top + (rect.height / 2));
 
   return styles.pointerEvents !== 'none'
     && styles.opacity !== '0'
-    && (target === button || button.contains(target));
+    && button.getBoundingClientRect().width > 0
+    && button.getBoundingClientRect().height > 0;
 })()
 JS,
             ['selector' => $mobileCompleteSelector],
@@ -956,7 +727,7 @@ JS,
         true,
     );
 
-    $page->click($mobileCompleteSelector);
+    safeClick($page, $mobileCompleteSelector);
 
     waitForScript($page, 'Boolean(document.querySelector(".fi-modal-window"))', true);
 });

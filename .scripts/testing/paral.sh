@@ -121,6 +121,7 @@ run_local() (
     set -euo pipefail
     cd "${root_dir}"
     export XDEBUG_MODE="${xdebug_mode}"
+    local -a pest_report_args=(--testdox-summary --display-skipped --display-all-issues)
 
     local cpu_cores
     local parallel_processes
@@ -139,7 +140,7 @@ run_local() (
         rm -f "${plugin_cache_file}.bak"
     fi
 
-    PEST_ENABLE_BROWSER_PLUGIN=0 "${run_clean_script}" vendor/bin/pest --parallel --processes="${parallel_processes}" --exclude-group=browser "$@"
+    PEST_ENABLE_BROWSER_PLUGIN=0 "${run_clean_script}" vendor/bin/pest "${pest_report_args[@]}" --parallel --processes="${parallel_processes}" --exclude-group=browser "$@"
 )
 
 run_in_container() {
@@ -223,7 +224,7 @@ run_in_container() {
 
             echo "[testing:${TESTING_SCRIPT_NAME}] mode=docker container=${TESTING_CONTAINER_NAME} cpu=${cpu_cores} processes=${parallel_processes}" >&2
 
-            PEST_ENABLE_BROWSER_PLUGIN=0 .scripts/testing/support/run-clean.sh vendor/bin/pest --parallel --processes="${parallel_processes}" --exclude-group=browser "$@"
+            PEST_ENABLE_BROWSER_PLUGIN=0 .scripts/testing/support/run-clean.sh vendor/bin/pest --testdox-summary --display-skipped --display-all-issues --parallel --processes="${parallel_processes}" --exclude-group=browser "$@"
         ' sh "$@"
 }
 

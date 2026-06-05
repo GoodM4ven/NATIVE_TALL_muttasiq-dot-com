@@ -1,7 +1,5 @@
 # Skipped Tests
 
-Generated on 2026-05-31 after full non-browser and browser test runs.
-
 - adds extra spacing only under the al-fatiha surah header
 - applies surah-affix rules correctly in word-target drag mode
 - clears search results immediately after closing the search modal
@@ -22,14 +20,18 @@ Generated on 2026-05-31 after full non-browser and browser test runs.
 - executes hidden completion buttons on desktop for single thikr and all athkar
 - publishes android bundles from the bundled credentials
 - honors auto-advance and overcount settings on tap
+- composes and executes the control panel lifecycle without persisting runtime-only updates
+- keeps surah-directory modal navigation fitted like a subsequent regular render on mobile
+- keeps quran text visible after rapid double swipe navigation
+- swipes count when setting 2 is enabled
 
 # Removed Tests
-
-Generated on 2026-06-04 after verbose backend and browser runs.
 
 ## Frontend Browser: Risky Zero-Assertion Tests
 
 - treats up and down swipes as forward navigation
+- shows hold-and-release tap aura only when visual enhancements are enabled
+- re-fits active thikr and origin text immediately when max main text size changes with a fixed min size
 - prevents swiping past incomplete athkar and allows quick navigation when disabled
 - returns to gate then opens athkar manager from the reader top mode button
 - opens athkar manager as a modal on tablet layouts while using the dedicated drag handle

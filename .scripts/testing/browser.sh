@@ -122,18 +122,18 @@ run_compact_command() {
     compose_browser_pest_args browser_pest_args "$@"
 
     if command -v timeout >/dev/null 2>&1; then
-        "${run_clean_script}" timeout "${browser_timeout}" vendor/bin/pest --compact "${browser_tests_path}" "${browser_pest_args[@]}"
+        "${run_clean_script}" timeout "${browser_timeout}" vendor/bin/pest --compact --testdox-summary --display-skipped --display-all-issues "${browser_tests_path}" "${browser_pest_args[@]}"
 
         return
     fi
 
     if [[ -x /usr/bin/timeout ]]; then
-        "${run_clean_script}" /usr/bin/timeout "${browser_timeout}" vendor/bin/pest --compact "${browser_tests_path}" "${browser_pest_args[@]}"
+        "${run_clean_script}" /usr/bin/timeout "${browser_timeout}" vendor/bin/pest --compact --testdox-summary --display-skipped --display-all-issues "${browser_tests_path}" "${browser_pest_args[@]}"
 
         return
     fi
 
-    "${run_clean_script}" vendor/bin/pest --compact "${browser_tests_path}" "${browser_pest_args[@]}"
+    "${run_clean_script}" vendor/bin/pest --compact --testdox-summary --display-skipped --display-all-issues "${browser_tests_path}" "${browser_pest_args[@]}"
 }
 
 run_parallel_command() {
@@ -143,18 +143,18 @@ run_parallel_command() {
     compose_browser_pest_args browser_pest_args "$@"
 
     if command -v timeout >/dev/null 2>&1; then
-        "${run_clean_script}" timeout "${browser_timeout}" vendor/bin/pest --compact --parallel --processes="${parallel_processes}" "${browser_tests_path}" "${browser_pest_args[@]}"
+        "${run_clean_script}" timeout "${browser_timeout}" vendor/bin/pest --compact --testdox-summary --display-skipped --display-all-issues --parallel --processes="${parallel_processes}" "${browser_tests_path}" "${browser_pest_args[@]}"
 
         return
     fi
 
     if [[ -x /usr/bin/timeout ]]; then
-        "${run_clean_script}" /usr/bin/timeout "${browser_timeout}" vendor/bin/pest --compact --parallel --processes="${parallel_processes}" "${browser_tests_path}" "${browser_pest_args[@]}"
+        "${run_clean_script}" /usr/bin/timeout "${browser_timeout}" vendor/bin/pest --compact --testdox-summary --display-skipped --display-all-issues --parallel --processes="${parallel_processes}" "${browser_tests_path}" "${browser_pest_args[@]}"
 
         return
     fi
 
-    "${run_clean_script}" vendor/bin/pest --compact --parallel --processes="${parallel_processes}" "${browser_tests_path}" "${browser_pest_args[@]}"
+    "${run_clean_script}" vendor/bin/pest --compact --testdox-summary --display-skipped --display-all-issues --parallel --processes="${parallel_processes}" "${browser_tests_path}" "${browser_pest_args[@]}"
 }
 
 ensure_local_browser_plugin_cache() {
@@ -502,16 +502,16 @@ EOF
             echo "[testing:${TESTING_SCRIPT_NAME}] mode=docker container=${TESTING_CONTAINER_NAME} cpu=${cpu_cores} processes=${parallel_processes}" >&2
 
             if command -v timeout >/dev/null 2>&1; then
-                .scripts/testing/support/run-clean.sh timeout "${browser_timeout}" vendor/bin/pest --compact --parallel --processes="${parallel_processes}" "${BROWSER_TESTS_PATH}" "$@"
+                .scripts/testing/support/run-clean.sh timeout "${browser_timeout}" vendor/bin/pest --compact --testdox-summary --display-skipped --display-all-issues --parallel --processes="${parallel_processes}" "${BROWSER_TESTS_PATH}" "$@"
                 exit 0
             fi
 
             if [ -x /usr/bin/timeout ]; then
-                .scripts/testing/support/run-clean.sh /usr/bin/timeout "${browser_timeout}" vendor/bin/pest --compact --parallel --processes="${parallel_processes}" "${BROWSER_TESTS_PATH}" "$@"
+                .scripts/testing/support/run-clean.sh /usr/bin/timeout "${browser_timeout}" vendor/bin/pest --compact --testdox-summary --display-skipped --display-all-issues --parallel --processes="${parallel_processes}" "${BROWSER_TESTS_PATH}" "$@"
                 exit 0
             fi
 
-            .scripts/testing/support/run-clean.sh vendor/bin/pest --compact --parallel --processes="${parallel_processes}" "${BROWSER_TESTS_PATH}" "$@"
+            .scripts/testing/support/run-clean.sh vendor/bin/pest --compact --testdox-summary --display-skipped --display-all-issues --parallel --processes="${parallel_processes}" "${BROWSER_TESTS_PATH}" "$@"
         ' sh "${browser_pest_args[@]}"
 }
 
