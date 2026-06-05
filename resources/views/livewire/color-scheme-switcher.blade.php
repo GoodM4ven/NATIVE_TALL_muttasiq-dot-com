@@ -1,6 +1,10 @@
 <div
-    class="inset-s-10 sm:inset-s-6.5 md:inset-s-6.5 lg:inset-s-6.5 xl:inset-s-8 2xl:inset-s-10 xl:top-6.5 fixed top-5 z-30 sm:top-5 md:top-5 lg:top-5 2xl:top-8"
     data-stack-item
+    @class([
+        'sm:top-5 md:top-5 lg:top-5' => !is_platform('ios'),
+        'sm:top-9 md:top-9 lg:top-9' => is_platform('ios'),
+        'inset-s-10 sm:inset-s-6.5 md:inset-s-6.5 lg:inset-s-6.5 xl:inset-s-8 2xl:inset-s-10 xl:top-6.5 fixed top-5 z-30 2xl:top-8',
+    ])
     wire:ignore
     x-transition
     x-show="!isControlPanelOpen && !isAthkarManagerOpen"

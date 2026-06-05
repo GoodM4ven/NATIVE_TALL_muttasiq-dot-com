@@ -1,6 +1,10 @@
 <div
-    class="sm:inset-e-21! md:inset-e-21! lg:inset-e-21! xl:inset-e-22! 2xl:inset-e-26! 3xl:inset-e-28! 4xl:end-29! xl:top-6.5 fixed top-5 z-30 sm:top-5 md:top-5 lg:top-5 2xl:top-8"
     data-stack-item
+    @class([
+        'sm:top-5 md:top-5 lg:top-5' => !is_platform('ios'),
+        'sm:top-9 md:top-9 lg:top-9' => is_platform('ios'),
+        'sm:inset-e-21! md:inset-e-21! lg:inset-e-21! xl:inset-e-22! 2xl:inset-e-26! 3xl:inset-e-28! 4xl:end-29! xl:top-6.5 fixed top-5 z-30 2xl:top-8',
+    ])
     x-data="{
         rippleStorageKey: 'quran-reader-font-scale-ripple-dismissed-v1',
         hasReaderRenderedOnce: false,

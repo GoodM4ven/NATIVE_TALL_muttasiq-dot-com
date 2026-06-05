@@ -40,8 +40,12 @@
     </style>
 
     <div
-        class="inset-e-10 sm:inset-e-6.5 md:inset-e-6.5 lg:inset-e-6.5 xl:inset-e-8 2xl:inset-e-10 xl:top-6.5 fixed top-5 z-30 sm:top-5 md:top-5 lg:top-5 2xl:top-8"
         data-stack-item
+        @class([
+            'sm:top-5 md:top-5 lg:top-5' => !is_platform('ios'),
+            'sm:top-9 md:top-9 lg:top-9' => is_platform('ios'),
+            'inset-e-10 sm:inset-e-6.5 md:inset-e-6.5 lg:inset-e-6.5 xl:inset-e-8 2xl:inset-e-10 xl:top-6.5 fixed top-5 z-30 2xl:top-8',
+        ])
         x-transition
         x-show="!isControlPanelOpen && !isAthkarManagerOpen"
         x-data="{
