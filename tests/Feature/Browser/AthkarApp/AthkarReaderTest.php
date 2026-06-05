@@ -22,7 +22,7 @@ it('shows hold-and-release tap aura only when visual enhancements are enabled', 
     setAthkarSettings($page, $settings);
     waitForAthkarSettings($page, $settings);
 
-    scriptClick($page, '[data-athkar-slide][data-active="true"] [data-athkar-tap]');
+    $page->script(athkarReaderCommandScript('data.handleTap();'));
 
     waitForScriptWithTimeout(
         $page,
@@ -48,7 +48,7 @@ it('shows hold-and-release tap aura only when visual enhancements are enabled', 
     setAthkarSettings($page, $settings);
     waitForAthkarSettings($page, $settings);
 
-    scriptClick($page, '[data-athkar-slide][data-active="true"] [data-athkar-tap]');
+    $page->script(athkarReaderCommandScript('data.handleTap();'));
 
     waitForScriptWithTimeout(
         $page,
@@ -122,7 +122,7 @@ it('persists athkar counts, overcounts, and restores the reader on reload', func
 
     waitForScript($page, athkarReaderDataScript('data.activeIndex'), $singleIndex);
 
-    scriptClick($page, '[data-athkar-slide][data-active="true"] [data-athkar-tap]');
+    $page->script(athkarReaderCommandScript('data.handleTap();'));
     scriptClick($page, '[data-athkar-slide][data-active="true"] [data-athkar-tap]');
 
     waitForScript($page, athkarReaderDataScript('data.countAt(data.activeIndex)'), 2);
@@ -367,6 +367,66 @@ JS, ['targetId' => $targetId]),
         4_000,
     );
 });
+
+it('keeps the first overcount tap and digit morph working after returning to a completed single-count thikr', function (bool $isMobile) {
+    $page = $isMobile ? visitMobile('/') : visit('/', ['waitUntil' => 'domcontentloaded']);
+
+    resetBrowserState($page, $isMobile);
+    openAthkarReader($page, 'sabah', $isMobile);
+
+    $settings = [
+        'does_automatically_switch_completed_athkar' => false,
+        'does_prevent_switching_athkar_until_completion' => false,
+    ];
+    setAthkarSettings($page, $settings);
+    waitForAthkarSettings($page, $settings);
+
+    $singleIndex = $page->script(
+        athkarReaderDataScript(
+            'data.activeList.findIndex((item, index) => Number(item.count ?? 1) === 1 && index < data.activeList.length - 1)',
+        ),
+    );
+
+    expect($singleIndex)->toBeGreaterThanOrEqual(0);
+
+    $page->script(athkarReaderCommandScript("data.setActiveIndex({$singleIndex});"));
+    waitForScript($page, athkarReaderDataScript('data.activeIndex'), $singleIndex);
+
+    $page->script(athkarReaderCommandScript("data.setCount({$singleIndex}, 1);"));
+    waitForScript($page, athkarReaderDataScript("data.countAt({$singleIndex})"), 1);
+    waitForScript($page, athkarReaderDataScript('data.activeIndex'), $singleIndex);
+
+    if ($isMobile) {
+        $page->script(athkarReaderCommandScript(
+            'data.hintIndex = data.activeIndex; data.setMobileCounterOpen(true);',
+        ));
+        waitForScript($page, athkarReaderDataScript('data.isHintOpen(data.activeIndex)'), true);
+    }
+
+    $settings = [
+        'does_automatically_switch_completed_athkar' => true,
+        'does_prevent_switching_athkar_until_completion' => false,
+    ];
+    setAthkarSettings($page, $settings);
+    waitForAthkarSettings($page, $settings);
+
+    $page->script(athkarReaderCommandScript('data.handleTap();'));
+
+    waitForScript($page, athkarReaderDataScript('data.activeIndex'), $singleIndex);
+    waitForScript($page, athkarReaderDataScript('data.countAt(data.activeIndex)'), 2);
+
+    waitForScriptWithTimeout(
+        $page,
+        athkarReaderDataScript(
+            'data.countPulse.index === data.activeIndex && data.countPulse.isActive === true && data.countPulse.hasChanges === true',
+        ),
+        true,
+        2000,
+    );
+})->with([
+    'desktop' => [false],
+    'mobile' => [true],
+]);
 
 it('fits origin text independently and keeps the text box clear of mobile top controls', function () {
     $page = visit('/', ['waitUntil' => 'domcontentloaded']);

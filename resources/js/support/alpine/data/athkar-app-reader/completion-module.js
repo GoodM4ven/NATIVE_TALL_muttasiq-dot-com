@@ -208,12 +208,6 @@ export const createCompletionModule = (deps) => {
                 return;
             }
 
-            if (this.isMobileCounterOpen && this.isMobileViewport()) {
-                this.setMobileCounterOpen(false);
-                this.closeHint();
-                return;
-            }
-
             if (this.swipe.ignoreClick) {
                 this.swipe.ignoreClick = false;
 
@@ -230,6 +224,7 @@ export const createCompletionModule = (deps) => {
                 true,
             );
             const shouldDeferCountPulseForImmediateAdvance =
+                !wasComplete &&
                 required <= 1 &&
                 autoSwitch &&
                 current + 1 >= required &&
@@ -335,7 +330,7 @@ export const createCompletionModule = (deps) => {
             const wasComplete = current >= required;
             const allowOvercount = this.shouldAllowOvercount({ wasComplete });
             const shouldDeferCountPulseForImmediateAdvance =
-                required <= 1 && this.canAdvance(index);
+                !wasComplete && required <= 1 && this.canAdvance(index);
             let didUpdate = false;
 
             if (current < required || allowOvercount) {

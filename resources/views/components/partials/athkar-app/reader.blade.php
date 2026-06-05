@@ -1329,7 +1329,7 @@
                 'is-tap-pulse': tapPulse.isActive,
                 'outline-transparent! dark:outline-transparent!': countPulse.isActive,
             }"
-            x-on:click.capture="if (isHintOpen(activeIndex) && !$event.target.closest('[data-hint-allow]')) { closeHint(); $event.stopPropagation(); $event.preventDefault(); }"
+            x-on:click.capture="if (isHintOpen(activeIndex) && !$event.target.closest('[data-hint-allow]') && !$event.target.closest('[data-athkar-tap]')) { closeHint(); $event.stopPropagation(); $event.preventDefault(); }"
             x-on:pointerdown="swipeStart($event)"
             x-on:pointerup="swipeEnd($event)"
             x-on:pointercancel="swipeCancel()"
@@ -1634,9 +1634,7 @@
                             <div class="contents">
                                 <!-- Content -->
                                 <div
-                                    class="pointer-events-auto flex min-h-0 flex-1 flex-col gap-3 sm:gap-1 sm:pt-0 md:gap-2 md:pt-2 lg:gap-4 lg:pt-4 xl:gap-4 xl:pt-3 2xl:gap-5 2xl:pt-4"
-                                    x-bind:class="{ 'pointer-events-none!': isHintOpen(activeIndex) }"
-                                >
+                                    class="pointer-events-auto flex min-h-0 flex-1 flex-col gap-3 sm:gap-1 sm:pt-0 md:gap-2 md:pt-2 lg:gap-4 lg:pt-4 xl:gap-4 xl:pt-3 2xl:gap-5 2xl:pt-4">
                                     <!-- Althikr -->
                                     <button
                                         class="athkar-tap md:px-13 3xl:px-4 4xl:px-5 3xl:py-6 group relative flex min-h-0 w-full flex-1 touch-manipulation flex-col items-center justify-center gap-4 overflow-hidden rounded-sm border border-transparent px-0 py-1.5 text-center transition sm:px-10 sm:py-2.5 md:py-3 lg:px-12 xl:px-3 xl:py-5 2xl:px-3 2xl:py-5"
