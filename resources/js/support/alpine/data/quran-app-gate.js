@@ -7,6 +7,8 @@ document.addEventListener('alpine:init', () => {
     const baseLaunchCleanupDelayMs = 320;
     const baseReturnNavigateDelayMs = 0;
     const baseReturnCleanupDelayMs = 220;
+    const nativeGateMediaRecoveryDelayMs = 430;
+    const nativeGateMediaRecoveryHoldMs = 180;
     const defaultOrbitAngleDeg = 180;
     const modeOrbitAngles = Object.freeze({
         tilawa: 0,
@@ -53,18 +55,28 @@ document.addEventListener('alpine:init', () => {
         launchNavigateTimeoutId: null,
         launchCleanupTimeoutId: null,
         activeTransitionDirection: null,
+        isMobileNativeRuntime: false,
+        nativeGateMediaRefreshKey: 0,
         geometryCache: null,
         geometryCacheFrameId: null,
         pendingOrbitUpdate: null,
         orbitPointerFrameId: null,
+        nativeGateMediaRecoveryTimeoutId: null,
+        nativeGateMediaRecoveryFrameId: null,
         _onSwitchView: null,
         _onReaderGoGate: null,
         _onExternalGateOpen: null,
         _onWindowResize: null,
         externalGateOpenTimerId: null,
         init() {
+            this.isMobileNativeRuntime = this.$root?.dataset?.nativeMobileRuntime === 'true';
+
             this._onSwitchView = (event) => {
                 const nextView = String(event?.detail?.to ?? '');
+
+                if (nextView === 'quran-app-gate') {
+                    this.queueNativeGateMediaRecovery();
+                }
 
                 if (
                     nextView === 'quran-app-gate' &&
@@ -136,6 +148,7 @@ document.addEventListener('alpine:init', () => {
             this.clearLaunchTransitionState();
             this.cancelPointerOrbitUpdate();
             this.cancelGeometryCacheRefresh();
+            this.cancelNativeGateMediaRecovery();
 
             if (typeof window !== 'undefined' && this._onSwitchView) {
                 window.removeEventListener('switch-view', this._onSwitchView);
@@ -168,6 +181,63 @@ document.addEventListener('alpine:init', () => {
         },
         quranShellElement() {
             return this.$root?.closest?.('[data-quran-app-shell]') ?? null;
+        },
+        gateImageSrc(path) {
+            const normalizedPath = String(path ?? '').trim();
+
+            return normalizedPath;
+        },
+        cancelNativeGateMediaRecovery() {
+            if (this.nativeGateMediaRecoveryTimeoutId !== null) {
+                clearTimeout(this.nativeGateMediaRecoveryTimeoutId);
+                this.nativeGateMediaRecoveryTimeoutId = null;
+            }
+
+            if (this.nativeGateMediaRecoveryFrameId !== null) {
+                cancelAnimationFrame(this.nativeGateMediaRecoveryFrameId);
+                this.nativeGateMediaRecoveryFrameId = null;
+            }
+
+            const shellElement = this.$refs?.shell;
+
+            if (shellElement instanceof HTMLElement) {
+                shellElement.classList.remove('quran-app-gate-shell--native-media-recovering');
+            }
+        },
+        queueNativeGateMediaRecovery() {
+            if (!this.isIosNativePlatform() || !this.shouldUseMobileBasePerfMode()) {
+                return;
+            }
+
+            const shellElement = this.$refs?.shell;
+
+            if (!(shellElement instanceof HTMLElement)) {
+                return;
+            }
+
+            this.cancelNativeGateMediaRecovery();
+
+            this.nativeGateMediaRecoveryTimeoutId = window.setTimeout(() => {
+                this.nativeGateMediaRecoveryTimeoutId = null;
+                this.nativeGateMediaRefreshKey += 1;
+                shellElement.dataset.gateMediaRevision = String(this.nativeGateMediaRefreshKey);
+                shellElement.classList.remove('quran-app-gate-shell--native-media-recovering');
+                void shellElement.offsetWidth;
+                shellElement.classList.add('quran-app-gate-shell--native-media-recovering');
+
+                this.nativeGateMediaRecoveryFrameId = requestAnimationFrame(() => {
+                    this.nativeGateMediaRecoveryFrameId = requestAnimationFrame(() => {
+                        this.nativeGateMediaRecoveryFrameId = null;
+                        this.nativeGateMediaRecoveryTimeoutId = window.setTimeout(() => {
+                            this.nativeGateMediaRecoveryTimeoutId = null;
+                            delete shellElement.dataset.gateMediaRevision;
+                            shellElement.classList.remove(
+                                'quran-app-gate-shell--native-media-recovering',
+                            );
+                        }, nativeGateMediaRecoveryHoldMs);
+                    });
+                });
+            }, nativeGateMediaRecoveryDelayMs);
         },
         clearLaunchTransitionTimers() {
             if (this.launchNavigateTimeoutId !== null) {
@@ -337,10 +407,8 @@ document.addEventListener('alpine:init', () => {
             );
         },
         shouldUseMobileBasePerfMode() {
-            if (typeof document !== 'undefined') {
-                if (document.documentElement.classList.contains('native-platform')) {
-                    return true;
-                }
+            if (this.isMobileNativeRuntime) {
+                return true;
             }
 
             if (typeof this.$store?.bp?.is === 'function') {
