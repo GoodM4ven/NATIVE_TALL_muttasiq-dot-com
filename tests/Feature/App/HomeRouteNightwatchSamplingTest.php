@@ -4,8 +4,14 @@ declare(strict_types=1);
 
 use App\Livewire\WebHomeViewTracker;
 use App\Services\Monitoring\WebHomeActivityTracker;
+use App\Services\Native\NativeVisitMetricsRelay;
+use App\Services\Support\Enums\ViewName;
 use Carbon\CarbonImmutable;
+use Illuminate\Http\Client\Request as HttpRequest;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+use Native\Mobile\Facades\Network;
 
 use function Pest\Livewire\livewire;
 
@@ -148,7 +154,7 @@ it('persists web home metrics in the configured cache store even when default ca
     Cache::store('file')->flush();
 });
 
-it('tracks gate-scoped metrics from Livewire view switches without affecting global counters', function () {
+it('tracks app-scoped metrics from Livewire view switches without affecting global counters', function () {
     config([
         'app.custom.security.web_home_metrics.enabled' => true,
         'app.custom.security.web_home_metrics.cache_store' => 'array',
@@ -162,21 +168,120 @@ it('tracks gate-scoped metrics from Livewire view switches without affecting glo
     ])->get('/')->assertSuccessful();
 
     livewire(WebHomeViewTracker::class)
-        ->call('trackGateView', WebHomeActivityTracker::CONTEXT_ATHKAR_GATE)
-        ->call('trackGateView', WebHomeActivityTracker::CONTEXT_ATHKAR_GATE)
-        ->call('trackGateView', WebHomeActivityTracker::CONTEXT_QURAN_GATE);
+        ->call('trackAppView', ViewName::AthkarAppGate->value)
+        ->call('trackAppView', ViewName::AthkarAppSabah->value)
+        ->call('trackAppView', ViewName::MainMenu->value)
+        ->call('trackAppView', ViewName::QuranAppTilawa->value)
+        ->call('trackAppView', ViewName::QuranAppHifth->value);
 
     $tracker = app(WebHomeActivityTracker::class);
 
     expect($tracker->todaySummary())->toBe([
-        'hits' => 1,
-        'unique_visitors' => 1,
+        'hits' => 0,
+        'unique_visitors' => 0,
     ])->and($tracker->todaySummary(WebHomeActivityTracker::CONTEXT_ATHKAR_GATE))->toBe([
-        'hits' => 2,
+        'hits' => 1,
         'unique_visitors' => 1,
     ])->and($tracker->todaySummary(WebHomeActivityTracker::CONTEXT_QURAN_GATE))->toBe([
         'hits' => 1,
         'unique_visitors' => 1,
-    ])->and($tracker->dailySeries(1, WebHomeActivityTracker::CONTEXT_ATHKAR_GATE)['hits'])->toBe([2])
+    ])->and($tracker->dailySeries(1, WebHomeActivityTracker::CONTEXT_ATHKAR_GATE)['hits'])->toBe([1])
         ->and($tracker->dailySeries(1, WebHomeActivityTracker::CONTEXT_QURAN_GATE)['hits'])->toBe([1]);
+});
+
+it('tracks native visit metrics through the api endpoint and replaces the home visit when an app is opened', function () {
+    config([
+        'app.custom.security.web_home_metrics.enabled' => true,
+        'app.custom.security.web_home_metrics.cache_store' => 'array',
+        'nativephp-internal.running' => false,
+        'nativephp-internal.platform' => null,
+    ]);
+
+    $this->postJson('/api/visit-metrics', [
+        'view' => ViewName::MainMenu->value,
+    ])->assertOk();
+
+    $this->postJson('/api/visit-metrics', [
+        'view' => ViewName::QuranAppGate->value,
+    ])->assertOk();
+
+    $this->postJson('/api/visit-metrics', [
+        'view' => ViewName::AthkarAppGate->value,
+    ])->assertOk();
+
+    $tracker = app(WebHomeActivityTracker::class);
+
+    expect($tracker->todaySummary())->toBe([
+        'hits' => 0,
+        'unique_visitors' => 0,
+    ])->and($tracker->todaySummary(WebHomeActivityTracker::CONTEXT_QURAN_GATE))->toBe([
+        'hits' => 1,
+        'unique_visitors' => 1,
+    ])->and($tracker->todaySummary(WebHomeActivityTracker::CONTEXT_ATHKAR_GATE))->toBe([
+        'hits' => 1,
+        'unique_visitors' => 1,
+    ]);
+});
+
+it('skips native visit metrics relay when the device is offline', function () {
+    config([
+        'app.custom.native_end_points.visit_metrics' => 'https://example.test/api/visit-metrics',
+        'app.custom.native_end_points.retries' => 4,
+        'nativephp-internal.running' => true,
+        'nativephp-internal.platform' => 'android',
+    ]);
+
+    Http::fake();
+    Network::shouldReceive('status')
+        ->once()
+        ->andReturn((object) [
+            'connected' => false,
+            'type' => 'unknown',
+        ]);
+
+    $relay = app(NativeVisitMetricsRelay::class);
+    $request = Request::create('/', 'GET', [], [], [], [
+        'HTTP_USER_AGENT' => 'Native Relay Agent',
+    ]);
+
+    expect($relay->relay(ViewName::QuranAppGate->value, $request))->toBeFalse();
+    Http::assertNothingSent();
+});
+
+it('relays native visit metrics when the device is online', function () {
+    config([
+        'app.custom.native_end_points.visit_metrics' => 'https://example.test/api/visit-metrics',
+        'app.custom.native_end_points.retries' => 4,
+        'nativephp-internal.running' => true,
+        'nativephp-internal.platform' => 'android',
+    ]);
+
+    Http::fake([
+        'https://example.test/api/visit-metrics' => Http::response([
+            'message' => 'ok',
+        ]),
+    ]);
+
+    Network::shouldReceive('status')
+        ->once()
+        ->andReturn((object) [
+            'connected' => true,
+            'type' => 'wifi',
+        ]);
+
+    $relay = app(NativeVisitMetricsRelay::class);
+    $request = Request::create('/', 'GET', [], [], [], [
+        'HTTP_USER_AGENT' => 'Native Relay Agent',
+    ]);
+
+    expect($relay->relay(ViewName::AthkarAppGate->value, $request))->toBeTrue();
+
+    Http::assertSent(function (HttpRequest $request): bool {
+        $data = $request->data();
+        $userAgent = $request->header('User-Agent')[0] ?? '';
+
+        return $request->url() === 'https://example.test/api/visit-metrics'
+            && ($data['view'] ?? null) === ViewName::AthkarAppGate->value
+            && $userAgent === 'Native Relay Agent';
+    });
 });

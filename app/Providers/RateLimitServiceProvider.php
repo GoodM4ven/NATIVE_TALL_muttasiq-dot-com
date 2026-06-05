@@ -28,6 +28,7 @@ class RateLimitServiceProvider extends ServiceProvider
         $this->rateLimitSettings();
         $this->rateLimitQuranSnapshot();
         $this->rateLimitJsErrorReports();
+        $this->rateLimitVisitMetrics();
     }
 
     private function rateLimitAthkar(): void
@@ -58,6 +59,15 @@ class RateLimitServiceProvider extends ServiceProvider
             $throttleKey = hash('sha256', $request->ip().'|'.$clientFingerprint);
 
             return Limit::perMinute(12)->by($throttleKey);
+        });
+    }
+
+    private function rateLimitVisitMetrics(): void
+    {
+        RateLimiter::for('visit-metrics', function (Request $request): Limit {
+            $throttleKey = hash('sha256', $request->ip().'|'.trim((string) $request->userAgent()));
+
+            return Limit::perMinute(60)->by($throttleKey);
         });
     }
 }
