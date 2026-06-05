@@ -36,22 +36,6 @@ read_env_var() {
     printf '%s' "${line}"
 }
 
-write_env_var() {
-    local key="$1"
-    local value="$2"
-
-    if [[ ! -f "${env_file}" ]]; then
-        echo "Missing environment file: ${env_file}" >&2
-        return 1
-    fi
-
-    if grep -qE "^${key}=" "${env_file}"; then
-        perl -0pi -e "s/^${key}=.*$/${key}=${value}/m" "${env_file}"
-    else
-        printf '\n%s=%s\n' "${key}" "${value}" >>"${env_file}"
-    fi
-}
-
 normalize_fingerprint() {
     printf '%s' "$1" | tr -d '[:space:]:'
 }
@@ -157,41 +141,25 @@ if [[ ! -f "${upload_certificate_file}" ]]; then
     exit 1
 fi
 
-upload_certificate_sha1="$(read_certificate_sha1 "${upload_certificate_file}" || true)"
-if [[ -z "${upload_certificate_sha1}" ]]; then
-    echo "Unable to read SHA1 fingerprint from upload certificate: ${upload_certificate_file}" >&2
-    exit 1
-fi
-
-key_alias="$(find_keystore_alias_by_fingerprint "${keystore_file}" "${keystore_password}" "${upload_certificate_sha1}" || true)"
+key_alias="${ANDROID_KEY_ALIAS:-$(read_env_var "ANDROID_KEY_ALIAS" || true)}"
 if [[ -z "${key_alias}" ]]; then
-    echo "Unable to find a keystore alias matching the upload certificate fingerprint in ${upload_certificate_file}" >&2
-    exit 1
+    upload_certificate_sha1="$(read_certificate_sha1 "${upload_certificate_file}" || true)"
+    if [[ -z "${upload_certificate_sha1}" ]]; then
+        echo "Unable to read SHA1 fingerprint from upload certificate: ${upload_certificate_file}" >&2
+        exit 1
+    fi
+
+    key_alias="$(find_keystore_alias_by_fingerprint "${keystore_file}" "${keystore_password}" "${upload_certificate_sha1}" || true)"
+    if [[ -z "${key_alias}" ]]; then
+        echo "Unable to find a keystore alias matching the upload certificate fingerprint in ${upload_certificate_file}" >&2
+        exit 1
+    fi
 fi
 
 if [[ -z "${key_password}" ]]; then
     key_password="${keystore_password}"
 fi
 
-alias_sha1="$(read_keystore_alias_sha1 "${keystore_file}" "${keystore_password}" "${key_alias}" || true)"
-if [[ -z "${alias_sha1}" ]]; then
-    echo "Unable to read SHA1 fingerprint for keystore alias '${key_alias}'" >&2
-    exit 1
-fi
-
-if [[ "$(normalize_fingerprint "${alias_sha1}")" != "$(normalize_fingerprint "${upload_certificate_sha1}")" ]]; then
-    echo "Selected alias '${key_alias}' does not match the upload certificate fingerprint in ${upload_certificate_file}" >&2
-    echo "Use the upload signing alias instead." >&2
-    exit 1
-fi
-
-current_version_code="$(read_env_var "NATIVEPHP_APP_VERSION_CODE" || true)"
-if [[ -n "${current_version_code}" ]]; then
-    bundle_version_code="$((current_version_code + 1))"
-    export NATIVEPHP_APP_VERSION_CODE="${bundle_version_code}"
-fi
-
-export NATIVEPHP_APP_VERSION="$(read_env_var "NATIVEPHP_APP_VERSION" || true)"
 export ANDROID_KEY_ALIAS="${key_alias}"
 
 cd "${root_dir}"
@@ -201,6 +169,8 @@ cd "${root_dir}"
 
 php artisan native:release "${release_type}" --no-interaction
 
+export NATIVEPHP_APP_VERSION="$(read_env_var "NATIVEPHP_APP_VERSION" || true)"
+
 php artisan native:package android \
     --build-type=bundle \
     --keystore="${keystore_file}" \
@@ -209,7 +179,3 @@ php artisan native:package android \
     --key-password="${key_password}" \
     --no-interaction \
     --no-tty
-
-if [[ -n "${bundle_version_code:-}" ]]; then
-    write_env_var "NATIVEPHP_APP_VERSION_CODE" "${bundle_version_code}"
-fi
