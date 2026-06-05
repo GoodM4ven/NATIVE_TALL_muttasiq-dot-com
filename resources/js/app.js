@@ -16,6 +16,7 @@ import './packages/auto-animate';
 import './packages/ldrs';
 import './packages/nativephp/browser';
 
+import './support/app-version-routing';
 import './support/alpine/data/layout-manager';
 import './support/alpine/data/main-menu';
 import './support/alpine/data/athkar-app-gate';

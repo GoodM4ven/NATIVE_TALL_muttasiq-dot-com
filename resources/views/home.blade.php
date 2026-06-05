@@ -14,6 +14,7 @@
             isAthkarReaderFontScaleOverlayOpen: false,
             isNativeRuntime: @js(is_platform('native')),
             activeView: $persist('main-menu').as('app-active-view'),
+            currentAppVersion: @js(\App\Models\Setting::appVersion()),
             actionStatePulseToken: 0,
             controlPanelGateReturnTimerId: null,
             quranBootstrap: {
@@ -86,8 +87,22 @@
                     isOpen: false,
                 },
             },
+            syncStartupVersionState() {
+                const versionState = window.appVersionRouting?.syncStoredAppVersion(
+                    this.currentAppVersion,
+                );
+        
+                this.applyViewState('main-menu', {
+                    persist: versionState?.shouldResetStartupView === true,
+                });
+        
+                return versionState;
+            },
             init() {
-                this.applyViewState('main-menu', { persist: false });
+                this.syncStartupVersionState();
+            },
+            handleAppVersionMajorMinorReset() {
+                this.applyViewState('main-menu', { persist: true });
             },
             openQuranEntry() {
                 if (!this.isNativeRuntime) {
@@ -581,6 +596,7 @@
             }),
         }"
         x-on:switch-view.window="applyViewState($event.detail?.to)"
+        x-on:muttasiq-app-version-major-minor-reset.window="handleAppVersionMajorMinorReset($event.detail ?? {})"
         x-on:request-open-control-panel-modal.window="requestControlPanelOpenFromAnywhere($event.detail ?? {})"
         x-on:control-panel-updated.window="handleControlPanelSaveGateReturn($event.detail ?? {})"
         x-on:athkar-action-state-pulse.window="pulseActionState($event.detail ?? {})"
