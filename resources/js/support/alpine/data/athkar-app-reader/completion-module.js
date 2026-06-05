@@ -64,6 +64,10 @@ export const createCompletionModule = (deps) => {
                     (previousValue >= maxCount && nextValue < maxCount),
             });
             this.persistProgress();
+
+            if (allowOvercount && nextValue > maxCount) {
+                this.showMobileOvercountHint?.(index);
+            }
         },
 
         isItemComplete(index) {

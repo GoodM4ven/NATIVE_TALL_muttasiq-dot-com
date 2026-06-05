@@ -1391,11 +1391,14 @@
                             type="button"
                             aria-label="{{ arabic_text('العدد') }}"
                             tabindex="-1"
-                            x-bind:class="isHintOpen(activeIndex) ? 'size-16! pointer-events-none' : ''"
-                            x-on:click.stop="toggleHint(activeIndex)"
+                            x-ref="mobileOvercountHintRing"
+                            x-bind:class="isHintOpen(activeIndex) ? 'size-16!' : ''"
+                            x-on:click.stop="toggleMobileOvercountHint()"
                             x-on:pointerdown.stop
                             x-on:touchstart.stop
                             x-bind:aria-expanded="isHintOpen(activeIndex)"
+                            x-on:athkar-mobile-overcount-hint-show.window="$tippy(@js(arabic_text('زيادة عدّ')), { placement: 'right-start', durationInMs: 0, showWhenGuidancePanelsSkipped: true, disableFlip: true, offset: [0, 8] })"
+                            x-on:athkar-mobile-overcount-hint-hide.window="$tippy.hide()"
                         >
                             <div class="athkar-counter-repel"></div>
                             <div

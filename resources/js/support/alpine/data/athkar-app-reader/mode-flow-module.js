@@ -16,6 +16,7 @@ export const createModeFlowModule = (deps) => {
         skipGuidancePanelsSettingKey,
         progressStorageKey,
         athkarReaderNoticeBypassKey,
+        athkarMobileOvercountHintBypassKey,
         supportUnlockStorageKey,
         supportUnlockModePermanent,
         supportUnlockModeWeekly,
@@ -304,6 +305,7 @@ export const createModeFlowModule = (deps) => {
             this.closeHint();
             this.resetSwipeState();
             this.syncNativeVolumeNavigation();
+            this.showMobileOvercountHint?.(this.activeIndex);
 
             return true;
         },
@@ -410,6 +412,103 @@ export const createModeFlowModule = (deps) => {
                 noticeKey: athkarReaderNoticeBypassKey,
                 markBypassed: true,
             });
+        },
+
+        showMobileOvercountHint(index) {
+            if (
+                !this.activeMode ||
+                typeof this.isMobileViewport !== 'function' ||
+                !this.isMobileViewport()
+            ) {
+                return;
+            }
+
+            if (this.shouldBypassNoticeOnce(athkarMobileOvercountHintBypassKey)) {
+                return;
+            }
+
+            if (this.countAt(index) <= this.requiredCount(index)) {
+                return;
+            }
+
+            this.markNoticeDisplayed(athkarMobileOvercountHintBypassKey);
+            const activeMode = this.activeMode;
+            const hintIndex = index;
+
+            const showHint = () => {
+                if (
+                    this.activeMode !== activeMode ||
+                    this.activeIndex !== hintIndex ||
+                    this.shouldBypassNoticeOnce(athkarMobileOvercountHintBypassKey) ||
+                    this.countAt(hintIndex) <= this.requiredCount(hintIndex)
+                ) {
+                    return;
+                }
+
+                window.dispatchEvent(
+                    new CustomEvent('athkar-mobile-overcount-hint-show', {
+                        detail: { index },
+                    }),
+                );
+            };
+
+            if (typeof this.$nextTick === 'function') {
+                this.$nextTick(() => window.requestAnimationFrame(showHint));
+            } else {
+                window.requestAnimationFrame(showHint);
+            }
+        },
+
+        hideMobileOvercountHint() {
+            window.dispatchEvent(new CustomEvent('athkar-mobile-overcount-hint-hide'));
+        },
+
+        acknowledgeMobileOvercountHint(index) {
+            if (
+                this.activeMode &&
+                this.countAt(index) > this.requiredCount(index) &&
+                !this.shouldBypassNoticeOnce(athkarMobileOvercountHintBypassKey)
+            ) {
+                this.markNoticeBypassedOnce(athkarMobileOvercountHintBypassKey);
+            }
+
+            this.hideMobileOvercountHint();
+        },
+
+        toggleMobileOvercountHint() {
+            const index = this.activeIndex;
+
+            this.hideMobileOvercountHint();
+
+            if (this.shouldShowMobileOvercountHint(index)) {
+                this.acknowledgeMobileOvercountHint(index);
+            }
+
+            this.toggleHint(index);
+        },
+
+        markMobileOvercountHintDisplayed() {
+            this.markNoticeDisplayed(athkarMobileOvercountHintBypassKey);
+        },
+
+        markMobileOvercountHintAcknowledged() {
+            this.markNoticeBypassedOnce(athkarMobileOvercountHintBypassKey);
+        },
+
+        shouldShowMobileOvercountHint(index) {
+            if (
+                !this.activeMode ||
+                typeof this.isMobileViewport !== 'function' ||
+                !this.isMobileViewport()
+            ) {
+                return false;
+            }
+
+            if (this.shouldBypassNoticeOnce(athkarMobileOvercountHintBypassKey)) {
+                return false;
+            }
+
+            return this.countAt(index) > this.requiredCount(index);
         },
 
         resolveNoticeBypassFlags() {

@@ -430,7 +430,7 @@
                             title="اسحب لإعادة الترتيب"
                             @class([
                                 'opacity-45 pointer-events-none' => $hasActiveSearch,
-                                'athkar-manager-card__drag-handle'
+                                'athkar-manager-card__drag-handle',
                             ])
                             wire:click.stop
                             x-on:click.stop

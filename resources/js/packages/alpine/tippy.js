@@ -19,6 +19,8 @@ const normalizeTooltipOptions = (direction = 'top', durationInMs = 2000, options
             placement: direction.placement ?? direction.direction ?? 'top',
             durationInMs: direction.durationInMs ?? direction.duration ?? 2000,
             showWhenGuidancePanelsSkipped: Boolean(direction.showWhenGuidancePanelsSkipped),
+            offset: direction.offset ?? null,
+            disableFlip: Boolean(direction.disableFlip),
         };
     }
 
@@ -29,6 +31,8 @@ const normalizeTooltipOptions = (direction = 'top', durationInMs = 2000, options
         placement: direction,
         durationInMs,
         showWhenGuidancePanelsSkipped: Boolean(normalizedOptions.showWhenGuidancePanelsSkipped),
+        offset: normalizedOptions.offset ?? null,
+        disableFlip: Boolean(normalizedOptions.disableFlip),
     };
 };
 
@@ -78,18 +82,32 @@ document.addEventListener('alpine:init', () => {
                 placement,
                 durationInMs: resolvedDuration,
                 showWhenGuidancePanelsSkipped,
+                offset,
+                disableFlip,
             } = normalizeTooltipOptions(direction, durationInMs, options);
 
             const existing = tippyInstances.get(el);
             let instance = existing;
 
             if (!instance || instance.state.isDestroyed) {
-                instance = Tippy(el, {
+                const instanceOptions = {
                     content: message,
                     placement,
                     trigger: 'manual',
                     theme: window.Alpine.store('colorScheme').isDark ? 'light' : '',
-                });
+                };
+
+                if (offset !== null) {
+                    instanceOptions.offset = offset;
+                }
+
+                if (disableFlip) {
+                    instanceOptions.popperOptions = {
+                        modifiers: [{ name: 'flip', enabled: false }],
+                    };
+                }
+
+                instance = Tippy(el, instanceOptions);
 
                 instance._hideTimer = null;
                 instance._clearHideTimer = () => {
@@ -101,11 +119,23 @@ document.addEventListener('alpine:init', () => {
 
                 tippyInstances.set(el, instance);
             } else {
-                instance.setContent(message);
-                instance.setProps({
+                const nextProps = {
                     placement,
                     theme: window.Alpine.store('colorScheme').isDark ? 'light' : '',
-                });
+                };
+
+                if (offset !== null) {
+                    nextProps.offset = offset;
+                }
+
+                if (disableFlip) {
+                    nextProps.popperOptions = {
+                        modifiers: [{ name: 'flip', enabled: false }],
+                    };
+                }
+
+                instance.setContent(message);
+                instance.setProps(nextProps);
             }
 
             instance._clearHideTimer?.();

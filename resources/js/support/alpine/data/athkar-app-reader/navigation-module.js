@@ -161,6 +161,7 @@ export const createNavigationModule = (deps) => {
             }
 
             if (nextIndex === currentIndex) {
+                this.showMobileOvercountHint?.(nextIndex);
                 return;
             }
 
@@ -168,6 +169,7 @@ export const createNavigationModule = (deps) => {
                 this.resetTopUiTransition();
             }
 
+            this.hideMobileOvercountHint?.();
             this.resetMaintenanceTapTracking();
             const previousPage = currentIndex + 1;
             this.progress[this.activeMode].index = nextIndex;
@@ -178,6 +180,7 @@ export const createNavigationModule = (deps) => {
 
             this.triggerSlidePulse(direction);
             this.triggerPagePulse(direction, previousPage, nextPage);
+            this.showMobileOvercountHint?.(nextIndex);
         },
 
         prev() {
