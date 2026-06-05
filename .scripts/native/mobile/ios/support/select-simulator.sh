@@ -11,66 +11,26 @@ if ! command -v xcrun >/dev/null 2>&1; then
     exit 1
 fi
 
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+project_root="$(cd "${script_dir}/../../../../.." && pwd)"
+
 simulator_udid="$(
-    xcrun simctl list devices available --json | php -r '
-    $json = stream_get_contents(STDIN);
-    $data = json_decode($json, true);
-    if (!is_array($data) || !isset($data["devices"]) || !is_array($data["devices"])) {
+    xcrun simctl list devices --json | php -r '
+    require $argv[1];
+
+    $selector = new App\Services\Native\IosSimulatorSelector();
+    $simulatorUdid = $selector->selectUdidFromJson(stream_get_contents(STDIN));
+
+    if ($simulatorUdid === null || $simulatorUdid === "") {
         exit(1);
     }
 
-    $booted = null;
-    $fallback = null;
-
-    foreach ($data["devices"] as $devices) {
-        if (!is_array($devices)) {
-            continue;
-        }
-
-        foreach ($devices as $device) {
-            if (!is_array($device)) {
-                continue;
-            }
-
-            if (($device["isAvailable"] ?? false) !== true) {
-                continue;
-            }
-
-            $name = (string) ($device["name"] ?? "");
-            $udid = (string) ($device["udid"] ?? "");
-            $state = (string) ($device["state"] ?? "");
-
-            if ($udid === "" || strpos($name, "iPhone") === false) {
-                continue;
-            }
-
-            if ($state === "Booted") {
-                $booted = $udid;
-                break 2;
-            }
-
-            if ($fallback === null) {
-                $fallback = $udid;
-            }
-        }
-    }
-
-    if ($booted !== null) {
-        echo $booted;
-        exit(0);
-    }
-
-    if ($fallback !== null) {
-        echo $fallback;
-        exit(0);
-    }
-
-    exit(1);
-    '
+    echo $simulatorUdid;
+    ' "${project_root}/vendor/autoload.php"
 )"
 
 if [[ -z "${simulator_udid}" ]]; then
-    echo "[native-ios-sim] no available iPhone simulator was found." >&2
+    echo "[native-ios-sim] no booted simulator or available iPhone simulator was found." >&2
     exit 1
 fi
 
