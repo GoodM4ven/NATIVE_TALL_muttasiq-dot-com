@@ -557,3 +557,47 @@ JS);
     waitForScript($mobilePage, homeDataScript('data.activeView'), 'quran-app-gate');
     waitForScript($mobilePage, 'window.location.hash', '#quran-app-gate');
 });
+
+it('keeps patch version updates on the last active view but resets major and minor updates to the main menu', function () {
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
+
+    resetBrowserState($page);
+
+    $cases = [
+        [
+            'currentVersion' => '2.4.2',
+            'storedVersion' => '2.4.1',
+            'expectedView' => 'quran-app-tilawa',
+        ],
+        [
+            'currentVersion' => '2.5.0',
+            'storedVersion' => '2.4.2',
+            'expectedView' => 'main-menu',
+        ],
+    ];
+
+    foreach ($cases as $case) {
+        setLocalStorageValue($page, 'muttasiq-app-version-last-seen-v1', $case['storedVersion']);
+
+        $shouldResetStartupView = (bool) $page->script(js_template(<<<'JS'
+(() => {
+  return Boolean(
+    window.appVersionRouting?.syncStoredAppVersion({{currentVersion}})?.shouldResetStartupView,
+  );
+})()
+JS, ['currentVersion' => $case['currentVersion']]));
+
+        forceHomeView(
+            $page,
+            $shouldResetStartupView ? 'main-menu' : 'quran-app-tilawa',
+            false,
+        );
+
+        waitForScript($page, homeDataScript('data.activeView'), $case['expectedView']);
+
+        expect($page->script('JSON.parse(localStorage.getItem("app-active-view"))'))
+            ->toBe($case['expectedView']);
+        expect($page->script('JSON.parse(localStorage.getItem("muttasiq-app-version-last-seen-v1"))'))
+            ->toBe($case['currentVersion']);
+    }
+});

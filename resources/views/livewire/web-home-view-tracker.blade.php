@@ -8,11 +8,6 @@
         }
 
         lastView = nextView;
-
-        if (nextView !== 'athkar-app-gate' && nextView !== 'quran-app-gate') {
-            return;
-        }
-
-        $wire.trackGateView(nextView);
+        $wire.trackAppView(nextView);
     "
 ></div>

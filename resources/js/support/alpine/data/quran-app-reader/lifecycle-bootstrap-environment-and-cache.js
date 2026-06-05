@@ -620,6 +620,10 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
                 this._onWindowNativeVolumeButton,
                 true,
             );
+            this._onNativeBridgeReady = () => {
+                this.syncNativeVolumeNavigation();
+            };
+            window.addEventListener('native-bridge-ready', this._onNativeBridgeReady);
 
             if (!(readerPanel instanceof Element)) {
                 this.syncNativeVolumeNavigation();
@@ -896,6 +900,11 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
                     true,
                 );
                 this._onWindowNativeVolumeButton = null;
+            }
+
+            if (this._onNativeBridgeReady) {
+                window.removeEventListener('native-bridge-ready', this._onNativeBridgeReady);
+                this._onNativeBridgeReady = null;
             }
 
             this._onPanelPointerDown = null;

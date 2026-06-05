@@ -609,7 +609,7 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
         },
 
         shouldCloseSearchModalBeforeManagerModalOpen() {
-            return this.search.modalOpen || this.isSearchModalWindowVisible();
+            return this.isSearchModalWindowVisible();
         },
 
         shouldUseSmPlusWebFastModalRecovery() {
@@ -995,7 +995,9 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             this.search.activeSurahNumber = surahNumber;
             this.search.preserveActiveSurahOnNextOpen = true;
             const shouldUseStandardSmPlusNavigation =
-                !this.nativeRuntime && Boolean(this.$store?.bp?.is?.('sm+'));
+                !this.nativeRuntime &&
+                Boolean(this.$store?.bp?.is?.('sm+')) &&
+                !Boolean(this.$store?.bp?.isTablet?.());
             const standardSmPlusSource = 'search-standard';
             if (shouldUseStandardSmPlusNavigation) {
                 this.searchDestinationScaleBoostPageNumber = 0;

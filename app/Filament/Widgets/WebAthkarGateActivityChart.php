@@ -9,7 +9,7 @@ use Filament\Widgets\ChartWidget;
 
 class WebAthkarGateActivityChart extends ChartWidget
 {
-    protected ?string $heading = 'نشاط زيارات بوابة الأذكار';
+    protected ?string $heading = 'نشاط زيارات تطبيق الأذكار';
 
     protected int|string|array $columnSpan = 'full';
 

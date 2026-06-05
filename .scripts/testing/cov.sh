@@ -26,6 +26,9 @@ run_pest_coverage() {
         php -d "memory_limit=${testcov_memory_limit}" vendor/bin/pest \
         tests/Unit \
         tests/Feature/App \
+        --testdox-summary \
+        --display-skipped \
+        --display-all-issues \
         --coverage \
         --exclude-group=browser \
         "$@"
@@ -105,6 +108,9 @@ docker exec \
             php -d "memory_limit=${TESTCOV_MEMORY_LIMIT}" vendor/bin/pest \
             tests/Unit \
             tests/Feature/App \
+            --testdox-summary \
+            --display-skipped \
+            --display-all-issues \
             --coverage \
             --exclude-group=browser \
             "$@"

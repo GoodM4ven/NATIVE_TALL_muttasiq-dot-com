@@ -25,7 +25,20 @@ trait HasControlPanelChangelogsTab
 
     private function changelogsMarkdown(): HtmlString
     {
-        $markdown = File::get(public_path('docs/updates/changelogs.md'));
+        $markdownPath = public_path('docs/updates/changelogs.md');
+        if (! File::exists($markdownPath)) {
+            $fallbackMessage = $this->escapeHtml(arabic_text('ملف التحديثات غير متوفر الآن.'));
+
+            return new HtmlString(<<<HTML
+                <article class="mx-auto w-full max-w-3xl text-right leading-7">
+                    <p class="text-sm text-gray-600 dark:text-gray-300">
+                        {$fallbackMessage}
+                    </p>
+                </article>
+                HTML);
+        }
+
+        $markdown = File::get($markdownPath);
 
         $markdown = preg_replace('/^\s*<div align="right">\s*/', '', $markdown) ?? $markdown;
         $markdown = preg_replace('/\s*<\/div>\s*$/', '', $markdown) ?? $markdown;
@@ -68,6 +81,11 @@ trait HasControlPanelChangelogsTab
                 {$html}
             </article>
             HTML);
+    }
+
+    private function escapeHtml(string $value): string
+    {
+        return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5, 'UTF-8');
     }
 
     private function rewriteChangelogMarkdownImageSources(string $markdown): string

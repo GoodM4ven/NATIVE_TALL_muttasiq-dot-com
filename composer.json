@@ -20,7 +20,7 @@
         "filament/filament": "^5.0",
         "goodm4ven/arabicable": "^1.0",
         "goodm4ven/blurred-image": "^1.1",
-        "goodm4ven/nativephp-muttasiq-patches": "^1.5.0",
+        "goodm4ven/nativephp-muttasiq-patches": "^1.6.0",
         "goodm4ven/tailwind-merge": "^1.1",
         "laravel/framework": "^12.0",
         "laravel/nightwatch": "^1.22",
@@ -186,12 +186,5 @@
         }
     },
     "minimum-stability": "stable",
-    "prefer-stable": true,
-    "repositories": [
-        {
-            "name": "filament",
-            "type": "composer",
-            "url": "https://packages.filamentphp.com/composer"
-        }
-    ]
+    "prefer-stable": true
 }

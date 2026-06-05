@@ -1329,7 +1329,7 @@
                 'is-tap-pulse': tapPulse.isActive,
                 'outline-transparent! dark:outline-transparent!': countPulse.isActive,
             }"
-            x-on:click.capture="if (isHintOpen(activeIndex) && !$event.target.closest('[data-hint-allow]')) { closeHint(); $event.stopPropagation(); $event.preventDefault(); }"
+            x-on:click.capture="if (isHintOpen(activeIndex) && !$event.target.closest('[data-hint-allow]') && !$event.target.closest('[data-athkar-tap]')) { closeHint(); $event.stopPropagation(); $event.preventDefault(); }"
             x-on:pointerdown="swipeStart($event)"
             x-on:pointerup="swipeEnd($event)"
             x-on:pointercancel="swipeCancel()"
@@ -1391,11 +1391,14 @@
                             type="button"
                             aria-label="{{ arabic_text('العدد') }}"
                             tabindex="-1"
-                            x-bind:class="isHintOpen(activeIndex) ? 'size-16! pointer-events-none' : ''"
-                            x-on:click.stop="toggleHint(activeIndex)"
+                            x-ref="mobileOvercountHintRing"
+                            x-bind:class="isHintOpen(activeIndex) ? 'size-16!' : ''"
+                            x-on:click.stop="toggleMobileOvercountHint()"
                             x-on:pointerdown.stop
                             x-on:touchstart.stop
                             x-bind:aria-expanded="isHintOpen(activeIndex)"
+                            x-on:athkar-mobile-overcount-hint-show.window="$tippy(@js(arabic_text('زيادة عدّ')), { placement: 'right-start', durationInMs: 0, showWhenGuidancePanelsSkipped: true, disableFlip: true, offset: [0, 8] })"
+                            x-on:athkar-mobile-overcount-hint-hide.window="$tippy.hide()"
                         >
                             <div class="athkar-counter-repel"></div>
                             <div
@@ -1631,9 +1634,7 @@
                             <div class="contents">
                                 <!-- Content -->
                                 <div
-                                    class="pointer-events-auto flex min-h-0 flex-1 flex-col gap-3 sm:gap-1 sm:pt-0 md:gap-2 md:pt-2 lg:gap-4 lg:pt-4 xl:gap-4 xl:pt-3 2xl:gap-5 2xl:pt-4"
-                                    x-bind:class="{ 'pointer-events-none!': isHintOpen(activeIndex) }"
-                                >
+                                    class="pointer-events-auto flex min-h-0 flex-1 flex-col gap-3 sm:gap-1 sm:pt-0 md:gap-2 md:pt-2 lg:gap-4 lg:pt-4 xl:gap-4 xl:pt-3 2xl:gap-5 2xl:pt-4">
                                     <!-- Althikr -->
                                     <button
                                         class="athkar-tap md:px-13 3xl:px-4 4xl:px-5 3xl:py-6 group relative flex min-h-0 w-full flex-1 touch-manipulation flex-col items-center justify-center gap-4 overflow-hidden rounded-sm border border-transparent px-0 py-1.5 text-center transition sm:px-10 sm:py-2.5 md:py-3 lg:px-12 xl:px-3 xl:py-5 2xl:px-3 2xl:py-5"

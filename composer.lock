@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "78bc71a56d81d9cf3f3f35ece41392c8",
+    "content-hash": "daea67edcb551cf0f6fded807f07c7bd",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -1903,16 +1903,16 @@
         },
         {
             "name": "goodm4ven/blurred-image",
-            "version": "v1.3.2",
+            "version": "v1.3.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/GoodM4ven/PACKAGE_LARAVEL_blurred-image.git",
-                "reference": "ee7304fd9db17b63e41c60f675cc6a53bcbe92da"
+                "reference": "40eecdf42bff4ec57a1ea2babc56b214349dac32"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/GoodM4ven/PACKAGE_LARAVEL_blurred-image/zipball/ee7304fd9db17b63e41c60f675cc6a53bcbe92da",
-                "reference": "ee7304fd9db17b63e41c60f675cc6a53bcbe92da",
+                "url": "https://api.github.com/repos/GoodM4ven/PACKAGE_LARAVEL_blurred-image/zipball/40eecdf42bff4ec57a1ea2babc56b214349dac32",
+                "reference": "40eecdf42bff4ec57a1ea2babc56b214349dac32",
                 "shasum": ""
             },
             "require": {
@@ -1982,7 +1982,7 @@
             ],
             "support": {
                 "issues": "https://github.com/GoodM4ven/PACKAGE_LARAVEL_blurred-image/issues",
-                "source": "https://github.com/GoodM4ven/PACKAGE_LARAVEL_blurred-image/tree/v1.3.2"
+                "source": "https://github.com/GoodM4ven/PACKAGE_LARAVEL_blurred-image/tree/v1.3.3"
             },
             "funding": [
                 {
@@ -1998,20 +1998,20 @@
                     "type": "patreon"
                 }
             ],
-            "time": "2026-02-21T20:31:14+00:00"
+            "time": "2026-06-03T03:09:08+00:00"
         },
         {
             "name": "goodm4ven/nativephp-muttasiq-patches",
-            "version": "v1.6.0",
+            "version": "v1.6.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/GoodM4ven/NATIVE_PLUGIN_muttasiq-patches.git",
-                "reference": "fed87c1f9e736506dba0062ef1a577a8302b8da9"
+                "reference": "4ffe5aec39d2418c02ee2fee9b79038834835b50"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/GoodM4ven/NATIVE_PLUGIN_muttasiq-patches/zipball/fed87c1f9e736506dba0062ef1a577a8302b8da9",
-                "reference": "fed87c1f9e736506dba0062ef1a577a8302b8da9",
+                "url": "https://api.github.com/repos/GoodM4ven/NATIVE_PLUGIN_muttasiq-patches/zipball/4ffe5aec39d2418c02ee2fee9b79038834835b50",
+                "reference": "4ffe5aec39d2418c02ee2fee9b79038834835b50",
                 "shasum": ""
             },
             "require": {
@@ -2076,7 +2076,7 @@
                     "type": "patreon"
                 }
             ],
-            "time": "2026-05-29T05:15:44+00:00"
+            "time": "2026-06-04T03:08:14+00:00"
         },
         {
             "name": "goodm4ven/tailwind-merge",

@@ -69,6 +69,7 @@ run_local() (
     cd "${root_dir}"
     print_runtime_indicator "local"
     export XDEBUG_MODE="${xdebug_mode}"
+    local -a pest_report_args=(--testdox-summary --display-skipped --display-all-issues)
 
     plugin_cache_file="${plugin_cache_relative_path}"
     backup_file=""
@@ -81,7 +82,7 @@ run_local() (
         rm -f "${plugin_cache_file}.bak"
     fi
 
-    PEST_ENABLE_BROWSER_PLUGIN=0 "${run_clean_script}" vendor/bin/pest --exclude-group=browser "$@"
+    PEST_ENABLE_BROWSER_PLUGIN=0 "${run_clean_script}" vendor/bin/pest "${pest_report_args[@]}" --exclude-group=browser "$@"
 )
 
 run_in_container() {
@@ -109,7 +110,7 @@ run_in_container() {
                 rm -f "${plugin_cache_file}.bak"
             fi
 
-            PEST_ENABLE_BROWSER_PLUGIN=0 .scripts/testing/support/run-clean.sh vendor/bin/pest --exclude-group=browser "$@"
+            PEST_ENABLE_BROWSER_PLUGIN=0 .scripts/testing/support/run-clean.sh vendor/bin/pest --testdox-summary --display-skipped --display-all-issues --exclude-group=browser "$@"
         ' sh "$@"
 }
 

@@ -91,17 +91,22 @@ if [[ "$(uname -s)" != "Darwin" ]]; then
     exit 1
 fi
 
+native_ensure_icu_preference
+
 install_args=()
 
-if [[ "$(native_read_icu_preference)" == "1" ]]; then
-    install_args+=(--with-icu)
-    echo "[native-prepare:ios] ICU-enabled PHP binaries are required by NativePHP lock/config"
-fi
+install_args+=(--with-icu)
+echo "[native-prepare:ios] ICU-enabled PHP binaries are required by NativePHP lock/config"
 
-echo "[native-prepare:ios] forcing native:install ios ${install_args[*]} --force --no-interaction"
+install_args_display="${install_args[*]-}"
+echo "[native-prepare:ios] forcing native:install ios ${install_args_display} --force --no-interaction"
 (
     cd "${root_dir}"
-    php artisan native:install ios "${install_args[@]}" --force --no-interaction
+    if (( ${#install_args[@]} > 0 )); then
+        php artisan native:install ios "${install_args[@]}" --force --no-interaction
+    else
+        php artisan native:install ios --force --no-interaction
+    fi
 )
 
 if [[ ! -d "${ios_dir}/Include" || ! -d "${ios_dir}/Libraries" ]]; then

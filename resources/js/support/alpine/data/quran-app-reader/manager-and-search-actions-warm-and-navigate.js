@@ -685,7 +685,9 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                 .map((value) => String(value ?? '').trim())
                 .filter((value) => value !== '');
             const shouldUseStandardSmPlusNavigation =
-                !this.nativeRuntime && Boolean(this.$store?.bp?.is?.('sm+'));
+                !this.nativeRuntime &&
+                Boolean(this.$store?.bp?.is?.('sm+')) &&
+                !Boolean(this.$store?.bp?.isTablet?.());
             const standardSmPlusSource = 'search-standard';
             if (shouldUseStandardSmPlusNavigation) {
                 this.searchDestinationScaleBoostPageNumber = 0;
@@ -759,16 +761,28 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                     this.searchHighlightedAyahIndex = 0;
                 }
                 this.activeWordIndex = 0;
-                this.activateSearchDestinationCue({
-                    source: shouldUseStandardSmPlusNavigation
-                        ? standardSmPlusSource
-                        : isSurahNameResult
-                          ? 'surah-directory'
-                          : 'search-result',
-                    surahNumber,
-                    pageNumber: targetPage,
-                    ayahText: this.searchResultAyahText(result),
-                });
+                if (shouldUseStandardSmPlusNavigation) {
+                    this.activateSearchDestinationCue({
+                        source: standardSmPlusSource,
+                        surahNumber,
+                        pageNumber: targetPage,
+                        ayahText: this.searchResultAyahText(result),
+                    });
+                } else if (isSurahNameResult) {
+                    this.activateSearchDestinationCue({
+                        source: 'surah-directory',
+                        surahNumber,
+                        pageNumber: targetPage,
+                        ayahText: this.searchResultAyahText(result),
+                    });
+                } else {
+                    this.activateSearchDestinationCue({
+                        source: 'search-result',
+                        surahNumber,
+                        pageNumber: targetPage,
+                        ayahText: this.searchResultAyahText(result),
+                    });
+                }
                 this.recordNavigationHistory({
                     source: 'search-result',
                     pageNumber: targetPage,

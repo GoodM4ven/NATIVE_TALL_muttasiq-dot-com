@@ -9,7 +9,7 @@ use Filament\Widgets\ChartWidget;
 
 class WebQuranGateActivityChart extends ChartWidget
 {
-    protected ?string $heading = 'نشاط زيارات بوابة القرآن';
+    protected ?string $heading = 'نشاط زيارات تطبيق القرآن';
 
     protected int|string|array $columnSpan = 'full';
 

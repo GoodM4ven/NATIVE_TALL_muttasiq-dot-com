@@ -582,11 +582,35 @@ export const createSelectionCopyComposeAndPointerModule = (deps) => {
             return withoutHarakat ?? normalizedText;
         },
 
+        async writeNativeBridgeClipboardText(text) {
+            if (typeof window === 'undefined') {
+                return false;
+            }
+
+            const bridge = window.AndroidBridge;
+
+            if (!bridge || typeof bridge.copyText !== 'function') {
+                return false;
+            }
+
+            try {
+                const didCopy = await bridge.copyText(String(text ?? ''));
+
+                return didCopy !== false;
+            } catch (_) {
+                return false;
+            }
+        },
+
         async writeClipboardText(text) {
             const normalizedText = this.normalizeCopiedText(text);
 
             if (!normalizedText) {
                 return false;
+            }
+
+            if (await this.writeNativeBridgeClipboardText(normalizedText)) {
+                return true;
             }
 
             if (
@@ -807,6 +831,19 @@ export const createSelectionCopyComposeAndPointerModule = (deps) => {
             this.wordPress.trailWords = [];
             this.wordPress.trailAyahIndexes = [];
             this.wordPress.lastAnchor = null;
+
+            const isNativeIosTouch =
+                typeof document !== 'undefined' &&
+                document.body instanceof HTMLElement &&
+                document.body.classList.contains('nativephp-ios') &&
+                ['touch', 'pen'].includes(
+                    String(point.pointerType ?? event?.pointerType ?? '').toLowerCase(),
+                );
+
+            if (isNativeIosTouch) {
+                event?.preventDefault?.();
+            }
+
             this.collectWordPressTrailWord(word, {
                 x: point.x,
                 y: point.y,
@@ -902,6 +939,18 @@ export const createSelectionCopyComposeAndPointerModule = (deps) => {
                 return;
             }
 
+            const isNativeIosTouch =
+                typeof document !== 'undefined' &&
+                document.body instanceof HTMLElement &&
+                document.body.classList.contains('nativephp-ios') &&
+                ['touch', 'pen'].includes(
+                    String(point.pointerType ?? this.wordPress.pointerType ?? '').toLowerCase(),
+                );
+
+            if (isNativeIosTouch) {
+                event?.preventDefault?.();
+            }
+
             if (
                 this.wordPress.pointerId !== null &&
                 point.pointerId !== null &&
@@ -957,6 +1006,19 @@ export const createSelectionCopyComposeAndPointerModule = (deps) => {
                     ? Math.abs(point.x - this.wordPress.startX) > wordPressDragThresholdPx ||
                       Math.abs(point.y - this.wordPress.startY) > wordPressDragThresholdPx
                     : false;
+
+            const isNativeIosTouch =
+                point !== null &&
+                typeof document !== 'undefined' &&
+                document.body instanceof HTMLElement &&
+                document.body.classList.contains('nativephp-ios') &&
+                ['touch', 'pen'].includes(
+                    String(point.pointerType ?? this.wordPress.pointerType ?? '').toLowerCase(),
+                );
+
+            if (isNativeIosTouch) {
+                event?.preventDefault?.();
+            }
 
             if (
                 this.usesMobileDoubleTapCopyMode() &&

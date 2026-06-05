@@ -202,6 +202,7 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
                         }),
                 ])
                     ->label(arabic_text('إجراءات'))
+                    ->dropdownTeleport()
                     ->iconButton(),
             ], position: RecordActionsPosition::BeforeColumns)
             ->headerActions([

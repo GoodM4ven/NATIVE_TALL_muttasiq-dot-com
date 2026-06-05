@@ -233,6 +233,7 @@ class BookmarksManagerTable extends Component implements HasActions, HasSchemas,
                         }),
                 ])
                     ->label(arabic_text('إجراءات'))
+                    ->dropdownTeleport()
                     ->iconButton(),
             ], position: RecordActionsPosition::BeforeColumns)
             ->emptyStateHeading(arabic_text('لا توجد علامات محفوظة.'));

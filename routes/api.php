@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\JsErrorReportController;
 use App\Http\Controllers\Api\QuranSnapshotDownloadController;
 use App\Http\Controllers\Api\QuranSnapshotMetaController;
 use App\Http\Controllers\Api\SettingsController;
+use App\Http\Controllers\Api\VisitMetricController;
 use Illuminate\Support\Facades\Route;
 
 Route::name('api.')->group(function () {
@@ -21,6 +22,10 @@ Route::name('api.')->group(function () {
     Route::post('/js-error-reports', JsErrorReportController::class)
         ->middleware('throttle:js-error-reports')
         ->name('js-error-reports.store');
+
+    Route::post('/visit-metrics', VisitMetricController::class)
+        ->middleware('throttle:visit-metrics')
+        ->name('visit-metrics.store');
 
     Route::get('/quran-snapshot/meta', QuranSnapshotMetaController::class)
         ->middleware('throttle:quran-snapshot')

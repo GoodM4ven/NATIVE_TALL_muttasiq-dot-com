@@ -89,7 +89,20 @@
                 return;
             }
     
+            const versionState = window.appVersionRouting?.syncStoredAppVersion(normalizedVersion);
+    
             this.appVersion = normalizedVersion;
+    
+            if (versionState?.shouldResetStartupView) {
+                window.dispatchEvent(
+                    new CustomEvent(
+                        window.appVersionRouting?.appVersionMajorMinorResetEventName ??
+                        'muttasiq-app-version-major-minor-reset', {
+                            detail: versionState,
+                        },
+                    ),
+                );
+            }
         },
         isTouchDevice() {
             if (!$store.bp) {

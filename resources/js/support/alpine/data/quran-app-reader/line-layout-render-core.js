@@ -624,22 +624,32 @@ export const createLineLayoutRenderCoreModule = (deps) => {
 
         lineFontStyle() {
             const family = String(this.qpcPageFontFamily ?? '').trim();
+            const featureSettings =
+                "font-feature-settings: 'liga' 1, 'calt' 1, 'rlig' 1, 'ccmp' 1;";
+            const ligatures =
+                'font-variant-ligatures: common-ligatures contextual discretionary-ligatures;';
+            const rendering = 'text-rendering: optimizeLegibility;';
 
             if (!family) {
-                return 'color: var(--quran-ink);';
+                return `color: var(--quran-ink); ${featureSettings} ${ligatures} ${rendering}`;
             }
 
-            return `font-family: '${family}', 'MadinaQuran', 'Amiri', 'Traditional Arabic', serif; color: var(--quran-ink);`;
+            return `font-family: '${family}', 'MadinaQuran', 'Amiri', 'Traditional Arabic', serif; color: var(--quran-ink); ${featureSettings} ${ligatures} ${rendering}`;
         },
 
         basmallahLineStyle(line) {
             const family = String(this.basmallahFontFamily ?? '').trim();
+            const featureSettings =
+                "font-feature-settings: 'liga' 1, 'calt' 1, 'rlig' 1, 'ccmp' 1;";
+            const ligatures =
+                'font-variant-ligatures: common-ligatures contextual discretionary-ligatures;';
+            const rendering = 'text-rendering: optimizeLegibility;';
 
             if (!family) {
-                return "font-family: 'Scheherazade New', 'Amiri', 'Noto Naskh Arabic', 'Traditional Arabic', serif; color: var(--quran-ink); font-feature-settings: 'liga' 1, 'calt' 1;";
+                return `font-family: 'Scheherazade New', 'Amiri', 'Noto Naskh Arabic', 'Traditional Arabic', serif; color: var(--quran-ink); ${featureSettings} ${ligatures} ${rendering}`;
             }
 
-            return `font-family: '${family}', 'Scheherazade New', 'Amiri', 'Noto Naskh Arabic', 'Traditional Arabic', serif; color: var(--quran-ink); font-feature-settings: 'liga' 1, 'calt' 1;`;
+            return `font-family: '${family}', 'Scheherazade New', 'Amiri', 'Noto Naskh Arabic', 'Traditional Arabic', serif; color: var(--quran-ink); ${featureSettings} ${ligatures} ${rendering}`;
         },
 
         basmallahDisplayText(line) {
@@ -663,12 +673,19 @@ export const createLineLayoutRenderCoreModule = (deps) => {
         surahHeaderLineStyle() {
             const family = String(this.surahHeaderFontFamily ?? '').trim();
             const styles = [];
+            const featureSettings =
+                "font-feature-settings: 'liga' 1, 'calt' 1, 'rlig' 1, 'ccmp' 1;";
+            const ligatures =
+                'font-variant-ligatures: common-ligatures contextual discretionary-ligatures;';
+            const rendering = 'text-rendering: optimizeLegibility;';
 
             if (family) {
                 styles.push(
                     `font-family: '${family}', 'MadinaQuran', 'Amiri', 'Traditional Arabic', serif;`,
                 );
             }
+
+            styles.push(featureSettings, ligatures, rendering);
 
             return styles.join(' ');
         },

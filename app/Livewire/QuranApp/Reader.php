@@ -321,6 +321,7 @@ class Reader extends Component implements HasActions, HasSchemas
      *     match_rank: int
      * }>
      */
+    #[Async]
     public function streamSearch(string $query, int $requestSerial = 0, int $limit = 24): array
     {
         $this->prepareSearchStreamingOutput();
@@ -637,6 +638,7 @@ class Reader extends Component implements HasActions, HasSchemas
     }
 
     #[Renderless]
+    #[Async]
     public function cancelSearch(int $requestSerial = 0): void
     {
         $this->markSearchStreamCancelled(max(0, $requestSerial));
@@ -867,6 +869,7 @@ class Reader extends Component implements HasActions, HasSchemas
     }
 
     #[Renderless]
+    #[Async]
     public function prewarmManagerModals(): void
     {
         foreach (['search-modal', 'history-modal', 'bookmarks-modal'] as $partial) {

@@ -14,6 +14,10 @@ Route::get('/', HomeController::class)
     ->name('home');
 
 Route::get('/qpc-v2-fonts/{page}.ttf', function (int $page) {
+    return redirect()->route('qpc-v2-font', ['page' => $page], 301);
+})->whereNumber('page');
+
+Route::get('/qpc-v2-fonts/{page}.woff2', function (int $page) {
     if ($page < 1 || $page > 604) {
         abort(404);
     }
@@ -205,6 +209,35 @@ Route::get('/quran-basmallah-font/{fontKey}', function (string $fontKey) {
         'Cache-Control' => 'public, max-age=31536000, immutable',
     ]);
 })->name('quran-basmallah-font');
+
+Route::get('/arabicable-madina-font', function () {
+    $candidates = [
+        base_path('vendor/goodm4ven/arabicable/resources/dist/madina.woff2'),
+        base_path('vendor/goodm4ven/arabicable/resources/raw-data/madina.woff2'),
+        public_path('vendor/arabicable/madina.woff2'),
+    ];
+
+    $fontPath = null;
+
+    foreach ($candidates as $candidate) {
+        $candidatePath = (string) $candidate;
+
+        if ($candidatePath !== '' && is_file($candidatePath)) {
+            $fontPath = $candidatePath;
+
+            break;
+        }
+    }
+
+    if ($fontPath === null) {
+        abort(404);
+    }
+
+    return response()->file($fontPath, [
+        'Content-Type' => 'font/woff2',
+        'Cache-Control' => 'public, max-age=31536000, immutable',
+    ]);
+})->name('arabicable-madina-font');
 
 Route::get('/quran-reader/pages/{page}.json', ReaderPageDataController::class)
     ->whereNumber('page')
