@@ -131,10 +131,10 @@
             x-transition.opacity.duration.220ms
         >
             <span
-                class="inline-block h-5 w-5 animate-spin rounded-full border-2 border-amber-300/80 border-t-transparent"
+                class="inline-block h-5 w-5 animate-spin [animation-direction:reverse]! rounded-full border-2 border-amber-300/80 border-t-transparent"
                 aria-hidden="true"
             ></span>
-            <span>{{ arabic_text('تتوسع النتائج تباعًا...') }}</span>
+            <span>{{ arabic_text('أذكر الله...') }}</span>
         </div>
     </div>
 
