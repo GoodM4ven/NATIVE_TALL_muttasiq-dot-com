@@ -466,7 +466,8 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                 return;
             }
 
-            const normalizedQuery = this.normalizeSearchQuery(this.search.query);
+            const rawQuery = String(this.search.query ?? '').trim();
+            const normalizedQuery = this.normalizeSearchQuery(rawQuery);
 
             if (!normalizedQuery) {
                 this._searchQueuedNormalizedQuery = null;
@@ -558,13 +559,13 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
             };
             const runWorkerFallbackSearch = async () => {
                 const workers = [
-                    () => this.$wire.searchSurahExact(normalizedQuery, requestSerial, 24),
-                    () => this.$wire.searchAyahExact(normalizedQuery, requestSerial, 24),
-                    () => this.$wire.searchSurahClose(normalizedQuery, requestSerial, 24),
-                    () => this.$wire.searchAyahClose(normalizedQuery, requestSerial, 24),
-                    () => this.$wire.searchSurahSarf(normalizedQuery, requestSerial, 24),
-                    () => this.$wire.searchAyahSarf(normalizedQuery, requestSerial, 24),
-                    () => this.$wire.searchAyahJathr(normalizedQuery, requestSerial, 24),
+                    () => this.$wire.searchSurahExact(rawQuery, requestSerial, 24),
+                    () => this.$wire.searchAyahExact(rawQuery, requestSerial, 24),
+                    () => this.$wire.searchSurahClose(rawQuery, requestSerial, 24),
+                    () => this.$wire.searchAyahClose(rawQuery, requestSerial, 24),
+                    () => this.$wire.searchSurahSarf(rawQuery, requestSerial, 24),
+                    () => this.$wire.searchAyahSarf(rawQuery, requestSerial, 24),
+                    () => this.$wire.searchAyahJathr(rawQuery, requestSerial, 24),
                 ];
 
                 if (this.nativeRuntime) {
@@ -615,7 +616,7 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
             try {
                 if (shouldUseStreamSearch) {
                     const streamedResults = await this.$wire.streamSearch(
-                        normalizedQuery,
+                        rawQuery,
                         requestSerial,
                         24,
                     );
