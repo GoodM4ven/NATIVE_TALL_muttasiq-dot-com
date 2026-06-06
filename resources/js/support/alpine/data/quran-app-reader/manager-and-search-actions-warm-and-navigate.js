@@ -496,20 +496,7 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
             }
 
             if (!this.search.isReady) {
-                await this.warmSearchIndex();
-            }
-
-            if (!this.search.isReady) {
-                this._searchQueuedNormalizedQuery = null;
-                this.setSearchResults([], { immediate: true });
-                this.search.isLoading = false;
-                this.search.streamHasUpdates = false;
-                this.search.lastCompletedNormalizedQuery = '';
-                this._searchRequestSerial += 1;
-                this._searchRequestInFlight = false;
-                this.clearSearchStreamTarget();
-
-                return;
+                void this.warmSearchIndex();
             }
 
             if (!this.search.localIndexReady) {

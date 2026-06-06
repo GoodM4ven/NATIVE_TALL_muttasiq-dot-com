@@ -742,6 +742,28 @@ class QuranReaderDataService
         $matches = [];
         $seenAyahIndexes = [];
         $seenSurahNumbers = [];
+        $shouldPrioritizeExactPhrase = count($tokens) > 1;
+
+        if ($shouldPrioritizeExactPhrase) {
+            $this->appendExactPhraseMatchesFromSearchIndex(
+                $matches,
+                $seenAyahIndexes,
+                $limit,
+                $searchQuery,
+                $onProgress,
+                $shouldCancel,
+            );
+
+            if ($matches !== []) {
+                $this->emitSearchProgress($onProgress, $matches, 'complete', true);
+
+                return $matches;
+            }
+
+            if ($shouldCancel !== null && $shouldCancel() === true) {
+                return [];
+            }
+        }
 
         $surahExactMatches = $this->collectSurahMatchesByExactQuery($searchQuery, $tokens, $limit);
         $surahExactStageMatches = $this->appendSurahMatches(
@@ -770,23 +792,25 @@ class QuranReaderDataService
             return [];
         }
 
-        $this->appendExactPhraseMatchesFromSearchIndex(
-            $matches,
-            $seenAyahIndexes,
-            $limit,
-            $searchQuery,
-            $onProgress,
-            $shouldCancel,
-        );
+        if (! $shouldPrioritizeExactPhrase) {
+            $this->appendExactPhraseMatchesFromSearchIndex(
+                $matches,
+                $seenAyahIndexes,
+                $limit,
+                $searchQuery,
+                $onProgress,
+                $shouldCancel,
+            );
 
-        if ($matches !== []) {
-            $this->emitSearchProgress($onProgress, $matches, 'complete', true);
+            if ($matches !== []) {
+                $this->emitSearchProgress($onProgress, $matches, 'complete', true);
 
-            return $matches;
-        }
+                return $matches;
+            }
 
-        if ($shouldCancel !== null && $shouldCancel() === true) {
-            return [];
+            if ($shouldCancel !== null && $shouldCancel() === true) {
+                return [];
+            }
         }
 
         $this->appendExactTokenMatchesFromSearchIndex(
@@ -807,6 +831,35 @@ class QuranReaderDataService
 
         if ($shouldCancel !== null && $shouldCancel() === true) {
             return [];
+        }
+
+        if ($shouldPrioritizeExactPhrase) {
+            $surahExactMatches = $this->collectSurahMatchesByExactQuery($searchQuery, $tokens, $limit);
+            $surahExactStageMatches = $this->appendSurahMatches(
+                $matches,
+                $seenAyahIndexes,
+                $seenSurahNumbers,
+                $surahExactMatches,
+                $limit,
+                $searchQuery,
+                'surah_exact',
+            );
+            $this->emitIncrementalSearchProgress(
+                $onProgress,
+                $matches,
+                'surah_exact',
+                $surahExactStageMatches,
+            );
+
+            if (count($matches) >= $limit) {
+                $this->emitSearchProgress($onProgress, $matches, 'complete', true);
+
+                return $matches;
+            }
+
+            if ($shouldCancel !== null && $shouldCancel() === true) {
+                return [];
+            }
         }
 
         $surahCloseMatches = $this->collectSurahMatchesByCloseQuery($searchQuery, $tokens, $limit);
@@ -966,6 +1019,24 @@ class QuranReaderDataService
         $matches = [];
         $seenAyahIndexes = [];
         $seenSurahNumbers = [];
+        $shouldPrioritizeExactPhrase = count($tokens) > 1;
+
+        if ($shouldPrioritizeExactPhrase) {
+            if (isset($stageSet['ayah_exact'])) {
+                $this->appendExactPhraseMatchesFromSearchIndex(
+                    $matches,
+                    $seenAyahIndexes,
+                    $limit,
+                    $searchQuery,
+                    null,
+                    null,
+                );
+            }
+
+            if (count($matches) >= $limit) {
+                return $matches;
+            }
+        }
 
         if (isset($stageSet['surah_exact'])) {
             $surahExactMatches = $this->collectSurahMatchesByExactQuery($searchQuery, $tokens, $limit);
@@ -984,19 +1055,21 @@ class QuranReaderDataService
             return $matches;
         }
 
-        if (isset($stageSet['ayah_exact'])) {
-            $this->appendExactPhraseMatchesFromSearchIndex(
-                $matches,
-                $seenAyahIndexes,
-                $limit,
-                $searchQuery,
-                null,
-                null,
-            );
-        }
+        if (! $shouldPrioritizeExactPhrase) {
+            if (isset($stageSet['ayah_exact'])) {
+                $this->appendExactPhraseMatchesFromSearchIndex(
+                    $matches,
+                    $seenAyahIndexes,
+                    $limit,
+                    $searchQuery,
+                    null,
+                    null,
+                );
+            }
 
-        if (count($matches) >= $limit) {
-            return $matches;
+            if (count($matches) >= $limit) {
+                return $matches;
+            }
         }
 
         if (isset($stageSet['surah_close'])) {
@@ -1831,6 +1904,81 @@ class QuranReaderDataService
             return $addedMatches;
         }
 
+        $candidateVerseIds = $this->collectExactPhraseCandidateVerseIds($searchQuery);
+
+        if ($candidateVerseIds !== []) {
+            $candidateRows = DB::table('quran_verses')
+                ->select([
+                    'id',
+                    'ayah_index',
+                    'surah_number',
+                    'ayah_number',
+                    'mushaf_page',
+                    'text_uthmani',
+                    'text_searchable_typed',
+                    'text_searchable',
+                ])
+                ->whereIn('id', $candidateVerseIds)
+                ->orderBy('ayah_index')
+                ->orderBy('id')
+                ->get();
+
+            foreach ($candidateRows as $row) {
+                if ($shouldCancel !== null && $shouldCancel() === true) {
+                    return $addedMatches;
+                }
+
+                if (count($matches) >= $limit) {
+                    return $addedMatches;
+                }
+
+                $typedText = trim((string) $row->text_searchable_typed);
+                $searchableText = trim((string) $row->text_searchable);
+                $matchesVariant = false;
+
+                foreach ($queryVariants as $variant) {
+                    if (
+                        $this->containsWholePhrase($typedText, $variant) ||
+                        $this->containsWholePhrase($searchableText, $variant)
+                    ) {
+                        $matchesVariant = true;
+
+                        break;
+                    }
+                }
+
+                if (! $matchesVariant) {
+                    continue;
+                }
+
+                $addedMatch = $this->appendSearchIndexVerseMatch(
+                    $matches,
+                    $seenAyahIndexes,
+                    [
+                        'id' => (int) $row->id,
+                        'ayah_index' => (int) $row->ayah_index,
+                        'surah_number' => (int) $row->surah_number,
+                        'ayah_number' => (int) $row->ayah_number,
+                        'page_number' => (int) $row->mushaf_page,
+                        'text_uthmani' => (string) $row->text_uthmani,
+                        'text_searchable_typed' => (string) $row->text_searchable_typed,
+                    ],
+                    $limit,
+                    $searchQuery,
+                    'ayah_exact',
+                );
+
+                if ($addedMatch === null) {
+                    continue;
+                }
+
+                $addedMatches[] = $addedMatch;
+                $this->emitSearchProgress($onProgress, $matches, 'ayah_exact');
+            }
+
+            return $addedMatches;
+        }
+
         foreach ($this->searchIndex() as $row) {
             if ($shouldCancel !== null && $shouldCancel() === true) {
                 return $addedMatches;
@@ -1968,6 +2116,78 @@ class QuranReaderDataService
         }
 
         return $resolved;
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    private function collectExactPhraseCandidateVerseIds(string $searchQuery): array
+    {
+        $candidateToken = $this->resolveExactPhraseCandidateToken($searchQuery);
+
+        if ($candidateToken === null) {
+            return [];
+        }
+
+        $tokenVariants = $this->resolveExactTokenSearchCandidates($candidateToken);
+        $candidateColumns = array_values(array_filter([
+            $this->hasQuranWordColumn('token_searchable_typed') ? 'token_searchable_typed' : null,
+            $this->hasQuranWordColumn('token_searchable') ? 'token_searchable' : null,
+        ]));
+
+        if ($tokenVariants === [] || $candidateColumns === []) {
+            return [];
+        }
+
+        return DB::table('quran_words')
+            ->selectRaw('verse_id, MIN(ayah_index) AS ayah_index')
+            ->where(function (Builder $whereBuilder) use ($tokenVariants, $candidateColumns): void {
+                foreach ($tokenVariants as $variant) {
+                    foreach ($candidateColumns as $column) {
+                        $this->addTokenPrefixConditions($whereBuilder, $column, $variant);
+                    }
+                }
+            })
+            ->groupBy('verse_id')
+            ->orderBy('ayah_index')
+            ->orderBy('verse_id')
+            ->pluck('verse_id')
+            ->map(static fn (mixed $value): int => (int) $value)
+            ->all();
+    }
+
+    private function resolveExactPhraseCandidateToken(string $searchQuery): ?string
+    {
+        $tokens = array_values(array_filter(
+            preg_split('/\s+/u', trim($searchQuery)) ?: [],
+            static fn (string $token): bool => $token !== '',
+        ));
+
+        if ($tokens === []) {
+            return null;
+        }
+
+        $candidateToken = null;
+        $candidateLength = 0;
+
+        foreach ($tokens as $token) {
+            $normalizedToken = trim((string) $token);
+
+            if ($normalizedToken === '' || $this->isSacredNameToken($normalizedToken)) {
+                continue;
+            }
+
+            $tokenLength = mb_strlen($normalizedToken);
+
+            if ($tokenLength < 3 || $tokenLength <= $candidateLength) {
+                continue;
+            }
+
+            $candidateToken = $normalizedToken;
+            $candidateLength = $tokenLength;
+        }
+
+        return $candidateToken;
     }
 
     /**
