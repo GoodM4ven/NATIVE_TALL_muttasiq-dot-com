@@ -107,6 +107,89 @@ test('quran search treats يس and ياسين as the same surah-name match', fun
     'ya sin alias' => ['يس'],
 ]);
 
+test('quran search returns opening ayah matches for حم', function () {
+    if (! Schema::hasTable('quran_verses')) {
+        $this->markTestSkipped('Quran reader search dependencies are unavailable.');
+    }
+
+    /** @var QuranReaderDataService $service */
+    $service = app(QuranReaderDataService::class);
+
+    if (! $service->isReady()) {
+        $this->markTestSkipped('Quran reader search dependencies are unavailable.');
+    }
+
+    $results = $service->searchProgressively('حم', 24);
+
+    expect($results)->toHaveCount(7)
+        ->and(collect($results)->pluck('match_strategy')->all())->toBe([
+            'ayah_exact',
+            'ayah_exact',
+            'ayah_exact',
+            'ayah_exact',
+            'ayah_exact',
+            'ayah_exact',
+            'ayah_exact',
+        ])
+        ->and(collect($results)->pluck('surah_number')->all())->toBe([
+            40,
+            41,
+            42,
+            43,
+            44,
+            45,
+            46,
+        ])
+        ->and(collect($results)->pluck('ayah_number')->all())->toBe([
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+        ]);
+});
+
+test('quran search returns opening ayah matches for حم when split with other opening queries', function () {
+    if (! Schema::hasTable('quran_verses')) {
+        $this->markTestSkipped('Quran reader search dependencies are unavailable.');
+    }
+
+    /** @var QuranReaderDataService $service */
+    $service = app(QuranReaderDataService::class);
+
+    if (! $service->isReady()) {
+        $this->markTestSkipped('Quran reader search dependencies are unavailable.');
+    }
+
+    $results = $service->searchProgressively('يس ۝ طه ۝ حم', 24);
+
+    expect($results)->toHaveCount(9)
+        ->and(collect($results)->pluck('match_strategy')->all())->toBe([
+            'surah_exact',
+            'surah_exact',
+            'ayah_exact',
+            'ayah_exact',
+            'ayah_exact',
+            'ayah_exact',
+            'ayah_exact',
+            'ayah_exact',
+            'ayah_exact',
+        ])
+        ->and(collect($results)->pluck('surah_number')->all())->toBe([
+            36,
+            20,
+            40,
+            41,
+            42,
+            43,
+            44,
+            45,
+            46,
+        ]);
+});
+
 test('quran search splits multi-ayah queries into separate exact results', function () {
     if (! Schema::hasTable('quran_verses')) {
         $this->markTestSkipped('Quran reader search dependencies are unavailable.');

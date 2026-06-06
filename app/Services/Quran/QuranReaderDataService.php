@@ -56,6 +56,14 @@ class QuranReaderDataService
     ];
 
     /**
+     * @var array<string, array<int, int>>
+     */
+    private const OPENING_AYAH_QUERY_MAP = [
+        'حم' => [40, 41, 42, 43, 44, 45, 46],
+        'حم عسق' => [42],
+    ];
+
+    /**
      * @phpstan-impure
      */
     public function isReady(): bool
@@ -411,8 +419,6 @@ class QuranReaderDataService
         $hasTypedWordColumn = $this->hasQuranWordColumn('token_searchable_typed');
         $resolvedMatches = [];
         $seenMatchIds = [];
-        $partLimit = count($queryParts) > 1 ? 1 : $resolvedLimit;
-
         foreach ($queryParts as $queryPart) {
             $tokens = $this->prepareSearchTokens(array_values(array_unique(array_filter(
                 preg_split('/\s+/u', trim($queryPart)) ?: [],
@@ -422,6 +428,12 @@ class QuranReaderDataService
             if ($tokens === []) {
                 continue;
             }
+
+            $partLimit = $this->resolveSearchPartLimit(
+                $queryPart,
+                $resolvedLimit,
+                count($queryParts) > 1,
+            );
 
             $partMatches = $this->buildSearchMatchesForStageSet(
                 $queryPart,
@@ -564,7 +576,6 @@ class QuranReaderDataService
 
         $resolvedMatches = [];
         $seenMatchIds = [];
-        $partLimit = count($queryParts) > 1 ? 1 : $resolvedLimit;
         $forwardProgress = null;
 
         if ($onProgress !== null) {
@@ -581,6 +592,12 @@ class QuranReaderDataService
             if ($shouldCancel !== null && $shouldCancel() === true) {
                 return [];
             }
+
+            $partLimit = $this->resolveSearchPartLimit(
+                $queryPart,
+                $resolvedLimit,
+                count($queryParts) > 1,
+            );
 
             $partMatches = $this->buildSearchMatches(
                 $queryPart,
@@ -742,6 +759,16 @@ class QuranReaderDataService
         $matches = [];
         $seenAyahIndexes = [];
         $seenSurahNumbers = [];
+        $openingAyahMatches = $this->collectOpeningAyahMatches($searchQuery, $limit);
+
+        if ($openingAyahMatches !== []) {
+            $matches = $openingAyahMatches;
+
+            $this->emitSearchProgress($onProgress, $matches, 'complete', true);
+
+            return $matches;
+        }
+
         $shouldPrioritizeExactPhrase = count($tokens) > 1;
 
         if ($shouldPrioritizeExactPhrase) {
@@ -1019,6 +1046,16 @@ class QuranReaderDataService
         $matches = [];
         $seenAyahIndexes = [];
         $seenSurahNumbers = [];
+        $openingAyahMatches = $this->collectOpeningAyahMatches($searchQuery, $limit);
+
+        if ($openingAyahMatches !== []) {
+            if (isset($stageSet['ayah_exact'])) {
+                $matches = $openingAyahMatches;
+            }
+
+            return $matches;
+        }
+
         $shouldPrioritizeExactPhrase = count($tokens) > 1;
 
         if ($shouldPrioritizeExactPhrase) {
@@ -1180,6 +1217,143 @@ class QuranReaderDataService
         }
 
         return $matches;
+    }
+
+    /**
+     * @return array<int, array{
+     *     id: int,
+     *     ayah_index: int,
+     *     surah_number: int,
+     *     ayah_number: int,
+     *     page_number: int,
+     *     text_uthmani: string,
+     *     text_searchable_typed: string,
+     *     search_snippet: string,
+     *     match_strategy: string,
+     *     match_tone: string,
+     *     match_shade: int,
+     *     match_label: string,
+     *     match_rank: int
+     * }>
+     */
+    private function collectOpeningAyahMatches(string $searchQuery, int $limit): array
+    {
+        if ($limit < 1) {
+            return [];
+        }
+
+        $normalizedQuery = trim($this->normalizeQuranSearchQuery($searchQuery));
+
+        if ($normalizedQuery === '') {
+            return [];
+        }
+
+        $surahNumbers = self::OPENING_AYAH_QUERY_MAP[$normalizedQuery] ?? [];
+
+        if ($surahNumbers === []) {
+            return [];
+        }
+
+        $entriesBySurahNumber = [];
+
+        foreach ($this->surahSearchEntries() as $entry) {
+            $surahNumber = (int) $entry['surah_number'];
+
+            if ($surahNumber < 1) {
+                continue;
+            }
+
+            $entriesBySurahNumber[$surahNumber] = $entry;
+        }
+
+        $verseIds = [];
+        $openings = [];
+
+        foreach ($surahNumbers as $surahNumber) {
+            $entry = $entriesBySurahNumber[$surahNumber] ?? null;
+
+            if (! is_array($entry)) {
+                continue;
+            }
+
+            $verseId = max(0, (int) $entry['verse_id']);
+
+            if ($verseId < 1) {
+                continue;
+            }
+
+            $verseIds[] = $verseId;
+            $openings[$surahNumber] = $entry;
+        }
+
+        if ($verseIds === []) {
+            return [];
+        }
+
+        $verseRowsById = DB::table('quran_verses')
+            ->select([
+                'id',
+                'ayah_index',
+                'surah_number',
+                'ayah_number',
+                'mushaf_page',
+                'text_uthmani',
+                'text_searchable_typed',
+            ])
+            ->whereIn('id', $verseIds)
+            ->get()
+            ->keyBy(static fn (object $row): int => (int) $row->id);
+
+        $resolved = [];
+
+        foreach ($surahNumbers as $surahNumber) {
+            $entry = $openings[$surahNumber] ?? null;
+
+            if (! is_array($entry)) {
+                continue;
+            }
+
+            $verseId = max(0, (int) $entry['verse_id']);
+            $row = $verseRowsById->get($verseId);
+
+            if (! is_object($row)) {
+                continue;
+            }
+
+            $surahNumber = max(1, (int) ($row->surah_number ?? $surahNumber));
+            $ayahNumber = max(1, (int) ($row->ayah_number ?? 1));
+            $mushafPage = $row->mushaf_page !== null ? (int) $row->mushaf_page : 0;
+            $displayPage = $this->resolveDisplayedMushafPage(
+                $surahNumber,
+                $ayahNumber,
+                $mushafPage > 0 ? $mushafPage : null,
+            );
+
+            $resolved[] = [
+                'id' => (int) $row->id,
+                'ayah_index' => max(0, (int) ($row->ayah_index ?? 0)),
+                'surah_number' => $surahNumber,
+                'ayah_number' => $ayahNumber,
+                'page_number' => max(1, (int) ($displayPage ?? max(1, $mushafPage))),
+                'text_uthmani' => trim((string) $row->text_uthmani),
+                'text_searchable_typed' => trim((string) $row->text_searchable_typed),
+                'search_snippet' => $this->buildSearchSnippet(
+                    trim((string) $row->text_searchable_typed),
+                    $searchQuery,
+                ),
+                'match_strategy' => 'ayah_exact',
+                'match_tone' => 'success',
+                'match_shade' => 500,
+                'match_label' => 'مطابقة آية تامة',
+                'match_rank' => 4,
+            ];
+
+            if (count($resolved) >= $limit) {
+                break;
+            }
+        }
+
+        return $resolved;
     }
 
     /**
@@ -2188,6 +2362,26 @@ class QuranReaderDataService
         }
 
         return $candidateToken;
+    }
+
+    private function resolveSearchPartLimit(string $queryPart, int $resolvedLimit, bool $isMultiPartQuery): int
+    {
+        if (! $isMultiPartQuery) {
+            return $resolvedLimit;
+        }
+
+        return $this->isOpeningAyahQueryPart($queryPart) ? $resolvedLimit : 1;
+    }
+
+    private function isOpeningAyahQueryPart(string $queryPart): bool
+    {
+        $normalizedQueryPart = trim($this->normalizeQuranSearchQuery($queryPart));
+
+        if ($normalizedQueryPart === '') {
+            return false;
+        }
+
+        return array_key_exists($normalizedQueryPart, self::OPENING_AYAH_QUERY_MAP);
     }
 
     /**
