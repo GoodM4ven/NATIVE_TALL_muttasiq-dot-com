@@ -127,3 +127,6 @@
 - it normalizes settings payload values by their definitions
 - it caps wird khatamat target to fixed daily and monthly maxima
 - volume buttons navigation setting key is shared by quran and athkar readers
+- emits uncached quran search progress in incremental result steps
+- caches repeated quran search queries while preserving complete progress emission
+- maintains quick stack layout and navigation resilience across reload, modal, and color-scheme flows
