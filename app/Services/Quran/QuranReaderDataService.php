@@ -19,7 +19,9 @@ class QuranReaderDataService
 
     private const MAX_PAGE_CACHE_KEY = 'quran-reader-max-page-v2';
 
-    private const SEARCH_RESULTS_CACHE_PREFIX = 'quran-reader-search-results-v9';
+    private const SEARCH_RESULTS_CACHE_PREFIX = 'quran-reader-search-results-v13';
+
+    private const UNBOUNDED_STAGE_RESULT_LIMIT = 6200;
 
     private const DISPLAYED_PAGE_CACHE_PREFIX = 'quran-reader-display-page-v2';
 
@@ -62,6 +64,26 @@ class QuranReaderDataService
         'حم' => [40, 41, 42, 43, 44, 45, 46],
         'حم عسق' => [42],
     ];
+
+    /**
+     * @var array<int, string>
+     */
+    private const LONE_SEARCH_BLOCKED_WORDS = [
+        'قال',
+        'كان',
+    ];
+
+    /**
+     * @var array<int, string>
+     */
+    private const SEMANTIC_FOCUS_SKIP_STEMS = [
+        'قال',
+        'قول',
+        'كان',
+        'كون',
+    ];
+
+    private const SEMANTIC_STAGE_RESULT_LIMIT = 50;
 
     /**
      * @phpstan-impure
@@ -395,6 +417,10 @@ class QuranReaderDataService
             return [];
         }
 
+        if ($this->shouldSkipSearchEntirelyForQuery($queryParts)) {
+            return [];
+        }
+
         $resolvedStages = [];
 
         foreach ($stages as $stage) {
@@ -415,10 +441,9 @@ class QuranReaderDataService
             return [];
         }
 
-        $resolvedLimit = max(1, min(60, $limit));
+        $resolvedLimit = self::UNBOUNDED_STAGE_RESULT_LIMIT;
         $hasTypedWordColumn = $this->hasQuranWordColumn('token_searchable_typed');
         $resolvedMatches = [];
-        $seenMatchIds = [];
         foreach ($queryParts as $queryPart) {
             $tokens = $this->prepareSearchTokens(array_values(array_unique(array_filter(
                 preg_split('/\s+/u', trim($queryPart)) ?: [],
@@ -444,21 +469,7 @@ class QuranReaderDataService
             );
 
             foreach ($partMatches as $match) {
-                $matchId = max(0, (int) $match['id']);
-
-                if ($matchId > 0 && isset($seenMatchIds[$matchId])) {
-                    continue;
-                }
-
-                if ($matchId > 0) {
-                    $seenMatchIds[$matchId] = true;
-                }
-
                 $resolvedMatches[] = $match;
-
-                if (count($resolvedMatches) >= $resolvedLimit) {
-                    break 2;
-                }
             }
         }
 
@@ -552,7 +563,11 @@ class QuranReaderDataService
             return [];
         }
 
-        $resolvedLimit = max(1, min(60, $limit));
+        if ($this->shouldSkipSearchEntirelyForQuery($queryParts)) {
+            return [];
+        }
+
+        $resolvedLimit = self::UNBOUNDED_STAGE_RESULT_LIMIT;
         $hasTypedWordColumn = $this->hasQuranWordColumn('token_searchable_typed');
         $cacheKey = sprintf(
             '%s:%d:%d:%s',
@@ -575,7 +590,6 @@ class QuranReaderDataService
         }
 
         $resolvedMatches = [];
-        $seenMatchIds = [];
         $forwardProgress = null;
 
         if ($onProgress !== null) {
@@ -608,21 +622,7 @@ class QuranReaderDataService
             );
 
             foreach ($partMatches as $match) {
-                $matchId = max(0, (int) $match['id']);
-
-                if ($matchId > 0 && isset($seenMatchIds[$matchId])) {
-                    continue;
-                }
-
-                if ($matchId > 0) {
-                    $seenMatchIds[$matchId] = true;
-                }
-
                 $resolvedMatches[] = $match;
-
-                if (count($resolvedMatches) >= $resolvedLimit) {
-                    break 2;
-                }
             }
         }
 
@@ -759,7 +759,10 @@ class QuranReaderDataService
         $matches = [];
         $seenAyahIndexes = [];
         $seenSurahNumbers = [];
-        $openingAyahMatches = $this->collectOpeningAyahMatches($searchQuery, $limit);
+        $openingAyahMatches = $this->collectOpeningAyahMatches(
+            $searchQuery,
+            self::UNBOUNDED_STAGE_RESULT_LIMIT,
+        );
 
         if ($openingAyahMatches !== []) {
             $matches = $openingAyahMatches;
@@ -783,8 +786,6 @@ class QuranReaderDataService
 
             if ($matches !== []) {
                 $this->emitSearchProgress($onProgress, $matches, 'complete', true);
-
-                return $matches;
             }
 
             if ($shouldCancel !== null && $shouldCancel() === true) {
@@ -831,8 +832,6 @@ class QuranReaderDataService
 
             if ($matches !== []) {
                 $this->emitSearchProgress($onProgress, $matches, 'complete', true);
-
-                return $matches;
             }
 
             if ($shouldCancel !== null && $shouldCancel() === true) {
@@ -967,19 +966,17 @@ class QuranReaderDataService
             return $matches;
         }
 
-        $rootAndStemTokens = array_values(array_filter(
-            $tokens,
-            fn (string $token): bool => ! $this->isSacredNameToken($token),
-        ));
-        $hasRootAndStemTokens = $rootAndStemTokens !== [];
+        $semanticTokens = $this->resolveSemanticFocusTokens($tokens);
+        $hasRootAndStemTokens = $semanticTokens !== [];
         $shouldUseExpandedRoots = count($tokens) <= 6;
-        $shouldUseRootStage = count($tokens) <= 4;
+        $shouldUseRootStage = count($tokens) <= 6;
 
         if ($shouldUseExpandedRoots && $hasRootAndStemTokens) {
+            $semanticSeenAyahIndexes = [];
             $this->appendStemTokenMatchesFromQuranWords(
                 $matches,
-                $seenAyahIndexes,
-                $rootAndStemTokens,
+                $semanticSeenAyahIndexes,
+                $semanticTokens,
                 $limit,
                 $searchQuery,
                 $onProgress,
@@ -994,10 +991,11 @@ class QuranReaderDataService
         }
 
         if ($shouldUseExpandedRoots && $shouldUseRootStage && $hasRootAndStemTokens) {
+            $semanticSeenAyahIndexes = [];
             $this->appendRootTokenMatchesFromQuranWords(
                 $matches,
-                $seenAyahIndexes,
-                $rootAndStemTokens,
+                $semanticSeenAyahIndexes,
+                $semanticTokens,
                 $limit,
                 $searchQuery,
                 $onProgress,
@@ -1063,33 +1061,29 @@ class QuranReaderDataService
                 $this->appendExactPhraseMatchesFromSearchIndex(
                     $matches,
                     $seenAyahIndexes,
-                    $limit,
+                    self::UNBOUNDED_STAGE_RESULT_LIMIT,
                     $searchQuery,
                     null,
                     null,
                 );
             }
-
-            if (count($matches) >= $limit) {
-                return $matches;
-            }
         }
 
         if (isset($stageSet['surah_exact'])) {
-            $surahExactMatches = $this->collectSurahMatchesByExactQuery($searchQuery, $tokens, $limit);
+            $surahExactMatches = $this->collectSurahMatchesByExactQuery(
+                $searchQuery,
+                $tokens,
+                self::UNBOUNDED_STAGE_RESULT_LIMIT,
+            );
             $this->appendSurahMatches(
                 $matches,
                 $seenAyahIndexes,
                 $seenSurahNumbers,
                 $surahExactMatches,
-                $limit,
+                self::UNBOUNDED_STAGE_RESULT_LIMIT,
                 $searchQuery,
                 'surah_exact',
             );
-        }
-
-        if (count($matches) >= $limit) {
-            return $matches;
         }
 
         if (! $shouldPrioritizeExactPhrase) {
@@ -1097,50 +1091,46 @@ class QuranReaderDataService
                 $this->appendExactPhraseMatchesFromSearchIndex(
                     $matches,
                     $seenAyahIndexes,
-                    $limit,
+                    self::UNBOUNDED_STAGE_RESULT_LIMIT,
                     $searchQuery,
                     null,
                     null,
                 );
             }
-
-            if (count($matches) >= $limit) {
-                return $matches;
-            }
         }
 
         if (isset($stageSet['surah_close'])) {
-            $surahCloseMatches = $this->collectSurahMatchesByCloseQuery($searchQuery, $tokens, $limit);
+            $surahCloseMatches = $this->collectSurahMatchesByCloseQuery(
+                $searchQuery,
+                $tokens,
+                self::UNBOUNDED_STAGE_RESULT_LIMIT,
+            );
             $this->appendSurahMatches(
                 $matches,
                 $seenAyahIndexes,
                 $seenSurahNumbers,
                 $surahCloseMatches,
-                $limit,
+                self::UNBOUNDED_STAGE_RESULT_LIMIT,
                 $searchQuery,
                 'surah_close',
             );
         }
 
-        if (count($matches) >= $limit) {
-            return $matches;
-        }
-
         if (isset($stageSet['surah_sarf'])) {
-            $surahSarfMatches = $this->collectSurahMatchesBySarfQuery($searchQuery, $tokens, $limit);
+            $surahSarfMatches = $this->collectSurahMatchesBySarfQuery(
+                $searchQuery,
+                $tokens,
+                self::SEMANTIC_STAGE_RESULT_LIMIT,
+            );
             $this->appendSurahMatches(
                 $matches,
                 $seenAyahIndexes,
                 $seenSurahNumbers,
                 $surahSarfMatches,
-                $limit,
+                self::SEMANTIC_STAGE_RESULT_LIMIT,
                 $searchQuery,
                 'surah_sarf',
             );
-        }
-
-        if (count($matches) >= $limit) {
-            return $matches;
         }
 
         if (isset($stageSet['ayah_close'])) {
@@ -1148,55 +1138,48 @@ class QuranReaderDataService
                 $matches,
                 $seenAyahIndexes,
                 $tokens,
-                $limit,
+                self::UNBOUNDED_STAGE_RESULT_LIMIT,
                 $searchQuery,
                 null,
                 null,
             );
 
-            if (count($matches) < $limit && $hasTypedWordColumn) {
-                $wordLikeVerseIds = $this->collectVerseIdsByWordLikeFallback($searchQuery, $limit);
+            if ($hasTypedWordColumn) {
+                $wordLikeVerseIds = $this->collectVerseIdsByWordLikeFallback(
+                    $searchQuery,
+                    self::UNBOUNDED_STAGE_RESULT_LIMIT,
+                );
                 $this->appendVerseMatches(
                     $matches,
                     $seenAyahIndexes,
                     $wordLikeVerseIds,
-                    $limit,
+                    self::UNBOUNDED_STAGE_RESULT_LIMIT,
                     $searchQuery,
                     'ayah_close',
                 );
             }
         }
 
-        if (count($matches) >= $limit) {
-            return $matches;
-        }
-
-        $rootAndStemTokens = array_values(array_filter(
-            $tokens,
-            fn (string $token): bool => ! $this->isSacredNameToken($token),
-        ));
-        $hasRootAndStemTokens = $rootAndStemTokens !== [];
+        $semanticTokens = $this->resolveSemanticFocusTokens($tokens);
+        $hasRootAndStemTokens = $semanticTokens !== [];
         $shouldUseExpandedRoots = count($tokens) <= 6;
-        $shouldUseRootStage = count($tokens) <= 4;
+        $shouldUseRootStage = count($tokens) <= 6;
 
         if (
             isset($stageSet['ayah_sarf']) &&
             $shouldUseExpandedRoots &&
             $hasRootAndStemTokens
         ) {
+            $semanticSeenAyahIndexes = [];
             $this->appendStemTokenMatchesFromQuranWords(
                 $matches,
-                $seenAyahIndexes,
-                $rootAndStemTokens,
-                $limit,
+                $semanticSeenAyahIndexes,
+                $semanticTokens,
+                self::SEMANTIC_STAGE_RESULT_LIMIT,
                 $searchQuery,
                 null,
                 null,
             );
-        }
-
-        if (count($matches) >= $limit) {
-            return $matches;
         }
 
         if (
@@ -1205,11 +1188,12 @@ class QuranReaderDataService
             $shouldUseRootStage &&
             $hasRootAndStemTokens
         ) {
+            $semanticSeenAyahIndexes = [];
             $this->appendRootTokenMatchesFromQuranWords(
                 $matches,
-                $seenAyahIndexes,
-                $rootAndStemTokens,
-                $limit,
+                $semanticSeenAyahIndexes,
+                $semanticTokens,
+                self::SEMANTIC_STAGE_RESULT_LIMIT,
                 $searchQuery,
                 null,
                 null,
@@ -2041,7 +2025,7 @@ class QuranReaderDataService
     ): array {
         $queryVariants = $this->exactPhraseQueryVariants($searchQuery);
 
-        if ($queryVariants === [] || count($matches) >= $limit) {
+        if ($queryVariants === []) {
             return [];
         }
 
@@ -2051,10 +2035,6 @@ class QuranReaderDataService
         if ($prefixMatches !== []) {
             foreach ($prefixMatches as $row) {
                 if ($shouldCancel !== null && $shouldCancel() === true) {
-                    return $addedMatches;
-                }
-
-                if (count($matches) >= $limit) {
                     return $addedMatches;
                 }
 
@@ -2099,10 +2079,6 @@ class QuranReaderDataService
 
             foreach ($candidateRows as $row) {
                 if ($shouldCancel !== null && $shouldCancel() === true) {
-                    return $addedMatches;
-                }
-
-                if (count($matches) >= $limit) {
                     return $addedMatches;
                 }
 
@@ -2258,7 +2234,7 @@ class QuranReaderDataService
             })
             ->orderBy('ayah_index')
             ->orderBy('id')
-            ->limit(max(1, min(60, $limit * 4)))
+            ->limit(max(1, min(self::UNBOUNDED_STAGE_RESULT_LIMIT, $limit * 4)))
             ->get();
 
         if ($rows->isEmpty()) {
@@ -2576,7 +2552,7 @@ class QuranReaderDataService
         ?callable $onProgress,
         ?callable $shouldCancel = null,
     ): array {
-        if ($tokens === [] || count($matches) >= $limit) {
+        if ($tokens === []) {
             return [];
         }
 
@@ -2593,10 +2569,6 @@ class QuranReaderDataService
 
         foreach ($this->searchIndex() as $row) {
             if ($shouldCancel !== null && $shouldCancel() === true) {
-                return $addedMatches;
-            }
-
-            if (count($matches) >= $limit) {
                 return $addedMatches;
             }
 
@@ -2792,7 +2764,7 @@ class QuranReaderDataService
             $matches,
             $seenAyahIndexes,
             $tokens,
-            $limit,
+            min($limit, self::SEMANTIC_STAGE_RESULT_LIMIT),
             $searchQuery,
             $onProgress,
             $shouldCancel,
@@ -2848,7 +2820,7 @@ class QuranReaderDataService
             $matches,
             $seenAyahIndexes,
             $tokens,
-            $limit,
+            min($limit, self::SEMANTIC_STAGE_RESULT_LIMIT),
             $searchQuery,
             $onProgress,
             $shouldCancel,
@@ -2904,175 +2876,180 @@ class QuranReaderDataService
     ): array {
         $hasSemanticColumn = $this->hasQuranWordColumn($semanticColumn);
         $searchColumns = $this->resolveTokenSearchColumns();
+        $semanticTokenPools = [];
+        $stageMatchLimit = max(1, $limit);
 
-        if ((! $hasSemanticColumn && $searchColumns === []) || $tokens === [] || count($matches) >= $limit) {
+        if ((! $hasSemanticColumn && $searchColumns === []) || $tokens === []) {
             return [];
         }
 
-        $tokenCandidateSets = [];
-        $allSemanticCandidates = [];
-        $allTextCandidates = [];
-
         foreach ($tokens as $token) {
-            $semanticCandidates = $hasSemanticColumn
-                ? ($semanticColumn === 'token_root'
-                    ? $this->resolveRootCandidatesForToken($token)
-                    : $this->resolveStemCandidatesForToken($token))
-                : [];
-            $tokenVariants = $this->expandSearchTextVariants($token);
+            $verseIds = $this->collectSemanticTokenVerseIds(
+                $token,
+                $semanticColumn,
+                $hasSemanticColumn,
+                $searchColumns,
+            );
 
-            if ($semanticCandidates === [] && $tokenVariants === []) {
-                return [];
+            if ($verseIds === []) {
+                continue;
             }
 
-            $tokenCandidateSets[] = [
-                'semantic' => array_fill_keys($semanticCandidates, true),
-                'text' => array_fill_keys($tokenVariants, true),
-            ];
-
-            foreach ($semanticCandidates as $semanticCandidate) {
-                $normalizedSemanticCandidate = trim((string) $semanticCandidate);
-
-                if ($normalizedSemanticCandidate === '') {
-                    continue;
-                }
-
-                $allSemanticCandidates[$normalizedSemanticCandidate] = true;
-            }
-
-            foreach ($tokenVariants as $tokenVariant) {
-                $normalizedTokenVariant = trim((string) $tokenVariant);
-
-                if ($normalizedTokenVariant === '') {
-                    continue;
-                }
-
-                $allTextCandidates[$normalizedTokenVariant] = true;
-            }
+            $semanticTokenPools[] = $verseIds;
         }
 
-        if ($allSemanticCandidates === [] && $allTextCandidates === []) {
+        if ($semanticTokenPools === []) {
+            return [];
+        }
+
+        shuffle($semanticTokenPools);
+
+        $matchedVerseIds = $this->interleaveSemanticTokenVerseIds(
+            $semanticTokenPools,
+            $stageMatchLimit,
+        );
+
+        if ($matchedVerseIds === []) {
             return [];
         }
 
         $addedMatches = [];
-        $currentVerseId = null;
-        $matchedTokenIndexes = [];
-        $selectColumns = array_values(array_unique(array_filter([
-            'verse_id',
-            'ayah_index',
-            'word_position',
-            $hasSemanticColumn ? $semanticColumn : null,
-            ...$searchColumns,
-        ])));
-        $verseRowsById = $this->searchIndexByVerseId();
-        $semanticCandidates = array_keys($allSemanticCandidates);
-        $textCandidates = array_keys($allTextCandidates);
-        $canFilterBySemantic = $hasSemanticColumn && $semanticCandidates !== [];
-        $canFilterByText = $searchColumns !== [] && $textCandidates !== [];
 
-        if (! $canFilterBySemantic && ! $canFilterByText) {
+        $addedMatches = $this->appendVerseMatches(
+            $matches,
+            $seenAyahIndexes,
+            $matchedVerseIds,
+            self::UNBOUNDED_STAGE_RESULT_LIMIT,
+            $searchQuery,
+            $matchStrategy,
+            $limit,
+        );
+
+        if ($addedMatches !== []) {
+            $this->emitSearchProgress($onProgress, $matches, $matchStrategy);
+        }
+
+        return $addedMatches;
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    private function collectSemanticTokenVerseIds(
+        string $token,
+        string $semanticColumn,
+        bool $hasSemanticColumn,
+        array $searchColumns,
+    ): array {
+        if ($token === '') {
             return [];
         }
 
-        $wordRowsQuery = DB::table('quran_words')
-            ->select($selectColumns)
+        $semanticCandidates = $hasSemanticColumn
+            ? ($semanticColumn === 'token_root'
+                ? $this->resolveRootCandidatesForToken($token)
+                : $this->resolveStemCandidatesForToken($token))
+            : [];
+        $tokenVariants = $this->expandSearchTextVariants($token);
+
+        if ($semanticCandidates === [] && $tokenVariants === []) {
+            return [];
+        }
+
+        $query = DB::table('quran_words')
+            ->select('verse_id')
+            ->distinct()
             ->where(function (Builder $builder) use (
                 $semanticColumn,
                 $semanticCandidates,
-                $textCandidates,
+                $tokenVariants,
                 $searchColumns,
-                $canFilterBySemantic,
-                $canFilterByText,
+                $hasSemanticColumn,
             ): void {
                 $hasSeedCondition = false;
 
-                if ($canFilterBySemantic) {
+                if ($hasSemanticColumn && $semanticCandidates !== []) {
                     $builder->whereIn($semanticColumn, $semanticCandidates);
                     $hasSeedCondition = true;
                 }
 
-                if ($canFilterByText) {
+                if ($searchColumns !== [] && $tokenVariants !== []) {
                     foreach ($searchColumns as $searchColumn) {
                         if (! $hasSeedCondition) {
-                            $builder->whereIn($searchColumn, $textCandidates);
+                            $builder->whereIn($searchColumn, $tokenVariants);
                             $hasSeedCondition = true;
 
                             continue;
                         }
 
-                        $builder->orWhereIn($searchColumn, $textCandidates);
+                        $builder->orWhereIn($searchColumn, $tokenVariants);
                     }
                 }
-            })
-            ->orderBy('ayah_index')
-            ->orderBy('word_position');
+            });
 
-        foreach ($wordRowsQuery->lazy(512) as $wordRow) {
-            if ($shouldCancel !== null && $shouldCancel() === true) {
-                return $addedMatches;
-            }
+        $verseIds = $query
+            ->pluck('verse_id')
+            ->map(static fn (mixed $verseId): int => max(0, (int) $verseId))
+            ->filter(static fn (int $verseId): bool => $verseId > 0)
+            ->values()
+            ->all();
 
-            if (count($matches) >= $limit) {
-                return $addedMatches;
-            }
+        if ($verseIds === []) {
+            return [];
+        }
 
-            $verseId = (int) $wordRow->verse_id;
+        shuffle($verseIds);
 
-            if ($currentVerseId !== null && $verseId !== $currentVerseId) {
-                $addedMatch = $this->appendMatchedQuranWordVerse(
-                    $matches,
-                    $seenAyahIndexes,
-                    $verseRowsById,
-                    $currentVerseId,
-                    $matchedTokenIndexes,
-                    count($tokenCandidateSets),
-                    $limit,
-                    $searchQuery,
-                    $matchStrategy,
-                    $onProgress,
-                );
+        return $verseIds;
+    }
 
-                if ($addedMatch !== null) {
-                    $addedMatches[] = $addedMatch;
+    /**
+     * @param  array<int, array<int, int>>  $verseIdPools
+     * @return array<int, int>
+     */
+    private function interleaveSemanticTokenVerseIds(array $verseIdPools, int $limit): array
+    {
+        if ($verseIdPools === [] || $limit < 1) {
+            return [];
+        }
+
+        $selectedVerseIds = [];
+        $seenVerseIds = [];
+        $poolOffsets = array_fill(0, count($verseIdPools), 0);
+
+        while (count($selectedVerseIds) < $limit) {
+            $didAddVerseId = false;
+
+            foreach ($verseIdPools as $poolIndex => $verseIdPool) {
+                $poolOffset = $poolOffsets[$poolIndex] ?? 0;
+
+                while (isset($verseIdPool[$poolOffset])) {
+                    $verseId = (int) $verseIdPool[$poolOffset];
+                    $poolOffsets[$poolIndex] = $poolOffset + 1;
+                    $poolOffset++;
+
+                    if ($verseId < 1 || isset($seenVerseIds[$verseId])) {
+                        continue;
+                    }
+
+                    $seenVerseIds[$verseId] = true;
+                    $selectedVerseIds[] = $verseId;
+                    $didAddVerseId = true;
+
+                    break;
                 }
 
-                $matchedTokenIndexes = [];
+                if (count($selectedVerseIds) >= $limit) {
+                    break 2;
+                }
             }
 
-            $currentVerseId = $verseId;
-
-            foreach ($tokenCandidateSets as $tokenIndex => $tokenCandidateSet) {
-                if (isset($matchedTokenIndexes[$tokenIndex])) {
-                    continue;
-                }
-
-                if ($this->quranWordRowMatchesTokenCandidates($wordRow, $tokenCandidateSet, $searchColumns, $semanticColumn, $hasSemanticColumn)) {
-                    $matchedTokenIndexes[$tokenIndex] = true;
-                }
+            if (! $didAddVerseId) {
+                break;
             }
         }
 
-        if ($currentVerseId !== null && count($matches) < $limit) {
-            $addedMatch = $this->appendMatchedQuranWordVerse(
-                $matches,
-                $seenAyahIndexes,
-                $verseRowsById,
-                $currentVerseId,
-                $matchedTokenIndexes,
-                count($tokenCandidateSets),
-                $limit,
-                $searchQuery,
-                $matchStrategy,
-                $onProgress,
-            );
-
-            if ($addedMatch !== null) {
-                $addedMatches[] = $addedMatch;
-            }
-        }
-
-        return $addedMatches;
+        return $selectedVerseIds;
     }
 
     /**
@@ -3170,6 +3147,7 @@ class QuranReaderDataService
         int $limit,
         string $searchQuery,
         string $matchStrategy,
+        ?int $maxAddedMatches = null,
     ): array {
         if ($verseIds === [] || count($matches) >= $limit) {
             return [];
@@ -3177,7 +3155,9 @@ class QuranReaderDataService
 
         $matchMeta = $this->resolveSearchMatchMeta($matchStrategy);
         $addedMatches = [];
-        $rows = DB::table('quran_verses')
+        $rowsById = [];
+
+        foreach (DB::table('quran_verses')
             ->select([
                 'id',
                 'ayah_index',
@@ -3188,10 +3168,21 @@ class QuranReaderDataService
                 'text_searchable_typed',
             ])
             ->whereIn('id', $verseIds)
-            ->orderBy('ayah_index')
-            ->get();
+            ->get() as $row) {
+            $rowsById[(int) ($row->id ?? 0)] = $row;
+        }
 
-        foreach ($rows as $row) {
+        foreach ($verseIds as $verseId) {
+            if ($maxAddedMatches !== null && count($addedMatches) >= $maxAddedMatches) {
+                return $addedMatches;
+            }
+
+            $row = $rowsById[(int) $verseId] ?? null;
+
+            if ($row === null) {
+                continue;
+            }
+
             $ayahIndex = (int) ($row->ayah_index ?? 0);
 
             if ($ayahIndex < 1 || isset($seenAyahIndexes[$ayahIndex])) {
@@ -3228,7 +3219,10 @@ class QuranReaderDataService
             $matches[] = $resolvedMatch;
             $addedMatches[] = $resolvedMatch;
 
-            if (count($matches) >= $limit) {
+            if (
+                ($maxAddedMatches === null && count($matches) >= $limit) ||
+                ($maxAddedMatches !== null && count($addedMatches) >= $maxAddedMatches)
+            ) {
                 return $addedMatches;
             }
         }
@@ -3268,141 +3262,6 @@ class QuranReaderDataService
         }
 
         return $lookup;
-    }
-
-    /**
-     * @param  array{semantic: array<string, true>, text: array<string, true>}  $tokenCandidateSet
-     * @param  array<int, string>  $searchColumns
-     */
-    private function quranWordRowMatchesTokenCandidates(
-        object $wordRow,
-        array $tokenCandidateSet,
-        array $searchColumns,
-        string $semanticColumn,
-        bool $hasSemanticColumn,
-    ): bool {
-        if ($hasSemanticColumn) {
-            $semanticValue = trim((string) ($wordRow->{$semanticColumn} ?? ''));
-
-            if ($semanticValue !== '' && isset($tokenCandidateSet['semantic'][$semanticValue])) {
-                return true;
-            }
-        }
-
-        foreach ($searchColumns as $searchColumn) {
-            $searchValue = trim((string) ($wordRow->{$searchColumn} ?? ''));
-
-            if ($searchValue !== '' && isset($tokenCandidateSet['text'][$searchValue])) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * @return array<int, array{
-     *     id: int,
-     *     ayah_index: int,
-     *     surah_number: int,
-     *     ayah_number: int,
-     *     page_number: int,
-     *     text_uthmani: string,
-     *     text_searchable_typed: string,
-     *     text_searchable: string
-     * }>
-     */
-    private function searchIndexByVerseId(): array
-    {
-        $rowsByVerseId = [];
-
-        foreach ($this->searchIndex() as $row) {
-            $rowsByVerseId[(int) $row['id']] = $row;
-        }
-
-        return $rowsByVerseId;
-    }
-
-    /**
-     * @param  array<int, array{
-     *     id: int,
-     *     ayah_index: int,
-     *     surah_number: int,
-     *     ayah_number: int,
-     *     page_number: int,
-     *     text_uthmani: string,
-     *     text_searchable_typed: string,
-     *     search_snippet: string,
-     *     match_strategy: string,
-     *     match_tone: string,
-     *     match_shade: int,
-     *     match_label: string,
-     *     match_rank: int
-     * }>  $matches
-     * @param  array<int, true>  $seenAyahIndexes
-     * @param  array<int, array{
-     *     id: int,
-     *     ayah_index: int,
-     *     surah_number: int,
-     *     ayah_number: int,
-     *     page_number: int,
-     *     text_uthmani: string,
-     *     text_searchable_typed: string,
-     *     text_searchable: string
-     * }>  $verseRowsById
-     * @param  array<int, true>  $matchedTokenIndexes
-     * @return array{
-     *     id: int,
-     *     ayah_index: int,
-     *     surah_number: int,
-     *     ayah_number: int,
-     *     page_number: int,
-     *     text_uthmani: string,
-     *     text_searchable_typed: string,
-     *     search_snippet: string,
-     *     match_strategy: string,
-     *     match_tone: string,
-     *     match_shade: int,
-     *     match_label: string,
-     *     match_rank: int
-     * }|null
-     */
-    private function appendMatchedQuranWordVerse(
-        array &$matches,
-        array &$seenAyahIndexes,
-        array $verseRowsById,
-        int $verseId,
-        array $matchedTokenIndexes,
-        int $tokenCount,
-        int $limit,
-        string $searchQuery,
-        string $matchStrategy,
-        ?callable $onProgress,
-    ): ?array {
-        if (count($matchedTokenIndexes) < $tokenCount) {
-            return null;
-        }
-
-        $row = $verseRowsById[$verseId] ?? null;
-
-        if ($row === null) {
-            return null;
-        }
-
-        $addedMatch = $this->appendSearchIndexVerseMatch(
-            $matches,
-            $seenAyahIndexes,
-            $row,
-            $limit,
-            $searchQuery,
-            $matchStrategy,
-        );
-
-        if ($addedMatch !== null) {
-            $this->emitSearchProgress($onProgress, $matches, $matchStrategy);
-        }
-
-        return $addedMatch;
     }
 
     /**
@@ -3855,6 +3714,14 @@ class QuranReaderDataService
             }
         }
 
+        foreach ($this->expandRaoofSpellingVariants($text) as $raoofVariant) {
+            $variants[$raoofVariant] = true;
+        }
+
+        foreach ($this->expandRahmaSpellingVariants($text) as $rahmaVariant) {
+            $variants[$rahmaVariant] = true;
+        }
+
         return array_keys($variants);
     }
 
@@ -3914,7 +3781,238 @@ class QuranReaderDataService
      */
     private function expandStrictExactPhraseVariants(string $text): array
     {
-        return QuranSearchText::expandStrictExactPhraseVariants($text);
+        $variants = [];
+
+        foreach (QuranSearchText::expandStrictExactPhraseVariants($text) as $variant) {
+            $normalizedVariant = trim((string) $variant);
+
+            if ($normalizedVariant === '') {
+                continue;
+            }
+
+            $variants[$normalizedVariant] = true;
+        }
+
+        foreach ($this->expandRaoofSpellingVariants($text) as $raoofVariant) {
+            $variants[$raoofVariant] = true;
+        }
+
+        foreach ($this->expandRahmaSpellingVariants($text) as $rahmaVariant) {
+            $variants[$rahmaVariant] = true;
+        }
+
+        return array_keys($variants);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function expandRahmaSpellingVariants(string $text): array
+    {
+        $trimmedText = trim($text);
+
+        if ($trimmedText === '') {
+            return [];
+        }
+
+        $variant = strtr($trimmedText, [
+            'رحمة' => 'رحمت',
+            'رحمت' => 'رحمة',
+        ]);
+
+        if ($variant === $trimmedText) {
+            return [];
+        }
+
+        return [trim($variant)];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function expandRaoofSpellingVariants(string $text): array
+    {
+        $trimmedText = trim($text);
+
+        if ($trimmedText === '') {
+            return [];
+        }
+
+        $variant = strtr($trimmedText, [
+            'رووف' => 'رءوف',
+            'رؤوف' => 'رءوف',
+            'رءوف' => 'رووف',
+        ]);
+
+        if ($variant === $trimmedText) {
+            return [];
+        }
+
+        return [trim($variant)];
+    }
+
+    /**
+     * @param  array<int, string>  $tokens
+     * @return array<int, string>
+     */
+    private function resolveSemanticFocusTokens(array $tokens): array
+    {
+        if ($tokens === []) {
+            return [];
+        }
+
+        $semanticTokens = [];
+        $seenTokens = [];
+
+        foreach ($tokens as $index => $token) {
+            $normalizedToken = trim((string) $token);
+
+            if (
+                $normalizedToken === '' ||
+                isset($seenTokens[$normalizedToken]) ||
+                $this->isSemanticFocusTokenBlocked($normalizedToken)
+            ) {
+                continue;
+            }
+
+            $coreToken = $this->semanticFocusTokenCore($normalizedToken);
+            $coreLength = mb_strlen($coreToken);
+
+            if ($coreLength < 3) {
+                continue;
+            }
+
+            $breadthScore = $this->estimateSemanticFocusBreadth($normalizedToken);
+            if ($breadthScore < 1) {
+                continue;
+            }
+
+            $seenTokens[$normalizedToken] = true;
+            $semanticTokens[] = [
+                'token' => $normalizedToken,
+                'breadth' => $breadthScore,
+                'index' => $index,
+            ];
+        }
+
+        if ($semanticTokens === []) {
+            return [];
+        }
+
+        usort(
+            $semanticTokens,
+            static function (array $left, array $right): int {
+                $breadthComparison = $left['breadth'] <=> $right['breadth'];
+
+                if ($breadthComparison !== 0) {
+                    return $breadthComparison;
+                }
+
+                return $left['index'] <=> $right['index'];
+            },
+        );
+
+        return array_map(
+            static fn (array $token): string => $token['token'],
+            $semanticTokens,
+        );
+    }
+
+    private function estimateSemanticFocusBreadth(string $token): int
+    {
+        static $breadthCache = [];
+
+        $normalizedToken = trim($this->normalizeQuranSearchQuery($token));
+
+        if ($normalizedToken === '') {
+            return 0;
+        }
+
+        if (isset($breadthCache[$normalizedToken])) {
+            return $breadthCache[$normalizedToken];
+        }
+
+        $breadth = 0;
+
+        $stemCandidates = $this->resolveStemCandidatesForToken($normalizedToken);
+
+        if ($stemCandidates !== []) {
+            $breadth = max(
+                $breadth,
+                (int) DB::table('quran_words')
+                    ->whereIn('token_stem', $stemCandidates)
+                    ->distinct()
+                    ->count('verse_id'),
+            );
+        }
+
+        $rootCandidates = $this->resolveRootCandidatesForToken($normalizedToken);
+
+        if ($rootCandidates !== []) {
+            $breadth = max(
+                $breadth,
+                (int) DB::table('quran_words')
+                    ->whereIn('token_root', $rootCandidates)
+                    ->distinct()
+                    ->count('verse_id'),
+            );
+        }
+
+        return $breadthCache[$normalizedToken] = $breadth;
+    }
+
+    private function semanticFocusTokenCore(string $token): string
+    {
+        $normalizedToken = trim($this->normalizeQuranSearchQuery($token));
+
+        if ($normalizedToken === '') {
+            return '';
+        }
+
+        $coreToken = preg_replace('/^[وفبكل]+(?:ال)?/u', '', $normalizedToken);
+
+        return trim(is_string($coreToken) ? $coreToken : $normalizedToken);
+    }
+
+    private function isSemanticFocusTokenBlocked(string $token): bool
+    {
+        $normalizedToken = trim($this->normalizeQuranSearchQuery($token));
+
+        if ($normalizedToken === '' || $this->isSacredNameToken($normalizedToken)) {
+            return true;
+        }
+
+        if ($this->isBlockedExactToken($normalizedToken)) {
+            return true;
+        }
+
+        $stem = trim((string) ArabicFilter::forStem($normalizedToken));
+
+        return $stem !== '' && in_array($stem, self::SEMANTIC_FOCUS_SKIP_STEMS, true);
+    }
+
+    /**
+     * @param  array<int, string>  $queryParts
+     */
+    private function shouldSkipSearchEntirelyForQuery(array $queryParts): bool
+    {
+        if (count($queryParts) !== 1) {
+            return false;
+        }
+
+        $tokens = array_values(array_filter(
+            preg_split('/\s+/u', trim($queryParts[0] ?? '')) ?: [],
+            static fn (string $token): bool => $token !== '',
+        ));
+
+        return count($tokens) === 1 && $this->isBlockedExactToken($tokens[0]);
+    }
+
+    private function isBlockedExactToken(string $token): bool
+    {
+        $normalizedToken = trim($this->normalizeQuranSearchQuery($token));
+
+        return $normalizedToken !== '' && in_array($normalizedToken, self::LONE_SEARCH_BLOCKED_WORDS, true);
     }
 
     /**

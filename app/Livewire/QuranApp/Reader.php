@@ -329,7 +329,7 @@ class Reader extends Component implements HasActions, HasSchemas
         /** @var QuranReaderDataService $readerDataService */
         $readerDataService = app(QuranReaderDataService::class);
         $normalizedRequestSerial = max(0, $requestSerial);
-        $resolvedLimit = max(6, min(24, $limit));
+        $resolvedLimit = max(6, min(60, $limit));
         $this->markSearchStreamStarted($normalizedRequestSerial);
 
         $this->streamSearchPayload(
@@ -447,7 +447,7 @@ class Reader extends Component implements HasActions, HasSchemas
         return $readerDataService->searchByStages(
             $query,
             ['surah_exact'],
-            max(1, min(24, $limit)),
+            max(1, min(60, $limit)),
         );
     }
 
@@ -478,7 +478,7 @@ class Reader extends Component implements HasActions, HasSchemas
         return $readerDataService->searchByStages(
             $query,
             ['surah_close'],
-            max(1, min(24, $limit)),
+            max(1, min(60, $limit)),
         );
     }
 
@@ -509,7 +509,7 @@ class Reader extends Component implements HasActions, HasSchemas
         return $readerDataService->searchByStages(
             $query,
             ['ayah_exact'],
-            max(1, min(24, $limit)),
+            max(1, min(60, $limit)),
         );
     }
 
@@ -540,7 +540,7 @@ class Reader extends Component implements HasActions, HasSchemas
         return $readerDataService->searchByStages(
             $query,
             ['ayah_close'],
-            max(1, min(24, $limit)),
+            max(1, min(60, $limit)),
         );
     }
 
@@ -571,7 +571,7 @@ class Reader extends Component implements HasActions, HasSchemas
         return $readerDataService->searchByStages(
             $query,
             ['surah_sarf'],
-            max(1, min(24, $limit)),
+            max(1, min(60, $limit)),
         );
     }
 
@@ -602,7 +602,7 @@ class Reader extends Component implements HasActions, HasSchemas
         return $readerDataService->searchByStages(
             $query,
             ['ayah_sarf'],
-            max(1, min(24, $limit)),
+            max(1, min(60, $limit)),
         );
     }
 
@@ -633,7 +633,7 @@ class Reader extends Component implements HasActions, HasSchemas
         return $readerDataService->searchByStages(
             $query,
             ['ayah_jathr'],
-            max(1, min(24, $limit)),
+            max(1, min(60, $limit)),
         );
     }
 

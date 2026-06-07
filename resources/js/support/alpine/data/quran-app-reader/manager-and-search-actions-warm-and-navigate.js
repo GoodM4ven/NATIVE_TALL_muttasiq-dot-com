@@ -514,6 +514,10 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                 return;
             }
 
+            if (this._searchModalCloseDebounceTimer !== null && !this.search.modalOpen) {
+                return;
+            }
+
             if (!this.search.modalOpen) {
                 this.search.modalOpen = true;
                 this._lastKnownModalOpenState = true;
@@ -546,13 +550,13 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
             };
             const runWorkerFallbackSearch = async () => {
                 const workers = [
-                    () => this.$wire.searchSurahExact(rawQuery, requestSerial, 24),
-                    () => this.$wire.searchAyahExact(rawQuery, requestSerial, 24),
-                    () => this.$wire.searchSurahClose(rawQuery, requestSerial, 24),
-                    () => this.$wire.searchAyahClose(rawQuery, requestSerial, 24),
-                    () => this.$wire.searchSurahSarf(rawQuery, requestSerial, 24),
-                    () => this.$wire.searchAyahSarf(rawQuery, requestSerial, 24),
-                    () => this.$wire.searchAyahJathr(rawQuery, requestSerial, 24),
+                    () => this.$wire.searchSurahExact(rawQuery, requestSerial, 60),
+                    () => this.$wire.searchAyahExact(rawQuery, requestSerial, 60),
+                    () => this.$wire.searchSurahClose(rawQuery, requestSerial, 60),
+                    () => this.$wire.searchAyahClose(rawQuery, requestSerial, 60),
+                    () => this.$wire.searchSurahSarf(rawQuery, requestSerial, 60),
+                    () => this.$wire.searchAyahSarf(rawQuery, requestSerial, 60),
+                    () => this.$wire.searchAyahJathr(rawQuery, requestSerial, 60),
                 ];
 
                 if (this.nativeRuntime) {
@@ -605,12 +609,12 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                     const streamedResults = await this.$wire.streamSearch(
                         rawQuery,
                         requestSerial,
-                        24,
+                        60,
                     );
 
                     if (requestSerial === this._searchRequestSerial) {
                         const resolvedResults = Array.isArray(streamedResults)
-                            ? streamedResults.slice(0, 24)
+                            ? streamedResults
                             : [];
                         const hadStreamUpdates = this.search.streamHasUpdates;
 

@@ -280,6 +280,10 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             this._searchNavigationInFlight = false;
             this._lastKnownModalOpenState = true;
             this._skipNextSearchModalCloseLayout = false;
+            if (this._searchModalCloseDebounceTimer !== null) {
+                clearTimeout(this._searchModalCloseDebounceTimer);
+                this._searchModalCloseDebounceTimer = null;
+            }
             this.refreshSurahTriggerCaption(false);
             this.dispatchManagerModalsVisibilityState();
 
@@ -386,6 +390,7 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             this._lastKnownModalOpenState = false;
             this.searchActionModalId = '';
             this.search.query = '';
+            this.search.streamHasUpdates = false;
             this.setSearchResults([], { immediate: true });
             this.search.isLoading = false;
             this.dispatchManagerModalsVisibilityState();
@@ -435,8 +440,10 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             const closeEventName = quietly ? 'close-modal-quietly' : 'close-modal';
 
             for (const modalId of normalizedModalIds) {
-                window.dispatchEvent(
+                document.dispatchEvent(
                     new CustomEvent(closeEventName, {
+                        bubbles: true,
+                        composed: true,
                         detail: {
                             id: modalId,
                         },
@@ -475,6 +482,17 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                 this._skipNextSearchModalCloseLayout = true;
             }
 
+            if (this._searchModalCloseDebounceTimer !== null) {
+                clearTimeout(this._searchModalCloseDebounceTimer);
+            }
+
+            this._searchModalCloseDebounceTimer = window.setTimeout(
+                () => {
+                    this._searchModalCloseDebounceTimer = null;
+                },
+                Math.max(240, modalCloseTransitionDelayMs + 120),
+            );
+
             const shouldAttemptLivewireUnmount = !Boolean(this._searchNavigationInFlight);
             const searchModalCloseTargetId = this.resolveSearchModalCloseTargetId();
             let didCloseSearchModal = await this.requestModalCloseByKnownIds(
@@ -497,8 +515,10 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                 const fallbackModalId = this.resolveSearchModalCloseTargetId();
 
                 if (fallbackModalId !== '') {
-                    window.dispatchEvent(
+                    document.dispatchEvent(
                         new CustomEvent('close-modal', {
+                            bubbles: true,
+                            composed: true,
                             detail: {
                                 id: fallbackModalId,
                             },
@@ -514,18 +534,15 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
 
             if (!modalStillVisible) {
                 this.searchActionModalId = '';
+                this.handleSearchModalClosed();
+
+                return true;
             }
 
             if (this.search.modalOpen && modalStillVisible) {
                 this.queueSearchModalCloseSync({ delayMs: 120 });
 
                 return false;
-            }
-
-            if (this.search.modalOpen && !modalStillVisible) {
-                this.handleSearchModalClosed();
-
-                return true;
             }
 
             return !modalStillVisible || didCloseSearchModal;

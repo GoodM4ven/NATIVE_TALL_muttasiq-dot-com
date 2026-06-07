@@ -176,6 +176,36 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
             };
             window.addEventListener(quranReaderDebugLogsToggleEventName, this._onQrDebugLogsToggle);
 
+            this._onSearchModalCloseCapture = (event) => {
+                if (typeof this.shouldBlockSearchModalCloseEvent !== 'function') {
+                    return;
+                }
+
+                if (!this.shouldBlockSearchModalCloseEvent(event)) {
+                    return;
+                }
+
+                this.traceSearchModalLifecycle('close-blocked', {
+                    eventType: String(event?.type ?? ''),
+                    modalId: String(event?.detail?.id ?? ''),
+                    queryLength: this.normalizeSearchQuery(this.search.query).length,
+                    isLoading: Boolean(this.search.isLoading),
+                    searchRequestInFlight: Boolean(this._searchRequestInFlight),
+                    searchNavigationInFlight: Boolean(this._searchNavigationInFlight),
+                    searchStreamHasUpdates: Boolean(this.search.streamHasUpdates),
+                });
+
+                event.stopImmediatePropagation();
+                event.stopPropagation();
+
+                if (typeof event.preventDefault === 'function') {
+                    event.preventDefault();
+                }
+            };
+
+            window.addEventListener('close-modal', this._onSearchModalCloseCapture, true);
+            window.addEventListener('close-modal-quietly', this._onSearchModalCloseCapture, true);
+
             const storedLastPageNumber = readLastPageNumber();
             const restoredPage = clampPage(
                 storedLastPageNumber ?? this.pageNumber,
@@ -1248,6 +1278,16 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
                     this._onQrDebugLogsToggle,
                 );
                 this._onQrDebugLogsToggle = null;
+            }
+
+            if (this._onSearchModalCloseCapture) {
+                window.removeEventListener('close-modal', this._onSearchModalCloseCapture, true);
+                window.removeEventListener(
+                    'close-modal-quietly',
+                    this._onSearchModalCloseCapture,
+                    true,
+                );
+                this._onSearchModalCloseCapture = null;
             }
 
             if (this._onWirdSimulateDay) {
