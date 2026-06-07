@@ -264,6 +264,66 @@ it('closes the search modal after an active long search is dismissed', function 
     );
 });
 
+it('keeps the search modal open after quickly reopening it following a result selection', function () {
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
+
+    resetBrowserState($page);
+    waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
+    hashAction($page, '#quran-app-tilawa', true);
+
+    waitForScript($page, homeDataScript('data.activeView'), 'quran-app-tilawa');
+    waitForScript($page, 'window.location.hash', '#quran-app-tilawa');
+    waitForQuranReaderVisible($page);
+    waitForScript($page, quranReaderDataScript('data.ready && data.mushafLines.length > 0'), true);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
+
+    scriptClick($page, '.quran-soorah-trigger');
+    waitForScriptWithTimeout($page, 'Boolean(document.querySelector("#quran-reader-search-modal"))', true, 5_000);
+
+    $page->fill('#quran-reader-search-input', 'وقال ربكم ادعوني أستجب لكم');
+
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('!data.search.isLoading && Number(data.search.results?.length ?? 0) > 0'),
+        true,
+        12_000,
+    );
+
+    $page->script(quranReaderCommandScript('void data.goToSearchResult(data.search.results[0]);'));
+
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('!data.search.modalOpen && !data.isSearchModalWindowVisible()'),
+        true,
+        8_000,
+    );
+
+    $page->script(quranReaderCommandScript('void data.openSearchModal();'));
+
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('data.search.modalOpen && data.isSearchModalWindowVisible()'),
+        true,
+        8_000,
+    );
+
+    expect(
+        $page->script(
+            quranReaderCommandScript(
+                <<<'JS'
+window.__searchModalStayedOpenAfterReopen = false;
+setTimeout(() => {
+  window.__searchModalStayedOpenAfterReopen = Boolean(data.search.modalOpen && data.isSearchModalWindowVisible());
+}, 1200);
+return true;
+JS,
+            ),
+        ),
+    )->toBeTrue();
+
+    waitForScriptWithTimeout($page, 'Boolean(window.__searchModalStayedOpenAfterReopen)', true, 4_000);
+});
+
 it('auto-copies activated text with popover feedback and uses normal history modal', function () {
     $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 

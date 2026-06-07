@@ -665,6 +665,8 @@ export const createInitialState = (config, deps) => {
 
         _searchModalCloseDebounceTimer: null,
 
+        _searchModalCloseSyncSuppressionUntil: 0,
+
         _searchModalOpenInFlight: null,
 
         _searchModalInputSyncElement: null,

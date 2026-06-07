@@ -1031,6 +1031,7 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                 this.cancelActiveSearchProcessing();
                 this.resetNavigationQueueForPriorityJump();
                 this.clearPendingPostModalTargetFit();
+                this.suppressSearchModalCloseSync(Math.max(900, modalCloseTransitionDelayMs + 720));
                 if (!shouldUseStandardSmPlusNavigation) {
                     this.holdPageHiddenForModalLifecycle({ animateFadeOut: false });
                     this.beginModalNavigationCloseGuard(searchModalLifecycleIds);

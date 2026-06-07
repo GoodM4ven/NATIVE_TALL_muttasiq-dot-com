@@ -739,7 +739,15 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
         queueSearchModalCloseSync({ delayMs = 0 } = {}) {
             const normalizedDelayMs = Math.max(0, Math.trunc(Number(delayMs) || 0));
 
+            if (this.shouldDeferSearchModalClose()) {
+                return;
+            }
+
             window.setTimeout(() => {
+                if (this.shouldDeferSearchModalClose()) {
+                    return;
+                }
+
                 this.syncManagerModalFlagsFromVisibility();
 
                 const hasStaleSearchState =
@@ -758,6 +766,19 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                     this.handleSearchModalClosed();
                 }
             }, normalizedDelayMs);
+        },
+
+        suppressSearchModalCloseSync(durationMs = 0) {
+            const suppressionDurationMs = Math.max(0, Math.trunc(Number(durationMs) || 0));
+
+            if (suppressionDurationMs <= 0) {
+                return;
+            }
+
+            this._searchModalCloseSyncSuppressionUntil = Math.max(
+                this._searchModalCloseSyncSuppressionUntil,
+                Date.now() + suppressionDurationMs,
+            );
         },
 
         suppressModalLifecycleEffects(
@@ -1005,7 +1026,7 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
         },
 
         shouldDeferSearchModalClose() {
-            return false;
+            return Date.now() < Number(this._searchModalCloseSyncSuppressionUntil ?? 0);
         },
 
         shouldBlockSearchModalCloseEvent(event) {

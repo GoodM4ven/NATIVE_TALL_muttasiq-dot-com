@@ -698,6 +698,7 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                 this.resetNavigationQueueForPriorityJump();
                 this.clearPendingPostModalTargetFit();
                 this.cancelActiveSearchProcessing();
+                this.suppressSearchModalCloseSync(Math.max(900, modalCloseTransitionDelayMs + 720));
                 if (!shouldUseStandardSmPlusNavigation) {
                     this.holdPageHiddenForModalLifecycle({ animateFadeOut: false });
                     this.beginModalNavigationCloseGuard(searchModalLifecycleIds);
