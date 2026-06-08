@@ -19,7 +19,7 @@ class QuranReaderDataService
 
     private const MAX_PAGE_CACHE_KEY = 'quran-reader-max-page-v2';
 
-    private const SEARCH_RESULTS_CACHE_PREFIX = 'quran-reader-search-results-v13';
+    private const SEARCH_RESULTS_CACHE_PREFIX = 'quran-reader-search-results-v14';
 
     private const UNBOUNDED_STAGE_RESULT_LIMIT = 6200;
 
@@ -4029,7 +4029,46 @@ class QuranReaderDataService
      */
     private function prepareSearchTokens(array $tokens): array
     {
-        return QuranSearchText::prepareTokens($tokens);
+        return QuranSearchText::prepareTokens($this->collapseVocativeTokens($tokens));
+    }
+
+    /**
+     * Keep an explicit vocative particle attached to the following token so
+     * searches can still target the fused Uthmani form (for example `ياارض`).
+     *
+     * @param  array<int, string>  $tokens
+     * @return array<int, string>
+     */
+    private function collapseVocativeTokens(array $tokens): array
+    {
+        $collapsedTokens = [];
+        $tokenCount = count($tokens);
+
+        for ($index = 0; $index < $tokenCount; $index++) {
+            $token = trim((string) ($tokens[$index] ?? ''));
+
+            if ($token === '') {
+                continue;
+            }
+
+            if (
+                $token === 'يا'
+                && array_key_exists($index + 1, $tokens)
+            ) {
+                $nextToken = trim((string) $tokens[$index + 1]);
+
+                if ($nextToken !== '') {
+                    $collapsedTokens[] = 'يا'.$nextToken;
+                    $index++;
+
+                    continue;
+                }
+            }
+
+            $collapsedTokens[] = $token;
+        }
+
+        return $collapsedTokens;
     }
 
     private function addTokenPrefixConditions(Builder $builder, string $column, string $variant): void

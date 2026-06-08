@@ -234,6 +234,34 @@ test('quran search keeps exact close sarf and jathr stage buckets disjoint', fun
     'long phrase' => ['وقال ربكم ادعوني أستجب لكم'],
 ]);
 
+test('quran search keeps vocative phrases out of sarf and jathr when the vocative token is explicit', function (): void {
+    if (! Schema::hasTable('quran_verses')) {
+        $this->markTestSkipped('Quran reader search dependencies are unavailable.');
+    }
+
+    /** @var QuranReaderDataService $service */
+    $service = app(QuranReaderDataService::class);
+
+    if (! $service->isReady()) {
+        $this->markTestSkipped('Quran reader search dependencies are unavailable.');
+    }
+
+    $results = $service->searchProgressively('قيل يا أرض ابلعي ماءك', 24);
+    $targetMatch = collect($results)->first(
+        static fn (array $item): bool => (int) ($item['surah_number'] ?? 0) === 11
+            && (int) ($item['ayah_number'] ?? 0) === 44,
+    );
+
+    expect($results)->toBeArray()->not->toBeEmpty()
+        ->and($targetMatch)->toBeArray()
+        ->and(in_array((string) ($targetMatch['match_strategy'] ?? ''), ['ayah_exact', 'ayah_close'], true))->toBeTrue()
+        ->and(collect($results)->contains(
+            static fn (array $item): bool => (int) ($item['surah_number'] ?? 0) === 11
+                && (int) ($item['ayah_number'] ?? 0) === 44
+                && in_array((string) ($item['match_strategy'] ?? ''), ['ayah_sarf', 'ayah_jathr'], true),
+        ))->toBeFalse();
+});
+
 test('quran search distributes semantic matches across the meaningful words in a multi-word query', function (): void {
     if (! Schema::hasTable('quran_verses')) {
         $this->markTestSkipped('Quran reader search dependencies are unavailable.');
