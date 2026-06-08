@@ -130,3 +130,4 @@
 - emits uncached quran search progress in incremental result steps
 - caches repeated quran search queries while preserving complete progress emission
 - maintains quick stack layout and navigation resilience across reload, modal, and color-scheme flows
+- keeps the first overcount tap and digit morph working after returning to a completed single-count thikr
