@@ -444,6 +444,7 @@ class QuranReaderDataService
         $resolvedLimit = self::UNBOUNDED_STAGE_RESULT_LIMIT;
         $hasTypedWordColumn = $this->hasQuranWordColumn('token_searchable_typed');
         $resolvedMatches = [];
+        $resolvedMatchIndexes = [];
         foreach ($queryParts as $queryPart) {
             $tokens = $this->prepareSearchTokens(array_values(array_unique(array_filter(
                 preg_split('/\s+/u', trim($queryPart)) ?: [],
@@ -468,12 +469,76 @@ class QuranReaderDataService
                 array_keys($resolvedStages),
             );
 
-            foreach ($partMatches as $match) {
-                $resolvedMatches[] = $match;
-            }
+            $this->mergeSearchMatches($resolvedMatches, $resolvedMatchIndexes, $partMatches);
         }
 
         return $resolvedMatches;
+    }
+
+    /**
+     * @param  array<int, array{
+     *     id: int,
+     *     ayah_index: int,
+     *     surah_number: int,
+     *     ayah_number: int,
+     *     page_number: int,
+     *     text_uthmani: string,
+     *     text_searchable_typed: string,
+     *     search_snippet: string,
+     *     match_strategy: string,
+     *     match_tone: string,
+     *     match_shade: int,
+     *     match_label: string,
+     *     match_rank: int
+     * }>  $resolvedMatches
+     * @param  array<int, int>  $resolvedMatchIndexes
+     * @param  array<int, array{
+     *     id: int,
+     *     ayah_index: int,
+     *     surah_number: int,
+     *     ayah_number: int,
+     *     page_number: int,
+     *     text_uthmani: string,
+     *     text_searchable_typed: string,
+     *     search_snippet: string,
+     *     match_strategy: string,
+     *     match_tone: string,
+     *     match_shade: int,
+     *     match_label: string,
+     *     match_rank: int
+     * }>  $partMatches
+     */
+    private function mergeSearchMatches(
+        array &$resolvedMatches,
+        array &$resolvedMatchIndexes,
+        array $partMatches,
+    ): void {
+        foreach ($partMatches as $match) {
+            $verseId = (int) $match['id'];
+            $existingIndex = $resolvedMatchIndexes[$verseId] ?? null;
+
+            if ($existingIndex === null) {
+                $resolvedMatchIndexes[$verseId] = count($resolvedMatches);
+                $resolvedMatches[] = $match;
+
+                continue;
+            }
+
+            $existingMatch = $resolvedMatches[$existingIndex] ?? null;
+
+            if (! is_array($existingMatch)) {
+                $resolvedMatches[$existingIndex] = $match;
+
+                continue;
+            }
+
+            $existingRank = (int) $existingMatch['match_rank'];
+            $newRank = (int) $match['match_rank'];
+
+            if ($newRank < $existingRank) {
+                $resolvedMatches[$existingIndex] = $match;
+            }
+        }
     }
 
     /**
@@ -590,6 +655,7 @@ class QuranReaderDataService
         }
 
         $resolvedMatches = [];
+        $resolvedMatchIndexes = [];
         $forwardProgress = null;
 
         if ($onProgress !== null) {
@@ -621,9 +687,7 @@ class QuranReaderDataService
                 $shouldCancel,
             );
 
-            foreach ($partMatches as $match) {
-                $resolvedMatches[] = $match;
-            }
+            $this->mergeSearchMatches($resolvedMatches, $resolvedMatchIndexes, $partMatches);
         }
 
         if ($shouldCancel !== null && $shouldCancel() === true) {

@@ -217,8 +217,10 @@ test('quran search keeps exact close sarf and jathr stage buckets disjoint', fun
     $closeIds = $idsByStrategy->get('ayah_close', []);
     $sarfIds = $idsByStrategy->get('ayah_sarf', []);
     $jathrIds = $idsByStrategy->get('ayah_jathr', []);
+    $allIds = collect($results)->pluck('id')->map(static fn (mixed $id): int => (int) $id);
 
     expect($results)->toBeArray()->not->toBeEmpty()
+        ->and($allIds->count())->toBe($allIds->unique()->count())
         ->and($exactIds)->toHaveCount(1)
         ->and(count($closeIds))->toBeLessThanOrEqual(50)
         ->and(count($sarfIds))->toBeLessThanOrEqual(50)
