@@ -131,3 +131,4 @@
 - caches repeated quran search queries while preserving complete progress emission
 - maintains quick stack layout and navigation resilience across reload, modal, and color-scheme flows
 - keeps the first overcount tap and digit morph working after returning to a completed single-count thikr
+- re-focuses and scrolls the selected surah tile when reopening search modal
