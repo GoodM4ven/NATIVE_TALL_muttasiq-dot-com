@@ -1005,7 +1005,9 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                 this.search.modalOpen &&
                 !this.isSearchModalWindowVisible()
             ) {
-                this.handleSearchModalClosed();
+                this.queueSearchModalCloseSync({
+                    delayMs: normalizedKind === 'closed' ? 0 : 96,
+                });
             }
 
             if (normalizedKind === 'closed' && this.openModalCount() <= 0) {

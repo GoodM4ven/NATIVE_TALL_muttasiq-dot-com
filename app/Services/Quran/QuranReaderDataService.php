@@ -972,10 +972,9 @@ class QuranReaderDataService
         $shouldUseRootStage = count($tokens) <= 6;
 
         if ($shouldUseExpandedRoots && $hasRootAndStemTokens) {
-            $semanticSeenAyahIndexes = [];
             $this->appendStemTokenMatchesFromQuranWords(
                 $matches,
-                $semanticSeenAyahIndexes,
+                $seenAyahIndexes,
                 $semanticTokens,
                 $limit,
                 $searchQuery,
@@ -991,10 +990,9 @@ class QuranReaderDataService
         }
 
         if ($shouldUseExpandedRoots && $shouldUseRootStage && $hasRootAndStemTokens) {
-            $semanticSeenAyahIndexes = [];
             $this->appendRootTokenMatchesFromQuranWords(
                 $matches,
-                $semanticSeenAyahIndexes,
+                $seenAyahIndexes,
                 $semanticTokens,
                 $limit,
                 $searchQuery,
@@ -1170,10 +1168,9 @@ class QuranReaderDataService
             $shouldUseExpandedRoots &&
             $hasRootAndStemTokens
         ) {
-            $semanticSeenAyahIndexes = [];
             $this->appendStemTokenMatchesFromQuranWords(
                 $matches,
-                $semanticSeenAyahIndexes,
+                $seenAyahIndexes,
                 $semanticTokens,
                 self::SEMANTIC_STAGE_RESULT_LIMIT,
                 $searchQuery,
@@ -1188,10 +1185,9 @@ class QuranReaderDataService
             $shouldUseRootStage &&
             $hasRootAndStemTokens
         ) {
-            $semanticSeenAyahIndexes = [];
             $this->appendRootTokenMatchesFromQuranWords(
                 $matches,
-                $semanticSeenAyahIndexes,
+                $seenAyahIndexes,
                 $semanticTokens,
                 self::SEMANTIC_STAGE_RESULT_LIMIT,
                 $searchQuery,
@@ -2895,6 +2891,15 @@ class QuranReaderDataService
                 continue;
             }
 
+            $verseIds = array_values(array_filter(
+                $verseIds,
+                static fn (int $verseId): bool => ! isset($seenAyahIndexes[$verseId]),
+            ));
+
+            if ($verseIds === []) {
+                continue;
+            }
+
             $semanticTokenPools[] = $verseIds;
         }
 
@@ -2906,7 +2911,10 @@ class QuranReaderDataService
 
         $matchedVerseIds = $this->interleaveSemanticTokenVerseIds(
             $semanticTokenPools,
-            $stageMatchLimit,
+            min(
+                self::UNBOUNDED_STAGE_RESULT_LIMIT,
+                max($stageMatchLimit * 4, self::SEMANTIC_STAGE_RESULT_LIMIT),
+            ),
         );
 
         if ($matchedVerseIds === []) {

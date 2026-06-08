@@ -191,7 +191,7 @@ test('quran search caps and randomizes semantic stage batches', function (): voi
     }
 });
 
-test('quran search does not let exact matches consume the semantic stage budget', function (string $query): void {
+test('quran search keeps exact close sarf and jathr stage buckets disjoint', function (string $query): void {
     if (! Schema::hasTable('quran_verses')) {
         $this->markTestSkipped('Quran reader search dependencies are unavailable.');
     }
@@ -204,13 +204,31 @@ test('quran search does not let exact matches consume the semantic stage budget'
     }
 
     $results = $service->searchProgressively($query, 60);
-    $matchStrategies = collect($results)->pluck('match_strategy');
+    $idsByStrategy = collect($results)
+        ->groupBy(static fn (array $item): string => (string) ($item['match_strategy'] ?? ''))
+        ->map(static fn ($group): array => $group
+            ->pluck('id')
+            ->map(static fn (mixed $id): int => (int) $id)
+            ->unique()
+            ->values()
+            ->all());
+
+    $exactIds = $idsByStrategy->get('ayah_exact', []);
+    $closeIds = $idsByStrategy->get('ayah_close', []);
+    $sarfIds = $idsByStrategy->get('ayah_sarf', []);
+    $jathrIds = $idsByStrategy->get('ayah_jathr', []);
 
     expect($results)->toBeArray()->not->toBeEmpty()
-        ->and($results)->toHaveCount(101)
-        ->and($matchStrategies->filter(static fn (string $strategy): bool => $strategy === 'ayah_exact'))->toHaveCount(1)
-        ->and($matchStrategies->filter(static fn (string $strategy): bool => $strategy === 'ayah_sarf'))->toHaveCount(50)
-        ->and($matchStrategies->filter(static fn (string $strategy): bool => $strategy === 'ayah_jathr'))->toHaveCount(50);
+        ->and($exactIds)->toHaveCount(1)
+        ->and(count($closeIds))->toBeLessThanOrEqual(50)
+        ->and(count($sarfIds))->toBeLessThanOrEqual(50)
+        ->and(count($jathrIds))->toBeLessThanOrEqual(50)
+        ->and(array_intersect($exactIds, $closeIds))->toBe([])
+        ->and(array_intersect($exactIds, $sarfIds))->toBe([])
+        ->and(array_intersect($exactIds, $jathrIds))->toBe([])
+        ->and(array_intersect($closeIds, $sarfIds))->toBe([])
+        ->and(array_intersect($closeIds, $jathrIds))->toBe([])
+        ->and(array_intersect($sarfIds, $jathrIds))->toBe([]);
 })->with([
     'short phrase' => ['وقال ربكم ادعوني'],
     'long phrase' => ['وقال ربكم ادعوني أستجب لكم'],

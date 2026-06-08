@@ -307,6 +307,22 @@ it('keeps the search modal open after quickly reopening it following a result se
         8_000,
     );
 
+    $page->fill('#quran-reader-search-input', 'وقال ربكم ادعوني أستجب لكم');
+
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('String(data.search.query ?? "") === "وقال ربكم ادعوني أستجب لكم"'),
+        true,
+        6_000,
+    );
+
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('!data.search.isLoading && Number(data.search.results?.length ?? 0) > 0'),
+        true,
+        12_000,
+    );
+
     expect(
         $page->script(
             quranReaderCommandScript(
