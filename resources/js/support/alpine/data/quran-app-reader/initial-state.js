@@ -295,6 +295,8 @@ export const createInitialState = (config, deps) => {
 
         searchDestinationScaleBoostExpiresAt: 0,
 
+        searchNeedsInitialSelectionRecovery: true,
+
         pageMotionTimer: null,
 
         pageScale: 1,
@@ -348,6 +350,7 @@ export const createInitialState = (config, deps) => {
             surahDirectory: [],
             activeSurahNumber: 1,
             preserveActiveSurahOnNextOpen: false,
+            lastResultsUpdatedAt: 0,
         },
 
         navigationHistory: [],
@@ -422,6 +425,10 @@ export const createInitialState = (config, deps) => {
         _activePageAbortController: null,
 
         _searchIndexPromise: null,
+
+        _searchModalCloseRequested: false,
+
+        _searchModalCloseProtectionUntil: 0,
 
         _layoutToken: 0,
 
@@ -664,6 +671,8 @@ export const createInitialState = (config, deps) => {
         _bookmarksRowsAutoAnimateStop: null,
 
         _searchModalCloseDebounceTimer: null,
+
+        _searchModalCloseSyncTimer: null,
 
         _searchModalCloseSyncSuppressionUntil: 0,
 

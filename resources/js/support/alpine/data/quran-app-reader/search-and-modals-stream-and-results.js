@@ -183,6 +183,7 @@ export const createSearchAndModalsStreamAndResultsModule = (deps) => {
             this.search.lastCompletedNormalizedQuery = '';
             this.search.streamHasUpdates = false;
             this.setSearchResults([], { immediate: true });
+            this.clearSearchModalCloseSyncQueue();
 
             if (normalized === '' || normalized.length < this.search.minQueryLength) {
                 this.search.isLoading = false;
@@ -190,6 +191,10 @@ export const createSearchAndModalsStreamAndResultsModule = (deps) => {
                 return;
             }
 
+            this._searchModalCloseProtectionUntil = Math.max(
+                this._searchModalCloseProtectionUntil,
+                Date.now() + Math.max(900, modalCloseTransitionDelayMs + 320),
+            );
             this.search.isLoading = true;
         },
 

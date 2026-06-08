@@ -340,6 +340,197 @@ JS,
     waitForScriptWithTimeout($page, 'Boolean(window.__searchModalStayedOpenAfterReopen)', true, 4_000);
 });
 
+it('keeps the reader visible after the first search result selection on a fresh session', function () {
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
+
+    resetBrowserState($page);
+    waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
+    hashAction($page, '#quran-app-tilawa', true);
+
+    waitForScript($page, homeDataScript('data.activeView'), 'quran-app-tilawa');
+    waitForScript($page, 'window.location.hash', '#quran-app-tilawa');
+    waitForQuranReaderVisible($page);
+    waitForScript($page, quranReaderDataScript('data.ready && data.mushafLines.length > 0'), true);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
+
+    scriptClick($page, '.quran-soorah-trigger');
+    waitForScriptWithTimeout($page, 'Boolean(document.querySelector("#quran-reader-search-modal"))', true, 5_000);
+
+    $page->fill('#quran-reader-search-input', 'غافر');
+
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('!data.search.isLoading && Number(data.search.results?.length ?? 0) > 0'),
+        true,
+        12_000,
+    );
+
+    expect(
+        $page->script(
+            quranReaderCommandScript(
+                <<<'JS'
+window.__searchModalStayedOpenAfterResultsSettled = false;
+setTimeout(() => {
+  window.__searchModalStayedOpenAfterResultsSettled = Boolean(
+    data.search.modalOpen &&
+    data.isSearchModalWindowVisible() &&
+    Number(data.search.results?.length ?? 0) > 0,
+  );
+}, 1200);
+return true;
+JS,
+            ),
+        ),
+    )->toBeTrue();
+
+    waitForScriptWithTimeout(
+        $page,
+        'Boolean(window.__searchModalStayedOpenAfterResultsSettled)',
+        true,
+        4_000,
+    );
+
+    $targetPage = (int) $page->script(
+        quranReaderDataScript('Number(data.search.results[0]?.page_number ?? 0)'),
+    );
+
+    expect($targetPage)->toBeGreaterThan(0);
+
+    $page->script(quranReaderCommandScript('void data.goToSearchResult(data.search.results[0]);'));
+
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('!data.search.modalOpen && !data.isSearchModalWindowVisible()'),
+        true,
+        8_000,
+    );
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('Number(data.pageNumber ?? 0)'),
+        $targetPage,
+        8_000,
+    );
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('!data.isFittingPage && data.ready && data.mushafLines.length > 0'),
+        true,
+        12_000,
+    );
+    waitForScriptWithTimeout(
+        $page,
+        <<<'JS'
+(() => {
+  const lines = document.querySelector('.quran-page-lines');
+
+  if (!(lines instanceof HTMLElement)) {
+    return false;
+  }
+
+  const styles = window.getComputedStyle(lines);
+
+  return styles.visibility === 'visible' && styles.opacity === '1';
+})()
+JS,
+        true,
+        12_000,
+    );
+});
+
+it('refits the reader before revealing the selected search result on a fresh session', function () {
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
+
+    resetBrowserState($page);
+    waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
+    hashAction($page, '#quran-app-tilawa', true);
+
+    waitForScript($page, homeDataScript('data.activeView'), 'quran-app-tilawa');
+    waitForScript($page, 'window.location.hash', '#quran-app-tilawa');
+    waitForQuranReaderVisible($page);
+    waitForScript($page, quranReaderDataScript('data.ready && data.mushafLines.length > 0'), true);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
+
+    scriptClick($page, '.quran-soorah-trigger');
+    waitForScriptWithTimeout($page, 'Boolean(document.querySelector("#quran-reader-search-modal"))', true, 5_000);
+
+    $page->fill('#quran-reader-search-input', 'محمد رسول الله');
+
+    expect(
+        $page->script(
+            quranReaderCommandScript(
+                <<<'JS'
+window.__searchModalRemainedOpenWhileSearchStarted = false;
+setTimeout(() => {
+  window.__searchModalRemainedOpenWhileSearchStarted = Boolean(
+    data.search.modalOpen &&
+    data.isSearchModalWindowVisible(),
+  );
+}, 1200);
+return true;
+JS,
+            ),
+        ),
+    )->toBeTrue();
+
+    waitForScriptWithTimeout(
+        $page,
+        'Boolean(window.__searchModalRemainedOpenWhileSearchStarted)',
+        true,
+        4_000,
+    );
+
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('!data.search.isLoading && Number(data.search.results?.length ?? 0) > 0'),
+        true,
+        12_000,
+    );
+
+    $targetPage = (int) $page->script(
+        quranReaderDataScript('Number(data.search.results[0]?.page_number ?? 0)'),
+    );
+
+    expect($targetPage)->toBeGreaterThan(0);
+
+    $page->script(quranReaderCommandScript('void data.goToSearchResult(data.search.results[0]);'));
+
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('!data.search.modalOpen && !data.isSearchModalWindowVisible()'),
+        true,
+        8_000,
+    );
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('Number(data.pageNumber ?? 0)'),
+        $targetPage,
+        8_000,
+    );
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('!data.isFittingPage && data.ready && data.mushafLines.length > 0'),
+        true,
+        12_000,
+    );
+    waitForScriptWithTimeout(
+        $page,
+        <<<'JS'
+(() => {
+  const lines = document.querySelector('.quran-page-lines');
+
+  if (!(lines instanceof HTMLElement)) {
+    return false;
+  }
+
+  const styles = window.getComputedStyle(lines);
+
+  return styles.visibility === 'visible' && styles.opacity === '1';
+})()
+JS,
+        true,
+        12_000,
+    );
+});
+
 it('auto-copies activated text with popover feedback and uses normal history modal', function () {
     $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 

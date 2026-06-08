@@ -280,6 +280,15 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             this._searchNavigationInFlight = false;
             this._lastKnownModalOpenState = true;
             this._skipNextSearchModalCloseLayout = false;
+            this.clearSearchModalCloseSyncQueue();
+            this._searchModalCloseProtectionUntil = Math.max(
+                this._searchModalCloseProtectionUntil,
+                Date.now() +
+                    Math.max(
+                        modalLifecycleSuppressionDurationMs,
+                        postModalFitRevealSettleDelayMs + 640,
+                    ),
+            );
             if (this._searchModalCloseDebounceTimer !== null) {
                 clearTimeout(this._searchModalCloseDebounceTimer);
                 this._searchModalCloseDebounceTimer = null;
@@ -393,6 +402,9 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             this.search.streamHasUpdates = false;
             this.setSearchResults([], { immediate: true });
             this.search.isLoading = false;
+            this.search.lastResultsUpdatedAt = 0;
+            this._searchModalCloseProtectionUntil = 0;
+            this.clearSearchModalCloseSyncQueue();
             this.dispatchManagerModalsVisibilityState();
 
             if (this._searchModalCloseDebounceTimer !== null) {
@@ -478,74 +490,80 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
         },
 
         async requestSearchModalClose({ skipLayout = false } = {}) {
-            if (skipLayout) {
-                this._skipNextSearchModalCloseLayout = true;
-            }
+            this._searchModalCloseRequested = true;
 
-            if (this._searchModalCloseDebounceTimer !== null) {
-                clearTimeout(this._searchModalCloseDebounceTimer);
-            }
-
-            this._searchModalCloseDebounceTimer = window.setTimeout(
-                () => {
-                    this._searchModalCloseDebounceTimer = null;
-                },
-                Math.max(240, modalCloseTransitionDelayMs + 120),
-            );
-
-            const shouldAttemptLivewireUnmount = !Boolean(this._searchNavigationInFlight);
-            const searchModalCloseTargetId = this.resolveSearchModalCloseTargetId();
-            let didCloseSearchModal = await this.requestModalCloseByKnownIds(
-                [
-                    searchModalCloseTargetId,
-                    this.searchActionModalId,
-                    this.searchModalId,
-                    this.searchModalDomId,
-                ],
-                {
-                    onFallback: () => {},
-                    isModalStillVisible: () => this.isSearchModalWindowVisible(),
-                    quietly: false,
-                    allowLivewireUnmount: shouldAttemptLivewireUnmount,
-                    forceLivewireUnmount: shouldAttemptLivewireUnmount,
-                },
-            );
-
-            if (!didCloseSearchModal && this.isSearchModalWindowVisible()) {
-                const fallbackModalId = this.resolveSearchModalCloseTargetId();
-
-                if (fallbackModalId !== '') {
-                    document.dispatchEvent(
-                        new CustomEvent('close-modal', {
-                            bubbles: true,
-                            composed: true,
-                            detail: {
-                                id: fallbackModalId,
-                            },
-                        }),
-                    );
+            try {
+                if (skipLayout) {
+                    this._skipNextSearchModalCloseLayout = true;
                 }
 
-                didCloseSearchModal = await this.waitForSearchModalToClose();
+                if (this._searchModalCloseDebounceTimer !== null) {
+                    clearTimeout(this._searchModalCloseDebounceTimer);
+                }
+
+                this._searchModalCloseDebounceTimer = window.setTimeout(
+                    () => {
+                        this._searchModalCloseDebounceTimer = null;
+                    },
+                    Math.max(240, modalCloseTransitionDelayMs + 120),
+                );
+
+                const shouldAttemptLivewireUnmount = !Boolean(this._searchNavigationInFlight);
+                const searchModalCloseTargetId = this.resolveSearchModalCloseTargetId();
+                let didCloseSearchModal = await this.requestModalCloseByKnownIds(
+                    [
+                        searchModalCloseTargetId,
+                        this.searchActionModalId,
+                        this.searchModalId,
+                        this.searchModalDomId,
+                    ],
+                    {
+                        onFallback: () => {},
+                        isModalStillVisible: () => this.isSearchModalWindowVisible(),
+                        quietly: false,
+                        allowLivewireUnmount: shouldAttemptLivewireUnmount,
+                        forceLivewireUnmount: shouldAttemptLivewireUnmount,
+                    },
+                );
+
+                if (!didCloseSearchModal && this.isSearchModalWindowVisible()) {
+                    const fallbackModalId = this.resolveSearchModalCloseTargetId();
+
+                    if (fallbackModalId !== '') {
+                        document.dispatchEvent(
+                            new CustomEvent('close-modal', {
+                                bubbles: true,
+                                composed: true,
+                                detail: {
+                                    id: fallbackModalId,
+                                },
+                            }),
+                        );
+                    }
+
+                    didCloseSearchModal = await this.waitForSearchModalToClose();
+                }
+
+                this.syncManagerModalFlagsFromVisibility();
+                const modalStillVisible = this.isSearchModalWindowVisible();
+
+                if (!modalStillVisible) {
+                    this.searchActionModalId = '';
+                    this.handleSearchModalClosed();
+
+                    return true;
+                }
+
+                if (this.search.modalOpen && modalStillVisible) {
+                    this.queueSearchModalCloseSync({ delayMs: 120 });
+
+                    return false;
+                }
+
+                return !modalStillVisible || didCloseSearchModal;
+            } finally {
+                this._searchModalCloseRequested = false;
             }
-
-            this.syncManagerModalFlagsFromVisibility();
-            const modalStillVisible = this.isSearchModalWindowVisible();
-
-            if (!modalStillVisible) {
-                this.searchActionModalId = '';
-                this.handleSearchModalClosed();
-
-                return true;
-            }
-
-            if (this.search.modalOpen && modalStillVisible) {
-                this.queueSearchModalCloseSync({ delayMs: 120 });
-
-                return false;
-            }
-
-            return !modalStillVisible || didCloseSearchModal;
         },
 
         async waitForSearchModalToClose(maxAttempts = 18, delayMs = 24) {
@@ -1093,6 +1111,42 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                     });
                 }
 
+                this._bypassNextFitCache = true;
+                await this.layoutPageGuaranteed({
+                    revealDelayMs: 120,
+                    maxAttempts: 5,
+                    useIdleFit: false,
+                });
+
+                if (this.searchNeedsInitialSelectionRecovery) {
+                    const shouldRunInitialSelectionRecovery =
+                        this.searchNeedsInitialSelectionRecovery;
+                    this.searchNeedsInitialSelectionRecovery = false;
+
+                    if (shouldRunInitialSelectionRecovery) {
+                        window.setTimeout(
+                            () => {
+                                if (
+                                    this.pageNumber !== pageNumber ||
+                                    !this.hasRenderablePage() ||
+                                    this.search.modalOpen ||
+                                    this.isSearchModalWindowVisible() ||
+                                    this.openModalCount() > 0
+                                ) {
+                                    return;
+                                }
+
+                                this._bypassNextFitCache = true;
+                                void this.layoutPageGuaranteed({
+                                    revealDelayMs: 120,
+                                    maxAttempts: 5,
+                                    useIdleFit: false,
+                                });
+                            },
+                            Math.max(120, modalCloseTransitionDelayMs + 60),
+                        );
+                    }
+                }
                 this.search.activeSurahNumber = surahNumber;
                 this.activeAyahIndex = 0;
                 this.activeWordIndex = 0;

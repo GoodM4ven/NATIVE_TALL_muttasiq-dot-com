@@ -645,6 +645,10 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                 }
 
                 this.search.isLoading = false;
+                this._searchModalCloseProtectionUntil = Math.max(
+                    this._searchModalCloseProtectionUntil,
+                    Date.now() + Math.max(640, modalCloseTransitionDelayMs + 240),
+                );
                 this.search.lastCompletedNormalizedQuery = normalizedQuery;
                 this._searchRequestInFlight = false;
                 this._searchQueuedNormalizedQuery = null;
@@ -746,6 +750,13 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                     });
                 }
 
+                this._bypassNextFitCache = true;
+                await this.layoutPageGuaranteed({
+                    revealDelayMs: 120,
+                    maxAttempts: 5,
+                    useIdleFit: false,
+                });
+
                 if (highlightAyahIndex > 0) {
                     this.activeAyahIndex = highlightAyahIndex;
                     this.searchHighlightedAyahIndex = highlightAyahIndex;
@@ -775,6 +786,35 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                         pageNumber: targetPage,
                         ayahText: this.searchResultAyahText(result),
                     });
+                }
+                if (this.searchNeedsInitialSelectionRecovery) {
+                    const shouldRunInitialSelectionRecovery =
+                        this.searchNeedsInitialSelectionRecovery;
+                    this.searchNeedsInitialSelectionRecovery = false;
+
+                    if (shouldRunInitialSelectionRecovery) {
+                        window.setTimeout(
+                            () => {
+                                if (
+                                    this.pageNumber !== targetPage ||
+                                    !this.hasRenderablePage() ||
+                                    this.search.modalOpen ||
+                                    this.isSearchModalWindowVisible() ||
+                                    this.openModalCount() > 0
+                                ) {
+                                    return;
+                                }
+
+                                this._bypassNextFitCache = true;
+                                void this.layoutPageGuaranteed({
+                                    revealDelayMs: 120,
+                                    maxAttempts: 5,
+                                    useIdleFit: false,
+                                });
+                            },
+                            Math.max(120, modalCloseTransitionDelayMs + 60),
+                        );
+                    }
                 }
                 this.recordNavigationHistory({
                     source: 'search-result',

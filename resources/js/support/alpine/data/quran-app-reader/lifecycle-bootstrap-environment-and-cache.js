@@ -1473,6 +1473,11 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
                 this._searchModalCloseDebounceTimer = null;
             }
 
+            if (this._searchModalCloseSyncTimer !== null) {
+                clearTimeout(this._searchModalCloseSyncTimer);
+                this._searchModalCloseSyncTimer = null;
+            }
+
             this.clearWirdEntryRevealTimers();
 
             if (this._modalLayoutResumeTimer !== null) {
