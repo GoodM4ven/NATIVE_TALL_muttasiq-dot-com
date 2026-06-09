@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "6ab1ae444d2632160111bf98e6d5f14b",
+    "content-hash": "930f14a89e631e40196f3e8c1a765a19",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -2002,11 +2002,17 @@
         },
         {
             "name": "goodm4ven/nativephp-muttasiq-patches",
-            "version": "1.6.999999",
-            "dist": {
-                "type": "path",
-                "url": "/home/goodm4ven/Code/LaravelPackages/NATIVE_PLUGIN_muttasiq-patches",
+            "version": "v1.6.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/GoodM4ven/NATIVE_PLUGIN_muttasiq-patches.git",
                 "reference": "4ffe5aec39d2418c02ee2fee9b79038834835b50"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/GoodM4ven/NATIVE_PLUGIN_muttasiq-patches/zipball/4ffe5aec39d2418c02ee2fee9b79038834835b50",
+                "reference": "4ffe5aec39d2418c02ee2fee9b79038834835b50",
+                "shasum": ""
             },
             "require": {
                 "nativephp/mobile": "^3.2",
@@ -2028,6 +2034,7 @@
                     "Goodm4ven\\NativePatches\\": "src/"
                 }
             },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "AGPL-3.0-only"
             ],
@@ -2051,14 +2058,25 @@
                 "nativephp-plugin"
             ],
             "support": {
+                "email": "goodm4ven@proton.me",
                 "issues": "https://github.com/GoodM4ven/nativephp-muttasiq-patches/issues",
-                "source": "https://github.com/GoodM4ven/nativephp-muttasiq-patches",
-                "email": "goodm4ven@proton.me"
+                "source": "https://github.com/GoodM4ven/nativephp-muttasiq-patches"
             },
-            "transport-options": {
-                "symlink": true,
-                "relative": false
-            }
+            "funding": [
+                {
+                    "url": "https://www.buymeacoffee.com/GoodM4ven",
+                    "type": "buy_me_a_coffee"
+                },
+                {
+                    "url": "https://github.com/GoodM4ven",
+                    "type": "github"
+                },
+                {
+                    "url": "https://www.patreon.com/GoodM4ven",
+                    "type": "patreon"
+                }
+            ],
+            "time": "2026-06-04T03:08:14+00:00"
         },
         {
             "name": "goodm4ven/tailwind-merge",
