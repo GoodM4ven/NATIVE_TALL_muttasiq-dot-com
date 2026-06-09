@@ -19,7 +19,7 @@ use Illuminate\Support\HtmlString;
 trait HasControlPanelSettingsTab
 {
     /**
-     * @return array<string, bool|int>
+     * @return array<string, bool|int|string>
      */
     public static function controlPanelDefaults(): array
     {
@@ -201,7 +201,6 @@ trait HasControlPanelSettingsTab
                                 'class' => 'relative sm:hidden',
                             ])
                             ->label($quranDefinitions[Setting::DOES_QURAN_SHOW_IMMERSIVE_MOBILE_EDGE_CAPTIONS]['label']),
-
                     ]),
 
                 Text::make(new HtmlString('<hr class="border-0 h-px bg-linear-to-r from-transparent via-gray-400 to-transparent mt-5">'))

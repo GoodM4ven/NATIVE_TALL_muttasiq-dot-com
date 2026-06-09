@@ -1,15 +1,15 @@
 <div
-    class="inset-s-10 sm:inset-s-6.5 md:inset-s-6.5 lg:inset-s-6.5 xl:inset-s-8 2xl:inset-s-10 fixed bottom-7 z-30 sm:bottom-7 md:bottom-7 lg:bottom-7 xl:bottom-10 2xl:bottom-12"
+    class="sm:inset-s-21! md:inset-s-21! lg:inset-s-21! xl:inset-s-22! 2xl:inset-s-26! 3xl:inset-s-28! 4xl:start-29! fixed bottom-7 z-30 sm:bottom-7 md:bottom-7 lg:bottom-7 xl:bottom-10 2xl:bottom-12"
     data-stack-item
     x-data="{ isExpanded: false }"
     x-transition
     x-cloak
-    x-show="views['main-menu'].isOpen && !isControlPanelOpen && !isAthkarManagerOpen"
+    x-show="views['main-menu'].isOpen && !isControlPanelOpen && !isAthkarManagerOpen && !isIntroductionVideoOpen"
     x-on:click.outside="isExpanded = false"
     x-on:switch-view.window="isExpanded = false"
     x-on:keydown.escape.window="isExpanded = false"
 >
-    <div class="relative inline-grid place-items-center">
+    <div class="relative inline-grid place-items-center sm:translate-y-0.5">
         <div x-bind:class="{ 'scale-110': isExpanded }">
             <x-action-button
                 data-testid="download-button"
@@ -28,12 +28,12 @@
             class="absolute left-1/2 top-[calc(100%+0.6rem)] z-40 flex -translate-x-1/2 flex-col items-center gap-[0.6rem] sm:bottom-[calc(100%+0.6rem)] sm:left-1/2 sm:right-auto sm:top-auto sm:-translate-x-1/2 sm:items-center"
             x-cloak
             x-show="isExpanded"
-            x-transition:enter="transition-[opacity,transform] duration-180 ease-out"
-            x-transition:enter-start="opacity-0 -translate-y-1/2"
-            x-transition:enter-end="opacity-100 translate-y-0"
-            x-transition:leave="transition-[opacity,transform] duration-140 ease-in"
-            x-transition:leave-start="opacity-100 translate-y-0"
-            x-transition:leave-end="opacity-0 -translate-y-1/2"
+            x-transition:enter="transition-opacity duration-180 ease-out"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition-opacity duration-140 ease-in"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
         >
             <x-action-button
                 data-testid="download-android-button"

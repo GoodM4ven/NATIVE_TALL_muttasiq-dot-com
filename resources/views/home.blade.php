@@ -9,6 +9,7 @@
             lock: null,
             isControlPanelOpen: false,
             isAthkarManagerOpen: false,
+            isIntroductionVideoOpen: false,
             isQuranReaderCalibrating: false,
             isQuranReaderFontScaleOverlayOpen: false,
             isAthkarReaderFontScaleOverlayOpen: false,
@@ -596,6 +597,8 @@
             }),
         }"
         x-on:switch-view.window="applyViewState($event.detail?.to)"
+        x-on:introduction-video-modal-opened.window="isIntroductionVideoOpen = true"
+        x-on:introduction-video-modal-closed.window="isIntroductionVideoOpen = false"
         x-on:muttasiq-app-version-major-minor-reset.window="handleAppVersionMajorMinorReset($event.detail ?? {})"
         x-on:request-open-control-panel-modal.window="requestControlPanelOpenFromAnywhere($event.detail ?? {})"
         x-on:control-panel-updated.window="handleControlPanelSaveGateReturn($event.detail ?? {})"
@@ -641,6 +644,7 @@
             <livewire:control-panel />
             <x-athkar-reader-font-scale-button />
             <x-quran-reader-font-scale-button />
+            <livewire:main-menu-introduction-video-button />
             @if (!is_platform('native'))
                 <x-partials.download-stack-button />
             @endif

@@ -30,15 +30,12 @@ class HomeController extends Controller
     }
 
     /**
-     * @return array{settings: array<string, bool|int>, mainTextSizeLimits: array<string, array{min: int, max: int, default: int}>}
+     * @return array{settings: array<string, bool|int|string>, mainTextSizeLimits: array<string, array{min: int, max: int, default: int}>}
      */
     private function resolveLocalSettingsPayload(): array
     {
         $settingDefaults = Setting::defaults();
-        $storedSettings = Setting::query()
-            ->whereIn('name', array_keys($settingDefaults))
-            ->pluck('value', 'name')
-            ->all();
+        $storedSettings = Setting::storedValues(array_keys($settingDefaults));
 
         return [
             'settings' => Setting::normalizeSettings(

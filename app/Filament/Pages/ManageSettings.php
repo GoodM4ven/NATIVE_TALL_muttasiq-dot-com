@@ -44,15 +44,13 @@ class ManageSettings extends Page
 
     public function mount(): void
     {
-        $storedSettings = Setting::query()
-            ->whereIn('name', array_keys(Setting::defaults()))
-            ->pluck('value', 'name')
-            ->all();
+        $storedSettings = Setting::storedValues(array_keys(Setting::defaults()));
 
         $currentSettings = Setting::normalizeSettings(
             array_replace(Setting::defaults(), $storedSettings),
         );
         $currentSettings[Setting::APP_VERSION] = Setting::appVersion();
+        $currentSettings[Setting::YOUTUBE_VIDEO_URL] = Setting::youtubeVideoUrl();
 
         $this->form->fill($currentSettings);
     }
@@ -72,6 +70,12 @@ class ManageSettings extends Page
                                 ->label('نسخة المنصة المعروضة')
                                 ->maxLength(32)
                                 ->placeholder((string) config('app.custom.app_version')),
+
+                            Components\TextInput::make(Setting::YOUTUBE_VIDEO_URL)
+                                ->label('رابط فيديو يوتيوب المعروض')
+                                ->helperText('يُستخدم داخل زر الفيديو في القائمة الرئيسية.')
+                                ->maxLength(255)
+                                ->url(),
                         ]),
 
                     Section::make('العامة')
@@ -105,15 +109,36 @@ class ManageSettings extends Page
     {
         $data = $this->form->getState();
         $normalized = Setting::normalizeSettings($data);
+        $definitions = Setting::definitions();
 
         if (array_key_exists(Setting::APP_VERSION, $data)) {
             Setting::setAppVersion($data[Setting::APP_VERSION]);
         }
 
+        if (array_key_exists(Setting::YOUTUBE_VIDEO_URL, $data)) {
+            Setting::setYoutubeVideoUrl(
+                is_string($data[Setting::YOUTUBE_VIDEO_URL]) ? $data[Setting::YOUTUBE_VIDEO_URL] : null,
+            );
+        }
+
         foreach ($normalized as $name => $value) {
+            $definition = $definitions[$name] ?? null;
+
+            if (is_array($definition) && $definition['type'] === 'string') {
+                Setting::query()->updateOrCreate(
+                    ['name' => $name],
+                    [
+                        'value' => 0,
+                        'value_text' => is_string($value) && trim($value) !== '' ? $value : null,
+                    ],
+                );
+
+                continue;
+            }
+
             Setting::query()->updateOrCreate(
                 ['name' => $name],
-                ['value' => is_bool($value) ? (int) $value : $value],
+                ['value' => (int) $value],
             );
         }
 
@@ -124,7 +149,7 @@ class ManageSettings extends Page
     }
 
     /**
-     * @param  array<string, array{default: bool|int, label: string, group: string, type: 'boolean'|'integer', help?: string, min?: int, max?: int}>  $definitions
+     * @param  array<string, array{default: bool|int|string, label: string, group: string, type: 'boolean'|'integer'|'string', help?: string, min?: int, max?: int, maxLength?: int, format?: 'url'}>  $definitions
      * @return array<int, SchemaComponent>
      */
     private function buildFieldsFromDefinitions(array $definitions): array
@@ -158,6 +183,19 @@ class ManageSettings extends Page
                     ->minValue($definition['min'] ?? 0)
                     ->maxValue($definition['max'] ?? 100)
                     ->helperText($definition['help'] ?? null);
+
+                $fields[] = $field;
+            }
+
+            if ($definition['type'] === 'string') {
+                $field = Components\TextInput::make($name)
+                    ->label($definition['label'])
+                    ->maxLength((int) ($definition['maxLength'] ?? 255))
+                    ->helperText($definition['help'] ?? null);
+
+                if (($definition['format'] ?? null) === 'url') {
+                    $field->url();
+                }
 
                 $fields[] = $field;
             }

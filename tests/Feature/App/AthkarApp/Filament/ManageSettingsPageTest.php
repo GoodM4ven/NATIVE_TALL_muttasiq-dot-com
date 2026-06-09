@@ -32,6 +32,10 @@ it('allows the admin to access manage settings and loads the current settings fo
         ['name' => Setting::APP_VERSION],
         ['value' => 0, 'value_text' => '2.5.1'],
     );
+    Setting::query()->updateOrCreate(
+        ['name' => Setting::YOUTUBE_VIDEO_URL],
+        ['value' => 0, 'value_text' => 'https://www.youtube.com/watch?v=abcdefghijk'],
+    );
 
     actingAs($admin);
     Filament::setCurrentPanel('admin');
@@ -41,6 +45,7 @@ it('allows the admin to access manage settings and loads the current settings fo
             Setting::DOES_SKIP_GUIDANCE_PANELS => true,
             Setting::DOES_ENABLE_VISUAL_ENHANCEMENTS => false,
             Setting::APP_VERSION => '2.5.1',
+            Setting::YOUTUBE_VIDEO_URL => 'https://www.youtube.com/watch?v=abcdefghijk',
         ]);
 });
 
@@ -55,6 +60,7 @@ it('saves settings and normalizes inverted min/max text-size values', function (
     livewire(ManageSettings::class)
         ->fillForm([
             Setting::APP_VERSION => '3.0.0',
+            Setting::YOUTUBE_VIDEO_URL => 'https://youtu.be/abcdefghijk',
             Setting::DOES_SKIP_GUIDANCE_PANELS => true,
             Setting::DOES_ENABLE_VISUAL_ENHANCEMENTS => false,
             Setting::DOES_AUTOMATICALLY_SWITCH_COMPLETED_ATHKAR => false,
@@ -78,6 +84,9 @@ it('saves settings and normalizes inverted min/max text-size values', function (
 
     expect(Setting::query()->where('name', Setting::APP_VERSION)->value('value_text'))
         ->toBe('3.0.0');
+
+    expect(Setting::query()->where('name', Setting::YOUTUBE_VIDEO_URL)->value('value_text'))
+        ->toBe('https://youtu.be/abcdefghijk');
 
     expect((int) Setting::query()->where('name', Setting::MINIMUM_MAIN_TEXT_SIZE)->value('value'))
         ->toBe(18);

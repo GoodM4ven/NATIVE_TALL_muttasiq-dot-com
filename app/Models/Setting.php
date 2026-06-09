@@ -11,6 +11,10 @@ class Setting extends Model
 {
     public const APP_VERSION = 'app_version';
 
+    public const YOUTUBE_VIDEO_URL = 'youtube_video_url';
+
+    public const DEFAULT_YOUTUBE_VIDEO_URL = 'https://www.youtube.com/watch?v=3gVbuDSm-uk';
+
     public const GROUP_GENERAL = 'general';
 
     public const GROUP_ATHKAR = 'athkar';
@@ -74,7 +78,7 @@ class Setting extends Model
     public const MAX_MAIN_TEXT_SIZE_DEFAULT = 25;
 
     /**
-     * @return array<string, array{default: bool|int, label: string, group: string, type: 'boolean'|'integer', help?: string, min?: int, max?: int}>
+     * @return array<string, array{default: bool|int|string, label: string, group: string, type: 'boolean'|'integer'|'string', help?: string, min?: int, max?: int, maxLength?: int, format?: 'url'}>
      */
     public static function definitions(): array
     {
@@ -256,7 +260,7 @@ class Setting extends Model
     }
 
     /**
-     * @return array<string, array{default: bool|int, label: string, group: string, type: 'boolean'|'integer', help?: string, min?: int, max?: int}>
+     * @return array<string, array{default: bool|int|string, label: string, group: string, type: 'boolean'|'integer'|'string', help?: string, min?: int, max?: int, maxLength?: int, format?: 'url'}>
      */
     public static function definitionsForGroup(string $group): array
     {
@@ -267,7 +271,43 @@ class Setting extends Model
     }
 
     /**
-     * @return array<string, bool|int>
+     * @param  array<int, string>  $names
+     * @return array<string, bool|int|string>
+     */
+    public static function storedValues(array $names): array
+    {
+        if ($names === []) {
+            return [];
+        }
+
+        $definitions = self::definitions();
+
+        /** @var array<string, bool|int|string> $storedValues */
+        $storedValues = self::query()
+            ->whereIn('name', $names)
+            ->get(['name', 'value', 'value_text'])
+            ->mapWithKeys(function (self $setting) use ($definitions): array {
+                $definition = $definitions[$setting->name] ?? null;
+
+                if (is_array($definition) && $definition['type'] === 'string') {
+                    return [
+                        $setting->name => is_string($setting->value_text) && trim($setting->value_text) !== ''
+                            ? trim($setting->value_text)
+                            : '',
+                    ];
+                }
+
+                return [
+                    $setting->name => (int) $setting->value,
+                ];
+            })
+            ->all();
+
+        return $storedValues;
+    }
+
+    /**
+     * @return array<string, bool|int|string>
      */
     public static function defaults(): array
     {
@@ -306,7 +346,7 @@ class Setting extends Model
         ];
     }
 
-    public static function normalizeValue(string $name, mixed $value): bool|int
+    public static function normalizeValue(string $name, mixed $value): bool|int|string
     {
         $definition = self::definitions()[$name] ?? null;
 
@@ -328,6 +368,25 @@ class Setting extends Model
             $maximum = (int) ($definition['max'] ?? $definition['default']);
 
             return max($minimum, min($maximum, $numericValue));
+        }
+
+        if ($definition['type'] === 'string') {
+            $normalizedValue = trim((string) $value);
+
+            if ($normalizedValue === '') {
+                return (string) $definition['default'];
+            }
+
+            $maxLength = (int) ($definition['maxLength'] ?? 255);
+            $normalizedValue = Str::of($normalizedValue)
+                ->limit($maxLength, '')
+                ->toString();
+
+            if (($definition['format'] ?? null) === 'url' && ! filter_var($normalizedValue, FILTER_VALIDATE_URL)) {
+                return (string) $definition['default'];
+            }
+
+            return $normalizedValue;
         }
 
         if (is_bool($value)) {
@@ -353,7 +412,7 @@ class Setting extends Model
 
     /**
      * @param  array<string, mixed>  $settings
-     * @return array<string, bool|int>
+     * @return array<string, bool|int|string>
      */
     public static function normalizeSettings(array $settings): array
     {
@@ -406,9 +465,7 @@ class Setting extends Model
 
     public static function appVersion(): string
     {
-        $stored = self::query()
-            ->where('name', self::APP_VERSION)
-            ->value('value_text');
+        $stored = self::resolveTextValue(self::APP_VERSION);
 
         if (is_string($stored) && trim($stored) !== '') {
             return trim($stored);
@@ -430,16 +487,134 @@ class Setting extends Model
 
     public static function setAppVersion(?string $version): void
     {
-        $normalized = is_string($version) ? trim($version) : '';
-        $normalized = $normalized !== '' ? Str::of($normalized)->limit(32, '')->toString() : '';
+        self::storeTextValue(self::APP_VERSION, $version, 32);
+    }
+
+    public static function youtubeVideoUrl(): string
+    {
+        $stored = self::resolveTextValue(self::YOUTUBE_VIDEO_URL);
+
+        if (is_string($stored) && trim($stored) !== '') {
+            if (self::parseYoutubeVideoId($stored) !== null) {
+                return $stored;
+            }
+        }
+
+        return self::DEFAULT_YOUTUBE_VIDEO_URL;
+    }
+
+    public static function youtubeVideoEmbedUrl(): string
+    {
+        $url = self::youtubeVideoUrl();
+        $parsed = self::parseYoutubeVideoId($url);
+
+        if ($parsed === null) {
+            return $url;
+        }
+
+        return sprintf(
+            'https://www.youtube.com/embed/%s?rel=0&modestbranding=1&playsinline=1',
+            $parsed,
+        );
+    }
+
+    public static function setYoutubeVideoUrl(?string $url): void
+    {
+        $normalized = is_string($url) ? trim($url) : '';
+
+        if ($normalized === '') {
+            $normalized = self::DEFAULT_YOUTUBE_VIDEO_URL;
+        }
+
+        if (self::parseYoutubeVideoId($normalized) === null) {
+            $normalized = self::DEFAULT_YOUTUBE_VIDEO_URL;
+        }
+
+        self::storeTextValue(self::YOUTUBE_VIDEO_URL, $normalized, 255);
+    }
+
+    private static function resolveTextValue(string $name): ?string
+    {
+        $stored = self::query()
+            ->where('name', $name)
+            ->value('value_text');
+
+        if (! is_string($stored)) {
+            return null;
+        }
+
+        $normalized = trim($stored);
+
+        return $normalized === '' ? null : $normalized;
+    }
+
+    private static function storeTextValue(string $name, ?string $value, int $maxLength): void
+    {
+        $normalized = is_string($value) ? trim($value) : '';
+        $normalized = $normalized !== '' ? Str::of($normalized)->limit($maxLength, '')->toString() : '';
         $valueText = $normalized === '' ? null : $normalized;
 
         self::query()->updateOrCreate(
-            ['name' => self::APP_VERSION],
+            ['name' => $name],
             [
                 'value' => 0,
                 'value_text' => $valueText,
             ],
         );
+    }
+
+    private static function parseYoutubeVideoId(string $url): ?string
+    {
+        $trimmed = trim($url);
+
+        if ($trimmed === '') {
+            return null;
+        }
+
+        $parsedUrl = parse_url($trimmed);
+
+        if (! is_array($parsedUrl)) {
+            return null;
+        }
+
+        $host = strtolower((string) ($parsedUrl['host'] ?? ''));
+        $path = trim((string) ($parsedUrl['path'] ?? ''), '/');
+
+        if ($host === 'youtu.be') {
+            $videoId = trim((string) explode('/', $path)[0]);
+
+            return $videoId !== '' ? $videoId : null;
+        }
+
+        if (str_contains($host, 'youtube.com')) {
+            if (str_starts_with($path, 'embed/')) {
+                $videoId = trim((string) explode('/', substr($path, 6))[0]);
+
+                return $videoId !== '' ? $videoId : null;
+            }
+
+            if (str_starts_with($path, 'shorts/')) {
+                $videoId = trim((string) explode('/', substr($path, 7))[0]);
+
+                return $videoId !== '' ? $videoId : null;
+            }
+
+            if (str_starts_with($path, 'live/')) {
+                $videoId = trim((string) explode('/', substr($path, 5))[0]);
+
+                return $videoId !== '' ? $videoId : null;
+            }
+
+            if ($path === 'watch') {
+                $query = [];
+                parse_str((string) ($parsedUrl['query'] ?? ''), $query);
+
+                $videoId = trim((string) ($query['v'] ?? ''));
+
+                return $videoId !== '' ? $videoId : null;
+            }
+        }
+
+        return null;
     }
 }

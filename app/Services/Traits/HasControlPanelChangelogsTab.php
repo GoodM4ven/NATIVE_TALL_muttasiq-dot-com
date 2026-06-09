@@ -6,6 +6,7 @@ namespace App\Services\Traits;
 
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\Text;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\HtmlString;
 
@@ -26,16 +27,34 @@ trait HasControlPanelChangelogsTab
     private function changelogsMarkdown(): HtmlString
     {
         $markdownPath = public_path('docs/updates/changelogs.md');
+        $cacheKey = implode('|', [
+            'control-panel:changelogs-markdown',
+            (string) config('nativephp-internal.running'),
+            (string) config('nativephp-internal.platform'),
+            File::exists($markdownPath) ? (string) File::lastModified($markdownPath) : 'missing',
+        ]);
+
+        $html = Cache::remember(
+            $cacheKey,
+            now()->addDay(),
+            fn (): string => $this->buildChangelogsMarkdownHtml($markdownPath),
+        );
+
+        return new HtmlString($html);
+    }
+
+    private function buildChangelogsMarkdownHtml(string $markdownPath): string
+    {
         if (! File::exists($markdownPath)) {
             $fallbackMessage = $this->escapeHtml(arabic_text('ملف التحديثات غير متوفر الآن.'));
 
-            return new HtmlString(<<<HTML
+            return <<<HTML
                 <article class="mx-auto w-full max-w-3xl text-right leading-7">
                     <p class="text-sm text-gray-600 dark:text-gray-300">
                         {$fallbackMessage}
                     </p>
                 </article>
-                HTML);
+                HTML;
         }
 
         $markdown = File::get($markdownPath);
@@ -59,7 +78,11 @@ trait HasControlPanelChangelogsTab
                 }
 
                 $href = html_entity_decode($matches[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
-                $openLinkNativeAware = htmlspecialchars(open_link_native_aware($href), ENT_QUOTES, 'UTF-8');
+                $openLinkNativeAware = htmlspecialchars(
+                    open_link_native_aware($href),
+                    ENT_QUOTES,
+                    'UTF-8',
+                );
 
                 return rtrim(substr($tag, 0, -1))
                     .' x-on:click.prevent="'.$openLinkNativeAware.'"'
@@ -69,7 +92,7 @@ trait HasControlPanelChangelogsTab
             $html,
         ) ?? $html;
 
-        return new HtmlString(<<<HTML
+        return <<<HTML
             <article class="mx-auto w-full max-w-3xl text-right leading-7
                 [&_h2]:mt-12 [&_h2:first-child]:mt-0 [&_h2]:mb-4 [&_h2]:border-b [&_h2]:border-gray-200 [&_h2]:pb-2 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-gray-800 dark:[&_h2]:border-gray-700 dark:[&_h2]:text-gray-100
                 [&_h3]:mt-3 [&_h3]:mb-1.5 [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-gray-700 dark:[&_h3]:text-gray-200
@@ -80,7 +103,7 @@ trait HasControlPanelChangelogsTab
                 [&_img]:my-4 [&_img]:mx-auto [&_img]:h-auto [&_img]:rounded-lg [&_img]:border [&_img]:border-gray-200 dark:[&_img]:border-gray-700">
                 {$html}
             </article>
-            HTML);
+            HTML;
     }
 
     private function escapeHtml(string $value): string

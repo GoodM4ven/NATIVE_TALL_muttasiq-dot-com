@@ -47,7 +47,7 @@
             'inset-e-10 sm:inset-e-6.5 md:inset-e-6.5 lg:inset-e-6.5 xl:inset-e-8 2xl:inset-e-10 xl:top-6.5 fixed top-5 z-30 2xl:top-8',
         ])
         x-transition
-        x-show="!isControlPanelOpen && !isAthkarManagerOpen"
+        x-show="!isControlPanelOpen && !isAthkarManagerOpen && !isIntroductionVideoOpen"
         x-data="{
             controlPanelModalId: @js('fi-' . $this->getId() . '-action-0'),
             isReaderMaintenanceInFlight: false,
@@ -665,6 +665,12 @@
                 return this.$el.getClientRects().length > 0;
             },
             openControlPanelModalFromEvent(detail = {}) {
+                isControlPanelOpen = true;
+        
+                if (this.$store?.layoutManager) {
+                    this.$store.layoutManager.isActionOpen = true;
+                }
+        
                 $wire.openControlPanelModal(
                     window.getAthkarSettingsFromStorage?.() ?? {},
                     detail?.tab ?? null,
@@ -676,6 +682,13 @@
                         this.boostControlPanelModalLayer();
                         this.setupControlPanelSliderNumeralsObserver();
                         this.queueControlPanelSliderNumeralsSync(40);
+                        return;
+                    }
+        
+                    isControlPanelOpen = false;
+        
+                    if (this.$store?.layoutManager) {
+                        this.$store.layoutManager.isActionOpen = false;
                     }
                 }, 120);
             },

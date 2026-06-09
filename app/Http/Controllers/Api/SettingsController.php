@@ -13,10 +13,7 @@ class SettingsController extends Controller
     public function __invoke(): JsonResponse
     {
         $settingDefaults = Setting::defaults();
-        $storedSettings = Setting::query()
-            ->whereIn('name', array_keys($settingDefaults))
-            ->pluck('value', 'name')
-            ->all();
+        $storedSettings = Setting::storedValues(array_keys($settingDefaults));
 
         return response()->json([
             'settings' => Setting::normalizeSettings(
