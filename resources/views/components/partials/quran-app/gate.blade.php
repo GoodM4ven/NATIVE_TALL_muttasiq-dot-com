@@ -317,6 +317,21 @@
             pointer-events: none;
         }
 
+        .quran-app-sector__chip-lock--text-only {
+            justify-content: center;
+        }
+
+        .quran-app-sector__chip-lock--touch-prompt {
+            top: 50%;
+            z-index: 6;
+            transform: translate(-50%, -136%);
+        }
+
+        .quran-app-sector--tilawa .quran-app-sector__chip-lock--touch-prompt {
+            left: 50%;
+            top: 30%;
+        }
+
         .quran-app-sector__chip-lock-icon {
             color: color-mix(in srgb, var(--quran-gold-1) 92%, white);
             filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.44));
@@ -331,6 +346,18 @@
         }
 
         .quran-app-sector.is-active.is-locked .quran-app-sector__chip-lock {
+            opacity: 1;
+            transform: translate(-50%, -136%);
+            filter: blur(0);
+        }
+
+        .quran-app-sector__chip-lock--text-only.is-touch-visible {
+            opacity: 1;
+            transform: translate(-50%, -136%);
+            filter: blur(0);
+        }
+
+        .quran-app-sector__chip-lock--touch-prompt.is-touch-visible {
             opacity: 1;
             transform: translate(-50%, -136%);
             filter: blur(0);
@@ -665,10 +692,15 @@
             .quran-app-sector__chip {
                 -webkit-backdrop-filter: none;
                 backdrop-filter: none;
-                text-shadow: none;
+                text-shadow: 0 2px 8px rgba(8, 4, 2, 0.52);
                 box-shadow:
-                    inset 0 1px 0 rgba(255, 234, 183, 0.2),
-                    0 4px 10px rgba(8, 4, 2, 0.22);
+                    inset 0 1px 0 rgba(255, 234, 183, 0.26),
+                    0 5px 12px rgba(8, 4, 2, 0.28);
+            }
+
+            .quran-app-sector__chip-text {
+                opacity: 0.98;
+                text-shadow: 0 1px 5px rgba(8, 4, 2, 0.42);
             }
 
             .quran-app-gate-focal-dim,
@@ -687,6 +719,10 @@
             .quran-app-sector__chip--tadabbur,
             .quran-app-sector__chip--hifth {
                 top: 72%;
+            }
+
+            .quran-app-sector--tilawa .quran-app-sector__chip-lock--touch-prompt {
+                top: 30%;
             }
 
             .quran-app-gate-geometry path {
@@ -927,6 +963,19 @@
                 class="quran-app-sector__chip quran-app-sector__chip--tilawa font-arabic-serif 3xl:text-[2.2rem] 4xl:text-[2.6rem] 3xl:py-3 3xl:px-7 4xl:py-[0.9rem] 4xl:px-8 px-[0.9rem] py-[0.35rem] text-[1.25rem] sm:px-[1.15rem] sm:py-[0.52rem] sm:text-[1.5rem] md:px-[1.35rem] md:py-[0.6rem] md:text-[1.9rem] lg:px-[1.35rem] lg:py-[0.56rem] lg:text-[1.85rem] xl:px-[1.525rem] xl:py-[0.6rem] xl:text-[1.7rem] 2xl:px-[1.35rem] 2xl:py-[0.72rem] 2xl:text-[1.65rem]"
             >
                 <span class="quran-app-sector__chip-text">{{ arabic_text('تلاوة') }}</span>
+            </span>
+            <span
+                class="quran-app-sector__chip-lock quran-app-sector__chip-lock--text-only quran-app-sector__chip-lock--touch-prompt 3xl:gap-[0.46rem] 3xl:px-[0.72rem] 3xl:py-[0.38rem] 4xl:gap-[0.46rem] 4xl:px-[0.72rem] 4xl:py-[0.38rem] justify-center gap-[0.3rem] px-[0.52rem] py-[0.28rem] sm:gap-[0.46rem] sm:px-[0.72rem] sm:py-[0.38rem] md:gap-[0.46rem] md:px-[0.72rem] md:py-[0.38rem] lg:gap-[0.46rem] lg:px-[0.72rem] lg:py-[0.38rem] xl:gap-[0.46rem] xl:px-[0.72rem] xl:py-[0.38rem] 2xl:gap-[0.46rem] 2xl:px-[0.72rem] 2xl:py-[0.38rem]"
+                data-quran-app-sector-touch-callout
+                aria-hidden="true"
+                x-cloak
+                x-bind:class="{
+                    'is-touch-visible': shouldShowAvailableModePrompt('tilawa'),
+                }"
+            >
+                <span
+                    class="quran-app-sector__chip-lock-caption 3xl:text-[1.06rem] 4xl:text-[1.12rem] text-[0.78rem] sm:text-[0.84rem] md:text-[0.92rem] lg:text-[0.95rem] xl:text-[0.78rem] 2xl:text-[0.84rem]"
+                >{{ arabic_text('انقر') }}</span>
             </span>
         </button>
 

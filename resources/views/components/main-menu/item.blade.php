@@ -81,15 +81,13 @@
                 filter: saturate(1.06);
             }
 
-            [data-main-menu-lock-preview='true'] [data-main-menu-item][data-locked='true']
-                [data-main-menu-item-icon] {
+            [data-main-menu-lock-preview='true'] [data-main-menu-item][data-locked='true'] [data-main-menu-item-icon] {
                 opacity: 0;
                 transform: scale(0.92);
                 filter: grayscale(1);
             }
 
-            [data-main-menu-lock-preview='true'] [data-main-menu-item][data-locked='true']
-                [data-main-menu-lock-icon-wrapper] {
+            [data-main-menu-lock-preview='true'] [data-main-menu-item][data-locked='true'] [data-main-menu-lock-icon-wrapper] {
                 opacity: 1;
                 transform: scale(1);
             }
