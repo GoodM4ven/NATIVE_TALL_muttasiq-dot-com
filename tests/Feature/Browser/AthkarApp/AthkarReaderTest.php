@@ -667,6 +667,31 @@ JS,
         true,
     );
 
+    waitForScript(
+        $page,
+        js_template(
+            <<<'JS'
+(() => {
+  const button = document.querySelector({{selector}});
+
+  if (!button) {
+    return false;
+  }
+
+  const rect = button.getBoundingClientRect();
+  const target = document.elementFromPoint(
+    rect.left + (rect.width / 2),
+    rect.top + (rect.height / 2),
+  );
+
+  return target === button || button.contains(target);
+})()
+JS,
+            ['selector' => $mobileCompleteSelector],
+        ),
+        true,
+    );
+
     safeClick($page, $mobileCompleteSelector);
 
     waitForScript($page, 'Boolean(document.querySelector(".fi-modal-window"))', true);
