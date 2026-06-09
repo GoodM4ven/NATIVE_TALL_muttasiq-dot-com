@@ -15,7 +15,7 @@
             isAthkarReaderFontScaleOverlayOpen: false,
             isNativeRuntime: @js(is_platform('native')),
             activeView: $persist('main-menu').as('app-active-view'),
-            currentAppVersion: @js(\App\Models\Setting::appVersion()),
+            currentAppVersion: @js($currentAppVersion),
             actionStatePulseToken: 0,
             controlPanelGateReturnTimerId: null,
             quranBootstrap: {

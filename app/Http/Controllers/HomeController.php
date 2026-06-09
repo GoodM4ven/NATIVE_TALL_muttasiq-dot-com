@@ -23,9 +23,10 @@ class HomeController extends Controller
         $settingsPayload = $this->resolveLocalSettingsPayload();
 
         return view('home', [
-            'athkar' => Thikr::defaultsPayload(),
+            'athkar' => Thikr::cachedDefaults(),
             'athkarSettings' => $settingsPayload['settings'],
             'athkarMainTextSizeLimits' => $settingsPayload['mainTextSizeLimits'],
+            'currentAppVersion' => Setting::appVersion(),
         ]);
     }
 

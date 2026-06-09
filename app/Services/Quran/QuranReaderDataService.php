@@ -11,7 +11,9 @@ use GoodMaven\Arabicable\Support\Quran\QuranWordCopyText;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Throwable;
 
 class QuranReaderDataService
 {
@@ -90,22 +92,36 @@ class QuranReaderDataService
      */
     public function isReady(): bool
     {
-        return (bool) Cache::memo()->remember(self::READY_CACHE_KEY, now()->addMinutes(5), static function (): bool {
-            $hasVersesTable = Schema::hasTable('quran_verses');
-            $hasWordsTable = Schema::hasTable('quran_words');
-            $hasMushafLinesTable = Schema::hasTable('quran_mushaf_lines');
-            $hasTypedSearchColumn = $hasVersesTable && Schema::hasColumn('quran_verses', 'text_searchable_typed');
+        try {
+            return (bool) Cache::memo()->remember(self::READY_CACHE_KEY, now()->addMinutes(5), static function (): bool {
+                $hasVersesTable = Schema::hasTable('quran_verses');
+                $hasWordsTable = Schema::hasTable('quran_words');
+                $hasMushafLinesTable = Schema::hasTable('quran_mushaf_lines');
+                $hasTypedSearchColumn = $hasVersesTable && Schema::hasColumn('quran_verses', 'text_searchable_typed');
 
-            if (! $hasVersesTable || ! $hasWordsTable || ! $hasMushafLinesTable || ! $hasTypedSearchColumn) {
-                return false;
+                if (! $hasVersesTable || ! $hasWordsTable || ! $hasMushafLinesTable || ! $hasTypedSearchColumn) {
+                    return false;
+                }
+
+                $verseCount = (int) DB::table('quran_verses')->count();
+                $wordCount = (int) DB::table('quran_words')->count();
+                $maxPage = (int) DB::table('quran_mushaf_lines')->max('page_number');
+
+                return $verseCount >= 6200 && $wordCount >= 77000 && $maxPage >= 604;
+            });
+        } catch (Throwable $exception) {
+            Log::warning('Failed to check Quran reader readiness.', [
+                'message' => $exception->getMessage(),
+            ]);
+
+            try {
+                Cache::memo()->forget(self::READY_CACHE_KEY);
+            } catch (Throwable) {
+                // Ignore cache cleanup failures when the database is unavailable.
             }
 
-            $verseCount = (int) DB::table('quran_verses')->count();
-            $wordCount = (int) DB::table('quran_words')->count();
-            $maxPage = (int) DB::table('quran_mushaf_lines')->max('page_number');
-
-            return $verseCount >= 6200 && $wordCount >= 77000 && $maxPage >= 604;
-        });
+            return false;
+        }
     }
 
     /**

@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Throwable;
 
 class Setting extends Model
 {
@@ -280,30 +282,39 @@ class Setting extends Model
             return [];
         }
 
-        $definitions = self::definitions();
+        try {
+            $definitions = self::definitions();
 
-        /** @var array<string, bool|int|string> $storedValues */
-        $storedValues = self::query()
-            ->whereIn('name', $names)
-            ->get(['name', 'value', 'value_text'])
-            ->mapWithKeys(function (self $setting) use ($definitions): array {
-                $definition = $definitions[$setting->name] ?? null;
+            /** @var array<string, bool|int|string> $storedValues */
+            $storedValues = self::query()
+                ->whereIn('name', $names)
+                ->get(['name', 'value', 'value_text'])
+                ->mapWithKeys(function (self $setting) use ($definitions): array {
+                    $definition = $definitions[$setting->name] ?? null;
 
-                if (is_array($definition) && $definition['type'] === 'string') {
+                    if (is_array($definition) && $definition['type'] === 'string') {
+                        return [
+                            $setting->name => is_string($setting->value_text) && trim($setting->value_text) !== ''
+                                ? trim($setting->value_text)
+                                : '',
+                        ];
+                    }
+
                     return [
-                        $setting->name => is_string($setting->value_text) && trim($setting->value_text) !== ''
-                            ? trim($setting->value_text)
-                            : '',
+                        $setting->name => (int) $setting->value,
                     ];
-                }
+                })
+                ->all();
 
-                return [
-                    $setting->name => (int) $setting->value,
-                ];
-            })
-            ->all();
+            return $storedValues;
+        } catch (Throwable $exception) {
+            Log::warning('Failed to resolve stored settings from the database.', [
+                'message' => $exception->getMessage(),
+                'names' => $names,
+            ]);
 
-        return $storedValues;
+            return [];
+        }
     }
 
     /**
@@ -465,10 +476,16 @@ class Setting extends Model
 
     public static function appVersion(): string
     {
-        $stored = self::resolveTextValue(self::APP_VERSION);
+        try {
+            $stored = self::resolveTextValue(self::APP_VERSION);
 
-        if (is_string($stored) && trim($stored) !== '') {
-            return trim($stored);
+            if (is_string($stored) && trim($stored) !== '') {
+                return trim($stored);
+            }
+        } catch (Throwable $exception) {
+            Log::warning('Failed to resolve the stored app version from the database.', [
+                'message' => $exception->getMessage(),
+            ]);
         }
 
         return self::configuredAppVersion();
@@ -487,17 +504,29 @@ class Setting extends Model
 
     public static function setAppVersion(?string $version): void
     {
-        self::storeTextValue(self::APP_VERSION, $version, 32);
+        try {
+            self::storeTextValue(self::APP_VERSION, $version, 32);
+        } catch (Throwable $exception) {
+            Log::warning('Failed to store the app version in the database.', [
+                'message' => $exception->getMessage(),
+            ]);
+        }
     }
 
     public static function youtubeVideoUrl(): string
     {
-        $stored = self::resolveTextValue(self::YOUTUBE_VIDEO_URL);
+        try {
+            $stored = self::resolveTextValue(self::YOUTUBE_VIDEO_URL);
 
-        if (is_string($stored) && trim($stored) !== '') {
-            if (self::parseYoutubeVideoId($stored) !== null) {
-                return $stored;
+            if (is_string($stored) && trim($stored) !== '') {
+                if (self::parseYoutubeVideoId($stored) !== null) {
+                    return $stored;
+                }
             }
+        } catch (Throwable $exception) {
+            Log::warning('Failed to resolve the stored YouTube video URL from the database.', [
+                'message' => $exception->getMessage(),
+            ]);
         }
 
         return self::DEFAULT_YOUTUBE_VIDEO_URL;
