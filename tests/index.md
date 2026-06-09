@@ -132,3 +132,8 @@
 - maintains quick stack layout and navigation resilience across reload, modal, and color-scheme flows
 - keeps the first overcount tap and digit morph working after returning to a completed single-count thikr
 - re-focuses and scrolls the selected surah tile when reopening search modal
+- renders centered touch prompts for available and locked quran gate modes
+- auto-copies activated text with popover feedback and uses normal history modal
+- shows global lock previews and touch arm prompts on the main menu
+- disables shared counter pulse animation when visual enhancements are turned off
+- allows swipe navigation from quran line gaps but not from quran text lines
