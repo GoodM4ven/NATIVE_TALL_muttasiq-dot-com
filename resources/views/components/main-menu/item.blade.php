@@ -81,6 +81,19 @@
                 filter: saturate(1.06);
             }
 
+            [data-main-menu-lock-preview='true'] [data-main-menu-item][data-locked='true']
+                [data-main-menu-item-icon] {
+                opacity: 0;
+                transform: scale(0.92);
+                filter: grayscale(1);
+            }
+
+            [data-main-menu-lock-preview='true'] [data-main-menu-item][data-locked='true']
+                [data-main-menu-lock-icon-wrapper] {
+                opacity: 1;
+                transform: scale(1);
+            }
+
             @keyframes main-menu-unlock-hover-echo {
 
                 0%,
@@ -127,7 +140,7 @@
 <div
     class="{{ twMerge([
         'item-unlocked-indicator' => !$locked,
-        'flex h-20 w-20 cursor-pointer select-none items-center justify-center rounded-xl border border-transparent transition-colors will-change-[border-color,box-shadow]',
+        'relative flex h-20 w-20 cursor-pointer select-none items-center justify-center rounded-xl border border-transparent transition-colors will-change-[border-color,box-shadow]',
         $buttonClasses,
     ]) }}"
     data-main-menu-item
@@ -140,9 +153,13 @@
         isTouchActive: false,
         isTouching: false,
         isForcedActive: false,
-        isLockedActive: false,
+        isLockedPreviewVisible: false,
+        isLockedConfirmed: false,
         get isActive() {
             return this.isForcedActive;
+        },
+        get isTouchArmVisible() {
+            return this.isTouchActive && !this.locked;
         },
         shadow: makeBoxShadowFromColor('--primary-500'),
         shadowDark: makeBoxShadowFromColor('--primary-100'),
@@ -156,9 +173,6 @@
         isTouchActive = $event.detail?.element === $el;
     "
     x-on:main-menu-active-state.window="isForcedActive = $event.detail?.element === $el"
-    x-on:main-menu-lock-state.window="
-        isLockedActive = $event.detail?.element === $el && $event.detail?.active;
-    "
     x-on:mouseenter="
         if (caption) {
             $dispatch('main-menu-item-enter', { caption, iconName, onClickCallback, locked, element: $el, source: 'hover' });
@@ -181,11 +195,28 @@
     x-bind:class="{ 'fill-primary-500 dark:border-primary-200!': isActive }"
 >
     <div class="relative flex h-8 w-8 items-center justify-center">
+        @if (!$locked)
+            <span
+                class="text-primary-600 dark:text-primary-200 3xl:-top-6 4xl:-top-6 pointer-events-none absolute inset-x-0 -top-4 z-20 flex justify-center text-[0.62rem] font-semibold leading-none tracking-[0.34em] opacity-0 transition-[opacity,transform] duration-200 sm:-top-5 sm:text-[0.64rem] md:-top-5 md:text-[0.64rem] lg:-top-6 lg:text-[0.66rem] xl:-top-6 xl:text-[0.68rem] 2xl:-top-6"
+                data-main-menu-touch-arm-caption
+                x-cloak
+                x-bind:class="{
+                    'opacity-100 translate-y-0': isTouchArmVisible,
+                    'translate-y-1': !isTouchArmVisible,
+                }"
+            >
+                {{ arabic_text('انقر') }}
+            </span>
+        @endif
+
         <x-icon
             class="{{ twMerge('will-change-[transform,opacity,filter] relative z-10 fill-primary-500 dark:fill-primary-200 h-8 w-8 transform-gpu transition-[opacity,scale,filter]', $iconClasses) }}"
+            data-main-menu-item-icon
             x-bind:class="{
-                'scale-[0.88]! opacity-[0.48] grayscale-[1]': containerHovered && isItemActive && !isActive,
-                'opacity-0 scale-[0.92]': isLockedActive,
+                'scale-[0.88]! opacity-[0.48] grayscale-[1]': containerHovered && isItemActive && !isActive && !
+                    isTouchArmVisible,
+                'opacity-[0.85] scale-[0.88] grayscale-[0.5]': isTouchArmVisible,
+                'opacity-0 scale-[0.92]': isLockedPreviewVisible && locked,
             }"
             :name="$iconName"
         />
@@ -197,13 +228,14 @@
                     'will-change-[transform,opacity] absolute inset-0 z-0 flex h-8 w-8 items-center justify-center transform-gpu transition-[opacity,transform]',
                     $iconClasses,
                 ]) }}"
+                data-main-menu-lock-icon-wrapper
                 x-cloak
                 x-data="{ ready: false }"
                 x-init="() => setTimeout((ready = true), 100);"
                 x-show="ready"
                 x-bind:class="{
-                    'opacity-100 scale-100': isLockedActive,
-                    'opacity-0 scale-[0.85]': !isLockedActive,
+                    'opacity-100 scale-100': isLockedPreviewVisible,
+                    'opacity-0 scale-[0.85]': !isLockedPreviewVisible,
                 }"
             >
                 <x-icon
