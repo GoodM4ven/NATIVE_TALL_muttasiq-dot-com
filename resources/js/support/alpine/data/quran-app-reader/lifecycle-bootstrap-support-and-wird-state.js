@@ -405,13 +405,29 @@ export const createLifecycleBootstrapSupportAndWirdStateModule = (deps) => {
             );
 
             this.isCalibrating = true;
+            const timingNow =
+                typeof performance !== 'undefined' && typeof performance.now === 'function'
+                    ? () => performance.now()
+                    : () => Date.now();
+            const calibrationStartedAt = timingNow();
+            const logCalibrationTiming = (phase, details = {}) => {
+                this.qrTimingLog(phase, {
+                    phaseContext: 'startup-calibration',
+                    referencePage: normalizedReferencePage,
+                    targetPage: startupTargetPage,
+                    ...details,
+                    elapsedMs: Math.round(timingNow() - calibrationStartedAt),
+                });
+            };
 
             try {
+                logCalibrationTiming('calibration:start');
                 const referencePayload = await this.getPagePayload(normalizedReferencePage, {
                     preferCache: true,
                 });
 
                 if (!referencePayload) {
+                    logCalibrationTiming('calibration:no-payload');
                     return;
                 }
 
@@ -419,23 +435,35 @@ export const createLifecycleBootstrapSupportAndWirdStateModule = (deps) => {
                     setPageNumber: true,
                     persistPageNumber: false,
                 });
+                logCalibrationTiming('calibration:payload-applied');
                 await this.nextTickAsync();
                 await this.waitForPageFontReady();
+                logCalibrationTiming('calibration:fonts-ready');
                 await this.resolveWithTimeout(document.fonts?.ready, 3200, {
                     timeoutValue: 'timeout',
                 });
+                logCalibrationTiming('calibration:document-fonts-ready');
                 await this.waitForStablePageFrame({
                     maxFrames: 22,
                     requiredStableFrames: 3,
                     tolerancePx: 0.8,
                 });
+                logCalibrationTiming('calibration:stable-frame');
                 this._bypassNextFitCache = true;
                 await this.layoutPageGuaranteed({
                     revealDelayMs: 110,
                     maxAttempts: 5,
                     useIdleFit: true,
+                    timingContext: {
+                        startedAt: calibrationStartedAt,
+                        phase: 'startup-calibration',
+                        referencePage: normalizedReferencePage,
+                        targetPage: startupTargetPage,
+                    },
                 });
+                logCalibrationTiming('calibration:layout-complete');
                 await this.waitForStableRenderedText(12);
+                logCalibrationTiming('calibration:stable-text');
                 const rootElement = this.$el.firstElementChild;
                 const frameElement = this.$refs.pageFrame;
                 const contentElement = this.$refs.pageContent;
@@ -590,6 +618,10 @@ export const createLifecycleBootstrapSupportAndWirdStateModule = (deps) => {
                 this.pageInput = startupTargetPage;
                 this._lastPageInputVisualValue = startupTargetPage;
                 this._bypassNextFitCache = true;
+                logCalibrationTiming('calibration:done', {
+                    appliedPageNumber: this.pageNumber,
+                    pageInput: this.pageInput,
+                });
             }
         },
 

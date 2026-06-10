@@ -623,13 +623,17 @@
             .quran-app-gate-shell {
                 --gate-cy: 58%;
                 --gate-top-overshoot: 20%;
-                background-image: url('{{ asset('images/background/quran/morning/tilawa.webp') }}');
+                background-image: url('{{ asset('images/background/quran/night/tilawa.webp') }}');
                 background-size: cover;
                 background-position: center top;
             }
 
-            .dark .quran-app-gate-shell {
-                background-image: url('{{ asset('images/background/quran/night/tilawa.webp') }}');
+            .quran-app-sector__media--morning {
+                display: none;
+            }
+
+            .quran-app-sector__media--night {
+                display: block;
             }
 
             .quran-app-gate-caption {
@@ -911,20 +915,14 @@
         >
             @if (is_platform('mobile'))
                 <span class="quran-app-sector__media quran-app-sector__media--tilawa">
-                    <picture>
-                        <source
-                            srcset="{{ asset('images/background/quran/night/tilawa.webp') }}"
-                            media="(prefers-color-scheme: dark)"
-                        >
-                        <img
-                            class="quran-app-sector__image-img quran-app-sector__image-img--tilawa select-none"
-                            src="{{ asset('images/background/quran/morning/tilawa.webp') }}"
-                            alt="{{ arabic_text('وضع التلاوة') }}"
-                            loading="eager"
-                            decoding="async"
-                            draggable="false"
-                        >
-                    </picture>
+                    <img
+                        class="quran-app-sector__image-img quran-app-sector__image-img--tilawa select-none"
+                        src="{{ asset('images/background/quran/night/tilawa.webp') }}"
+                        alt="{{ arabic_text('وضع التلاوة') }}"
+                        loading="eager"
+                        decoding="async"
+                        draggable="false"
+                    >
                 </span>
             @else
                 <span class="quran-app-sector__media quran-app-sector__media--tilawa quran-app-sector__media--morning">
@@ -996,20 +994,14 @@
         >
             @if (is_platform('mobile'))
                 <span class="quran-app-sector__media quran-app-sector__media--tadabbur">
-                    <picture>
-                        <source
-                            srcset="{{ asset('images/background/quran/night/tadabbur.webp') }}"
-                            media="(prefers-color-scheme: dark)"
-                        >
-                        <img
-                            class="quran-app-sector__image-img quran-app-sector__image-img--tadabbur select-none"
-                            src="{{ asset('images/background/quran/morning/tadabbur.webp') }}"
-                            alt="{{ arabic_text('وضع التدبّر') }}"
-                            loading="eager"
-                            decoding="async"
-                            draggable="false"
-                        >
-                    </picture>
+                    <img
+                        class="quran-app-sector__image-img quran-app-sector__image-img--tadabbur select-none"
+                        src="{{ asset('images/background/quran/night/tadabbur.webp') }}"
+                        alt="{{ arabic_text('وضع التدبّر') }}"
+                        loading="eager"
+                        decoding="async"
+                        draggable="false"
+                    >
                 </span>
             @else
                 <span
@@ -1080,20 +1072,14 @@
         >
             @if (is_platform('mobile'))
                 <span class="quran-app-sector__media quran-app-sector__media--hifth">
-                    <picture>
-                        <source
-                            srcset="{{ asset('images/background/quran/night/hifth.webp') }}"
-                            media="(prefers-color-scheme: dark)"
-                        >
-                        <img
-                            class="quran-app-sector__image-img quran-app-sector__image-img--hifth select-none"
-                            src="{{ asset('images/background/quran/morning/hifth.webp') }}"
-                            alt="{{ arabic_text('وضع الحفظ') }}"
-                            loading="eager"
-                            decoding="async"
-                            draggable="false"
-                        >
-                    </picture>
+                    <img
+                        class="quran-app-sector__image-img quran-app-sector__image-img--hifth select-none"
+                        src="{{ asset('images/background/quran/night/hifth.webp') }}"
+                        alt="{{ arabic_text('وضع الحفظ') }}"
+                        loading="eager"
+                        decoding="async"
+                        draggable="false"
+                    >
                 </span>
             @else
                 <span class="quran-app-sector__media quran-app-sector__media--hifth quran-app-sector__media--morning">

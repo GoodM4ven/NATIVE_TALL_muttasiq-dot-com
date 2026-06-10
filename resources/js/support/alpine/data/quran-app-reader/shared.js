@@ -95,6 +95,79 @@ const wait = async (durationMs) => {
     });
 };
 
+const parseCssTimeMs = (value) => {
+    const normalizedValue = String(value ?? '').trim();
+
+    if (normalizedValue === '') {
+        return 0;
+    }
+
+    const parsedValue = Number.parseFloat(normalizedValue);
+
+    if (!Number.isFinite(parsedValue)) {
+        return 0;
+    }
+
+    return normalizedValue.endsWith('ms') ? parsedValue : parsedValue * 1000;
+};
+
+const resolveElementMotionDurationMs = (element) => {
+    if (!(element instanceof Element)) {
+        return 0;
+    }
+
+    const computedStyle = window.getComputedStyle(element);
+    const transitionDurations = String(computedStyle.transitionDuration ?? '')
+        .split(',')
+        .map(parseCssTimeMs);
+    const transitionDelays = String(computedStyle.transitionDelay ?? '')
+        .split(',')
+        .map(parseCssTimeMs);
+    const animationDurations = String(computedStyle.animationDuration ?? '')
+        .split(',')
+        .map(parseCssTimeMs);
+    const animationDelays = String(computedStyle.animationDelay ?? '')
+        .split(',')
+        .map(parseCssTimeMs);
+
+    const transitionCount = Math.max(transitionDurations.length, transitionDelays.length);
+    const animationCount = Math.max(animationDurations.length, animationDelays.length);
+
+    let maxDurationMs = 0;
+
+    for (let index = 0; index < transitionCount; index += 1) {
+        const durationMs = transitionDurations[index] ?? 0;
+        const delayMs = transitionDelays[index] ?? 0;
+
+        maxDurationMs = Math.max(maxDurationMs, durationMs + delayMs);
+    }
+
+    for (let index = 0; index < animationCount; index += 1) {
+        const durationMs = animationDurations[index] ?? 0;
+        const delayMs = animationDelays[index] ?? 0;
+
+        maxDurationMs = Math.max(maxDurationMs, durationMs + delayMs);
+    }
+
+    return maxDurationMs;
+};
+
+const resolvePageMotionExitDelayMs = ({
+    elements = [],
+    minimumDelayMs = 0,
+    bufferMs = 32,
+} = {}) => {
+    const normalizedMinimumDelayMs = Math.max(0, Math.trunc(Number(minimumDelayMs) || 0));
+    const normalizedBufferMs = Math.max(0, Math.trunc(Number(bufferMs) || 0));
+    const motionDurationMs = elements.reduce(
+        (longestDurationMs, element) =>
+            Math.max(longestDurationMs, resolveElementMotionDurationMs(element)),
+        0,
+    );
+
+    return Math.max(normalizedMinimumDelayMs, Math.trunc(motionDurationMs + normalizedBufferMs));
+};
+
 const wordPressHoldDelayMs = 750;
 const wordPressDragThresholdPx = 14;
 const mobileDoubleTapCopyWindowMs = 520;
@@ -209,6 +282,7 @@ const supportedHistorySources = Object.freeze([
     'page-jump',
     'page-slider-commit',
 ]);
+const quranContentVersionStorageKey = 'quran-reader-content-version';
 const lastPageStorageKey = 'quran-reader-last-page-v1';
 const navigationHistoryStorageKey = 'quran-reader-navigation-history-v1';
 const bookmarksStorageKey = 'quran-reader-bookmarks-v1';
@@ -888,9 +962,11 @@ export {
     quranPageYOffsetAdjustMin,
     quranPageYOffsetAdjustRemStep,
     quranPageYOffsetAdjustStorageKey,
+    quranContentVersionStorageKey,
     quranReaderDebugLogsEnabledByEnv,
     quranReaderDebugLogsToggleEventName,
     quranSearchStreamFrameDelimiter,
+    resolvePageMotionExitDelayMs,
     readBookmarks,
     readLastPageNumber,
     readLocalStorage,

@@ -103,6 +103,7 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
         swipeActivationThresholdPx,
         swipeRevealWatchdogDelayMs,
         uniqueLocalId,
+        resolvePageMotionExitDelayMs,
         wait,
         wirdCompletionVisibleDurationMs,
         wirdDailyKhatmatTargetMax,
@@ -227,7 +228,9 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                 direction,
             );
             const previousInputPage = clampPage(this.pageInput, this.maxPage);
-            this.pauseIdleWarmup(this.resolveIdleWarmupPauseDuration(source), {
+            const idleWarmupPauseMs = Math.max(this.resolveIdleWarmupPauseDuration(source), 1200);
+
+            this.pauseIdleWarmup(idleWarmupPauseMs, {
                 preservePage: normalizedTargetPage,
             });
 
@@ -856,6 +859,21 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                 Number(searchHighlightAyahIndex) > 0
                     ? Math.trunc(Number(searchHighlightAyahIndex))
                     : 0;
+            const timingNow =
+                typeof performance !== 'undefined' && typeof performance.now === 'function'
+                    ? () => performance.now()
+                    : () => Date.now();
+            const navigationTimingStartedAt = timingNow();
+            const logNavigationTiming = (phase, details = {}) => {
+                this.qrTimingLog(phase, {
+                    pageNumber: normalizedPage,
+                    source,
+                    direction,
+                    animate: Boolean(animate),
+                    ...details,
+                    elapsedMs: Math.round(timingNow() - navigationTimingStartedAt),
+                });
+            };
             const shouldKeepSearchHighlightForSource =
                 source === 'search-result' ||
                 (source === 'search-standard' && normalizedSearchHighlightAyahIndex > 0);
@@ -945,6 +963,9 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                 const payloadPromise = this.getPagePayload(normalizedPage, {
                     signal: pageAbortController?.signal ?? null,
                 });
+                logNavigationTiming('nav:payload-requested', {
+                    hasExistingPage: this.mushafLines.length > 0,
+                });
                 const transitionDelayMs = this.isImmediateNavigationSource(source)
                     ? 0
                     : this.isHighFrequencyNavigationSource(source)
@@ -952,18 +973,39 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                       : 44;
 
                 if (this.mushafLines.length > 0) {
+                    this.pageMotionLeavingClass =
+                        animate && direction
+                            ? direction === 'next'
+                                ? 'quran-page-motion-leaving-next'
+                                : 'quran-page-motion-leaving-prev'
+                            : '';
                     this.isTransitioningOutPage = true;
                     this.isFittingPage = false;
                     await this.nextTickAsync();
-                    await wait(transitionDelayMs);
+                    const pageLinesElement = this.$refs?.pageFrame?.querySelector?.(
+                        ".quran-page-lines[data-fit-state='fading-out']",
+                    );
+                    await wait(
+                        resolvePageMotionExitDelayMs({
+                            elements: [this.$refs?.pageSurface, pageLinesElement],
+                            minimumDelayMs: transitionDelayMs,
+                            bufferMs: 0,
+                        }),
+                    );
                     this.isTransitioningOutPage = false;
                     this.isFittingPage = true;
+                    this.pageMotionLeavingClass = '';
+                    this.flushQueuedReaderPanelLayoutRefresh();
                 }
 
                 const payload = await payloadPromise;
+                logNavigationTiming('nav:payload-resolved', {
+                    payloadReceived: payload !== null,
+                });
 
                 if (payload === null) {
                     didAbortPageTransition = true;
+                    logNavigationTiming('nav:payload-aborted');
 
                     return;
                 }
@@ -978,6 +1020,7 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                 }
 
                 this.applyPayload(payload, { setPageNumber: true });
+                logNavigationTiming('nav:payload-applied');
                 this.persistLastPageNumber(this.pageNumber);
                 this.refreshSurahTriggerCaption(animate);
                 this.refreshMobileEdgeCaptions(animate);
@@ -991,15 +1034,20 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                 this.activeWordIndex = 0;
                 this.searchHighlightedAyahIndex = nextSearchHighlightedAyahIndex;
 
-                if (animate) {
-                    this.playPageMotion(direction);
-                }
+                this._pendingMotionDirection = animate ? direction : null;
 
                 if (this.navigationBurstRemainingMsFor(source) <= 0) {
                     this.prefetchNeighborPages(normalizedPage);
                 }
 
                 const shouldUseFastFitPriority = this.isFastFitPrioritySource(source);
+                logNavigationTiming('nav:layout-start', {
+                    revealDelayMs: shouldUseFastFitPriority
+                        ? 62
+                        : this.isHighFrequencyNavigationSource(source)
+                          ? 70
+                          : 96,
+                });
                 await this.layoutPageGuaranteed({
                     revealDelayMs: shouldUseFastFitPriority
                         ? 62
@@ -1013,11 +1061,26 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                           : 3,
                     useIdleFit: !shouldUseFastFitPriority,
                     deferReveal: Boolean(deferInitialReveal),
+                    strictFontWait:
+                        source === 'startup-restore' ||
+                        Boolean(this._startupCalibrationPending || this.isCalibrating),
+                    timingContext: {
+                        startedAt: navigationTimingStartedAt,
+                        source,
+                        direction,
+                        animate: Boolean(animate),
+                        pageNumber: normalizedPage,
+                        phase: 'navigation',
+                    },
                 });
+                logNavigationTiming('nav:layout-complete');
                 didCompletePageTransition = true;
             } catch (error) {
                 if (error?.name === 'AbortError') {
                     didAbortPageTransition = true;
+                    logNavigationTiming('nav:abort', {
+                        errorName: error?.name ?? null,
+                    });
 
                     return;
                 }
@@ -1025,6 +1088,11 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                 if (this.hasRenderablePage()) {
                     this.isFittingPage = false;
                 }
+
+                logNavigationTiming('nav:error', {
+                    errorName: error?.name ?? null,
+                    errorMessage: String(error?.message ?? error ?? ''),
+                });
             } finally {
                 if (this._activePageAbortController === pageAbortController) {
                     this._activePageAbortController = null;
@@ -1032,6 +1100,8 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
 
                 this.isLoadingPage = false;
                 this.isTransitioningOutPage = false;
+                this.pageMotionLeavingClass = '';
+                this.flushQueuedReaderPanelLayoutRefresh();
 
                 if (!didCompletePageTransition && this.hasRenderablePage()) {
                     this.scheduleLayout({ revealDelayMs: 150 });
@@ -1062,6 +1132,10 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                 }
 
                 this.scheduleIdleWarmup();
+                logNavigationTiming('nav:complete', {
+                    didCompletePageTransition,
+                    didAbortPageTransition,
+                });
             }
         },
 
@@ -2031,8 +2105,37 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
             this._revealBlockedLayoutToken = 0;
         },
 
+        isPageMotionInProgress() {
+            return (
+                this._pageMotionRaf !== null ||
+                this.pageMotionTimer !== null ||
+                this.isTransitioningOutPage ||
+                this.pageMotionClass !== '' ||
+                this.pageMotionLeavingClass !== ''
+            );
+        },
+
+        flushQueuedReaderPanelLayoutRefresh() {
+            if (this.isPageMotionInProgress()) {
+                return;
+            }
+
+            if (this._readerPanelLayoutRefreshQueued) {
+                this._readerPanelLayoutRefreshQueued = false;
+                this.scheduleReaderPanelLayoutRefresh();
+            }
+
+            this.flushQueuedLayoutRequest();
+        },
+
         scheduleReaderPanelLayoutRefresh() {
             if (this.$el instanceof Element && !this.$el.isConnected) {
+                return;
+            }
+
+            if (this.isPageMotionInProgress()) {
+                this._readerPanelLayoutRefreshQueued = true;
+
                 return;
             }
 
@@ -2040,6 +2143,7 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                 return;
             }
 
+            this._readerPanelLayoutRefreshQueued = false;
             this._readerPanelLayoutRaf = requestAnimationFrame(() => {
                 this._readerPanelLayoutRaf = null;
                 this._readerPanelLayoutSerial += 1;
@@ -2049,7 +2153,8 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                         !this.ready ||
                         this.isLoadingPage ||
                         !this.hasRenderablePage() ||
-                        !this.isReaderElementVisible()
+                        !this.isReaderElementVisible() ||
+                        this.isPageMotionInProgress()
                     ) {
                         return;
                     }

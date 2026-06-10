@@ -107,6 +107,7 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
         swipeActivationThresholdPx,
         swipeRevealWatchdogDelayMs,
         uniqueLocalId,
+        resolvePageMotionExitDelayMs,
         wait,
         wirdCompletionVisibleDurationMs,
         wirdDailyKhatmatTargetMax,
@@ -453,12 +454,28 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
             if (this.pageMotionTimer !== null) {
                 clearTimeout(this.pageMotionTimer);
             }
+            if (this._pageMotionRaf !== null) {
+                cancelAnimationFrame(this._pageMotionRaf);
+                this._pageMotionRaf = null;
+            }
 
             this.pageMotionClass = nextClass;
-            this.pageMotionTimer = window.setTimeout(() => {
-                this.pageMotionClass = '';
-                this.pageMotionTimer = null;
-            }, 260);
+
+            this._pageMotionRaf = requestAnimationFrame(() => {
+                this._pageMotionRaf = null;
+                const pageMotionDurationMs = resolvePageMotionExitDelayMs({
+                    elements: [this.$refs?.pageSurface],
+                    bufferMs: 0,
+                });
+                const resolvedPageMotionDurationMs =
+                    pageMotionDurationMs > 0 ? pageMotionDurationMs : 260;
+
+                this.pageMotionTimer = window.setTimeout(() => {
+                    this.pageMotionClass = '';
+                    this.pageMotionTimer = null;
+                    this.flushQueuedReaderPanelLayoutRefresh();
+                }, resolvedPageMotionDurationMs);
+            });
         },
 
         swipePoint(event) {
@@ -983,7 +1000,19 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
             return null;
         },
 
+        shouldApplySearchDestinationScaleBoost() {
+            if (typeof this.$store?.bp?.isTouch !== 'function') {
+                return false;
+            }
+
+            return this.$store.bp.isTouch();
+        },
+
         searchDestinationScaleBoostAmount() {
+            if (!this.shouldApplySearchDestinationScaleBoost()) {
+                return 0;
+            }
+
             if (
                 typeof this.shouldShowImmersiveMobileEdgeCaptions === 'function' &&
                 !this.shouldShowImmersiveMobileEdgeCaptions()
@@ -1021,6 +1050,10 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
         },
 
         searchDestinationTypeScaleBoostAmount() {
+            if (!this.shouldApplySearchDestinationScaleBoost()) {
+                return 0;
+            }
+
             if (
                 typeof this.shouldShowImmersiveMobileEdgeCaptions === 'function' &&
                 !this.shouldShowImmersiveMobileEdgeCaptions()
@@ -1058,6 +1091,7 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
         },
 
         setCurrentPageScale(baseScale, { forFitting = false } = {}) {
+            // const rootElement = this.$el?.firstElementChild;
             const contentElement = this.$refs?.pageContent;
             const frameElement = this.$refs?.pageFrame;
             const fallbackScaleElement = this.pageScaleElement();
@@ -1072,6 +1106,7 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
                 frameElement,
                 fallbackScaleElement,
                 ...pageLinesTargets,
+                // rootElement,
             ].filter(
                 (element, index, array) =>
                     element instanceof HTMLElement && array.indexOf(element) === index,

@@ -1030,9 +1030,7 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             this.search.activeSurahNumber = surahNumber;
             this.search.preserveActiveSurahOnNextOpen = true;
             const shouldUseStandardSmPlusNavigation =
-                !this.nativeRuntime &&
-                Boolean(this.$store?.bp?.is?.('sm+')) &&
-                !Boolean(this.$store?.bp?.isTablet?.());
+                !this.nativeRuntime && Boolean(this.$store?.bp?.is?.('sm+'));
             const standardSmPlusSource = 'search-standard';
             if (shouldUseStandardSmPlusNavigation) {
                 this.searchDestinationScaleBoostPageNumber = 0;
@@ -1087,7 +1085,19 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                         searchHighlightAyahIndex: 0,
                     });
                     await wait(24);
-                } else {
+                    const pageRevealed = await this.waitForPageRevealCycle(pageNumber, {
+                        maxAttempts: 60,
+                        delayMs: 40,
+                    });
+                    if (!pageRevealed && !this.isCurrentPageVisiblyReady()) {
+                        this._bypassNextFitCache = true;
+                        await this.layoutPageGuaranteed({
+                            revealDelayMs: 120,
+                            maxAttempts: 5,
+                            useIdleFit: false,
+                        });
+                    }
+                } else if (this.nativeRuntime) {
                     this._bypassNextFitCache = true;
                     await this.goToPageFromChevron(pageNumber, {
                         activeAyahIndex: 0,
@@ -1109,14 +1119,42 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                         maxAttempts: 5,
                         fallbackReason: 'surah-directory-post-close-visibility-recovery',
                     });
-                }
 
-                this._bypassNextFitCache = true;
-                await this.layoutPageGuaranteed({
-                    revealDelayMs: 120,
-                    maxAttempts: 5,
-                    useIdleFit: false,
-                });
+                    if (!this.isCurrentPageVisiblyReady()) {
+                        this._bypassNextFitCache = true;
+                        await this.layoutPageGuaranteed({
+                            revealDelayMs: 120,
+                            maxAttempts: 5,
+                            useIdleFit: false,
+                        });
+                    }
+                } else {
+                    usedStandardSmPlusNavigation = true;
+                    await this.nextTickAsync();
+                    await this.waitForStablePageFrame({
+                        maxFrames: 18,
+                        requiredStableFrames: 3,
+                        tolerancePx: 0.8,
+                    });
+                    this._bypassNextFitCache = true;
+                    this.dispatchPageNavigationRequest(pageNumber, standardSmPlusSource, {
+                        activeAyahIndex: 0,
+                        searchHighlightAyahIndex: 0,
+                    });
+                    await wait(24);
+                    const pageRevealed = await this.waitForPageRevealCycle(pageNumber, {
+                        maxAttempts: 80,
+                        delayMs: 40,
+                    });
+                    if (!pageRevealed && !this.isCurrentPageVisiblyReady()) {
+                        this._bypassNextFitCache = true;
+                        await this.layoutPageGuaranteed({
+                            revealDelayMs: 120,
+                            maxAttempts: 5,
+                            useIdleFit: false,
+                        });
+                    }
+                }
 
                 if (this.searchNeedsInitialSelectionRecovery) {
                     const shouldRunInitialSelectionRecovery =
@@ -1171,7 +1209,8 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                 if (
                     usedStandardSmPlusNavigation &&
                     this.hasRenderablePage() &&
-                    this.openModalCount() <= 0
+                    this.openModalCount() <= 0 &&
+                    !this.isCurrentPageVisiblyReady()
                 ) {
                     this.clearStaleRevealGuards();
                     this.scheduleLayout({ revealDelayMs: 96, maxAttempts: 4 });

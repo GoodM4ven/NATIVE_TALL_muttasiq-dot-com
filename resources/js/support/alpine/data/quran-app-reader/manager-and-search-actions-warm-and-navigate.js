@@ -427,7 +427,10 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                     this.buildSurahDirectory(surahDirectory);
                     this.refreshSurahTriggerCaption(false);
                     this.search.isReady = true;
-                    void this.warmSearchLocalIndex();
+
+                    if (!this.nativeRuntime) {
+                        void this.warmSearchLocalIndex();
+                    }
                 } catch (_) {
                     if (
                         !Array.isArray(this.search.surahDirectory) ||
@@ -681,9 +684,7 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                 .map((value) => String(value ?? '').trim())
                 .filter((value) => value !== '');
             const shouldUseStandardSmPlusNavigation =
-                !this.nativeRuntime &&
-                Boolean(this.$store?.bp?.is?.('sm+')) &&
-                !Boolean(this.$store?.bp?.isTablet?.());
+                !this.nativeRuntime && Boolean(this.$store?.bp?.is?.('sm+'));
             const standardSmPlusSource = 'search-standard';
             if (shouldUseStandardSmPlusNavigation) {
                 this.searchDestinationScaleBoostPageNumber = 0;
@@ -740,7 +741,19 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                         searchHighlightAyahIndex: highlightAyahIndex,
                     });
                     await wait(24);
-                } else {
+                    const pageRevealed = await this.waitForPageRevealCycle(targetPage, {
+                        maxAttempts: 60,
+                        delayMs: 40,
+                    });
+                    if (!pageRevealed && !this.isCurrentPageVisiblyReady()) {
+                        this._bypassNextFitCache = true;
+                        await this.layoutPageGuaranteed({
+                            revealDelayMs: 120,
+                            maxAttempts: 5,
+                            useIdleFit: false,
+                        });
+                    }
+                } else if (this.nativeRuntime) {
                     await this.navigateFromManagerModalRecord({
                         targetPage,
                         ayahIndex: highlightAyahIndex,
@@ -748,14 +761,41 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                         modalId: this.resolveSearchModalCloseTargetId(),
                         ensureVisibleAfterModalClose: true,
                     });
+                    if (!this.isCurrentPageVisiblyReady()) {
+                        this._bypassNextFitCache = true;
+                        await this.layoutPageGuaranteed({
+                            revealDelayMs: 120,
+                            maxAttempts: 5,
+                            useIdleFit: false,
+                        });
+                    }
+                } else {
+                    usedStandardSmPlusNavigation = true;
+                    await this.nextTickAsync();
+                    await this.waitForStablePageFrame({
+                        maxFrames: 18,
+                        requiredStableFrames: 3,
+                        tolerancePx: 0.8,
+                    });
+                    this._bypassNextFitCache = true;
+                    this.dispatchPageNavigationRequest(targetPage, standardSmPlusSource, {
+                        activeAyahIndex: highlightAyahIndex,
+                        searchHighlightAyahIndex: highlightAyahIndex,
+                    });
+                    await wait(24);
+                    const pageRevealed = await this.waitForPageRevealCycle(targetPage, {
+                        maxAttempts: 80,
+                        delayMs: 40,
+                    });
+                    if (!pageRevealed && !this.isCurrentPageVisiblyReady()) {
+                        this._bypassNextFitCache = true;
+                        await this.layoutPageGuaranteed({
+                            revealDelayMs: 120,
+                            maxAttempts: 5,
+                            useIdleFit: false,
+                        });
+                    }
                 }
-
-                this._bypassNextFitCache = true;
-                await this.layoutPageGuaranteed({
-                    revealDelayMs: 120,
-                    maxAttempts: 5,
-                    useIdleFit: false,
-                });
 
                 if (highlightAyahIndex > 0) {
                     this.activeAyahIndex = highlightAyahIndex;
@@ -832,7 +872,8 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                 if (
                     usedStandardSmPlusNavigation &&
                     this.hasRenderablePage() &&
-                    this.openModalCount() <= 0
+                    this.openModalCount() <= 0 &&
+                    !this.isCurrentPageVisiblyReady()
                 ) {
                     this.clearStaleRevealGuards();
                     this.scheduleLayout({ revealDelayMs: 96, maxAttempts: 4 });

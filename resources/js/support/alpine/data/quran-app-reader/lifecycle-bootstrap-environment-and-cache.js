@@ -78,6 +78,7 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
         quranPageYOffsetAdjustMin,
         quranPageYOffsetAdjustRemStep,
         quranPageYOffsetAdjustStorageKey,
+        quranContentVersionStorageKey,
         quranReaderDebugLogsEnabledByEnv,
         quranReaderDebugLogsToggleEventName,
         quranSearchStreamFrameDelimiter,
@@ -131,6 +132,26 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
 
     return {
         init() {
+            if (this.contentVersion) {
+                const storedContentVersion = localStorage.getItem(quranContentVersionStorageKey);
+
+                if (storedContentVersion !== this.contentVersion) {
+                    localStorage.setItem(quranContentVersionStorageKey, this.contentVersion);
+                    this._pagePayloadByPage.clear();
+
+                    void (async () => {
+                        if (typeof window !== 'undefined' && typeof window.caches !== 'undefined') {
+                            await Promise.allSettled([
+                                window.caches.delete(this.cacheNames.pages),
+                                window.caches.delete(this.cacheNames.fonts),
+                                window.caches.delete(this.cacheNames.search),
+                                window.caches.delete(this.cacheNames.searchLocalIndex),
+                            ]);
+                        }
+                    })();
+                }
+            }
+
             this.applyPayload(this.initialPayload, {
                 setPageNumber: true,
                 persistPageNumber: false,

@@ -148,6 +148,8 @@ export const createInitialState = (config, deps) => {
 
         nativeRuntime: Boolean(config?.nativeRuntime ?? false),
 
+        contentVersion: String(config?.contentVersion ?? ''),
+
         prewarmPages: Math.max(1, Number(config?.prewarmPages ?? 6)),
 
         prefetchRadius: Math.max(1, Number(config?.prefetchRadius ?? 2)),
@@ -264,6 +266,10 @@ export const createInitialState = (config, deps) => {
         isTransitioningOutPage: false,
 
         pageMotionClass: '',
+
+        pageMotionLeavingClass: '',
+
+        _pendingMotionDirection: null,
 
         surahTriggerCaption: '',
 
@@ -457,6 +463,10 @@ export const createInitialState = (config, deps) => {
         _readerPanelLayoutSerial: 0,
 
         _readerPanelLayoutRaf: null,
+
+        _readerPanelLayoutRefreshQueued: false,
+
+        _pageMotionRaf: null,
 
         _viewportChangeDebounceTimer: null,
 

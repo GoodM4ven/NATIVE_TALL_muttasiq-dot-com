@@ -33,7 +33,7 @@
         <x-action-button
             data-testid="introduction-video-button"
             :useInvertedStyle="true"
-            :iconName="'heroicon-o-play-circle'"
+            :iconName="'heroicon-s-play-circle'"
             :iconClasses="'text-primary-600 dark:text-primary-50 !h-5.5 !w-5.5 sm:!h-6.5 sm:!w-6.5 md:!h-6.5 md:!w-6.5 lg:!h-6.5 lg:!w-6.5 xl:!h-7 xl:!w-7'"
             :extraAttributes="[
                 'title' => arabic_text('ما هو متسق؟'),

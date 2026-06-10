@@ -243,6 +243,19 @@ it('prefers published static quran helper font assets over dynamic binary routes
         ->and($page['basmallahFontUrl'] ?? null)->toBe(url('/vendor/arabicable/quran-common.woff2'));
 });
 
+it('keeps search destination cue caption-only on immersive mobile and touch contexts', function () {
+    $scaleControlsSource = file_get_contents(
+        resource_path('js/support/alpine/data/quran-app-reader/reader-navigation-fit-idle-warmup-and-scale-controls.js'),
+    );
+
+    expect($scaleControlsSource)->not->toBeFalse()
+        ->and($scaleControlsSource)->toContain('shouldApplySearchDestinationScaleBoost()')
+        ->and($scaleControlsSource)->toContain('this.$store.bp.isTouch()')
+        ->and($scaleControlsSource)->toContain('return this.$store.bp.isTouch();')
+        ->and($scaleControlsSource)->toContain('searchDestinationScaleBoostAmount()')
+        ->and($scaleControlsSource)->toContain('searchDestinationTypeScaleBoostAmount()');
+});
+
 it('does not repeat surah preludes on continuation pages', function () {
     if (! Schema::hasTable('quran_verses')) {
         $this->markTestSkipped('Quran verses table is unavailable.');

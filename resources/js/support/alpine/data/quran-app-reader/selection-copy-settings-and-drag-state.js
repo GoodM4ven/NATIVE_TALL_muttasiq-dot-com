@@ -166,6 +166,14 @@ export const createSelectionCopySettingsAndDragStateModule = (deps) => {
             console.log(...messages);
         },
 
+        qrTimingLog(phase, details = {}) {
+            if (!this.nativeRuntime && !this.isQrDebugLoggingEnabled) {
+                return;
+            }
+
+            console.log('[QR:timing]', phase, details);
+        },
+
         qrDebugError(...messages) {
             if (!this.isQrDebugLoggingEnabled) {
                 return;
