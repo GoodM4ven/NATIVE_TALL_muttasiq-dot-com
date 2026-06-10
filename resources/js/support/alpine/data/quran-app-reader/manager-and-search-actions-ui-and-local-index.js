@@ -1032,7 +1032,7 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             const shouldUseStandardSmPlusNavigation =
                 !this.nativeRuntime && Boolean(this.$store?.bp?.is?.('sm+'));
             const standardSmPlusSource = 'search-standard';
-            if (shouldUseStandardSmPlusNavigation) {
+            if (!this.nativeRuntime) {
                 this.searchDestinationScaleBoostPageNumber = 0;
                 this.searchDestinationScaleBoostSource = '';
                 this.searchDestinationScaleBoostExpiresAt = 0;
@@ -1190,9 +1190,7 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                 this.activeWordIndex = 0;
                 this.searchHighlightedAyahIndex = 0;
                 this.activateSearchDestinationCue({
-                    source: shouldUseStandardSmPlusNavigation
-                        ? standardSmPlusSource
-                        : 'surah-directory',
+                    source: !this.nativeRuntime ? standardSmPlusSource : 'surah-directory',
                     surahNumber,
                     pageNumber,
                 });

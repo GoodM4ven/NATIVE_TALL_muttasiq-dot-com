@@ -3923,7 +3923,7 @@
                     @class([
                         'top-[3.75rem]' => is_platform('ios'),
                         'top-[1.92rem]' => !is_platform('ios'),
-                        'z-54 pointer-events-none absolute inset-x-0 flex justify-center px-3 sm:hidden',
+                        'hidden! z-54 pointer-events-none absolute inset-x-0 flex justify-center px-3 sm:hidden',
                     ])
                     x-cloak
                     x-show="typeof shouldShowSearchDestinationCueCaption === 'function' && shouldShowSearchDestinationCueCaption()"
@@ -3945,7 +3945,7 @@
                     @class([
                         'top-[5rem]' => is_platform('ios'),
                         'top-[3rem]' => !is_platform('ios'),
-                        'quran-search-destination-frame-wrap sm:hidden',
+                        'quran-search-destination-frame-wrap hidden! sm:hidden',
                     ])
                     x-cloak
                     x-show="typeof shouldShowSearchDestinationCueFrame === 'function' && shouldShowSearchDestinationCueFrame()"
