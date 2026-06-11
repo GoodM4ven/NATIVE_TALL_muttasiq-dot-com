@@ -73,7 +73,7 @@ jobs:
         run: vendor/bin/pest --coverage --coverage-clover=build/coverage/clover.xml --do-not-fail-on-risky
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v6
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: build/coverage/clover.xml
