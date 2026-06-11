@@ -60,12 +60,14 @@ function fakeQuranReaderDataService(bool $ready, ?array $payload = null): QuranR
 function fakeNativeQuranPreparationService(
     ?array $queuedStatus = null,
     ?array $currentStatus = null,
+    ?bool $internetConnected = null,
 ): NativeQuranPreparationService {
-    return new class($queuedStatus, $currentStatus) extends NativeQuranPreparationService
+    return new class($queuedStatus, $currentStatus, $internetConnected) extends NativeQuranPreparationService
     {
         public function __construct(
             private ?array $queuedStatus,
             private ?array $currentStatus,
+            private ?bool $internetConnected,
         ) {}
 
         public function queueIfNeeded(QuranReaderDataService $readerDataService): array
@@ -76,6 +78,11 @@ function fakeNativeQuranPreparationService(
         public function currentStatus(QuranReaderDataService $readerDataService): array
         {
             return $this->currentStatus ?? parent::currentStatus($readerDataService);
+        }
+
+        public function isInternetConnected(): ?bool
+        {
+            return $this->internetConnected ?? parent::isInternetConnected();
         }
     };
 }
@@ -109,6 +116,40 @@ it('does not enqueue native quran preparation again while it is already running'
     ]);
 
     Queue::assertNothingPushed();
+});
+
+it('marks native quran preparation as failed immediately when the device is offline', function () {
+    Queue::fake();
+
+    $status = fakeNativeQuranPreparationService(
+        internetConnected: false,
+    )->queueIfNeeded(
+        fakeQuranReaderDataService(false),
+    );
+
+    expect($status)->toMatchArray([
+        'ready' => false,
+        'state' => 'failed',
+    ]);
+
+    expect((string) $status['message'])->not->toBeEmpty();
+    Queue::assertNothingPushed();
+});
+
+it('fails a stale running native quran preparation while the device is offline', function () {
+    $service = fakeNativeQuranPreparationService(
+        internetConnected: false,
+    );
+    $service->markRunning(progressPercent: 1, downloadedBytes: 1024, totalBytes: 4096);
+
+    $status = $service->currentStatus(fakeQuranReaderDataService(false));
+
+    expect($status)->toMatchArray([
+        'ready' => false,
+        'state' => 'failed',
+    ]);
+
+    expect((string) $status['message'])->not->toBeEmpty();
 });
 
 it('reports native quran preparation as ready without queueing when reader data exists', function () {
