@@ -279,6 +279,10 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
         },
 
         traceReaderReveal(eventName, details = {}) {
+            if (!this.readerRevealDebugEnabled()) {
+                return;
+            }
+
             const normalizedEventName = String(eventName ?? '').trim() || 'event';
             const payload =
                 details && typeof details === 'object' && !Array.isArray(details) ? details : {};
@@ -300,10 +304,6 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 modalResumeTimerActive: this._modalLayoutResumeTimer !== null,
                 ...payload,
             };
-
-            if (!this.readerRevealDebugEnabled()) {
-                return;
-            }
 
             console.log('[quran-reader][reveal]', normalizedEventName, tracePayload);
 
