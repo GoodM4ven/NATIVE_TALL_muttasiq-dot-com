@@ -464,6 +464,20 @@ export const createLifecycleModule = (deps) => {
             };
         },
 
+        resolveMainTextSizeSliderLimits() {
+            const minimumLimits = this.resolveMainTextSizeLimitsFor(minimumMainTextSizeKey);
+            const maximumLimits = this.resolveMainTextSizeLimitsFor(maximumMainTextSizeKey);
+            const minimum = Math.max(minimumLimits.min, maximumLimits.min);
+            const maximum = Math.max(minimum, Math.min(minimumLimits.max, maximumLimits.max));
+            const defaultValue = Math.max(minimum, Math.min(maximum, maximumLimits.default));
+
+            return {
+                min: minimum,
+                max: maximum,
+                default: defaultValue,
+            };
+        },
+
         mainTextSizeMinimumValue() {
             return this.resolveMainTextSizeRange().minimum;
         },
@@ -472,60 +486,37 @@ export const createLifecycleModule = (deps) => {
             return this.resolveMainTextSizeRange().maximum;
         },
 
-        updateMainTextSizeRange(
-            nextValue,
-            { target = minimumMainTextSizeKey, persist = false } = {},
-        ) {
-            const { minimum, maximum, minimumLimits, maximumLimits } =
-                this.resolveMainTextSizeRange();
-            let nextMinimum = minimum;
-            let nextMaximum = maximum;
+        mainTextSizeValue() {
+            const sliderLimits = this.resolveMainTextSizeSliderLimits();
+            const { maximum } = this.resolveMainTextSizeRange();
 
-            if (target === maximumMainTextSizeKey) {
-                nextMaximum = this.normalizeMainTextSizeValue(
-                    maximumMainTextSizeKey,
-                    nextValue,
-                    maximum,
-                );
-                if (nextMaximum < nextMinimum) {
-                    nextMinimum = this.normalizeMainTextSizeValue(
-                        minimumMainTextSizeKey,
-                        nextMaximum,
-                        nextMinimum,
-                    );
-                }
-            } else {
-                nextMinimum = this.normalizeMainTextSizeValue(
-                    minimumMainTextSizeKey,
-                    nextValue,
-                    minimum,
-                );
-                if (nextMinimum > nextMaximum) {
-                    nextMaximum = this.normalizeMainTextSizeValue(
-                        maximumMainTextSizeKey,
-                        nextMinimum,
-                        nextMaximum,
-                    );
-                }
-            }
+            return Math.max(sliderLimits.min, Math.min(sliderLimits.max, maximum));
+        },
 
-            nextMinimum = Math.max(minimumLimits.min, Math.min(minimumLimits.max, nextMinimum));
-            nextMaximum = Math.max(maximumLimits.min, Math.min(maximumLimits.max, nextMaximum));
-            nextMinimum = Math.min(nextMinimum, nextMaximum);
-            nextMaximum = Math.max(nextMaximum, nextMinimum);
+        updateMainTextSizeRange(nextValue, { persist = false } = {}) {
+            const sliderLimits = this.resolveMainTextSizeSliderLimits();
+            const normalizedValue = this.normalizeMainTextSizeValue(
+                maximumMainTextSizeKey,
+                nextValue,
+                this.mainTextSizeValue(),
+            );
+            const nextMainTextSize = Math.max(
+                sliderLimits.min,
+                Math.min(sliderLimits.max, normalizedValue),
+            );
 
             this.settings = {
                 ...(this.settings && typeof this.settings === 'object' ? this.settings : {}),
-                [minimumMainTextSizeKey]: nextMinimum,
-                [maximumMainTextSizeKey]: nextMaximum,
+                [minimumMainTextSizeKey]: nextMainTextSize,
+                [maximumMainTextSizeKey]: nextMainTextSize,
             };
 
             this.persistMainTextSizeRangeSnapshot();
 
             if (persist) {
                 this.applySettings({
-                    [minimumMainTextSizeKey]: nextMinimum,
-                    [maximumMainTextSizeKey]: nextMaximum,
+                    [minimumMainTextSizeKey]: nextMainTextSize,
+                    [maximumMainTextSizeKey]: nextMainTextSize,
                 });
                 return;
             }
@@ -542,37 +533,41 @@ export const createLifecycleModule = (deps) => {
             writeAthkarSettingsToStorage(this.settings, this.settingsDefaults);
         },
 
-        handleMinimumMainTextSizeInput(event = null) {
+        handleMainTextSizeInput(event = null) {
             this.updateMainTextSizeRange(event?.target?.value ?? null, {
-                target: minimumMainTextSizeKey,
                 persist: false,
             });
         },
 
+        handleMinimumMainTextSizeInput(event = null) {
+            this.handleMainTextSizeInput(event);
+        },
+
         handleMaximumMainTextSizeInput(event = null) {
-            this.updateMainTextSizeRange(event?.target?.value ?? null, {
-                target: maximumMainTextSizeKey,
-                persist: false,
+            this.handleMainTextSizeInput(event);
+        },
+
+        commitMainTextSizeValue() {
+            const nextMainTextSize = this.mainTextSizeValue();
+
+            this.applySettings({
+                [minimumMainTextSizeKey]: nextMainTextSize,
+                [maximumMainTextSizeKey]: nextMainTextSize,
             });
         },
 
         commitMainTextSizeRange() {
-            const { minimum, maximum } = this.resolveMainTextSizeRange();
-
-            this.applySettings({
-                [minimumMainTextSizeKey]: minimum,
-                [maximumMainTextSizeKey]: maximum,
-            });
+            this.commitMainTextSizeValue();
         },
 
         resetMainTextSizeRangeToDefaults() {
-            const minimumLimits = this.resolveMainTextSizeLimitsFor(minimumMainTextSizeKey);
-            const maximumLimits = this.resolveMainTextSizeLimitsFor(maximumMainTextSizeKey);
+            const sliderLimits = this.resolveMainTextSizeSliderLimits();
+            const defaultMainTextSize = sliderLimits.default;
 
             this.settings = {
                 ...(this.settings && typeof this.settings === 'object' ? this.settings : {}),
-                [minimumMainTextSizeKey]: minimumLimits.default,
-                [maximumMainTextSizeKey]: Math.max(maximumLimits.default, minimumLimits.default),
+                [minimumMainTextSizeKey]: defaultMainTextSize,
+                [maximumMainTextSizeKey]: defaultMainTextSize,
             };
 
             this.commitMainTextSizeRange();

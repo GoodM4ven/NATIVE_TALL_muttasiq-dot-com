@@ -270,6 +270,9 @@ native_prepare_platform_install() {
     elif [[ ! -f "${required_path}" ]]; then
         should_install=1
         reason="${required_file} missing"
+    elif [[ "${platform}" == "android" && ! -f "${native_root_dir}/nativephp/android/app/src/main/staticLibs/arm64-v8a/libphp.a" ]]; then
+        should_install=1
+        reason="nativephp/android/app/src/main/staticLibs/arm64-v8a/libphp.a missing"
     elif [[ ! -f "${stamp_file}" ]]; then
         should_install=1
         reason="version stamp missing"
@@ -284,12 +287,17 @@ native_prepare_platform_install() {
 
     if [[ "${should_install}" -eq 1 ]]; then
         echo "[native-prepare:${platform}] refreshing native ${platform} project (${reason})"
+
+        if [[ -d "${platform_dir}" ]]; then
+            rm -rf "${platform_dir}"
+        fi
+
         if [[ "${desired_icu}" == "1" ]]; then
             echo "[native-prepare:${platform}] ICU-enabled PHP binaries are required by NativePHP lock/config"
         fi
         (
             cd "${native_root_dir}"
-            php artisan native:install "${platform}" "${install_args[@]}" --force --no-interaction
+            php artisan native:install "${platform}" "${install_args[@]}" --no-force --no-interaction
         )
         printf '%s\n' "${desired_signature}" > "${stamp_file}"
     fi

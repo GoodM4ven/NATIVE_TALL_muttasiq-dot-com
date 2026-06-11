@@ -15,6 +15,7 @@ use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Support\Enums\Width;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\HtmlString;
 use Illuminate\View\View;
 use Livewire\Component;
@@ -33,7 +34,7 @@ class ControlPanel extends Component implements HasActions, HasSchemas
     private const UPDATES_TAB_INDEX = 2;
 
     /**
-     * @var array<string, bool|int>
+     * @var array<string, bool|int|string>
      */
     public array $clientControlPanel = [];
 
@@ -42,6 +43,7 @@ class ControlPanel extends Component implements HasActions, HasSchemas
     public function controlPanelAction(): Action
     {
         return Action::make('controlPanel')
+            ->modal()
             ->label(arabic_text('لوحة التحكم'))
             ->modalDescription(arabic_text('بعض المعلومات والتفضيلات في كيفية عمل المنصة'))
             ->modalSubmitActionLabel(arabic_text('حفظ'))
@@ -86,6 +88,7 @@ class ControlPanel extends Component implements HasActions, HasSchemas
     public function supportUnlockAction(): Action
     {
         return Action::make('supportUnlock')
+            ->modal()
             ->modalHeading(arabic_text('دعم المشروع'))
             ->modalDescription(arabic_text('قبل استخدام بعض الخصائص المميّزة في المنصة، نحتاج منك تأكيد دعم تطوير المشروع.'))
             ->modalWidth(Width::ThreeExtraLarge)
@@ -181,6 +184,16 @@ class ControlPanel extends Component implements HasActions, HasSchemas
 
     private function supportUnlockModalContent(): HtmlString
     {
+        $html = Cache::rememberForever(
+            'support-unlock-modal-content:v1',
+            fn (): string => $this->buildSupportUnlockModalContent(),
+        );
+
+        return new HtmlString($html);
+    }
+
+    private function buildSupportUnlockModalContent(): string
+    {
         $introBeforeStrong = arabic_text(
             'تطوير المزايا المتقدمة، وإتاحة المنصة على المخدّمات والمنصات بأجهزتها المختلفة، كل هذا يتطلب ',
         );
@@ -190,23 +203,21 @@ class ControlPanel extends Component implements HasActions, HasSchemas
         );
         $supportLinksCaption = arabic_text('روابط منصات الدعم:');
 
-        return new HtmlString(
-            '<div class="space-y-4 text-right text-base! leading-7 text-gray-800 dark:text-gray-100">'
-                .'<p class="text-center">'
-                .e($introBeforeStrong)
-                .'<strong>'.e($introStrong).'</strong>'
-                .e($introAfterStrong)
-                .'</p>'
-                .'<div class="quran-support-unlock-links-panel rounded-xl p-3 text-sm">'
-                .'<p class="mb-2 font-semibold text-gray-900 dark:text-gray-100">'.e($supportLinksCaption).'</p>'
-                .'<div class="flex flex-wrap items-center justify-end gap-2">'
-                .$this->supportUnlockLinkMarkup('Buy Me a Coffee', 'https://buymeacoffee.com/goodm4ven')
-                .$this->supportUnlockLinkMarkup('Patreon', 'https://patreon.com/GoodM4ven')
-                .$this->supportUnlockLinkMarkup('GitHub Sponsors', 'https://github.com/sponsors/GoodM4ven')
-                .'</div>'
-                .'</div>'
-                .'</div>',
-        );
+        return '<div class="space-y-4 text-right text-base! leading-7 text-gray-800 dark:text-gray-100">'
+            .'<p class="text-center">'
+            .e($introBeforeStrong)
+            .'<strong>'.e($introStrong).'</strong>'
+            .e($introAfterStrong)
+            .'</p>'
+            .'<div class="quran-support-unlock-links-panel rounded-xl p-3 text-sm">'
+            .'<p class="mb-2 font-semibold text-gray-900 dark:text-gray-100">'.e($supportLinksCaption).'</p>'
+            .'<div class="flex flex-wrap items-center justify-end gap-2">'
+            .$this->supportUnlockLinkMarkup('Buy Me a Coffee', 'https://buymeacoffee.com/goodm4ven')
+            .$this->supportUnlockLinkMarkup('Patreon', 'https://patreon.com/GoodM4ven')
+            .$this->supportUnlockLinkMarkup('GitHub Sponsors', 'https://github.com/sponsors/GoodM4ven')
+            .'</div>'
+            .'</div>'
+            .'</div>';
     }
 
     private function supportUnlockLinkMarkup(string $label, string $url): string
@@ -223,14 +234,11 @@ class ControlPanel extends Component implements HasActions, HasSchemas
     }
 
     /**
-     * @return array<string, bool|int|list<int>>
+     * @return array<string, bool|int|string>
      */
     private function loadControlPanel(): array
     {
-        $storedControlPanelValues = Setting::query()
-            ->whereIn('name', array_keys(self::controlPanelDefaults()))
-            ->pluck('value', 'name')
-            ->all();
+        $storedControlPanelValues = Setting::storedValues(array_keys(self::controlPanelDefaults()));
 
         $normalizedControlPanelValues = Setting::normalizeSettings(
             array_replace(self::controlPanelDefaults(), $storedControlPanelValues, $this->clientControlPanel),
@@ -241,7 +249,7 @@ class ControlPanel extends Component implements HasActions, HasSchemas
 
     /**
      * @param  array<string, mixed>  $controlPanel
-     * @return array<string, bool|int>
+     * @return array<string, bool|int|string>
      */
     private function filterControlPanel(array $controlPanel): array
     {

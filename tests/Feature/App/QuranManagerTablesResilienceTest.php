@@ -89,6 +89,47 @@ it('dispatches bookmarks manager go action payload from scalar key', function ()
         );
 });
 
+it('closes the bookmarks dropdown before opening the edit modal', function () {
+    $record = [
+        'id' => 'bookmark-edit-1',
+        'sort_order' => 1,
+        'page_number' => 21,
+        'tags' => [],
+        'note' => '',
+    ];
+
+    $component = livewire(BookmarksManagerTable::class)
+        ->call('syncFromClient', records: [$record])
+        ->instance();
+
+    $editAction = collect($component->getTable()->getRecordActions()[0]->getActions())
+        ->first(fn (mixed $action): bool => (string) $action->getName() === 'edit');
+
+    expect($editAction?->getExtraAttributes()['x-on:pointerdown'] ?? null)->toBe('close()');
+});
+
+it('closes the bookmarks dropdown before replacing or removing a record', function () {
+    $record = [
+        'id' => 'bookmark-5',
+        'sort_order' => 1,
+        'page_number' => 11,
+        'tags' => [],
+        'note' => '',
+    ];
+
+    $component = livewire(BookmarksManagerTable::class)
+        ->call('syncFromClient', records: [$record])
+        ->instance();
+
+    $actions = collect($component->getTable()->getRecordActions()[0]->getActions());
+
+    $replacePageAction = $actions->first(fn (mixed $action): bool => (string) $action->getName() === 'replacePage');
+    $removeAction = $actions->first(fn (mixed $action): bool => (string) $action->getName() === 'remove');
+
+    expect($replacePageAction?->getExtraAttributes()['x-on:pointerdown'] ?? null)->toBe('close()')
+        ->and($removeAction?->getExtraAttributes()['x-on:pointerdown'] ?? null)->toBe('close()');
+});
+
 it('handles history manager remove action for custom table records', function () {
     $record = [
         'id' => 'history-1',
@@ -153,4 +194,46 @@ it('resolves history manager action record from filament array key', function ()
     expect($resolvedRecord)->toBeArray()
         ->and((string) ($resolvedRecord['id'] ?? ''))->toBe('history-3')
         ->and((int) ($resolvedRecord['page_number'] ?? 0))->toBe(8);
+});
+
+it('closes the history dropdown before opening the edit modal', function () {
+    $record = [
+        'id' => 'history-edit-1',
+        'sort_order' => 1,
+        'page_number' => 9,
+        'surah_number' => 1,
+        'source' => 'search-result',
+        'tags' => [],
+        'note' => '',
+    ];
+
+    $component = livewire(HistoryManagerTable::class)
+        ->call('syncFromClient', records: [$record])
+        ->instance();
+
+    $editAction = collect($component->getTable()->getRecordActions()[0]->getActions())
+        ->first(fn (mixed $action): bool => (string) $action->getName() === 'edit');
+
+    expect($editAction?->getExtraAttributes()['x-on:pointerdown'] ?? null)->toBe('close()');
+});
+
+it('closes the history dropdown before removing a record', function () {
+    $record = [
+        'id' => 'history-4',
+        'sort_order' => 1,
+        'page_number' => 12,
+        'surah_number' => 1,
+        'source' => 'search-result',
+        'tags' => [],
+        'note' => '',
+    ];
+
+    $component = livewire(HistoryManagerTable::class)
+        ->call('syncFromClient', records: [$record])
+        ->instance();
+
+    $removeAction = collect($component->getTable()->getRecordActions()[0]->getActions())
+        ->first(fn (mixed $action): bool => (string) $action->getName() === 'remove');
+
+    expect($removeAction?->getExtraAttributes()['x-on:pointerdown'] ?? null)->toBe('close()');
 });

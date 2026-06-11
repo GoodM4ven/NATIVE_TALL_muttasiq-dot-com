@@ -183,6 +183,7 @@ export const createSearchAndModalsStreamAndResultsModule = (deps) => {
             this.search.lastCompletedNormalizedQuery = '';
             this.search.streamHasUpdates = false;
             this.setSearchResults([], { immediate: true });
+            this.clearSearchModalCloseSyncQueue();
 
             if (normalized === '' || normalized.length < this.search.minQueryLength) {
                 this.search.isLoading = false;
@@ -190,6 +191,10 @@ export const createSearchAndModalsStreamAndResultsModule = (deps) => {
                 return;
             }
 
+            this._searchModalCloseProtectionUntil = Math.max(
+                this._searchModalCloseProtectionUntil,
+                Date.now() + Math.max(900, modalCloseTransitionDelayMs + 320),
+            );
             this.search.isLoading = true;
         },
 
@@ -1013,9 +1018,8 @@ export const createSearchAndModalsStreamAndResultsModule = (deps) => {
                 });
             });
 
-            return this.normalizeSearchResults(
-                this.dedupeSearchResultsByDestination(Array.from(mergedByKey.values())),
-            );
+            // Keep distinct stage buckets visible even when they point at the same verse.
+            return this.normalizeSearchResults(Array.from(mergedByKey.values()));
         },
 
         searchResultsSelectElement() {
@@ -1054,6 +1058,11 @@ export const createSearchAndModalsStreamAndResultsModule = (deps) => {
 
         encodeFilamentSearchSelectionPayload(result, query = '') {
             const payload = {
+                search_result_key: this.searchResultKey(result),
+                match_strategy:
+                    String(result?.match_strategy ?? '')
+                        .trim()
+                        .toLowerCase() || null,
                 verse_id: Math.max(0, Math.trunc(Number(result?.id ?? 0))),
                 page_number: Math.max(1, Math.trunc(Number(result?.page_number ?? 1))),
                 surah_number: Math.max(1, Math.trunc(Number(result?.surah_number ?? 1))),

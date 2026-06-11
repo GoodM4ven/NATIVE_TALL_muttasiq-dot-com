@@ -51,7 +51,13 @@ https://muttasiq.com
 
 <br>
 
-(الصور قريبًا إن شاء الله...)
+<img src="public/docs/updates/images/v-1-2-0/ios/quran-app-reader-search-result-highlight.webp" alt="Quran app reader search result highlight - light mode" height="400"/>
+<span>&nbsp;&nbsp;</span>
+<img src=".assets/images/screenshots/ios/quran-app-dynamic-scaling.png" alt="Quran app reader dynamic font sizing - light mode" height="400"/>
+<span>&nbsp;&nbsp;</span>
+<img src=".assets/images/screenshots/ios/quran-app-reader-dark.png" alt="Quran app reader with interactibles - dark mode" height="400"/>
+<span>&nbsp;&nbsp;</span>
+<img src=".assets/images/screenshots/ios/control-panel-settings-light.png" alt="Control panel settings on mobile - light mode" height="400"/>
 
 
 ## المهام
@@ -89,7 +95,9 @@ https://muttasiq.com
 - ~~متابعة الوِرد اليومي من القرآن الكريم~~
 - ~~(الجوال) القدرة على التنقل بين صفحات المصحف عن طريق أزرار صوت الجهاز~~
 
-### التحديث الثاني
+<hr>
+
+### تحديثات قادمة (في حالة دعم المشروع إن شاء الله)
 - التاريخ الهجري
 - الصلوات وتذكيراتها
 - قضاء الصلوات أيّام ضلال المرء
@@ -97,16 +105,12 @@ https://muttasiq.com
 - أذكار يوم الجمعة
 - نمط الأذكار المطلق
 - تذكير بالورد اليومي للقرآن
-
-### التحديث الثالث
 - صِلة، لصلة الأرحام
 - سُنّة الاستهام
 - سنن اليوم والليلة
 - اصطياد كل السنن بآثارها، ولو مرّة في العمر
 - صحيح الأدعية، مُقسَّمَة بأنواع الاحتياجات
 - أسماء الله الحسنى
-
-### التحديث الرابع
 - علم الحديث: إسناد ورواة ومتون
 - إمكانية جرد الآثار باتساق
 - (والمزيد، إن شاء الله...)

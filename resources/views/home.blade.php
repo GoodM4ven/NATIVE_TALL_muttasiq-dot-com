@@ -9,12 +9,13 @@
             lock: null,
             isControlPanelOpen: false,
             isAthkarManagerOpen: false,
+            isIntroductionVideoOpen: false,
             isQuranReaderCalibrating: false,
             isQuranReaderFontScaleOverlayOpen: false,
             isAthkarReaderFontScaleOverlayOpen: false,
             isNativeRuntime: @js(is_platform('native')),
             activeView: $persist('main-menu').as('app-active-view'),
-            currentAppVersion: @js(\App\Models\Setting::appVersion()),
+            currentAppVersion: @js($currentAppVersion),
             actionStatePulseToken: 0,
             controlPanelGateReturnTimerId: null,
             quranBootstrap: {
@@ -596,6 +597,8 @@
             }),
         }"
         x-on:switch-view.window="applyViewState($event.detail?.to)"
+        x-on:introduction-video-modal-opened.window="isIntroductionVideoOpen = true"
+        x-on:introduction-video-modal-closed.window="isIntroductionVideoOpen = false"
         x-on:muttasiq-app-version-major-minor-reset.window="handleAppVersionMajorMinorReset($event.detail ?? {})"
         x-on:request-open-control-panel-modal.window="requestControlPanelOpenFromAnywhere($event.detail ?? {})"
         x-on:control-panel-updated.window="handleControlPanelSaveGateReturn($event.detail ?? {})"
@@ -612,17 +615,17 @@
         @php
             $quranReaderViewsCondition =
                 'views[`quran-app-tilawa`].isOpen || views[`quran-app-hifth`].isOpen || views[`quran-app-tadabbur`].isOpen';
-            $returnButtonShowCondition = is_platform('mobile')
+            $returnButtonShowCondition = is_platform('android')
                 ? 'false'
                 : 'views[`athkar-app-gate`].isReaderVisible || ' . $quranReaderViewsCondition;
-            $returnButtonClickCallback = is_platform('mobile')
+            $returnButtonClickCallback = is_platform('android')
                 ? 'if (' .
                     $quranReaderViewsCondition .
                     ') { window.dispatchEvent(new CustomEvent(`quran-reader-go-gate`)); }'
                 : 'if (views[`athkar-app-gate`].isReaderVisible) { $dispatch(`close-athkar-mode`); return; } if (' .
                     $quranReaderViewsCondition .
                     ') { window.dispatchEvent(new CustomEvent(`quran-reader-go-gate`)); }';
-            $homeButtonShowCondition = is_platform('mobile')
+            $homeButtonShowCondition = is_platform('android')
                 ? 'false'
                 : "!views['main-menu'].isOpen && !isControlPanelOpen && !isAthkarManagerOpen";
         @endphp
@@ -641,6 +644,7 @@
             <livewire:control-panel />
             <x-athkar-reader-font-scale-button />
             <x-quran-reader-font-scale-button />
+            <livewire:main-menu-introduction-video-button />
             @if (!is_platform('native'))
                 <x-partials.download-stack-button />
             @endif

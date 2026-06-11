@@ -44,6 +44,8 @@ class DownloadNativeQuranSnapshot implements ShouldQueue
             return;
         }
 
+        $this->assertInternetConnection($preparationService);
+
         $preparationService->markRunning(progressPercent: 1, message: arabic_text('يجري تنزيل بيانات القرآن...'));
 
         $temporaryGzipPath = null;
@@ -51,7 +53,7 @@ class DownloadNativeQuranSnapshot implements ShouldQueue
 
         try {
             $metadataUrl = $this->metadataEndpointUrl();
-            $metadata = $this->fetchRemoteSnapshotMetadata($metadataUrl);
+            $metadata = $this->fetchRemoteSnapshotMetadata($metadataUrl, $preparationService);
             $snapshotInfo = $metadata['snapshot'] ?? null;
 
             if (! is_array($snapshotInfo)) {
@@ -70,6 +72,8 @@ class DownloadNativeQuranSnapshot implements ShouldQueue
 
             File::delete($temporaryGzipPath);
             File::delete($temporarySnapshotPath);
+
+            $this->assertInternetConnection($preparationService);
 
             $this->downloadSnapshotArchive(
                 $downloadUrl,
@@ -100,7 +104,11 @@ class DownloadNativeQuranSnapshot implements ShouldQueue
 
             $preparationService->markReady();
         } catch (Throwable $throwable) {
-            $preparationService->markFailed($throwable);
+            if ($preparationService->isInternetConnected() === false) {
+                $preparationService->markNoInternetConnection();
+            } else {
+                $preparationService->markFailed($throwable);
+            }
 
             throw $throwable;
         } finally {
@@ -116,15 +124,27 @@ class DownloadNativeQuranSnapshot implements ShouldQueue
 
     public function failed(?Throwable $exception): void
     {
-        app(NativeQuranPreparationService::class)->markFailed($exception);
+        $preparationService = app(NativeQuranPreparationService::class);
+
+        if ($preparationService->isInternetConnected() === false) {
+            $preparationService->markNoInternetConnection();
+
+            return;
+        }
+
+        $preparationService->markFailed($exception);
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function fetchRemoteSnapshotMetadata(string $metadataUrl): array
-    {
+    private function fetchRemoteSnapshotMetadata(
+        string $metadataUrl,
+        NativeQuranPreparationService $preparationService,
+    ): array {
         try {
+            $this->assertInternetConnection($preparationService);
+
             /** @var Response $response */
             $response = Http::acceptJson()
                 ->connectTimeout(3)
@@ -166,6 +186,8 @@ class DownloadNativeQuranSnapshot implements ShouldQueue
         NativeQuranPreparationService $preparationService,
     ): void {
         try {
+            $this->assertInternetConnection($preparationService);
+
             /** @var Response $response */
             $response = Http::withOptions([
                 'sink' => $destinationPath,
@@ -173,6 +195,10 @@ class DownloadNativeQuranSnapshot implements ShouldQueue
                     int|float $downloadTotal,
                     int|float $downloadedBytes,
                 ) use ($expectedSizeBytes, $preparationService): void {
+                    if ($preparationService->isInternetConnected() === false) {
+                        throw new RuntimeException($preparationService->offlineFailureMessage());
+                    }
+
                     $knownTotalBytes = $downloadTotal > 0
                         ? (int) round($downloadTotal)
                         : ($expectedSizeBytes > 0 ? $expectedSizeBytes : null);
@@ -191,7 +217,7 @@ class DownloadNativeQuranSnapshot implements ShouldQueue
                 },
             ])
                 ->connectTimeout(6)
-                ->timeout(900)
+                ->timeout(180)
                 ->retry(2, 1000)
                 ->get($downloadUrl);
         } catch (Throwable $throwable) {
@@ -239,6 +265,13 @@ class DownloadNativeQuranSnapshot implements ShouldQueue
     private function isValidHttpUrl(string $url): bool
     {
         return $url !== '' && preg_match('/^https?:\/\//i', $url) === 1;
+    }
+
+    private function assertInternetConnection(NativeQuranPreparationService $preparationService): void
+    {
+        if ($preparationService->isInternetConnected() === false) {
+            throw new RuntimeException($preparationService->offlineFailureMessage());
+        }
     }
 
     private function downloadUrlFromLocalMetadataEndpoint(string $metadataUrl): ?string

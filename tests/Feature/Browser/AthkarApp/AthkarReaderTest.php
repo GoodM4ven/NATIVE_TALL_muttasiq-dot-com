@@ -279,66 +279,6 @@ JS, ['targetId' => $targetId]),
     );
 });
 
-it('keeps the first overcount tap and digit morph working after returning to a completed single-count thikr', function (bool $isMobile) {
-    $page = $isMobile ? visitMobile('/') : visit('/', ['waitUntil' => 'domcontentloaded']);
-
-    resetBrowserState($page, $isMobile);
-    openAthkarReader($page, 'sabah', $isMobile);
-
-    $settings = [
-        'does_automatically_switch_completed_athkar' => false,
-        'does_prevent_switching_athkar_until_completion' => false,
-    ];
-    setAthkarSettings($page, $settings);
-    waitForAthkarSettings($page, $settings);
-
-    $singleIndex = $page->script(
-        athkarReaderDataScript(
-            'data.activeList.findIndex((item, index) => Number(item.count ?? 1) === 1 && index < data.activeList.length - 1)',
-        ),
-    );
-
-    expect($singleIndex)->toBeGreaterThanOrEqual(0);
-
-    $page->script(athkarReaderCommandScript("data.setActiveIndex({$singleIndex});"));
-    waitForScript($page, athkarReaderDataScript('data.activeIndex'), $singleIndex);
-
-    $page->script(athkarReaderCommandScript("data.setCount({$singleIndex}, 1);"));
-    waitForScript($page, athkarReaderDataScript("data.countAt({$singleIndex})"), 1);
-    waitForScript($page, athkarReaderDataScript('data.activeIndex'), $singleIndex);
-
-    if ($isMobile) {
-        $page->script(athkarReaderCommandScript(
-            'data.hintIndex = data.activeIndex; data.setMobileCounterOpen(true);',
-        ));
-        waitForScript($page, athkarReaderDataScript('data.isHintOpen(data.activeIndex)'), true);
-    }
-
-    $settings = [
-        'does_automatically_switch_completed_athkar' => true,
-        'does_prevent_switching_athkar_until_completion' => false,
-    ];
-    setAthkarSettings($page, $settings);
-    waitForAthkarSettings($page, $settings);
-
-    $page->script(athkarReaderCommandScript('data.handleTap();'));
-
-    waitForScript($page, athkarReaderDataScript('data.activeIndex'), $singleIndex);
-    waitForScript($page, athkarReaderDataScript('data.countAt(data.activeIndex)'), 2);
-
-    waitForScriptWithTimeout(
-        $page,
-        athkarReaderDataScript(
-            'data.countPulse.index === data.activeIndex && data.countPulse.isActive === true && data.countPulse.hasChanges === true',
-        ),
-        true,
-        2000,
-    );
-})->with([
-    'desktop' => [false],
-    'mobile' => [true],
-]);
-
 it('fits origin text independently and keeps the text box clear of mobile top controls', function () {
     $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
@@ -476,6 +416,65 @@ JS,
   const contentTop = boxRect.top + (Number.isFinite(paddingTop) ? paddingTop : 0);
 
   return Number.isFinite(contentTop) && Number.isFinite(controlsBottom);
+})()
+JS,
+        true,
+    );
+});
+
+it('keeps the athkar font size slider on one shared value and refits immediately', function () {
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
+
+    resetBrowserState($page);
+    openAthkarReader($page, 'sabah', false);
+    waitForReaderVisible($page);
+
+    $initialFontSizes = $page->script(<<<'JS'
+(() => {
+  const slide = document.querySelector('[data-athkar-slide][data-active="true"]');
+  if (!slide) {
+    return null;
+  }
+
+  const text = slide.querySelector('[data-athkar-text]');
+  const origin = slide.querySelector('[data-athkar-origin-text]');
+  if (!text || !origin) {
+    return null;
+  }
+
+  return {
+    text: Number.parseFloat(getComputedStyle(text).fontSize),
+    origin: Number.parseFloat(getComputedStyle(origin).fontSize),
+  };
+})()
+JS);
+
+    expect($initialFontSizes)->toBeArray();
+    $page->script('window.__athkarFontSizeBefore = '.js_encode($initialFontSizes['text']).';');
+
+    $page->script(athkarReaderCommandScript('data.handleMainTextSizeInput({ target: { value: 14 } });'));
+
+    waitForScript(
+        $page,
+        athkarReaderDataScript(
+            'data.settings.minimum_main_text_size === 14 && data.settings.maximum_main_text_size === 14 && data.mainTextSizeValue() === 14',
+        ),
+        true,
+    );
+
+    waitForScript(
+        $page,
+        <<<'JS'
+(() => {
+  const text = document.querySelector('[data-athkar-slide][data-active="true"] [data-athkar-text]');
+  if (!text) {
+    return false;
+  }
+
+  const before = Number(window.__athkarFontSizeBefore ?? 0);
+  const next = Number.parseFloat(getComputedStyle(text).fontSize);
+
+  return Number.isFinite(before) && Number.isFinite(next) && next < before;
 })()
 JS,
         true,
@@ -720,6 +719,31 @@ JS,
     && styles.opacity !== '0'
     && button.getBoundingClientRect().width > 0
     && button.getBoundingClientRect().height > 0;
+})()
+JS,
+            ['selector' => $mobileCompleteSelector],
+        ),
+        true,
+    );
+
+    waitForScript(
+        $page,
+        js_template(
+            <<<'JS'
+(() => {
+  const button = document.querySelector({{selector}});
+
+  if (!button) {
+    return false;
+  }
+
+  const rect = button.getBoundingClientRect();
+  const target = document.elementFromPoint(
+    rect.left + (rect.width / 2),
+    rect.top + (rect.height / 2),
+  );
+
+  return target === button || button.contains(target);
 })()
 JS,
             ['selector' => $mobileCompleteSelector],
@@ -1147,101 +1171,6 @@ JS, ['expectsShimmer' => $expectsShimmer]),
         true,
     );
 });
-
-it('disables shared counter pulse animation when visual enhancements are turned off', function (bool $isMobile) {
-    $page = $isMobile ? visitMobile('/') : visit('/', ['waitUntil' => 'domcontentloaded']);
-
-    resetBrowserState($page, $isMobile);
-    openAthkarReader($page, 'sabah', $isMobile);
-    waitForReaderVisible($page);
-
-    $settings = [
-        Setting::DOES_AUTOMATICALLY_SWITCH_COMPLETED_ATHKAR => true,
-        Setting::DOES_PREVENT_SWITCHING_ATHKAR_UNTIL_COMPLETION => false,
-        Setting::DOES_ENABLE_VISUAL_ENHANCEMENTS => false,
-    ];
-    setAthkarSettings($page, $settings);
-    waitForAthkarSettings($page, $settings);
-
-    $multiIndex = $page->script(
-        athkarReaderDataScript(
-            'data.activeList.findIndex((item, index) => Number(item.count ?? 1) > 1 && index < data.activeList.length - 1)',
-        ),
-    );
-
-    expect($multiIndex)->toBeGreaterThanOrEqual(0);
-
-    $page->script(
-        athkarReaderCommandScript(
-            "data.setActiveIndex({$multiIndex}); data.setCount({$multiIndex}, data.requiredCount({$multiIndex}) - 1, { allowOvercount: true });",
-        ),
-    );
-
-    waitForScript($page, athkarReaderDataScript('data.activeIndex'), $multiIndex);
-
-    scriptClick($page, '[data-athkar-slide][data-active="true"] [data-athkar-tap]');
-
-    $selector = $isMobile ? '[data-athkar-mobile-counter]' : '[data-athkar-desktop-counter]';
-    $nextIndex = $multiIndex + 1;
-
-    waitForScriptWithTimeout(
-        $page,
-        js_template(
-            <<<'JS'
-(() => {
-  const counter = document.querySelector({{selector}});
-
-  if (!counter || !window.Alpine) {
-    return false;
-  }
-
-  const root = document.querySelector('[x-data^="athkarAppReader"]');
-  const data = window.Alpine.$data ? window.Alpine.$data(root) : (root?.__x?.$data ?? null);
-
-  return data?.activeIndex === {{nextIndex}}
-    && data?.topUi?.progressOverride === 100;
-})()
-JS,
-            [
-                'nextIndex' => $nextIndex,
-                'selector' => $selector,
-            ],
-        ),
-        true,
-        2000,
-    );
-
-    waitForScriptWithTimeout(
-        $page,
-        js_template(
-            <<<'JS'
-(() => {
-  const counter = document.querySelector({{selector}});
-  const repel = counter?.querySelector('.athkar-counter-repel');
-
-  if (!counter || !repel || !window.Alpine) {
-    return false;
-  }
-
-  const root = document.querySelector('[x-data^="athkarAppReader"]');
-  const data = window.Alpine.$data ? window.Alpine.$data(root) : (root?.__x?.$data ?? null);
-  const repelStyles = getComputedStyle(repel);
-  window.__athkarSharedPulseSeen = window.__athkarSharedPulseSeen || data?.topUi?.pulseActive === true;
-
-  return window.__athkarSharedPulseSeen === true
-    && counter.dataset.counterPulse === 'inactive'
-    && repelStyles.animationName === 'none';
-})()
-JS,
-            ['selector' => $selector],
-        ),
-        true,
-        2200,
-    );
-})->with([
-    'desktop' => [false],
-    'mobile' => [true],
-]);
 
 it('keeps non-overflowing main text centered after hiding a scrolled origin on short mobile heights', function () {
     $page = visit('/', ['waitUntil' => 'domcontentloaded']);

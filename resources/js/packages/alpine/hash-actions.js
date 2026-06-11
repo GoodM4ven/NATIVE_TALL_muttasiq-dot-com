@@ -425,8 +425,20 @@ document.addEventListener('alpine:init', () => {
 
         if (modalId !== '') {
             const payload = { id: modalId };
-            window.dispatchEvent(new CustomEvent('close-modal-quietly', { detail: payload }));
-            window.dispatchEvent(new CustomEvent('close-modal', { detail: payload }));
+            document.dispatchEvent(
+                new CustomEvent('close-modal-quietly', {
+                    bubbles: true,
+                    composed: true,
+                    detail: payload,
+                }),
+            );
+            document.dispatchEvent(
+                new CustomEvent('close-modal', {
+                    bubbles: true,
+                    composed: true,
+                    detail: payload,
+                }),
+            );
 
             return true;
         }

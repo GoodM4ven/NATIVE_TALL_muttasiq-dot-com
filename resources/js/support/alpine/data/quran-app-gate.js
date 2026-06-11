@@ -563,6 +563,14 @@ document.addEventListener('alpine:init', () => {
         isModeLocked(mode) {
             return !this.isModeAvailable(mode);
         },
+        shouldShowAvailableModePrompt(mode) {
+            return (
+                mode === 'tilawa' &&
+                this.hasTouchInput() &&
+                this.isModeAvailable(mode) &&
+                this.isModeActive(mode)
+            );
+        },
         modeForUiState() {
             if (this.hasTouchInput() && this.isTouchPointerActive && this.projectedMode) {
                 return this.projectedMode;

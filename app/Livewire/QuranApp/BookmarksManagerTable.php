@@ -161,6 +161,9 @@ class BookmarksManagerTable extends Component implements HasActions, HasSchemas,
                     Action::make('edit')
                         ->label(arabic_text('تعديل'))
                         ->icon('heroicon-s-pencil-square')
+                        ->extraAttributes([
+                            'x-on:pointerdown' => 'close()',
+                        ])
                         ->modalSubmitActionLabel(arabic_text('تعديل'))
                         ->modalSubmitAction(fn (Action $action): Action => $action->icon('heroicon-o-pencil-square'))
                         ->fillForm(fn (mixed $record): array => [
@@ -209,6 +212,9 @@ class BookmarksManagerTable extends Component implements HasActions, HasSchemas,
                         ->icon('heroicon-s-arrow-path')
                         ->color('warning')
                         ->requiresConfirmation()
+                        ->extraAttributes([
+                            'x-on:pointerdown' => 'close()',
+                        ])
                         ->modalHeading(arabic_text('تأكيد استبدال الصفحة'))
                         ->modalDescription(arabic_text('سيتم استبدال الصفحة المحفوظة لهذه العلامة بالصفحة الحالية.'))
                         ->modalSubmitActionLabel(arabic_text('استبدال الصفحة'))
@@ -221,6 +227,9 @@ class BookmarksManagerTable extends Component implements HasActions, HasSchemas,
                         ->color('danger')
                         ->requiresConfirmation()
                         ->icon('heroicon-o-x-mark')
+                        ->extraAttributes([
+                            'x-on:pointerdown' => 'close()',
+                        ])
                         ->action(function (mixed $record): void {
                             $recordId = trim((string) ($this->resolveTableRecord($record)['id'] ?? ''));
 

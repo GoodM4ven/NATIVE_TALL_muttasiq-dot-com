@@ -280,6 +280,19 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             this._searchNavigationInFlight = false;
             this._lastKnownModalOpenState = true;
             this._skipNextSearchModalCloseLayout = false;
+            this.clearSearchModalCloseSyncQueue();
+            this._searchModalCloseProtectionUntil = Math.max(
+                this._searchModalCloseProtectionUntil,
+                Date.now() +
+                    Math.max(
+                        modalLifecycleSuppressionDurationMs,
+                        postModalFitRevealSettleDelayMs + 640,
+                    ),
+            );
+            if (this._searchModalCloseDebounceTimer !== null) {
+                clearTimeout(this._searchModalCloseDebounceTimer);
+                this._searchModalCloseDebounceTimer = null;
+            }
             this.refreshSurahTriggerCaption(false);
             this.dispatchManagerModalsVisibilityState();
 
@@ -386,8 +399,12 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             this._lastKnownModalOpenState = false;
             this.searchActionModalId = '';
             this.search.query = '';
+            this.search.streamHasUpdates = false;
             this.setSearchResults([], { immediate: true });
             this.search.isLoading = false;
+            this.search.lastResultsUpdatedAt = 0;
+            this._searchModalCloseProtectionUntil = 0;
+            this.clearSearchModalCloseSyncQueue();
             this.dispatchManagerModalsVisibilityState();
 
             if (this._searchModalCloseDebounceTimer !== null) {
@@ -435,8 +452,10 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             const closeEventName = quietly ? 'close-modal-quietly' : 'close-modal';
 
             for (const modalId of normalizedModalIds) {
-                window.dispatchEvent(
+                document.dispatchEvent(
                     new CustomEvent(closeEventName, {
+                        bubbles: true,
+                        composed: true,
                         detail: {
                             id: modalId,
                         },
@@ -471,64 +490,80 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
         },
 
         async requestSearchModalClose({ skipLayout = false } = {}) {
-            if (skipLayout) {
-                this._skipNextSearchModalCloseLayout = true;
-            }
+            this._searchModalCloseRequested = true;
 
-            const shouldAttemptLivewireUnmount = !Boolean(this._searchNavigationInFlight);
-            const searchModalCloseTargetId = this.resolveSearchModalCloseTargetId();
-            let didCloseSearchModal = await this.requestModalCloseByKnownIds(
-                [
-                    searchModalCloseTargetId,
-                    this.searchActionModalId,
-                    this.searchModalId,
-                    this.searchModalDomId,
-                ],
-                {
-                    onFallback: () => {},
-                    isModalStillVisible: () => this.isSearchModalWindowVisible(),
-                    quietly: false,
-                    allowLivewireUnmount: shouldAttemptLivewireUnmount,
-                    forceLivewireUnmount: shouldAttemptLivewireUnmount,
-                },
-            );
-
-            if (!didCloseSearchModal && this.isSearchModalWindowVisible()) {
-                const fallbackModalId = this.resolveSearchModalCloseTargetId();
-
-                if (fallbackModalId !== '') {
-                    window.dispatchEvent(
-                        new CustomEvent('close-modal', {
-                            detail: {
-                                id: fallbackModalId,
-                            },
-                        }),
-                    );
+            try {
+                if (skipLayout) {
+                    this._skipNextSearchModalCloseLayout = true;
                 }
 
-                didCloseSearchModal = await this.waitForSearchModalToClose();
+                if (this._searchModalCloseDebounceTimer !== null) {
+                    clearTimeout(this._searchModalCloseDebounceTimer);
+                }
+
+                this._searchModalCloseDebounceTimer = window.setTimeout(
+                    () => {
+                        this._searchModalCloseDebounceTimer = null;
+                    },
+                    Math.max(240, modalCloseTransitionDelayMs + 120),
+                );
+
+                const shouldAttemptLivewireUnmount = !Boolean(this._searchNavigationInFlight);
+                const searchModalCloseTargetId = this.resolveSearchModalCloseTargetId();
+                let didCloseSearchModal = await this.requestModalCloseByKnownIds(
+                    [
+                        searchModalCloseTargetId,
+                        this.searchActionModalId,
+                        this.searchModalId,
+                        this.searchModalDomId,
+                    ],
+                    {
+                        onFallback: () => {},
+                        isModalStillVisible: () => this.isSearchModalWindowVisible(),
+                        quietly: false,
+                        allowLivewireUnmount: shouldAttemptLivewireUnmount,
+                        forceLivewireUnmount: shouldAttemptLivewireUnmount,
+                    },
+                );
+
+                if (!didCloseSearchModal && this.isSearchModalWindowVisible()) {
+                    const fallbackModalId = this.resolveSearchModalCloseTargetId();
+
+                    if (fallbackModalId !== '') {
+                        document.dispatchEvent(
+                            new CustomEvent('close-modal', {
+                                bubbles: true,
+                                composed: true,
+                                detail: {
+                                    id: fallbackModalId,
+                                },
+                            }),
+                        );
+                    }
+
+                    didCloseSearchModal = await this.waitForSearchModalToClose();
+                }
+
+                this.syncManagerModalFlagsFromVisibility();
+                const modalStillVisible = this.isSearchModalWindowVisible();
+
+                if (!modalStillVisible) {
+                    this.searchActionModalId = '';
+                    this.handleSearchModalClosed();
+
+                    return true;
+                }
+
+                if (this.search.modalOpen && modalStillVisible) {
+                    this.queueSearchModalCloseSync({ delayMs: 120 });
+
+                    return false;
+                }
+
+                return !modalStillVisible || didCloseSearchModal;
+            } finally {
+                this._searchModalCloseRequested = false;
             }
-
-            this.syncManagerModalFlagsFromVisibility();
-            const modalStillVisible = this.isSearchModalWindowVisible();
-
-            if (!modalStillVisible) {
-                this.searchActionModalId = '';
-            }
-
-            if (this.search.modalOpen && modalStillVisible) {
-                this.queueSearchModalCloseSync({ delayMs: 120 });
-
-                return false;
-            }
-
-            if (this.search.modalOpen && !modalStillVisible) {
-                this.handleSearchModalClosed();
-
-                return true;
-            }
-
-            return !modalStillVisible || didCloseSearchModal;
         },
 
         async waitForSearchModalToClose(maxAttempts = 18, delayMs = 24) {
@@ -995,11 +1030,9 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             this.search.activeSurahNumber = surahNumber;
             this.search.preserveActiveSurahOnNextOpen = true;
             const shouldUseStandardSmPlusNavigation =
-                !this.nativeRuntime &&
-                Boolean(this.$store?.bp?.is?.('sm+')) &&
-                !Boolean(this.$store?.bp?.isTablet?.());
+                !this.nativeRuntime && Boolean(this.$store?.bp?.is?.('sm+'));
             const standardSmPlusSource = 'search-standard';
-            if (shouldUseStandardSmPlusNavigation) {
+            if (!this.nativeRuntime) {
                 this.searchDestinationScaleBoostPageNumber = 0;
                 this.searchDestinationScaleBoostSource = '';
                 this.searchDestinationScaleBoostExpiresAt = 0;
@@ -1014,6 +1047,7 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                 this.cancelActiveSearchProcessing();
                 this.resetNavigationQueueForPriorityJump();
                 this.clearPendingPostModalTargetFit();
+                this.suppressSearchModalCloseSync(Math.max(900, modalCloseTransitionDelayMs + 720));
                 if (!shouldUseStandardSmPlusNavigation) {
                     this.holdPageHiddenForModalLifecycle({ animateFadeOut: false });
                     this.beginModalNavigationCloseGuard(searchModalLifecycleIds);
@@ -1051,7 +1085,19 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                         searchHighlightAyahIndex: 0,
                     });
                     await wait(24);
-                } else {
+                    const pageRevealed = await this.waitForPageRevealCycle(pageNumber, {
+                        maxAttempts: 60,
+                        delayMs: 40,
+                    });
+                    if (!pageRevealed && !this.isCurrentPageVisiblyReady()) {
+                        this._bypassNextFitCache = true;
+                        await this.layoutPageGuaranteed({
+                            revealDelayMs: 120,
+                            maxAttempts: 5,
+                            useIdleFit: false,
+                        });
+                    }
+                } else if (this.nativeRuntime) {
                     this._bypassNextFitCache = true;
                     await this.goToPageFromChevron(pageNumber, {
                         activeAyahIndex: 0,
@@ -1073,16 +1119,78 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                         maxAttempts: 5,
                         fallbackReason: 'surah-directory-post-close-visibility-recovery',
                     });
+
+                    if (!this.isCurrentPageVisiblyReady()) {
+                        this._bypassNextFitCache = true;
+                        await this.layoutPageGuaranteed({
+                            revealDelayMs: 120,
+                            maxAttempts: 5,
+                            useIdleFit: false,
+                        });
+                    }
+                } else {
+                    usedStandardSmPlusNavigation = true;
+                    await this.nextTickAsync();
+                    await this.waitForStablePageFrame({
+                        maxFrames: 18,
+                        requiredStableFrames: 3,
+                        tolerancePx: 0.8,
+                    });
+                    this._bypassNextFitCache = true;
+                    this.dispatchPageNavigationRequest(pageNumber, standardSmPlusSource, {
+                        activeAyahIndex: 0,
+                        searchHighlightAyahIndex: 0,
+                    });
+                    await wait(24);
+                    const pageRevealed = await this.waitForPageRevealCycle(pageNumber, {
+                        maxAttempts: 80,
+                        delayMs: 40,
+                    });
+                    if (!pageRevealed && !this.isCurrentPageVisiblyReady()) {
+                        this._bypassNextFitCache = true;
+                        await this.layoutPageGuaranteed({
+                            revealDelayMs: 120,
+                            maxAttempts: 5,
+                            useIdleFit: false,
+                        });
+                    }
                 }
 
+                if (this.searchNeedsInitialSelectionRecovery) {
+                    const shouldRunInitialSelectionRecovery =
+                        this.searchNeedsInitialSelectionRecovery;
+                    this.searchNeedsInitialSelectionRecovery = false;
+
+                    if (shouldRunInitialSelectionRecovery) {
+                        window.setTimeout(
+                            () => {
+                                if (
+                                    this.pageNumber !== pageNumber ||
+                                    !this.hasRenderablePage() ||
+                                    this.search.modalOpen ||
+                                    this.isSearchModalWindowVisible() ||
+                                    this.openModalCount() > 0
+                                ) {
+                                    return;
+                                }
+
+                                this._bypassNextFitCache = true;
+                                void this.layoutPageGuaranteed({
+                                    revealDelayMs: 120,
+                                    maxAttempts: 5,
+                                    useIdleFit: false,
+                                });
+                            },
+                            Math.max(120, modalCloseTransitionDelayMs + 60),
+                        );
+                    }
+                }
                 this.search.activeSurahNumber = surahNumber;
                 this.activeAyahIndex = 0;
                 this.activeWordIndex = 0;
                 this.searchHighlightedAyahIndex = 0;
                 this.activateSearchDestinationCue({
-                    source: shouldUseStandardSmPlusNavigation
-                        ? standardSmPlusSource
-                        : 'surah-directory',
+                    source: !this.nativeRuntime ? standardSmPlusSource : 'surah-directory',
                     surahNumber,
                     pageNumber,
                 });
@@ -1099,7 +1207,8 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                 if (
                     usedStandardSmPlusNavigation &&
                     this.hasRenderablePage() &&
-                    this.openModalCount() <= 0
+                    this.openModalCount() <= 0 &&
+                    !this.isCurrentPageVisiblyReady()
                 ) {
                     this.clearStaleRevealGuards();
                     this.scheduleLayout({ revealDelayMs: 96, maxAttempts: 4 });

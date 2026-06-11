@@ -142,6 +142,9 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
                     Action::make('edit')
                         ->label(arabic_text('تعديل'))
                         ->icon('heroicon-s-pencil-square')
+                        ->extraAttributes([
+                            'x-on:pointerdown' => 'close()',
+                        ])
                         ->modalSubmitActionLabel(arabic_text('تعديل'))
                         ->modalSubmitAction(fn (Action $action): Action => $action->icon('heroicon-o-pencil-square'))
                         ->fillForm(fn (mixed $record): array => [
@@ -190,6 +193,9 @@ class HistoryManagerTable extends Component implements HasActions, HasSchemas, H
                         ->icon('heroicon-o-x-mark')
                         ->color('danger')
                         ->requiresConfirmation()
+                        ->extraAttributes([
+                            'x-on:pointerdown' => 'close()',
+                        ])
                         ->action(function (mixed $record): void {
                             $recordId = trim((string) ($this->resolveTableRecord($record)['id'] ?? ''));
 

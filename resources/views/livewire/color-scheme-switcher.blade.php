@@ -7,7 +7,7 @@
     ])
     wire:ignore
     x-transition
-    x-show="!isControlPanelOpen && !isAthkarManagerOpen"
+    x-show="!isControlPanelOpen && !isAthkarManagerOpen && !isIntroductionVideoOpen"
     x-init="() => (lock = $livewireLock($wire, defaultTransitionDurationInMs, true))"
 >
     <x-action-button

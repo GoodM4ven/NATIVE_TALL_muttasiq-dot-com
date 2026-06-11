@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use App\Support\Native\NativeCachePath;
 use Illuminate\Support\Str;
 
 $isRunningInNativeRuntime = filter_var(env('NATIVEPHP_RUNNING', false), FILTER_VALIDATE_BOOL);
+$nativeCachePath = NativeCachePath::resolve();
 
 return [
 
@@ -55,8 +57,8 @@ return [
 
         'file' => [
             'driver' => 'file',
-            'path' => storage_path('framework/cache/data'),
-            'lock_path' => storage_path('framework/cache/data'),
+            'path' => $nativeCachePath,
+            'lock_path' => $nativeCachePath,
         ],
 
         'memcached' => [

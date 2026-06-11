@@ -185,6 +185,7 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
 
         setSearchResults(nextResults, { immediate = false } = {}) {
             const normalizedNextResults = this.normalizeSearchResults(nextResults);
+            const resultsUpdatedAt = Date.now();
 
             if (immediate) {
                 if (this._searchResultsLeaveTimer !== null) {
@@ -193,6 +194,7 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                 }
 
                 this.search.results = normalizedNextResults;
+                this.search.lastResultsUpdatedAt = resultsUpdatedAt;
                 this.syncSearchResultMetadata(this.search.results);
                 if (typeof this.syncFilamentSearchSelectOptionsFromResults === 'function') {
                     this.syncFilamentSearchSelectOptionsFromResults();
@@ -257,6 +259,7 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
             });
 
             this.search.results = composedResults;
+            this.search.lastResultsUpdatedAt = resultsUpdatedAt;
             this.syncSearchResultMetadata(this.search.results);
             if (typeof this.syncFilamentSearchSelectOptionsFromResults === 'function') {
                 this.syncFilamentSearchSelectOptionsFromResults();
@@ -284,10 +287,8 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
             }
 
             const stage = String(payload?.stage ?? '').trim();
-            const stageResults = Array.isArray(payload?.stage_items)
-                ? payload.stage_items.slice(0, 24)
-                : [];
-            const allResults = Array.isArray(payload?.items) ? payload.items.slice(0, 24) : [];
+            const stageResults = Array.isArray(payload?.stage_items) ? payload.stage_items : [];
+            const allResults = Array.isArray(payload?.items) ? payload.items : [];
             const hasStreamChunk = stageResults.length > 0;
 
             if (hasStreamChunk && stage !== 'complete') {
@@ -296,11 +297,17 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                     this.mergeSearchResults(this.activeSearchResults(), stageResults),
                 );
             } else if (allResults.length > 0) {
-                this.setSearchResults(
-                    this.search.streamHasUpdates
-                        ? this.mergeSearchResults(this.activeSearchResults(), allResults)
-                        : allResults,
-                );
+                if (!this.search.streamHasUpdates || stage === 'start') {
+                    this.setSearchResults(allResults);
+                } else {
+                    this.syncSearchResultMetadata(this.search.results);
+
+                    if (typeof this.syncFilamentSearchSelectOptionsFromResults === 'function') {
+                        this.syncFilamentSearchSelectOptionsFromResults();
+                    }
+
+                    this.queueSearchLeaveCleanup();
+                }
             } else if (!this.search.streamHasUpdates) {
                 this.setSearchResults([], { immediate: true });
             }
@@ -723,7 +730,23 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                 this.search.modalOpen = true;
                 this._lastKnownModalOpenState = true;
             } else if (this.search.modalOpen) {
-                this.handleSearchModalClosed();
+                const recentResultsUpdateMs =
+                    Date.now() - Number(this.search.lastResultsUpdatedAt ?? 0);
+                const shouldKeepSearchModalWarm =
+                    this._searchModalCloseRequested ||
+                    this._searchRequestInFlight ||
+                    this.search.isLoading ||
+                    Date.now() < Number(this._searchModalCloseProtectionUntil ?? 0) ||
+                    (Number.isFinite(recentResultsUpdateMs) &&
+                        recentResultsUpdateMs >= 0 &&
+                        recentResultsUpdateMs <= 650 &&
+                        Number(this.search.results?.length ?? 0) > 0);
+
+                if (shouldKeepSearchModalWarm) {
+                    this._lastKnownModalOpenState = true;
+                } else {
+                    this.handleSearchModalClosed();
+                }
             } else {
                 this._lastKnownModalOpenState = false;
             }
@@ -735,7 +758,19 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
         queueSearchModalCloseSync({ delayMs = 0 } = {}) {
             const normalizedDelayMs = Math.max(0, Math.trunc(Number(delayMs) || 0));
 
-            window.setTimeout(() => {
+            this.clearSearchModalCloseSyncQueue();
+
+            if (this.shouldDeferSearchModalClose()) {
+                return;
+            }
+
+            this._searchModalCloseSyncTimer = window.setTimeout(() => {
+                this._searchModalCloseSyncTimer = null;
+
+                if (this.shouldDeferSearchModalClose()) {
+                    return;
+                }
+
                 this.syncManagerModalFlagsFromVisibility();
 
                 const hasStaleSearchState =
@@ -747,6 +782,16 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                     return;
                 }
 
+                if (
+                    this.search.modalOpen &&
+                    (this._searchModalCloseRequested ||
+                        this._searchRequestInFlight ||
+                        this.search.isLoading ||
+                        Date.now() < Number(this._searchModalCloseProtectionUntil ?? 0))
+                ) {
+                    return;
+                }
+
                 if (!this.isSearchModalWindowVisible()) {
                     this.traceSearchModalLifecycle('closed-by-sync', {
                         delayMs: normalizedDelayMs,
@@ -754,6 +799,26 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                     this.handleSearchModalClosed();
                 }
             }, normalizedDelayMs);
+        },
+
+        clearSearchModalCloseSyncQueue() {
+            if (this._searchModalCloseSyncTimer !== null) {
+                clearTimeout(this._searchModalCloseSyncTimer);
+                this._searchModalCloseSyncTimer = null;
+            }
+        },
+
+        suppressSearchModalCloseSync(durationMs = 0) {
+            const suppressionDurationMs = Math.max(0, Math.trunc(Number(durationMs) || 0));
+
+            if (suppressionDurationMs <= 0) {
+                return;
+            }
+
+            this._searchModalCloseSyncSuppressionUntil = Math.max(
+                this._searchModalCloseSyncSuppressionUntil,
+                Date.now() + suppressionDurationMs,
+            );
         },
 
         suppressModalLifecycleEffects(
@@ -849,6 +914,16 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                 (normalizedKind === 'closing' || normalizedKind === 'closed') &&
                 !isSearchModalEvent
             ) {
+                if (
+                    this.search.modalOpen &&
+                    (this._searchModalCloseRequested ||
+                        this._searchRequestInFlight ||
+                        this.search.isLoading ||
+                        Date.now() < Number(this._searchModalCloseProtectionUntil ?? 0))
+                ) {
+                    return;
+                }
+
                 this.queueSearchModalCloseSync({
                     delayMs: normalizedKind === 'closed' ? 0 : 96,
                 });
@@ -951,6 +1026,7 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
             if (isSearchModalEvent) {
                 if (normalizedKind === 'opened') {
                     this._searchModalOpenRequestedAt = 0;
+                    this.clearSearchModalCloseSyncQueue();
                     void this.handleSearchModalOpened();
                     this.traceSearchModalLifecycle('opened', {
                         handler: 'handleSearchModalOpened',
@@ -960,6 +1036,17 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                 }
 
                 if (normalizedKind === 'closing') {
+                    if (this.shouldBlockSearchModalCloseEvent(event)) {
+                        this.clearSearchModalCloseSyncQueue();
+                        this.traceSearchModalLifecycle('close-blocked', {
+                            eventType: String(event?.type ?? ''),
+                            modalId: eventModalId,
+                            reason: 'search-modal-closing-blocked',
+                        });
+
+                        return;
+                    }
+
                     this.cancelActiveSearchProcessing();
                     this.queueSearchModalCloseSync({ delayMs: 96 });
                     this.traceSearchModalLifecycle('closing');
@@ -968,8 +1055,20 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                 }
 
                 if (normalizedKind === 'closed') {
+                    if (this.shouldBlockSearchModalCloseEvent(event)) {
+                        this.clearSearchModalCloseSyncQueue();
+                        this.traceSearchModalLifecycle('close-blocked', {
+                            eventType: String(event?.type ?? ''),
+                            modalId: eventModalId,
+                            reason: 'search-modal-closed-blocked',
+                        });
+
+                        return;
+                    }
+
                     this._searchModalOpenRequestedAt = 0;
                     this.cancelActiveSearchProcessing();
+                    this.clearSearchModalCloseSyncQueue();
                     this.handleSearchModalClosed();
                     this.traceSearchModalLifecycle('closed', {
                         handler: 'handleSearchModalClosed',
@@ -980,9 +1079,9 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                 this.search.modalOpen &&
                 !this.isSearchModalWindowVisible()
             ) {
-                this.search.modalOpen = false;
-                this._lastKnownModalOpenState = false;
-                this.dispatchManagerModalsVisibilityState();
+                this.queueSearchModalCloseSync({
+                    delayMs: normalizedKind === 'closed' ? 0 : 96,
+                });
             }
 
             if (normalizedKind === 'closed' && this.openModalCount() <= 0) {
@@ -1000,6 +1099,51 @@ export const createSearchAndModalsLifecycleAndStateModule = (deps) => {
                     });
                 }
             }
+        },
+
+        shouldDeferSearchModalClose() {
+            return Date.now() < Number(this._searchModalCloseSyncSuppressionUntil ?? 0);
+        },
+
+        shouldBlockSearchModalCloseEvent(event) {
+            if (this._searchModalCloseRequested) {
+                return false;
+            }
+
+            if (!this.search.modalOpen) {
+                return false;
+            }
+
+            if (this.shouldDeferSearchModalClose()) {
+                return true;
+            }
+
+            if (this._searchRequestInFlight || this.search.isLoading) {
+                return true;
+            }
+
+            const protectionUntil = Math.max(
+                0,
+                Math.trunc(Number(this._searchModalCloseProtectionUntil ?? 0)),
+            );
+
+            if (Date.now() < protectionUntil) {
+                return true;
+            }
+
+            const recentResultsUpdateMs =
+                Date.now() - Number(this.search.lastResultsUpdatedAt ?? 0);
+
+            if (
+                Number.isFinite(recentResultsUpdateMs) &&
+                recentResultsUpdateMs >= 0 &&
+                recentResultsUpdateMs <= 650 &&
+                Number(this.search.results?.length ?? 0) > 0
+            ) {
+                return true;
+            }
+
+            return false;
         },
     };
 };

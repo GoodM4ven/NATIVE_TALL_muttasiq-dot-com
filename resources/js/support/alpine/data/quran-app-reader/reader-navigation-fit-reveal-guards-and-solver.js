@@ -103,6 +103,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
         swipeActivationThresholdPx,
         swipeRevealWatchdogDelayMs,
         uniqueLocalId,
+        resolvePageMotionExitDelayMs,
         wait,
         wirdCompletionVisibleDurationMs,
         wirdDailyKhatmatTargetMax,
@@ -300,6 +301,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 modalLifecycleSettling: this._isModalLifecycleSettling,
                 activeModalCount: this._activeModalIds.size,
                 openModalCount: this.openModalCount(),
+                modalResumeTimerActive: this._modalLayoutResumeTimer !== null,
                 ...payload,
             };
 
@@ -473,6 +475,9 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             this._activeModalIds.clear();
             this._modalLifecycleFadeOutPending = false;
             this.isTransitioningOutPage = false;
+            this.pageMotionLeavingClass = '';
+            this.flushQueuedReaderPanelLayoutRefresh();
+            this._pendingMotionDirection = null;
             this.isFittingPage = false;
             this._lastPageRevealAt = Date.now();
             this._revealBlockedSinceAt = 0;
@@ -941,7 +946,7 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             }
         },
 
-        holdPageHiddenForModalLifecycle({
+        async holdPageHiddenForModalLifecycle({
             waitForModalLifecycle = true,
             animateFadeOut = true,
         } = {}) {
@@ -971,22 +976,40 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 this._modalLifecycleFadeOutPending = true;
                 this.isTransitioningOutPage = true;
 
-                this._modalLifecycleFadeOutTimer = window.setTimeout(() => {
-                    this._modalLifecycleFadeOutTimer = null;
+                await this.nextTickAsync();
+                const pageLinesElement = this.$refs?.pageFrame?.querySelector?.(
+                    ".quran-page-lines[data-fit-state='fading-out']",
+                );
 
-                    if (!this._modalLifecycleFadeOutPending) {
-                        return;
-                    }
+                this._modalLifecycleFadeOutTimer = window.setTimeout(
+                    () => {
+                        this._modalLifecycleFadeOutTimer = null;
 
-                    this._modalLifecycleFadeOutPending = false;
-                    this.isTransitioningOutPage = false;
-                }, 130);
+                        if (!this._modalLifecycleFadeOutPending) {
+                            return;
+                        }
+
+                        this._modalLifecycleFadeOutPending = false;
+                        this.isTransitioningOutPage = false;
+                        this.pageMotionLeavingClass = '';
+                        this.flushQueuedReaderPanelLayoutRefresh();
+                    },
+                    resolvePageMotionExitDelayMs({
+                        elements: [this.$refs?.pageSurface, pageLinesElement],
+                        minimumDelayMs: 130,
+                        bufferMs: 0,
+                    }),
+                );
             }
 
             if (!waitForModalLifecycle) {
                 return;
             }
 
+            this.traceReaderReveal('hold-page-hidden-for-modal-lifecycle', {
+                animateFadeOut,
+                shouldAnimateFadeOut,
+            });
             this._isModalLifecycleSettling = true;
             this.clearLayoutTimers();
             this.beginLayoutCycle();
@@ -1002,15 +1025,26 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 this._modalLayoutResumeTimer = null;
             }
 
+            this.traceReaderReveal('schedule-layout-after-modal-lifecycle', { delayMs });
+
             this._modalLayoutResumeTimer = window.setTimeout(
                 () => {
                     this._modalLayoutResumeTimer = null;
+
+                    if (this._modalLifecycleFadeOutTimer !== null) {
+                        clearTimeout(this._modalLifecycleFadeOutTimer);
+                        this._modalLifecycleFadeOutTimer = null;
+                    }
+
                     this._isModalLifecycleSettling = false;
                     this._modalLifecycleFadeOutPending = false;
+                    this.isTransitioningOutPage = false;
                     this.clearModalPreOpenPending();
                     this.clearLayoutTimers();
                     this.isFittingPage = true;
                     this._bypassNextFitCache = true;
+
+                    this.traceReaderReveal('modal-lifecycle-recovery-start');
 
                     void this.layoutPageGuaranteed({
                         revealDelayMs: 120,
@@ -1327,6 +1361,11 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             const normalizedAttempt = Math.max(0, Math.trunc(Number(attempt) || 0));
             const remainingModalCount = this.openModalCount();
 
+            this.traceReaderReveal('resume-layout-when-no-open-modals', {
+                attempt: normalizedAttempt,
+                remainingModalCount,
+            });
+
             if (remainingModalCount <= 0) {
                 this.recoverStaleModalLifecycleState();
                 this.scheduleLayoutAfterModalLifecycle(120);
@@ -1337,6 +1376,9 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             this._isModalLifecycleSettling = true;
 
             if (normalizedAttempt >= 24) {
+                this.traceReaderReveal('resume-layout-when-no-open-modals-exhausted', {
+                    remainingModalCount,
+                });
                 this._activeModalIds.clear();
                 this._isModalLifecycleSettling = false;
                 this.scheduleLayout({ revealDelayMs: 140 });
@@ -1355,6 +1397,16 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             const hasTrackedModalId = modalId !== '' && this._activeModalIds.has(modalId);
             const hasTrackedModalState =
                 this._activeModalIds.size > 0 || this._isModalLifecycleSettling;
+
+            this.traceReaderReveal('track-modal-lifecycle', {
+                kind,
+                modalId,
+                openModalCount,
+                hasTrackedModalId,
+                hasTrackedModalState,
+                isModalLifecycleSettling: this._isModalLifecycleSettling,
+                activeModalCount: this._activeModalIds.size,
+            });
             const isLateCloseLikeEvent = kind === 'closing' || kind === 'closed';
             const shouldKeepHiddenForModalNavigation = Boolean(
                 this._modalNavigationCloseGuardActive,
@@ -1435,17 +1487,41 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                     return;
                 }
 
-                if (modalId !== '' && !hasTrackedModalId && openModalCount <= 0) {
+                if (
+                    modalId !== '' &&
+                    !hasTrackedModalId &&
+                    openModalCount <= 0 &&
+                    !this.isTransitioningOutPage
+                ) {
                     return;
                 }
             }
 
             if (kind === 'closed') {
                 if (modalId === '' && openModalCount <= 0 && !hasTrackedModalState) {
+                    this.traceReaderReveal('track-modal-lifecycle-closed-early-return', {
+                        reason: 'empty-id-no-tracked-state',
+                        modalId,
+                        openModalCount,
+                        hasTrackedModalState,
+                    });
+
                     return;
                 }
 
-                if (modalId !== '' && !hasTrackedModalId && openModalCount <= 0) {
+                if (
+                    modalId !== '' &&
+                    !hasTrackedModalId &&
+                    openModalCount <= 0 &&
+                    !this.isTransitioningOutPage
+                ) {
+                    this.traceReaderReveal('track-modal-lifecycle-closed-early-return', {
+                        reason: 'id-not-tracked',
+                        modalId,
+                        openModalCount,
+                        hasTrackedModalId,
+                    });
+
                     return;
                 }
             }
@@ -1484,7 +1560,8 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                     modalId === '' ||
                     this._activeModalIds.has(modalId) ||
                     openModalCount > 0 ||
-                    shouldKeepHiddenForModalNavigation
+                    shouldKeepHiddenForModalNavigation ||
+                    this.isTransitioningOutPage
                 ) {
                     if (this.hasRenderablePage()) {
                         this._bypassNextFitCache = true;
@@ -1520,6 +1597,36 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                     this.recoverStaleModalLifecycleState();
                     this.syncReaderChromeDocumentClass();
                 }, 320);
+
+                window.setTimeout(() => {
+                    if (!this.hasRenderablePage()) {
+                        return;
+                    }
+
+                    if (this.isCurrentPageVisiblyReady()) {
+                        return;
+                    }
+
+                    if (this._modalLayoutResumeTimer !== null || this.isLoadingPage) {
+                        return;
+                    }
+
+                    this.traceReaderReveal('modal-close-watchdog-recovery');
+                    this._activeModalIds.clear();
+                    this._isModalLifecycleSettling = false;
+                    this._modalLifecycleFadeOutPending = false;
+                    this.isTransitioningOutPage = false;
+                    this.clearModalPreOpenPending();
+                    this.clearLayoutTimers();
+                    this.isFittingPage = true;
+                    this._bypassNextFitCache = true;
+
+                    void this.layoutPageGuaranteed({
+                        revealDelayMs: 120,
+                        maxAttempts: 4,
+                        useIdleFit: false,
+                    });
+                }, 600);
             }
         },
 
@@ -1662,11 +1769,18 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                     return;
                 }
 
+                if (this._pendingMotionDirection) {
+                    this.playPageMotion(this._pendingMotionDirection);
+                    this._pendingMotionDirection = null;
+                }
+
                 this.isFittingPage = false;
                 this.clearModalPreOpenPending();
                 this._isModalLifecycleSettling = false;
                 this._modalLifecycleFadeOutPending = false;
                 this.isTransitioningOutPage = false;
+                this.pageMotionLeavingClass = '';
+                this.flushQueuedReaderPanelLayoutRefresh();
                 this.traceReaderReveal('queue-page-reveal-ready');
             }, delayMs);
         },
@@ -1734,6 +1848,12 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 maxAttempts,
             });
 
+            if (this.isPageMotionInProgress()) {
+                this.queueLayoutRequest(layoutRequest);
+
+                return;
+            }
+
             if (this.isLoadingPage || this._layoutActivePromise) {
                 this.queueLayoutRequest(layoutRequest);
 
@@ -1798,6 +1918,8 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             useIdleFit = true,
             deferReveal = false,
             forceRebalanceWordSpacing = false,
+            timingContext = null,
+            strictFontWait = Boolean(this._startupCalibrationPending || this.isCalibrating),
         } = {}) {
             const layoutToken = this.beginLayoutCycle();
             const shouldUseImmersiveChrome = this.shouldUseImmersiveReaderChrome();
@@ -1806,15 +1928,52 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 !shouldUseImmersiveChrome &&
                 !this.isCalibrating &&
                 (!this._startupCalibrationPending || Boolean(forceRebalanceWordSpacing));
+            const timingNow =
+                typeof performance !== 'undefined' && typeof performance.now === 'function'
+                    ? () => performance.now()
+                    : () => Date.now();
+            const layoutTimingStartedAt = timingNow();
+            const logLayoutTiming = (phase, details = {}) => {
+                if (timingContext === null && !this.isQrDebugLoggingEnabled) {
+                    return;
+                }
+
+                this.qrTimingLog(phase, {
+                    phaseContext: 'layout',
+                    ...timingContext,
+                    ...details,
+                    elapsedMs: Math.round(timingNow() - layoutTimingStartedAt),
+                });
+            };
+
+            logLayoutTiming('layout:start', {
+                revealDelayMs,
+                useIdleFit: Boolean(useIdleFit),
+                deferReveal: Boolean(deferReveal),
+                forceRebalanceWordSpacing: Boolean(forceRebalanceWordSpacing),
+                strictFontWait: Boolean(strictFontWait),
+            });
 
             await this.nextTickAsync();
-            if (!this.areTrackedPageFontsLoaded()) {
+            if (strictFontWait && !this.areTrackedPageFontsLoaded()) {
                 await this.waitForPageFontReady();
+            } else if (!this.areTrackedPageFontsLoaded()) {
+                this.scheduleFontReadyRecoveryRefit(this.pageNumber);
             }
+            logLayoutTiming('layout:fonts-ready', {
+                trackedFontsLoaded: this.areTrackedPageFontsLoaded(),
+                strictFontWait: Boolean(strictFontWait),
+            });
             await nextAnimationFrame();
             await this.waitForStableRenderedText(stableTextFrames);
+            logLayoutTiming('layout:stable-text-ready', {
+                stableTextFrames,
+            });
 
             if (shouldRebalanceWordSpacing) {
+                if (!this.areTrackedPageFontsLoaded()) {
+                    await this.waitForPageFontReady();
+                }
                 try {
                     this.rebalanceRectangularAyahLineWordSpacing();
                 } catch (_) {
@@ -1830,10 +1989,16 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             } else {
                 this.fitPageToViewport();
             }
+            logLayoutTiming('layout:fit-complete', {
+                useIdleFit: Boolean(useIdleFit),
+            });
 
             if (!deferReveal) {
                 this.queuePageReveal(layoutToken, revealDelayMs);
             }
+            logLayoutTiming('layout:done', {
+                revealQueued: !deferReveal,
+            });
         },
 
         async runFitPageToViewportLazily() {
@@ -1863,6 +2028,8 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             useIdleFit = true,
             deferReveal = false,
             forceRebalanceWordSpacing = false,
+            timingContext = null,
+            strictFontWait = Boolean(this._startupCalibrationPending || this.isCalibrating),
         } = {}) {
             const layoutRequest = this.normalizeLayoutRequest({
                 revealDelayMs,
@@ -1870,9 +2037,35 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 deferReveal,
                 forceRebalanceWordSpacing,
             });
+            const timingNow =
+                typeof performance !== 'undefined' && typeof performance.now === 'function'
+                    ? () => performance.now()
+                    : () => Date.now();
+            const guaranteedTimingStartedAt = timingNow();
+            const logGuaranteedTiming = (phase, details = {}) => {
+                if (timingContext === null && !this.isQrDebugLoggingEnabled) {
+                    return;
+                }
+
+                this.qrTimingLog(phase, {
+                    phaseContext: 'layout-guaranteed',
+                    ...timingContext,
+                    ...details,
+                    elapsedMs: Math.round(timingNow() - guaranteedTimingStartedAt),
+                });
+            };
+
+            logGuaranteedTiming('layout:guaranteed:start', {
+                revealDelayMs: layoutRequest.revealDelayMs,
+                maxAttempts: layoutRequest.maxAttempts,
+                useIdleFit: Boolean(useIdleFit),
+                deferReveal: Boolean(layoutRequest.deferReveal),
+                strictFontWait: Boolean(strictFontWait),
+            });
 
             if (this._layoutActivePromise) {
                 this.queueLayoutRequest(layoutRequest);
+                logGuaranteedTiming('layout:guaranteed:queued');
                 await this._layoutActivePromise;
 
                 return;
@@ -1883,28 +2076,49 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
 
                 for (let attempt = 0; attempt < layoutRequest.maxAttempts; attempt += 1) {
                     const fitRunsBeforeAttempt = this._fitRunCounter;
+                    logGuaranteedTiming('layout:guaranteed:attempt:start', {
+                        attempt: attempt + 1,
+                        maxAttempts: layoutRequest.maxAttempts,
+                    });
                     await this.layoutPage({
                         revealDelayMs: attempt === 0 ? layoutRequest.revealDelayMs : 108,
                         useIdleFit: shouldUseIdleFit,
                         deferReveal: Boolean(layoutRequest.deferReveal),
                         forceRebalanceWordSpacing: Boolean(layoutRequest.forceRebalanceWordSpacing),
+                        timingContext,
+                        strictFontWait: Boolean(strictFontWait),
                     });
 
                     if (
                         this._fitRunCounter > fitRunsBeforeAttempt &&
                         this._lastFittedPageNumber === this.pageNumber
                     ) {
+                        logGuaranteedTiming('layout:guaranteed:attempt:success', {
+                            attempt: attempt + 1,
+                            fitRunsBeforeAttempt,
+                            fitRunsAfterAttempt: this._fitRunCounter,
+                        });
                         return;
                     }
 
+                    logGuaranteedTiming('layout:guaranteed:attempt:retry', {
+                        attempt: attempt + 1,
+                        fitRunsBeforeAttempt,
+                        fitRunsAfterAttempt: this._fitRunCounter,
+                    });
                     await wait(24);
                 }
+
+                logGuaranteedTiming('layout:guaranteed:exhausted', {
+                    attempts: layoutRequest.maxAttempts,
+                });
             })();
 
             this._layoutActivePromise = runLayoutPromise;
 
             try {
                 await runLayoutPromise;
+                logGuaranteedTiming('layout:guaranteed:done');
             } finally {
                 if (this._layoutActivePromise === runLayoutPromise) {
                     this._layoutActivePromise = null;

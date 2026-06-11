@@ -861,7 +861,8 @@ export const createWirdAndHistoryProgressAndModeModule = (deps) => {
             if (
                 this.pageNumber === normalizedTargetPage &&
                 !this.isLoadingPage &&
-                this._pendingNavigationRequest === null
+                this._pendingNavigationRequest === null &&
+                this._revealTimer === null
             ) {
                 this.isFittingPage = false;
             }

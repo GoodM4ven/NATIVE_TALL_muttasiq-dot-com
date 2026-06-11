@@ -1334,14 +1334,13 @@ document.addEventListener('alpine:init', () => {
             this.touchActiveElement = element;
             this.broadcastTouchState();
         },
-        broadcastLockState(element, active) {
-            if (!element) {
-                return;
-            }
-
+        broadcastLockState({ previewVisible = false, confirmedElement = null } = {}) {
             window.dispatchEvent(
                 new CustomEvent('main-menu-lock-state', {
-                    detail: { element, active },
+                    detail: {
+                        previewVisible: Boolean(previewVisible),
+                        confirmedElement,
+                    },
                 }),
             );
         },
@@ -1351,6 +1350,22 @@ document.addEventListener('alpine:init', () => {
                     detail: { element },
                 }),
             );
+        },
+        syncItemLockStates() {
+            const hasLockedPreview = Boolean(this.activeItemLocked || this.lockedItemElement);
+
+            document.querySelectorAll('[data-main-menu-item]').forEach((element) => {
+                const itemData = window.Alpine?.$data ? window.Alpine.$data(element) : null;
+
+                if (!itemData) {
+                    return;
+                }
+
+                const isLockedItem = element.dataset?.locked === 'true';
+
+                itemData.isLockedPreviewVisible = hasLockedPreview && isLockedItem;
+                itemData.isLockedConfirmed = this.lockedItemElement === element;
+            });
         },
         handleTouchStart(event) {
             this.refreshTouchCapability({ resetTouchState: false });
@@ -1578,7 +1593,7 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            this.activateLockedItem(detail);
+            this.confirmLockedItem(detail);
         },
         runItemCallback(callback, element) {
             if (!callback) {
@@ -1668,14 +1683,17 @@ document.addEventListener('alpine:init', () => {
 
             this.syncUI();
         },
-        activateLockedItem(detail) {
+        confirmLockedItem(detail) {
             if (!detail?.element || !detail.caption || !detail.locked) {
                 return;
             }
 
             // Turn off previous lock (if any)
             if (this.lockedItemElement && this.lockedItemElement !== detail.element) {
-                this.broadcastLockState(this.lockedItemElement, false);
+                this.broadcastLockState({
+                    previewVisible: false,
+                    confirmedElement: null,
+                });
             }
 
             // Ensure this is the active element
@@ -1687,6 +1705,7 @@ document.addEventListener('alpine:init', () => {
 
             // Lock state
             this.lockedItemElement = detail.element;
+            this.wiggleLockIcon(detail.element);
             this.syncUI();
         },
         resetLockedItem() {
@@ -1694,10 +1713,7 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            const prev = this.lockedItemElement;
             this.lockedItemElement = null;
-
-            this.broadcastLockState(prev, false);
 
             // restore caption to current active item (or hide)
             if (this.isItemActive && this.activeItemCaption) {
@@ -1922,19 +1938,21 @@ document.addEventListener('alpine:init', () => {
                 this.activeItemCaption = caption;
             }
 
+            const hasLockedPreview = Boolean(this.activeItemLocked || this.lockedItemElement);
+            this.broadcastLockState({
+                previewVisible: hasLockedPreview,
+                confirmedElement: this.lockedItemElement,
+            });
+            this.syncItemLockStates();
+
             // no active and no lock => hide
             if (!hasActive && !this.lockedItemElement) {
                 this.hideCaption();
                 return;
             }
 
-            // keep lock icon in sync
-            if (this.lockedItemElement) {
-                this.broadcastLockState(this.lockedItemElement, true);
-            }
-
             // ✅ CAPTION RULE:
-            // locked caption ONLY when locked item is the active item
+            // locked caption only after the locked item is confirmed.
             const caption =
                 this.lockedItemElement &&
                 this.activeItemElement &&

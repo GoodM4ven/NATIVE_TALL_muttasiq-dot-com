@@ -227,7 +227,7 @@
                 class="opacity-(--bg-athkar-sabah-opacity) h-full w-full scale-110 object-cover"
                 alt="Athkar morning background"
                 :imagePath="asset('images/background/athkar-morning-blurred.webp')"
-                :thumbnailImagePath="asset('images/background/athkar-morning-blurred-blur-thumbnail.png')"
+                :thumbnailImagePath="asset('images/background/athkar-morning-blurred-blur-thumbnail.webp')"
                 :isDisplayEnforced="true"
             />
         </div>
@@ -243,7 +243,7 @@
                 class="opacity-(--bg-athkar-masaa-opacity) h-full w-full scale-110 object-cover"
                 alt="Athkar night background"
                 :imagePath="asset('images/background/athkar-night-blurred.webp')"
-                :thumbnailImagePath="asset('images/background/athkar-night-blurred-blur-thumbnail.png')"
+                :thumbnailImagePath="asset('images/background/athkar-night-blurred-blur-thumbnail.webp')"
                 :isDisplayEnforced="true"
             />
         </div>

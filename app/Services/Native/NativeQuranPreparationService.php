@@ -7,6 +7,7 @@ namespace App\Services\Native;
 use App\Jobs\DownloadNativeQuranSnapshot;
 use App\Services\Quran\QuranReaderDataService;
 use Illuminate\Support\Facades\Cache;
+use Native\Mobile\Facades\Network;
 use Throwable;
 
 class NativeQuranPreparationService
@@ -38,6 +39,10 @@ class NativeQuranPreparationService
 
         if ($status['ready'] || in_array($status['state'], ['queued', 'running'], true)) {
             return $status;
+        }
+
+        if ($this->isInternetConnected() === false) {
+            return $this->markNoInternetConnection();
         }
 
         $queuedStatus = $this->storeStatus([
@@ -82,6 +87,13 @@ class NativeQuranPreparationService
 
         if ($status === null) {
             return $this->idleStatus();
+        }
+
+        if (
+            in_array($status['state'], ['queued', 'running'], true)
+            && $this->isInternetConnected() === false
+        ) {
+            return $this->markNoInternetConnection();
         }
 
         if (
@@ -195,6 +207,58 @@ class NativeQuranPreparationService
             'totalBytes' => null,
             'updatedAt' => now()->getTimestamp(),
         ], self::FAILURE_TTL_SECONDS);
+    }
+
+    /**
+     * @return array{
+     *     ready: false,
+     *     state: 'failed',
+     *     message: string,
+     *     progressPercent: null,
+     *     downloadedBytes: null,
+     *     totalBytes: null,
+     *     updatedAt: int
+     * }
+     */
+    public function markNoInternetConnection(): array
+    {
+        $status = [
+            'ready' => false,
+            'state' => 'failed',
+            'message' => $this->offlineFailureMessage(),
+            'progressPercent' => null,
+            'downloadedBytes' => null,
+            'totalBytes' => null,
+            'updatedAt' => now()->getTimestamp(),
+        ];
+
+        $this->storeStatus($status, self::FAILURE_TTL_SECONDS);
+
+        return $status;
+    }
+
+    public function offlineFailureMessage(): string
+    {
+        return arabic_text('لا يوجد اتصال بالإنترنت الآن. اتصل بالإنترنت ثم حاول مرة أخرى.');
+    }
+
+    public function isInternetConnected(): ?bool
+    {
+        if (! is_platform('mobile')) {
+            return null;
+        }
+
+        try {
+            $status = Network::status();
+        } catch (Throwable) {
+            return null;
+        }
+
+        if (! is_object($status) || ! property_exists($status, 'connected')) {
+            return null;
+        }
+
+        return (bool) ($status->connected ?? false);
     }
 
     public function forgetStatus(): void

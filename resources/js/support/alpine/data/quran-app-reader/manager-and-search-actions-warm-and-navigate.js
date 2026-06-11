@@ -427,7 +427,10 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                     this.buildSurahDirectory(surahDirectory);
                     this.refreshSurahTriggerCaption(false);
                     this.search.isReady = true;
-                    void this.warmSearchLocalIndex();
+
+                    if (!this.nativeRuntime) {
+                        void this.warmSearchLocalIndex();
+                    }
                 } catch (_) {
                     if (
                         !Array.isArray(this.search.surahDirectory) ||
@@ -466,7 +469,8 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                 return;
             }
 
-            const normalizedQuery = this.normalizeSearchQuery(this.search.query);
+            const rawQuery = String(this.search.query ?? '').trim();
+            const normalizedQuery = this.normalizeSearchQuery(rawQuery);
 
             if (!normalizedQuery) {
                 this._searchQueuedNormalizedQuery = null;
@@ -495,20 +499,7 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
             }
 
             if (!this.search.isReady) {
-                await this.warmSearchIndex();
-            }
-
-            if (!this.search.isReady) {
-                this._searchQueuedNormalizedQuery = null;
-                this.setSearchResults([], { immediate: true });
-                this.search.isLoading = false;
-                this.search.streamHasUpdates = false;
-                this.search.lastCompletedNormalizedQuery = '';
-                this._searchRequestSerial += 1;
-                this._searchRequestInFlight = false;
-                this.clearSearchStreamTarget();
-
-                return;
+                void this.warmSearchIndex();
             }
 
             if (!this.search.localIndexReady) {
@@ -523,6 +514,10 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                 Boolean(this.searchResultsSelectInstance());
 
             if (!hasSearchModalContext) {
+                return;
+            }
+
+            if (this._searchModalCloseDebounceTimer !== null && !this.search.modalOpen) {
                 return;
             }
 
@@ -558,13 +553,13 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
             };
             const runWorkerFallbackSearch = async () => {
                 const workers = [
-                    () => this.$wire.searchSurahExact(normalizedQuery, requestSerial, 24),
-                    () => this.$wire.searchAyahExact(normalizedQuery, requestSerial, 24),
-                    () => this.$wire.searchSurahClose(normalizedQuery, requestSerial, 24),
-                    () => this.$wire.searchAyahClose(normalizedQuery, requestSerial, 24),
-                    () => this.$wire.searchSurahSarf(normalizedQuery, requestSerial, 24),
-                    () => this.$wire.searchAyahSarf(normalizedQuery, requestSerial, 24),
-                    () => this.$wire.searchAyahJathr(normalizedQuery, requestSerial, 24),
+                    () => this.$wire.searchSurahExact(rawQuery, requestSerial, 60),
+                    () => this.$wire.searchAyahExact(rawQuery, requestSerial, 60),
+                    () => this.$wire.searchSurahClose(rawQuery, requestSerial, 60),
+                    () => this.$wire.searchAyahClose(rawQuery, requestSerial, 60),
+                    () => this.$wire.searchSurahSarf(rawQuery, requestSerial, 60),
+                    () => this.$wire.searchAyahSarf(rawQuery, requestSerial, 60),
+                    () => this.$wire.searchAyahJathr(rawQuery, requestSerial, 60),
                 ];
 
                 if (this.nativeRuntime) {
@@ -615,14 +610,14 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
             try {
                 if (shouldUseStreamSearch) {
                     const streamedResults = await this.$wire.streamSearch(
-                        normalizedQuery,
+                        rawQuery,
                         requestSerial,
-                        24,
+                        60,
                     );
 
                     if (requestSerial === this._searchRequestSerial) {
                         const resolvedResults = Array.isArray(streamedResults)
-                            ? streamedResults.slice(0, 24)
+                            ? streamedResults
                             : [];
                         const hadStreamUpdates = this.search.streamHasUpdates;
 
@@ -653,6 +648,10 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                 }
 
                 this.search.isLoading = false;
+                this._searchModalCloseProtectionUntil = Math.max(
+                    this._searchModalCloseProtectionUntil,
+                    Date.now() + Math.max(640, modalCloseTransitionDelayMs + 240),
+                );
                 this.search.lastCompletedNormalizedQuery = normalizedQuery;
                 this._searchRequestInFlight = false;
                 this._searchQueuedNormalizedQuery = null;
@@ -685,9 +684,7 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                 .map((value) => String(value ?? '').trim())
                 .filter((value) => value !== '');
             const shouldUseStandardSmPlusNavigation =
-                !this.nativeRuntime &&
-                Boolean(this.$store?.bp?.is?.('sm+')) &&
-                !Boolean(this.$store?.bp?.isTablet?.());
+                !this.nativeRuntime && Boolean(this.$store?.bp?.is?.('sm+'));
             const standardSmPlusSource = 'search-standard';
             if (shouldUseStandardSmPlusNavigation) {
                 this.searchDestinationScaleBoostPageNumber = 0;
@@ -706,6 +703,7 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                 this.resetNavigationQueueForPriorityJump();
                 this.clearPendingPostModalTargetFit();
                 this.cancelActiveSearchProcessing();
+                this.suppressSearchModalCloseSync(Math.max(900, modalCloseTransitionDelayMs + 720));
                 if (!shouldUseStandardSmPlusNavigation) {
                     this.holdPageHiddenForModalLifecycle({ animateFadeOut: false });
                     this.beginModalNavigationCloseGuard(searchModalLifecycleIds);
@@ -743,7 +741,19 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                         searchHighlightAyahIndex: highlightAyahIndex,
                     });
                     await wait(24);
-                } else {
+                    const pageRevealed = await this.waitForPageRevealCycle(targetPage, {
+                        maxAttempts: 60,
+                        delayMs: 40,
+                    });
+                    if (!pageRevealed && !this.isCurrentPageVisiblyReady()) {
+                        this._bypassNextFitCache = true;
+                        await this.layoutPageGuaranteed({
+                            revealDelayMs: 120,
+                            maxAttempts: 5,
+                            useIdleFit: false,
+                        });
+                    }
+                } else if (this.nativeRuntime) {
                     await this.navigateFromManagerModalRecord({
                         targetPage,
                         ayahIndex: highlightAyahIndex,
@@ -751,6 +761,40 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                         modalId: this.resolveSearchModalCloseTargetId(),
                         ensureVisibleAfterModalClose: true,
                     });
+                    if (!this.isCurrentPageVisiblyReady()) {
+                        this._bypassNextFitCache = true;
+                        await this.layoutPageGuaranteed({
+                            revealDelayMs: 120,
+                            maxAttempts: 5,
+                            useIdleFit: false,
+                        });
+                    }
+                } else {
+                    usedStandardSmPlusNavigation = true;
+                    await this.nextTickAsync();
+                    await this.waitForStablePageFrame({
+                        maxFrames: 18,
+                        requiredStableFrames: 3,
+                        tolerancePx: 0.8,
+                    });
+                    this._bypassNextFitCache = true;
+                    this.dispatchPageNavigationRequest(targetPage, standardSmPlusSource, {
+                        activeAyahIndex: highlightAyahIndex,
+                        searchHighlightAyahIndex: highlightAyahIndex,
+                    });
+                    await wait(24);
+                    const pageRevealed = await this.waitForPageRevealCycle(targetPage, {
+                        maxAttempts: 80,
+                        delayMs: 40,
+                    });
+                    if (!pageRevealed && !this.isCurrentPageVisiblyReady()) {
+                        this._bypassNextFitCache = true;
+                        await this.layoutPageGuaranteed({
+                            revealDelayMs: 120,
+                            maxAttempts: 5,
+                            useIdleFit: false,
+                        });
+                    }
                 }
 
                 if (highlightAyahIndex > 0) {
@@ -783,6 +827,35 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                         ayahText: this.searchResultAyahText(result),
                     });
                 }
+                if (this.searchNeedsInitialSelectionRecovery) {
+                    const shouldRunInitialSelectionRecovery =
+                        this.searchNeedsInitialSelectionRecovery;
+                    this.searchNeedsInitialSelectionRecovery = false;
+
+                    if (shouldRunInitialSelectionRecovery) {
+                        window.setTimeout(
+                            () => {
+                                if (
+                                    this.pageNumber !== targetPage ||
+                                    !this.hasRenderablePage() ||
+                                    this.search.modalOpen ||
+                                    this.isSearchModalWindowVisible() ||
+                                    this.openModalCount() > 0
+                                ) {
+                                    return;
+                                }
+
+                                this._bypassNextFitCache = true;
+                                void this.layoutPageGuaranteed({
+                                    revealDelayMs: 120,
+                                    maxAttempts: 5,
+                                    useIdleFit: false,
+                                });
+                            },
+                            Math.max(120, modalCloseTransitionDelayMs + 60),
+                        );
+                    }
+                }
                 this.recordNavigationHistory({
                     source: 'search-result',
                     pageNumber: targetPage,
@@ -799,7 +872,8 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                 if (
                     usedStandardSmPlusNavigation &&
                     this.hasRenderablePage() &&
-                    this.openModalCount() <= 0
+                    this.openModalCount() <= 0 &&
+                    !this.isCurrentPageVisiblyReady()
                 ) {
                     this.clearStaleRevealGuards();
                     this.scheduleLayout({ revealDelayMs: 96, maxAttempts: 4 });

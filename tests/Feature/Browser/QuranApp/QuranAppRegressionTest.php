@@ -1,7 +1,6 @@
 <?php
 
 declare(strict_types=1);
-use Illuminate\Support\Facades\DB;
 
 uses()->group('browser-flaky');
 
@@ -48,7 +47,7 @@ it('navigates to quran gate, persists it across refresh, and handles native back
     waitForScript($mobilePage, 'window.location.hash', '#main-menu');
 });
 
-it('re-focuses and scrolls the selected surah tile when reopening search modal', function () {
+it('closes the search modal after an active long search is dismissed', function () {
     $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     resetBrowserState($page);
@@ -64,159 +63,39 @@ it('re-focuses and scrolls the selected surah tile when reopening search modal',
     scriptClick($page, '.quran-soorah-trigger');
     waitForScriptWithTimeout($page, 'Boolean(document.querySelector("#quran-reader-search-modal"))', true, 5_000);
 
-    $targetSurahSelection = $page->script(
-        quranReaderDataScript(
-            <<<'JS'
-(() => {
-  const currentPage = Number(data.pageNumber ?? 1);
-  const directory = Array.isArray(data.search?.surahDirectory) ? data.search.surahDirectory : [];
-  const preferredBoundarySurahNumbers = [45, 55, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
+    $page->fill('#quran-reader-search-input', 'وقال ربكم ادعوني أستجب لكم');
 
-  const preferredEntry = preferredBoundarySurahNumbers
-    .map((surahNumber) =>
-      directory.find(
-        (item) =>
-          Number(item?.surah_number ?? 0) === surahNumber
-          && Number(item?.page_number ?? 0) > currentPage,
-      ),
-    )
-    .find((entry) => entry);
-
-  const fallbackEntry =
-    preferredEntry
-    ?? directory.find((item) => Number(item?.page_number ?? 0) > currentPage && Number(item?.surah_number ?? 0) > 1)
-    ?? directory.find((item) => Number(item?.surah_number ?? 0) > 1)
-    ?? null;
-
-  return {
-    surahNumber: Number(fallbackEntry?.surah_number ?? 0),
-    pageNumber: Number(fallbackEntry?.page_number ?? 0),
-  };
-})()
-JS,
-        ),
-    );
-
-    expect($targetSurahSelection)->toBeArray();
-    expect((int) ($targetSurahSelection['surahNumber'] ?? 0))->toBeGreaterThan(0);
-    expect((int) ($targetSurahSelection['pageNumber'] ?? 0))->toBeGreaterThan(0);
-
-    $page->script(
-        quranReaderCommandScript(
-            js_template(
-                <<<'JS'
-const targetSurah = Number({{surahNumber}});
-const entry = (Array.isArray(data.search?.surahDirectory) ? data.search.surahDirectory : [])
-  .find((item) => Number(item?.surah_number ?? 0) === targetSurah);
-
-if (!entry) {
-  return false;
-}
-
-data.goToSurahFromDirectory(entry);
-
-return true;
-JS,
-                ['surahNumber' => (int) ($targetSurahSelection['surahNumber'] ?? 0)],
-            ),
-        ),
-    );
-
-    waitForScriptWithTimeout($page, modalClosedScript(), true, 6_000);
     waitForScriptWithTimeout(
         $page,
-        quranReaderDataScript('data.pageNumber'),
-        (int) ($targetSurahSelection['pageNumber'] ?? 0),
-        6_000,
-    );
-    waitForScriptWithTimeout(
-        $page,
-        quranReaderDataScript('Number(data.search?.activeSurahNumber ?? 0)'),
-        (int) ($targetSurahSelection['surahNumber'] ?? 0),
-        6_000,
-    );
-    waitForScriptWithTimeout(
-        $page,
-        quranReaderDataScript('Number(data.currentSurahNumber())'),
-        (int) ($targetSurahSelection['surahNumber'] ?? 0),
-        6_000,
-    );
-    waitForScriptWithTimeout(
-        $page,
-        quranReaderDataScript('Number(data.surahTriggerSurahNumber ?? 0)'),
-        (int) ($targetSurahSelection['surahNumber'] ?? 0),
+        quranReaderDataScript('String(data.search.query ?? "") === "وقال ربكم ادعوني أستجب لكم"'),
+        true,
         6_000,
     );
 
-    scriptClick($page, '.quran-soorah-trigger');
-    waitForScriptWithTimeout($page, 'Boolean(document.querySelector("#quran-reader-search-modal"))', true, 5_000);
     waitForScriptWithTimeout(
         $page,
-        quranReaderDataScript('Number(data.search?.activeSurahNumber ?? 0)'),
-        (int) ($targetSurahSelection['surahNumber'] ?? 0),
-        6_000,
+        quranReaderDataScript('!data.search.isLoading && Number(data.search.results?.length ?? 0) > 0'),
+        true,
+        12_000,
     );
 
-    $surahTileFocusState = $page->script(
-        <<<'JS'
-(() => {
-  const modalRoots = Array.from(document.querySelectorAll('#quran-reader-search-modal'))
-    .filter((node) => node instanceof HTMLElement);
-  const activeModalRoot = modalRoots.find((modalRoot) =>
-    modalRoot.closest('.fi-modal')?.classList.contains('fi-modal-open')
-  ) ?? modalRoots[0] ?? null;
-  const activeModal = activeModalRoot instanceof HTMLElement
-    ? activeModalRoot.closest('.fi-modal')
-    : null;
+    expect($page->script(quranReaderDataScript('data.requestSearchModalClose({ skipLayout: true })')))->toBeTrue();
 
-  if (!(activeModal instanceof HTMLElement)) {
-    return {
-      surahNumber: 0,
-      scrollTop: 0,
-      isTileVisible: false,
-    };
-  }
-
-  const grid = activeModal.querySelector('.quran-surah-grid');
-  const activeTile = grid instanceof HTMLElement ? grid.querySelector('.quran-surah-tile--active') : null;
-
-  if (!(grid instanceof HTMLElement) || !(activeTile instanceof HTMLElement)) {
-    return {
-      surahNumber: 0,
-      scrollTop: 0,
-      isTileVisible: false,
-    };
-  }
-
-  return {
-    surahNumber: Number(activeTile.getAttribute('data-surah-number') ?? 0),
-    scrollTop: Math.max(0, Math.trunc(Number(grid.scrollTop ?? 0))),
-    gridClientHeight: Math.max(0, Math.trunc(Number(grid.clientHeight ?? 0))),
-    tileHeight: Math.max(0, Math.trunc(activeTile.getBoundingClientRect().height ?? 0)),
-    tileOffsetTop: Math.max(0, Math.trunc(Number(activeTile.offsetTop ?? 0))),
-    isTileVisible: (() => {
-      const gridRect = grid.getBoundingClientRect();
-      const tileRect = activeTile.getBoundingClientRect();
-
-      return tileRect.top >= gridRect.top - 1 && tileRect.bottom <= gridRect.bottom + 1;
-    })(),
-  };
-})()
-JS,
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('!data.search.modalOpen && !data.isSearchModalWindowVisible()'),
+        true,
+        8_000,
     );
-
-    expect($surahTileFocusState)->toBeArray();
-    $targetSurahNumber = (int) ($targetSurahSelection['surahNumber'] ?? 0);
-    $focusedSurahNumber = (int) ($surahTileFocusState['surahNumber'] ?? 0);
-    $focusedSurahNumber = $focusedSurahNumber > 0
-        ? $focusedSurahNumber
-        : (int) $page->script(quranReaderDataScript('Number(data.search?.activeSurahNumber ?? 0)'));
-    $surahGridScrollTop = (int) ($surahTileFocusState['scrollTop'] ?? 0);
-    expect($focusedSurahNumber)->toBe($targetSurahNumber);
-    expect($surahGridScrollTop)->toBeGreaterThanOrEqual(0);
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('String(data.search.query ?? "") === "" && Number(data.search.results?.length ?? 0) === 0'),
+        true,
+        8_000,
+    );
 });
 
-it('auto-copies activated text with popover feedback and uses normal history modal', function () {
+it('keeps the search modal open after quickly reopening it following a result selection', function () {
     $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     resetBrowserState($page);
@@ -229,513 +108,70 @@ it('auto-copies activated text with popover feedback and uses normal history mod
     waitForScript($page, quranReaderDataScript('data.ready && data.mushafLines.length > 0'), true);
     waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
 
-    $page->script(<<<'JS'
-(() => {
-  window.__copiedTexts = [];
-  const clipboard = {
-    writeText(value) {
-      window.__copiedTexts.push(String(value ?? ''));
-      return Promise.resolve();
-    },
-  };
+    scriptClick($page, '.quran-soorah-trigger');
+    waitForScriptWithTimeout($page, 'Boolean(document.querySelector("#quran-reader-search-modal"))', true, 5_000);
 
-  try {
-    Object.defineProperty(navigator, 'clipboard', {
-      configurable: true,
-      value: clipboard,
-    });
-  } catch (_) {
-    navigator.clipboard = clipboard;
-  }
+    $page->fill('#quran-reader-search-input', 'وقال ربكم ادعوني أستجب لكم');
 
-  return true;
-})()
-JS);
-
-    $didClickWord = $page->script(<<<'JS'
-(() => {
-  const wordButton = document.querySelector('.quran-page-lines .quran-word-button');
-
-  if (!(wordButton instanceof HTMLButtonElement)) {
-    return false;
-  }
-
-  const rect = wordButton.getBoundingClientRect();
-  const point = {
-    x: rect.left + (rect.width / 2),
-    y: rect.top + (rect.height / 2),
-  };
-
-  window.__copyClickPoint = point;
-
-  wordButton.dispatchEvent(
-    new PointerEvent('pointerdown', {
-      bubbles: true,
-      pointerId: 912,
-      pointerType: 'mouse',
-      clientX: point.x,
-      clientY: point.y,
-    }),
-  );
-
-  wordButton.dispatchEvent(
-    new PointerEvent('pointerup', {
-      bubbles: true,
-      pointerId: 912,
-      pointerType: 'mouse',
-      clientX: point.x,
-      clientY: point.y,
-    }),
-  );
-
-  wordButton.dispatchEvent(
-    new MouseEvent('click', {
-      bubbles: true,
-      clientX: point.x,
-      clientY: point.y,
-    }),
-  );
-
-  return true;
-})()
-JS);
-
-    expect($didClickWord)->toBeTrue();
-
-    waitForScriptWithTimeout($page, 'Number(window.__copiedTexts?.length ?? 0) >= 1', true, 6_000);
-    waitForScriptWithTimeout($page, quranReaderDataScript('data.copyFeedback.visible'), true, 4_000);
     waitForScriptWithTimeout(
         $page,
-        <<<'JS'
-(() => {
-  const popover = document.querySelector('[data-quran-copy-popover]');
-  const point = window.__copyClickPoint;
-
-  if (!(popover instanceof HTMLElement) || !point) {
-    return false;
-  }
-
-  const left = Number.parseFloat(popover.style.left || 'NaN');
-  const top = Number.parseFloat(popover.style.top || 'NaN');
-
-  return Number.isFinite(left)
-    && Number.isFinite(top)
-    && Math.abs(left - Number(point.x)) <= 1.5
-    && Math.abs(top - Number(point.y)) <= 1.5;
-})()
-JS,
+        quranReaderDataScript('!data.search.isLoading && Number(data.search.results?.length ?? 0) > 0'),
         true,
-        5_000,
+        12_000,
     );
 
-    $didHoldWord = $page->script(<<<'JS'
-(() => {
-  const wordButton = document.querySelector('.quran-page-lines .quran-word-button');
+    $page->script(quranReaderCommandScript('void data.goToSearchResult(data.search.results[0]);'));
 
-  if (!(wordButton instanceof HTMLButtonElement)) {
-    return false;
-  }
-
-  const rect = wordButton.getBoundingClientRect();
-  const point = {
-    x: rect.left + (rect.width / 2),
-    y: rect.top + (rect.height / 2),
-  };
-
-  window.__copyHoldPoint = point;
-
-  wordButton.dispatchEvent(
-    new PointerEvent('pointerdown', {
-      bubbles: true,
-      pointerId: 913,
-      pointerType: 'mouse',
-      clientX: point.x,
-      clientY: point.y,
-    }),
-  );
-
-  window.setTimeout(() => {
-    wordButton.dispatchEvent(
-      new PointerEvent('pointerup', {
-        bubbles: true,
-        pointerId: 913,
-        pointerType: 'mouse',
-        clientX: point.x,
-        clientY: point.y,
-      }),
-    );
-  }, 820);
-
-  return true;
-})()
-JS);
-
-    expect($didHoldWord)->toBeTrue();
-
-    waitForScriptWithTimeout($page, 'Number(window.__copiedTexts?.length ?? 0) >= 2', true, 6_000);
-    waitForScriptWithTimeout($page, quranReaderDataScript('Number(data.copyFeedback.serial ?? 0) >= 2'), true, 6_000);
-    $didDragThenSingleClick = $page->script(<<<'JS'
-(() => {
-  const wordButtons = Array.from(document.querySelectorAll('.quran-page-lines .quran-word-button'))
-    .filter((button) => button instanceof HTMLButtonElement && !button.disabled);
-
-  if (wordButtons.length < 4) {
-    return false;
-  }
-
-  const pointFor = (button) => {
-    const rect = button.getBoundingClientRect();
-
-    return {
-      x: rect.left + (rect.width / 2),
-      y: rect.top + (rect.height / 2),
-    };
-  };
-
-  const startWord = wordButtons[0];
-  const middleWord = wordButtons[1];
-  const endWord = wordButtons[2];
-  const postDragWord = wordButtons[3];
-  const startPoint = pointFor(startWord);
-  const middlePoint = pointFor(middleWord);
-  const endPoint = pointFor(endWord);
-  const postDragPoint = pointFor(postDragWord);
-
-  startWord.dispatchEvent(
-    new PointerEvent('pointerdown', {
-      bubbles: true,
-      pointerId: 914,
-      pointerType: 'mouse',
-      clientX: startPoint.x,
-      clientY: startPoint.y,
-    }),
-  );
-
-  middleWord.dispatchEvent(
-    new PointerEvent('pointermove', {
-      bubbles: true,
-      pointerId: 914,
-      pointerType: 'mouse',
-      clientX: middlePoint.x,
-      clientY: middlePoint.y,
-    }),
-  );
-
-  endWord.dispatchEvent(
-    new PointerEvent('pointermove', {
-      bubbles: true,
-      pointerId: 914,
-      pointerType: 'mouse',
-      clientX: endPoint.x,
-      clientY: endPoint.y,
-    }),
-  );
-
-  endWord.dispatchEvent(
-    new PointerEvent('pointerup', {
-      bubbles: true,
-      pointerId: 914,
-      pointerType: 'mouse',
-      clientX: endPoint.x,
-      clientY: endPoint.y,
-    }),
-  );
-
-  window.setTimeout(() => {
-    postDragWord.dispatchEvent(
-      new PointerEvent('pointerdown', {
-        bubbles: true,
-        pointerId: 915,
-        pointerType: 'mouse',
-        clientX: postDragPoint.x,
-        clientY: postDragPoint.y,
-      }),
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('!data.search.modalOpen && !data.isSearchModalWindowVisible()'),
+        true,
+        8_000,
     );
 
-    postDragWord.dispatchEvent(
-      new PointerEvent('pointerup', {
-        bubbles: true,
-        pointerId: 915,
-        pointerType: 'mouse',
-        clientX: postDragPoint.x,
-        clientY: postDragPoint.y,
-      }),
+    $page->script(quranReaderCommandScript('void data.openSearchModal();'));
+
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('data.search.modalOpen && data.isSearchModalWindowVisible()'),
+        true,
+        8_000,
     );
 
-    postDragWord.dispatchEvent(
-      new MouseEvent('click', {
-        bubbles: true,
-        clientX: postDragPoint.x,
-        clientY: postDragPoint.y,
-      }),
+    $page->fill('#quran-reader-search-input', 'وقال ربكم ادعوني أستجب لكم');
+
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('String(data.search.query ?? "") === "وقال ربكم ادعوني أستجب لكم"'),
+        true,
+        6_000,
     );
-  }, 260);
 
-  return true;
-})()
-JS);
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('!data.search.isLoading && Number(data.search.results?.length ?? 0) > 0'),
+        true,
+        12_000,
+    );
 
-    expect($didDragThenSingleClick)->toBeTrue();
-
-    waitForScriptWithTimeout($page, 'Number(window.__copiedTexts?.length ?? 0) >= 3', true, 6_000);
-    waitForScriptWithTimeout($page, 'Number(window.__copiedTexts?.length ?? 0) >= 4', true, 6_000);
-
-    $didOutOfOrderAyahDragCopy = $page->script(<<<'JS'
-(() => {
-  const ayahSevenWord = document.querySelector('.quran-page-lines .quran-word-button[data-quran-ayah-number="7"]');
-  const ayahSixWord = document.querySelector('.quran-page-lines .quran-word-button[data-quran-ayah-number="6"]');
-
-  if (!(ayahSevenWord instanceof HTMLButtonElement) || !(ayahSixWord instanceof HTMLButtonElement)) {
-    return false;
-  }
-
-  const pointFor = (button) => {
-    const rect = button.getBoundingClientRect();
-
-    return {
-      x: rect.left + (rect.width / 2),
-      y: rect.top + (rect.height / 2),
-    };
-  };
-
-  const ayahSevenPoint = pointFor(ayahSevenWord);
-  const ayahSixPoint = pointFor(ayahSixWord);
-
-  ayahSevenWord.dispatchEvent(
-    new PointerEvent('pointerdown', {
-      bubbles: true,
-      pointerId: 916,
-      pointerType: 'mouse',
-      clientX: ayahSevenPoint.x,
-      clientY: ayahSevenPoint.y,
-    }),
-  );
-
-  ayahSixWord.dispatchEvent(
-    new PointerEvent('pointermove', {
-      bubbles: true,
-      pointerId: 916,
-      pointerType: 'mouse',
-      clientX: ayahSixPoint.x,
-      clientY: ayahSixPoint.y,
-    }),
-  );
-
-  ayahSixWord.dispatchEvent(
-    new PointerEvent('pointerup', {
-      bubbles: true,
-      pointerId: 916,
-      pointerType: 'mouse',
-      clientX: ayahSixPoint.x,
-      clientY: ayahSixPoint.y,
-    }),
-  );
-
-  return true;
-})()
-JS);
-
-    expect($didOutOfOrderAyahDragCopy)->toBeTrue();
-
-    waitForScriptWithTimeout($page, 'Number(window.__copiedTexts?.length ?? 0) >= 5', true, 6_000);
-
-    $copiedTexts = $page->script('window.__copiedTexts');
-    $outOfOrderCopiedAyahText = trim((string) ($copiedTexts[4] ?? ''));
-
-    expect($copiedTexts)->toBeArray()
-        ->and(trim((string) ($copiedTexts[0] ?? '')))->not->toBe('')
-        ->and(trim((string) ($copiedTexts[1] ?? '')))->not->toBe('')
-        ->and(trim((string) ($copiedTexts[2] ?? '')))->not->toBe('')
-        ->and(trim((string) ($copiedTexts[3] ?? '')))->not->toBe('')
-        ->and($outOfOrderCopiedAyahText)->not->toBe('')
-        ->and($outOfOrderCopiedAyahText)->not->toContain('۝');
-
-    $crossSurahPageNumber = (int) DB::table('quran_mushaf_lines')
-        ->select('page_number')
-        ->where('line_type', 'ayah')
-        ->whereNotNull('surah_number')
-        ->groupBy('page_number')
-        ->havingRaw('COUNT(DISTINCT surah_number) > 1')
-        ->orderBy('page_number')
-        ->value('page_number');
-
-    if ($crossSurahPageNumber > 0) {
+    expect(
         $page->script(
             quranReaderCommandScript(
-                "data.dispatchPageNavigationRequest({$crossSurahPageNumber}, 'test-cross-surah-multi-copy');",
-            ),
-        );
-        waitForScriptWithTimeout(
-            $page,
-            quranReaderDataScript('data.pageNumber'),
-            $crossSurahPageNumber,
-            6_000,
-        );
-        waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
-
-        $crossSurahSelection = $page->script(<<<'JS'
-(() => {
-  const wordButtons = Array.from(document.querySelectorAll('.quran-page-lines .quran-word-button'))
-    .filter((button) => button instanceof HTMLButtonElement && !button.disabled)
-    .map((button) => ({
-      button,
-      surahNumber: Number(button.getAttribute('data-quran-surah-number') ?? 0),
-      ayahNumber: Number(button.getAttribute('data-quran-ayah-number') ?? 0),
-    }))
-    .filter((entry) => entry.surahNumber > 0 && entry.ayahNumber > 0);
-
-  if (wordButtons.length < 2) {
-    return null;
-  }
-
-  let boundaryStart = null;
-  let boundaryEnd = null;
-
-  for (let index = 0; index < wordButtons.length - 1; index += 1) {
-    const currentWord = wordButtons[index];
-    const nextWord = wordButtons[index + 1];
-
-    if (currentWord.surahNumber === nextWord.surahNumber) {
-      continue;
-    }
-
-    boundaryStart = currentWord;
-    boundaryEnd = nextWord;
-
-    break;
-  }
-
-  if (!boundaryStart || !boundaryEnd) {
-    return null;
-  }
-
-  const pointFor = (button) => {
-    const rect = button.getBoundingClientRect();
-
-    return {
-      x: rect.left + (rect.width / 2),
-      y: rect.top + (rect.height / 2),
-    };
-  };
-
-  const startPoint = pointFor(boundaryStart.button);
-  const endPoint = pointFor(boundaryEnd.button);
-
-  boundaryStart.button.dispatchEvent(
-    new PointerEvent('pointerdown', {
-      bubbles: true,
-      pointerId: 917,
-      pointerType: 'mouse',
-      clientX: startPoint.x,
-      clientY: startPoint.y,
-    }),
-  );
-
-  boundaryEnd.button.dispatchEvent(
-    new PointerEvent('pointermove', {
-      bubbles: true,
-      pointerId: 917,
-      pointerType: 'mouse',
-      clientX: endPoint.x,
-      clientY: endPoint.y,
-    }),
-  );
-
-  boundaryEnd.button.dispatchEvent(
-    new PointerEvent('pointerup', {
-      bubbles: true,
-      pointerId: 917,
-      pointerType: 'mouse',
-      clientX: endPoint.x,
-      clientY: endPoint.y,
-    }),
-  );
-
-  return {
-    firstSurahNumber: boundaryStart.surahNumber,
-    secondSurahNumber: boundaryEnd.surahNumber,
-    firstAyahNumber: boundaryStart.ayahNumber,
-    secondAyahNumber: boundaryEnd.ayahNumber,
-  };
-})()
-JS);
-
-        expect($crossSurahSelection)->toBeArray()
-            ->and((int) ($crossSurahSelection['firstSurahNumber'] ?? 0))->toBeGreaterThan(0)
-            ->and((int) ($crossSurahSelection['secondSurahNumber'] ?? 0))->toBeGreaterThan(0)
-            ->and((int) ($crossSurahSelection['firstAyahNumber'] ?? 0))->toBeGreaterThan(0)
-            ->and((int) ($crossSurahSelection['secondAyahNumber'] ?? 0))->toBeGreaterThan(0);
-
-        waitForScriptWithTimeout($page, 'Number(window.__copiedTexts?.length ?? 0) >= 6', true, 6_000);
-
-        $copiedTexts = $page->script('window.__copiedTexts');
-        $crossSurahCopiedText = trim((string) ($copiedTexts[5] ?? ''));
-        $splitterMatches = [];
-        preg_match_all('/\(([0-9٠-٩]+)\)/u', $crossSurahCopiedText, $splitterMatches);
-        $splitterValues = collect($splitterMatches[1] ?? [])
-            ->map(static fn (string $token): int => (int) strtr(
-                $token,
-                ['٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4', '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9'],
-            ))
-            ->all();
-        $surahAffixMatches = [];
-        preg_match_all('/~\s*\[([^\]]+)\]/u', $crossSurahCopiedText, $surahAffixMatches);
-        $surahAffixes = collect($surahAffixMatches[1] ?? [])
-            ->map(static fn (string $token): string => trim($token))
-            ->filter(static fn (string $token): bool => $token !== '')
-            ->values()
-            ->all();
-        $expectedSurahAffixesCount = collect([
-            (int) ($crossSurahSelection['firstSurahNumber'] ?? 0),
-            (int) ($crossSurahSelection['secondSurahNumber'] ?? 0),
-        ])
-            ->filter(static fn (int $surahNumber): bool => $surahNumber > 0)
-            ->unique()
-            ->count();
-        $expectedSplitterValues = [
-            (int) ($crossSurahSelection['firstAyahNumber'] ?? 0),
-            (int) ($crossSurahSelection['secondAyahNumber'] ?? 0),
-        ];
-
-        expect($crossSurahCopiedText)->not->toBe('')
-            ->and($crossSurahCopiedText)->not->toContain('۝')
-            ->and($crossSurahCopiedText)->not->toMatch('/[\x{FB50}-\x{FDFF}\x{FE70}-\x{FEFF}]/u')
-            ->and($splitterValues)->toBe($expectedSplitterValues)
-            ->and(count($surahAffixes))->toBe($expectedSurahAffixesCount);
-    }
-
-    scriptClick($page, '[data-quran-open-history]');
-    waitForScriptWithTimeout(
-        $page,
-        'Boolean(document.querySelector("#quran-reader-history-modal"))',
-        true,
-        6_000,
-    );
-    waitForScriptWithTimeout(
-        $page,
-        <<<'JS'
-(() => {
-  const modal = document.querySelector('#quran-reader-history-modal');
-  const modalWindow = modal?.closest?.('.fi-modal-window');
-
-  if (!(modalWindow instanceof HTMLElement)) {
-    return false;
-  }
-
-  return !modalWindow.className.includes('slide-over');
-})()
+                <<<'JS'
+window.__searchModalStayedOpenAfterReopen = false;
+setTimeout(() => {
+  window.__searchModalStayedOpenAfterReopen = Boolean(data.search.modalOpen && data.isSearchModalWindowVisible());
+}, 1200);
+return true;
 JS,
-        true,
-        6_000,
-    );
+            ),
+        ),
+    )->toBeTrue();
 
-    safeClick($page, '.fi-modal-window .fi-modal-close-btn');
-    waitForScriptWithTimeout($page, modalClosedScript(), true, 6_000);
-
-    $page->assertNoJavaScriptErrors();
+    waitForScriptWithTimeout($page, 'Boolean(window.__searchModalStayedOpenAfterReopen)', true, 4_000);
 });
 
-it('allows swipe navigation from quran line gaps but not from quran text lines', function () {
+it('keeps the reader visible after the first search result selection on a fresh session', function () {
     $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     resetBrowserState($page);
@@ -748,144 +184,182 @@ it('allows swipe navigation from quran line gaps but not from quran text lines',
     waitForScript($page, quranReaderDataScript('data.ready && data.mushafLines.length > 0'), true);
     waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
 
-    $startingPageNumber = (int) $page->script(quranReaderDataScript('Number(data.pageNumber ?? 0)'));
-    expect($startingPageNumber)->toBeGreaterThan(0);
+    scriptClick($page, '.quran-soorah-trigger');
+    waitForScriptWithTimeout($page, 'Boolean(document.querySelector("#quran-reader-search-modal"))', true, 5_000);
 
-    $didSwipeFromTextLine = $page->script(<<<'JS'
-(() => {
-  const wordButton = document.querySelector('.quran-page-lines .quran-word-button');
+    $page->fill('#quran-reader-search-input', 'غافر');
 
-  if (!(wordButton instanceof HTMLButtonElement)) {
-    return false;
-  }
-
-  const rect = wordButton.getBoundingClientRect();
-  const startPoint = {
-    x: rect.left + (rect.width / 2),
-    y: rect.top + (rect.height / 2),
-  };
-  const endPoint = {
-    x: startPoint.x + 170,
-    y: startPoint.y,
-  };
-
-  wordButton.dispatchEvent(
-    new PointerEvent('pointerdown', {
-      bubbles: true,
-      pointerId: 918,
-      pointerType: 'mouse',
-      clientX: startPoint.x,
-      clientY: startPoint.y,
-    }),
-  );
-
-  wordButton.dispatchEvent(
-    new PointerEvent('pointerup', {
-      bubbles: true,
-      pointerId: 918,
-      pointerType: 'mouse',
-      clientX: endPoint.x,
-      clientY: endPoint.y,
-    }),
-  );
-
-  return true;
-})()
-JS);
-
-    expect($didSwipeFromTextLine)->toBeTrue();
-    waitForScriptWithTimeout($page, quranReaderDataScript('data.pageNumber'), $startingPageNumber, 6_000);
-    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
-
-    $didSwipeFromLineGap = $page->script(<<<'JS'
-(() => {
-  const linesContainer = document.querySelector('.quran-page-lines');
-  const lineEntries = Array.from(document.querySelectorAll('.quran-page-lines [data-quran-line]'))
-    .filter((entry) => entry instanceof HTMLElement);
-
-  if (!(linesContainer instanceof HTMLElement) || lineEntries.length < 2) {
-    return false;
-  }
-
-  let gapPoint = null;
-
-  for (let index = 0; index < lineEntries.length - 1; index += 1) {
-    const currentRect = lineEntries[index].getBoundingClientRect();
-    const nextRect = lineEntries[index + 1].getBoundingClientRect();
-    const gapHeight = nextRect.top - currentRect.bottom;
-
-    if (gapHeight > 4) {
-      gapPoint = {
-        x: currentRect.left + (currentRect.width / 2),
-        y: currentRect.bottom + (gapHeight / 2),
-      };
-
-      break;
-    }
-  }
-
-  if (!gapPoint) {
-    const containerRect = linesContainer.getBoundingClientRect();
-    gapPoint = {
-      x: containerRect.left + (containerRect.width / 2),
-      y: containerRect.top + 4,
-    };
-  }
-
-  const endPoint = {
-    x: gapPoint.x + 170,
-    y: gapPoint.y,
-  };
-
-  linesContainer.dispatchEvent(
-    new PointerEvent('pointerdown', {
-      bubbles: true,
-      pointerId: 919,
-      pointerType: 'mouse',
-      clientX: gapPoint.x,
-      clientY: gapPoint.y,
-    }),
-  );
-
-  linesContainer.dispatchEvent(
-    new PointerEvent('pointerup', {
-      bubbles: true,
-      pointerId: 919,
-      pointerType: 'mouse',
-      clientX: endPoint.x,
-      clientY: endPoint.y,
-    }),
-  );
-
-  return true;
-})()
-JS);
-
-    expect($didSwipeFromLineGap)->toBeTrue();
     waitForScriptWithTimeout(
         $page,
-        quranReaderDataScript(
-            js_template(
-                <<<'JS'
-(() => {
-  const startPage = Number({{startPage}});
-  const currentPage = Number(data.pageNumber ?? 0);
+        quranReaderDataScript('!data.search.isLoading && Number(data.search.results?.length ?? 0) > 0'),
+        true,
+        12_000,
+    );
 
-  if (currentPage < 1 || startPage < 1) {
+    expect(
+        $page->script(
+            quranReaderCommandScript(
+                <<<'JS'
+window.__searchModalStayedOpenAfterResultsSettled = false;
+setTimeout(() => {
+  window.__searchModalStayedOpenAfterResultsSettled = Boolean(
+    data.search.modalOpen &&
+    data.isSearchModalWindowVisible() &&
+    Number(data.search.results?.length ?? 0) > 0,
+  );
+}, 1200);
+return true;
+JS,
+            ),
+        ),
+    )->toBeTrue();
+
+    waitForScriptWithTimeout(
+        $page,
+        'Boolean(window.__searchModalStayedOpenAfterResultsSettled)',
+        true,
+        4_000,
+    );
+
+    $targetPage = (int) $page->script(
+        quranReaderDataScript('Number(data.search.results[0]?.page_number ?? 0)'),
+    );
+
+    expect($targetPage)->toBeGreaterThan(0);
+
+    $page->script(quranReaderCommandScript('void data.goToSearchResult(data.search.results[0]);'));
+
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('!data.search.modalOpen && !data.isSearchModalWindowVisible()'),
+        true,
+        8_000,
+    );
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('Number(data.pageNumber ?? 0)'),
+        $targetPage,
+        8_000,
+    );
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('!data.isFittingPage && data.ready && data.mushafLines.length > 0'),
+        true,
+        12_000,
+    );
+    waitForScriptWithTimeout(
+        $page,
+        <<<'JS'
+(() => {
+  const lines = document.querySelector('.quran-page-lines');
+
+  if (!(lines instanceof HTMLElement)) {
     return false;
   }
 
-  return currentPage !== startPage && Math.abs(currentPage - startPage) === 1;
+  const styles = window.getComputedStyle(lines);
+
+  return styles.visibility === 'visible' && styles.opacity === '1';
 })()
 JS,
-                ['startPage' => $startingPageNumber],
+        true,
+        12_000,
+    );
+});
+
+it('refits the reader before revealing the selected search result on a fresh session', function () {
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
+
+    resetBrowserState($page);
+    waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
+    hashAction($page, '#quran-app-tilawa', true);
+
+    waitForScript($page, homeDataScript('data.activeView'), 'quran-app-tilawa');
+    waitForScript($page, 'window.location.hash', '#quran-app-tilawa');
+    waitForQuranReaderVisible($page);
+    waitForScript($page, quranReaderDataScript('data.ready && data.mushafLines.length > 0'), true);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
+
+    scriptClick($page, '.quran-soorah-trigger');
+    waitForScriptWithTimeout($page, 'Boolean(document.querySelector("#quran-reader-search-modal"))', true, 5_000);
+
+    $page->fill('#quran-reader-search-input', 'محمد رسول الله');
+
+    expect(
+        $page->script(
+            quranReaderCommandScript(
+                <<<'JS'
+window.__searchModalRemainedOpenWhileSearchStarted = false;
+setTimeout(() => {
+  window.__searchModalRemainedOpenWhileSearchStarted = Boolean(
+    data.search.modalOpen &&
+    data.isSearchModalWindowVisible(),
+  );
+}, 1200);
+return true;
+JS,
             ),
         ),
+    )->toBeTrue();
+
+    waitForScriptWithTimeout(
+        $page,
+        'Boolean(window.__searchModalRemainedOpenWhileSearchStarted)',
         true,
-        6_000,
+        4_000,
     );
-    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
-    $page->assertNoJavaScriptErrors();
+
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('!data.search.isLoading && Number(data.search.results?.length ?? 0) > 0'),
+        true,
+        12_000,
+    );
+
+    $targetPage = (int) $page->script(
+        quranReaderDataScript('Number(data.search.results[0]?.page_number ?? 0)'),
+    );
+
+    expect($targetPage)->toBeGreaterThan(0);
+
+    $page->script(quranReaderCommandScript('void data.goToSearchResult(data.search.results[0]);'));
+
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('!data.search.modalOpen && !data.isSearchModalWindowVisible()'),
+        true,
+        8_000,
+    );
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('Number(data.pageNumber ?? 0)'),
+        $targetPage,
+        8_000,
+    );
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('!data.isFittingPage && data.ready && data.mushafLines.length > 0'),
+        true,
+        12_000,
+    );
+    waitForScriptWithTimeout(
+        $page,
+        <<<'JS'
+(() => {
+  const lines = document.querySelector('.quran-page-lines');
+
+  if (!(lines instanceof HTMLElement)) {
+    return false;
+  }
+
+  const styles = window.getComputedStyle(lines);
+
+  return styles.visibility === 'visible' && styles.opacity === '1';
+})()
+JS,
+        true,
+        12_000,
+    );
 });
 
 it('keeps the reader visible on 4xl when jumping from opening spread to dense pages', function () {

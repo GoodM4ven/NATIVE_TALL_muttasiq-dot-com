@@ -17,6 +17,8 @@ class ReaderSearchIndexController extends Controller
         $isLocalIndexRequest = $request->boolean('local');
 
         if ($isLocalIndexRequest) {
+            $readerDataService->primeSearchCaches();
+
             return response()
                 ->json([
                     'ready' => $readerDataService->isReady(),

@@ -197,7 +197,7 @@ it('renders expected icon and markup contracts while resetting app version to co
         ->and($content)->toContain('data-quran-app-reader-root');
 });
 
-it('renders the download stack controls on web runtime only', function () {
+it('renders the download and introduction video stack controls on web runtime only', function () {
     config([
         'nativephp-internal.running' => false,
         'nativephp-internal.platform' => null,
@@ -206,9 +206,25 @@ it('renders the download stack controls on web runtime only', function () {
     $webResponse = get('/');
 
     $webResponse->assertSuccessful()
+        ->assertSee('data-testid="introduction-video-button"', false)
         ->assertSee('data-testid="download-button"', false)
         ->assertSee('data-testid="download-android-button"', false)
         ->assertSee('data-testid="download-ios-button"', false);
+
+    $webContent = $webResponse->getContent();
+    $introductionVideoButtonPosition = strpos($webContent, 'data-testid="introduction-video-button"');
+    $downloadButtonPosition = strpos($webContent, 'data-testid="download-button"');
+
+    expect($introductionVideoButtonPosition)->not->toBeFalse()
+        ->and($downloadButtonPosition)->not->toBeFalse()
+        ->and($introductionVideoButtonPosition)->toBeLessThan($downloadButtonPosition);
+
+    expect($webContent)
+        ->toContain('isIntroductionVideoOpen')
+        ->toContain('!isControlPanelOpen && !isAthkarManagerOpen && !isIntroductionVideoOpen');
+
+    expect($webContent)
+        ->toContain("views['main-menu'].isOpen && !isControlPanelOpen && !isAthkarManagerOpen && !isIntroductionVideoOpen");
 
     config([
         'nativephp-internal.running' => true,
@@ -218,7 +234,31 @@ it('renders the download stack controls on web runtime only', function () {
     $nativeResponse = get('/');
 
     $nativeResponse->assertSuccessful()
+        ->assertSee('data-testid="introduction-video-button"', false)
         ->assertDontSee('data-testid="download-button"', false)
         ->assertDontSee('data-testid="download-android-button"', false)
         ->assertDontSee('data-testid="download-ios-button"', false);
+});
+
+it('renders a single athkar font scale slider that controls one shared text size value', function () {
+    config([
+        'nativephp-internal.running' => false,
+        'nativephp-internal.platform' => null,
+    ]);
+
+    $response = get('/');
+
+    $response->assertSuccessful();
+
+    $content = $response->getContent();
+
+    expect($content)
+        ->toContain('aria-label="حجم النص"')
+        ->toContain('x-text="mainTextSizeValue()"')
+        ->toContain('x-on:input="handleMainTextSizeInput($event)"')
+        ->toContain('x-on:change="commitMainTextSizeValue()"')
+        ->not->toContain('aria-label="الحد الأدنى لحجم النص"')
+        ->not->toContain('aria-label="الحد الأقصى لحجم النص"')
+        ->not->toContain('x-on:input="handleMinimumMainTextSizeInput($event)"')
+        ->not->toContain('x-on:input="handleMaximumMainTextSizeInput($event)"');
 });

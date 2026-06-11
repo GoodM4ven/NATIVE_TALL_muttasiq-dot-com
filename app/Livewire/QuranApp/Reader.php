@@ -329,7 +329,7 @@ class Reader extends Component implements HasActions, HasSchemas
         /** @var QuranReaderDataService $readerDataService */
         $readerDataService = app(QuranReaderDataService::class);
         $normalizedRequestSerial = max(0, $requestSerial);
-        $resolvedLimit = max(6, min(24, $limit));
+        $resolvedLimit = max(6, min(60, $limit));
         $this->markSearchStreamStarted($normalizedRequestSerial);
 
         $this->streamSearchPayload(
@@ -447,7 +447,7 @@ class Reader extends Component implements HasActions, HasSchemas
         return $readerDataService->searchByStages(
             $query,
             ['surah_exact'],
-            max(1, min(24, $limit)),
+            max(1, min(60, $limit)),
         );
     }
 
@@ -478,7 +478,7 @@ class Reader extends Component implements HasActions, HasSchemas
         return $readerDataService->searchByStages(
             $query,
             ['surah_close'],
-            max(1, min(24, $limit)),
+            max(1, min(60, $limit)),
         );
     }
 
@@ -509,7 +509,7 @@ class Reader extends Component implements HasActions, HasSchemas
         return $readerDataService->searchByStages(
             $query,
             ['ayah_exact'],
-            max(1, min(24, $limit)),
+            max(1, min(60, $limit)),
         );
     }
 
@@ -540,7 +540,7 @@ class Reader extends Component implements HasActions, HasSchemas
         return $readerDataService->searchByStages(
             $query,
             ['ayah_close'],
-            max(1, min(24, $limit)),
+            max(1, min(60, $limit)),
         );
     }
 
@@ -571,7 +571,7 @@ class Reader extends Component implements HasActions, HasSchemas
         return $readerDataService->searchByStages(
             $query,
             ['surah_sarf'],
-            max(1, min(24, $limit)),
+            max(1, min(60, $limit)),
         );
     }
 
@@ -602,7 +602,7 @@ class Reader extends Component implements HasActions, HasSchemas
         return $readerDataService->searchByStages(
             $query,
             ['ayah_sarf'],
-            max(1, min(24, $limit)),
+            max(1, min(60, $limit)),
         );
     }
 
@@ -633,7 +633,7 @@ class Reader extends Component implements HasActions, HasSchemas
         return $readerDataService->searchByStages(
             $query,
             ['ayah_jathr'],
-            max(1, min(24, $limit)),
+            max(1, min(60, $limit)),
         );
     }
 
@@ -825,6 +825,7 @@ class Reader extends Component implements HasActions, HasSchemas
     public function navigationHistoryAction(): Action
     {
         return Action::make('navigationHistory')
+            ->modal()
             ->modalHeading(arabic_text('سجلّ الانتقالات'))
             ->modalDescription(arabic_text('آخر مئة انتقال بين الصفحات، بالإضافة لحفظ المميّز (بالوسوم والملاحظات).'))
             ->modalAutofocus(false)
@@ -848,6 +849,7 @@ class Reader extends Component implements HasActions, HasSchemas
     public function bookmarksManagerAction(): Action
     {
         return Action::make('bookmarksManager')
+            ->modal()
             ->modalHeading(arabic_text('إدارة علامات الصفحات'))
             ->modalDescription(arabic_text('جدول للبحث والتصفية (بالوسوم والملاحظات) والترتيب، من أجل الانتقال السريع.'))
             ->modalAutofocus(false)
@@ -880,6 +882,7 @@ class Reader extends Component implements HasActions, HasSchemas
     public function supportUnlockAction(): Action
     {
         return Action::make('supportUnlock')
+            ->modal()
             ->modalHeading(arabic_text('دعم المشروع'))
             ->modalDescription(arabic_text('قبل استخدام بعض الخصائص المميّزة في المنصة، نحتاج منك تأكيد دعم تطوير المشروع.'))
             ->modalWidth(Width::ThreeExtraLarge)
@@ -927,10 +930,7 @@ class Reader extends Component implements HasActions, HasSchemas
         $readerData = $readerDataService->resolvePage($this->pageNumber, $this->activeAyahIndex);
         $surahNames = $readerDataService->surahNames();
         $surahDirectory = $readerDataService->surahDirectory();
-        $storedSettings = Setting::query()
-            ->whereIn('name', array_keys(Setting::defaults()))
-            ->pluck('value', 'name')
-            ->all();
+        $storedSettings = Setting::storedValues(array_keys(Setting::defaults()));
         $normalizedSettings = Setting::normalizeSettings(
             array_replace(Setting::defaults(), $storedSettings),
         );
@@ -1083,6 +1083,16 @@ class Reader extends Component implements HasActions, HasSchemas
 
     private function supportUnlockModalContent(): HtmlString
     {
+        $html = Cache::rememberForever(
+            'support-unlock-modal-content:v1',
+            fn (): string => $this->buildSupportUnlockModalContent(),
+        );
+
+        return new HtmlString($html);
+    }
+
+    private function buildSupportUnlockModalContent(): string
+    {
         $introBeforeStrong = arabic_text(
             'تطوير المزايا المتقدمة، وإتاحة المنصة على المخدّمات والمنصات بأجهزتها المختلفة، كل هذا يتطلب ',
         );
@@ -1092,23 +1102,21 @@ class Reader extends Component implements HasActions, HasSchemas
         );
         $supportLinksCaption = arabic_text('روابط منصات الدعم:');
 
-        return new HtmlString(
-            '<div class="space-y-4 text-right text-sm! leading-7 text-gray-800 dark:text-gray-100">'
-                .'<p>'
-                .e($introBeforeStrong)
-                .'<strong>'.e($introStrong).'</strong>'
-                .e($introAfterStrong)
-                .'</p>'
-                .'<div class="quran-support-unlock-links-panel rounded-xl p-3 text-sm">'
-                .'<p class="mb-2 font-semibold text-gray-900 dark:text-gray-100">'.e($supportLinksCaption).'</p>'
-                .'<div class="flex flex-wrap items-center justify-end gap-2">'
-                .$this->supportUnlockLinkMarkup('Buy Me a Coffee', 'https://buymeacoffee.com/goodm4ven')
-                .$this->supportUnlockLinkMarkup('Patreon', 'https://patreon.com/GoodM4ven')
-                .$this->supportUnlockLinkMarkup('GitHub Sponsors', 'https://github.com/sponsors/GoodM4ven')
-                .'</div>'
-                .'</div>'
-                .'</div>',
-        );
+        return '<div class="space-y-4 text-right text-sm! leading-7 text-gray-800 dark:text-gray-100">'
+            .'<p>'
+            .e($introBeforeStrong)
+            .'<strong>'.e($introStrong).'</strong>'
+            .e($introAfterStrong)
+            .'</p>'
+            .'<div class="quran-support-unlock-links-panel rounded-xl p-3 text-sm">'
+            .'<p class="mb-2 font-semibold text-gray-900 dark:text-gray-100">'.e($supportLinksCaption).'</p>'
+            .'<div class="flex flex-wrap items-center justify-end gap-2">'
+            .$this->supportUnlockLinkMarkup('Buy Me a Coffee', 'https://buymeacoffee.com/goodm4ven')
+            .$this->supportUnlockLinkMarkup('Patreon', 'https://patreon.com/GoodM4ven')
+            .$this->supportUnlockLinkMarkup('GitHub Sponsors', 'https://github.com/sponsors/GoodM4ven')
+            .'</div>'
+            .'</div>'
+            .'</div>';
     }
 
     private function supportUnlockLinkMarkup(string $label, string $url): string

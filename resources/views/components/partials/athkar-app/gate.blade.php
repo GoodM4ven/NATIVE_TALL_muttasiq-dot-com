@@ -484,7 +484,7 @@
                         <x-goodmaven::blurred-image
                             alt="Athkar night spill"
                             :imagePath="asset('images/background/athkar-night-blurred.webp')"
-                            :thumbnailImagePath="asset('images/background/athkar-night-blurred-blur-thumbnail.png')"
+                            :thumbnailImagePath="asset('images/background/athkar-night-blurred-blur-thumbnail.webp')"
                             :isDisplayEnforced="true"
                             containerClasses="overflow-visible bg-transparent"
                             imageClasses="athkar-gate__spill-image"
@@ -495,7 +495,7 @@
                         <x-goodmaven::blurred-image
                             alt="Athkar morning spill"
                             :imagePath="asset('images/background/athkar-morning-blurred.webp')"
-                            :thumbnailImagePath="asset('images/background/athkar-morning-blurred-blur-thumbnail.png')"
+                            :thumbnailImagePath="asset('images/background/athkar-morning-blurred-blur-thumbnail.webp')"
                             :isDisplayEnforced="true"
                             containerClasses="overflow-visible bg-transparent"
                             imageClasses="athkar-gate__spill-image"
@@ -522,7 +522,7 @@
                             <x-goodmaven::blurred-image
                                 alt="Athkar night"
                                 :imagePath="asset('images/background/athkar-night.webp')"
-                                :thumbnailImagePath="asset('images/background/athkar-night-blur-thumbnail.png')"
+                                :thumbnailImagePath="asset('images/background/athkar-night-blur-thumbnail.webp')"
                                 :isDisplayEnforced="true"
                                 imageClasses="athkar-gate__image-img select-none"
                             />
@@ -562,7 +562,7 @@
                             <x-goodmaven::blurred-image
                                 alt="Athkar morning"
                                 :imagePath="asset('images/background/athkar-morning.webp')"
-                                :thumbnailImagePath="asset('images/background/athkar-morning-blur-thumbnail.png')"
+                                :thumbnailImagePath="asset('images/background/athkar-morning-blur-thumbnail.webp')"
                                 :isDisplayEnforced="true"
                                 imageClasses="athkar-gate__image-img select-none"
                             />

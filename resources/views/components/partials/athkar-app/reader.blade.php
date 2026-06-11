@@ -1378,13 +1378,13 @@
                 </div>
 
                 <div
-                    class="pointer-events-auto absolute inset-x-0 top-0 h-11 overflow-visible"
+                    class="pointer-events-auto absolute inset-x-0 top-0 z-[60] h-[4.5rem] overflow-visible"
                     data-athkar-mobile-counter
                     x-bind:data-counter-pulse="shouldEnableVisualEnhancements() ? sharedCounterPulseState() : 'inactive'"
                     x-show="shouldShowSharedMobileCounter() || !settingValue('does_automatically_switch_completed_athkar', true) || !settingValue('does_clicking_switch_athkar_too', true)"
                     x-transition.opacity.duration.250ms
                 >
-                    <div class="group relative h-11">
+                    <div class="group relative h-[4.5rem]">
                         <button
                             class="pointer-events-auto absolute left-1/2 top-0 z-20 flex size-[2.6rem] origin-top -translate-x-1/2 touch-manipulation transition-all duration-200"
                             data-hint-allow
@@ -1392,7 +1392,11 @@
                             aria-label="{{ arabic_text('العدد') }}"
                             tabindex="-1"
                             x-ref="mobileOvercountHintRing"
-                            x-bind:class="isHintOpen(activeIndex) ? 'size-16!' : ''"
+                            x-bind:class="{
+                                'size-16!': isHintOpen(activeIndex),
+                                'pointer-events-none!': isHintOpen(activeIndex) && requiredCount(activeIndex) > 1 &&
+                                    countAt(activeIndex) !== requiredCount(activeIndex),
+                            }"
                             x-on:click.stop="toggleMobileOvercountHint()"
                             x-on:pointerdown.stop
                             x-on:touchstart.stop
@@ -1459,7 +1463,7 @@
                         </button>
 
                         <button
-                            class="bg-success-500/90 z-9999 absolute inset-x-0 -bottom-2 mx-auto flex h-7 w-7 translate-x-[15px] translate-y-[20px] items-center justify-center rounded-full text-white shadow-lg"
+                            class="bg-success-500/90 pointer-events-auto absolute inset-x-0 -bottom-2 z-[70] mx-auto flex h-7 w-7 translate-x-[15px] translate-y-[-12px] items-center justify-center rounded-full text-white shadow-lg"
                             data-hint-allow
                             type="button"
                             aria-label="{{ arabic_text('إتمام الذكر') }}"
@@ -1634,10 +1638,12 @@
                             <div class="contents">
                                 <!-- Content -->
                                 <div
-                                    class="pointer-events-auto flex min-h-0 flex-1 flex-col gap-3 sm:gap-1 sm:pt-0 md:gap-2 md:pt-2 lg:gap-4 lg:pt-4 xl:gap-4 xl:pt-3 2xl:gap-5 2xl:pt-4">
+                                    class="pointer-events-auto flex min-h-0 flex-1 flex-col gap-3 sm:gap-1 sm:pt-0 md:gap-2 md:pt-2 lg:gap-4 lg:pt-4 xl:gap-4 xl:pt-3 2xl:gap-5 2xl:pt-4"
+                                    x-bind:style="isHintOpen(activeIndex) ? 'pointer-events: none;' : null"
+                                >
                                     <!-- Althikr -->
                                     <button
-                                        class="athkar-tap md:px-13 3xl:px-4 4xl:px-5 3xl:py-6 group relative flex min-h-0 w-full flex-1 touch-manipulation flex-col items-center justify-center gap-4 overflow-hidden rounded-sm border border-transparent px-0 py-1.5 text-center transition sm:px-10 sm:py-2.5 md:py-3 lg:px-12 xl:px-3 xl:py-5 2xl:px-3 2xl:py-5"
+                                        class="athkar-tap md:px-13 3xl:px-4 4xl:px-5 3xl:py-6 group pointer-events-auto relative flex min-h-0 w-full flex-1 touch-manipulation flex-col items-center justify-center gap-4 overflow-hidden rounded-sm border border-transparent px-0 py-1.5 text-center transition sm:px-10 sm:py-2.5 md:py-3 lg:px-12 xl:px-3 xl:py-5 2xl:px-3 2xl:py-5"
                                         data-athkar-tap
                                         type="button"
                                         tabindex="-1"
@@ -1651,6 +1657,7 @@
                                         x-on:touchmove="moveTapAuraHold($event)"
                                         x-on:touchend="endTapAuraHold($event)"
                                         x-on:touchcancel="cancelTapAuraHold($event)"
+                                        x-bind:style="isHintOpen(index) ? 'pointer-events: none;' : null"
                                         x-bind:class="{
                                             'opacity-30!': isHintOpen(index),
                                             'athkar-tap--pulse': tapPulse.index === index && tapPulse.isActive,
@@ -1705,6 +1712,7 @@
                                             <div
                                                 class="athkar-main-text"
                                                 x-bind:class="shouldHideMainTextLayer(index) && 'is-main-hidden'"
+                                                x-bind:style="isHintOpen(activeIndex) ? 'pointer-events: none;' : null"
                                             >
                                                 <p
                                                     class="athkar-text athkar-shimmer font-arabic-serif text-primary-950 dark:text-primary-50 whitespace-break-spaces!"
@@ -1960,7 +1968,7 @@
                     x-on:click="closeFontScaleOverlay()"
                 ></div>
                 <section
-                    class="athkar-font-scale-overlay__panel"
+                    class="athkar-font-scale-overlay__panel flex flex-col items-center gap-3"
                     x-on:click.stop
                 >
                     <p class="athkar-font-scale-overlay__title font-arabic-sans">
@@ -1971,40 +1979,20 @@
                         class="quran-page-slider-chip athkar-font-scale-overlay__value select-none rounded-full px-2 py-[0.18rem] text-[0.72rem] font-semibold"
                         type="button"
                         tabindex="-1"
-                        x-text="mainTextSizeMinimumValue()"
+                        x-text="mainTextSizeValue()"
                         x-on:click="resetMainTextSizeRangeToDefaults()"
                     ></button>
                     <input
                         class="quran-page-slider min-w-42 h-[0.56rem] w-[min(70vw,15rem)] outline-none"
                         type="range"
-                        aria-label="{{ arabic_text('الحد الأدنى لحجم النص') }}"
+                        aria-label="{{ arabic_text('حجم النص') }}"
                         tabindex="-1"
-                        x-bind:min="resolveMainTextSizeLimitsFor('minimum_main_text_size').min"
-                        x-bind:max="mainTextSizeMaximumValue()"
+                        x-bind:min="resolveMainTextSizeSliderLimits().min"
+                        x-bind:max="resolveMainTextSizeSliderLimits().max"
                         step="1"
-                        x-bind:value="mainTextSizeMinimumValue()"
-                        x-on:input="handleMinimumMainTextSizeInput($event)"
-                        x-on:change="commitMainTextSizeRange()"
-                    />
-
-                    <button
-                        class="quran-page-slider-chip athkar-font-scale-overlay__value select-none rounded-full px-2 py-[0.18rem] text-[0.72rem] font-semibold"
-                        type="button"
-                        tabindex="-1"
-                        x-text="mainTextSizeMaximumValue()"
-                        x-on:click="resetMainTextSizeRangeToDefaults()"
-                    ></button>
-                    <input
-                        class="quran-page-slider min-w-42 h-[0.56rem] w-[min(70vw,15rem)] outline-none"
-                        type="range"
-                        aria-label="{{ arabic_text('الحد الأقصى لحجم النص') }}"
-                        tabindex="-1"
-                        x-bind:min="mainTextSizeMinimumValue()"
-                        x-bind:max="resolveMainTextSizeLimitsFor('maximum_main_text_size').max"
-                        step="1"
-                        x-bind:value="mainTextSizeMaximumValue()"
-                        x-on:input="handleMaximumMainTextSizeInput($event)"
-                        x-on:change="commitMainTextSizeRange()"
+                        x-bind:value="mainTextSizeValue()"
+                        x-on:input="handleMainTextSizeInput($event)"
+                        x-on:change="commitMainTextSizeValue()"
                     />
                 </section>
             </div>

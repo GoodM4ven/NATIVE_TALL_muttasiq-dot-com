@@ -78,6 +78,7 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
         quranPageYOffsetAdjustMin,
         quranPageYOffsetAdjustRemStep,
         quranPageYOffsetAdjustStorageKey,
+        quranContentVersionStorageKey,
         quranReaderDebugLogsEnabledByEnv,
         quranReaderDebugLogsToggleEventName,
         quranSearchStreamFrameDelimiter,
@@ -131,6 +132,26 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
 
     return {
         init() {
+            if (this.contentVersion) {
+                const storedContentVersion = localStorage.getItem(quranContentVersionStorageKey);
+
+                if (storedContentVersion !== this.contentVersion) {
+                    localStorage.setItem(quranContentVersionStorageKey, this.contentVersion);
+                    this._pagePayloadByPage.clear();
+
+                    void (async () => {
+                        if (typeof window !== 'undefined' && typeof window.caches !== 'undefined') {
+                            await Promise.allSettled([
+                                window.caches.delete(this.cacheNames.pages),
+                                window.caches.delete(this.cacheNames.fonts),
+                                window.caches.delete(this.cacheNames.search),
+                                window.caches.delete(this.cacheNames.searchLocalIndex),
+                            ]);
+                        }
+                    })();
+                }
+            }
+
             this.applyPayload(this.initialPayload, {
                 setPageNumber: true,
                 persistPageNumber: false,
@@ -175,6 +196,36 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
                 this.isQrDebugLoggingEnabled = !this.isQrDebugLoggingEnabled;
             };
             window.addEventListener(quranReaderDebugLogsToggleEventName, this._onQrDebugLogsToggle);
+
+            this._onSearchModalCloseCapture = (event) => {
+                if (typeof this.shouldBlockSearchModalCloseEvent !== 'function') {
+                    return;
+                }
+
+                if (!this.shouldBlockSearchModalCloseEvent(event)) {
+                    return;
+                }
+
+                this.traceSearchModalLifecycle('close-blocked', {
+                    eventType: String(event?.type ?? ''),
+                    modalId: String(event?.detail?.id ?? ''),
+                    queryLength: this.normalizeSearchQuery(this.search.query).length,
+                    isLoading: Boolean(this.search.isLoading),
+                    searchRequestInFlight: Boolean(this._searchRequestInFlight),
+                    searchNavigationInFlight: Boolean(this._searchNavigationInFlight),
+                    searchStreamHasUpdates: Boolean(this.search.streamHasUpdates),
+                });
+
+                event.stopImmediatePropagation();
+                event.stopPropagation();
+
+                if (typeof event.preventDefault === 'function') {
+                    event.preventDefault();
+                }
+            };
+
+            window.addEventListener('close-modal', this._onSearchModalCloseCapture, true);
+            window.addEventListener('close-modal-quietly', this._onSearchModalCloseCapture, true);
 
             const storedLastPageNumber = readLastPageNumber();
             const restoredPage = clampPage(
@@ -1250,6 +1301,16 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
                 this._onQrDebugLogsToggle = null;
             }
 
+            if (this._onSearchModalCloseCapture) {
+                window.removeEventListener('close-modal', this._onSearchModalCloseCapture, true);
+                window.removeEventListener(
+                    'close-modal-quietly',
+                    this._onSearchModalCloseCapture,
+                    true,
+                );
+                this._onSearchModalCloseCapture = null;
+            }
+
             if (this._onWirdSimulateDay) {
                 window.removeEventListener('quran-wird-simulate-day', this._onWirdSimulateDay);
                 this._onWirdSimulateDay = null;
@@ -1431,6 +1492,11 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
             if (this._searchModalCloseDebounceTimer !== null) {
                 clearTimeout(this._searchModalCloseDebounceTimer);
                 this._searchModalCloseDebounceTimer = null;
+            }
+
+            if (this._searchModalCloseSyncTimer !== null) {
+                clearTimeout(this._searchModalCloseSyncTimer);
+                this._searchModalCloseSyncTimer = null;
             }
 
             this.clearWirdEntryRevealTimers();

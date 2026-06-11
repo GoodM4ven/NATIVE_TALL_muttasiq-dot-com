@@ -9,8 +9,10 @@ use App\Services\Enums\ThikrType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Spatie\EloquentSortable\Sortable;
 use Spatie\EloquentSortable\SortableTrait;
+use Throwable;
 
 /**
  * @property int $id
@@ -72,11 +74,29 @@ class Thikr extends Model implements Sortable
      */
     public static function cachedDefaults(): array
     {
-        return Cache::remember(
-            self::DEFAULT_CACHE_KEY,
-            now()->addSeconds(self::DEFAULT_CACHE_TTL_SECONDS),
-            fn (): array => self::defaultsPayload(),
-        );
+        try {
+            return Cache::remember(
+                self::DEFAULT_CACHE_KEY,
+                now()->addSeconds(self::DEFAULT_CACHE_TTL_SECONDS),
+                fn (): array => self::defaultsPayload(),
+            );
+        } catch (Throwable $exception) {
+            Log::warning('Failed to resolve cached athkar defaults.', [
+                'message' => $exception->getMessage(),
+            ]);
+
+            try {
+                $cachedDefaults = Cache::get(self::DEFAULT_CACHE_KEY, []);
+            } catch (Throwable $cacheException) {
+                Log::warning('Failed to read cached athkar defaults after a database failure.', [
+                    'message' => $cacheException->getMessage(),
+                ]);
+
+                return [];
+            }
+
+            return is_array($cachedDefaults) ? $cachedDefaults : [];
+        }
     }
 
     public static function clearDefaultCache(): void

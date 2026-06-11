@@ -973,10 +973,12 @@
             wird: @js(arabic_text('وِرد القرآن')),
             masaa: @js(arabic_text('أذكار المَساء')),
         },
+        lockedCaption: @js(arabic_text('قريبا...')),
     })"
     x-bind:class="{
         'main-menu--visual-enhancements-enabled': doesEnableVisualEnhancements,
     }"
+    x-bind:data-main-menu-lock-preview="activeItemLocked ? 'true' : 'false'"
     x-on:main-menu-item-enter="handleItemEnter($event.detail)"
     x-on:main-menu-item-leave="handleItemLeave()"
     x-on:main-menu-item-click="handleItemClick($event.detail)"

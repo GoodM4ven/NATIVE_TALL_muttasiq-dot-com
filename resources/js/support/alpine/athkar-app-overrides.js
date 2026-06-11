@@ -121,7 +121,9 @@ const normalizeAthkarSettingValue = (key, value, defaultValue) => {
         return normalizeIntegerSettingValue(key, value, defaultValue);
     }
 
-    return value ?? defaultValue;
+    const normalized = String(value ?? '').trim();
+
+    return normalized === '' ? defaultValue : normalized;
 };
 
 const normalizeAthkarSettings = (settings, defaults) => {

@@ -2096,17 +2096,32 @@
             animation: none !important;
         }
 
+        .quran-reader--visual-enhancements-disabled .quran-page-surface.quran-page-motion-leaving-next .quran-page-lines[data-fit-state='fading-out'] {
+            translate: 2rem 0;
+            transition: opacity 200ms ease-out, translate 200ms ease-out;
+        }
+
+        .quran-reader--visual-enhancements-disabled .quran-page-surface.quran-page-motion-leaving-prev .quran-page-lines[data-fit-state='fading-out'] {
+            translate: -2rem 0;
+            transition: opacity 200ms ease-out, translate 200ms ease-out;
+        }
+
         @media (max-width: 639px) {
             .quran-reader--visual-enhancements-disabled .quran-page-lines[data-fit-state='fading-out'] {
-                transition: opacity 70ms ease-out;
+                transition: opacity 200ms ease-out;
             }
 
             .quran-reader--visual-enhancements-disabled .quran-page-lines[data-fit-state='ready'] {
-                transition: opacity 150ms ease-in;
+                transition: opacity 200ms ease-in;
             }
 
             .quran-reader--visual-enhancements-disabled .quran-page-lines[data-fit-state='ready'] [data-quran-line] {
                 animation: none !important;
+            }
+
+            .quran-reader--visual-enhancements-disabled .quran-page-surface.quran-page-motion-leaving-next .quran-page-lines[data-fit-state='fading-out'],
+            .quran-reader--visual-enhancements-disabled .quran-page-surface.quran-page-motion-leaving-prev .quran-page-lines[data-fit-state='fading-out'] {
+                transition: opacity 200ms ease-out, translate 200ms ease-out;
             }
 
             .quran-reader:not(.quran-reader--visual-enhancements-disabled) .quran-page-lines[data-fit-state='fading-out'] {
@@ -2168,12 +2183,34 @@
             display: inline-block;
         }
 
-        .quran-page-motion-next {
-            animation: quran-page-slide-next 260ms ease-out;
+        .quran-reader--visual-enhancements-disabled .quran-page-motion-next {
+            animation: quran-page-slide-next 400ms ease-out;
+            will-change: transform, opacity;
         }
 
-        .quran-page-motion-prev {
-            animation: quran-page-slide-prev 260ms ease-out;
+        .quran-reader--visual-enhancements-disabled .quran-page-motion-prev {
+            animation: quran-page-slide-prev 400ms ease-out;
+            will-change: transform, opacity;
+        }
+
+        @media (min-width: 768px) {
+            .quran-reader--visual-enhancements-disabled .quran-page-motion-next {
+                animation-duration: 240ms;
+            }
+
+            .quran-reader--visual-enhancements-disabled .quran-page-motion-prev {
+                animation-duration: 240ms;
+            }
+        }
+
+        @media (max-width: 639px) {
+            .quran-reader--visual-enhancements-disabled .quran-page-motion-next {
+                animation: quran-page-slide-next 800ms ease-out;
+            }
+
+            .quran-reader--visual-enhancements-disabled .quran-page-motion-prev {
+                animation: quran-page-slide-prev 800ms ease-out;
+            }
         }
 
         .quran-top-strip {
@@ -3645,25 +3682,21 @@
 
         @keyframes quran-page-slide-next {
             from {
-                opacity: 0.46;
-                transform: translateY(0.5rem);
+                translate: -2rem 0;
             }
 
             to {
-                opacity: 1;
-                transform: translateY(0);
+                translate: 0 0;
             }
         }
 
         @keyframes quran-page-slide-prev {
             from {
-                opacity: 0.46;
-                transform: translateY(0.5rem);
+                translate: 2rem 0;
             }
 
             to {
-                opacity: 1;
-                transform: translateY(0);
+                translate: 0 0;
             }
         }
 
@@ -3760,6 +3793,7 @@
         },
         initialPayload: @js($initialReaderPayload),
         nativeRuntime: @js(is_platform('native')),
+        contentVersion: @js(config('app.app_version', '')),
         prewarmPages: @js(is_platform('native') ? 12 : 6),
         prefetchRadius: @js(is_platform('native') ? 3 : 2),
         searchModalId: @js('quran-reader-search-modal'),
@@ -3889,7 +3923,7 @@
                     @class([
                         'top-[3.75rem]' => is_platform('ios'),
                         'top-[1.92rem]' => !is_platform('ios'),
-                        'z-54 pointer-events-none absolute inset-x-0 flex justify-center px-3 sm:hidden',
+                        'hidden! z-54 pointer-events-none absolute inset-x-0 flex justify-center px-3 sm:hidden',
                     ])
                     x-cloak
                     x-show="typeof shouldShowSearchDestinationCueCaption === 'function' && shouldShowSearchDestinationCueCaption()"
@@ -3911,7 +3945,7 @@
                     @class([
                         'top-[5rem]' => is_platform('ios'),
                         'top-[3rem]' => !is_platform('ios'),
-                        'quran-search-destination-frame-wrap sm:hidden',
+                        'quran-search-destination-frame-wrap hidden! sm:hidden',
                     ])
                     x-cloak
                     x-show="typeof shouldShowSearchDestinationCueFrame === 'function' && shouldShowSearchDestinationCueFrame()"
@@ -4200,7 +4234,7 @@
                                     x-text="wirdProgressPercentLabel()"
                                 ></span>
                                 <span
-                                    class="text-primary-700 4xl:text-xs -translate-y-0.25 text-[0.56rem] font-bold transition-all duration-500 sm:text-[0.7rem] md:text-[0.8rem] lg:text-[0.72rem] xl:text-[0.74rem]"
+                                    class="text-primary-700 4xl:text-xs -translate-y-0.25 text-[0.56rem] font-bold transition-all duration-500 sm:text-[0.7rem] md:text-[0.8rem] lg:text-[0.72rem] xl:text-[0.5rem] 2xl:text-[0.74rem]"
                                     x-bind:class="{
                                         'font-normal!': Boolean($data.wirdModeActive),
                                         'text-[0.5rem]!': $store.bp.is('base') && !Boolean($data.wirdModeActive),
@@ -4258,7 +4292,7 @@
                 >
                     <div
                         class="quran-page-surface 3xl:pt-2.5 h-full rounded-2xl pt-2.5 transition-opacity duration-200 2xl:pt-1.5"
-                        x-bind:class="pageMotionClass"
+                        x-bind:class="[pageMotionClass, pageMotionLeavingClass]"
                         x-on:click="clearAyahSelectionOnBackground($event)"
                         x-ref="pageSurface"
                     >
