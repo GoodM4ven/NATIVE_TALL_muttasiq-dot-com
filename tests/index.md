@@ -137,3 +137,4 @@
 - shows global lock previews and touch arm prompts on the main menu
 - disables shared counter pulse animation when visual enhancements are turned off
 - allows swipe navigation from quran line gaps but not from quran text lines
+- keeps an iOS native gate media recovery hook for quran gate re-entry
