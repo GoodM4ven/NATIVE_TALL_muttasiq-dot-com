@@ -139,3 +139,4 @@
 - allows swipe navigation from quran line gaps but not from quran text lines
 - keeps an iOS native gate media recovery hook for quran gate re-entry
 - falls back to android home when config sdk path is empty
+- detects valid and invalid android binary cache archives

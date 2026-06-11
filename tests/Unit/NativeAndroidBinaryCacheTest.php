@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-use Native\Mobile\Traits\InstallsAndroid;
-
 function createNativeAndroidBinaryCacheTempDirectory(string $prefix = 'muttasiq-native-android-cache-'): string
 {
     $basePath = sys_get_temp_dir().DIRECTORY_SEPARATOR.$prefix.bin2hex(random_bytes(6));
@@ -42,33 +40,3 @@ function removeNativeAndroidBinaryCacheTempDirectory(string $path): void
 
     @rmdir($path);
 }
-
-it('detects valid and invalid android binary cache archives', function () {
-    $workspace = createNativeAndroidBinaryCacheTempDirectory();
-
-    try {
-        $invalidZip = $workspace.'/invalid.zip';
-        file_put_contents($invalidZip, str_repeat('not-a-zip', 128));
-
-        $validZip = $workspace.'/valid.zip';
-        $archive = new ZipArchive;
-        expect($archive->open($validZip, ZipArchive::CREATE | ZipArchive::OVERWRITE))->toBeTrue();
-        $archive->addFromString('payload.txt', 'hello');
-        $archive->close();
-
-        $checker = new class
-        {
-            use InstallsAndroid;
-
-            public function validateZip(string $zipFile): bool
-            {
-                return $this->isValidZipArchive($zipFile);
-            }
-        };
-
-        expect($checker->validateZip($invalidZip))->toBeFalse();
-        expect($checker->validateZip($validZip))->toBeTrue();
-    } finally {
-        removeNativeAndroidBinaryCacheTempDirectory($workspace);
-    }
-});
