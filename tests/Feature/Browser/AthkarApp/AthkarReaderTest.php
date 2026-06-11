@@ -422,6 +422,65 @@ JS,
     );
 });
 
+it('keeps the athkar font size slider on one shared value and refits immediately', function () {
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
+
+    resetBrowserState($page);
+    openAthkarReader($page, 'sabah', false);
+    waitForReaderVisible($page);
+
+    $initialFontSizes = $page->script(<<<'JS'
+(() => {
+  const slide = document.querySelector('[data-athkar-slide][data-active="true"]');
+  if (!slide) {
+    return null;
+  }
+
+  const text = slide.querySelector('[data-athkar-text]');
+  const origin = slide.querySelector('[data-athkar-origin-text]');
+  if (!text || !origin) {
+    return null;
+  }
+
+  return {
+    text: Number.parseFloat(getComputedStyle(text).fontSize),
+    origin: Number.parseFloat(getComputedStyle(origin).fontSize),
+  };
+})()
+JS);
+
+    expect($initialFontSizes)->toBeArray();
+    $page->script('window.__athkarFontSizeBefore = '.js_encode($initialFontSizes['text']).';');
+
+    $page->script(athkarReaderCommandScript('data.handleMainTextSizeInput({ target: { value: 14 } });'));
+
+    waitForScript(
+        $page,
+        athkarReaderDataScript(
+            'data.settings.minimum_main_text_size === 14 && data.settings.maximum_main_text_size === 14 && data.mainTextSizeValue() === 14',
+        ),
+        true,
+    );
+
+    waitForScript(
+        $page,
+        <<<'JS'
+(() => {
+  const text = document.querySelector('[data-athkar-slide][data-active="true"] [data-athkar-text]');
+  if (!text) {
+    return false;
+  }
+
+  const before = Number(window.__athkarFontSizeBefore ?? 0);
+  const next = Number.parseFloat(getComputedStyle(text).fontSize);
+
+  return Number.isFinite(before) && Number.isFinite(next) && next < before;
+})()
+JS,
+        true,
+    );
+});
+
 it('bypasses hint popups but still requires confirmation for single-thikr completion when setting 4 is enabled', function () {
     $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 

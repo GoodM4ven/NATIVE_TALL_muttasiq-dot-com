@@ -1968,7 +1968,7 @@
                     x-on:click="closeFontScaleOverlay()"
                 ></div>
                 <section
-                    class="athkar-font-scale-overlay__panel"
+                    class="athkar-font-scale-overlay__panel flex flex-col items-center gap-3"
                     x-on:click.stop
                 >
                     <p class="athkar-font-scale-overlay__title font-arabic-sans">
@@ -1979,40 +1979,20 @@
                         class="quran-page-slider-chip athkar-font-scale-overlay__value select-none rounded-full px-2 py-[0.18rem] text-[0.72rem] font-semibold"
                         type="button"
                         tabindex="-1"
-                        x-text="mainTextSizeMinimumValue()"
+                        x-text="mainTextSizeValue()"
                         x-on:click="resetMainTextSizeRangeToDefaults()"
                     ></button>
                     <input
                         class="quran-page-slider min-w-42 h-[0.56rem] w-[min(70vw,15rem)] outline-none"
                         type="range"
-                        aria-label="{{ arabic_text('الحد الأدنى لحجم النص') }}"
+                        aria-label="{{ arabic_text('حجم النص') }}"
                         tabindex="-1"
-                        x-bind:min="resolveMainTextSizeLimitsFor('minimum_main_text_size').min"
-                        x-bind:max="mainTextSizeMaximumValue()"
+                        x-bind:min="resolveMainTextSizeSliderLimits().min"
+                        x-bind:max="resolveMainTextSizeSliderLimits().max"
                         step="1"
-                        x-bind:value="mainTextSizeMinimumValue()"
-                        x-on:input="handleMinimumMainTextSizeInput($event)"
-                        x-on:change="commitMainTextSizeRange()"
-                    />
-
-                    <button
-                        class="quran-page-slider-chip athkar-font-scale-overlay__value select-none rounded-full px-2 py-[0.18rem] text-[0.72rem] font-semibold"
-                        type="button"
-                        tabindex="-1"
-                        x-text="mainTextSizeMaximumValue()"
-                        x-on:click="resetMainTextSizeRangeToDefaults()"
-                    ></button>
-                    <input
-                        class="quran-page-slider min-w-42 h-[0.56rem] w-[min(70vw,15rem)] outline-none"
-                        type="range"
-                        aria-label="{{ arabic_text('الحد الأقصى لحجم النص') }}"
-                        tabindex="-1"
-                        x-bind:min="mainTextSizeMinimumValue()"
-                        x-bind:max="resolveMainTextSizeLimitsFor('maximum_main_text_size').max"
-                        step="1"
-                        x-bind:value="mainTextSizeMaximumValue()"
-                        x-on:input="handleMaximumMainTextSizeInput($event)"
-                        x-on:change="commitMainTextSizeRange()"
+                        x-bind:value="mainTextSizeValue()"
+                        x-on:input="handleMainTextSizeInput($event)"
+                        x-on:change="commitMainTextSizeValue()"
                     />
                 </section>
             </div>

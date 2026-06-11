@@ -239,3 +239,26 @@ it('renders the download and introduction video stack controls on web runtime on
         ->assertDontSee('data-testid="download-android-button"', false)
         ->assertDontSee('data-testid="download-ios-button"', false);
 });
+
+it('renders a single athkar font scale slider that controls one shared text size value', function () {
+    config([
+        'nativephp-internal.running' => false,
+        'nativephp-internal.platform' => null,
+    ]);
+
+    $response = get('/');
+
+    $response->assertSuccessful();
+
+    $content = $response->getContent();
+
+    expect($content)
+        ->toContain('aria-label="حجم النص"')
+        ->toContain('x-text="mainTextSizeValue()"')
+        ->toContain('x-on:input="handleMainTextSizeInput($event)"')
+        ->toContain('x-on:change="commitMainTextSizeValue()"')
+        ->not->toContain('aria-label="الحد الأدنى لحجم النص"')
+        ->not->toContain('aria-label="الحد الأقصى لحجم النص"')
+        ->not->toContain('x-on:input="handleMinimumMainTextSizeInput($event)"')
+        ->not->toContain('x-on:input="handleMaximumMainTextSizeInput($event)"');
+});
