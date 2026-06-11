@@ -58,13 +58,16 @@ it('detects valid and invalid android binary cache archives', function () {
 
         $checker = new class
         {
-            use InstallsAndroid {
-                isValidZipArchive as public;
+            use InstallsAndroid;
+
+            public function validateZip(string $zipFile): bool
+            {
+                return $this->isValidZipArchive($zipFile);
             }
         };
 
-        expect($checker->isValidZipArchive($invalidZip))->toBeFalse();
-        expect($checker->isValidZipArchive($validZip))->toBeTrue();
+        expect($checker->validateZip($invalidZip))->toBeFalse();
+        expect($checker->validateZip($validZip))->toBeTrue();
     } finally {
         removeNativeAndroidBinaryCacheTempDirectory($workspace);
     }
