@@ -279,10 +279,6 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
         },
 
         traceReaderReveal(eventName, details = {}) {
-            if (!this.readerRevealDebugEnabled()) {
-                return;
-            }
-
             const normalizedEventName = String(eventName ?? '').trim() || 'event';
             const payload =
                 details && typeof details === 'object' && !Array.isArray(details) ? details : {};
@@ -301,8 +297,13 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 modalLifecycleSettling: this._isModalLifecycleSettling,
                 activeModalCount: this._activeModalIds.size,
                 openModalCount: this.openModalCount(),
+                modalResumeTimerActive: this._modalLayoutResumeTimer !== null,
                 ...payload,
             };
+
+            if (!this.readerRevealDebugEnabled()) {
+                return;
+            }
 
             console.log('[quran-reader][reveal]', normalizedEventName, tracePayload);
 
@@ -1005,6 +1006,10 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 return;
             }
 
+            this.traceReaderReveal('hold-page-hidden-for-modal-lifecycle', {
+                animateFadeOut,
+                shouldAnimateFadeOut,
+            });
             this._isModalLifecycleSettling = true;
             this.clearLayoutTimers();
             this.beginLayoutCycle();
@@ -1019,6 +1024,8 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                 clearTimeout(this._modalLayoutResumeTimer);
                 this._modalLayoutResumeTimer = null;
             }
+
+            this.traceReaderReveal('schedule-layout-after-modal-lifecycle', { delayMs });
 
             this._modalLayoutResumeTimer = window.setTimeout(
                 () => {
@@ -1036,6 +1043,8 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                     this.clearLayoutTimers();
                     this.isFittingPage = true;
                     this._bypassNextFitCache = true;
+
+                    this.traceReaderReveal('modal-lifecycle-recovery-start');
 
                     void this.layoutPageGuaranteed({
                         revealDelayMs: 120,
@@ -1352,6 +1361,11 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             const normalizedAttempt = Math.max(0, Math.trunc(Number(attempt) || 0));
             const remainingModalCount = this.openModalCount();
 
+            this.traceReaderReveal('resume-layout-when-no-open-modals', {
+                attempt: normalizedAttempt,
+                remainingModalCount,
+            });
+
             if (remainingModalCount <= 0) {
                 this.recoverStaleModalLifecycleState();
                 this.scheduleLayoutAfterModalLifecycle(120);
@@ -1362,6 +1376,9 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             this._isModalLifecycleSettling = true;
 
             if (normalizedAttempt >= 24) {
+                this.traceReaderReveal('resume-layout-when-no-open-modals-exhausted', {
+                    remainingModalCount,
+                });
                 this._activeModalIds.clear();
                 this._isModalLifecycleSettling = false;
                 this.scheduleLayout({ revealDelayMs: 140 });
@@ -1380,6 +1397,16 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             const hasTrackedModalId = modalId !== '' && this._activeModalIds.has(modalId);
             const hasTrackedModalState =
                 this._activeModalIds.size > 0 || this._isModalLifecycleSettling;
+
+            this.traceReaderReveal('track-modal-lifecycle', {
+                kind,
+                modalId,
+                openModalCount,
+                hasTrackedModalId,
+                hasTrackedModalState,
+                isModalLifecycleSettling: this._isModalLifecycleSettling,
+                activeModalCount: this._activeModalIds.size,
+            });
             const isLateCloseLikeEvent = kind === 'closing' || kind === 'closed';
             const shouldKeepHiddenForModalNavigation = Boolean(
                 this._modalNavigationCloseGuardActive,
@@ -1460,17 +1487,41 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                     return;
                 }
 
-                if (modalId !== '' && !hasTrackedModalId && openModalCount <= 0) {
+                if (
+                    modalId !== '' &&
+                    !hasTrackedModalId &&
+                    openModalCount <= 0 &&
+                    !this.isTransitioningOutPage
+                ) {
                     return;
                 }
             }
 
             if (kind === 'closed') {
                 if (modalId === '' && openModalCount <= 0 && !hasTrackedModalState) {
+                    this.traceReaderReveal('track-modal-lifecycle-closed-early-return', {
+                        reason: 'empty-id-no-tracked-state',
+                        modalId,
+                        openModalCount,
+                        hasTrackedModalState,
+                    });
+
                     return;
                 }
 
-                if (modalId !== '' && !hasTrackedModalId && openModalCount <= 0) {
+                if (
+                    modalId !== '' &&
+                    !hasTrackedModalId &&
+                    openModalCount <= 0 &&
+                    !this.isTransitioningOutPage
+                ) {
+                    this.traceReaderReveal('track-modal-lifecycle-closed-early-return', {
+                        reason: 'id-not-tracked',
+                        modalId,
+                        openModalCount,
+                        hasTrackedModalId,
+                    });
+
                     return;
                 }
             }
@@ -1509,7 +1560,8 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                     modalId === '' ||
                     this._activeModalIds.has(modalId) ||
                     openModalCount > 0 ||
-                    shouldKeepHiddenForModalNavigation
+                    shouldKeepHiddenForModalNavigation ||
+                    this.isTransitioningOutPage
                 ) {
                     if (this.hasRenderablePage()) {
                         this._bypassNextFitCache = true;
@@ -1545,6 +1597,36 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
                     this.recoverStaleModalLifecycleState();
                     this.syncReaderChromeDocumentClass();
                 }, 320);
+
+                window.setTimeout(() => {
+                    if (!this.hasRenderablePage()) {
+                        return;
+                    }
+
+                    if (this.isCurrentPageVisiblyReady()) {
+                        return;
+                    }
+
+                    if (this._modalLayoutResumeTimer !== null || this.isLoadingPage) {
+                        return;
+                    }
+
+                    this.traceReaderReveal('modal-close-watchdog-recovery');
+                    this._activeModalIds.clear();
+                    this._isModalLifecycleSettling = false;
+                    this._modalLifecycleFadeOutPending = false;
+                    this.isTransitioningOutPage = false;
+                    this.clearModalPreOpenPending();
+                    this.clearLayoutTimers();
+                    this.isFittingPage = true;
+                    this._bypassNextFitCache = true;
+
+                    void this.layoutPageGuaranteed({
+                        revealDelayMs: 120,
+                        maxAttempts: 4,
+                        useIdleFit: false,
+                    });
+                }, 600);
             }
         },
 
