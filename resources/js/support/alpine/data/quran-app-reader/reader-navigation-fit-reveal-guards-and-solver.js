@@ -1023,8 +1023,15 @@ export const createReaderNavigationFitRevealGuardsAndSolverModule = (deps) => {
             this._modalLayoutResumeTimer = window.setTimeout(
                 () => {
                     this._modalLayoutResumeTimer = null;
+
+                    if (this._modalLifecycleFadeOutTimer !== null) {
+                        clearTimeout(this._modalLifecycleFadeOutTimer);
+                        this._modalLifecycleFadeOutTimer = null;
+                    }
+
                     this._isModalLifecycleSettling = false;
                     this._modalLifecycleFadeOutPending = false;
+                    this.isTransitioningOutPage = false;
                     this.clearModalPreOpenPending();
                     this.clearLayoutTimers();
                     this.isFittingPage = true;
