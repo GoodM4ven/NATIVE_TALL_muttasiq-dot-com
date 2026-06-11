@@ -7,6 +7,10 @@ use Tests\TestCase;
 
 uses(TestCase::class);
 
+if (! trait_exists(BuildsAndroidEmulatorLaunchArguments::class)) {
+    require_once dirname(__DIR__, 2).'/vendor/nativephp/mobile/src/Traits/BuildsAndroidEmulatorLaunchArguments.php';
+}
+
 function createAndroidLaunchTempDirectory(string $prefix = 'muttasiq-android-launch-'): string
 {
     $basePath = sys_get_temp_dir().DIRECTORY_SEPARATOR.$prefix.bin2hex(random_bytes(6));
