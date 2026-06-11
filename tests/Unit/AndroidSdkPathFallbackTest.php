@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use Native\Mobile\Traits\RunsAndroid;
 use Tests\TestCase;
 
 uses(TestCase::class);
