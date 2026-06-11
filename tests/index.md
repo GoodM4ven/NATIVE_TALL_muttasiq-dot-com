@@ -138,3 +138,4 @@
 - disables shared counter pulse animation when visual enhancements are turned off
 - allows swipe navigation from quran line gaps but not from quran text lines
 - keeps an iOS native gate media recovery hook for quran gate re-entry
+- falls back to android home when config sdk path is empty
