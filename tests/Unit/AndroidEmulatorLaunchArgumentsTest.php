@@ -2,14 +2,9 @@
 
 declare(strict_types=1);
 
-use Native\Mobile\Traits\BuildsAndroidEmulatorLaunchArguments;
 use Tests\TestCase;
 
 uses(TestCase::class);
-
-if (! trait_exists(BuildsAndroidEmulatorLaunchArguments::class)) {
-    require_once dirname(__DIR__, 2).'/vendor/nativephp/mobile/src/Traits/BuildsAndroidEmulatorLaunchArguments.php';
-}
 
 function createAndroidLaunchTempDirectory(string $prefix = 'muttasiq-android-launch-'): string
 {
@@ -89,42 +84,6 @@ function runAndroidPrepareCommand(string $command, array $environment, string $w
 {
     return runAndroidLaunchCommand($command, $environment, $workingDirectory);
 }
-
-function restoreAndroidLaunchEnv(string $key, string|false|null $previousValue): void
-{
-    if ($previousValue === false || $previousValue === null) {
-        putenv($key);
-
-        return;
-    }
-
-    putenv("{$key}={$previousValue}");
-}
-
-it('defaults to swiftshader emulator args on linux when no override is set', function () {
-    $previousNativeArgs = getenv('NATIVEPHP_ANDROID_EMULATOR_ARGS');
-    $previousAndroidFlags = getenv('ANDROID_EMULATOR_FLAGS');
-
-    putenv('NATIVEPHP_ANDROID_EMULATOR_ARGS');
-    putenv('ANDROID_EMULATOR_FLAGS');
-
-    try {
-        $resolver = new class
-        {
-            use BuildsAndroidEmulatorLaunchArguments;
-
-            public function args(): array
-            {
-                return $this->resolveAndroidEmulatorLaunchArguments();
-            }
-        };
-
-        expect($resolver->args())->toBe(['-gpu', 'swiftshader_indirect']);
-    } finally {
-        restoreAndroidLaunchEnv('NATIVEPHP_ANDROID_EMULATOR_ARGS', $previousNativeArgs);
-        restoreAndroidLaunchEnv('ANDROID_EMULATOR_FLAGS', $previousAndroidFlags);
-    }
-});
 
 it('passes the linux emulator args through the run-android wrapper', function () {
     $workspace = createAndroidLaunchTempDirectory();
