@@ -3713,13 +3713,11 @@
         }
     </style>
 
-    @if (is_platform('ios'))
-        <style>
-            body.quran-reader-immersive-active.quran-reader-immersive-chrome-visible .app-action-buttons-stack {
-                top: 3.5rem !important;
-            }
-        </style>
-    @endif
+    <style>
+        body.nativephp-ios.mobile-platform.quran-reader-immersive-active.quran-reader-immersive-chrome-visible .app-action-buttons-stack {
+            top: 3.5rem !important;
+        }
+    </style>
 @endassets
 
 @php
@@ -3772,12 +3770,10 @@
     x-effect="syncReaderChromeDocumentClass()"
 >
     <div
+        class="quran-reader relative grid h-full w-full place-items-center items-center"
         dir="rtl"
-        @class([
-            'mt-[1.2rem]' => is_platform('ios'),
-            'quran-reader relative grid h-full w-full place-items-center items-center',
-        ])
         x-bind:class="{
+            'mt-[1.2rem]': $store.bp.isIosNativePlatform(),
             'quran-reader--visual-enhancements-disabled': !doesEnableVisualEnhancements,
             'quran-reader--wird-active': Boolean($data.wirdModeActive),
             'within-quran-app': (
@@ -3863,11 +3859,8 @@
                 >
                 </div>
                 <div
-                    @class([
-                        'top-[2.5rem]' => is_platform('ios'),
-                        'top-2' => !is_platform('ios'),
-                        'z-54 pointer-events-none absolute inset-x-0 top-2 flex justify-center px-3 sm:hidden',
-                    ])
+                    class="z-54 pointer-events-none absolute inset-x-0 flex justify-center px-3 sm:hidden"
+                    x-bind:class="$store.bp.isIosNativePlatform() ? 'top-[2.5rem]' : 'top-2'"
                     x-cloak
                     x-show="shouldShowImmersiveMobileEdgeCaptions()"
                     x-transition:enter="transition-opacity ease-out duration-280 delay-500"
@@ -3885,11 +3878,8 @@
                     ></p>
                 </div>
                 <div
-                    @class([
-                        'top-[3.75rem]' => is_platform('ios'),
-                        'top-[1.92rem]' => !is_platform('ios'),
-                        'hidden! z-54 pointer-events-none absolute inset-x-0 flex justify-center px-3 sm:hidden',
-                    ])
+                    class="hidden! z-54 pointer-events-none absolute inset-x-0 flex justify-center px-3 sm:hidden"
+                    x-bind:class="$store.bp.isIosNativePlatform() ? 'top-[3.75rem]' : 'top-[1.92rem]'"
                     x-cloak
                     x-show="typeof shouldShowSearchDestinationCueCaption === 'function' && shouldShowSearchDestinationCueCaption()"
                     x-transition:enter="transition-opacity ease-out duration-360 delay-150"
@@ -3907,11 +3897,8 @@
                     ></p>
                 </div>
                 <div
-                    @class([
-                        'top-[5rem]' => is_platform('ios'),
-                        'top-[3rem]' => !is_platform('ios'),
-                        'quran-search-destination-frame-wrap hidden! sm:hidden',
-                    ])
+                    class="quran-search-destination-frame-wrap hidden! sm:hidden"
+                    x-bind:class="$store.bp.isIosNativePlatform() ? 'top-[5rem]' : 'top-[3rem]'"
                     x-cloak
                     x-show="typeof shouldShowSearchDestinationCueFrame === 'function' && shouldShowSearchDestinationCueFrame()"
                     x-transition:enter="transition-opacity ease-out duration-420 delay-130"
@@ -4030,13 +4017,11 @@
                     </div>
                 </template>
                 <header
+                    class="quran-top-strip sm:pt-[0.8rem]! gap-[0.4rem] rounded-t-2xl px-[0.6rem] pb-2 sm:gap-[0.65rem] sm:rounded-[1.75rem] sm:px-4 sm:pb-2"
                     data-quran-reader-chrome
-                    @class([
-                        'pt-[0.45rem]!' => !is_platform('ios'),
-                        'pt-[2.2rem]!' => is_platform('ios'),
-                        'quran-top-strip gap-[0.4rem] rounded-t-2xl px-[0.6rem] pb-2 sm:gap-[0.65rem] sm:rounded-[1.75rem] sm:px-4 sm:pb-2 sm:pt-[0.8rem]!',
-                    ])
                     x-bind:class="{
+                        'pt-[2.2rem]!': $store.bp.isIosNativePlatform(),
+                        'pt-[0.45rem]!': !$store.bp.isIosNativePlatform(),
                         'quran-top-strip--wird-active': Boolean($data.wirdModeActive),
                         'quran-top-strip--initial-loading': isCalibrating || _startupCalibrationPending || !
                             hasCompletedInitialMushafPreparation,
