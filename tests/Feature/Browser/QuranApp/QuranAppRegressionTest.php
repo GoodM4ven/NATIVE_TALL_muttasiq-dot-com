@@ -120,6 +120,12 @@ it('keeps the search modal open after quickly reopening it following a result se
         12_000,
     );
 
+    $searchResultTargetPage = (int) $page->script(
+        quranReaderDataScript('Number(data.search.results[0]?.page_number ?? 0)'),
+    );
+
+    expect($searchResultTargetPage)->toBeGreaterThan(0);
+
     $page->script(quranReaderCommandScript('void data.goToSearchResult(data.search.results[0]);'));
 
     waitForScriptWithTimeout(
@@ -256,6 +262,105 @@ JS),
             ),
         ),
     )->toBeTrue();
+});
+
+it('uses the standard search navigation path on touch tablets to avoid destination scale boosts', function () {
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
+
+    resetBrowserState($page);
+    waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
+    hashAction($page, '#quran-app-tilawa', true);
+
+    waitForScript($page, homeDataScript('data.activeView'), 'quran-app-tilawa');
+    waitForScript($page, 'window.location.hash', '#quran-app-tilawa');
+    waitForQuranReaderVisible($page);
+    waitForScript($page, quranReaderDataScript('data.ready && data.mushafLines.length > 0'), true);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
+
+    enableTabletContext($page);
+    $page->script(quranReaderCommandScript('data.nativeRuntime = true;'));
+
+    scriptClick($page, '.quran-soorah-trigger');
+    waitForScriptWithTimeout(
+        $page,
+        'Boolean(document.querySelector("#quran-reader-search-modal"))',
+        true,
+        5_000,
+    );
+
+    $page->fill('#quran-reader-search-input', 'وقال ربكم ادعوني أستجب لكم');
+
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('!data.search.isLoading && Number(data.search.results?.length ?? 0) > 0'),
+        true,
+        12_000,
+    );
+
+    $searchResultTargetPage = (int) $page->script(
+        quranReaderDataScript('Number(data.search.results[0]?.page_number ?? 0)'),
+    );
+
+    expect($searchResultTargetPage)->toBeGreaterThan(0);
+
+    $page->script(quranReaderCommandScript('void data.goToSearchResult(data.search.results[0]);'));
+
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('!data.search.modalOpen && !data.isSearchModalWindowVisible()'),
+        true,
+        8_000,
+    );
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('Number(data.pageNumber ?? 0)'),
+        $searchResultTargetPage,
+        8_000,
+    );
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('data.searchDestinationScaleBoostAmount() === 0'),
+        true,
+        8_000,
+    );
+
+    $surahTargetPage = (int) $page->script(
+        quranReaderDataScript(
+            'Number(data.search.surahDirectory.find((entry) => Number(entry?.surah_number ?? 0) === 2)?.page_number ?? 0)',
+        ),
+    );
+
+    expect($surahTargetPage)->toBeGreaterThan(0);
+
+    $page->script(quranReaderCommandScript('void data.openSearchModal();'));
+
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('data.search.modalOpen && data.isSearchModalWindowVisible()'),
+        true,
+        8_000,
+    );
+
+    scriptClick($page, '.quran-surah-tile[data-surah-number="2"]');
+
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('!data.search.modalOpen && !data.isSearchModalWindowVisible()'),
+        true,
+        8_000,
+    );
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('Number(data.pageNumber ?? 0)'),
+        $surahTargetPage,
+        8_000,
+    );
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('data.searchDestinationScaleBoostAmount() === 0'),
+        true,
+        8_000,
+    );
 });
 
 it('keeps the reader visible after the first search result selection on a fresh session', function () {

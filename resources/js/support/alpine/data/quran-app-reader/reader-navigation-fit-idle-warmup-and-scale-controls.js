@@ -1014,6 +1014,10 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
                 return false;
             }
 
+            if (typeof this.$store?.bp?.isTablet === 'function' && this.$store.bp.isTablet()) {
+                return false;
+            }
+
             return this.$store.bp.isTouch();
         },
 

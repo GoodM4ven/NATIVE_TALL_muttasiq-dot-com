@@ -685,8 +685,10 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
             ]
                 .map((value) => String(value ?? '').trim())
                 .filter((value) => value !== '');
+            const isTouchTablet =
+                typeof this.$store?.bp?.isTablet === 'function' && this.$store.bp.isTablet();
             const shouldUseStandardSmPlusNavigation =
-                !this.nativeRuntime && Boolean(this.$store?.bp?.is?.('sm+'));
+                (!this.nativeRuntime && Boolean(this.$store?.bp?.is?.('sm+'))) || isTouchTablet;
             const standardSmPlusSource = 'search-standard';
             if (shouldUseStandardSmPlusNavigation) {
                 this.searchDestinationScaleBoostPageNumber = 0;

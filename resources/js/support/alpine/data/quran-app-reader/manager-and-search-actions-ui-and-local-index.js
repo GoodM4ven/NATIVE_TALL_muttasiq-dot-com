@@ -1031,26 +1031,25 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             ]
                 .map((value) => String(value ?? '').trim())
                 .filter((value) => value !== '');
+            const isTouchTablet =
+                typeof this.$store?.bp?.isTablet === 'function' && this.$store.bp.isTablet();
 
             this.search.activeSurahNumber = surahNumber;
             this.search.preserveActiveSurahOnNextOpen = true;
             const shouldUseStandardSmPlusNavigation =
-                !this.nativeRuntime && Boolean(this.$store?.bp?.is?.('sm+'));
+                (!this.nativeRuntime && Boolean(this.$store?.bp?.is?.('sm+'))) || isTouchTablet;
             const standardSmPlusSource = 'search-standard';
             const shouldUseSearchResultStyleNavigation =
-                this.nativeRuntime || Boolean(this.$store?.bp?.is?.('base'));
+                (this.nativeRuntime && !isTouchTablet) || Boolean(this.$store?.bp?.is?.('base'));
 
             if (shouldUseSearchResultStyleNavigation) {
                 this.searchDestinationScaleBoostPageNumber = pageNumber;
                 this.searchDestinationScaleBoostSource = 'search-result';
                 this.searchDestinationScaleBoostExpiresAt = 0;
-            } else if (!this.nativeRuntime) {
+            } else {
                 this.searchDestinationScaleBoostPageNumber = 0;
                 this.searchDestinationScaleBoostSource = '';
                 this.searchDestinationScaleBoostExpiresAt = 0;
-            } else {
-                this.searchDestinationScaleBoostPageNumber = pageNumber;
-                this.searchDestinationScaleBoostSource = 'search-result';
             }
             let usedStandardSmPlusNavigation = false;
             let usedModalCloseGuard = false;
