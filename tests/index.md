@@ -129,3 +129,6 @@
 - keeps an iOS native gate media recovery hook for quran gate re-entry
 - falls back to android home when config sdk path is empty
 - detects valid and invalid android binary cache archives
+- expands the mobile counter hint when tapped while hint bypass is disabled
+- persists athkar counts, overcounts, and restores the reader on reload
+- expands the mobile counter hint when tapped while hint bypass is disabled
