@@ -705,6 +705,66 @@ const openCacheSafely = async (cacheName) => {
     }
 };
 
+const trimCacheEntries = async (cache, cacheName, maximumEntries) => {
+    if (!cache || !Number.isFinite(maximumEntries) || maximumEntries < 1) {
+        return 0;
+    }
+
+    const cacheKeys = await cache.keys();
+
+    if (cacheKeys.length <= maximumEntries) {
+        return 0;
+    }
+
+    const entriesToDelete = cacheKeys.slice(0, cacheKeys.length - maximumEntries);
+    let deletedEntries = 0;
+
+    for (const request of entriesToDelete) {
+        const cacheKey = request instanceof Request ? request.url : String(request ?? '');
+
+        if (cacheKey === '') {
+            continue;
+        }
+
+        try {
+            const wasDeleted = await cache.delete(cacheKey);
+
+            if (wasDeleted) {
+                deletedEntries += 1;
+                continue;
+            }
+
+            const fallbackDeleted = await cache.delete(request);
+
+            if (fallbackDeleted) {
+                deletedEntries += 1;
+            }
+        } catch (_) {
+            //
+        }
+    }
+
+    const remainingKeys = await cache.keys();
+
+    if (
+        remainingKeys.length > maximumEntries &&
+        typeof window !== 'undefined' &&
+        typeof window.caches !== 'undefined' &&
+        typeof cacheName === 'string' &&
+        cacheName !== ''
+    ) {
+        try {
+            if (await window.caches.delete(cacheName)) {
+                return remainingKeys.length;
+            }
+        } catch (_) {
+            //
+        }
+    }
+
+    return deletedEntries;
+};
+
 const resolveCacheRequestUrl = (url) => {
     if (!url || typeof window === 'undefined') {
         return null;
@@ -730,6 +790,7 @@ const fetchJsonWithCache = async ({
     preferCache = true,
     forceNetwork = false,
     signal = null,
+    maximumEntries = null,
 }) => {
     const cache = await openCacheSafely(cacheName);
     const cacheRequestUrl = resolveCacheRequestUrl(url);
@@ -755,6 +816,7 @@ const fetchJsonWithCache = async ({
 
         if (cache && cacheRequestUrl) {
             await cache.put(cacheRequestUrl, response.clone());
+            await trimCacheEntries(cache, cacheName, maximumEntries);
         }
 
         return await response.json();
@@ -804,6 +866,7 @@ const cacheAssetResponse = async ({ url, cacheName }) => {
         }
 
         await cache.put(cacheRequestUrl, response);
+        await trimCacheEntries(cache, cacheName, 4);
     } catch (_) {
         // Ignore cache misses in offline / flaky network states.
     }

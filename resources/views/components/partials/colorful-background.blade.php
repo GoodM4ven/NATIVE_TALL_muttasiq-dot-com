@@ -164,6 +164,10 @@
                 this.isAthkarGateBackgroundActive = false;
             });
             window.addEventListener('control-panel-updated', (event) => {
+                if (event?.detail?.maintenancePulse) {
+                    return;
+                }
+    
                 this.syncAthkarGatePreviewVisualEnhancements(
                     event?.detail?.controlPanel?.enable_visual_enhancements,
                 );

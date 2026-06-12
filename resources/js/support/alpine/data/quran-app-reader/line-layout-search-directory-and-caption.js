@@ -552,6 +552,10 @@ export const createLineLayoutSearchDirectoryAndCaptionModule = (deps) => {
             }
         },
 
+        shouldAutoFocusSearchModalInput() {
+            return !(this.nativeRuntime || Boolean(this.$store?.bp?.is?.('base')));
+        },
+
         resolveActiveSurahDirectoryTile(gridElement = null) {
             const resolvedGridElement =
                 gridElement instanceof Element
@@ -620,6 +624,10 @@ export const createLineLayoutSearchDirectoryAndCaptionModule = (deps) => {
 
                 if (isGridReady) {
                     this.scrollSurahDirectoryToActive({ behavior: 'auto' });
+
+                    if (!this.shouldAutoFocusSearchModalInput()) {
+                        return;
+                    }
 
                     const searchInput = this.searchModalInputElement();
 

@@ -1108,8 +1108,8 @@ export const createTextInteractionModule = (deps) => {
 
             if (this.swipe.startedOnTap && isTouchLike && absX < 12 && absY < 12) {
                 this.swipe.startedOnTap = false;
-                this.swipe.ignoreClick = true;
                 this.handleTap();
+                this.swipe.ignoreClick = true;
 
                 return;
             }
@@ -1306,6 +1306,31 @@ export const createTextInteractionModule = (deps) => {
 
             this.totalPulse.timer = setTimeout(() => {
                 this.totalPulse.isActive = false;
+            }, this.pulseDurationMs);
+        },
+
+        triggerRequiredPulse(previousValue, nextValue) {
+            if (this.requiredPulse.timer) {
+                clearTimeout(this.requiredPulse.timer);
+            }
+
+            const morph = this.buildDigitMorphSegments(previousValue, nextValue);
+
+            this.requiredPulse.segments = morph.segments;
+            this.requiredPulse.hasChanges = morph.hasChanges;
+
+            if (!morph.hasChanges) {
+                return;
+            }
+
+            if (!this.requiredPulse.isActive) {
+                requestAnimationFrame(() => {
+                    this.requiredPulse.isActive = true;
+                });
+            }
+
+            this.requiredPulse.timer = setTimeout(() => {
+                this.requiredPulse.isActive = false;
             }, this.pulseDurationMs);
         },
 

@@ -241,6 +241,43 @@
             }
         }
 
+        .athkar-counter-digits {
+            font-variant-numeric: tabular-nums lining-nums;
+            font-feature-settings:
+                "tnum" 1,
+                "lnum" 1;
+        }
+
+        .athkar-count-slot--collapsing {
+            overflow: hidden;
+            animation: athkar-count-slot-collapse 520ms ease-out both;
+        }
+
+        .athkar-count-slot--expanding {
+            overflow: hidden;
+            animation: athkar-count-slot-expand 520ms ease-out both;
+        }
+
+        @keyframes athkar-count-slot-collapse {
+            0% {
+                max-width: 1.2ch;
+            }
+
+            100% {
+                max-width: 0;
+            }
+        }
+
+        @keyframes athkar-count-slot-expand {
+            0% {
+                max-width: 0;
+            }
+
+            100% {
+                max-width: 1.2ch;
+            }
+        }
+
         @keyframes athkar-tap-pulse {
             0% {
                 box-shadow: 0 0 0 0 var(--athkar-tap-pulse);
@@ -1415,14 +1452,63 @@
                             </div>
 
                             <div
-                                class="text-primary-800 dark:text-primary-100 absolute inset-0 flex items-center justify-center gap-0.5 whitespace-nowrap text-[0.6rem] font-semibold tabular-nums"
+                                class="athkar-counter-digits text-primary-800 dark:text-primary-100 absolute inset-0 flex items-center justify-center gap-0.5 whitespace-nowrap text-[0.6rem] font-semibold tabular-nums"
                                 x-show="isHintOpen(activeIndex)"
                                 x-transition.opacity.duration.200ms
                                 dir="ltr"
                             >
-                                <span x-text="`${topUiDisplayRequiredCount(activeIndex)} /`"></span>
+                                <span
+                                    class="inline-flex items-center justify-center gap-0"
+                                    x-bind:style="'min-width:' + String(topUiDisplayRequiredCount(activeIndex)).length + 'ch'"
+                                >
+                                    <span
+                                        class="athkar-count__current"
+                                        x-show="!(requiredPulse.isActive && requiredPulse.hasChanges)"
+                                        x-text="topUiDisplayRequiredCount(activeIndex)"
+                                    ></span>
+                                    <span
+                                        class="athkar-count__current inline-flex items-center gap-0"
+                                        x-cloak
+                                        x-show="requiredPulse.isActive && requiredPulse.hasChanges"
+                                    >
+                                        <template
+                                            x-for="segment in requiredPulse.segments"
+                                            x-bind:key="segment.key"
+                                        >
+                                            <span
+                                                class="inline-flex items-center"
+                                                x-bind:class="{
+                                                    'athkar-count-slot--collapsing': segment.changed && !segment.next,
+                                                    'athkar-count-slot--expanding': segment.changed && !segment.prev,
+                                                }"
+                                            >
+                                                <span
+                                                    x-show="!segment.changed"
+                                                    x-text="segment.next"
+                                                ></span>
+                                                <span
+                                                    class="athkar-count athkar-count--rolling"
+                                                    x-show="segment.changed"
+                                                >
+                                                    <span
+                                                        class="athkar-count__prev"
+                                                        x-text="segment.prev"
+                                                    ></span>
+                                                    <span
+                                                        class="athkar-count__next"
+                                                        x-text="segment.next"
+                                                    ></span>
+                                                </span>
+                                            </span>
+                                        </template>
+                                    </span>
+                                </span>
+                                <span> /</span>
 
-                                <span class="athkar-count">
+                                <span
+                                    class="athkar-count"
+                                    x-bind:style="'min-width:' + String(topUiDisplayCount(activeIndex)).length + 'ch'"
+                                >
                                     <span
                                         class="athkar-count__current"
                                         x-show="!(countPulse.index === activeIndex && countPulse.isActive && countPulse.hasChanges)"
@@ -1437,7 +1523,13 @@
                                             x-for="segment in countPulse.segments"
                                             x-bind:key="segment.key"
                                         >
-                                            <span class="inline-flex items-center">
+                                            <span
+                                                class="inline-flex items-center"
+                                                x-bind:class="{
+                                                    'athkar-count-slot--collapsing': segment.changed && !segment.next,
+                                                    'athkar-count-slot--expanding': segment.changed && !segment.prev,
+                                                }"
+                                            >
                                                 <span
                                                     x-show="!segment.changed"
                                                     x-text="segment.next"
@@ -1519,11 +1611,60 @@
                         </div>
 
                         <div
-                            class="text-primary-800 dark:text-primary-100 absolute inset-0 flex select-none items-center justify-center gap-1 font-semibold tabular-nums"
+                            class="athkar-counter-digits text-primary-800 dark:text-primary-100 absolute inset-0 flex select-none items-center justify-center gap-1 font-semibold tabular-nums"
                             dir="ltr"
                         >
-                            <span x-text="`${topUiDisplayRequiredCount(activeIndex)} /`"></span>
-                            <span class="athkar-count">
+                            <span
+                                class="inline-flex items-center justify-center gap-0"
+                                x-bind:style="'min-width:' + String(topUiDisplayRequiredCount(activeIndex)).length + 'ch'"
+                            >
+                                <span
+                                    class="athkar-count__current"
+                                    x-show="!(requiredPulse.isActive && requiredPulse.hasChanges)"
+                                    x-text="topUiDisplayRequiredCount(activeIndex)"
+                                ></span>
+                                <span
+                                    class="athkar-count__current inline-flex items-center gap-0"
+                                    x-cloak
+                                    x-show="requiredPulse.isActive && requiredPulse.hasChanges"
+                                >
+                                    <template
+                                        x-for="segment in requiredPulse.segments"
+                                        x-bind:key="segment.key"
+                                    >
+                                        <span
+                                            class="inline-flex items-center"
+                                            x-bind:class="{
+                                                'athkar-count-slot--collapsing': segment.changed && !segment.next,
+                                                'athkar-count-slot--expanding': segment.changed && !segment.prev,
+                                            }"
+                                        >
+                                            <span
+                                                x-show="!segment.changed"
+                                                x-text="segment.next"
+                                            ></span>
+                                            <span
+                                                class="athkar-count athkar-count--rolling"
+                                                x-show="segment.changed"
+                                            >
+                                                <span
+                                                    class="athkar-count__prev"
+                                                    x-text="segment.prev"
+                                                ></span>
+                                                <span
+                                                    class="athkar-count__next"
+                                                    x-text="segment.next"
+                                                ></span>
+                                            </span>
+                                        </span>
+                                    </template>
+                                </span>
+                            </span>
+                            <span> /</span>
+                            <span
+                                class="athkar-count"
+                                x-bind:style="'min-width:' + String(topUiDisplayCount(activeIndex)).length + 'ch'"
+                            >
                                 <span
                                     class="athkar-count__current"
                                     x-show="!(countPulse.index === activeIndex && countPulse.isActive && countPulse.hasChanges)"
@@ -1538,7 +1679,13 @@
                                         x-for="segment in countPulse.segments"
                                         x-bind:key="segment.key"
                                     >
-                                        <span class="inline-flex items-center">
+                                        <span
+                                            class="inline-flex items-center"
+                                            x-bind:class="{
+                                                'athkar-count-slot--collapsing': segment.changed && !segment.next,
+                                                'athkar-count-slot--expanding': segment.changed && !segment.prev,
+                                            }"
+                                        >
                                             <span
                                                 x-show="!segment.changed"
                                                 x-text="segment.next"

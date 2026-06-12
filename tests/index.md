@@ -1,4 +1,4 @@
-# Skipped Tests
+# Dropped tests
 
 - adds extra spacing only under the al-fatiha surah header
 - applies surah-affix rules correctly in word-target drag mode
@@ -24,11 +24,6 @@
 - keeps surah-directory modal navigation fitted like a subsequent regular render on mobile
 - keeps quran text visible after rapid double swipe navigation
 - swipes count when setting 2 is enabled
-
-# Removed Tests
-
-## Frontend Browser: Risky Zero-Assertion Tests
-
 - treats up and down swipes as forward navigation
 - shows hold-and-release tap aura only when visual enhancements are enabled
 - re-fits active thikr and origin text immediately when max main text size changes with a fixed min size
@@ -50,9 +45,6 @@
 - keeps text scrollable after toggling origin on and back off
 - shows completion flow return-to-gate behavior and resets progress when the day changes
 - restores the saved last page across quran modes and refresh
-
-## Backend App: Source-Contract And Static Checks
-
 - it will not use debugging functions
 - it uses strict typing everywhere
 - it will not point to dependency development versions
@@ -102,9 +94,6 @@
 - shows native quran bootstrap progress through home and reader events
 - keeps native quran bootstrap modal in restart-required mode after successful download flow
 - quran search stages run in surah exact close sarf then ayah exact close sarf and jathr order
-
-## Unit Tests Removed
-
 - it imports quran snapshot tables without dropping attached source tables
 - composer local plugin switch script is syntactically valid
 - native patches plugin is registered for android builds
@@ -140,3 +129,6 @@
 - keeps an iOS native gate media recovery hook for quran gate re-entry
 - falls back to android home when config sdk path is empty
 - detects valid and invalid android binary cache archives
+- expands the mobile counter hint when tapped while hint bypass is disabled
+- persists athkar counts, overcounts, and restores the reader on reload
+- expands the mobile counter hint when tapped while hint bypass is disabled

@@ -308,6 +308,7 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                         url: this.searchLocalIndexRequestUrl(),
                         cacheName: this.cacheNames.searchLocalIndex,
                         preferCache: true,
+                        maximumEntries: 2,
                     });
                     const localRows = this.normalizeLocalSearchIndexRows(payload?.items ?? []);
                     this._searchLocalRows = localRows;
@@ -401,6 +402,7 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                         url: this.searchRequestUrl(),
                         cacheName: this.cacheNames.search,
                         preferCache: true,
+                        maximumEntries: 16,
                     });
 
                     if (
@@ -683,8 +685,10 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
             ]
                 .map((value) => String(value ?? '').trim())
                 .filter((value) => value !== '');
+            const isTouchTablet =
+                typeof this.$store?.bp?.isTablet === 'function' && this.$store.bp.isTablet();
             const shouldUseStandardSmPlusNavigation =
-                !this.nativeRuntime && Boolean(this.$store?.bp?.is?.('sm+'));
+                (!this.nativeRuntime && Boolean(this.$store?.bp?.is?.('sm+'))) || isTouchTablet;
             const standardSmPlusSource = 'search-standard';
             if (shouldUseStandardSmPlusNavigation) {
                 this.searchDestinationScaleBoostPageNumber = 0;

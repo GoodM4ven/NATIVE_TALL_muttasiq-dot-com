@@ -1,3 +1,5 @@
+import { resolveEffectiveSettings } from '../athkar-app-overrides';
+
 document.addEventListener('alpine:init', () => {
     window.Alpine.data('mainMenu', (el, config = {}) => ({
         containerHovered: false,
@@ -778,6 +780,20 @@ document.addEventListener('alpine:init', () => {
         },
         resolveVisualEnhancementsSetting() {
             const visualEnhancementsSettingKey = 'enable_visual_enhancements';
+            const effectiveSettings = resolveEffectiveSettings(window.athkarSettingsDefaults ?? {});
+
+            if (
+                Object.prototype.hasOwnProperty.call(
+                    effectiveSettings,
+                    visualEnhancementsSettingKey,
+                )
+            ) {
+                return this.normalizeBooleanSettingValue(
+                    effectiveSettings[visualEnhancementsSettingKey],
+                    false,
+                );
+            }
+
             const athkarReader = this.getAthkarReaderData();
 
             if (athkarReader && typeof athkarReader.settingValue === 'function') {
@@ -803,24 +819,10 @@ document.addEventListener('alpine:init', () => {
                 );
             }
 
-            const userOverrideValue = this.readAthkarSettingFromStorage(
-                visualEnhancementsSettingKey,
-                'athkar-settings-user-overrides-v1',
+            return this.normalizeBooleanSettingValue(
+                this.readAthkarSettingFromStorage(visualEnhancementsSettingKey) ?? false,
+                false,
             );
-
-            if (userOverrideValue !== null) {
-                return this.normalizeBooleanSettingValue(userOverrideValue, false);
-            }
-
-            const defaultStorageValue = this.readAthkarSettingFromStorage(
-                visualEnhancementsSettingKey,
-            );
-
-            if (defaultStorageValue !== null) {
-                return this.normalizeBooleanSettingValue(defaultStorageValue, false);
-            }
-
-            return false;
         },
         refreshVisualEnhancementsSetting() {
             this.doesEnableVisualEnhancements = this.resolveVisualEnhancementsSetting();

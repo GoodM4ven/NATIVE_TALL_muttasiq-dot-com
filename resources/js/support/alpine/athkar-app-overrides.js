@@ -319,6 +319,12 @@ const writeUserSettingOverride = (key, value) => {
 
 const resolveEffectiveSettings = (serverDefaults) => {
     const defaults = serverDefaults && typeof serverDefaults === 'object' ? serverDefaults : {};
+    const shouldMigrateSettings = Object.keys(defaults).length > 0;
+
+    if (shouldMigrateSettings) {
+        migrateSettingsOverrides(defaults);
+    }
+
     const userOverrides = readUserSettingsOverrides();
     const merged = { ...defaults };
 
@@ -336,13 +342,18 @@ const migrateSettingsOverrides = (serverDefaults) => {
         return;
     }
 
+    const defaults = serverDefaults && typeof serverDefaults === 'object' ? serverDefaults : {};
+
+    if (Object.keys(defaults).length === 0) {
+        return;
+    }
+
     const existing = localStorage.getItem(athkarSettingsUserOverridesStorageKey);
 
     if (existing !== null) {
         return;
     }
 
-    const defaults = serverDefaults && typeof serverDefaults === 'object' ? serverDefaults : {};
     const currentSettings = readAthkarSettingsFromStorage(defaults);
     const overrides = {};
 

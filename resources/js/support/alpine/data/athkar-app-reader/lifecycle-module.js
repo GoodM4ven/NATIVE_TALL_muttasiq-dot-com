@@ -916,6 +916,8 @@ export const createLifecycleModule = (deps) => {
             if (shouldHoldCompletedDigitsUntilPulse) {
                 this.topUi.requiredOverride = completedRequired;
                 this.topUi.countOverride = completedCount;
+            } else if (completedRequired !== nextRequired) {
+                this.triggerRequiredPulse(completedRequired, nextRequired);
             }
 
             this.topUi.lingerTimer = setTimeout(() => {
@@ -923,6 +925,9 @@ export const createLifecycleModule = (deps) => {
                 this.topUi.pulseActive = true;
 
                 if (shouldHoldCompletedDigitsUntilPulse) {
+                    if (completedRequired !== nextRequired) {
+                        this.triggerRequiredPulse(completedRequired, nextRequired);
+                    }
                     this.topUi.requiredOverride = null;
                     this.topUi.countOverride = null;
                 }

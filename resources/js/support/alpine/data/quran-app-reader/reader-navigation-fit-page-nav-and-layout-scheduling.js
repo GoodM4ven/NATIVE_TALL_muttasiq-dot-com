@@ -2021,7 +2021,7 @@ export const createReaderNavigationFitPageNavAndLayoutSchedulingModule = (deps) 
                     }
 
                     const response = await fetch(normalizedUrl, {
-                        cache: 'force-cache',
+                        cache: 'no-store',
                         credentials: 'same-origin',
                     });
 

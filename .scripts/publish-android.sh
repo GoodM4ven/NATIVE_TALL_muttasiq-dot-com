@@ -121,6 +121,19 @@ keystore_file="${ANDROID_KEYSTORE_FILE:-$(read_env_var "ANDROID_KEYSTORE_FILE" |
 keystore_password="${ANDROID_KEYSTORE_PASSWORD:-$(read_env_var "ANDROID_KEYSTORE_PASSWORD" || true)}"
 key_password="${ANDROID_KEY_PASSWORD:-$(read_env_var "ANDROID_KEY_PASSWORD" || true)}"
 
+app_name_env="${APP_NAME:-$(read_env_var "APP_NAME" || true)}"
+native_app_id_env="${NATIVEPHP_APP_ID:-$(read_env_var "NATIVEPHP_APP_ID" || true)}"
+
+if [[ "$app_name_env" == *"تطوير متسق"* ]] || [[ "$native_app_id_env" == "localdev.goodm4ven.muttasiq" ]]; then
+    echo "" >&2
+    echo "──────────────────────────────────────────────" >&2
+    echo " Error: Development variables detected!" >&2
+    echo " Please run the toggle script first:" >&2
+    echo "   .scripts/toggle-dev-production.sh" >&2
+    echo "──────────────────────────────────────────────" >&2
+    exit 1
+fi
+
 if [[ -z "${keystore_file}" ]]; then
     echo "Missing Android keystore file path" >&2
     exit 1

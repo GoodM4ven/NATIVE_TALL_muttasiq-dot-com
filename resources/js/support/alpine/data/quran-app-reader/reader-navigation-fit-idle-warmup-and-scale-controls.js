@@ -135,19 +135,28 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
     return {
         async prefetchFontAsset(payload) {
             const fontUrl = String(payload?.qpcPageFontUrl ?? '').trim();
+            const fontFamily = String(payload?.qpcPageFontFamily ?? '').trim();
+            const fontFormat = String(payload?.qpcPageFontFormat ?? 'woff2').trim() || 'woff2';
             const surahHeaderFontUrl = String(payload?.surahHeaderFontUrl ?? '').trim();
+            const surahHeaderFontFamily = String(payload?.surahHeaderFontFamily ?? '').trim();
+            const surahHeaderFontFormat =
+                String(payload?.surahHeaderFontFormat ?? 'woff2').trim() || 'woff2';
 
-            if (fontUrl) {
-                await cacheAssetResponse({
+            if (fontUrl && fontFamily) {
+                await this.ensureDynamicFontFace({
+                    styleId: 'quran-reader-dynamic-page-font',
+                    family: fontFamily,
                     url: fontUrl,
-                    cacheName: this.cacheNames.fonts,
+                    format: fontFormat,
                 });
             }
 
-            if (surahHeaderFontUrl) {
-                await cacheAssetResponse({
+            if (surahHeaderFontUrl && surahHeaderFontFamily) {
+                await this.ensureDynamicFontFace({
+                    styleId: 'quran-reader-dynamic-surah-header-font',
+                    family: surahHeaderFontFamily,
                     url: surahHeaderFontUrl,
-                    cacheName: this.cacheNames.fonts,
+                    format: surahHeaderFontFormat,
                 });
             }
         },
@@ -1002,6 +1011,10 @@ export const createReaderNavigationFitIdleWarmupAndScaleControlsModule = (deps) 
 
         shouldApplySearchDestinationScaleBoost() {
             if (typeof this.$store?.bp?.isTouch !== 'function') {
+                return false;
+            }
+
+            if (typeof this.$store?.bp?.isTablet === 'function' && this.$store.bp.isTablet()) {
                 return false;
             }
 

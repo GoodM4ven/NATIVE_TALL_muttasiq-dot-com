@@ -2086,67 +2086,32 @@
         }
 
         .quran-page-lines[data-fit-state='ready'] [data-quran-line] {
-            animation: quran-line-reveal 240ms ease both;
-            animation-delay: calc(var(--quran-line-index, 0) * 10ms);
             backface-visibility: hidden;
             will-change: opacity, transform;
         }
 
-        .quran-reader--visual-enhancements-disabled .quran-page-lines[data-fit-state='ready'] [data-quran-line] {
-            animation: none !important;
-        }
-
-        .quran-reader--visual-enhancements-disabled .quran-page-surface.quran-page-motion-leaving-next .quran-page-lines[data-fit-state='fading-out'] {
+        .quran-page-surface.quran-page-motion-leaving-next .quran-page-lines[data-fit-state='fading-out'] {
             translate: 2rem 0;
             transition: opacity 200ms ease-out, translate 200ms ease-out;
         }
 
-        .quran-reader--visual-enhancements-disabled .quran-page-surface.quran-page-motion-leaving-prev .quran-page-lines[data-fit-state='fading-out'] {
+        .quran-page-surface.quran-page-motion-leaving-prev .quran-page-lines[data-fit-state='fading-out'] {
             translate: -2rem 0;
             transition: opacity 200ms ease-out, translate 200ms ease-out;
         }
 
         @media (max-width: 639px) {
-            .quran-reader--visual-enhancements-disabled .quran-page-lines[data-fit-state='fading-out'] {
+            .quran-page-lines[data-fit-state='fading-out'] {
                 transition: opacity 200ms ease-out;
             }
 
-            .quran-reader--visual-enhancements-disabled .quran-page-lines[data-fit-state='ready'] {
+            .quran-page-lines[data-fit-state='ready'] {
                 transition: opacity 200ms ease-in;
             }
 
-            .quran-reader--visual-enhancements-disabled .quran-page-lines[data-fit-state='ready'] [data-quran-line] {
-                animation: none !important;
-            }
-
-            .quran-reader--visual-enhancements-disabled .quran-page-surface.quran-page-motion-leaving-next .quran-page-lines[data-fit-state='fading-out'],
-            .quran-reader--visual-enhancements-disabled .quran-page-surface.quran-page-motion-leaving-prev .quran-page-lines[data-fit-state='fading-out'] {
+            .quran-page-surface.quran-page-motion-leaving-next .quran-page-lines[data-fit-state='fading-out'],
+            .quran-page-surface.quran-page-motion-leaving-prev .quran-page-lines[data-fit-state='fading-out'] {
                 transition: opacity 200ms ease-out, translate 200ms ease-out;
-            }
-
-            .quran-reader:not(.quran-reader--visual-enhancements-disabled) .quran-page-lines[data-fit-state='fading-out'] {
-                transition: opacity 120ms ease-out;
-            }
-
-            .quran-reader:not(.quran-reader--visual-enhancements-disabled) .quran-page-lines[data-fit-state='ready'] {
-                transition: opacity 120ms ease-in;
-            }
-
-            .quran-reader:not(.quran-reader--visual-enhancements-disabled) .quran-page-lines[data-fit-state='ready'] [data-quran-line] {
-                animation: quran-line-reveal 240ms ease both;
-                animation-delay: calc(var(--quran-line-index, 0) * 10ms);
-            }
-        }
-
-        @keyframes quran-line-reveal {
-            from {
-                opacity: 0;
-                transform: translateY(0.42rem);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
             }
         }
 
@@ -2183,32 +2148,32 @@
             display: inline-block;
         }
 
-        .quran-reader--visual-enhancements-disabled .quran-page-motion-next {
+        .quran-page-motion-next {
             animation: quran-page-slide-next 400ms ease-out;
             will-change: transform, opacity;
         }
 
-        .quran-reader--visual-enhancements-disabled .quran-page-motion-prev {
+        .quran-page-motion-prev {
             animation: quran-page-slide-prev 400ms ease-out;
             will-change: transform, opacity;
         }
 
         @media (min-width: 768px) {
-            .quran-reader--visual-enhancements-disabled .quran-page-motion-next {
+            .quran-page-motion-next {
                 animation-duration: 240ms;
             }
 
-            .quran-reader--visual-enhancements-disabled .quran-page-motion-prev {
+            .quran-page-motion-prev {
                 animation-duration: 240ms;
             }
         }
 
         @media (max-width: 639px) {
-            .quran-reader--visual-enhancements-disabled .quran-page-motion-next {
+            .quran-page-motion-next {
                 animation: quran-page-slide-next 800ms ease-out;
             }
 
-            .quran-reader--visual-enhancements-disabled .quran-page-motion-prev {
+            .quran-page-motion-prev {
                 animation: quran-page-slide-prev 800ms ease-out;
             }
         }

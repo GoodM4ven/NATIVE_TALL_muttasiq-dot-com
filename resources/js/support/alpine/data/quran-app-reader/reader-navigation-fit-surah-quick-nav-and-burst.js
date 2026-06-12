@@ -472,6 +472,7 @@ export const createReaderNavigationFitSurahQuickNavAndBurstModule = (deps) => {
                             preferCache,
                             forceNetwork,
                             signal,
+                            maximumEntries: 32,
                         }),
                     );
 

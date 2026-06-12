@@ -1,5 +1,6 @@
 const appVersionStorageKey = 'muttasiq-app-version-last-seen-v1';
 const appVersionMajorMinorResetEventName = 'muttasiq-app-version-major-minor-reset';
+const nativeTransientStorageKeys = ['quran-reader-content-version', 'quran-reader-fit-cache-v18'];
 
 const normalizeAppVersion = (version) => {
     if (typeof version !== 'string') {
@@ -89,9 +90,52 @@ const syncStoredAppVersion = (version) => {
     };
 };
 
+const clearNativeUpdateCaches = async () => {
+    if (typeof window === 'undefined') {
+        return [];
+    }
+
+    const deletedCacheNames = [];
+
+    try {
+        if (typeof window.caches?.keys === 'function') {
+            const cacheNames = await window.caches.keys();
+
+            await Promise.allSettled(
+                cacheNames.map(async (cacheName) => {
+                    try {
+                        const wasDeleted = await window.caches.delete(cacheName);
+
+                        if (wasDeleted) {
+                            deletedCacheNames.push(cacheName);
+                        }
+                    } catch (_) {
+                        //
+                    }
+                }),
+            );
+        }
+    } catch (_) {
+        //
+    }
+
+    if (typeof localStorage !== 'undefined') {
+        nativeTransientStorageKeys.forEach((storageKey) => {
+            try {
+                localStorage.removeItem(storageKey);
+            } catch (_) {
+                //
+            }
+        });
+    }
+
+    return deletedCacheNames;
+};
+
 window.appVersionRouting = Object.freeze({
     appVersionMajorMinorResetEventName,
     appVersionStorageKey,
+    clearNativeUpdateCaches,
     normalizeAppVersion,
     readStoredAppVersion,
     syncStoredAppVersion,

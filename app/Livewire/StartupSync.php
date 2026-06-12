@@ -34,7 +34,10 @@ class StartupSync extends Component
 
     private function synchronizeSettingsVersion(): void
     {
-        $resolvedVersion = Setting::appVersion();
+        // Native app builds are packaged with a fixed release version, so we
+        // keep the baked version authoritative even when the settings API is reachable.
+        $resolvedVersion = Setting::configuredAppVersion();
+        Setting::setAppVersion($resolvedVersion);
         $url = $this->resolveSettingsApiUrl();
         $timeoutInSeconds = $this->resolveTimeoutInSeconds();
         $connectTimeoutInSeconds = min(2, $timeoutInSeconds);
@@ -47,14 +50,7 @@ class StartupSync extends Component
                     ->timeout($timeoutInSeconds)
                     ->get($url);
 
-                if ($response->successful()) {
-                    $remoteAppVersion = $response->json('appVersion');
-
-                    if (is_string($remoteAppVersion) && trim($remoteAppVersion) !== '') {
-                        Setting::setAppVersion($remoteAppVersion);
-                        $resolvedVersion = Setting::appVersion();
-                    }
-                } else {
+                if (! $response->successful()) {
                     Log::warning('Settings API returned non-success response during startup sync.', [
                         'status' => $response->status(),
                         'url' => $url,

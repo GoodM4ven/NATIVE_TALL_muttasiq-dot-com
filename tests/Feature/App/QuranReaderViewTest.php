@@ -251,6 +251,7 @@ it('keeps search destination cue caption-only on immersive mobile and touch cont
     expect($scaleControlsSource)->not->toBeFalse()
         ->and($scaleControlsSource)->toContain('shouldApplySearchDestinationScaleBoost()')
         ->and($scaleControlsSource)->toContain('this.$store.bp.isTouch()')
+        ->and($scaleControlsSource)->toContain('this.$store.bp.isTablet()')
         ->and($scaleControlsSource)->toContain('return this.$store.bp.isTouch();')
         ->and($scaleControlsSource)->toContain('searchDestinationScaleBoostAmount()')
         ->and($scaleControlsSource)->toContain('searchDestinationTypeScaleBoostAmount()');
