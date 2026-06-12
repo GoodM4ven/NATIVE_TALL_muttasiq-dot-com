@@ -1309,6 +1309,31 @@ export const createTextInteractionModule = (deps) => {
             }, this.pulseDurationMs);
         },
 
+        triggerRequiredPulse(previousValue, nextValue) {
+            if (this.requiredPulse.timer) {
+                clearTimeout(this.requiredPulse.timer);
+            }
+
+            const morph = this.buildDigitMorphSegments(previousValue, nextValue);
+
+            this.requiredPulse.segments = morph.segments;
+            this.requiredPulse.hasChanges = morph.hasChanges;
+
+            if (!morph.hasChanges) {
+                return;
+            }
+
+            if (!this.requiredPulse.isActive) {
+                requestAnimationFrame(() => {
+                    this.requiredPulse.isActive = true;
+                });
+            }
+
+            this.requiredPulse.timer = setTimeout(() => {
+                this.requiredPulse.isActive = false;
+            }, this.pulseDurationMs);
+        },
+
         triggerTapPulse(index) {
             if (this.tapPulse.timer) {
                 clearTimeout(this.tapPulse.timer);

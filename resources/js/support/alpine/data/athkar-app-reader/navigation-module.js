@@ -165,6 +165,13 @@ export const createNavigationModule = (deps) => {
                 return;
             }
 
+            const prevRequiredCount = !preserveTopUiTransition
+                ? this.topUiDisplayRequiredCount(currentIndex)
+                : null;
+            const prevDisplayCount = !preserveTopUiTransition
+                ? this.topUiDisplayCount(currentIndex)
+                : null;
+
             if (!preserveTopUiTransition) {
                 this.resetTopUiTransition();
             }
@@ -180,6 +187,12 @@ export const createNavigationModule = (deps) => {
 
             this.triggerSlidePulse(direction);
             this.triggerPagePulse(direction, previousPage, nextPage);
+
+            if (!preserveTopUiTransition) {
+                this.triggerRequiredPulse(prevRequiredCount, this.requiredCount(nextIndex));
+                this.triggerCountPulse(nextIndex, prevDisplayCount, this.countAt(nextIndex));
+            }
+
             this.showMobileOvercountHint?.(nextIndex);
         },
 

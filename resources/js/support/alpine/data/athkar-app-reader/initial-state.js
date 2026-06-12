@@ -124,6 +124,13 @@ export const createInitialState = (config, deps) => {
             hasChanges: false,
         },
 
+        requiredPulse: {
+            isActive: false,
+            timer: null,
+            segments: [],
+            hasChanges: false,
+        },
+
         tapPulse: {
             index: null,
             isActive: false,
