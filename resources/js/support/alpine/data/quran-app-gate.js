@@ -48,6 +48,7 @@ document.addEventListener('alpine:init', () => {
         didTouchOrbitMove: false,
         suppressNextOpenMode: null,
         touchReleaseArmedMode: null,
+        hasUserInteractedWithSector: false,
         orbitAnimationFrameId: null,
         orbitLastFrameAt: 0,
         isLaunchTransitioning: false,
@@ -567,6 +568,7 @@ document.addEventListener('alpine:init', () => {
             return (
                 mode === 'tilawa' &&
                 this.hasTouchInput() &&
+                this.hasUserInteractedWithSector &&
                 this.isModeAvailable(mode) &&
                 this.isModeActive(mode)
             );
@@ -829,6 +831,7 @@ document.addEventListener('alpine:init', () => {
             this.touchPointerId = event.pointerId;
             this.isTouchPointerActive = true;
             this.isPointerInside = true;
+            this.hasUserInteractedWithSector = true;
 
             if (this.shouldUseMobileBasePerfMode()) {
                 this.scheduleGeometryCacheRefresh();
@@ -925,6 +928,7 @@ document.addEventListener('alpine:init', () => {
             this.activeTouchIdentifier = touch.identifier;
             this.isTouchPointerActive = true;
             this.isPointerInside = true;
+            this.hasUserInteractedWithSector = true;
 
             if (this.shouldUseMobileBasePerfMode()) {
                 this.scheduleGeometryCacheRefresh();
