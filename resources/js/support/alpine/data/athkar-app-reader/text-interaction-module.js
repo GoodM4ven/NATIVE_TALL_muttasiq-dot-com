@@ -1108,8 +1108,8 @@ export const createTextInteractionModule = (deps) => {
 
             if (this.swipe.startedOnTap && isTouchLike && absX < 12 && absY < 12) {
                 this.swipe.startedOnTap = false;
-                this.swipe.ignoreClick = true;
                 this.handleTap();
+                this.swipe.ignoreClick = true;
 
                 return;
             }
