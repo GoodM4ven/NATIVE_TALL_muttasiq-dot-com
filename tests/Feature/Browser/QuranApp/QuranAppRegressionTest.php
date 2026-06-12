@@ -171,6 +171,93 @@ JS,
     waitForScriptWithTimeout($page, 'Boolean(window.__searchModalStayedOpenAfterReopen)', true, 4_000);
 });
 
+it('keeps the search input unfocused on base and reuses the stable search-result path for surah grid jumps', function () {
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
+
+    resetBrowserState($page);
+    waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
+    hashAction($page, '#quran-app-tilawa', true);
+
+    waitForScript($page, homeDataScript('data.activeView'), 'quran-app-tilawa');
+    waitForScript($page, 'window.location.hash', '#quran-app-tilawa');
+    waitForQuranReaderVisible($page);
+    waitForScript($page, quranReaderDataScript('data.ready && data.mushafLines.length > 0'), true);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 6_000);
+
+    enableMobileContext($page);
+
+    scriptClick($page, '.quran-soorah-trigger');
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('data.search.modalOpen && data.isSearchModalWindowVisible()'),
+        true,
+        8_000,
+    );
+
+    waitForScriptWithTimeout(
+        $page,
+        <<<'JS'
+(() => {
+  const input = document.querySelector('#quran-reader-search-input');
+
+  return !(input instanceof HTMLInputElement) || document.activeElement !== input;
+})()
+JS,
+        true,
+        2_500,
+    );
+
+    expect(
+        $page->script(<<<'JS'
+(() => {
+  const input = document.querySelector('#quran-reader-search-input');
+
+  return !(input instanceof HTMLInputElement) || document.activeElement !== input;
+})()
+JS),
+    )->toBeTrue();
+
+    scriptClick($page, '.quran-surah-tile[data-surah-number="2"]');
+
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('!data.search.modalOpen && !data.isSearchModalWindowVisible()'),
+        true,
+        8_000,
+    );
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('Number(data.pageNumber ?? 0) > 1'),
+        true,
+        12_000,
+    );
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript(
+            'data.searchDestinationScaleBoostSource === "search-result" && data.searchHighlightedAyahIndex === 0',
+        ),
+        true,
+        8_000,
+    );
+    waitForScriptWithTimeout(
+        $page,
+        quranReaderDataScript('!data.isFittingPage && data.ready && data.mushafLines.length > 0'),
+        true,
+        12_000,
+    );
+
+    expect(
+        $page->script(quranReaderDataScript('Number(data.pageNumber ?? 0) > 1')),
+    )->toBeTrue();
+    expect(
+        $page->script(
+            quranReaderDataScript(
+                'data.searchDestinationScaleBoostSource === "search-result" && data.searchHighlightedAyahIndex === 0',
+            ),
+        ),
+    )->toBeTrue();
+});
+
 it('keeps the reader visible after the first search result selection on a fresh session', function () {
     $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 

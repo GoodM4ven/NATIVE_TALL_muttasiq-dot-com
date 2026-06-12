@@ -362,6 +362,11 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             this.ensureSearchResultAnimations();
             this.queueSearchModalInputSyncBinding();
             this.queueSurahDirectoryAutoFocus();
+
+            if (!this.shouldAutoFocusSearchModalInput()) {
+                return;
+            }
+
             this.searchModalInputElement()?.focus?.();
             window.setTimeout(() => {
                 if (this._searchModalLifecycleToken !== lifecycleToken || !this.search.modalOpen) {
@@ -1032,13 +1037,20 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
             const shouldUseStandardSmPlusNavigation =
                 !this.nativeRuntime && Boolean(this.$store?.bp?.is?.('sm+'));
             const standardSmPlusSource = 'search-standard';
-            if (!this.nativeRuntime) {
+            const shouldUseSearchResultStyleNavigation =
+                this.nativeRuntime || Boolean(this.$store?.bp?.is?.('base'));
+
+            if (shouldUseSearchResultStyleNavigation) {
+                this.searchDestinationScaleBoostPageNumber = pageNumber;
+                this.searchDestinationScaleBoostSource = 'search-result';
+                this.searchDestinationScaleBoostExpiresAt = 0;
+            } else if (!this.nativeRuntime) {
                 this.searchDestinationScaleBoostPageNumber = 0;
                 this.searchDestinationScaleBoostSource = '';
                 this.searchDestinationScaleBoostExpiresAt = 0;
             } else {
                 this.searchDestinationScaleBoostPageNumber = pageNumber;
-                this.searchDestinationScaleBoostSource = 'surah-directory';
+                this.searchDestinationScaleBoostSource = 'search-result';
             }
             let usedStandardSmPlusNavigation = false;
             let usedModalCloseGuard = false;
@@ -1097,27 +1109,14 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                             useIdleFit: false,
                         });
                     }
-                } else if (this.nativeRuntime) {
+                } else if (shouldUseSearchResultStyleNavigation) {
                     this._bypassNextFitCache = true;
-                    await this.goToPageFromChevron(pageNumber, {
-                        activeAyahIndex: 0,
-                        source: 'surah-directory',
-                        commitNow: true,
-                        settleDelayMs: 0,
-                    });
-
-                    await this.stabilizeModalDrivenLayout({
-                        revealDelayMs: 160,
-                        maxAttempts: 4,
-                        maxFrames: 18,
-                        requiredStableFrames: 3,
-                        tolerancePx: 0.8,
-                    });
-
-                    await this.ensureModalDrivenPageVisible(pageNumber, {
-                        revealDelayMs: 190,
-                        maxAttempts: 5,
-                        fallbackReason: 'surah-directory-post-close-visibility-recovery',
+                    await this.navigateFromManagerModalRecord({
+                        targetPage: pageNumber,
+                        ayahIndex: 0,
+                        source: 'search-result',
+                        modalId: this.resolveSearchModalCloseTargetId(),
+                        ensureVisibleAfterModalClose: true,
                     });
 
                     if (!this.isCurrentPageVisiblyReady()) {
@@ -1190,7 +1189,11 @@ export const createManagerAndSearchActionsUiAndLocalIndexModule = (deps) => {
                 this.activeWordIndex = 0;
                 this.searchHighlightedAyahIndex = 0;
                 this.activateSearchDestinationCue({
-                    source: !this.nativeRuntime ? standardSmPlusSource : 'surah-directory',
+                    source: shouldUseSearchResultStyleNavigation
+                        ? 'search-result'
+                        : !this.nativeRuntime
+                          ? standardSmPlusSource
+                          : 'surah-directory',
                     surahNumber,
                     pageNumber,
                 });
