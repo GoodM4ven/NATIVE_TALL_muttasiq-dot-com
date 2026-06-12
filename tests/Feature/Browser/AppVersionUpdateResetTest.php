@@ -40,6 +40,57 @@ it('returns native users to main menu and clears only transient caches when the 
     ]);
     setLocalStorageValue($page, 'quran-reader-content-version', '2026.06.12');
 
+    $page->script(<<<'JS'
+(async () => {
+  const createResponse = (value) => new Response(JSON.stringify(value), {
+    headers: { 'Content-Type': 'application/json' },
+  });
+  const baseUrl = window.location.origin;
+
+  const pagesCache = await caches.open('quran-reader-pages-v13');
+  const searchCache = await caches.open('quran-reader-search-v3');
+  const localIndexCache = await caches.open('quran-reader-search-local-index-v1');
+
+  for (let index = 1; index <= 5; index += 1) {
+    await pagesCache.put(new Request(`${baseUrl}/pages/${index}`), createResponse({ page: index }));
+  }
+
+  for (let index = 1; index <= 3; index += 1) {
+    await searchCache.put(new Request(`${baseUrl}/search/${index}`), createResponse({ search: index }));
+  }
+
+  for (let index = 1; index <= 2; index += 1) {
+    await localIndexCache.put(new Request(`${baseUrl}/local-index/${index}`), createResponse({ index }));
+  }
+
+  await window.appVersionRouting?.clearNativeUpdateCaches?.();
+
+  const [trimmedPagesCache, trimmedSearchCache, trimmedLocalIndexCache] = await Promise.all([
+    caches.open('quran-reader-pages-v13'),
+    caches.open('quran-reader-search-v3'),
+    caches.open('quran-reader-search-local-index-v1'),
+  ]);
+
+  const [pageKeys, searchKeys, localIndexKeys] = await Promise.all([
+    trimmedPagesCache.keys(),
+    trimmedSearchCache.keys(),
+    trimmedLocalIndexCache.keys(),
+  ]);
+
+  window.__cacheCounts = {
+    pages: pageKeys.length,
+    search: searchKeys.length,
+    localIndex: localIndexKeys.length,
+  };
+  window.__cacheCountsReady = true;
+})()
+JS);
+
+    waitForScript($page, 'window.__cacheCountsReady === true', true);
+    waitForScript($page, 'window.__cacheCounts.pages', 0);
+    waitForScript($page, 'window.__cacheCounts.search', 0);
+    waitForScript($page, 'window.__cacheCounts.localIndex', 0);
+
     $page->script(homeDataCommandScript("data.applyViewState('quran-app-gate', { persist: true });"));
     waitForScript($page, homeDataScript('data.activeView'), 'quran-app-gate');
 

@@ -308,6 +308,7 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                         url: this.searchLocalIndexRequestUrl(),
                         cacheName: this.cacheNames.searchLocalIndex,
                         preferCache: true,
+                        maximumEntries: 2,
                     });
                     const localRows = this.normalizeLocalSearchIndexRows(payload?.items ?? []);
                     this._searchLocalRows = localRows;
@@ -401,6 +402,7 @@ export const createManagerAndSearchActionsWarmAndNavigateModule = (deps) => {
                         url: this.searchRequestUrl(),
                         cacheName: this.cacheNames.search,
                         preferCache: true,
+                        maximumEntries: 16,
                     });
 
                     if (

@@ -100,6 +100,10 @@
                     this.currentAppVersion,
                 );
         
+                if (this.isNativeRuntime) {
+                    void window.appVersionRouting?.clearNativeUpdateCaches?.();
+                }
+        
                 this.applyViewState('main-menu', {
                     persist: versionState?.shouldResetStartupView === true,
                 });
