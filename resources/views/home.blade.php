@@ -111,6 +111,12 @@
             },
             handleAppVersionMajorMinorReset() {
                 this.applyViewState('main-menu', { persist: true });
+        
+                if (!this.isNativeRuntime) {
+                    return;
+                }
+        
+                void window.appVersionRouting?.clearNativeUpdateCaches?.();
             },
             openQuranEntry() {
                 if (!this.isNativeRuntime) {
