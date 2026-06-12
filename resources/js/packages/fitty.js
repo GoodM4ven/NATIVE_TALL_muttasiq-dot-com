@@ -752,7 +752,10 @@ window.addEventListener(fittyRefitEventName, (event) => {
     refitTargets(targets);
 });
 window.addEventListener('control-panel-updated', (event) => {
-    latestSettingsOverride = event?.detail?.controlPanel ?? null;
+    if (!event?.detail?.maintenancePulse) {
+        latestSettingsOverride = event?.detail?.controlPanel ?? null;
+    }
+
     refitTargets();
 });
 window.addEventListener(

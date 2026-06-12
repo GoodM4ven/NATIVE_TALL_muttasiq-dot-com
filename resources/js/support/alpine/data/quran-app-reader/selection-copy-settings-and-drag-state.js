@@ -1,3 +1,5 @@
+import { migrateSettingsOverrides } from '../../athkar-app-overrides';
+
 export const createSelectionCopySettingsAndDragStateModule = (deps) => {
     const {
         arabicHarakatPattern,
@@ -234,6 +236,27 @@ export const createSelectionCopySettingsAndDragStateModule = (deps) => {
                 return defaults;
             }
 
+            const storageDefaults = {};
+
+            Object.keys(controlPanelSettingKeys).forEach((key) => {
+                const persistedSettingKey = controlPanelSettingKeys[key];
+
+                if (typeof persistedSettingKey !== 'string') {
+                    return;
+                }
+
+                if (Object.prototype.hasOwnProperty.call(defaults, persistedSettingKey)) {
+                    storageDefaults[persistedSettingKey] = defaults[persistedSettingKey];
+                    return;
+                }
+
+                if (Object.prototype.hasOwnProperty.call(defaults, key)) {
+                    storageDefaults[persistedSettingKey] = defaults[key];
+                }
+            });
+
+            migrateSettingsOverrides(storageDefaults);
+
             let helperOverrides = {};
 
             if (typeof window.getUserSettingsOverrides === 'function') {
@@ -337,162 +360,85 @@ export const createSelectionCopySettingsAndDragStateModule = (deps) => {
 
         applyControlPanelSettings(controlPanel = {}) {
             const previousWirdSignature = this.resolveWirdRecordSignature();
-            const input =
+            const mergedDefaults =
                 controlPanel && typeof controlPanel === 'object' && !Array.isArray(controlPanel)
-                    ? controlPanel
-                    : {};
-            const hasVisualEnhancements = Object.prototype.hasOwnProperty.call(
-                input,
-                controlPanelSettingKeys.enableVisualEnhancements,
-            );
-            const hasWordTargeting = Object.prototype.hasOwnProperty.call(
-                input,
-                controlPanelSettingKeys.targetWordsByDefault,
-            );
-            const hasPreserveHarakatOnCopy = Object.prototype.hasOwnProperty.call(
-                input,
-                controlPanelSettingKeys.preserveHarakatOnCopy,
-            );
-            const hasAppendSurahAffixOnMultiCopy = Object.prototype.hasOwnProperty.call(
-                input,
-                controlPanelSettingKeys.appendSurahAffixOnMultiCopy,
-            );
-            const hasAppendSurahAffixAlwaysOnCopy = Object.prototype.hasOwnProperty.call(
-                input,
-                controlPanelSettingKeys.appendSurahAffixAlwaysOnCopy,
-            );
-            const hasShowImmersiveMobileEdgeCaptions = Object.prototype.hasOwnProperty.call(
-                input,
-                controlPanelSettingKeys.showImmersiveMobileEdgeCaptions,
-            );
-            const hasUseVolumeButtonsNavigation = Object.prototype.hasOwnProperty.call(
-                input,
-                controlPanelSettingKeys.useVolumeButtonsNavigation,
-            );
-            const hasUseWesternNumerals = Object.prototype.hasOwnProperty.call(
-                input,
-                controlPanelSettingKeys.useWesternNumerals,
-            );
-            const hasWirdFrequencyMode = Object.prototype.hasOwnProperty.call(
-                input,
-                controlPanelSettingKeys.wirdFrequencyMode,
-            );
-            const hasWirdKhatmatTarget = Object.prototype.hasOwnProperty.call(
-                input,
-                controlPanelSettingKeys.wirdKhatmatTarget,
-            );
-            const defaultVisualEnhancements = this.normalizeBooleanFlag(
-                this.initialSettings?.enableVisualEnhancements,
-                false,
-            );
-            const defaultWordTargeting = this.normalizeBooleanFlag(
-                this.initialSettings?.targetWordsByDefault,
-                false,
-            );
-            const defaultPreserveHarakatOnCopy = this.normalizeBooleanFlag(
-                this.initialSettings?.preserveHarakatOnCopy,
-                true,
-            );
-            const defaultAppendSurahAffixOnMultiCopy = this.normalizeBooleanFlag(
-                this.initialSettings?.appendSurahAffixOnMultiCopy,
-                true,
-            );
-            const defaultAppendSurahAffixAlwaysOnCopy = this.normalizeBooleanFlag(
-                this.initialSettings?.appendSurahAffixAlwaysOnCopy,
-                false,
-            );
-            const defaultShowImmersiveMobileEdgeCaptions = this.normalizeBooleanFlag(
-                this.initialSettings?.showImmersiveMobileEdgeCaptions,
-                true,
-            );
-            const defaultUseVolumeButtonsNavigation = this.normalizeBooleanFlag(
-                this.initialSettings?.useVolumeButtonsNavigation,
-                false,
-            );
-            const defaultUseWesternNumerals = this.normalizeBooleanFlag(
-                this.initialSettings?.useWesternNumerals,
-                true,
-            );
-            const defaultWirdFrequencyMode = this.normalizeWirdFrequencyMode(
-                this.initialSettings?.wirdFrequencyMode,
-                wirdFrequencyModeMonthly,
-            );
-            const defaultWirdKhatmatTarget = this.normalizeWirdKhatmatTarget(
-                this.initialSettings?.wirdKhatmatTarget,
-                1,
-                {
-                    frequencyMode: defaultWirdFrequencyMode,
-                },
-            );
+                    ? {
+                          ...(this.initialSettings && typeof this.initialSettings === 'object'
+                              ? this.initialSettings
+                              : {}),
+                          ...controlPanel,
+                      }
+                    : {
+                          ...(this.initialSettings && typeof this.initialSettings === 'object'
+                              ? this.initialSettings
+                              : {}),
+                      };
+            const resolvedSettings =
+                this.resolveControlPanelSettingsWithUserOverrides(mergedDefaults);
 
             this.westernNumeralCharacters = this.normalizeNumeralCharacters(
-                this.initialSettings?.numeralCharacters?.western,
+                resolvedSettings?.numeralCharacters?.western,
                 defaultWesternNumerals,
             );
             this.arabicNumeralCharacters = this.normalizeNumeralCharacters(
-                this.initialSettings?.numeralCharacters?.arabic,
+                resolvedSettings?.numeralCharacters?.arabic,
                 defaultArabicNumerals,
             );
 
             this.doesEnableVisualEnhancements = this.normalizeBooleanFlag(
-                hasVisualEnhancements
-                    ? input[controlPanelSettingKeys.enableVisualEnhancements]
-                    : defaultVisualEnhancements,
+                resolvedSettings?.enableVisualEnhancements ??
+                    resolvedSettings?.[controlPanelSettingKeys.enableVisualEnhancements],
                 false,
             );
             this.doesTargetWordsByDefault = this.normalizeBooleanFlag(
-                hasWordTargeting
-                    ? input[controlPanelSettingKeys.targetWordsByDefault]
-                    : defaultWordTargeting,
+                resolvedSettings?.targetWordsByDefault ??
+                    resolvedSettings?.[controlPanelSettingKeys.targetWordsByDefault],
                 false,
             );
             this.doesPreserveHarakatOnCopy = this.normalizeBooleanFlag(
-                hasPreserveHarakatOnCopy
-                    ? input[controlPanelSettingKeys.preserveHarakatOnCopy]
-                    : defaultPreserveHarakatOnCopy,
+                resolvedSettings?.preserveHarakatOnCopy ??
+                    resolvedSettings?.[controlPanelSettingKeys.preserveHarakatOnCopy],
                 true,
             );
             this.doesAppendSurahAffixOnMultiCopy = this.normalizeBooleanFlag(
-                hasAppendSurahAffixOnMultiCopy
-                    ? input[controlPanelSettingKeys.appendSurahAffixOnMultiCopy]
-                    : defaultAppendSurahAffixOnMultiCopy,
+                resolvedSettings?.appendSurahAffixOnMultiCopy ??
+                    resolvedSettings?.[controlPanelSettingKeys.appendSurahAffixOnMultiCopy],
                 true,
             );
             this.doesAppendSurahAffixAlwaysOnCopy = this.normalizeBooleanFlag(
-                hasAppendSurahAffixAlwaysOnCopy
-                    ? input[controlPanelSettingKeys.appendSurahAffixAlwaysOnCopy]
-                    : defaultAppendSurahAffixAlwaysOnCopy,
+                resolvedSettings?.appendSurahAffixAlwaysOnCopy ??
+                    resolvedSettings?.[controlPanelSettingKeys.appendSurahAffixAlwaysOnCopy],
                 false,
             );
             this.doesShowImmersiveMobileEdgeCaptions = this.normalizeBooleanFlag(
-                hasShowImmersiveMobileEdgeCaptions
-                    ? input[controlPanelSettingKeys.showImmersiveMobileEdgeCaptions]
-                    : defaultShowImmersiveMobileEdgeCaptions,
+                resolvedSettings?.showImmersiveMobileEdgeCaptions ??
+                    resolvedSettings?.[controlPanelSettingKeys.showImmersiveMobileEdgeCaptions],
                 true,
             );
             this.doesUseVolumeButtonsNavigation = this.normalizeBooleanFlag(
-                hasUseVolumeButtonsNavigation
-                    ? input[controlPanelSettingKeys.useVolumeButtonsNavigation]
-                    : defaultUseVolumeButtonsNavigation,
+                resolvedSettings?.useVolumeButtonsNavigation ??
+                    resolvedSettings?.[controlPanelSettingKeys.useVolumeButtonsNavigation],
                 false,
             );
             this.doesUseWesternNumerals = this.normalizeBooleanFlag(
-                hasUseWesternNumerals
-                    ? input[controlPanelSettingKeys.useWesternNumerals]
-                    : defaultUseWesternNumerals,
+                resolvedSettings?.useWesternNumerals ??
+                    resolvedSettings?.[controlPanelSettingKeys.useWesternNumerals],
                 true,
             );
             this.wirdFrequencyMode = this.normalizeWirdFrequencyMode(
-                hasWirdFrequencyMode
-                    ? input[controlPanelSettingKeys.wirdFrequencyMode]
-                    : defaultWirdFrequencyMode,
-                defaultWirdFrequencyMode,
+                resolvedSettings?.wirdFrequencyMode ??
+                    resolvedSettings?.[controlPanelSettingKeys.wirdFrequencyMode],
+                this.normalizeWirdFrequencyMode(
+                    this.initialSettings?.wirdFrequencyMode,
+                    wirdFrequencyModeMonthly,
+                ),
             );
             this.wirdKhatmatTarget = this.normalizeWirdKhatmatTarget(
-                hasWirdKhatmatTarget
-                    ? input[controlPanelSettingKeys.wirdKhatmatTarget]
-                    : defaultWirdKhatmatTarget,
-                defaultWirdKhatmatTarget,
+                resolvedSettings?.wirdKhatmatTarget ??
+                    resolvedSettings?.[controlPanelSettingKeys.wirdKhatmatTarget],
+                this.normalizeWirdKhatmatTarget(this.initialSettings?.wirdKhatmatTarget, 1, {
+                    frequencyMode: this.wirdFrequencyMode,
+                }),
                 {
                     frequencyMode: this.wirdFrequencyMode,
                 },

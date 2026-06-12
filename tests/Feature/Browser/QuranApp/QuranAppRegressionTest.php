@@ -1585,3 +1585,85 @@ JS,
 
     $page->assertNoJavaScriptErrors();
 });
+
+it('migrates legacy settings storage and applies it before the settings modal is saved again', function () {
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
+
+    safeBrowserResize($page, 375, 812);
+    $page->script(
+        <<<'JS'
+(() => {
+  window.__disableJsErrorReporting = true;
+  localStorage.clear();
+  sessionStorage.clear();
+  localStorage.setItem('athkar-settings-v1', JSON.stringify({
+    enable_visual_enhancements: true,
+    quran_wird_frequency_mode: 1,
+    quran_wird_khatmat_target: 2,
+  }));
+  localStorage.removeItem('athkar-settings-user-overrides-v1');
+  window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+})()
+JS,
+    );
+    $page->refresh();
+    waitForAlpineReady($page);
+    applyTestSpeedups($page);
+    $page->script('window.__disableJsErrorReporting = true;');
+    enableMobileContext($page);
+
+    if ($page->script('window.location.hash') !== '#main-menu') {
+        setHashOnly($page, '#main-menu', true, true);
+    }
+
+    if ($page->script(homeDataScript('data.activeView')) !== 'main-menu') {
+        forceHomeView($page, 'main-menu');
+    }
+
+    if ($page->script('JSON.parse(localStorage.getItem("app-active-view"))') !== 'main-menu') {
+        $page->script('localStorage.setItem("app-active-view", JSON.stringify("main-menu"));');
+    }
+
+    waitForScript($page, 'window.location.hash', '#main-menu');
+    waitForScript($page, homeDataScript('data.activeView'), 'main-menu');
+    waitForScript($page, homeDataScript('typeof data.applyViewState === "function"'), true);
+    hashAction($page, '#quran-app-tilawa', true);
+
+    waitForScript($page, homeDataScript('data.activeView'), 'quran-app-tilawa');
+    waitForScript($page, 'window.location.hash', '#quran-app-tilawa');
+    waitForQuranReaderVisible($page);
+    waitForScript($page, quranReaderDataScript('data.ready && data.mushafLines.length > 0'), true);
+    waitForScriptWithTimeout($page, quranReaderDataScript('data.isFittingPage'), false, 8_000);
+
+    $migratedOverrides = $page->script(
+        <<<'JS'
+JSON.parse(localStorage.getItem('athkar-settings-user-overrides-v1') ?? 'null')
+JS,
+    );
+
+    expect($migratedOverrides)->toBeArray();
+    expect((bool) ($migratedOverrides['enable_visual_enhancements'] ?? false))->toBeTrue();
+    expect((int) ($migratedOverrides['quran_wird_frequency_mode'] ?? -1))->toBe(1);
+    expect((int) ($migratedOverrides['quran_wird_khatmat_target'] ?? -1))->toBe(2);
+
+    $appliedSettings = $page->script(
+        quranReaderDataScript(
+            <<<'JS'
+(() => {
+  return {
+    visualEnhancements: Boolean(data.doesEnableVisualEnhancements),
+    frequencyMode: Number(data.wirdFrequencyMode ?? -1),
+    khatmatTarget: Number(data.wirdKhatmatTarget ?? -1),
+  };
+})()
+JS,
+        ),
+    );
+
+    expect($appliedSettings)->toBeArray();
+    expect((bool) ($appliedSettings['visualEnhancements'] ?? false))->toBeTrue();
+    expect((int) ($appliedSettings['frequencyMode'] ?? -1))->toBe(1);
+    expect((int) ($appliedSettings['khatmatTarget'] ?? -1))->toBe(2);
+
+    $page->assertNoJavaScriptErrors();
+});

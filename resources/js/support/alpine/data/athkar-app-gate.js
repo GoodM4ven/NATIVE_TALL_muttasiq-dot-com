@@ -1,3 +1,5 @@
+import { resolveEffectiveSettings } from '../athkar-app-overrides';
+
 document.addEventListener('alpine:init', () => {
     const visualEnhancementsSettingKey = 'enable_visual_enhancements';
     const athkarGateBackgroundPreviewEventName = 'athkar-gate-background-preview';
@@ -91,13 +93,20 @@ document.addEventListener('alpine:init', () => {
             return Boolean(fallback);
         },
         resolveVisualEnhancementsSetting(settings = null) {
+            const defaults =
+                settings && typeof settings === 'object' && !Array.isArray(settings)
+                    ? settings
+                    : (window.athkarSettingsDefaults ?? {});
+            const effectiveSettings = resolveEffectiveSettings(defaults);
+
             if (
-                settings &&
-                typeof settings === 'object' &&
-                Object.prototype.hasOwnProperty.call(settings, visualEnhancementsSettingKey)
+                Object.prototype.hasOwnProperty.call(
+                    effectiveSettings,
+                    visualEnhancementsSettingKey,
+                )
             ) {
                 return this.normalizeBooleanSettingValue(
-                    settings[visualEnhancementsSettingKey],
+                    effectiveSettings[visualEnhancementsSettingKey],
                     true,
                 );
             }

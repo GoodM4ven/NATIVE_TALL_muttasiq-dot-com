@@ -1,4 +1,11 @@
 <x-app>
+    @push('head-scripts')
+        <script>
+            window.athkarSettingsDefaults = @js($athkarSettings);
+            window.athkarMainTextSizeLimits = @js($athkarMainTextSizeLimits);
+        </script>
+    @endpush
+
     <div
         class="flex h-full flex-1 flex-col"
         x-cloak
