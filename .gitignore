@@ -33,3 +33,4 @@ nativephp.json
 /database/native-quran-reader.sqlite
 /database/native-quran-reader.json
 nativephp.lock
+.DS_Store
