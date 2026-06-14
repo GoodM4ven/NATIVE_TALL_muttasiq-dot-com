@@ -25,12 +25,18 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 11
+
       - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 22
+          cache: pnpm
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Check Prettier formatting
-        run: npx prettier --check --config .prettierrc "resources/{css,js}/**/*.{css,js}"
+        run: pnpm exec prettier --check --config .prettierrc "resources/{css,js}/**/*.{css,js}"

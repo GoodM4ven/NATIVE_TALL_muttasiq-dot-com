@@ -55,19 +55,25 @@ jobs:
           cp .env.example .env
           php artisan key:generate --force --no-interaction
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 11
+
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '22'
+          cache: pnpm
 
-      - name: Install npm dependencies
-        run: npm ci
+      - name: Install pnpm dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Build frontend assets
-        run: npm run build
+        run: pnpm run build
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps
+        run: pnpm exec playwright install --with-deps
 
       - name: Execute tests
         run: vendor/bin/pest --coverage --coverage-clover=build/coverage/clover.xml --do-not-fail-on-risky
