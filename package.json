@@ -2,7 +2,9 @@
     "$schema": "https://www.schemastore.org/package.json",
     "private": true,
     "type": "module",
+    "packageManager": "pnpm@11.5.0",
     "scripts": {
+        "preinstall": "npx only-allow pnpm",
         "format:blade": "blade-formatter --write --config .bladeformatterrc \"resources/views/**/*.blade.php\"",
         "format:prettier": "prettier --write --config .prettierrc \"resources/{css,js}/**/*.{css,js}\"",
         "build": "vite build",
@@ -26,6 +28,7 @@
         "animejs": "^4.2.2",
         "axios": "^1.16.1",
         "color": "^5.0.3",
+        "concurrently": "^10.0.3",
         "dayjs": "^1.11.19",
         "dayjs-hijri": "^1.0.1",
         "fitty": "^2.4.2",

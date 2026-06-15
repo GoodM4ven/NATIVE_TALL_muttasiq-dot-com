@@ -141,5 +141,5 @@ fi
 
 (
     cd "${root_dir}"
-    npm run build -- --mode=ios
+    pnpm run build -- --mode=ios
 )
