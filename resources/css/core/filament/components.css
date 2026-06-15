@@ -1729,7 +1729,9 @@
 
     /* base - non-IOS (Android + web) */
     @media (max-width: 639px) {
-        body:not(.ios-platform) .quran-support-lock-target--locked.quran-wird-progress-button .quran-support-lock-badge {
+        body:not(.ios-platform)
+            .quran-support-lock-target--locked.quran-wird-progress-button
+            .quran-support-lock-badge {
             transform: translate(0.5rem, -0.5rem) scale(0.9);
         }
     }

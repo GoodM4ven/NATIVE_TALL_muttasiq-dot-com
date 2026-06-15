@@ -123,8 +123,8 @@
             "pnpm exec concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"php artisan pail --timeout=0\" \"pnpm run dev\" --names=server,queue,logs,vite --kill-others"
         ],
         "format": [
-            "pnpm exec format:blade",
-            "pnpm exec format:prettier",
+            "pnpm run format:blade",
+            "pnpm run format:prettier",
             "vendor/bin/pint"
         ],
         "analyse": "XDEBUG_MODE=off vendor/bin/phpstan analyse --memory-limit=512M",
