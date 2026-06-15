@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
 import tailwindcss from '@tailwindcss/vite';
-import laravelHotRefresh from 'laravel-hot-refresh';
+// import laravelHotRefresh from 'laravel-hot-refresh';
 import {
     nativephpMobile,
     nativephpHotFile,
@@ -22,20 +22,20 @@ export default defineConfig({
         emptyOutDir: false,
     },
     plugins: [
-        laravelHotRefresh({
-            refresh: [
-                'resources/css/app.css',
-                'resources/css/app-lazy.css',
-                'resources/css/core/filament/panels.css',
-                'resources/css/core/filament/components.css',
-            ],
-            defaultWatches: [
-                'app/Filament/**/*.php',
-                'app/Livewire/**/*.php',
-                'app/View/Components/**/*.php',
-                'resources/views/**/*.blade.php',
-            ],
-        }),
+        // laravelHotRefresh({
+        //     refresh: [
+        //         'resources/css/app.css',
+        //         'resources/css/app-lazy.css',
+        //         'resources/css/core/filament/panels.css',
+        //         'resources/css/core/filament/components.css',
+        //     ],
+        //     defaultWatches: [
+        //         'app/Filament/**/*.php',
+        //         'app/Livewire/**/*.php',
+        //         'app/View/Components/**/*.php',
+        //         'resources/views/**/*.blade.php',
+        //     ],
+        // }),
         tailwindcss(),
         laravel({
             input: [
