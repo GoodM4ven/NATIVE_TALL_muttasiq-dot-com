@@ -1,4 +1,4 @@
-// import 'laravel-hot-refresh';
+import 'laravel-hot-refresh';
 import './support/dispatch';
 import './support/css-variables';
 import './support/animate-scroll';
