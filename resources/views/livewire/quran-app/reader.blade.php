@@ -2169,11 +2169,13 @@
         }
 
         @media (max-width: 639px) {
-            .quran-page-motion-next {
+            body.ios-platform .quran-page-motion-next,
+            body.android-platform .quran-page-motion-next {
                 animation: quran-page-slide-next 800ms ease-out;
             }
 
-            .quran-page-motion-prev {
+            body.ios-platform .quran-page-motion-prev,
+            body.android-platform .quran-page-motion-prev {
                 animation: quran-page-slide-prev 800ms ease-out;
             }
         }
