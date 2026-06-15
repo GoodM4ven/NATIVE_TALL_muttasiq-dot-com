@@ -2169,6 +2169,7 @@
         }
 
         @media (max-width: 639px) {
+
             body.ios-platform .quran-page-motion-next,
             body.android-platform .quran-page-motion-next {
                 animation: quran-page-slide-next 800ms ease-out;
