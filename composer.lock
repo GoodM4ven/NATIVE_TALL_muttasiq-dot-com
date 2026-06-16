@@ -2002,16 +2002,16 @@
         },
         {
             "name": "goodm4ven/nativephp-muttasiq-patches",
-            "version": "v1.6.3",
+            "version": "v1.6.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/GoodM4ven/NATIVE_PLUGIN_muttasiq-patches.git",
-                "reference": "ac91be53aa101a659fe98e7479cae22cc295eaaa"
+                "reference": "591fc8afb1b5123bf1cc13771953c8bdec099258"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/GoodM4ven/NATIVE_PLUGIN_muttasiq-patches/zipball/ac91be53aa101a659fe98e7479cae22cc295eaaa",
-                "reference": "ac91be53aa101a659fe98e7479cae22cc295eaaa",
+                "url": "https://api.github.com/repos/GoodM4ven/NATIVE_PLUGIN_muttasiq-patches/zipball/591fc8afb1b5123bf1cc13771953c8bdec099258",
+                "reference": "591fc8afb1b5123bf1cc13771953c8bdec099258",
                 "shasum": ""
             },
             "require": {
@@ -2076,7 +2076,7 @@
                     "type": "patreon"
                 }
             ],
-            "time": "2026-06-15T18:48:10+00:00"
+            "time": "2026-06-16T09:01:40+00:00"
         },
         {
             "name": "goodm4ven/tailwind-merge",
