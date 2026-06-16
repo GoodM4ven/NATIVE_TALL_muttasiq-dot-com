@@ -932,8 +932,8 @@
                         :imagePath="asset('images/background/quran/morning/tilawa.webp')"
                         :thumbnailImagePath="asset('images/background/quran/morning/tilawa-blur-thumbnail.webp')"
                         :isEagerLoaded="true"
-                        :isDisplayEnforced="true"
                         :isObjectCentered="false"
+                        isDisplayEnforcedJs="() => window.location.hash === '#quran-app-gate'"
                         containerClasses="absolute inset-0 overflow-hidden bg-black/10 dark:bg-black/25"
                         imageClasses="quran-app-sector__image-img quran-app-sector__image-img--tilawa select-none"
                     />
@@ -948,8 +948,8 @@
                         :imagePath="asset('images/background/quran/night/tilawa.webp')"
                         :thumbnailImagePath="asset('images/background/quran/night/tilawa-blur-thumbnail.webp')"
                         :isEagerLoaded="true"
-                        :isDisplayEnforced="true"
                         :isObjectCentered="false"
+                        isDisplayEnforcedJs="() => window.location.hash === '#quran-app-gate'"
                         containerClasses="absolute inset-0 overflow-hidden bg-black/10 dark:bg-black/25"
                         imageClasses="quran-app-sector__image-img quran-app-sector__image-img--tilawa select-none"
                     />
@@ -1012,8 +1012,8 @@
                         :imagePath="asset('images/background/quran/morning/tadabbur.webp')"
                         :thumbnailImagePath="asset('images/background/quran/morning/tadabbur-blur-thumbnail.webp')"
                         :isEagerLoaded="true"
-                        :isDisplayEnforced="true"
                         :isObjectCentered="false"
+                        isDisplayEnforcedJs="() => window.location.hash === '#quran-app-gate'"
                         containerClasses="absolute inset-0 overflow-hidden bg-black/10 dark:bg-black/25"
                         imageClasses="quran-app-sector__image-img quran-app-sector__image-img--tadabbur select-none"
                     />
@@ -1028,8 +1028,8 @@
                         :imagePath="asset('images/background/quran/night/tadabbur.webp')"
                         :thumbnailImagePath="asset('images/background/quran/night/tadabbur-blur-thumbnail.webp')"
                         :isEagerLoaded="true"
-                        :isDisplayEnforced="true"
                         :isObjectCentered="false"
+                        isDisplayEnforcedJs="() => window.location.hash === '#quran-app-gate'"
                         containerClasses="absolute inset-0 overflow-hidden bg-black/10 dark:bg-black/25"
                         imageClasses="quran-app-sector__image-img quran-app-sector__image-img--tadabbur select-none"
                     />
@@ -1089,8 +1089,8 @@
                         :imagePath="asset('images/background/quran/morning/hifth.webp')"
                         :thumbnailImagePath="asset('images/background/quran/morning/hifth-blur-thumbnail.webp')"
                         :isEagerLoaded="true"
-                        :isDisplayEnforced="true"
                         :isObjectCentered="false"
+                        isDisplayEnforcedJs="() => window.location.hash === '#quran-app-gate'"
                         containerClasses="absolute inset-0 overflow-hidden bg-black/10 dark:bg-black/25"
                         imageClasses="quran-app-sector__image-img quran-app-sector__image-img--hifth select-none"
                     />
@@ -1105,8 +1105,8 @@
                         :imagePath="asset('images/background/quran/night/hifth.webp')"
                         :thumbnailImagePath="asset('images/background/quran/night/hifth-blur-thumbnail.webp')"
                         :isEagerLoaded="true"
-                        :isDisplayEnforced="true"
                         :isObjectCentered="false"
+                        isDisplayEnforcedJs="() => window.location.hash === '#quran-app-gate'"
                         containerClasses="absolute inset-0 overflow-hidden bg-black/10 dark:bg-black/25"
                         imageClasses="quran-app-sector__image-img quran-app-sector__image-img--hifth select-none"
                     />

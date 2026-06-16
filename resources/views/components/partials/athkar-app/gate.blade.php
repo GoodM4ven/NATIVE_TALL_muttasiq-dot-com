@@ -485,7 +485,7 @@
                             alt="Athkar night spill"
                             :imagePath="asset('images/background/athkar-night-blurred.webp')"
                             :thumbnailImagePath="asset('images/background/athkar-night-blurred-blur-thumbnail.webp')"
-                            :isDisplayEnforced="true"
+                            isDisplayEnforcedJs="() => window.location.hash === '#athkar-app-gate'"
                             containerClasses="overflow-visible bg-transparent"
                             imageClasses="athkar-gate__spill-image"
                         />
@@ -496,7 +496,7 @@
                             alt="Athkar morning spill"
                             :imagePath="asset('images/background/athkar-morning-blurred.webp')"
                             :thumbnailImagePath="asset('images/background/athkar-morning-blurred-blur-thumbnail.webp')"
-                            :isDisplayEnforced="true"
+                            isDisplayEnforcedJs="() => window.location.hash === '#athkar-app-gate'"
                             containerClasses="overflow-visible bg-transparent"
                             imageClasses="athkar-gate__spill-image"
                         />
@@ -523,7 +523,7 @@
                                 alt="Athkar night"
                                 :imagePath="asset('images/background/athkar-night.webp')"
                                 :thumbnailImagePath="asset('images/background/athkar-night-blur-thumbnail.webp')"
-                                :isDisplayEnforced="true"
+                                isDisplayEnforcedJs="() => window.location.hash === '#athkar-app-gate'"
                                 imageClasses="athkar-gate__image-img select-none"
                             />
                             <span
@@ -563,7 +563,7 @@
                                 alt="Athkar morning"
                                 :imagePath="asset('images/background/athkar-morning.webp')"
                                 :thumbnailImagePath="asset('images/background/athkar-morning-blur-thumbnail.webp')"
-                                :isDisplayEnforced="true"
+                                isDisplayEnforcedJs="() => window.location.hash === '#athkar-app-gate'"
                                 imageClasses="athkar-gate__image-img select-none"
                             />
                             <span class="athkar-gate__veil athkar-gate__veil--morning"></span>

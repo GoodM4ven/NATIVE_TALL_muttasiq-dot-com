@@ -1903,16 +1903,16 @@
         },
         {
             "name": "goodm4ven/blurred-image",
-            "version": "v1.3.3",
+            "version": "v1.4.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/GoodM4ven/PACKAGE_LARAVEL_blurred-image.git",
-                "reference": "40eecdf42bff4ec57a1ea2babc56b214349dac32"
+                "reference": "088812c699f198303cc5dae446312d21de2995a2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/GoodM4ven/PACKAGE_LARAVEL_blurred-image/zipball/40eecdf42bff4ec57a1ea2babc56b214349dac32",
-                "reference": "40eecdf42bff4ec57a1ea2babc56b214349dac32",
+                "url": "https://api.github.com/repos/GoodM4ven/PACKAGE_LARAVEL_blurred-image/zipball/088812c699f198303cc5dae446312d21de2995a2",
+                "reference": "088812c699f198303cc5dae446312d21de2995a2",
                 "shasum": ""
             },
             "require": {
@@ -1982,7 +1982,7 @@
             ],
             "support": {
                 "issues": "https://github.com/GoodM4ven/PACKAGE_LARAVEL_blurred-image/issues",
-                "source": "https://github.com/GoodM4ven/PACKAGE_LARAVEL_blurred-image/tree/v1.3.3"
+                "source": "https://github.com/GoodM4ven/PACKAGE_LARAVEL_blurred-image/tree/v1.4.3"
             },
             "funding": [
                 {
@@ -1998,7 +1998,7 @@
                     "type": "patreon"
                 }
             ],
-            "time": "2026-06-03T03:09:08+00:00"
+            "time": "2026-06-16T02:50:43+00:00"
         },
         {
             "name": "goodm4ven/nativephp-muttasiq-patches",

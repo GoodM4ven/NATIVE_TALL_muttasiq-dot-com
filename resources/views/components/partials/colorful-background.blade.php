@@ -201,7 +201,7 @@
                 alt="Morning background"
                 :imagePath="asset('images/background/main-morning-blurred.webp')"
                 :thumbnailImagePath="asset('images/background/main-morning-blurred-blur-thumbnail.webp')"
-                :isDisplayEnforced="true"
+                isDisplayEnforcedJs="() => window.location.hash === '#main-menu'"
             />
         </div>
 
@@ -216,7 +216,7 @@
                 alt="Night background"
                 :imagePath="asset('images/background/main-night-blurred.webp')"
                 :thumbnailImagePath="asset('images/background/main-night-blurred-blur-thumbnail.webp')"
-                :isDisplayEnforced="true"
+                isDisplayEnforcedJs="() => window.location.hash === '#main-menu'"
             />
         </div>
 
@@ -232,7 +232,7 @@
                 alt="Athkar morning background"
                 :imagePath="asset('images/background/athkar-morning-blurred.webp')"
                 :thumbnailImagePath="asset('images/background/athkar-morning-blurred-blur-thumbnail.webp')"
-                :isDisplayEnforced="true"
+                isDisplayEnforcedJs="() => window.location.hash === '#athkar-app-sabah'"
             />
         </div>
 
@@ -248,7 +248,7 @@
                 alt="Athkar night background"
                 :imagePath="asset('images/background/athkar-night-blurred.webp')"
                 :thumbnailImagePath="asset('images/background/athkar-night-blurred-blur-thumbnail.webp')"
-                :isDisplayEnforced="true"
+                isDisplayEnforcedJs="() => window.location.hash === '#athkar-app-masaa'"
             />
         </div>
 
@@ -264,7 +264,7 @@
                 alt="Athkar gate morning background"
                 :imagePath="asset('images/background/main-morning-blurred.webp')"
                 :thumbnailImagePath="asset('images/background/main-morning-blurred-blur-thumbnail.webp')"
-                :isDisplayEnforced="true"
+                isDisplayEnforcedJs="() => window.location.hash === '#athkar-app-gate'"
             />
         </div>
 
@@ -280,7 +280,7 @@
                 alt="Athkar gate night background"
                 :imagePath="asset('images/background/main-night-blurred.webp')"
                 :thumbnailImagePath="asset('images/background/main-night-blurred-blur-thumbnail.webp')"
-                :isDisplayEnforced="true"
+                isDisplayEnforcedJs="() => window.location.hash === '#athkar-app-gate'"
             />
         </div>
 
@@ -295,7 +295,7 @@
                 alt="Tilawa background"
                 :imagePath="asset('images/background/quran/morning/tilawa-blurred.webp')"
                 :thumbnailImagePath="asset('images/background/quran/morning/tilawa-blurred-blur-thumbnail.webp')"
-                :isDisplayEnforced="true"
+                isDisplayEnforcedJs="() => window.location.hash === '#quran-app-tilawa'"
                 imageClasses="object-[50%_62.5%]"
             />
         </div>
@@ -311,7 +311,7 @@
                 alt="Tilawa background"
                 :imagePath="asset('images/background/quran/night/tilawa-blurred.webp')"
                 :thumbnailImagePath="asset('images/background/quran/night/tilawa-blurred-blur-thumbnail.webp')"
-                :isDisplayEnforced="true"
+                isDisplayEnforcedJs="() => window.location.hash === '#quran-app-tilawa'"
                 imageClasses="object-[50%_62.5%]"
             />
         </div>
@@ -327,7 +327,7 @@
                 alt="Hifth background"
                 :imagePath="asset('images/background/quran/morning/hifth-blurred.webp')"
                 :thumbnailImagePath="asset('images/background/quran/morning/hifth-blurred-blur-thumbnail.webp')"
-                :isDisplayEnforced="true"
+                isDisplayEnforcedJs="() => window.location.hash === '#quran-app-hifth'"
                 imageClasses="object-[0%_50%]"
             />
         </div>
@@ -343,7 +343,7 @@
                 alt="Hifth background"
                 :imagePath="asset('images/background/quran/night/hifth-blurred.webp')"
                 :thumbnailImagePath="asset('images/background/quran/night/hifth-blurred-blur-thumbnail.webp')"
-                :isDisplayEnforced="true"
+                isDisplayEnforcedJs="() => window.location.hash === '#quran-app-hifth'"
                 imageClasses="object-[0%_50%]"
             />
         </div>
@@ -359,7 +359,7 @@
                 alt="Tadabbur background"
                 :imagePath="asset('images/background/quran/morning/tadabbur-blurred.webp')"
                 :thumbnailImagePath="asset('images/background/quran/morning/tadabbur-blurred-blur-thumbnail.webp')"
-                :isDisplayEnforced="true"
+                isDisplayEnforcedJs="() => window.location.hash === '#quran-app-tadabbur'"
                 imageClasses="object-[100%_50%]"
             />
         </div>
@@ -375,7 +375,7 @@
                 alt="Tadabbur background"
                 :imagePath="asset('images/background/quran/night/tadabbur-blurred.webp')"
                 :thumbnailImagePath="asset('images/background/quran/night/tadabbur-blurred-blur-thumbnail.webp')"
-                :isDisplayEnforced="true"
+                isDisplayEnforcedJs="() => window.location.hash === '#quran-app-tadabbur'"
                 imageClasses="object-[100%_50%]"
             />
         </div>
