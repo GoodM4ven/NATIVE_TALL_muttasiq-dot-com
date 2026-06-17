@@ -132,3 +132,4 @@
 - expands the mobile counter hint when tapped while hint bypass is disabled
 - persists athkar counts, overcounts, and restores the reader on reload
 - expands the mobile counter hint when tapped while hint bypass is disabled
+- creates a pending override submission for a modified default thikr and skips exact duplicates
