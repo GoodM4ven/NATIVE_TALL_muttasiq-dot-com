@@ -154,7 +154,7 @@ it('persists web home metrics in the configured cache store even when default ca
     Cache::store('file')->flush();
 });
 
-it('tracks app-scoped metrics from Livewire view switches without affecting global counters', function () {
+it('tracks app-scoped metrics from Livewire view switches and counts main-menu visits independently', function () {
     config([
         'app.custom.security.web_home_metrics.enabled' => true,
         'app.custom.security.web_home_metrics.cache_store' => 'array',
@@ -162,11 +162,13 @@ it('tracks app-scoped metrics from Livewire view switches without affecting glob
         'nativephp-internal.platform' => null,
     ]);
 
+    // Web page load records a home visit via middleware
     $this->withServerVariables([
         'REMOTE_ADDR' => '203.0.113.77',
         'HTTP_USER_AGENT' => 'Scoped Agent',
     ])->get('/')->assertSuccessful();
 
+    // SPA navigation: athkar → same athkar sub-view (deduped) → main-menu (second home hit) → quran → same quran sub-view (deduped)
     livewire(WebHomeViewTracker::class)
         ->call('trackAppView', ViewName::AthkarAppGate->value)
         ->call('trackAppView', ViewName::AthkarAppSabah->value)
@@ -176,20 +178,26 @@ it('tracks app-scoped metrics from Livewire view switches without affecting glob
 
     $tracker = app(WebHomeActivityTracker::class);
 
+    // Home: 2 hits (middleware load + return to main-menu), 2 unique visitors (different test fingerprints)
     expect($tracker->todaySummary())->toBe([
-        'hits' => 0,
-        'unique_visitors' => 0,
-    ])->and($tracker->todaySummary(WebHomeActivityTracker::CONTEXT_ATHKAR_GATE))->toBe([
-        'hits' => 1,
-        'unique_visitors' => 1,
-    ])->and($tracker->todaySummary(WebHomeActivityTracker::CONTEXT_QURAN_GATE))->toBe([
-        'hits' => 1,
-        'unique_visitors' => 1,
-    ])->and($tracker->dailySeries(1, WebHomeActivityTracker::CONTEXT_ATHKAR_GATE)['hits'])->toBe([1])
+        'hits' => 2,
+        'unique_visitors' => 2,
+    ])
+    // Athkar: 1 hit (gate + sub-view deduped to same context), 1 unique
+        ->and($tracker->todaySummary(WebHomeActivityTracker::CONTEXT_ATHKAR_GATE))->toBe([
+            'hits' => 1,
+            'unique_visitors' => 1,
+        ])
+    // Quran: 1 hit (tilawa + hifth deduped to same context), 1 unique
+        ->and($tracker->todaySummary(WebHomeActivityTracker::CONTEXT_QURAN_GATE))->toBe([
+            'hits' => 1,
+            'unique_visitors' => 1,
+        ])
+        ->and($tracker->dailySeries(1, WebHomeActivityTracker::CONTEXT_ATHKAR_GATE)['hits'])->toBe([1])
         ->and($tracker->dailySeries(1, WebHomeActivityTracker::CONTEXT_QURAN_GATE)['hits'])->toBe([1]);
 });
 
-it('tracks native visit metrics through the api endpoint and replaces the home visit when an app is opened', function () {
+it('records all three visit types independently via the api endpoint', function () {
     config([
         'app.custom.security.web_home_metrics.enabled' => true,
         'app.custom.security.web_home_metrics.cache_store' => 'array',
@@ -211,9 +219,10 @@ it('tracks native visit metrics through the api endpoint and replaces the home v
 
     $tracker = app(WebHomeActivityTracker::class);
 
+    // All three contexts record independently — no replacement or suppression
     expect($tracker->todaySummary())->toBe([
-        'hits' => 0,
-        'unique_visitors' => 0,
+        'hits' => 1,
+        'unique_visitors' => 1,
     ])->and($tracker->todaySummary(WebHomeActivityTracker::CONTEXT_QURAN_GATE))->toBe([
         'hits' => 1,
         'unique_visitors' => 1,

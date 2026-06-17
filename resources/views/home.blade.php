@@ -936,7 +936,9 @@
             <livewire:startup-sync defer />
         @endif
 
-        @if ((bool) config('app.custom.security.web_home_metrics.enabled', false) && is_platform('web'))
+        @if (
+            (bool) config('app.custom.security.web_home_metrics.enabled', false) &&
+                (is_platform('web') || is_platform('native')))
             <livewire:web-home-view-tracker />
         @endif
 
