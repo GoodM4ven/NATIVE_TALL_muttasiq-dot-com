@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Services\Traits;
 
+use App\Livewire\ControlPanelChangelogs;
+use Filament\Schemas\Components\Livewire;
 use Filament\Schemas\Components\Tabs\Tab;
-use Filament\Schemas\Components\Text;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\HtmlString;
@@ -19,8 +20,13 @@ trait HasControlPanelChangelogsTab
             ->key('updates')
             ->icon('material-design.update')
             ->schema([
-                Text::make(fn (): HtmlString => $this->changelogsMarkdown())
-                    ->extraAttributes(['class' => 'block w-full']),
+                // Lazy-loaded so the (potentially large) changelog HTML is not built and
+                // serialized on every modal open. It only loads when this tab is actually
+                // shown, keeping the control-panel modal fast to open — especially in the
+                // native WebView. See [[ControlPanelChangelogs]].
+                Livewire::make(ControlPanelChangelogs::class)
+                    ->lazy()
+                    ->key('control-panel-changelogs'),
             ]);
     }
 
