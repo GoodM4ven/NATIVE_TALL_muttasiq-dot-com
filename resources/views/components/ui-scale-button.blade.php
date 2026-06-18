@@ -199,7 +199,7 @@
                 x-on:click.stop
             >
                 <p class="ui-scale-overlay__title font-arabic-sans">
-                    {{ arabic_text('تحكم في حجم واجهة القائمة') }}
+                    {{ arabic_text('تحكم في حجم عناصر الواجهة الرئيسة') }}
                 </p>
 
                 <button
@@ -212,7 +212,7 @@
                 <input
                     class="quran-page-slider min-w-42 h-[0.56rem] w-[min(70vw,15rem)] outline-none"
                     type="range"
-                    aria-label="{{ arabic_text('حجم الواجهة') }}"
+                    aria-label="{{ arabic_text('حجم العناصر الرئيسة') }}"
                     tabindex="-1"
                     x-bind:min="min"
                     x-bind:max="max"
