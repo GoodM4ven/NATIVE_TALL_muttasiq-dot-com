@@ -300,7 +300,7 @@
         x-on:selectstart.prevent
     >
         <p
-            class="inline-flex max-w-full items-center justify-center gap-1 overflow-hidden whitespace-nowrap text-center leading-tight [text-wrap:nowrap]">
+            class="inline-flex max-w-full items-center justify-center gap-1 overflow-hidden whitespace-nowrap text-center leading-arabic [text-wrap:nowrap]">
             <span class="min-w-0 shrink overflow-hidden text-ellipsis whitespace-nowrap">
                 {{ arabic_text('جميع الحقوق محفوظة') }} • {{ arabic_text('متسق') }} @ <span
                     x-text="window.dayjs().calendar('hijri').format('YYYY')"
