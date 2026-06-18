@@ -657,6 +657,7 @@
             <livewire:control-panel />
             <x-athkar-reader-font-scale-button />
             <x-quran-reader-font-scale-button />
+            <x-ui-scale-button />
             <livewire:main-menu-introduction-video-button />
             @if (!is_platform('native'))
                 <x-partials.download-stack-button />

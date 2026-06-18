@@ -9,7 +9,10 @@
     x-transition:leave-start="opacity-100 scale-100"
     x-transition:leave-end="opacity-0 scale-60"
 >
-    <x-main-menu x-bind:data-main-menu-exiting="views['main-menu'].isOpen ? 'false' : 'true'">
+    <x-main-menu
+        style="zoom: var(--ui-scale, 1);"
+        x-bind:data-main-menu-exiting="views['main-menu'].isOpen ? 'false' : 'true'"
+    >
         <x-main-menu.item
             :iconName="'zondicon.chat-bubble-dots'"
             :caption="arabic_text('الأذكار')"

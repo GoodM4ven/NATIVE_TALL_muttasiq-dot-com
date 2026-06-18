@@ -8,6 +8,7 @@
 ])
 
 <div
+    style="zoom: var(--ui-scale, 1);"
     {{ $attributes }}
     x-data="{
         horizontal: @js($horizontal),

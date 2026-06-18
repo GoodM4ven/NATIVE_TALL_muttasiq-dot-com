@@ -1,5 +1,23 @@
 <div align="right">
 
+## v1.4.0
+
+### المحرك
+
+- قابلية تكبير الواجهة الرئيسية والأزرار المتناثرة والمتكدسة ومنبثق حقوق النشر من الصفحة الرئيسية
+- اعتماد تغييرات الإعدادات بدون الحاجة إلى الضغط على زر الحفظ في الأسف
+
+### الأذكار
+
+- ...
+
+### الكتاب
+
+- ...
+
+<img src="images/v-1-4-0/web/home-ui-scaling-slider-modal.webp" alt="Home UI scaling feature with a slider to manually control it" height="320"/>
+
+
 ## [v1.3.0](https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com/pull/214)
 
 ### المحرك
