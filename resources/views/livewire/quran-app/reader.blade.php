@@ -3713,6 +3713,10 @@
             .native-platform .quran-bottom-strip {
                 transition-duration: 140ms !important;
             }
+
+            body.nativephp-ios .immersive-mode-top-caption {
+                top: 1.5rem !important;
+            }
         }
     </style>
 
@@ -3862,8 +3866,7 @@
                 >
                 </div>
                 <div
-                    class="z-54 pointer-events-none absolute inset-x-0 flex justify-center px-3 sm:hidden"
-                    x-bind:class="$store.bp.isIosNativePlatform() ? 'top-[2.5rem]' : 'top-2'"
+                    class="immersive-mode-top-caption z-54 pointer-events-none absolute top-2 inset-x-0 flex justify-center px-3 sm:hidden"
                     x-cloak
                     x-show="shouldShowImmersiveMobileEdgeCaptions()"
                     x-transition:enter="transition-opacity ease-out duration-280 delay-500"
