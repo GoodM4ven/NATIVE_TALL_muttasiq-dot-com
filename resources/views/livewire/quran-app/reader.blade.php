@@ -3715,7 +3715,7 @@
             }
 
             body.nativephp-ios .immersive-mode-top-caption {
-                top: 1.5rem !important;
+                top: 2.5rem !important;
             }
         }
     </style>
