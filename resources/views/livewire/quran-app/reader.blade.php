@@ -3866,7 +3866,7 @@
                 >
                 </div>
                 <div
-                    class="immersive-mode-top-caption z-54 pointer-events-none absolute top-2 inset-x-0 flex justify-center px-3 sm:hidden"
+                    class="immersive-mode-top-caption z-54 pointer-events-none absolute inset-x-0 top-2 flex justify-center px-3 sm:hidden"
                     x-cloak
                     x-show="shouldShowImmersiveMobileEdgeCaptions()"
                     x-transition:enter="transition-opacity ease-out duration-280 delay-500"
