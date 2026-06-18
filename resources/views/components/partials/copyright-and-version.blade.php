@@ -286,7 +286,7 @@
     x-effect="syncRevealLoop()"
 >
     <div
-        class="3xl:text-[1rem] relative w-fit max-w-[90vw] cursor-default select-none rounded-lg border border-white/70 bg-gray-100/40 px-2.5 py-2 text-[clamp(0.4rem,2.5vw,0.8rem)] text-gray-600 opacity-0 shadow-2xl ring-1 ring-gray-200/70 transition-all duration-500 ease-out sm:max-w-none sm:rounded-2xl sm:px-4 sm:py-3 sm:text-[0.82rem] md:px-5 md:py-3 md:text-[0.88rem] lg:px-4 lg:py-3 lg:text-[0.85rem] xl:px-6 xl:py-4 xl:text-[1rem] 2xl:text-[0.9rem] dark:border-white/10 dark:bg-gray-900/20 dark:text-gray-300 dark:ring-white/10 zoom-(--ui-scale,1)"
+        class="3xl:text-[1rem] zoom-(--ui-scale,1) relative w-fit max-w-[90vw] cursor-default select-none rounded-lg border border-white/70 bg-gray-100/40 px-2.5 py-2 text-[clamp(0.4rem,2.5vw,0.8rem)] text-gray-600 opacity-0 shadow-2xl ring-1 ring-gray-200/70 transition-all duration-500 ease-out sm:max-w-none sm:rounded-2xl sm:px-4 sm:py-3 sm:text-[0.82rem] md:px-5 md:py-3 md:text-[0.88rem] lg:px-4 lg:py-3 lg:text-[0.85rem] xl:px-6 xl:py-4 xl:text-[1rem] 2xl:text-[0.9rem] dark:border-white/10 dark:bg-gray-900/20 dark:text-gray-300 dark:ring-white/10"
         data-testid="copyright-version-panel"
         x-bind:class="{
             'opacity-100!': isVisible,
@@ -300,7 +300,7 @@
         x-on:selectstart.prevent
     >
         <p
-            class="inline-flex max-w-full items-center justify-center gap-1 overflow-hidden whitespace-nowrap text-center leading-arabic [text-wrap:nowrap]">
+            class="leading-arabic inline-flex max-w-full items-center justify-center gap-1 overflow-hidden whitespace-nowrap text-center [text-wrap:nowrap]">
             <span class="min-w-0 shrink overflow-hidden text-ellipsis whitespace-nowrap">
                 {{ arabic_text('جميع الحقوق محفوظة') }} • {{ arabic_text('متسق') }} @ <span
                     x-text="window.dayjs().calendar('hijri').format('YYYY')"

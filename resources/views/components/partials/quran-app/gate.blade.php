@@ -825,11 +825,7 @@
             }
         }
 
-        /*
-                     * Native (iOS/Android) is a WebView where performance is the priority, so the
-                     * same perf reductions as the web base breakpoint apply at ALL native widths
-                     * (not gated behind max-width: 639px, which would skip tablets / wide WebViews).
-                     */
+        /* Native (iOS/Android) is a WebView where performance is the priority, so the same perf reductions as the web base breakpoint apply at ALL native widths (not gated behind max-width: 639px, which would skip tablets / wide WebViews). */
         .native-platform .quran-app-gate-shell {
             will-change: auto;
         }
