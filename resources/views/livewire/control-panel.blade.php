@@ -50,6 +50,8 @@
         x-show="!isControlPanelOpen && !isAthkarManagerOpen && !isIntroductionVideoOpen"
         x-data="{
             controlPanelModalId: @js('fi-' . $this->getId() . '-action-0'),
+            isControlPanelLoading: false,
+            controlPanelLoadingSafetyTimerId: null,
             isReaderMaintenanceInFlight: false,
             hasQueuedReaderMaintenance: false,
             westernNumeralChars: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
@@ -664,8 +666,30 @@
         
                 return this.$el.getClientRects().length > 0;
             },
-            openControlPanelModalFromEvent(detail = {}) {
+            beginControlPanelLoading() {
                 isControlPanelOpen = true;
+                this.isControlPanelLoading = true;
+        
+                if (this.controlPanelLoadingSafetyTimerId !== null) {
+                    window.clearTimeout(this.controlPanelLoadingSafetyTimerId);
+                }
+        
+                // Safety net: never leave the spinner stuck if the modal fails to open.
+                this.controlPanelLoadingSafetyTimerId = window.setTimeout(() => {
+                    this.isControlPanelLoading = false;
+                    this.controlPanelLoadingSafetyTimerId = null;
+                }, 6000);
+            },
+            endControlPanelLoading() {
+                this.isControlPanelLoading = false;
+        
+                if (this.controlPanelLoadingSafetyTimerId !== null) {
+                    window.clearTimeout(this.controlPanelLoadingSafetyTimerId);
+                    this.controlPanelLoadingSafetyTimerId = null;
+                }
+            },
+            openControlPanelModalFromEvent(detail = {}) {
+                this.beginControlPanelLoading();
         
                 if (this.$store?.layoutManager) {
                     this.$store.layoutManager.isActionOpen = true;
@@ -749,11 +773,11 @@
         x-on:resize.window="if (isControlPanelOpen) { queueControlPanelSliderNumeralsSync(0); }"
         x-on:change.window="if (resolveControlPanelModalWindow()?.contains($event.target)) { queueControlPanelSliderNumeralsSync(0); }"
         x-on:input.window="if (resolveControlPanelModalWindow()?.contains($event.target)) { queueControlPanelSliderNumeralsSync(0); }"
-        x-on:x-modal-opened.window="if (isControlPanelModalEvent($event.detail ?? {})) { isControlPanelOpen = true; boostControlPanelModalLayer(); setupControlPanelSliderNumeralsObserver(); queueControlPanelSliderNumeralsSync(40); }"
-        x-on:opened-form-component-action-modal.window="if (isControlPanelModalEvent($event.detail ?? {})) { isControlPanelOpen = true; boostControlPanelModalLayer(); setupControlPanelSliderNumeralsObserver(); queueControlPanelSliderNumeralsSync(40); }"
-        x-on:close-modal.window="if (String($event.detail?.id ?? '') === controlPanelModalId || !isControlPanelModalCurrentlyOpen()) { isControlPanelOpen = false; teardownControlPanelSliderNumeralsObserver(); }"
-        x-on:close-modal-quietly.window="if (String($event.detail?.id ?? '') === controlPanelModalId || !isControlPanelModalCurrentlyOpen()) { isControlPanelOpen = false; teardownControlPanelSliderNumeralsObserver(); }"
-        x-on:closed-form-component-action-modal.window="if (String($event.detail?.id ?? '') === controlPanelModalId || !isControlPanelModalCurrentlyOpen()) { isControlPanelOpen = false; teardownControlPanelSliderNumeralsObserver(); }"
+        x-on:x-modal-opened.window="if (isControlPanelModalEvent($event.detail ?? {})) { isControlPanelOpen = true; endControlPanelLoading(); boostControlPanelModalLayer(); setupControlPanelSliderNumeralsObserver(); queueControlPanelSliderNumeralsSync(40); }"
+        x-on:opened-form-component-action-modal.window="if (isControlPanelModalEvent($event.detail ?? {})) { isControlPanelOpen = true; endControlPanelLoading(); boostControlPanelModalLayer(); setupControlPanelSliderNumeralsObserver(); queueControlPanelSliderNumeralsSync(40); }"
+        x-on:close-modal.window="if (String($event.detail?.id ?? '') === controlPanelModalId || !isControlPanelModalCurrentlyOpen()) { isControlPanelOpen = false; endControlPanelLoading(); teardownControlPanelSliderNumeralsObserver(); }"
+        x-on:close-modal-quietly.window="if (String($event.detail?.id ?? '') === controlPanelModalId || !isControlPanelModalCurrentlyOpen()) { isControlPanelOpen = false; endControlPanelLoading(); teardownControlPanelSliderNumeralsObserver(); }"
+        x-on:closed-form-component-action-modal.window="if (String($event.detail?.id ?? '') === controlPanelModalId || !isControlPanelModalCurrentlyOpen()) { isControlPanelOpen = false; endControlPanelLoading(); teardownControlPanelSliderNumeralsObserver(); }"
     >
         <x-action-button
             data-testid="control-panel-button"
@@ -761,6 +785,40 @@
             :iconName="'heroicon-s-adjustments-horizontal'"
             x-on:click="window.dispatchEvent(new CustomEvent('request-open-control-panel-modal'))"
         />
+
+        {{-- Instant feedback while the modal's open roundtrip is in flight: the action --}}
+        {{-- button hides immediately on click, so this fills the gap until the modal --}}
+        {{-- paints. Teleported to body so the button's x-show can't suppress it. --}}
+        <template x-teleport="body">
+            <div
+                class="fixed inset-0 z-[2147481999] flex items-center justify-center bg-black/25 backdrop-blur-[10px]"
+                x-cloak
+                x-show="isControlPanelLoading"
+                x-transition.opacity
+            >
+                <svg
+                    class="size-8 animate-spin text-white sm:size-10"
+                    aria-hidden="true"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                >
+                    <circle
+                        class="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        stroke-width="4"
+                    ></circle>
+                    <path
+                        class="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    ></path>
+                </svg>
+            </div>
+        </template>
     </div>
 
     <x-filament-actions::modals />
