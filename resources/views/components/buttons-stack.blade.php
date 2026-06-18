@@ -7,8 +7,16 @@
     'stackTopOffset' => null,
 ])
 
+@assets
+    {{-- Scale only the stacked buttons, never their inline Filament modals (siblings of the stack items, so excluded). --}}
+    <style>
+        [data-stack-item] {
+            zoom: var(--ui-scale, 1);
+        }
+    </style>
+@endassets
+
 <div
-    style="zoom: var(--ui-scale, 1);"
     {{ $attributes }}
     x-data="{
         horizontal: @js($horizontal),
