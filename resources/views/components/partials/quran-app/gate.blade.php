@@ -669,7 +669,7 @@
                 filter: none !important;
                 opacity: 1;
                 transition: transform 140ms cubic-bezier(0.2, 0.9, 0.25, 1);
-                will-change: transform;
+                will-change: auto;
             }
 
             .quran-app-sector.is-active img.quran-app-sector__image-img {
@@ -696,15 +696,21 @@
             .quran-app-sector__chip {
                 -webkit-backdrop-filter: none;
                 backdrop-filter: none;
-                text-shadow: 0 2px 8px rgba(8, 4, 2, 0.52);
-                box-shadow:
-                    inset 0 1px 0 rgba(255, 234, 183, 0.26),
-                    0 5px 12px rgba(8, 4, 2, 0.28);
+                text-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
+                transition:
+                    transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+                    opacity 150ms ease;
+            }
+
+            .quran-app-sector.is-active .quran-app-sector__chip {
+                box-shadow: 0 5px 12px rgba(0, 0, 0, 0.2);
             }
 
             .quran-app-sector__chip-text {
                 opacity: 0.98;
-                text-shadow: 0 1px 5px rgba(8, 4, 2, 0.42);
+                text-shadow: none;
+                will-change: auto;
             }
 
             .quran-app-gate-focal-dim,
@@ -736,7 +742,7 @@
             .quran-app-gate-anchor {
                 width: clamp(7rem, 18vw, 9rem);
                 border-width: 1px;
-                box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--quran-gold-1) 26%, transparent);
+                box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--quran-gold-1) 14%, transparent);
             }
 
             .quran-app-gate-anchor::before {
@@ -752,15 +758,15 @@
 
             .quran-app-gate-core {
                 width: clamp(1.55rem, 4vw, 2rem);
-                box-shadow: 0 0 10px color-mix(in srgb, var(--quran-gold-2) 28%, transparent);
+                box-shadow: 0 0 5px color-mix(in srgb, var(--quran-gold-2) 18%, transparent);
             }
 
             .quran-app-gate-pointer {
                 width: 1.26rem;
                 height: 1.26rem;
                 box-shadow:
-                    0 0 0 3px color-mix(in srgb, var(--quran-gold-2) 16%, transparent),
-                    0 0 9px color-mix(in srgb, var(--quran-gold-3) 26%, transparent);
+                    0 0 0 2px color-mix(in srgb, var(--quran-gold-2) 10%, transparent),
+                    0 2px 5px rgba(0, 0, 0, 0.1);
             }
 
             .quran-app-gate-pointer::before {
@@ -768,6 +774,7 @@
                 width: 0.38rem;
                 height: 0.38rem;
                 left: 0.4rem;
+                box-shadow: 0 1px 4px rgba(215, 159, 47, 0.2);
             }
 
             .quran-app-gate-pointer::after {
@@ -776,6 +783,7 @@
 
             .quran-app-gate-orbit {
                 transition-duration: 0ms;
+                will-change: auto;
             }
 
             .quran-app-sector__media {
@@ -817,42 +825,76 @@
             }
         }
 
-        @media (max-width: 639px) {
-            .native-platform .quran-app-gate-shell {
-                will-change: auto;
-            }
+        /*
+             * Native (iOS/Android) is a WebView where performance is the priority, so the
+             * same perf reductions as the web base breakpoint apply at ALL native widths
+             * (not gated behind max-width: 639px, which would skip tablets / wide WebViews).
+             */
+        .native-platform .quran-app-gate-shell {
+            will-change: auto;
+        }
 
-            .native-platform img.quran-app-sector__image-img {
-                filter: none !important;
-                transform: none !important;
-                transition: transform 130ms cubic-bezier(0.2, 0.9, 0.25, 1) !important;
-                will-change: transform;
-            }
+        .native-platform img.quran-app-sector__image-img {
+            filter: none !important;
+            transform: none !important;
+            transition: transform 130ms cubic-bezier(0.2, 0.9, 0.25, 1) !important;
+            will-change: auto;
+        }
 
-            .native-platform .quran-app-sector.is-active img.quran-app-sector__image-img {
-                opacity: 1;
-                transform: scale(1.015) translateZ(0) !important;
-            }
+        .native-platform .quran-app-sector.is-active img.quran-app-sector__image-img {
+            opacity: 1;
+            transform: scale(1.015) translateZ(0) !important;
+        }
 
-            .native-platform .quran-app-sector.is-launch-target img.quran-app-sector__image-img {
-                transform: scale(1.024) translateZ(0) !important;
-            }
+        .native-platform .quran-app-sector.is-launch-target img.quran-app-sector__image-img {
+            transform: scale(1.024) translateZ(0) !important;
+        }
 
-            .native-platform .quran-app-sector__chip,
-            .native-platform .quran-app-gate-anchor,
-            .native-platform .quran-app-gate-pointer {
-                -webkit-backdrop-filter: none !important;
-                backdrop-filter: none !important;
-                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18) !important;
-                transition:
-                    transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
-                    opacity 150ms ease !important;
-            }
+        .native-platform .quran-app-sector__chip,
+        .native-platform .quran-app-gate-anchor,
+        .native-platform .quran-app-gate-pointer {
+            -webkit-backdrop-filter: none !important;
+            backdrop-filter: none !important;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18) !important;
+            transition:
+                transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 150ms ease !important;
+        }
 
-            .native-platform .quran-app-sector__veil,
-            .native-platform .quran-app-gate-orbit {
-                transition-duration: 180ms !important;
-            }
+        .native-platform .quran-app-sector__chip {
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
+        }
+
+        .native-platform .quran-app-sector__chip-text {
+            text-shadow: none;
+            will-change: auto;
+        }
+
+        .native-platform .quran-app-gate-core {
+            box-shadow: 0 0 5px color-mix(in srgb, var(--quran-gold-2) 18%, transparent) !important;
+        }
+
+        .native-platform .quran-app-gate-pointer::before {
+            box-shadow: 0 1px 4px rgba(215, 159, 47, 0.2);
+        }
+
+        /* Costly focal dim + SVG geometry never paint on native, at any width. */
+        .native-platform .quran-app-gate-focal-dim,
+        .native-platform .quran-app-gate-geometry {
+            display: none !important;
+        }
+
+        .native-platform .quran-app-gate-anchor::before {
+            animation: none !important;
+        }
+
+        .native-platform .quran-app-sector__veil,
+        .native-platform .quran-app-gate-orbit {
+            transition-duration: 180ms !important;
+        }
+
+        .native-platform .quran-app-gate-orbit {
+            will-change: auto;
         }
     </style>
 @endassets
