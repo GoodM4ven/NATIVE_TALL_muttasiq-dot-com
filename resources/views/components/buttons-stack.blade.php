@@ -9,9 +9,10 @@
 
 @assets
     {{-- Scale only the stacked buttons, never their inline Filament modals (siblings of the stack items, so excluded). --}}
+    {{-- Use `scale` (a transform) not `zoom`: WebKit/iOS won't re-layout a dynamic `zoom` var over already-zoomed children, and `scale` is a separate longhand from the stack JS `transform`. --}}
     <style>
         [data-stack-item] {
-            zoom: var(--ui-scale, 1);
+            scale: var(--ui-scale, 1);
         }
     </style>
 @endassets
