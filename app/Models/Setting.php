@@ -84,6 +84,12 @@ class Setting extends Model
      */
     public static function definitions(): array
     {
+        static $cached = null;
+
+        if (is_array($cached)) {
+            return $cached;
+        }
+
         $definitions = [
             self::DOES_AUTOMATICALLY_SWITCH_COMPLETED_ATHKAR => [
                 'default' => true,
@@ -217,6 +223,13 @@ class Setting extends Model
             ['123', '١٢٣'],
             $definitions[self::DOES_USE_WESTERN_NUMERALS]['label'],
         );
+
+        // Memoize only once Arabic-text processing is meaningful (app booted with a
+        // resolvable settings context); the display context is itself frozen per
+        // request by `arabic_text_settings()`, so the processed labels are stable.
+        if (arabic_text_runtime_ready()) {
+            $cached = $definitions;
+        }
 
         return $definitions;
     }

@@ -46,7 +46,7 @@ class ControlPanel extends Component implements HasActions, HasSchemas
             ->modal()
             ->label(arabic_text('لوحة التحكم'))
             ->modalDescription(arabic_text('بعض المعلومات والتفضيلات في كيفية عمل المنصة'))
-            ->modalSubmitActionLabel(arabic_text('حفظ'))
+            ->modalSubmitAction(false)
             ->extraModalWindowAttributes([
                 'id' => 'control-panel-modal',
                 'class' => 'muttasiq-modal-window quran-control-panel-modal-window',
@@ -83,6 +83,33 @@ class ControlPanel extends Component implements HasActions, HasSchemas
                     );
                 }
             });
+    }
+
+    public function saveControlPanelSetting(string $key, mixed $value): void
+    {
+        $defaults = self::controlPanelDefaults();
+
+        if (! array_key_exists($key, $defaults)) {
+            return;
+        }
+
+        $savedControlPanel = $this->filterControlPanel(
+            array_replace($this->loadControlPanel(), [$key => $value]),
+        );
+
+        $this->clientControlPanel = $savedControlPanel;
+
+        $this->dispatch(
+            'control-panel-updated',
+            controlPanel: $savedControlPanel,
+            maintenancePulse: false,
+            returnToGate: false,
+        );
+
+        notify(
+            iconName: 'mdi.content-save-check',
+            title: arabic_text('تم حفظ الإعدادات بنجاح'),
+        );
     }
 
     public function supportUnlockAction(): Action

@@ -56,6 +56,10 @@ trait HasControlPanelSettingsTab
                     ->schema([
                         Components\Checkbox::make(Setting::DOES_ENABLE_VISUAL_ENHANCEMENTS)
                             ->default((bool) ($generalDefinitions[Setting::DOES_ENABLE_VISUAL_ENHANCEMENTS]['default'] ?? false))
+                            ->live()
+                            ->afterStateUpdated(function (mixed $state): void {
+                                $this->saveControlPanelSetting(Setting::DOES_ENABLE_VISUAL_ENHANCEMENTS, $state);
+                            })
                             ->extraFieldWrapperAttributes([
                                 'class' => 'quran-support-lock-target relative mt-1 sm:mt-3 md:mt-0',
                                 'data-support-lock-target' => 'enable-visual-enhancements',
@@ -68,21 +72,37 @@ trait HasControlPanelSettingsTab
 
                         Components\Checkbox::make(Setting::DOES_SKIP_GUIDANCE_PANELS)
                             ->default((bool) ($generalDefinitions[Setting::DOES_SKIP_GUIDANCE_PANELS]['default'] ?? false))
+                            ->live()
+                            ->afterStateUpdated(function (mixed $state): void {
+                                $this->saveControlPanelSetting(Setting::DOES_SKIP_GUIDANCE_PANELS, $state);
+                            })
                             ->extraFieldWrapperAttributes(['class' => 'relative mt-3 sm:mt-0'])
                             ->label($generalDefinitions[Setting::DOES_SKIP_GUIDANCE_PANELS]['label']),
 
                         Components\Checkbox::make(Setting::DOES_USE_WESTERN_NUMERALS)
                             ->default((bool) ($generalDefinitions[Setting::DOES_USE_WESTERN_NUMERALS]['default'] ?? true))
+                            ->live()
+                            ->afterStateUpdated(function (mixed $state): void {
+                                $this->saveControlPanelSetting(Setting::DOES_USE_WESTERN_NUMERALS, $state);
+                            })
                             ->extraFieldWrapperAttributes(['class' => 'relative mt-3 sm:mt-0'])
                             ->label($generalDefinitions[Setting::DOES_USE_WESTERN_NUMERALS]['label']),
 
                         Components\Checkbox::make(Setting::DOES_PRESERVE_HARAKAT_IN_DISPLAY)
                             ->default((bool) ($generalDefinitions[Setting::DOES_PRESERVE_HARAKAT_IN_DISPLAY]['default'] ?? true))
+                            ->live()
+                            ->afterStateUpdated(function (mixed $state): void {
+                                $this->saveControlPanelSetting(Setting::DOES_PRESERVE_HARAKAT_IN_DISPLAY, $state);
+                            })
                             ->extraFieldWrapperAttributes(['class' => 'relative mt-0 sm:mt-0'])
                             ->label($generalDefinitions[Setting::DOES_PRESERVE_HARAKAT_IN_DISPLAY]['label']),
 
                         Components\Checkbox::make(Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION)
                             ->default((bool) ($generalDefinitions[Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION]['default'] ?? false))
+                            ->live()
+                            ->afterStateUpdated(function (mixed $state): void {
+                                $this->saveControlPanelSetting(Setting::DOES_QURAN_USE_VOLUME_BUTTONS_NAVIGATION, $state);
+                            })
                             ->visible(fn (): bool => is_platform('native'))
                             ->extraFieldWrapperAttributes([
                                 'class' => 'relative mt-3 sm:mt-0 quran-volume-navigation-field',
@@ -109,6 +129,10 @@ trait HasControlPanelSettingsTab
                     ->schema([
                         Components\Checkbox::make(Setting::DOES_QURAN_TARGET_WORDS_BY_DEFAULT)
                             ->default((bool) ($quranDefinitions[Setting::DOES_QURAN_TARGET_WORDS_BY_DEFAULT]['default'] ?? false))
+                            ->live()
+                            ->afterStateUpdated(function (mixed $state): void {
+                                $this->saveControlPanelSetting(Setting::DOES_QURAN_TARGET_WORDS_BY_DEFAULT, $state);
+                            })
                             ->label($quranDefinitions[Setting::DOES_QURAN_TARGET_WORDS_BY_DEFAULT]['label'])
                             ->belowContent([
                                 Text::make((string) ($quranDefinitions[Setting::DOES_QURAN_TARGET_WORDS_BY_DEFAULT]['help'] ?? ''))->size(TextSize::ExtraSmall),
@@ -116,6 +140,10 @@ trait HasControlPanelSettingsTab
 
                         Components\Checkbox::make(Setting::DOES_QURAN_PRESERVE_HARAKAT_ON_COPY)
                             ->default((bool) ($quranDefinitions[Setting::DOES_QURAN_PRESERVE_HARAKAT_ON_COPY]['default'] ?? true))
+                            ->live()
+                            ->afterStateUpdated(function (mixed $state): void {
+                                $this->saveControlPanelSetting(Setting::DOES_QURAN_PRESERVE_HARAKAT_ON_COPY, $state);
+                            })
                             ->label($quranDefinitions[Setting::DOES_QURAN_PRESERVE_HARAKAT_ON_COPY]['label'])
                             ->belowContent([
                                 Text::make((string) ($quranDefinitions[Setting::DOES_QURAN_PRESERVE_HARAKAT_ON_COPY]['help'] ?? ''))->size(TextSize::ExtraSmall),
@@ -123,6 +151,10 @@ trait HasControlPanelSettingsTab
 
                         Components\Checkbox::make(Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ON_MULTI_COPY)
                             ->default((bool) ($quranDefinitions[Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ON_MULTI_COPY]['default'] ?? true))
+                            ->live()
+                            ->afterStateUpdated(function (mixed $state): void {
+                                $this->saveControlPanelSetting(Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ON_MULTI_COPY, $state);
+                            })
                             ->label($quranDefinitions[Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ON_MULTI_COPY]['label'])
                             ->belowContent([
                                 Text::make((string) ($quranDefinitions[Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ON_MULTI_COPY]['help'] ?? ''))->size(TextSize::ExtraSmall),
@@ -130,6 +162,10 @@ trait HasControlPanelSettingsTab
 
                         Components\Checkbox::make(Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ALWAYS_ON_COPY)
                             ->default((bool) ($quranDefinitions[Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ALWAYS_ON_COPY]['default'] ?? false))
+                            ->live()
+                            ->afterStateUpdated(function (mixed $state): void {
+                                $this->saveControlPanelSetting(Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ALWAYS_ON_COPY, $state);
+                            })
                             ->label($quranDefinitions[Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ALWAYS_ON_COPY]['label'])
                             ->belowContent([
                                 Text::make((string) ($quranDefinitions[Setting::DOES_QURAN_APPEND_SURAH_AFFIX_ALWAYS_ON_COPY]['help'] ?? ''))->size(TextSize::ExtraSmall),
@@ -158,6 +194,8 @@ trait HasControlPanelSettingsTab
                                     if ($current > $maximum) {
                                         $set(Setting::QURAN_WIRD_KHATMAT_TARGET, $maximum);
                                     }
+
+                                    $this->saveControlPanelSetting(Setting::QURAN_WIRD_FREQUENCY_MODE, $state);
                                 })
                                 ->helperText($quranDefinitions[Setting::QURAN_WIRD_FREQUENCY_MODE]['help'] ?? null)
                                 ->columnSpan(1),
@@ -172,6 +210,9 @@ trait HasControlPanelSettingsTab
                                 )
                                 ->native(false)
                                 ->live()
+                                ->afterStateUpdated(function (mixed $state): void {
+                                    $this->saveControlPanelSetting(Setting::QURAN_WIRD_KHATMAT_TARGET, $state);
+                                })
                                 ->extraFieldWrapperAttributes([
                                     'class' => 'quran-support-lock-target quran-wird-khatmat-field',
                                     'data-support-lock-target' => 'wird-khatmat-target',
@@ -197,6 +238,10 @@ trait HasControlPanelSettingsTab
 
                         Components\Checkbox::make(Setting::DOES_QURAN_SHOW_IMMERSIVE_MOBILE_EDGE_CAPTIONS)
                             ->default((bool) ($quranDefinitions[Setting::DOES_QURAN_SHOW_IMMERSIVE_MOBILE_EDGE_CAPTIONS]['default'] ?? true))
+                            ->live()
+                            ->afterStateUpdated(function (mixed $state): void {
+                                $this->saveControlPanelSetting(Setting::DOES_QURAN_SHOW_IMMERSIVE_MOBILE_EDGE_CAPTIONS, $state);
+                            })
                             ->extraFieldWrapperAttributes([
                                 'class' => 'relative sm:hidden',
                             ])
@@ -219,10 +264,18 @@ trait HasControlPanelSettingsTab
                     ->schema([
                         Components\Checkbox::make(Setting::DOES_AUTOMATICALLY_SWITCH_COMPLETED_ATHKAR)
                             ->default((bool) ($athkarDefinitions[Setting::DOES_AUTOMATICALLY_SWITCH_COMPLETED_ATHKAR]['default'] ?? true))
+                            ->live()
+                            ->afterStateUpdated(function (mixed $state): void {
+                                $this->saveControlPanelSetting(Setting::DOES_AUTOMATICALLY_SWITCH_COMPLETED_ATHKAR, $state);
+                            })
                             ->label($athkarDefinitions[Setting::DOES_AUTOMATICALLY_SWITCH_COMPLETED_ATHKAR]['label']),
 
                         Components\Checkbox::make(Setting::DOES_CLICKING_SWITCH_ATHKAR_TOO)
                             ->default((bool) ($athkarDefinitions[Setting::DOES_CLICKING_SWITCH_ATHKAR_TOO]['default'] ?? true))
+                            ->live()
+                            ->afterStateUpdated(function (mixed $state): void {
+                                $this->saveControlPanelSetting(Setting::DOES_CLICKING_SWITCH_ATHKAR_TOO, $state);
+                            })
                             ->label($athkarDefinitions[Setting::DOES_CLICKING_SWITCH_ATHKAR_TOO]['label'])
                             ->belowContent([
                                 Text::make((string) ($athkarDefinitions[Setting::DOES_CLICKING_SWITCH_ATHKAR_TOO]['help'] ?? ''))->size(TextSize::ExtraSmall),
@@ -230,6 +283,10 @@ trait HasControlPanelSettingsTab
 
                         Components\Checkbox::make(Setting::DOES_PREVENT_SWITCHING_ATHKAR_UNTIL_COMPLETION)
                             ->default((bool) ($athkarDefinitions[Setting::DOES_PREVENT_SWITCHING_ATHKAR_UNTIL_COMPLETION]['default'] ?? true))
+                            ->live()
+                            ->afterStateUpdated(function (mixed $state): void {
+                                $this->saveControlPanelSetting(Setting::DOES_PREVENT_SWITCHING_ATHKAR_UNTIL_COMPLETION, $state);
+                            })
                             ->label($athkarDefinitions[Setting::DOES_PREVENT_SWITCHING_ATHKAR_UNTIL_COMPLETION]['label'])
                             ->belowContent([
                                 Text::make((string) ($athkarDefinitions[Setting::DOES_PREVENT_SWITCHING_ATHKAR_UNTIL_COMPLETION]['help'] ?? ''))->size(TextSize::ExtraSmall),

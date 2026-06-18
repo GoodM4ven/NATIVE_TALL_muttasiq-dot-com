@@ -1415,7 +1415,7 @@
                 </div>
 
                 <div
-                    class="pointer-events-auto absolute inset-x-0 top-0 z-[60] h-[4.5rem] overflow-visible"
+                    class="pointer-events-none absolute inset-x-0 top-0 z-[60] h-[4.5rem] overflow-visible"
                     data-athkar-mobile-counter
                     x-bind:data-counter-pulse="shouldEnableVisualEnhancements() ? sharedCounterPulseState() : 'inactive'"
                     x-show="shouldShowSharedMobileCounter() || !settingValue('does_automatically_switch_completed_athkar', true) || !settingValue('does_clicking_switch_athkar_too', true)"

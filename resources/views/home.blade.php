@@ -657,6 +657,7 @@
             <livewire:control-panel />
             <x-athkar-reader-font-scale-button />
             <x-quran-reader-font-scale-button />
+            <x-ui-scale-button />
             <livewire:main-menu-introduction-video-button />
             @if (!is_platform('native'))
                 <x-partials.download-stack-button />
@@ -936,7 +937,9 @@
             <livewire:startup-sync defer />
         @endif
 
-        @if ((bool) config('app.custom.security.web_home_metrics.enabled', false) && is_platform('web'))
+        @if (
+            (bool) config('app.custom.security.web_home_metrics.enabled', false) &&
+                (is_platform('web') || is_platform('native')))
             <livewire:web-home-view-tracker />
         @endif
 

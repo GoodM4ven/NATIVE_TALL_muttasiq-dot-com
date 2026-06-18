@@ -19,6 +19,10 @@ trait HasControlPanelChangelogsTab
             ->key('updates')
             ->icon('material-design.update')
             ->schema([
+                // Rendered inline from a day-long cache (~16KB). A previous attempt wrapped
+                // this in a lazy Livewire component, but that just fired a second roundtrip
+                // on every modal open without making the open faster — the cost here is the
+                // per-roundtrip overhead, not the cached HTML size. One roundtrip is faster.
                 Text::make(fn (): HtmlString => $this->changelogsMarkdown())
                     ->extraAttributes(['class' => 'block w-full']),
             ]);

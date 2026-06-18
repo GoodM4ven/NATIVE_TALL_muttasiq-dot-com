@@ -46,10 +46,6 @@ class WebHomeActivityTracker
     {
         $fingerprint = $this->fingerprint($request);
 
-        if ($cache->has($this->appSeenKey($now, $fingerprint)) || $cache->has($this->homeReplacedKey($now, $fingerprint))) {
-            return;
-        }
-
         $this->incrementWithTtl(
             cache: $cache,
             key: $this->dailyHitsKey($now, self::CONTEXT_HOME),
@@ -88,8 +84,6 @@ class WebHomeActivityTracker
                 ttlSeconds: $this->hourlyCounterTtlSeconds($now),
             );
         }
-
-        $this->cacheHomeVisitHour($cache, $now, $fingerprint);
     }
 
     /**
@@ -166,12 +160,6 @@ class WebHomeActivityTracker
     private function trackAppVisit(Repository $cache, Request $request, CarbonImmutable $now, string $context): void
     {
         $fingerprint = $this->fingerprint($request);
-        $appSeenKey = $this->appSeenKey($now, $fingerprint);
-
-        if (! $cache->has($appSeenKey)) {
-            $this->replaceHomeVisitIfNeeded($cache, $now, $fingerprint);
-            $cache->add($appSeenKey, true, now()->addDays($this->retentionDays()));
-        }
 
         $this->incrementWithTtl(
             cache: $cache,
@@ -283,67 +271,6 @@ class WebHomeActivityTracker
         return $this->metricPrefix($context).':hourly:seen:'.$date->format('YmdH').':'.$fingerprint;
     }
 
-    private function appSeenKey(CarbonImmutable $date, string $fingerprint): string
-    {
-        return $this->metricPrefix(self::CONTEXT_HOME).':daily:app-seen:'.$date->format('Ymd').':'.$fingerprint;
-    }
-
-    private function homeReplacedKey(CarbonImmutable $date, string $fingerprint): string
-    {
-        return $this->metricPrefix(self::CONTEXT_HOME).':daily:home-replaced:'.$date->format('Ymd').':'.$fingerprint;
-    }
-
-    private function homeVisitHourKey(CarbonImmutable $date, string $fingerprint): string
-    {
-        return $this->metricPrefix(self::CONTEXT_HOME).':daily:home-hour:'.$date->format('Ymd').':'.$fingerprint;
-    }
-
-    private function cacheHomeVisitHour(Repository $cache, CarbonImmutable $date, string $fingerprint): void
-    {
-        $cache->put(
-            $this->homeVisitHourKey($date, $fingerprint),
-            $date->format('YmdH'),
-            now()->addDays($this->retentionDays()),
-        );
-    }
-
-    private function replaceHomeVisitIfNeeded(Repository $cache, CarbonImmutable $now, string $fingerprint): void
-    {
-        if ($cache->has($this->homeReplacedKey($now, $fingerprint))) {
-            return;
-        }
-
-        $homeDailyHitsKey = $this->dailyHitsKey($now, self::CONTEXT_HOME);
-        $homeDailyUniqueKey = $this->dailyUniqueKey($now, self::CONTEXT_HOME);
-        $homeVisitHourKey = $this->homeVisitHourKey($now, $fingerprint);
-
-        if ((int) $cache->get($homeDailyHitsKey, 0) <= 0 || (int) $cache->get($homeDailyUniqueKey, 0) <= 0) {
-            return;
-        }
-
-        $homeHour = trim((string) $cache->get($homeVisitHourKey, ''));
-
-        if ($homeHour !== '') {
-            try {
-                $homeHourTimestamp = CarbonImmutable::createFromFormat('YmdH', $homeHour);
-            } catch (\Throwable $exception) {
-                $homeHourTimestamp = null;
-            }
-        } else {
-            $homeHourTimestamp = null;
-        }
-
-        $this->decrementWithFloor($cache, $homeDailyHitsKey);
-        $this->decrementWithFloor($cache, $homeDailyUniqueKey);
-
-        if ($homeHourTimestamp instanceof CarbonImmutable) {
-            $this->decrementWithFloor($cache, $this->hourlyHitsKey($homeHourTimestamp, self::CONTEXT_HOME));
-            $this->decrementWithFloor($cache, $this->hourlyUniqueKey($homeHourTimestamp, self::CONTEXT_HOME));
-        }
-
-        $cache->put($this->homeReplacedKey($now, $fingerprint), true, now()->addDays($this->retentionDays()));
-    }
-
     private function normalizeContext(string $context): string
     {
         return in_array($context, self::CONTEXTS, true)
@@ -360,16 +287,5 @@ class WebHomeActivityTracker
         }
 
         return 'metrics:web-home:view:'.$context;
-    }
-
-    private function decrementWithFloor(Repository $cache, string $key): int
-    {
-        $currentValue = (int) $cache->get($key, 0);
-
-        if ($currentValue <= 0) {
-            return 0;
-        }
-
-        return (int) $cache->decrement($key);
     }
 }

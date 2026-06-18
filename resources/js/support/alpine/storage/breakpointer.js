@@ -31,6 +31,7 @@ document.addEventListener('alpine:init', function () {
     };
     const isTablet = () => detectTouchInput() && is('sm+') && is('xl-');
     const shouldUseSortHandles = () => detectTouchInput() && (is('base') || isTablet());
+    const isIosNativePlatform = () => Boolean(document.body?.classList?.contains('nativephp-ios'));
 
     const initialHasTouch = detectTouchInput();
     applyTouchClass(initialHasTouch);
@@ -39,6 +40,7 @@ document.addEventListener('alpine:init', function () {
         current: readBreakpoint(),
         hasTouch: initialHasTouch,
         is: (q) => is(q),
+        isIosNativePlatform: () => isIosNativePlatform(),
         isTouch: () => detectTouchInput(),
         isTablet: () => isTablet(),
         shouldUseSortHandles: () => shouldUseSortHandles(),

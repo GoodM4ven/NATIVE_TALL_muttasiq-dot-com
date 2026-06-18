@@ -83,8 +83,8 @@
             "@php artisan boost:install --no-interaction",
             "@php -r \"file_exists('database/database.sqlite') || touch('database/database.sqlite');\"",
             "@php artisan migrate:fresh --seed --force",
-            "npm install",
-            "npm run build"
+            "pnpm install",
+            "pnpm exec build"
         ],
         "paid-packages": [
             "composer config repositories.filament composer https://packages.filamentphp.com/composer",
@@ -120,11 +120,11 @@
         ],
         "dev": [
             "@optimize",
-            "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"php artisan pail --timeout=0\" \"npm run dev\" --names=server,queue,logs,vite --kill-others"
+            "pnpm exec concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"php artisan pail --timeout=0\" \"pnpm run dev\" --names=server,queue,logs,vite --kill-others"
         ],
         "format": [
-            "npm run format:blade",
-            "npm run format:prettier",
+            "pnpm run format:blade",
+            "pnpm run format:prettier",
             "vendor/bin/pint"
         ],
         "analyse": "XDEBUG_MODE=off vendor/bin/phpstan analyse --memory-limit=512M",
@@ -150,7 +150,7 @@
             "@optimize",
             "@testbrowser:raw"
         ],
-        "testbrowser:prepare": "sh -lc 'node_modules/.bin/playwright --version >/dev/null 2>&1 || npx playwright install'",
+        "testbrowser:prepare": "sh -lc 'node_modules/.bin/playwright --version >/dev/null 2>&1 || pnpm exec playwright install'",
         "testbrowser:raw": [
             "@testbrowser:prepare",
             ".scripts/testing/browser.sh"

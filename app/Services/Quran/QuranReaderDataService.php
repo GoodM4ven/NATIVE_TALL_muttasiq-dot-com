@@ -221,7 +221,7 @@ class QuranReaderDataService
         $normalizedPage = $maxPage > 0 ? max(1, min($pageNumber, $maxPage)) : 1;
         $basmallahConfigFingerprint = $this->basmallahConfigFingerprint();
         $cacheKey = sprintf(
-            'quran-reader-page-v19:%d:%s',
+            'quran-reader-page-v20:%d:%s',
             $normalizedPage,
             $basmallahConfigFingerprint,
         );
@@ -5997,6 +5997,10 @@ class QuranReaderDataService
 
         if (! is_file($publicAssetPath)) {
             return null;
+        }
+
+        if (is_platform('android')) {
+            return '/vendor/arabicable/'.$normalizedRelativePath;
         }
 
         return asset('vendor/arabicable/'.$normalizedRelativePath);

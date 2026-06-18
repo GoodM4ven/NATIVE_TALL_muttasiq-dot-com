@@ -2,7 +2,9 @@
     "$schema": "https://www.schemastore.org/package.json",
     "private": true,
     "type": "module",
+    "packageManager": "pnpm@11.5.0",
     "scripts": {
+        "preinstall": "npx only-allow pnpm",
         "format:blade": "blade-formatter --write --config .bladeformatterrc \"resources/views/**/*.blade.php\"",
         "format:prettier": "prettier --write --config .prettierrc \"resources/{css,js}/**/*.{css,js}\"",
         "build": "vite build",
@@ -11,14 +13,12 @@
     "devDependencies": {
         "@tailwindcss/vite": "^4.1.18",
         "blade-formatter": "^1.43.0",
-        "concurrently": "^9.0.1",
         "eslint": "^10.0.0",
         "eslint-plugin-unused-imports": "^4.4.1",
-        "laravel-hot-refresh": "^1.0.1",
-        "laravel-vite-plugin": "^2.0.0",
+        "laravel-vite-plugin": "^3.1.0",
         "playwright": "^1.59.1",
         "prettier": "^3.7.4",
-        "vite": "^7.0.7"
+        "vite": "^8.0.16"
     },
     "dependencies": {
         "@formkit/auto-animate": "^0.9.0",
@@ -28,9 +28,11 @@
         "animejs": "^4.2.2",
         "axios": "^1.16.1",
         "color": "^5.0.3",
+        "concurrently": "^10.0.3",
         "dayjs": "^1.11.19",
         "dayjs-hijri": "^1.0.1",
         "fitty": "^2.4.2",
+        "laravel-hot-refresh": "^1.0.7",
         "ldrs": "^1.1.9",
         "tailwindcss": "^4.2.0",
         "tippy.js": "^6.3.7"

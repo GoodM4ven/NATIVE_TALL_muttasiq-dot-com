@@ -15,7 +15,7 @@
             backface-visibility: hidden;
             will-change: transform;
             display: flex;
-            min-height: 27rem;
+            min-height: 22rem;
             cursor: pointer;
             border-radius: 1rem;
             border: 1px solid color-mix(in srgb, var(--primary-300) 45%, transparent);
@@ -291,7 +291,7 @@
         @media (hover: none),
         (pointer: coarse) {
             .athkar-manager-card {
-                min-height: 20rem;
+                min-height: 18rem;
                 transition: box-shadow 120ms ease, border-color 120ms ease;
             }
 
@@ -303,6 +303,12 @@
             .athkar-manager-card__click {
                 min-height: 20rem;
                 padding: 0.875rem;
+            }
+        }
+
+        @media (max-width: 639px) {
+            .athkar-manager-card {
+                min-height: 12rem;
             }
         }
     </style>

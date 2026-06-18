@@ -60,12 +60,12 @@
                     rgba(148, 163, 184, 0.3),
                     rgba(125, 211, 252, 0.45),
                     rgba(148, 163, 184, 0.2)) border-box;
+            /* ponytail: shadows only paint at sm+ (base media kills them); trimmed blur radii + dropped the wide inset spread for cheaper repaints */
             box-shadow:
-                0 36px 64px rgba(15, 23, 42, 0.26),
-                inset 0 1px 0 rgba(255, 255, 255, 0.35),
-                inset 0 -20px 40px rgba(15, 23, 42, 0.05);
-            backdrop-filter: blur(var(--gate-blur, 20px));
-            -webkit-backdrop-filter: blur(var(--gate-blur, 20px));
+                0 18px 32px rgba(15, 23, 42, 0.22),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(var(--gate-blur, 12px));
+            -webkit-backdrop-filter: blur(var(--gate-blur, 12px));
             overflow: hidden;
             isolation: isolate;
             z-index: 2;
@@ -79,7 +79,7 @@
                     rgba(56, 189, 248, 0.35),
                     rgba(30, 41, 59, 0.4)) border-box;
             box-shadow:
-                0 40px 70px rgba(2, 6, 23, 0.65),
+                0 20px 36px rgba(2, 6, 23, 0.55),
                 inset 0 1px 0 rgba(226, 232, 240, 0.18);
         }
 
@@ -323,11 +323,14 @@
             pointer-events: none;
             opacity: 0;
             z-index: 15;
+            /* ponytail: static ring; the ripple is driven by transform/opacity below, not by animating box-shadow */
+            box-shadow: 0 0 0 3px var(--ping-color);
         }
 
         @media (min-width: 640px) {
             .athkar-gate-shell.is-pinging .athkar-gate__ping {
                 animation: athkar-gate-ping 1.4s ease-out;
+                will-change: transform, opacity;
             }
         }
 
@@ -385,12 +388,12 @@
 
         @keyframes athkar-gate-ping {
             0% {
-                box-shadow: 0 0 0 0 var(--ping-color);
-                opacity: 1;
+                transform: scale(1);
+                opacity: 0.9;
             }
 
             100% {
-                box-shadow: 0 0 0 30px rgba(255, 255, 255, 0);
+                transform: scale(1.06);
                 opacity: 0;
             }
         }
@@ -456,8 +459,8 @@
                 '--spill-blur': isEnhanced ? '6px' : '3px',
                 '--spill-scale': isEnhanced ? '1.18' : '1.12',
                 '--spill-split': `${splitValue}%`,
-                '--gate-blur': isEnhanced ? '14px' : '0px',
-                '--divider-glow-blur': isEnhanced ? '6px' : '0px',
+                '--gate-blur': isEnhanced ? '10px' : '0px',
+                '--divider-glow-blur': isEnhanced ? '4px' : '0px',
             }"
             x-effect="syncPerfProfile(); syncSpillState(views['athkar-app-gate'].isOpen);"
             x-on:click.outside="handleOutsideActivation()"
@@ -485,7 +488,7 @@
                             alt="Athkar night spill"
                             :imagePath="asset('images/background/athkar-night-blurred.webp')"
                             :thumbnailImagePath="asset('images/background/athkar-night-blurred-blur-thumbnail.webp')"
-                            :isDisplayEnforced="true"
+                            isDisplayEnforcedJs="() => window.location.hash === '#athkar-app-gate'"
                             containerClasses="overflow-visible bg-transparent"
                             imageClasses="athkar-gate__spill-image"
                         />
@@ -496,7 +499,7 @@
                             alt="Athkar morning spill"
                             :imagePath="asset('images/background/athkar-morning-blurred.webp')"
                             :thumbnailImagePath="asset('images/background/athkar-morning-blurred-blur-thumbnail.webp')"
-                            :isDisplayEnforced="true"
+                            isDisplayEnforcedJs="() => window.location.hash === '#athkar-app-gate'"
                             containerClasses="overflow-visible bg-transparent"
                             imageClasses="athkar-gate__spill-image"
                         />
@@ -523,7 +526,7 @@
                                 alt="Athkar night"
                                 :imagePath="asset('images/background/athkar-night.webp')"
                                 :thumbnailImagePath="asset('images/background/athkar-night-blur-thumbnail.webp')"
-                                :isDisplayEnforced="true"
+                                isDisplayEnforcedJs="() => window.location.hash === '#athkar-app-gate'"
                                 imageClasses="athkar-gate__image-img select-none"
                             />
                             <span
@@ -563,7 +566,7 @@
                                 alt="Athkar morning"
                                 :imagePath="asset('images/background/athkar-morning.webp')"
                                 :thumbnailImagePath="asset('images/background/athkar-morning-blur-thumbnail.webp')"
-                                :isDisplayEnforced="true"
+                                isDisplayEnforcedJs="() => window.location.hash === '#athkar-app-gate'"
                                 imageClasses="athkar-gate__image-img select-none"
                             />
                             <span class="athkar-gate__veil athkar-gate__veil--morning"></span>

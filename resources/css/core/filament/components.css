@@ -1727,6 +1727,15 @@
         transform: translate(-50%, -50%) scale(1);
     }
 
+    /* base - non-IOS (Android + web) */
+    @media (max-width: 639px) {
+        body:not(.ios-platform)
+            .quran-support-lock-target--locked.quran-wird-progress-button
+            .quran-support-lock-badge {
+            transform: translate(0.5rem, -0.5rem) scale(0.9);
+        }
+    }
+
     .quran-support-lock-target--locked.quran-wird-progress-button
         .quran-support-lock-badge__icon-svg {
         inline-size: 1.45rem;

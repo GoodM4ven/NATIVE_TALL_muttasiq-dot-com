@@ -33,6 +33,8 @@ class WebHomeViewTracker extends Component
 
             if (is_platform('native')) {
                 app(NativeVisitMetricsRelay::class)->relay($view, request());
+            } else {
+                app(WebHomeActivityTracker::class)->track(request(), $context);
             }
 
             return;

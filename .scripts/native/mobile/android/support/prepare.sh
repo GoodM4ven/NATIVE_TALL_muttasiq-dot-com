@@ -10,5 +10,5 @@ native_prepare_platform_install \
 
 (
     cd "${root_dir}"
-    npm run build -- --mode=android
+    pnpm run build -- --mode=android
 )

@@ -192,7 +192,7 @@ ensure_local_playwright_runtime() {
     local playwright_bin="${root_dir}/node_modules/.bin/playwright"
 
     if [[ ! -x "${playwright_bin}" ]]; then
-        echo "Missing Playwright CLI at ${playwright_bin}. Run npm install." >&2
+        echo "Missing Playwright CLI at ${playwright_bin}. Run pnpm install." >&2
         exit 1
     fi
 
@@ -378,7 +378,7 @@ run_in_container() {
                 playwright_bin="./node_modules/.bin/playwright"
 
                 if [ ! -x "${playwright_bin}" ]; then
-                    echo "Missing Playwright CLI at ${playwright_bin}. Run npm install." >&2
+                    echo "Missing Playwright CLI at ${playwright_bin}. Run pnpm install." >&2
                     exit 1
                 fi
 

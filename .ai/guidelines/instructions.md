@@ -64,7 +64,7 @@ This shared source code base is representing the web version primarily, the one 
 - When you fail for the 2nd time in fixing a hairy bug, immediately improvise a logging mechanism in place and provide instructions on how to log back to IF you cannot do the logging and testing automatically until the fix is implemented. 
 
 ## Finishing
-- When have modified CSS or JS files, use `npm run format:prettier` to format them.
-- When have modified Blade-PHP files, use `npm run format:blade` to format them.
+- When have modified CSS or JS files, use `pnpm run format:prettier` to format them.
+- When have modified Blade-PHP files, use `pnpm run format:blade` to format them.
 - When have modified PHP files, ensure `php artisan pint` was ran to format them.
 - When have modified PHP files, run static analysis using `vendor/bin/phpstan analyse`.

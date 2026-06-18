@@ -58,7 +58,7 @@ function assertBrowserAssetsReady(): void
     }
 
     if (! file_exists($hotPath)) {
-        throw new Exception('Browser tests require Vite assets. Run npm run build or npm run dev.');
+        throw new Exception('Browser tests require Vite assets. Run pnpm run build or pnpm run dev.');
     }
 }
 
