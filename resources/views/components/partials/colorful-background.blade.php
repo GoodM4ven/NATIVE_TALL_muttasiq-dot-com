@@ -381,6 +381,9 @@
         </div>
 
         <!-- OPAQUE OVERLAY -->
-        <div class="absolute inset-0 dark:bg-black/60"></div>
+        <div
+            class="absolute inset-0 dark:bg-black/60"
+            x-bind:class="(window.location.hash === '#athkar-app-sabah') && 'dark:opacity-0'"
+        ></div>
     </div>
 </div>
