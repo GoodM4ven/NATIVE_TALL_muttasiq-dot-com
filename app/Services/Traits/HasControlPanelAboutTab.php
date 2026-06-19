@@ -64,6 +64,13 @@ trait HasControlPanelAboutTab
                 ),
 
                 $this->developmentLinkAction(
+                    name: 'open_telegram_updates_channel',
+                    label: 'متابعة التحديثات من تيليجرام',
+                    url: 'https://t.me/muttasiq',
+                    icon: 'bootstrap.telegram',
+                ),
+
+                $this->developmentLinkAction(
                     name: 'open_discussions',
                     label: 'الاقتراحات ونقاشها',
                     url: 'https://github.com/GoodM4ven/NATIVE_TALL_muttasiq-dot-com/discussions',
