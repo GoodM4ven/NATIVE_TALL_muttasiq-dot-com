@@ -1,5 +1,5 @@
 <div
-    class="3xl:zoom-[1.15] 4xl:zoom-[1.25] -top-40! sm:top-0! zoom-[0.625] sm:zoom-[0.85] md:zoom-[0.85] lg:zoom-[1] xl:zoom-[0.8] 2xl:zoom-[1] absolute inset-0 flex items-center justify-center"
+    class="3xl:scale-[1.15] 4xl:scale-[1.25] -top-40! sm:top-0! absolute inset-0 flex scale-[0.625] items-center justify-center sm:scale-[0.85] md:scale-[0.85] lg:scale-[1] xl:scale-[0.8] 2xl:scale-[1]"
     x-cloak
     x-show="views['main-menu'].isOpen"
     x-transition:enter="transition-all ease-out duration-650"
