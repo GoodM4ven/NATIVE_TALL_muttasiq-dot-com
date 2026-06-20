@@ -16,9 +16,9 @@ use function Pest\Laravel\get;
 use function Pest\Livewire\livewire;
 
 it('enforces athkar admin route access for admin users, non-admin users, and native runtime', function () {
-    config(['app.custom.user.email' => 'admin@example.test']);
+    config(['app.custom.user.username' => 'admin']);
 
-    $admin = User::factory()->create(['email' => 'admin@example.test']);
+    $admin = User::factory()->create(['username' => 'admin']);
     $thikr = Thikr::factory()->create();
 
     actingAs($admin);
@@ -30,7 +30,7 @@ it('enforces athkar admin route access for admin users, non-admin users, and nat
         ->assertSee('النوع')
         ->assertSee('الأصل');
     get(route('filament.admin.resources.athkar.edit', ['record' => $thikr]))->assertSuccessful();
-    $user = User::factory()->create(['email' => 'member@example.test']);
+    $user = User::factory()->create(['username' => 'member']);
 
     actingAs($user);
 
@@ -39,7 +39,7 @@ it('enforces athkar admin route access for admin users, non-admin users, and nat
     get(route('filament.admin.resources.athkar.edit', ['record' => $thikr]))->assertForbidden();
 
     config([
-        'app.custom.user.email' => 'admin@example.test',
+        'app.custom.user.username' => 'admin',
         'nativephp-internal.running' => true,
     ]);
 
@@ -72,9 +72,9 @@ it('applies create/edit/reorder semantics for athkar ordering through model and 
         ->and($first->fresh()->order)->toBe(2)
         ->and($second->fresh()->order)->toBe(3);
 
-    config(['app.custom.user.email' => 'admin@example.test']);
+    config(['app.custom.user.username' => 'admin']);
 
-    $admin = User::factory()->create(['email' => 'admin@example.test']);
+    $admin = User::factory()->create(['username' => 'admin']);
     actingAs($admin);
     Filament::setCurrentPanel('admin');
 
@@ -131,9 +131,9 @@ it('applies create/edit/reorder semantics for athkar ordering through model and 
 });
 
 it('validates thikr form constraints and filters the admin table by type', function () {
-    config(['app.custom.user.email' => 'admin@example.test']);
+    config(['app.custom.user.username' => 'admin']);
 
-    $admin = User::factory()->create(['email' => 'admin@example.test']);
+    $admin = User::factory()->create(['username' => 'admin']);
     actingAs($admin);
     Filament::setCurrentPanel('admin');
 

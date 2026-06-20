@@ -12,23 +12,23 @@ use function Pest\Laravel\get;
 use function Pest\Livewire\livewire;
 
 it('enforces js error reports page access for admin and non-admin users', function () {
-    config(['app.custom.user.email' => 'admin@example.test']);
+    config(['app.custom.user.username' => 'admin']);
 
-    $admin = User::factory()->create(['email' => 'admin@example.test']);
+    $admin = User::factory()->create(['username' => 'admin']);
     actingAs($admin);
 
     get(route('filament.admin.resources.balaghat-akhtaa.index'))->assertSuccessful();
 
-    $user = User::factory()->create(['email' => 'member@example.test']);
+    $user = User::factory()->create(['username' => 'member']);
     actingAs($user);
 
     get(route('filament.admin.resources.balaghat-akhtaa.index'))->assertForbidden();
 });
 
 it('separates unresolved/resolved reports by tabs and toggles resolution state from table actions', function () {
-    config(['app.custom.user.email' => 'admin@example.test']);
+    config(['app.custom.user.username' => 'admin']);
 
-    $admin = User::factory()->create(['email' => 'admin@example.test']);
+    $admin = User::factory()->create(['username' => 'admin']);
     actingAs($admin);
     Filament::setCurrentPanel('admin');
 
@@ -68,9 +68,9 @@ it('separates unresolved/resolved reports by tabs and toggles resolution state f
 });
 
 it('deletes nonsense reports from the table action', function () {
-    config(['app.custom.user.email' => 'admin@example.test']);
+    config(['app.custom.user.username' => 'admin']);
 
-    $admin = User::factory()->create(['email' => 'admin@example.test']);
+    $admin = User::factory()->create(['username' => 'admin']);
     actingAs($admin);
     Filament::setCurrentPanel('admin');
 

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Auth\TelegramAuthController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Quran\ReaderPageDataController;
 use App\Http\Controllers\Quran\ReaderSearchIndexController;
@@ -12,6 +13,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', HomeController::class)
     ->middleware(TrackWebHomeMetrics::class)
     ->name('home');
+
+Route::get('/auth/telegram/callback', [TelegramAuthController::class, 'callback'])->name('auth.telegram.callback');
 
 Route::get('/qpc-v2-fonts/{page}.ttf', function (int $page) {
     return redirect()->route('qpc-v2-font', ['page' => $page], 301);

@@ -610,6 +610,7 @@
             }),
         }"
         x-on:switch-view.window="applyViewState($event.detail?.to)"
+        x-on:auth-blink-reload.window="window.__authReloadInProgress = true; useFastTransitionDuration = false; isBlinkerShown = true; setTimeout(() => window.location.assign($event.detail?.url ?? @js(route('home'))), (defaultTransitionDurationInMs ?? 500))"
         x-on:introduction-video-modal-opened.window="isIntroductionVideoOpen = true"
         x-on:introduction-video-modal-closed.window="isIntroductionVideoOpen = false"
         x-on:muttasiq-app-version-major-minor-reset.window="handleAppVersionMajorMinorReset($event.detail ?? {})"
@@ -653,6 +654,7 @@
                 :jsClickCallback="$returnButtonClickCallback"
             />
             <x-partials.home-button :jsShowCondition="$homeButtonShowCondition" />
+            <livewire:auth-button />
             <livewire:color-scheme-switcher />
             <livewire:control-panel />
             <x-athkar-reader-font-scale-button />

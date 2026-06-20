@@ -12,9 +12,9 @@ use function Pest\Laravel\get;
 use function Pest\Livewire\livewire;
 
 it('allows the admin to access manage settings and loads the current settings form state', function () {
-    config(['app.custom.user.email' => 'admin@example.test']);
+    config(['app.custom.user.username' => 'admin']);
 
-    $admin = User::factory()->create(['email' => 'admin@example.test']);
+    $admin = User::factory()->create(['username' => 'admin']);
 
     actingAs($admin);
 
@@ -50,9 +50,9 @@ it('allows the admin to access manage settings and loads the current settings fo
 });
 
 it('saves settings and normalizes inverted min/max text-size values', function () {
-    config(['app.custom.user.email' => 'admin@example.test']);
+    config(['app.custom.user.username' => 'admin']);
 
-    $admin = User::factory()->create(['email' => 'admin@example.test']);
+    $admin = User::factory()->create(['username' => 'admin']);
 
     actingAs($admin);
     Filament::setCurrentPanel('admin');

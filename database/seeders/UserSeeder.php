@@ -16,10 +16,11 @@ class UserSeeder extends Seeder
     {
         User::updateOrCreate(
             [
-                'email' => config('app.custom.user.email'),
+                'username' => config('app.custom.user.username'),
             ],
             [
                 'name' => config('app.custom.user.name'),
+                'email' => config('app.custom.user.email'),
                 'password' => config('app.custom.user.password'),
             ]
         );

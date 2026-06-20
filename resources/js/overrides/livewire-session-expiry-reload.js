@@ -22,6 +22,13 @@ document.addEventListener('livewire:init', () => {
             if (status === 419) {
                 preventDefault();
 
+                // An intentional login/logout/delete is already driving its own
+                // blinker fade + reload; don't let the session-expiry fast reload
+                // race ahead of it.
+                if (window.__authReloadInProgress === true) {
+                    return;
+                }
+
                 if (hasPendingJsErrorReport()) {
                     return;
                 }

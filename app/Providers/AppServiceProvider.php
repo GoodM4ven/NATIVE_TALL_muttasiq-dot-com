@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Blaze\Blaze;
 use Livewire\Livewire;
+use SocialiteProviders\Manager\SocialiteWasCalled;
+use SocialiteProviders\Telegram\Provider as TelegramProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -35,6 +38,10 @@ class AppServiceProvider extends ServiceProvider
         $this->configureNativeIosUrlGeneration();
 
         Blaze::optimize()->in(resource_path('views/components'));
+
+        Event::listen(function (SocialiteWasCalled $event): void {
+            $event->extendSocialite('telegram', TelegramProvider::class);
+        });
     }
 
     private function disableViteHotFileWhenUnavailable(): void

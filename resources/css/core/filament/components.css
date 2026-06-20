@@ -17,6 +17,10 @@
 @import './overrides/color-overrides.css';
 
 @layer components {
+    .ltr-enforced input {
+        direction: ltr !important;
+    }
+
     .mobile-platform .fi-no {
         padding-bottom: calc(2rem + var(--inset-bottom, 0px));
     }

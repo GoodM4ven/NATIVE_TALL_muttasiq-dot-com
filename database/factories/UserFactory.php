@@ -28,8 +28,11 @@ class UserFactory extends Factory
     {
         return [
             'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
-            'email_verified_at' => now(),
+            'username' => 'user_'.fake()->unique()->numerify('######'),
+            'telegram_username' => null,
+            'telegram_id' => null,
+            'email' => null,
+            'email_verified_at' => null,
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
         ];

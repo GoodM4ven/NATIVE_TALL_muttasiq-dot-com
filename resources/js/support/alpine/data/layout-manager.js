@@ -8,7 +8,7 @@ document.addEventListener('alpine:init', () => {
         isLayoutSetUp: false,
         isBodyVisible: false,
         isBlinkerShown: true,
-        defaultTransitionDurationInMs: 750,
+        defaultTransitionDurationInMs: 350,
         fastTransitionDurationInMs: 250,
         useFastTransitionDuration: false,
         isActionOpen: false,

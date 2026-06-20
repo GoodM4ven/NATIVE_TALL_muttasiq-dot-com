@@ -22,6 +22,7 @@
         "goodm4ven/blurred-image": "^1.1",
         "goodm4ven/nativephp-muttasiq-patches": "^1.6.0",
         "goodm4ven/tailwind-merge": "^1.1",
+        "laravel/fortify": "^1.37",
         "laravel/framework": "^12.0",
         "laravel/nightwatch": "^1.22",
         "laravel/tinker": "^2.10.1",
@@ -30,6 +31,8 @@
         "nativephp/mobile": "^3.0",
         "nativephp/mobile-browser": "^1.0",
         "predis/predis": "^3.4",
+        "socialiteproviders/telegram": "^4.1",
+        "socialiteproviders/zoho": "^4.1",
         "spatie/eloquent-sortable": "^4.5",
         "spatie/laravel-tags": "^4.11",
         "wire-elements/spotlight": "^2.0"
