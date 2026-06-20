@@ -13,6 +13,8 @@
     <style>
         [data-stack-item] {
             scale: var(--ui-scale, 1);
+            /* Fade show/hide instead of snapping; stacked mode overrides this inline. */
+            transition: opacity 220ms ease;
         }
     </style>
 @endassets
@@ -43,6 +45,10 @@
         actionOpenState: false,
         isQuranManagerModalOpen: false,
         stackTransitionMs: 200,
+        modalHideGraceMs: 800,
+        wasHidingStackItems: false,
+        hideStackItemsGraceUntil: 0,
+        showStackItemsTimerId: null,
         shouldManageDisplay(item) {
             if (!item) {
                 return false;
@@ -100,6 +106,11 @@
             if (this.actionStateRecoveryId !== null) {
                 window.clearTimeout(this.actionStateRecoveryId);
                 this.actionStateRecoveryId = null;
+            }
+    
+            if (this.showStackItemsTimerId !== null) {
+                window.clearTimeout(this.showStackItemsTimerId);
+                this.showStackItemsTimerId = null;
             }
     
             this.releaseInteractionLock();
@@ -358,12 +369,47 @@
         shouldHideStackItems() {
             return this.isQuranManagerModalOpen || (this.actionOpenState && this.hasAnyOpenFilamentModal());
         },
+        // Hide instantly, but delay UN-hiding by a grace window measured from the
+        // moment a modal CLOSES, so Filament's close-A-then-open-B nested-modal
+        // handoff (both directions) never flashes the buttons in the gap.
+        effectiveShouldHideStackItems() {
+            if (this.shouldHideStackItems()) {
+                this.wasHidingStackItems = true;
+    
+                if (this.showStackItemsTimerId !== null) {
+                    window.clearTimeout(this.showStackItemsTimerId);
+                    this.showStackItemsTimerId = null;
+                }
+    
+                return true;
+            }
+    
+            if (this.wasHidingStackItems) {
+                this.wasHidingStackItems = false;
+                this.hideStackItemsGraceUntil = Date.now() + this.modalHideGraceMs;
+            }
+    
+            const remaining = this.hideStackItemsGraceUntil - Date.now();
+    
+            if (remaining > 0) {
+                if (this.showStackItemsTimerId === null) {
+                    this.showStackItemsTimerId = window.setTimeout(() => {
+                        this.showStackItemsTimerId = null;
+                        this.items.forEach((item) => this.applyStackItemVisibility(item));
+                    }, remaining + 20);
+                }
+    
+                return true;
+            }
+    
+            return false;
+        },
         applyStackItemVisibility(item) {
             if (!(item instanceof Element)) {
                 return;
             }
     
-            const shouldHide = this.shouldHideStackItems();
+            const shouldHide = this.effectiveShouldHideStackItems();
     
             item.style.opacity = shouldHide ? '0' : '1';
             item.style.pointerEvents = shouldHide ? 'none' : '';
@@ -371,9 +417,11 @@
         hasAnyOpenFilamentModal() {
             const modal = document.querySelector('.fi-modal.fi-modal-open');
             if (!modal) return false;
-            const rect = modal.getBoundingClientRect();
+            // Measure the inner window: some modals leave the outer .fi-modal at 0x0.
+            const target = modal.querySelector('.fi-modal-window') || modal;
+            const rect = target.getBoundingClientRect();
             if (rect.width === 0 && rect.height === 0) return false;
-            const styles = window.getComputedStyle(modal);
+            const styles = window.getComputedStyle(target);
             return styles.display !== 'none' && styles.visibility !== 'hidden';
         },
         scheduleQuranManagerModalStateSync() {

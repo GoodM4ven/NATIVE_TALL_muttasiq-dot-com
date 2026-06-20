@@ -97,7 +97,7 @@ class AuthButton extends Component implements HasActions, HasSchemas
                     ->password()
                     ->required()
                     ->extraAttributes(['class' => 'ltr-enforced'])
-                    ->rule(fn(Get $get): Closure => function (string $attribute, mixed $value, Closure $fail) use ($get): void {
+                    ->rule(fn (Get $get): Closure => function (string $attribute, mixed $value, Closure $fail) use ($get): void {
                         $user = User::query()->where('username', (string) $get('username'))->first();
 
                         if ($user === null || ! Hash::check((string) $value, $user->password)) {
@@ -105,14 +105,14 @@ class AuthButton extends Component implements HasActions, HasSchemas
                         }
                     }),
                 Text::make(new HtmlString('<hr class="border-gray-200 dark:border-gray-700">'))
-                    ->visible(fn(): bool => $this->awaitingTwoFactor),
+                    ->visible(fn (): bool => $this->awaitingTwoFactor),
                 TextInput::make('code')
                     ->label(arabic_text('رمز المصادقة الثنائية'))
                     ->numeric()
                     ->extraInputAttributes(['dir' => 'ltr'])
-                    ->visible(fn(): bool => $this->awaitingTwoFactor)
-                    ->required(fn(): bool => $this->awaitingTwoFactor)
-                    ->rule(fn(Get $get): Closure => function (string $attribute, mixed $value, Closure $fail) use ($get): void {
+                    ->visible(fn (): bool => $this->awaitingTwoFactor)
+                    ->required(fn (): bool => $this->awaitingTwoFactor)
+                    ->rule(fn (Get $get): Closure => function (string $attribute, mixed $value, Closure $fail) use ($get): void {
                         if (! $this->awaitingTwoFactor) {
                             return;
                         }
@@ -163,11 +163,11 @@ class AuthButton extends Component implements HasActions, HasSchemas
 
         return new HtmlString(
             '<div class="rounded-lg bg-primary-50 dark:bg-primary-950 p-3 text-sm"'
-                . ' x-data=\'{ password: ' . json_encode($this->freshCredentials['password']) . ' }\'>'
-                . '<span class="text-center">' . e(arabic_text('تم إنشاء حسابك ولله الحمد...')) . '</span><br><br>'
-                . '<strong>' . e(arabic_text('كلمة المرور')) . ':</strong><br>'
-                . '<span class="font-bold text-left flex justify-start hover:cursor-pointer" dir="ltr" x-on:click="$clipboard(password); $tippy(`تم النسخ`, `top`)" x-text="password"></span>'
-                . '</div>'
+                .' x-data=\'{ password: '.json_encode($this->freshCredentials['password']).' }\'>'
+                .'<span class="text-center">'.e(arabic_text('تم إنشاء حسابك ولله الحمد...')).'</span><br><br>'
+                .'<strong>'.e(arabic_text('كلمة المرور')).':</strong><br>'
+                .'<span class="font-bold text-left flex justify-start hover:cursor-pointer" dir="ltr" x-on:click="$clipboard(password); $tippy(`تم النسخ`, `top`)" x-text="password"></span>'
+                .'</div>'
         );
     }
 
@@ -214,8 +214,8 @@ class AuthButton extends Component implements HasActions, HasSchemas
                                             "navigator.clipboard.writeText(\$el.closest('.fi-input-wrp').querySelector('input').value).then(() => \$wire.call('notifyCopied'))"
                                         )
                                 ),
-                            Text::make(fn(): HtmlString => $this->freshCredentialsHtml())
-                                ->visible(fn(): bool => $this->freshCredentials !== null)
+                            Text::make(fn (): HtmlString => $this->freshCredentialsHtml())
+                                ->visible(fn (): bool => $this->freshCredentials !== null)
                                 ->extraAttributes(['class' => 'flex justify-center']),
                             SchemaActions::make([
                                 $this->changePasswordAction(),
@@ -278,7 +278,7 @@ class AuthButton extends Component implements HasActions, HasSchemas
             ->modalWidth(self::MODAL_WIDTH)
             ->modalSubmitAction(false)
             ->modalCancelActionLabel(arabic_text('إغلاق'))
-            ->modalContent(fn(): View => view('livewire.auth.two-factor', [
+            ->modalContent(fn (): View => view('livewire.auth.two-factor', [
                 'user' => $this->currentUser(),
             ]));
     }
