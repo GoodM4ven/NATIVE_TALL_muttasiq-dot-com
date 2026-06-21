@@ -19,8 +19,8 @@
         <div class="flex justify-center">{!! $user->twoFactorQrCodeSvg() !!}</div>
 
         <div class="rounded-lg bg-gray-100 p-3 dark:bg-gray-800">
-            <p class="mb-1 font-semibold">{{ arabic_text('رموز الاسترداد:') }}</p>
-            <div class="grid grid-cols-2 gap-1 font-mono text-xs">
+            <p class="mb-1 flex w-full justify-center font-semibold">{{ arabic_text('رموز الاسترداد الاحتياطية') }}</p>
+            <div class="mt-2 grid grid-cols-2 gap-1 font-mono text-xs">
                 @foreach ($user->recoveryCodes() as $code)
                     <span>{{ $code }}</span>
                 @endforeach

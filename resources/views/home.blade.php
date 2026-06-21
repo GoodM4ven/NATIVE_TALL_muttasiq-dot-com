@@ -1,6 +1,8 @@
 <x-app>
     @push('head-scripts')
         <script>
+            window.dataBranch = @js(auth()->check() ? 'user' : 'guest');
+            window.userSyncedData = @js(auth()->user()?->synced_data);
             window.athkarSettingsDefaults = @js($athkarSettings);
             window.athkarMainTextSizeLimits = @js($athkarMainTextSizeLimits);
         </script>
@@ -610,7 +612,7 @@
             }),
         }"
         x-on:switch-view.window="applyViewState($event.detail?.to)"
-        x-on:auth-blink-reload.window="window.__authReloadInProgress = true; useFastTransitionDuration = false; isBlinkerShown = true; setTimeout(() => window.location.assign($event.detail?.url ?? @js(route('home'))), (defaultTransitionDurationInMs ?? 500))"
+        x-on:auth-blink-reload.window="window.__authReloadInProgress = true; useFastTransitionDuration = false; isBlinkerShown = true; setTimeout(() => { const reloadUrl = $event.detail?.url; if (reloadUrl) { window.location.assign(reloadUrl); } else { window.location.reload(); } }, (defaultTransitionDurationInMs ?? 500))"
         x-on:introduction-video-modal-opened.window="isIntroductionVideoOpen = true"
         x-on:introduction-video-modal-closed.window="isIntroductionVideoOpen = false"
         x-on:muttasiq-app-version-major-minor-reset.window="handleAppVersionMajorMinorReset($event.detail ?? {})"

@@ -1,7 +1,7 @@
 {{-- Renders Telegram's real login button inline via the official widget script. --}}
 {{-- wire:ignore keeps Livewire morphs (e.g. invalid-credentials re-render) from wiping the injected iframe. --}}
 <div
-    class="relative mx-auto flex min-h-[64px] w-[400px] max-w-full items-center justify-center self-center py-2"
+    class="relative mx-auto flex min-h-[64px] w-[178px] max-w-full items-center justify-center self-center overflow-visible py-2"
     wire:ignore
     x-data="{
         loaded: false,

@@ -48,6 +48,7 @@ class User extends Authenticatable implements FilamentUser
             'email_verified_at' => 'datetime',
             'two_factor_confirmed_at' => 'datetime',
             'password' => 'hashed',
+            'synced_data' => 'array',
         ];
     }
 

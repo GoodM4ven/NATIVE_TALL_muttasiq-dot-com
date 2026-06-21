@@ -30,6 +30,7 @@ use Laravel\Fortify\Actions\DisableTwoFactorAuthentication;
 use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
 use Laravel\Fortify\Actions\GenerateNewRecoveryCodes;
 use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class AuthButton extends Component implements HasActions, HasSchemas
@@ -38,6 +39,13 @@ class AuthButton extends Component implements HasActions, HasSchemas
     use InteractsWithSchemas;
 
     private const MODAL_WIDTH = Width::Medium;
+
+    /**
+     * Max serialized size of a user's synced data bundle (5 MB). Generous
+     * enough for full athkar content overrides (text + origin per thikr) while
+     * still bounding abusive writes.
+     */
+    private const SYNCED_DATA_MAX_BYTES = 5_242_880;
 
     public string $twoFactorConfirmCode = '';
 
@@ -224,12 +232,87 @@ class AuthButton extends Component implements HasActions, HasSchemas
                         ]),
                     Tab::make('data')
                         ->label(arabic_text('البيانات'))
-                        ->icon('heroicon-o-circle-stack')
+                        ->icon('tabler.packages')
                         ->schema([
-                            Text::make(arabic_text('قريبا بإذن الله...'))->color('gray'),
+                            Text::make(arabic_text('نقل البيانات بين الجهاز والحساب'))
+                                ->color('gray')
+                                ->extraAttributes(['class' => 'flex justify-center w-full']),
+                            SchemaActions::make([
+                                $this->overrideGuestWithAccountAction(),
+                                $this->overrideAccountWithGuestAction(),
+                            ])->alignCenter(),
                         ]),
                 ]),
             ]);
+    }
+
+    public function overrideGuestWithAccountAction(): Action
+    {
+        return Action::make('overrideGuestWithAccount')
+            ->label(arabic_text('اجعل بيانات الجهاز كحسابي'))
+            ->icon('heroicon-o-arrow-down-on-square')
+            ->color('info')
+            ->requiresConfirmation()
+            ->modalHeading(arabic_text('استبدال بيانات الجهاز'))
+            ->modalDescription(arabic_text('سيتم استبدال بيانات الزائر المحلية في هذا الجهاز (أو المتصفح) ببيانات حسابك على المخدم. لا يمكن التراجع عن هذا...'))
+            ->modalSubmitActionLabel(arabic_text('نعم، استبدلها'))
+            ->action(function (Action $action): void {
+                // Stashed (not sent) so it surfaces on the post-reload page load
+                // instead of being consumed live during the blinker fade.
+                session()->put('data-branch-override-notice', arabic_text('تم استبدال بيانات الجهاز ببيانات حسابك'));
+
+                $this->dispatch('override-data-branch', fromBranch: 'user', toBranch: 'guest');
+                $this->dispatch('auth-blink-reload');
+
+                $action->halt();
+            });
+    }
+
+    public function overrideAccountWithGuestAction(): Action
+    {
+        return Action::make('overrideAccountWithGuest')
+            ->label(arabic_text('اجعل بيانات حسابي كالجهاز'))
+            ->icon('heroicon-o-arrow-up-on-square')
+            ->color('warning')
+            ->requiresConfirmation()
+            ->modalHeading(arabic_text('استبدال بيانات الحساب'))
+            ->modalDescription(arabic_text('سيتم استبدال بيانات حسابك على المخدم ببيانات الزائر المحلية في هذا الجهاز (أو المتصفح). لا يمكن التراجع...'))
+            ->modalSubmitActionLabel(arabic_text('نعم، استبدلها'))
+            ->action(function (Action $action): void {
+                // Stashed (not sent) so it surfaces on the post-reload page load
+                // instead of being consumed live during the blinker fade.
+                session()->put('data-branch-override-notice', arabic_text('تم استبدال بيانات حسابك ببيانات الجهاز'));
+
+                $this->dispatch('override-data-branch', fromBranch: 'guest', toBranch: 'user');
+                $this->dispatch('auth-blink-reload');
+
+                $action->halt();
+            });
+    }
+
+    /**
+     * Persist the logged-in user's local data bundle to the server so it
+     * follows the account across devices. Driven (debounced) from the JS
+     * data-branch chokepoint whenever user-branch storage changes.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    #[On('push-user-data')]
+    public function pushUserData(array $data): void
+    {
+        $user = Auth::user();
+
+        if (! $user instanceof User) {
+            return;
+        }
+
+        $bundle = array_filter($data, static fn ($value): bool => is_string($value));
+
+        if (strlen((string) json_encode($bundle)) > self::SYNCED_DATA_MAX_BYTES) {
+            return;
+        }
+
+        $user->forceFill(['synced_data' => $bundle])->save();
     }
 
     public function notifyCopied(): void
@@ -340,7 +423,7 @@ class AuthButton extends Component implements HasActions, HasSchemas
             ->color('danger')
             ->requiresConfirmation()
             ->modalHeading(arabic_text('حذف الحساب نهائيا'))
-            ->modalDescription(arabic_text('سيتم حذف حسابك وبياناته نهائيا. لا يمكن التراجع عن هذا.'))
+            ->modalDescription(arabic_text('سيتم حذف حسابك وبياناته نهائيا. لا يمكن التراجع عن هذا...'))
             ->modalSubmitActionLabel(arabic_text('نعم، احذف حسابي'))
             ->action(function (Action $action): void {
                 $user = $this->currentUser();

@@ -20,6 +20,16 @@ class HomeController extends Controller
             Setting::setAppVersion(Setting::configuredAppVersion());
         }
 
+        // Surfaced here, after the data-override blinker reload, so the
+        // notification renders on the fresh page rather than flashing away
+        // during the fade (the live notifications component would otherwise
+        // pull it from the session before the reload).
+        $overrideNotice = session()->pull('data-branch-override-notice');
+
+        if (is_string($overrideNotice) && $overrideNotice !== '') {
+            notify('heroicon-o-circle-stack', $overrideNotice);
+        }
+
         $settingsPayload = $this->resolveLocalSettingsPayload();
 
         return view('home', [
