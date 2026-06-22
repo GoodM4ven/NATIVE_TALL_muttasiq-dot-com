@@ -891,6 +891,8 @@ class Reader extends Component implements HasActions, HasSchemas
             ->extraModalWindowAttributes([
                 'id' => 'support-unlock-modal',
                 'class' => 'muttasiq-modal-window',
+                // Fires when this modal mounts, so the Buy Me a Coffee widget is tied to its lifecycle (removal is handled on close-modal in control-panel.blade).
+                'x-init' => "\$dispatch('support-unlock-modal-shown')",
             ])
             ->extraModalOverlayAttributes([
                 'class' => 'muttasiq-modal-overlay',

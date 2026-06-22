@@ -37,6 +37,12 @@
             -webkit-backdrop-filter: none !important;
             z-index: 2147482001 !important;
         }
+
+        /* Lift the Buy Me a Coffee widget (button + popup) above the support modal window so it stays clickable. */
+        #bmc-wbtn,
+        body>div:has(> #bmc-iframe) {
+            z-index: 2147482010 !important;
+        }
     </style>
 
     <div
@@ -764,6 +770,59 @@
                     }
                 }
             },
+            injectBuyMeACoffeeWidget() {
+                // Already built: just reveal it again (the widget has no re-run guard, so we never rebuild — that would stack duplicates).
+                const existingButton = document.getElementById('bmc-wbtn');
+        
+                if (existingButton instanceof HTMLElement) {
+                    existingButton.style.display = '';
+        
+                    return;
+                }
+        
+                const container = document.getElementById('bmc-widget-container');
+        
+                if (!(container instanceof HTMLElement)) {
+                    return;
+                }
+        
+                // Script already appended (build in flight from a prior trigger this open): let it finish, don't dispatch again.
+                if (container.querySelector('script[data-name=\'BMC-Widget\']')) {
+                    return;
+                }
+        
+                const script = document.createElement('script');
+                script.setAttribute('data-name', 'BMC-Widget');
+                script.setAttribute('data-cfasync', 'false');
+                script.async = true;
+                script.src = 'https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js';
+                script.setAttribute('data-id', 'goodm4ven');
+                script.setAttribute('data-description', 'ادعم تطوير منصة متسق!');
+                script.setAttribute('data-message', '');
+                script.setAttribute('data-color', '#FF813F');
+                script.setAttribute('data-position', 'Right');
+                script.setAttribute('data-x_margin', '18');
+                script.setAttribute('data-y_margin', '18');
+                // The widget builds its button only inside a window 'DOMContentLoaded' handler, which already fired before this lazy load. Re-dispatch it on window (where the widget listens) once the script loads; document-level listeners (Alpine/Livewire) are unaffected.
+                script.addEventListener('load', () => window.dispatchEvent(new Event('DOMContentLoaded')));
+                container.appendChild(script);
+            },
+            removeBuyMeACoffeeWidget() {
+                // Hide rather than remove: the widget loads once and can't be safely rebuilt, so we toggle visibility across modal open/close.
+                const button = document.getElementById('bmc-wbtn');
+        
+                if (button instanceof HTMLElement) {
+                    button.style.display = 'none';
+                }
+        
+                // ponytail: bmc-iframe and bmc-close-btn share an unnamed wrapper div; hide the wrapper to take both.
+                const iframe = document.getElementById('bmc-iframe');
+                const popup = iframe?.parentElement ?? iframe;
+        
+                if (popup instanceof HTMLElement) {
+                    popup.style.display = 'none';
+                }
+            },
         }"
         x-init="queueControlPanelSliderNumeralsSync(10)"
         x-on:open-control-panel-modal.window="openControlPanelModalFromEvent($event.detail ?? {})"
@@ -775,9 +834,10 @@
         x-on:input.window="if (resolveControlPanelModalWindow()?.contains($event.target)) { queueControlPanelSliderNumeralsSync(0); }"
         x-on:x-modal-opened.window="if (isControlPanelModalEvent($event.detail ?? {})) { isControlPanelOpen = true; endControlPanelLoading(); boostControlPanelModalLayer(); setupControlPanelSliderNumeralsObserver(); queueControlPanelSliderNumeralsSync(40); }"
         x-on:opened-form-component-action-modal.window="if (isControlPanelModalEvent($event.detail ?? {})) { isControlPanelOpen = true; endControlPanelLoading(); boostControlPanelModalLayer(); setupControlPanelSliderNumeralsObserver(); queueControlPanelSliderNumeralsSync(40); }"
-        x-on:close-modal.window="if (String($event.detail?.id ?? '') === controlPanelModalId || !isControlPanelModalCurrentlyOpen()) { isControlPanelOpen = false; endControlPanelLoading(); teardownControlPanelSliderNumeralsObserver(); }"
-        x-on:close-modal-quietly.window="if (String($event.detail?.id ?? '') === controlPanelModalId || !isControlPanelModalCurrentlyOpen()) { isControlPanelOpen = false; endControlPanelLoading(); teardownControlPanelSliderNumeralsObserver(); }"
+        x-on:close-modal.window="if (String($event.detail?.id ?? '') === controlPanelModalId || !isControlPanelModalCurrentlyOpen()) { isControlPanelOpen = false; endControlPanelLoading(); teardownControlPanelSliderNumeralsObserver(); } removeBuyMeACoffeeWidget();"
+        x-on:close-modal-quietly.window="if (String($event.detail?.id ?? '') === controlPanelModalId || !isControlPanelModalCurrentlyOpen()) { isControlPanelOpen = false; endControlPanelLoading(); teardownControlPanelSliderNumeralsObserver(); } removeBuyMeACoffeeWidget();"
         x-on:closed-form-component-action-modal.window="if (String($event.detail?.id ?? '') === controlPanelModalId || !isControlPanelModalCurrentlyOpen()) { isControlPanelOpen = false; endControlPanelLoading(); teardownControlPanelSliderNumeralsObserver(); }"
+        x-on:support-unlock-modal-shown.window="injectBuyMeACoffeeWidget()"
     >
         <x-action-button
             data-testid="control-panel-button"
@@ -820,6 +880,12 @@
             </div>
         </template>
     </div>
+
+    <div
+        class="hidden"
+        id="bmc-widget-container"
+        aria-hidden="true"
+    ></div>
 
     <x-filament-actions::modals />
 </div>

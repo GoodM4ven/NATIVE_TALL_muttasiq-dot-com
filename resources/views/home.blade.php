@@ -589,6 +589,12 @@
             '#control-panel': () => runHashAction(() => {
                 $dispatch('request-open-control-panel-modal');
             }),
+            '#donate': () => runHashAction(() => {
+                $dispatch('open-support-unlock-modal');
+            }),
+            '#donation': () => runHashAction(() => {
+                $dispatch('open-support-unlock-modal');
+            }),
             '#athkar-app-gate': () => runHashAction(() => {
                 $dispatch('switch-view', { to: 'athkar-app-gate' });
             }),
