@@ -97,7 +97,7 @@ trait HasControlPanelChangelogsTab
         ) ?? $html;
 
         return <<<HTML
-            <article class="mx-auto w-full max-w-3xl text-right leading-7
+            <article x-data x-viewer class="mx-auto w-full max-w-3xl text-right leading-7
                 [&_h2]:mt-12 [&_h2:first-child]:mt-0 [&_h2]:mb-4 [&_h2]:border-b [&_h2]:border-gray-200 [&_h2]:pb-2 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-gray-800 dark:[&_h2]:border-gray-700 dark:[&_h2]:text-gray-100
                 [&_h3]:mt-3 [&_h3]:mb-1.5 [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-gray-700 dark:[&_h3]:text-gray-200
                 [&_p]:my-1 [&_p]:text-sm [&_p]:text-gray-600 dark:[&_p]:text-gray-300

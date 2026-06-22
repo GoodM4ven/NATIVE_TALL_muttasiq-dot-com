@@ -638,6 +638,11 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
             const readerPanel = this.$refs.readerPanel;
 
             this._onWindowKeydown = (event) => {
+                // Yield to an open image viewer (ViewerJS owns the keyboard while shown).
+                if (window.__viewerKeyboardActive) {
+                    return;
+                }
+
                 const key = String(event?.key ?? '');
 
                 if (key === 'ArrowLeft') {

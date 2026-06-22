@@ -35,6 +35,7 @@
         "laravel-hot-refresh": "^1.0.7",
         "ldrs": "^1.1.9",
         "tailwindcss": "^4.2.0",
-        "tippy.js": "^6.3.7"
+        "tippy.js": "^6.3.7",
+        "viewerjs": "^1.11.7"
     }
 }

@@ -30,6 +30,7 @@ import './support/alpine/storage/color-scheme';
 import './support/alpine/storage/breakpointer';
 import './support/alpine/storage/locator.js';
 import './support/alpine/directive/image-loaded';
+import './support/alpine/directive/viewer';
 import './support/alpine/directive/top-scroller';
 import './support/alpine/magic/clipboard';
 import './support/alpine/magic/top-scroller';

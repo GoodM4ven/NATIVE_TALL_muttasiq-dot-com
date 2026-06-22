@@ -53,6 +53,9 @@ importers:
       tippy.js:
         specifier: ^6.3.7
         version: 6.3.7
+      viewerjs:
+        specifier: ^1.11.7
+        version: 1.11.7
     devDependencies:
       '@tailwindcss/vite':
         specifier: ^4.1.18
@@ -1488,6 +1491,9 @@ packages:
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
 
+  viewerjs@1.11.7:
+    resolution: {integrity: sha512-0JuVqOmL5v1jmEAlG5EBDR3XquxY8DWFQbFMprOXgaBB0F7Q/X9xWdEaQc59D8xzwkdUgXEMSSknTpriq95igg==}
+
   vite-plugin-full-reload@1.2.0:
     resolution: {integrity: sha512-kz18NW79x0IHbxRSHm0jttP4zoO9P9gXh+n6UTwlNKnviTTEpOlum6oS9SmecrTtSr+muHEn5TUuC75UovQzcA==}
 
@@ -2880,6 +2886,8 @@ snapshots:
       os-homedir: 1.0.2
 
   util-deprecate@1.0.2: {}
+
+  viewerjs@1.11.7: {}
 
   vite-plugin-full-reload@1.2.0:
     dependencies:
