@@ -43,6 +43,12 @@
         body>div:has(> #bmc-iframe) {
             z-index: 2147482010 !important;
         }
+
+        /* Visibility is toggled purely via this body class, so the widget's own inline styles are never overwritten (it builds once and can't be safely rebuilt). */
+        body:not(.bmc-widget-visible) #bmc-wbtn,
+        body:not(.bmc-widget-visible)>div:has(> #bmc-iframe) {
+            display: none !important;
+        }
     </style>
 
     <div
@@ -771,12 +777,11 @@
                 }
             },
             injectBuyMeACoffeeWidget() {
-                // Already built: just reveal it again (the widget has no re-run guard, so we never rebuild — that would stack duplicates).
-                const existingButton = document.getElementById('bmc-wbtn');
+                // Reveal the widget; visibility is driven by this body class alone so the widget's own inline styles are never touched.
+                document.body.classList.add('bmc-widget-visible');
         
-                if (existingButton instanceof HTMLElement) {
-                    existingButton.style.display = '';
-        
+                // Already built: the widget has no re-run guard, so we never rebuild (that would stack duplicates or render unstyled).
+                if (document.getElementById('bmc-wbtn') instanceof HTMLElement) {
                     return;
                 }
         
@@ -808,20 +813,8 @@
                 container.appendChild(script);
             },
             removeBuyMeACoffeeWidget() {
-                // Hide rather than remove: the widget loads once and can't be safely rebuilt, so we toggle visibility across modal open/close.
-                const button = document.getElementById('bmc-wbtn');
-        
-                if (button instanceof HTMLElement) {
-                    button.style.display = 'none';
-                }
-        
-                // ponytail: bmc-iframe and bmc-close-btn share an unnamed wrapper div; hide the wrapper to take both.
-                const iframe = document.getElementById('bmc-iframe');
-                const popup = iframe?.parentElement ?? iframe;
-        
-                if (popup instanceof HTMLElement) {
-                    popup.style.display = 'none';
-                }
+                // Hide without touching the widget's DOM or styles (it builds once and can't be safely rebuilt); visibility is purely the body class.
+                document.body.classList.remove('bmc-widget-visible');
             },
         }"
         x-init="queueControlPanelSliderNumeralsSync(10)"
