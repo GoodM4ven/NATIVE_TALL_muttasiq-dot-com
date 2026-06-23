@@ -14,4 +14,6 @@ enum ViewName: string
     case QuranAppTilawa = 'quran-app-tilawa';
     case QuranAppHifth = 'quran-app-hifth';
     case QuranAppTadabbur = 'quran-app-tadabbur';
+    case SunnaGate = 'sunna-gate';
+    case SunnaIstihamApp = 'sunna-istiham-app';
 }

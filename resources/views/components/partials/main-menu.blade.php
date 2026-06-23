@@ -30,6 +30,7 @@
         <x-main-menu.item
             :iconName="'unicons.check-square'"
             :caption="arabic_text('السنن')"
+            :onClickCallback="'() => ($viewNav(`sunna-gate`))'"
         />
         <x-main-menu.item
             :iconName="'entypo.book'"

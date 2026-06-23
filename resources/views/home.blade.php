@@ -59,6 +59,11 @@
                                 'athkar-app-masaa': {},
                             },
                         },
+                        'sunna-gate': {
+                            children: {
+                                'sunna-istiham-app': {},
+                            },
+                        },
                     },
                 },
             },
@@ -94,6 +99,14 @@
                 },
                 'quran-app-tadabbur': {
                     title: @js(view_title(\App\Services\Support\Enums\ViewName::QuranAppTadabbur)),
+                    isOpen: false,
+                },
+                'sunna-gate': {
+                    title: @js(view_title(\App\Services\Support\Enums\ViewName::SunnaGate)),
+                    isOpen: false,
+                },
+                'sunna-istiham-app': {
+                    title: @js(view_title(\App\Services\Support\Enums\ViewName::SunnaIstihamApp)),
                     isOpen: false,
                 },
             },
@@ -616,6 +629,12 @@
             '#quran-app-tadabbur': () => runHashAction(() => {
                 $dispatch('switch-view', { to: 'quran-app-tadabbur' });
             }),
+            '#sunna-gate': () => runHashAction(() => {
+                $dispatch('switch-view', { to: 'sunna-gate' });
+            }),
+            '#sunna-istiham-app': () => runHashAction(() => {
+                $dispatch('switch-view', { to: 'sunna-istiham-app' });
+            }),
         }"
         x-on:switch-view.window="applyViewState($event.detail?.to)"
         x-on:auth-blink-reload.window="window.__authReloadInProgress = true; useFastTransitionDuration = false; isBlinkerShown = true; setTimeout(() => { const reloadUrl = $event.detail?.url; if (reloadUrl) { window.location.assign(reloadUrl); } else { window.location.reload(); } }, (defaultTransitionDurationInMs ?? 500))"
@@ -688,6 +707,7 @@
                 :athkar-main-text-size-limits="$athkarMainTextSizeLimits"
             />
             <x-partials.quran-app.index />
+            <x-partials.sunna-app.index />
         </main>
 
         <div

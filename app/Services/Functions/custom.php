@@ -170,6 +170,8 @@ if (! function_exists('view_title')) {
             ViewName::QuranAppTilawa => 'تلاوة الكتاب',
             ViewName::QuranAppHifth => 'حفظ الكتاب',
             ViewName::QuranAppTadabbur => 'تدبّر الكتاب',
+            ViewName::SunnaGate => 'السنن',
+            ViewName::SunnaIstihamApp => 'الاستهام',
         };
 
         return arabic_text("$appName | $title");
