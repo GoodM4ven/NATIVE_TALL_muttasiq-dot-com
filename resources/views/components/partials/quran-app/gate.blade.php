@@ -65,26 +65,47 @@
             -webkit-backface-visibility: hidden;
         }
 
+        /* Noble caption: engraved gold plaque (double hairline + top sheen + soft glow) flanked by small diamonds; shared design with the sunna gate caption, gold accent here. All box-shadow so it stays cheap. */
         .quran-app-gate-caption {
             position: absolute;
             left: 50%;
             transform: translateX(-50%);
             z-index: 250;
             pointer-events: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.7em;
             border-radius: 999px;
-            border: 1px solid rgba(253, 232, 171, 0.42);
-            background: linear-gradient(160deg,
-                    rgba(24, 14, 7, 0.68) 0%,
-                    rgba(11, 6, 3, 0.54) 100%);
-            color: rgba(255, 245, 208, 0.96);
-            font-family: 'Readex Pro', 'IBM Plex Sans Arabic', ui-sans-serif, system-ui, sans-serif;
-            font-weight: 700;
-            letter-spacing: 0.02em;
+            font-weight: 600;
+            letter-spacing: 0.045em;
             line-height: 1;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.48);
+            color: color-mix(in srgb, var(--quran-gold-1) 96%, white);
+            background: linear-gradient(180deg,
+                    rgba(38, 23, 9, 0.74) 0%,
+                    rgba(13, 8, 3, 0.82) 100%);
             box-shadow:
-                inset 0 0 0 1px rgba(253, 232, 171, 0.12),
-                0 8px 24px rgba(0, 0, 0, 0.34);
+                inset 0 1px 0 color-mix(in srgb, var(--quran-gold-1) 26%, transparent),
+                inset 0 0 0 1px color-mix(in srgb, var(--quran-gold-2) 34%, transparent),
+                0 0 0 1px color-mix(in srgb, var(--quran-gold-3) 30%, transparent),
+                0 8px 22px rgba(0, 0, 0, 0.42),
+                0 0 18px color-mix(in srgb, var(--quran-gold-3) 30%, transparent);
+            text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
+        }
+
+        .quran-app-gate-caption::before,
+        .quran-app-gate-caption::after {
+            content: '';
+            flex: none;
+            width: 0.46em;
+            height: 0.46em;
+            border-radius: 1.5px;
+            transform: rotate(45deg);
+            background: linear-gradient(135deg,
+                    color-mix(in srgb, var(--quran-gold-1) 95%, white),
+                    color-mix(in srgb, var(--quran-gold-3) 92%, transparent));
+            box-shadow:
+                inset 0 0 0 0.5px color-mix(in srgb, white 45%, transparent),
+                0 0 6px color-mix(in srgb, var(--quran-gold-2) 60%, transparent);
         }
 
         .quran-app-sector {
@@ -640,8 +661,14 @@
                 left: auto;
                 right: 0.7rem;
                 transform: none;
+                display: block;
                 line-height: 1.2;
                 text-align: right;
+            }
+
+            .quran-app-gate-caption::before,
+            .quran-app-gate-caption::after {
+                display: none;
             }
 
             .quran-app-sector__veil {
@@ -933,7 +960,7 @@
         <p @class([
             'top-[3.6rem]' => is_platform('ios'),
             'top-[1.76rem]' => !is_platform('ios'),
-            'quran-app-gate-caption 3xl:top-8 3xl:px-[0.95rem] 3xl:py-2 3xl:text-[0.9rem] 4xl:top-10 4xl:px-[0.95rem] 4xl:py-[0.55rem] 4xl:text-[1.1rem] xl:top-6.5 px-[0.72rem] py-[0.26rem] text-[0.62rem] sm:top-[1.85rem] sm:px-[0.85rem] sm:py-2 sm:text-[0.7rem] md:top-8 md:px-4 md:py-2 md:text-[0.9rem] lg:top-6 lg:px-[0.925rem] lg:py-2 lg:text-[0.875rem] xl:px-[0.85rem] xl:py-[0.45rem] xl:text-[0.75rem] 2xl:top-[1.9rem] 2xl:px-3 2xl:py-2 2xl:text-[0.75rem]',
+            'quran-app-gate-caption font-arabic-serif 3xl:top-8 3xl:px-[1.1rem] 3xl:py-2 3xl:text-[0.92rem] 4xl:top-10 4xl:px-[1.15rem] 4xl:py-[0.55rem] 4xl:text-[1.12rem] xl:top-6.5 px-[0.9rem] py-[0.3rem] text-[0.64rem] sm:top-[1.85rem] sm:px-[1.05rem] sm:py-2 sm:text-[0.72rem] md:top-8 md:px-[1.15rem] md:py-2 md:text-[0.92rem] lg:top-6 lg:px-[1.1rem] lg:py-2 lg:text-[0.9rem] xl:px-4 xl:py-[0.45rem] xl:text-[0.78rem] 2xl:top-[1.9rem] 2xl:px-[1.05rem] 2xl:py-2 2xl:text-[0.78rem]',
         ])>
             {{ arabic_text('اختر نمط القراءة الذي يناسب مقصدك') }}</p>
 

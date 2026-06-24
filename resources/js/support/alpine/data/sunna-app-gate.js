@@ -127,6 +127,23 @@ document.addEventListener('alpine:init', () => {
             this.disarm();
             this.$viewNav(targetView);
         },
+        handleBackgroundTap(event) {
+            // The click that follows a camera-pan gesture is not a real tap; ignore it.
+            if (this.touchDidPan) {
+                this.touchDidPan = false;
+                return;
+            }
+
+            // Taps on a shape are handled by that shape's own activate(); only background
+            // taps reach here, and they clear any armed/hovered button so nothing stays active.
+            const target = event?.target;
+
+            if (target && typeof target.closest === 'function' && target.closest('.sunna-shape')) {
+                return;
+            }
+
+            this.disarm();
+        },
         // ---- Camera ----------------------------------------------------------
         shellElement() {
             return this.$refs?.shell ?? null;

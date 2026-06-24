@@ -658,12 +658,13 @@
                 'views[`quran-app-tilawa`].isOpen || views[`quran-app-hifth`].isOpen || views[`quran-app-tadabbur`].isOpen';
             $returnButtonShowCondition = is_platform('android')
                 ? 'false'
-                : 'views[`athkar-app-gate`].isReaderVisible || ' . $quranReaderViewsCondition;
+                : 'views[`athkar-app-gate`].isReaderVisible || views[`sunna-istiham-app`].isOpen || ' .
+                    $quranReaderViewsCondition;
             $returnButtonClickCallback = is_platform('android')
                 ? 'if (' .
                     $quranReaderViewsCondition .
                     ') { window.dispatchEvent(new CustomEvent(`quran-reader-go-gate`)); }'
-                : 'if (views[`athkar-app-gate`].isReaderVisible) { $dispatch(`close-athkar-mode`); return; } if (' .
+                : 'if (views[`sunna-istiham-app`].isOpen) { window.location.hash = `sunna-gate`; return; } if (views[`athkar-app-gate`].isReaderVisible) { $dispatch(`close-athkar-mode`); return; } if (' .
                     $quranReaderViewsCondition .
                     ') { window.dispatchEvent(new CustomEvent(`quran-reader-go-gate`)); }';
             $homeButtonShowCondition = is_platform('android')

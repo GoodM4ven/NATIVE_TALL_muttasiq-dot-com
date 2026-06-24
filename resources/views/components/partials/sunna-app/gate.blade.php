@@ -10,6 +10,7 @@
             user-select: none;
             -webkit-user-select: none;
             -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent;
             touch-action: none;
             contain: layout paint;
         }
@@ -37,25 +38,82 @@
                     color-mix(in srgb, var(--primary-950) 55%, transparent) 100%);
         }
 
+        /* Noble caption: engraved plaque (double hairline + top sheen + soft accent glow) flanked by small diamonds echoing the gate shapes; shared design with the quran gate caption, different accent palette; all box-shadow so it stays cheap. */
         .sunna-gate-caption {
             position: absolute;
             left: 50%;
             transform: translateX(-50%);
             z-index: 40;
             pointer-events: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.7em;
             border-radius: 999px;
-            border: 1px solid color-mix(in srgb, var(--primary-500) 34%, transparent);
-            background: color-mix(in srgb, var(--primary-50) 80%, transparent);
-            color: color-mix(in srgb, var(--primary-950) 88%, transparent);
-            font-weight: 700;
+            font-weight: 600;
+            letter-spacing: 0.045em;
             line-height: 1;
-            box-shadow: 0 6px 18px color-mix(in srgb, var(--primary-900) 16%, transparent);
+            color: color-mix(in srgb, var(--primary-950) 90%, transparent);
+            background: linear-gradient(180deg,
+                    color-mix(in srgb, var(--primary-50) 95%, transparent),
+                    color-mix(in srgb, var(--primary-100) 82%, transparent));
+            box-shadow:
+                inset 0 1px 0 color-mix(in srgb, white 85%, transparent),
+                inset 0 0 0 1px color-mix(in srgb, var(--primary-300) 44%, transparent),
+                0 0 0 1px color-mix(in srgb, var(--primary-500) 26%, transparent),
+                0 8px 22px color-mix(in srgb, var(--primary-900) 18%, transparent),
+                0 0 16px color-mix(in srgb, var(--primary-400) 18%, transparent);
+            text-shadow: 0 1px 0 color-mix(in srgb, white 50%, transparent);
+        }
+
+        .sunna-gate-caption::before,
+        .sunna-gate-caption::after {
+            content: '';
+            flex: none;
+            width: 0.46em;
+            height: 0.46em;
+            border-radius: 1.5px;
+            transform: rotate(45deg);
+            background: linear-gradient(135deg,
+                    color-mix(in srgb, var(--primary-300) 92%, white),
+                    color-mix(in srgb, var(--primary-500) 90%, transparent));
+            box-shadow:
+                inset 0 0 0 0.5px color-mix(in srgb, white 60%, transparent),
+                0 0 5px color-mix(in srgb, var(--primary-400) 55%, transparent);
         }
 
         .dark .sunna-gate-caption {
-            border-color: color-mix(in srgb, var(--primary-200) 30%, transparent);
-            background: color-mix(in srgb, var(--primary-950) 66%, transparent);
-            color: color-mix(in srgb, var(--primary-50) 92%, transparent);
+            color: color-mix(in srgb, var(--primary-50) 94%, transparent);
+            background: linear-gradient(180deg,
+                    color-mix(in srgb, var(--primary-900) 68%, transparent),
+                    color-mix(in srgb, var(--primary-950) 80%, transparent));
+            box-shadow:
+                inset 0 1px 0 color-mix(in srgb, var(--primary-200) 22%, transparent),
+                inset 0 0 0 1px color-mix(in srgb, var(--primary-300) 30%, transparent),
+                0 0 0 1px color-mix(in srgb, var(--primary-500) 30%, transparent),
+                0 8px 22px color-mix(in srgb, black 34%, transparent),
+                0 0 18px color-mix(in srgb, var(--primary-400) 26%, transparent);
+            text-shadow: 0 1px 6px color-mix(in srgb, black 45%, transparent);
+        }
+
+        .dark .sunna-gate-caption::before,
+        .dark .sunna-gate-caption::after {
+            background: linear-gradient(135deg,
+                    color-mix(in srgb, var(--primary-200) 92%, white),
+                    color-mix(in srgb, var(--primary-400) 90%, transparent));
+            box-shadow:
+                inset 0 0 0 0.5px color-mix(in srgb, white 40%, transparent),
+                0 0 6px color-mix(in srgb, var(--primary-300) 55%, transparent);
+        }
+
+        @media (max-width: 639px) {
+            .sunna-gate-caption {
+                gap: 0.5em;
+            }
+
+            .sunna-gate-caption::before,
+            .sunna-gate-caption::after {
+                display: none;
+            }
         }
 
         .sunna-gate-stage {
@@ -113,21 +171,48 @@
             padding: 0;
             border-radius: 7%;
             overflow: hidden;
-            border: 1px solid color-mix(in srgb, var(--primary-100) 10%, #ffffff0d);
             cursor: pointer;
+            outline: none;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
             transform: rotate(45deg);
+            /* No border: a primary-shaded ring + soft aura, all box-shadow (cheap, GPU-friendly). */
             box-shadow:
-                inset 0 2px 5px color-mix(in srgb, white 60%, transparent),
+                inset 0 2px 5px color-mix(in srgb, white 55%, transparent),
                 inset 0 -4px 10px color-mix(in srgb, var(--primary-950) 30%, transparent),
-                0 12px 26px color-mix(in srgb, var(--primary-950) 18%, transparent);
-            transition:
-                box-shadow 240ms cubic-bezier(0.22, 1, 0.36, 1),
-                border-color 240ms ease;
+                0 0 0 1px color-mix(in srgb, var(--primary-300) 50%, transparent),
+                0 10px 24px color-mix(in srgb, var(--primary-950) 20%, transparent),
+                0 0 16px color-mix(in srgb, var(--primary-400) 20%, transparent);
+            transition: box-shadow 260ms cubic-bezier(0.22, 1, 0.36, 1);
             will-change: box-shadow;
         }
 
+        .dark .sunna-shape {
+            box-shadow:
+                inset 0 2px 5px color-mix(in srgb, white 32%, transparent),
+                inset 0 -4px 10px color-mix(in srgb, var(--primary-950) 46%, transparent),
+                0 0 0 1px color-mix(in srgb, var(--primary-300) 42%, transparent),
+                0 10px 24px color-mix(in srgb, black 38%, transparent),
+                0 0 20px color-mix(in srgb, var(--primary-400) 26%, transparent);
+        }
+
+        /* Locked shapes are muted from the start: a neutral ring, NO primary aura layer, so there is no aura spread to flash before settling when they become active. */
         .sunna-shape-slot.is-locked .sunna-shape {
             cursor: default;
+            box-shadow:
+                inset 0 2px 5px color-mix(in srgb, white 55%, transparent),
+                inset 0 -4px 10px color-mix(in srgb, var(--primary-950) 30%, transparent),
+                0 0 0 1px color-mix(in srgb, var(--gray-400) 32%, transparent),
+                0 10px 24px color-mix(in srgb, var(--primary-950) 20%, transparent);
+        }
+
+        .dark .sunna-shape-slot.is-locked .sunna-shape {
+            box-shadow:
+                inset 0 2px 5px color-mix(in srgb, white 30%, transparent),
+                inset 0 -4px 10px color-mix(in srgb, var(--primary-950) 46%, transparent),
+                0 0 0 1px color-mix(in srgb, var(--gray-400) 26%, transparent),
+                0 10px 24px color-mix(in srgb, black 38%, transparent);
         }
 
         /* Square media (aspect-ratio 1) sized off shape width so the upright counter-rotated image always covers a rotated rectangle without bald corners. */
@@ -147,8 +232,12 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            transform: scale(var(--zoom, 1.02));
-            transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+            user-select: none;
+            -webkit-user-drag: none;
+            /* img is in a net-zero rotation frame (shape +45 then media -45), so this translate is screen-aligned: the picture drifts toward the cursor like the shapes do, on top of the in-place zoom; the 158% media oversize hides the edges. */
+            transform: translate(calc(var(--cam-x) * var(--img-shift, 0.55rem)),
+                    calc(var(--cam-y) * var(--img-shift, 0.55rem))) scale(var(--zoom, 1.02));
+            transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
             will-change: transform;
             backface-visibility: hidden;
         }
@@ -157,36 +246,48 @@
             position: absolute;
             inset: 0;
             pointer-events: none;
-            background: linear-gradient(191deg, 
-                color-mix(in srgb, var(--primary-950) 5%, transparent), 
-                color-mix(in srgb, var(--primary-950) 50%, transparent));
+            background: linear-gradient(191deg,
+                    color-mix(in srgb, var(--primary-950) 5%, transparent),
+                    color-mix(in srgb, var(--primary-950) 50%, transparent));
             transition: opacity 240ms ease;
         }
 
-        /* Active (pointer hover or armed touch) lift for unlocked shapes. */
+        /* Active (pointer hover or armed touch) lift for unlocked shapes: a wide primary aura. */
         .sunna-shape-slot.is-active:not(.is-locked) .sunna-shape {
             --zoom: 1.12;
-            border-color: color-mix(in srgb, var(--primary-300) 80%, white);
             box-shadow:
-                inset 0 2px 6px color-mix(in srgb, white 70%, transparent),
+                inset 0 2px 6px color-mix(in srgb, white 68%, transparent),
                 inset 0 -5px 12px color-mix(in srgb, var(--primary-950) 26%, transparent),
-                0 16px 34px color-mix(in srgb, var(--primary-950) 24%, transparent),
-                0 0 0 3px color-mix(in srgb, var(--primary-400) 40%, transparent),
-                0 0 26px 4px color-mix(in srgb, var(--primary-400) 45%, transparent);
+                0 0 0 2px color-mix(in srgb, var(--primary-400) 85%, transparent),
+                0 16px 34px color-mix(in srgb, var(--primary-950) 26%, transparent),
+                0 0 16px 1px color-mix(in srgb, var(--primary-300) 70%, transparent),
+                0 0 34px 6px color-mix(in srgb, var(--primary-400) 72%, transparent),
+                0 0 72px 16px color-mix(in srgb, var(--primary-500) 46%, transparent);
+        }
+
+        .dark .sunna-shape-slot.is-active:not(.is-locked) .sunna-shape {
+            box-shadow:
+                inset 0 2px 6px color-mix(in srgb, white 38%, transparent),
+                inset 0 -5px 12px color-mix(in srgb, var(--primary-950) 40%, transparent),
+                0 0 0 2px color-mix(in srgb, var(--primary-300) 80%, transparent),
+                0 16px 34px color-mix(in srgb, black 44%, transparent),
+                0 0 18px 1px color-mix(in srgb, var(--primary-200) 60%, transparent),
+                0 0 38px 7px color-mix(in srgb, var(--primary-400) 70%, transparent),
+                0 0 78px 18px color-mix(in srgb, var(--primary-500) 50%, transparent);
         }
 
         .sunna-shape-slot.is-active:not(.is-locked) .sunna-shape__veil {
             opacity: 0.22;
         }
 
-        /* Locked shapes still react, but with a muted aura. */
+        /* Locked active: only the neutral ring firms up + a small lift; same layer order as the locked resting state above, so box-shadow interpolates cleanly (no aura flash). */
         .sunna-shape-slot.is-locked.is-active .sunna-shape {
             --zoom: 1.06;
             box-shadow:
                 inset 0 2px 5px color-mix(in srgb, white 60%, transparent),
                 inset 0 -4px 10px color-mix(in srgb, var(--primary-950) 30%, transparent),
-                0 14px 28px color-mix(in srgb, var(--primary-950) 22%, transparent),
-                0 0 0 2px color-mix(in srgb, var(--gray-500) 34%, transparent);
+                0 0 0 2px color-mix(in srgb, var(--gray-500) 40%, transparent),
+                0 14px 28px color-mix(in srgb, var(--primary-950) 24%, transparent);
         }
 
         /* ---- Upright overlay (label / lock / hint), never rotated ---- */
@@ -204,19 +305,66 @@
             text-align: center;
         }
 
+        /* Caption plate: a rounded rectangle the label sits on, for legibility over the photo. */
+        .sunna-shape__plate {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            max-width: 100%;
+            border-radius: 0.7rem;
+            background: linear-gradient(165deg,
+                    color-mix(in srgb, var(--primary-950) 50%, transparent),
+                    color-mix(in srgb, var(--primary-950) 70%, transparent));
+            box-shadow:
+                inset 0 1px 0 color-mix(in srgb, white 24%, transparent),
+                inset 0 0 0 1px color-mix(in srgb, var(--primary-300) 26%, transparent),
+                0 6px 16px color-mix(in srgb, var(--primary-950) 38%, transparent);
+            /* Slow, smooth fades (opacity + background) so the title settles gently, not abruptly. */
+            transition:
+                box-shadow 320ms ease,
+                background 460ms cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 520ms cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .dark .sunna-shape__plate {
+            background: linear-gradient(165deg,
+                    color-mix(in srgb, var(--primary-950) 62%, transparent),
+                    color-mix(in srgb, var(--primary-950) 80%, transparent));
+        }
+
+        /* Unlocked + active: the plate goes much more transparent so the title text reads as the hero, while the ring/glow still frame it. */
+        .sunna-shape-slot.is-active:not(.is-locked) .sunna-shape__plate {
+            background: linear-gradient(165deg,
+                    color-mix(in srgb, var(--primary-950) 70%, transparent),
+                    color-mix(in srgb, var(--primary-950) 92%, transparent));
+            box-shadow:
+                inset 0 1px 0 color-mix(in srgb, white 30%, transparent),
+                inset 0 0 0 1px color-mix(in srgb, var(--primary-300) 56%, transparent),
+                0 8px 20px color-mix(in srgb, var(--primary-950) 36%, transparent),
+                0 0 18px color-mix(in srgb, var(--primary-400) 36%, transparent);
+        }
+
+        .dark .sunna-shape-slot.is-active:not(.is-locked) .sunna-shape__plate {
+            background: linear-gradient(165deg,
+                    color-mix(in srgb, var(--primary-950) 78%, transparent),
+                    color-mix(in srgb, var(--primary-950) 92%, transparent));
+        }
+
         .sunna-shape__label {
             color: white;
             font-weight: 700;
             line-height: 1.25;
             letter-spacing: 0.01em;
-            text-shadow:
-                0 2px 10px color-mix(in srgb, var(--primary-950) 72%, transparent),
-                0 1px 0 color-mix(in srgb, black 55%, transparent);
+            text-shadow: 0 1px 6px color-mix(in srgb, var(--primary-950) 60%, transparent);
             transition: opacity 240ms ease;
         }
 
-        .sunna-shape-slot.is-locked.is-active .sunna-shape__label {
-            opacity: 0.6;
+        .sunna-shape-slot.is-locked.is-active .sunna-shape__plate {
+            opacity: 0.62;
+        }
+
+        .sunna-shape-slot:not(.is-locked).is-active .sunna-shape__plate {
+            opacity: 0.95;
         }
 
         .sunna-shape__lock {
@@ -249,7 +397,7 @@
             letter-spacing: 0.06em;
             text-shadow: 0 2px 8px color-mix(in srgb, var(--primary-950) 72%, transparent);
             opacity: 0;
-            transform: translateY(0.35rem);
+            transform: translateY(0.5rem);
             transition:
                 opacity 220ms ease,
                 transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -257,17 +405,18 @@
 
         .sunna-shape__hint.is-visible {
             opacity: 1;
-            transform: translateY(0);
+            transform: translateY(0.35rem);
         }
 
         /* Base + native WebViews: drop the costly outer glows, keep the motion. */
         @media (max-width: 639px) {
             .sunna-shape-slot.is-active:not(.is-locked) .sunna-shape {
                 box-shadow:
-                    inset 0 2px 5px color-mix(in srgb, white 60%, transparent),
+                    inset 0 2px 5px color-mix(in srgb, white 58%, transparent),
                     inset 0 -4px 9px color-mix(in srgb, var(--primary-950) 26%, transparent),
+                    0 0 0 2px color-mix(in srgb, var(--primary-300) 70%, transparent),
                     0 10px 20px color-mix(in srgb, var(--primary-950) 20%, transparent),
-                    0 0 0 2px color-mix(in srgb, var(--primary-400) 38%, transparent);
+                    0 0 22px 3px color-mix(in srgb, var(--primary-400) 50%, transparent);
             }
         }
 
@@ -277,10 +426,11 @@
 
         .native-platform .sunna-shape-slot.is-active:not(.is-locked) .sunna-shape {
             box-shadow:
-                inset 0 2px 5px color-mix(in srgb, white 60%, transparent),
+                inset 0 2px 5px color-mix(in srgb, white 58%, transparent),
                 inset 0 -4px 9px color-mix(in srgb, var(--primary-950) 26%, transparent),
+                0 0 0 2px color-mix(in srgb, var(--primary-300) 70%, transparent),
                 0 10px 20px color-mix(in srgb, var(--primary-950) 20%, transparent),
-                0 0 0 2px color-mix(in srgb, var(--primary-400) 38%, transparent);
+                0 0 22px 3px color-mix(in srgb, var(--primary-400) 50%, transparent);
         }
     </style>
 @endassets
@@ -310,6 +460,7 @@
         x-on:touchmove="handleTouchMove($event)"
         x-on:touchend="handleTouchEnd()"
         x-on:touchcancel="handleTouchEnd()"
+        x-on:click="handleBackgroundTap($event)"
     >
         <div
             class="sunna-gate-bg"
@@ -320,7 +471,7 @@
             x-transition:enter-end="opacity-100"
         >
             <x-goodmaven::blurred-image
-                class="h-full w-full scale-110 object-cover opacity-20"
+                class="h-full w-full scale-110 object-cover opacity-15"
                 alt="{{ arabic_text('خلفية السنن') }}"
                 :imagePath="asset('images/background/sunna/desert-morning-blurred.webp')"
                 :thumbnailImagePath="asset('images/background/sunna/desert-morning-blurred-blur-thumbnail.webp')"
@@ -337,7 +488,7 @@
             x-transition:enter-end="opacity-100"
         >
             <x-goodmaven::blurred-image
-                class="h-full w-full scale-110 object-cover opacity-25"
+                class="h-full w-full scale-110 object-cover opacity-[0.225]"
                 alt="{{ arabic_text('خلفية السنن') }}"
                 :imagePath="asset('images/background/sunna/desert-night-blurred.webp')"
                 :thumbnailImagePath="asset('images/background/sunna/desert-night-blurred-blur-thumbnail.webp')"
@@ -350,12 +501,13 @@
         <p @class([
             'top-[1.76rem]' => !is_platform('ios'),
             'top-[3.6rem]' => is_platform('ios'),
-            'sunna-gate-caption px-[0.72rem] py-[0.3rem] text-[0.62rem] sm:top-[1.85rem] sm:px-[0.85rem] sm:py-2 sm:text-[0.7rem] md:top-8 md:px-4 md:py-2 md:text-[0.9rem] lg:top-6 lg:px-[0.925rem] lg:text-[0.875rem] xl:top-6.5 xl:px-[0.85rem] xl:py-[0.45rem] xl:text-[0.75rem] 2xl:top-[1.9rem] 2xl:px-3 2xl:text-[0.75rem] 3xl:top-8 3xl:text-[0.9rem] 4xl:top-10 4xl:text-[1.1rem]',
+            'sunna-gate-caption font-arabic-serif px-[0.9rem] py-[0.34rem] text-[0.64rem] sm:top-[1.85rem] sm:px-[1.05rem] sm:py-2 sm:text-[0.72rem] md:top-8 md:px-[1.15rem] md:py-2 md:text-[0.92rem] lg:top-6 lg:px-[1.1rem] lg:text-[0.9rem] xl:top-6.5 xl:px-4 xl:py-[0.45rem] xl:text-[0.78rem] 2xl:top-[1.9rem] 2xl:px-[1.05rem] 2xl:text-[0.78rem] 3xl:top-8 3xl:text-[0.95rem] 4xl:top-10 4xl:text-[1.15rem]',
         ])>
             {{ arabic_text('اختر بابًا من أبواب السنن') }}
         </p>
 
-        <div class="sunna-gate-stage">
+        <div
+            class="sunna-gate-stage 2xl:scale-80 md:scale-85 top-18 3xl:scale-100 3xl:top-20 -left-4 scale-95 sm:left-0 sm:scale-95">
             @php
                 $shapes = [
                     ['mode' => 'aamal', 'label' => 'أعمال اليوم والليلة', 'image' => 'aamal.webp', 'locked' => true],
@@ -371,6 +523,7 @@
                         'is-locked' => $shape['locked'],
                     ])
                     x-bind:class="{ 'is-active': isModeActive('{{ $shape['mode'] }}') }"
+                    x-data="{ isLocked: @js($shape['locked']) }"
                 >
                     <button
                         class="sunna-shape"
@@ -395,12 +548,18 @@
 
                     <div class="sunna-shape__face">
                         <span
-                            class="sunna-shape__label font-arabic-serif 3xl:text-[1.4rem] 4xl:text-[1.65rem] text-[0.82rem] sm:text-[0.95rem] md:text-[1.2rem] lg:text-[1.2rem] xl:text-[1.1rem] 2xl:text-[1.15rem]"
-                        >{{ arabic_text($shape['label']) }}</span>
+                            class="sunna-shape__plate 3xl:px-5 3xl:py-2 4xl:px-6 4xl:py-[0.6rem] px-[0.7rem] py-[0.3rem] sm:px-[0.85rem] sm:py-[0.34rem] md:px-[1.1rem] md:py-[0.42rem] lg:px-[1.1rem] lg:py-[0.42rem] xl:px-4 xl:py-[0.4rem] 2xl:px-4 2xl:py-[0.42rem]"
+                            x-bind:class="!isLocked &&
+                                'scale-[1.225] sm:scale-[1.3] md:scale-[1.2] lg:scale-[1.25] xl:scale-[1.3] 2xl:scale-[1.2] 3xl:scale-[1.15]'"
+                        >
+                            <span
+                                class="sunna-shape__label font-arabic-serif 3xl:text-[1.4rem] 4xl:text-[1.65rem] text-[1.0rem] sm:text-[1.25rem] md:text-[1.375rem] lg:text-[1.6rem] xl:text-[1.5rem] 2xl:text-[1.5rem]"
+                            >{{ arabic_text($shape['label']) }}</span>
+                        </span>
 
                         @if ($shape['locked'])
                             <span
-                                class="sunna-shape__lock 3xl:text-[0.92rem] 4xl:text-[1rem] px-2 py-[0.26rem] text-[0.7rem] sm:text-[0.76rem] md:text-[0.86rem] lg:text-[0.84rem] xl:text-[0.74rem] 2xl:text-[0.78rem]"
+                                class="sunna-shape__lock 3xl:text-[0.92rem] 4xl:text-[1rem] px-2 py-[0.26rem] text-[0.7rem] sm:text-[1.1rem] md:text-[1.2rem] lg:text-[1.3rem] xl:text-[1.4rem] 2xl:text-[1.1rem]"
                                 aria-hidden="true"
                             >
                                 <x-icon
@@ -411,7 +570,7 @@
                             </span>
                         @else
                             <span
-                                class="sunna-shape__hint 3xl:text-[1rem] 4xl:text-[1.1rem] text-[0.74rem] sm:text-[0.8rem] md:text-[0.9rem] lg:text-[0.9rem] xl:text-[0.78rem] 2xl:text-[0.82rem]"
+                                class="sunna-shape__hint 3xl:text-[1rem] 4xl:text-[1.1rem] text-[0.9rem] sm:text-[1.2rem] md:text-[1.35rem] lg:text-[1.4rem] xl:text-[1.25rem] 2xl:text-[1.2rem]"
                                 aria-hidden="true"
                                 x-cloak
                                 x-bind:class="{ 'is-visible': shouldShowEnterHint('{{ $shape['mode'] }}') }"
