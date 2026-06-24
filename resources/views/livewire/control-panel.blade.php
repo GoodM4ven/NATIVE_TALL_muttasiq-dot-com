@@ -64,6 +64,8 @@
             controlPanelModalId: @js('fi-' . $this->getId() . '-action-0'),
             isControlPanelLoading: false,
             controlPanelLoadingSafetyTimerId: null,
+            isSupportUnlockLoading: false,
+            supportUnlockLoadingSafetyTimerId: null,
             isReaderMaintenanceInFlight: false,
             hasQueuedReaderMaintenance: false,
             westernNumeralChars: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
@@ -700,6 +702,26 @@
                     this.controlPanelLoadingSafetyTimerId = null;
                 }
             },
+            beginSupportUnlockLoading() {
+                this.isSupportUnlockLoading = true;
+        
+                if (this.supportUnlockLoadingSafetyTimerId !== null) {
+                    window.clearTimeout(this.supportUnlockLoadingSafetyTimerId);
+                }
+        
+                this.supportUnlockLoadingSafetyTimerId = window.setTimeout(() => {
+                    this.isSupportUnlockLoading = false;
+                    this.supportUnlockLoadingSafetyTimerId = null;
+                }, 6000);
+            },
+            endSupportUnlockLoading() {
+                this.isSupportUnlockLoading = false;
+        
+                if (this.supportUnlockLoadingSafetyTimerId !== null) {
+                    window.clearTimeout(this.supportUnlockLoadingSafetyTimerId);
+                    this.supportUnlockLoadingSafetyTimerId = null;
+                }
+            },
             openControlPanelModalFromEvent(detail = {}) {
                 this.beginControlPanelLoading();
         
@@ -732,6 +754,7 @@
                 this.openSupportUnlockModal();
             },
             async openSupportUnlockModal() {
+                this.beginSupportUnlockLoading();
                 this.closeVisibleFilamentModals();
         
                 const closePayload = { id: this.controlPanelModalId };
@@ -746,6 +769,7 @@
         
                 await new Promise((resolve) => window.setTimeout(resolve, 220));
                 await $wire.mountAction('supportUnlock');
+                // ponytail: overlay ends on the modal's `support-unlock-modal-shown` event; 6s safety timer covers failures.
             },
             async runReaderMaintenancePulse() {
                 if (this.isReaderMaintenanceInFlight) {
@@ -830,7 +854,7 @@
         x-on:close-modal.window="if (String($event.detail?.id ?? '') === controlPanelModalId || !isControlPanelModalCurrentlyOpen()) { isControlPanelOpen = false; endControlPanelLoading(); teardownControlPanelSliderNumeralsObserver(); } removeBuyMeACoffeeWidget();"
         x-on:close-modal-quietly.window="if (String($event.detail?.id ?? '') === controlPanelModalId || !isControlPanelModalCurrentlyOpen()) { isControlPanelOpen = false; endControlPanelLoading(); teardownControlPanelSliderNumeralsObserver(); } removeBuyMeACoffeeWidget();"
         x-on:closed-form-component-action-modal.window="if (String($event.detail?.id ?? '') === controlPanelModalId || !isControlPanelModalCurrentlyOpen()) { isControlPanelOpen = false; endControlPanelLoading(); teardownControlPanelSliderNumeralsObserver(); }"
-        x-on:support-unlock-modal-shown.window="injectBuyMeACoffeeWidget()"
+        x-on:support-unlock-modal-shown.window="endSupportUnlockLoading(); injectBuyMeACoffeeWidget()"
     >
         <x-action-button
             data-testid="control-panel-button"
@@ -846,11 +870,11 @@
             <div
                 class="fixed inset-0 z-[2147481999] flex items-center justify-center bg-black/25 backdrop-blur-[10px]"
                 x-cloak
-                x-show="isControlPanelLoading"
+                x-show="isControlPanelLoading || isSupportUnlockLoading"
                 x-transition.opacity
             >
                 <svg
-                    class="size-8 animate-spin text-white sm:size-10"
+                    class="size-8 animate-spin text-white [animation-direction:reverse] sm:size-10"
                     aria-hidden="true"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
