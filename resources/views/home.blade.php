@@ -40,7 +40,6 @@
                 statusMessage: null,
                 stage: 'preparing',
                 closeTimeoutId: null,
-                restartRevealTimeoutId: null,
                 progressAnimationFrameId: null,
             },
             viewTree: {
@@ -166,14 +165,6 @@
                 window.clearTimeout(this.quranBootstrap.closeTimeoutId);
                 this.quranBootstrap.closeTimeoutId = null;
             },
-            clearQuranBootstrapRestartRevealTimeout() {
-                if (this.quranBootstrap.restartRevealTimeoutId === null) {
-                    return;
-                }
-        
-                window.clearTimeout(this.quranBootstrap.restartRevealTimeoutId);
-                this.quranBootstrap.restartRevealTimeoutId = null;
-            },
             stopQuranBootstrapProgressAnimation() {
                 if (this.quranBootstrap.progressAnimationFrameId === null) {
                     return;
@@ -248,7 +239,6 @@
             },
             handleQuranBootstrapStarted() {
                 this.clearQuranBootstrapCloseTimeout();
-                this.clearQuranBootstrapRestartRevealTimeout();
                 this.stopQuranBootstrapProgressAnimation();
                 this.quranBootstrap.isVisible = true;
                 this.quranBootstrap.isPreparing = true;
@@ -279,7 +269,6 @@
             },
             handleQuranBootstrapFinished(detail = {}) {
                 this.clearQuranBootstrapCloseTimeout();
-                this.clearQuranBootstrapRestartRevealTimeout();
                 this.setQuranBootstrapProgress(100, { allowDecrease: true });
                 this.quranBootstrap.isPreparing = false;
                 this.quranBootstrap.isFinishing = false;
@@ -290,17 +279,9 @@
                 if (this.quranBootstrap.didStartDownloadFlow) {
                     this.stopQuranBootstrapProgressAnimation();
                     this.quranBootstrap.displayProgressPercent = 100;
-                    this.quranBootstrap.requiresRestart = false;
+                    this.quranBootstrap.requiresRestart = true;
                     this.quranBootstrap.isRestarting = false;
-                    this.quranBootstrap.statusMessage = String(
-                        @js(arabic_text('اكتمل تنزيل بيانات القرآن بنجاح. يلزم إعادة تشغيل المنصة الآن.')),
-                    );
-        
-                    this.quranBootstrap.restartRevealTimeoutId = window.setTimeout(() => {
-                        this.quranBootstrap.requiresRestart = true;
-                        this.quranBootstrap.restartRevealTimeoutId = null;
-                        this.setQuranBootstrapStage('restart');
-                    }, 360);
+                    this.quranBootstrap.statusMessage = null;
         
                     return;
                 }
@@ -375,7 +356,6 @@
             },
             handleQuranBootstrapFailed(detail = {}) {
                 this.clearQuranBootstrapCloseTimeout();
-                this.clearQuranBootstrapRestartRevealTimeout();
                 this.stopQuranBootstrapProgressAnimation();
                 this.quranBootstrap.isVisible = true;
                 this.quranBootstrap.isPreparing = false;
@@ -388,7 +368,6 @@
             },
             dismissQuranBootstrapState() {
                 this.clearQuranBootstrapCloseTimeout();
-                this.clearQuranBootstrapRestartRevealTimeout();
                 this.stopQuranBootstrapProgressAnimation();
                 this.quranBootstrap.isVisible = false;
                 this.quranBootstrap.isPreparing = false;
@@ -776,14 +755,8 @@
                                 {{ arabic_text('تحميل بيانات المصحف') }}
                             </h2>
                             <div
-                                class="text-primary-900/78 dark:text-primary-100/82 flex w-full flex-col justify-center gap-2 text-sm/8 sm:text-base/9">
-                                <p>{{ arabic_text('يتم تجهيز المصحف بشكل أنيق ومحرك اللغة العربية لبحث متقدم...') }}</p>
-                                <p
-                                    class="text-primary-800/70 dark:text-primary-100/65 text-xs/6 font-medium sm:text-sm/7"
-                                    x-show="Boolean(quranBootstrap.statusMessage)"
-                                    x-transition.opacity.duration.220ms
-                                    x-text="quranBootstrap.statusMessage"
-                                ></p>
+                                class="text-primary-900/78 dark:text-primary-100/82 flex w-full items-center justify-center text-sm/8 sm:text-base/9">
+                                <p>{{ arabic_text('يجري تنزيل بيانات المصحف لأول مرة، يرجى الانتظار...') }}</p>
                             </div>
                             <div class="space-y-2">
                                 <div
@@ -828,59 +801,8 @@
                                 {{ arabic_text('تم بحمد الله') }}
                             </h2>
                             <div
-                                class="text-primary-900/78 dark:text-primary-100/82 flex w-full flex-col justify-center gap-2 text-sm/8 sm:text-base/9">
-                                <p>{{ arabic_text('اكتمل تنزيل بيانات القرآن بنجاح.') }}</p>
-                                <p
-                                    class="text-xs/6 font-semibold text-emerald-700/80 sm:text-sm/7 dark:text-emerald-300/80">
-                                    {{ arabic_text('يتم تهيئة الخطوة الأخيرة...') }}
-                                </p>
-                            </div>
-                            <div class="space-y-2">
-                                <div
-                                    class="h-2.5 w-full overflow-hidden rounded-full bg-emerald-100/80 dark:bg-emerald-950/45">
-                                    <div
-                                        class="bg-linear-to-r h-full w-full rounded-full from-emerald-400 via-emerald-500 to-emerald-600">
-                                    </div>
-                                </div>
-                                <p class="text-xs font-semibold text-emerald-700/80 dark:text-emerald-300/80">100%</p>
-                            </div>
-                        </div>
-
-                        <div
-                            class="min-h-53 duration-260 absolute inset-0 grid w-full grid-rows-[auto_auto_minmax(5.6rem,1fr)_auto] items-center gap-4 transition-[opacity,transform,filter] ease-[cubic-bezier(0.22,1,0.36,1)]"
-                            x-bind:aria-hidden="!isQuranBootstrapStage('restart')"
-                            x-bind:inert="!isQuranBootstrapStage('restart')"
-                            x-bind:class="quranBootstrapStageClasses('restart')"
-                            x-bind:style="quranBootstrapStageStyle('restart')"
-                        >
-                            <div
-                                class="dark:bg-emerald-500/18 mx-auto grid h-10 w-10 place-items-center rounded-full border border-emerald-300/70 bg-emerald-100/80 text-emerald-700 dark:border-emerald-400/60 dark:text-emerald-300">
-                                <svg
-                                    class="h-6 w-6"
-                                    aria-hidden="true"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="2.2"
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                >
-                                    <path d="M20 6L9 17l-5-5"></path>
-                                </svg>
-                            </div>
-                            <h2
-                                class="min-h-[1.85rem] w-full text-base/8 font-semibold text-emerald-700 sm:text-lg/9 dark:text-emerald-300">
-                                {{ arabic_text('تم بحمد الله') }}
-                            </h2>
-                            <div
-                                class="text-primary-900/78 dark:text-primary-100/82 flex w-full flex-col justify-center gap-2 text-sm/8 sm:text-base/9">
-                                <p>{{ arabic_text('يرجى إعادة تشغيل المنصة ليتمّ اعتماد البيانات.') }}</p>
-                                <p
-                                    class="text-primary-800/70 dark:text-primary-100/65 text-xs/6 font-medium sm:text-sm/7"
-                                    x-show="Boolean(quranBootstrap.statusMessage)"
-                                    x-transition.opacity.duration.220ms
-                                    x-text="quranBootstrap.statusMessage"
-                                ></p>
+                                class="text-primary-900/78 dark:text-primary-100/82 flex w-full items-center justify-center text-sm/8 sm:text-base/9">
+                                <p>{{ arabic_text('اكتمل التنزيل، يلزم إعادة تشغيل المنصة لاعتماد البيانات.') }}</p>
                             </div>
                             <div class="flex items-center justify-center">
                                 <button
