@@ -201,7 +201,8 @@
             width: 100%;
             object-fit: cover;
             transform: scale(1.065);
-            filter: blur(4px) brightness(0.66) saturate(0.9);
+            /* ponytail: idle defocus blur trimmed 4px -> 3px; large-image blur raster cost scales with radius, and at this dim brightness the 1px difference is imperceptible. Sharpens to blur(0) on active as before. */
+            filter: blur(3px) brightness(0.66) saturate(0.9);
             transition:
                 transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
                 filter 180ms ease,
@@ -257,8 +258,8 @@
             font-weight: 700;
             line-height: 1.2;
             letter-spacing: 0.04em;
-            backdrop-filter: blur(8px) saturate(1.04);
-            -webkit-backdrop-filter: blur(8px) saturate(1.04);
+            backdrop-filter: blur(5px) saturate(1.04);
+            -webkit-backdrop-filter: blur(5px) saturate(1.04);
             box-shadow:
                 inset 0 1px 0 rgba(255, 234, 183, 0.24),
                 inset 0 -1px 0 rgba(44, 28, 10, 0.34),
@@ -674,6 +675,14 @@
             .quran-app-sector__veil {
                 opacity: 0.22;
                 transition: opacity 130ms ease;
+            }
+
+            /* ponytail: on weak mobile GPUs the staggered per-wedge fade (40/120/200ms delays + 760ms) makes the three clip-path wedges pop in out-of-sync, showing seams against the shell background ("shattered" look) before settling. Sync + shorten the reveal so all wedges appear together and fast. */
+            .quran-app-sector__media--tilawa,
+            .quran-app-sector__media--tadabbur,
+            .quran-app-sector__media--hifth {
+                animation-delay: 0ms;
+                animation-duration: 300ms;
             }
 
             .quran-app-sector {

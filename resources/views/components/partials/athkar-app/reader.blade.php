@@ -962,7 +962,8 @@
                 0 0 24px color-mix(in srgb, var(--athkar-accent) 24%, transparent);
             opacity: 0;
             pointer-events: none;
-            will-change: transform, opacity, box-shadow;
+            /* ponytail: box-shadow can't be GPU-composited, so hinting it in will-change just costs a layer hint with no payoff; keep only the compositable transform/opacity. */
+            will-change: transform, opacity;
         }
 
         .dark .athkar-counter-repel {

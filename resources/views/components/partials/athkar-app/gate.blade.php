@@ -340,7 +340,8 @@
             pointer-events: none;
             z-index: 0;
             opacity: var(--spill-opacity, 0);
-            filter: blur(var(--spill-blur, 14px)) saturate(1.02);
+            /* ponytail: spill source images are already pre-blurred (-blurred.webp); the CSS blur only softens the diagonal seam, so a small radius is enough. Dropped saturate(1.02) (imperceptible second filter pass) to cut a full-viewport raster pass on weak GPUs. */
+            filter: blur(var(--spill-blur, 14px));
             transition: opacity var(--spill-transition, 200ms) ease;
         }
 
@@ -456,10 +457,10 @@
                 '--spill-opacity': spillOpacity,
                 '--spill-transition': `${spillTransitionMs}ms`,
                 '--spill-inset': isEnhanced ? '-48vmax' : '-42vmax',
-                '--spill-blur': isEnhanced ? '6px' : '3px',
+                '--spill-blur': isEnhanced ? '3px' : '2px',
                 '--spill-scale': isEnhanced ? '1.18' : '1.12',
                 '--spill-split': `${splitValue}%`,
-                '--gate-blur': isEnhanced ? '10px' : '0px',
+                '--gate-blur': isEnhanced ? '6px' : '0px',
                 '--divider-glow-blur': isEnhanced ? '4px' : '0px',
             }"
             x-effect="syncPerfProfile(); syncSpillState(views['athkar-app-gate'].isOpen);"
