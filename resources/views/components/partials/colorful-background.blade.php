@@ -63,26 +63,18 @@
             this.syncAthkarGatePreviewVisualEnhancements(
                 detail?.isVisualEnhancementsEnabled,
             );
-            this.athkarGatePreviewSide =
-                this.isAthkarGatePreviewVisualEnhancementsEnabled && isValidSide ?
-                side :
-                null;
+            // ponytail: the side preview/swap is no longer gated on visual-enhancements. When VE is OFF (at any breakpoint) we deliberately want the lightweight base-style background swap instead of the costly sm+ panes/spill, so the swap must drive whenever a side is active.
+            this.athkarGatePreviewSide = isValidSide ? side : null;
         },
         athkarGateMorningOpacity() {
-            if (
-                !this.isAthkarGatePreviewVisualEnhancementsEnabled ||
-                !this.athkarGatePreviewSide
-            ) {
+            if (!this.athkarGatePreviewSide) {
                 return this.$store.colorScheme.isDarkModeOn ? 0 : 1;
             }
     
             return this.athkarGatePreviewSide === 'morning' ? 1 : 0;
         },
         athkarGateNightOpacity() {
-            if (
-                !this.isAthkarGatePreviewVisualEnhancementsEnabled ||
-                !this.athkarGatePreviewSide
-            ) {
+            if (!this.athkarGatePreviewSide) {
                 return this.$store.colorScheme.isDarkModeOn ? 1 : 0;
             }
     
@@ -90,10 +82,9 @@
         },
         syncAthkarGateBackgroundStateFromViews() {
             const gateView = this.views?.['athkar-app-gate'];
+            // ponytail: the athkar gate now uses the lightweight background swap at every breakpoint and for both VE states (the costly sm+ panes/spill were dropped), so the swap is active whenever the gate is open.
             this.isAthkarGateBackgroundActive = Boolean(
-                gateView?.isOpen &&
-                !gateView?.isReaderVisible &&
-                (this.$store.bp?.is?.('base') || document.documentElement.classList.contains('native-platform')),
+                gateView?.isOpen && !gateView?.isReaderVisible,
             );
         },
         athkarGateLayerStyle(mode) {
@@ -172,9 +163,8 @@
                     event?.detail?.controlPanel?.enable_visual_enhancements,
                 );
     
-                if (!this.isAthkarGatePreviewVisualEnhancementsEnabled) {
-                    this.athkarGatePreviewSide = null;
-                }
+                // ponytail: keep the active-state in sync when VE is toggled while the gate is open, so sm+ flips between the rich panes (VE on) and the lightweight background swap (VE off) immediately.
+                this.syncAthkarGateBackgroundStateFromViews();
             });
         },
     }"
@@ -184,11 +174,15 @@
     x-transition:leave="transition ease-in duration-300"
     x-transition:leave-start="opacity-100"
     x-transition:leave-end="opacity-0"
-    x-show="views[`main-menu`].isOpen || views[`athkar-app-gate`].isReaderVisible || (views[`athkar-app-gate`].isOpen && ($store.bp?.is?.('base') || document.documentElement.classList.contains('native-platform'))) || views[`quran-app-tilawa`].isOpen || views[`quran-app-hifth`].isOpen || views[`quran-app-tadabbur`].isOpen"
+    x-show="views[`main-menu`].isOpen || views[`athkar-app-gate`].isReaderVisible || views[`athkar-app-gate`].isOpen || views[`quran-app-tilawa`].isOpen || views[`quran-app-hifth`].isOpen || views[`quran-app-tadabbur`].isOpen"
 >
     <div
-        class="duration-400 absolute inset-0 opacity-10 transition-opacity will-change-[opacity] [--bg-athkar-gate-masaa-opacity:1] [--bg-athkar-gate-sabah-opacity:0.4] [--bg-athkar-masaa-opacity:1] [--bg-athkar-sabah-opacity:0.3] [--bg-main-dark-opacity:1] [--bg-main-light-opacity:0.6] [--bg-quran-hifth-dark-opacity:1] [--bg-quran-hifth-light-opacity:1] [--bg-quran-tadabbur-dark-opacity:1] [--bg-quran-tadabbur-light-opacity:1] [--bg-quran-tilawa-dark-opacity:1] [--bg-quran-tilawa-light-opacity:1]"
-        x-bind:class="!$store.colorScheme.isDarkModeOn ? 'opacity-30!' : ''"
+        class="duration-400 absolute inset-0 transition-opacity will-change-[opacity] [--bg-athkar-gate-masaa-opacity:1] [--bg-athkar-gate-sabah-opacity:0.7] [--bg-athkar-masaa-opacity:1] [--bg-athkar-sabah-opacity:0.3] [--bg-main-dark-opacity:1] [--bg-main-light-opacity:0.6] [--bg-quran-hifth-dark-opacity:1] [--bg-quran-hifth-light-opacity:1] [--bg-quran-tadabbur-dark-opacity:1] [--bg-quran-tadabbur-light-opacity:1] [--bg-quran-tilawa-dark-opacity:1] [--bg-quran-tilawa-light-opacity:1]"
+        x-bind:class="{
+            'opacity-10!': ($store.colorScheme.isDarkModeOn && !views[`athkar-app-gate`].isOpen),
+            'opacity-40!': ($store.colorScheme.isDarkModeOn && views[`athkar-app-gate`].isOpen),
+            'opacity-30!': !$store.colorScheme.isDarkModeOn,
+        }"
     >
         <div
             class="absolute inset-0 transition-opacity delay-300 duration-500 will-change-[opacity]"

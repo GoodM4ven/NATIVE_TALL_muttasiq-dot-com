@@ -122,11 +122,10 @@ document.addEventListener('alpine:init', () => {
             this.isVisualEnhancementsEnabled = this.resolveVisualEnhancementsSetting(settings);
         },
         dispatchBackgroundPreview() {
+            // ponytail: drive the swap from the active side OR the hovered side, so a desktop hover at sm+ swaps the background exactly like a tap does on mobile (not just on click/activate). Regardless of VE; the consumer decides whether to render it.
+            const effectiveSide = this.activeSide ?? this.hoverSide;
             const previewSide =
-                this.isVisualEnhancementsEnabled &&
-                (this.activeSide === 'morning' || this.activeSide === 'night')
-                    ? this.activeSide
-                    : null;
+                effectiveSide === 'morning' || effectiveSide === 'night' ? effectiveSide : null;
 
             window.dispatchEvent(
                 new CustomEvent(athkarGateBackgroundPreviewEventName, {
@@ -143,7 +142,8 @@ document.addEventListener('alpine:init', () => {
         },
         syncPerfProfile() {
             this.$store.bp.current;
-            const nextEnhanced = this.$store.bp.is('sm+');
+            // ponytail: the rich "panes/spill" presentation is dropped entirely — it was too costly even at sm+ with VE on. The gate now always uses the lightweight base-style background swap (driven by colorful-background). The only VE-on extra is the ripple, gated separately via the `is-ve-on` class. Holding isEnhanced at a hard false leaves the existing enhanced CSS/markup inert without ripping it all out.
+            const nextEnhanced = false;
 
             if (nextEnhanced && !this.isEnhanced) {
                 this.deactivateSide();
@@ -175,6 +175,8 @@ document.addEventListener('alpine:init', () => {
             } else {
                 this.animateSplit(50);
             }
+            // ponytail: swap the gate background on hover too (mobile only ever taps/activates; desktop hovers). Mirrors the activate-side swap.
+            this.dispatchBackgroundPreview();
         },
         startHover() {
             if (this.isHovering) {
@@ -319,6 +321,12 @@ document.addEventListener('alpine:init', () => {
         },
         queuePing() {
             if (this.isFastUiMode) {
+                this.isPinging = false;
+                return;
+            }
+
+            // ponytail: the ripple is a visual-enhancements-only flourish; skip queueing it entirely when VE is off so no work happens (the CSS also gates it via .is-ve-on).
+            if (!this.isVisualEnhancementsEnabled) {
                 this.isPinging = false;
                 return;
             }

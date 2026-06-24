@@ -28,7 +28,8 @@
 
         .quran-app-gate-shell.quran-app-gate-shell--base-perf img.quran-app-sector__image-img {
             filter: none !important;
-            transform: none !important;
+            /* ponytail: keep every sector image on a stable GPU layer (translateZ(0)) in perf mode. Previously only the active sector got translateZ(0) while idle/muted dropped it, so each sector switch created+destroyed layers — on Android WebView that reads as image flicker and sluggish switching. Now switching only rescales within an existing layer. */
+            transform: translateZ(0) !important;
             opacity: 1;
             transition:
                 transform 130ms cubic-bezier(0.2, 0.9, 0.25, 1),
@@ -41,7 +42,7 @@
         }
 
         .quran-app-gate-shell.quran-app-gate-shell--base-perf .quran-app-sector.is-muted img.quran-app-sector__image-img {
-            transform: scale(1) !important;
+            transform: scale(1) translateZ(0) !important;
         }
 
         .quran-app-gate-shell.quran-app-gate-shell--base-perf .quran-app-sector__chip,
@@ -868,7 +869,8 @@
 
         .native-platform img.quran-app-sector__image-img {
             filter: none !important;
-            transform: none !important;
+            /* ponytail: stable GPU layer in native WebView too (see base-perf note) — kills the per-switch layer create/destroy flicker. */
+            transform: translateZ(0) !important;
             transition: transform 130ms cubic-bezier(0.2, 0.9, 0.25, 1) !important;
             will-change: auto;
         }
@@ -928,6 +930,28 @@
         .native-platform .quran-app-gate-orbit {
             will-change: auto;
         }
+
+        /* ponytail: ANDROID ONLY (iOS keeps these effects for now). Dragging the orbit puck rapidly toggles is-active/is-muted across the three sectors. Every toggle re-composites several per-sector effects each frame, which on Android WebView lags and flickers. Strip them down to just the background images + captions/hints. */
+        /* 1) No image "zoom": lock every sector image to one stable, unscaled GPU layer (no scale, no transform transition) so a switch never re-rasters the image. */
+        .quran-app-gate-shell--android img.quran-app-sector__image-img,
+        .quran-app-gate-shell--android .quran-app-sector.is-active img.quran-app-sector__image-img,
+        .quran-app-gate-shell--android .quran-app-sector.is-muted img.quran-app-sector__image-img,
+        .quran-app-gate-shell--android .quran-app-sector.is-launch-target img.quran-app-sector__image-img {
+            transform: translateZ(0) !important;
+            transition: none !important;
+        }
+
+        /* 2) Drop the veil entirely (both light and dark). It is a full-sector gradient overlay (three of them) whose opacity transitions on every active/muted flip — the heaviest per-frame cost during the drag. Captions stay readable via the chip's own dark background. */
+        .quran-app-gate-shell--android .quran-app-sector__veil {
+            display: none !important;
+        }
+
+        /* 3) Make sector/chip state changes instant (no per-switch transition compositing). Captions (chips) and hints (chip-locks) still show; they just no longer animate. */
+        .quran-app-gate-shell--android .quran-app-sector,
+        .quran-app-gate-shell--android .quran-app-sector__chip,
+        .quran-app-gate-shell--android .quran-app-sector__chip-text {
+            transition: none !important;
+        }
     </style>
 @endassets
 
@@ -951,6 +975,7 @@
         @class([
             'quran-app-gate-shell relative h-full w-full',
             'quran-app-gate-shell--base-perf' => is_platform('mobile'),
+            'quran-app-gate-shell--android' => is_platform('android'),
         ])
         x-data="quranAppGate"
         x-ref="shell"

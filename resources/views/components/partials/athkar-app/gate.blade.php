@@ -327,8 +327,9 @@
             box-shadow: 0 0 0 3px var(--ping-color);
         }
 
+        /* ponytail: ripple is a visual-enhancements-only flourish now (added .is-ve-on gate). The sm+ breakpoint restriction is unchanged. */
         @media (min-width: 640px) {
-            .athkar-gate-shell.is-pinging .athkar-gate__ping {
+            .athkar-gate-wrap.is-ve-on .athkar-gate-shell.is-pinging .athkar-gate__ping {
                 animation: athkar-gate-ping 1.4s ease-out;
                 will-change: transform, opacity;
             }
@@ -373,8 +374,9 @@
             background-color: transparent !important;
         }
 
+        /* ponytail: the costly full-viewport blurred spill is fully dropped now that the rich panes presentation is gone (isEnhanced is always false), so it never composites at any breakpoint. */
         .athkar-gate-wrap:not(.is-enhanced) .athkar-gate__spill {
-            /* display: none; */
+            display: none;
         }
 
         .athkar-gate__spill-image {
@@ -451,7 +453,7 @@
         <div
             class="athkar-gate-wrap relative w-full"
             x-data="athkarAppGate"
-            x-bind:class="{ 'is-enhanced': isEnhanced, 'is-spill-ready': isSpillReady }"
+            x-bind:class="{ 'is-enhanced': isEnhanced, 'is-spill-ready': isSpillReady, 'is-ve-on': isVisualEnhancementsEnabled }"
             x-bind:style="{
                 '--split': `${splitValue}%`,
                 '--spill-opacity': spillOpacity,
