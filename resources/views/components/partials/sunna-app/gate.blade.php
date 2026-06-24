@@ -185,7 +185,7 @@
                 0 10px 24px color-mix(in srgb, var(--primary-950) 20%, transparent),
                 0 0 16px color-mix(in srgb, var(--primary-400) 20%, transparent);
             transition: box-shadow 260ms cubic-bezier(0.22, 1, 0.36, 1);
-            will-change: box-shadow;
+            /* ponytail: dropped `will-change: box-shadow` — box-shadow can't be GPU-composited, so the hint just forces a wasted layer with no payoff while the shadow still repaints. */
         }
 
         .dark .sunna-shape {
@@ -253,6 +253,7 @@
         }
 
         /* Active (pointer hover or armed touch) lift for unlocked shapes: a wide primary aura. */
+        /* ponytail: same layered aura, intensity nudged down — the two widest glows (was 34px/6px and 72px/16px) are the dominant repaint cost while the hover box-shadow transitions; trimmed their blur radius + spread + opacity so the halo still reads but paints a far smaller area. Inner ring/close glow kept intact so the look holds. */
         .sunna-shape-slot.is-active:not(.is-locked) .sunna-shape {
             --zoom: 1.12;
             box-shadow:
@@ -260,9 +261,9 @@
                 inset 0 -5px 12px color-mix(in srgb, var(--primary-950) 26%, transparent),
                 0 0 0 2px color-mix(in srgb, var(--primary-400) 85%, transparent),
                 0 16px 34px color-mix(in srgb, var(--primary-950) 26%, transparent),
-                0 0 16px 1px color-mix(in srgb, var(--primary-300) 70%, transparent),
-                0 0 34px 6px color-mix(in srgb, var(--primary-400) 72%, transparent),
-                0 0 72px 16px color-mix(in srgb, var(--primary-500) 46%, transparent);
+                0 0 14px 1px color-mix(in srgb, var(--primary-300) 64%, transparent),
+                0 0 26px 4px color-mix(in srgb, var(--primary-400) 60%, transparent),
+                0 0 46px 9px color-mix(in srgb, var(--primary-500) 38%, transparent);
         }
 
         .dark .sunna-shape-slot.is-active:not(.is-locked) .sunna-shape {
@@ -271,9 +272,9 @@
                 inset 0 -5px 12px color-mix(in srgb, var(--primary-950) 40%, transparent),
                 0 0 0 2px color-mix(in srgb, var(--primary-300) 80%, transparent),
                 0 16px 34px color-mix(in srgb, black 44%, transparent),
-                0 0 18px 1px color-mix(in srgb, var(--primary-200) 60%, transparent),
-                0 0 38px 7px color-mix(in srgb, var(--primary-400) 70%, transparent),
-                0 0 78px 18px color-mix(in srgb, var(--primary-500) 50%, transparent);
+                0 0 14px 1px color-mix(in srgb, var(--primary-200) 54%, transparent),
+                0 0 28px 4px color-mix(in srgb, var(--primary-400) 60%, transparent),
+                0 0 46px 10px color-mix(in srgb, var(--primary-500) 42%, transparent);
         }
 
         .sunna-shape-slot.is-active:not(.is-locked) .sunna-shape__veil {
