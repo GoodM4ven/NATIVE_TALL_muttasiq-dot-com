@@ -439,6 +439,7 @@
 
 <div
     class="absolute inset-0 z-20 flex items-center justify-center px-6 py-12"
+    x-data="athkarAppGate"
     x-cloak
     x-show="views['athkar-app-gate'].isOpen && !activeMode && !isCompletionVisible"
     x-bind:style="gateTransitionStyles()"
@@ -449,10 +450,42 @@
     x-transition:leave-start="opacity-100 blur-0 athkar-shift-center"
     x-transition:leave-end="opacity-0! blur-[2px] athkar-shift-away"
 >
+    <div
+        class="duration-400 pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-40 transition-opacity dark:opacity-25"
+        aria-hidden="true"
+    >
+        <div
+            class="absolute inset-0 transition-opacity duration-500 will-change-[opacity]"
+            x-bind:style="`opacity:${gateBackgroundMorningOpacity()};transition:opacity 520ms cubic-bezier(0.22,1,0.36,1);`"
+        >
+            <x-goodmaven::blurred-image
+                class="h-full w-full scale-110 object-cover opacity-70"
+                alt="Athkar gate morning background"
+                :imagePath="asset('images/background/main-morning-blurred.webp')"
+                :thumbnailImagePath="asset('images/background/main-morning-blurred-blur-thumbnail.webp')"
+                isDisplayEnforcedJs="() => window.location.hash === '#athkar-app-gate'"
+            />
+        </div>
+
+        <div
+            class="absolute inset-0 transition-opacity duration-500 will-change-[opacity]"
+            x-bind:style="`opacity:${gateBackgroundNightOpacity()};transition:opacity 520ms cubic-bezier(0.22,1,0.36,1);`"
+        >
+            <x-goodmaven::blurred-image
+                class="h-full w-full scale-110 object-cover"
+                alt="Athkar gate night background"
+                :imagePath="asset('images/background/main-night-blurred.webp')"
+                :thumbnailImagePath="asset('images/background/main-night-blurred-blur-thumbnail.webp')"
+                isDisplayEnforcedJs="() => window.location.hash === '#athkar-app-gate'"
+            />
+        </div>
+
+        <div class="absolute inset-0 bg-black/0 dark:bg-black/60"></div>
+    </div>
+
     <div class="sm:zoom-[1.15] md:zoom-[1.15] relative flex select-none flex-col items-center">
         <div
             class="athkar-gate-wrap relative w-full"
-            x-data="athkarAppGate"
             x-bind:class="{ 'is-enhanced': isEnhanced, 'is-spill-ready': isSpillReady, 'is-ve-on': isVisualEnhancementsEnabled }"
             x-bind:style="{
                 '--split': `${splitValue}%`,

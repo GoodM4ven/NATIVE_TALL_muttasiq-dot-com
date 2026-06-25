@@ -1271,8 +1271,47 @@
     x-transition:leave-start="opacity-100 blur-0 athkar-shift-center"
     x-transition:leave-end="opacity-0! blur-[2px] athkar-shift-away"
 >
+    <div
+        class="duration-400 pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-40 transition-opacity dark:opacity-20"
+        aria-hidden="true"
+    >
+        <div
+            class="absolute inset-0 transition-opacity duration-500 will-change-[opacity]"
+            x-cloak
+            x-show="activeMode === 'sabah'"
+        >
+            <x-goodmaven::blurred-image
+                class="h-full w-full scale-110 object-cover opacity-50"
+                alt="Athkar morning background"
+                :imagePath="asset('images/background/athkar-morning-blurred.webp')"
+                :thumbnailImagePath="asset('images/background/athkar-morning-blurred-blur-thumbnail.webp')"
+                isDisplayEnforcedJs="() => window.location.hash === '#athkar-app-sabah'"
+            />
+        </div>
+
+        <div
+            class="absolute inset-0 transition-opacity duration-500 will-change-[opacity]"
+            x-cloak
+            x-show="activeMode === 'masaa'"
+        >
+            <x-goodmaven::blurred-image
+                class="h-full w-full scale-110 object-cover opacity-70 dark:opacity-90"
+                alt="Athkar night background"
+                :imagePath="asset('images/background/athkar-night-blurred.webp')"
+                :thumbnailImagePath="asset('images/background/athkar-night-blurred-blur-thumbnail.webp')"
+                isDisplayEnforcedJs="() => window.location.hash === '#athkar-app-masaa'"
+            />
+        </div>
+
+        <div
+            class="absolute inset-0 bg-black/0 dark:bg-black/60"
+            x-cloak
+            x-show="activeMode === 'masaa'"
+        ></div>
+    </div>
+
     <section
-        class="athkar-reader sm:max-w-117 md:max-w-145 lg:max-w-165 xl:max-w-178 2xl:max-w-190 3xl:max-w-212 4xl:max-w-4xl 3xl:gap-6 relative flex h-full min-h-0 w-full max-w-[min(93svw,20rem)] flex-col justify-center gap-3 pb-3 pt-10 sm:h-auto sm:gap-2 sm:py-0 md:gap-[0.6rem] md:py-5 lg:gap-3 lg:py-0 xl:gap-4 2xl:gap-5"
+        class="athkar-reader sm:max-w-117 md:max-w-145 lg:max-w-165 xl:max-w-178 2xl:max-w-190 3xl:max-w-212 4xl:max-w-4xl 3xl:gap-6 relative z-10 flex h-full min-h-0 w-full max-w-[min(93svw,20rem)] flex-col justify-center gap-3 pb-3 pt-10 sm:h-auto sm:gap-2 sm:py-0 md:gap-[0.6rem] md:py-5 lg:gap-3 lg:py-0 xl:gap-4 2xl:gap-5"
     >
         <div
             class="athkar-panel athkar-panel-actions 3xl:px-4 3xl:py-3 flex flex-wrap items-center gap-2 rounded-[0.55rem] py-1.5 pe-2.5 ps-1.5 sm:flex-nowrap sm:gap-4 sm:rounded-[0.45rem] sm:py-1 sm:pe-2 sm:ps-1 md:rounded-[0.65rem] md:px-[0.45rem] md:py-[0.3rem] lg:px-2 lg:py-[0.3rem] xl:px-[0.58rem] xl:py-[0.34rem] 2xl:px-3 2xl:py-2">

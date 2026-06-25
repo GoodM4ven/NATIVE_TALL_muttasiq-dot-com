@@ -672,9 +672,6 @@
                 <x-partials.download-stack-button />
             @endif
         </x-buttons-stack>
-
-        <x-partials.colorful-background />
-
         <main @class([
             'fixed inset-0 grid place-items-center sm:mt-0 dark:text-white',
             'mt-22' => is_platform('ios'),

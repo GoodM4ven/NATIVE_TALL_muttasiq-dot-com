@@ -2,7 +2,6 @@ import { resolveEffectiveSettings } from '../athkar-app-overrides';
 
 document.addEventListener('alpine:init', () => {
     const visualEnhancementsSettingKey = 'enable_visual_enhancements';
-    const athkarGateBackgroundPreviewEventName = 'athkar-gate-background-preview';
 
     window.Alpine.data('athkarAppGate', () => ({
         isFastUiMode: window.__APP_BROWSER_TEST_FAST_UI === true,
@@ -31,10 +30,8 @@ document.addEventListener('alpine:init', () => {
         init() {
             if (!this.isFastUiMode) {
                 this.syncVisualEnhancementsSetting();
-                this.dispatchBackgroundPreview();
                 window.addEventListener('control-panel-updated', (event) => {
                     this.syncVisualEnhancementsSetting(event?.detail?.controlPanel ?? null);
-                    this.dispatchBackgroundPreview();
                 });
 
                 return;
@@ -49,10 +46,8 @@ document.addEventListener('alpine:init', () => {
             this.pingDelay = 0;
             this.isSpillReady = true;
             this.syncVisualEnhancementsSetting();
-            this.dispatchBackgroundPreview();
             window.addEventListener('control-panel-updated', (event) => {
                 this.syncVisualEnhancementsSetting(event?.detail?.controlPanel ?? null);
-                this.dispatchBackgroundPreview();
             });
         },
         normalizeBooleanSettingValue(value, fallback = true) {
@@ -121,20 +116,34 @@ document.addEventListener('alpine:init', () => {
         syncVisualEnhancementsSetting(settings = null) {
             this.isVisualEnhancementsEnabled = this.resolveVisualEnhancementsSetting(settings);
         },
-        dispatchBackgroundPreview() {
-            // ponytail: drive the swap from the active side OR the hovered side, so a desktop hover at sm+ swaps the background exactly like a tap does on mobile (not just on click/activate). Regardless of VE; the consumer decides whether to render it.
-            const effectiveSide = this.activeSide ?? this.hoverSide;
-            const previewSide =
-                effectiveSide === 'morning' || effectiveSide === 'night' ? effectiveSide : null;
+        effectiveBackgroundSide() {
+            return this.activeSide ?? this.hoverSide;
+        },
+        gateBackgroundMorningOpacity() {
+            const side = this.effectiveBackgroundSide();
 
-            window.dispatchEvent(
-                new CustomEvent(athkarGateBackgroundPreviewEventName, {
-                    detail: {
-                        side: previewSide,
-                        isVisualEnhancementsEnabled: this.isVisualEnhancementsEnabled,
-                    },
-                }),
-            );
+            if (side === 'morning') {
+                return 1;
+            }
+
+            if (side === 'night') {
+                return 0;
+            }
+
+            return this.$store.colorScheme.isDarkModeOn ? 0 : 1;
+        },
+        gateBackgroundNightOpacity() {
+            const side = this.effectiveBackgroundSide();
+
+            if (side === 'night') {
+                return 1;
+            }
+
+            if (side === 'morning') {
+                return 0;
+            }
+
+            return this.$store.colorScheme.isDarkModeOn ? 1 : 0;
         },
         setScrollLock(locked) {
             document.documentElement.style.overflow = locked ? 'hidden' : '';
@@ -142,7 +151,7 @@ document.addEventListener('alpine:init', () => {
         },
         syncPerfProfile() {
             this.$store.bp.current;
-            // ponytail: the rich "panes/spill" presentation is dropped entirely — it was too costly even at sm+ with VE on. The gate now always uses the lightweight base-style background swap (driven by colorful-background). The only VE-on extra is the ripple, gated separately via the `is-ve-on` class. Holding isEnhanced at a hard false leaves the existing enhanced CSS/markup inert without ripping it all out.
+            // ponytail: the rich "panes/spill" presentation is dropped entirely — it was too costly even at sm+ with VE on. The gate keeps its own lightweight blurred backdrop locally, while the only VE-on extra left here is the ripple, gated separately via the `is-ve-on` class.
             const nextEnhanced = false;
 
             if (nextEnhanced && !this.isEnhanced) {
@@ -175,8 +184,6 @@ document.addEventListener('alpine:init', () => {
             } else {
                 this.animateSplit(50);
             }
-            // ponytail: swap the gate background on hover too (mobile only ever taps/activates; desktop hovers). Mirrors the activate-side swap.
-            this.dispatchBackgroundPreview();
         },
         startHover() {
             if (this.isHovering) {
@@ -204,18 +211,15 @@ document.addEventListener('alpine:init', () => {
 
             if (side === 'morning') {
                 this.animateSplit(40);
-                this.dispatchBackgroundPreview();
                 return;
             }
 
             if (side === 'night') {
                 this.animateSplit(60);
-                this.dispatchBackgroundPreview();
                 return;
             }
 
             this.animateSplit(50);
-            this.dispatchBackgroundPreview();
         },
         deactivateSide() {
             if (!this.activeSide) {
@@ -225,7 +229,6 @@ document.addEventListener('alpine:init', () => {
             this.activeSide = null;
             this.hoverSide = null;
             this.animateSplit(50);
-            this.dispatchBackgroundPreview();
         },
         handleOutsideActivation() {
             if (this.hasTouchInput()) {
