@@ -451,8 +451,12 @@
     x-transition:leave-end="opacity-0! blur-[2px] athkar-shift-away"
 >
     <div
-        class="duration-400 pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-40 transition-opacity dark:opacity-25"
         aria-hidden="true"
+        @class([
+            'duration-400 pointer-events-none absolute inset-x-0 bottom-0 z-0 overflow-hidden opacity-40 transition-opacity dark:opacity-25 sm:top-0',
+            '-top-22' => is_platform('ios'),
+            '-top-16' => !is_platform('ios'),
+        ])
     >
         <div
             class="absolute inset-0 transition-opacity duration-500 will-change-[opacity]"

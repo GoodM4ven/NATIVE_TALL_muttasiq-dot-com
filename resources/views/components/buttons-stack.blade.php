@@ -196,6 +196,16 @@
                 }
     
                 this.refreshItems();
+    
+                // Correct an external style clobber synchronously, before paint.
+                const styleClobber = mutations.some(
+                    (m) => m.type === 'attributes' && m.attributeName === 'style',
+                );
+    
+                if (styleClobber && this.respectingStack) {
+                    this.updateLayout();
+                }
+    
                 this.scheduleLayout(2, { afterDom: false });
             });
     
@@ -411,8 +421,8 @@
     
             const shouldHide = this.effectiveShouldHideStackItems();
     
-            item.style.opacity = shouldHide ? '0' : '1';
-            item.style.pointerEvents = shouldHide ? 'none' : '';
+            this.setItemStyle(item, 'opacity', shouldHide ? '0' : '1');
+            this.setItemStyle(item, 'pointerEvents', shouldHide ? 'none' : '');
         },
         hasAnyOpenFilamentModal() {
             const modal = document.querySelector('.fi-modal.fi-modal-open');
@@ -621,6 +631,11 @@
     
             return 70 - index;
         },
+        setItemStyle(item, prop, value) {
+            if (item.style[prop] !== value) {
+                item.style[prop] = value;
+            }
+        },
         updateLayout() {
             if (!this.items.length) {
                 return;
@@ -653,38 +668,44 @@
             const anchorSide = this.vertical === 'bottom' ? 'bottom' : 'top';
             const anchorOpposite = this.vertical === 'bottom' ? 'top' : 'bottom';
     
-            this.items.forEach((item) => this.resetItem(item));
+            const visibleSet = new Set(visibleItems);
+            this.items.forEach((item) => {
+                if (!visibleSet.has(item)) {
+                    this.resetItem(item);
+                }
+            });
     
             visibleItems.forEach((item, index) => {
                 const translateX = this.offsetFromAnchor(index, visibleCount).toFixed(2);
+                const positionTransition = this.isQuickStackOpen ? `transform ${this.stackTransitionMs}ms ease, ` : '';
     
-                item.style.position = 'absolute';
-                item.style[anchorSide] = '0';
-                item.style[anchorOpposite] = 'auto';
-                item.style.left = '0';
-                item.style.right = 'auto';
-                item.style.transform = `translateX(${translateX}rem)`;
-                item.style.transition = `transform ${this.stackTransitionMs}ms ease, opacity ${this.stackTransitionMs}ms ease`;
-                item.style.willChange = 'transform';
-                item.style.zIndex = String(this.itemZIndex(index));
+                this.setItemStyle(item, 'position', 'absolute');
+                this.setItemStyle(item, anchorSide, '0px');
+                this.setItemStyle(item, anchorOpposite, 'auto');
+                this.setItemStyle(item, 'left', '0px');
+                this.setItemStyle(item, 'right', 'auto');
+                this.setItemStyle(item, 'transform', `translateX(${translateX}rem)`);
+                this.setItemStyle(item, 'transition', `${positionTransition}opacity ${this.stackTransitionMs}ms ease`);
+                this.setItemStyle(item, 'willChange', 'transform');
+                this.setItemStyle(item, 'zIndex', String(this.itemZIndex(index)));
                 if (this.shouldManageDisplay(item)) {
-                    item.style.display = 'block';
+                    this.setItemStyle(item, 'display', 'block');
                 }
                 this.applyStackItemVisibility(item);
             });
         },
         resetItem(item) {
-            item.style.position = '';
-            item.style.top = '';
-            item.style.bottom = '';
-            item.style.left = '';
-            item.style.right = '';
-            item.style.transform = '';
-            item.style.transition = '';
-            item.style.willChange = '';
-            item.style.zIndex = '';
+            this.setItemStyle(item, 'position', '');
+            this.setItemStyle(item, 'top', '');
+            this.setItemStyle(item, 'bottom', '');
+            this.setItemStyle(item, 'left', '');
+            this.setItemStyle(item, 'right', '');
+            this.setItemStyle(item, 'transform', '');
+            this.setItemStyle(item, 'transition', '');
+            this.setItemStyle(item, 'willChange', '');
+            this.setItemStyle(item, 'zIndex', '');
             if (this.shouldManageDisplay(item)) {
-                item.style.display = '';
+                this.setItemStyle(item, 'display', '');
             }
         },
     }"
@@ -707,12 +728,14 @@
     x-on:click.window="
         if (!respectingStack) return;
         if ($refs.stack && $refs.stack.contains($event.target)) return;
+        if (!isQuickStackOpen && !isInteractionLocked) return;
         closeQuickStack();
         releaseInteractionLock();
         scheduleLayout(2, { afterDom: false });
     "
     x-on:click.outside="
         if (!respectingStack) return;
+        if (!isQuickStackOpen && !isInteractionLocked) return;
         closeQuickStack();
         releaseInteractionLock();
         scheduleLayout(2, { afterDom: false });

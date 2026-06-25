@@ -359,18 +359,9 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            if (this.isEnhanced) {
-                this.$dispatch('athkar-gate-open', { mode });
-                return;
-            }
-
-            if (this.activeSide === side) {
-                this.deactivateSide();
-                this.$dispatch('athkar-gate-open', { mode });
-                return;
-            }
-
-            this.activateSide(side);
+            // Non-touch (desktop): hover already previews the side, so a click opens
+            // immediately instead of arming-then-opening on a second click.
+            this.$dispatch('athkar-gate-open', { mode });
         },
     }));
 });

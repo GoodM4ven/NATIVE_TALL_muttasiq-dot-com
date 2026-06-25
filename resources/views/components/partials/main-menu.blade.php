@@ -5,8 +5,12 @@
     x-transition.opacity.duration.300ms
 >
     <div
-        class="duration-400 absolute inset-0 z-0 overflow-hidden opacity-30 transition-opacity dark:opacity-40"
         aria-hidden="true"
+        @class([
+            'duration-400 absolute inset-x-0 bottom-0 z-0 overflow-hidden opacity-30 transition-opacity dark:opacity-40 sm:top-0',
+            '-top-22' => is_platform('ios'),
+            '-top-16' => !is_platform('ios'),
+        ])
     >
         <div
             class="absolute inset-0 transition-opacity delay-300 duration-500 will-change-[opacity]"
@@ -40,7 +44,7 @@
     </div>
 
     <div
-        class="3xl:scale-[1.15] 4xl:scale-[1.25] -top-40! sm:top-0! absolute inset-0 z-10 flex scale-[0.625] items-center justify-center sm:scale-[0.85] md:scale-[0.85] lg:scale-[1] xl:scale-[0.8] 2xl:scale-[1]">
+        class="3xl:scale-[1.15] 4xl:scale-[1.25] -top-30! sm:top-0! absolute inset-0 z-10 flex scale-[0.7] items-center justify-center sm:scale-[0.85] md:scale-[0.85] lg:scale-[1] xl:scale-[0.8] 2xl:scale-[1]">
         <div
             x-cloak
             x-show="views['main-menu'].isOpen"

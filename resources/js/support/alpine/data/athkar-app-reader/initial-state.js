@@ -79,7 +79,10 @@ export const createInitialState = (config, deps) => {
         textScroll: {
             active: false,
             source: null,
+            startX: 0,
             startY: 0,
+            lastX: 0,
+            lastY: 0,
             startScrollTop: 0,
             pointerId: null,
             element: null,

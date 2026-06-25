@@ -148,7 +148,10 @@ export const createTextInteractionModule = (deps) => {
 
             this.textScroll.active = true;
             this.textScroll.source = event?.type?.startsWith('touch') ? 'touch' : 'pointer';
+            this.textScroll.startX = point.x;
             this.textScroll.startY = point.y;
+            this.textScroll.lastX = point.x;
+            this.textScroll.lastY = point.y;
             this.textScroll.startScrollTop = box.scrollTop;
             this.textScroll.pointerId = point.pointerId;
             this.textScroll.element = box;
@@ -182,7 +185,18 @@ export const createTextInteractionModule = (deps) => {
                 return;
             }
 
+            this.textScroll.lastX = point.x;
+            this.textScroll.lastY = point.y;
+
             const deltaY = point.y - this.textScroll.startY;
+            const deltaX = point.x - this.textScroll.startX;
+
+            // A clearly horizontal drag is a thikr-to-thikr swipe (resolved in endTextScroll),
+            // so don't consume it as a vertical scroll.
+            if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) >= 12) {
+                return;
+            }
+
             this.textScroll.element.scrollTop = this.textScroll.startScrollTop - deltaY;
             this.syncTextBoxEdgeFade(this.textScroll.element);
 
@@ -193,6 +207,8 @@ export const createTextInteractionModule = (deps) => {
         },
 
         endTextScroll() {
+            let horizontalNav = 0;
+
             if (this.textScroll.element) {
                 const target =
                     this.textScroll.element.dataset.athkarScrollTarget === 'origin'
@@ -204,14 +220,32 @@ export const createTextInteractionModule = (deps) => {
                     this.textScroll.element.scrollTop,
                 );
                 this.syncTextBoxEdgeFade(this.textScroll.element);
+
+                const deltaX = this.textScroll.lastX - this.textScroll.startX;
+                const deltaY = this.textScroll.lastY - this.textScroll.startY;
+
+                if (Math.abs(deltaX) >= 40 && Math.abs(deltaX) > Math.abs(deltaY)) {
+                    horizontalNav = deltaX < 0 ? -1 : 1;
+                }
             }
 
             this.textScroll.active = false;
             this.textScroll.source = null;
+            this.textScroll.startX = 0;
             this.textScroll.startY = 0;
+            this.textScroll.lastX = 0;
+            this.textScroll.lastY = 0;
             this.textScroll.startScrollTop = 0;
             this.textScroll.pointerId = null;
             this.textScroll.element = null;
+
+            if (horizontalNav === -1) {
+                this.prev();
+                this.swipe.ignoreClick = true;
+            } else if (horizontalNav === 1) {
+                this.next();
+                this.swipe.ignoreClick = true;
+            }
         },
 
         copyFeedbackStyle() {
@@ -1000,6 +1034,13 @@ export const createTextInteractionModule = (deps) => {
                 return;
             }
 
+            // A new genuine gesture clears any stale ignore-click left from a previous swipe
+            // whose synthesized "ghost click" never arrived (large-movement swipes emit no
+            // click), which would otherwise swallow this gesture's first real tap.
+            this.swipe.ignoreClick = false;
+
+            // Overflowing text owns its own gesture (beginTextScroll handles vertical scroll
+            // and horizontal nav, and stopPropagation()s past here); bail so the two don't fight.
             const textBox = event.target?.closest?.('[data-athkar-text-box]');
             if (
                 this.isTouchReaderContext() &&
