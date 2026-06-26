@@ -85,3 +85,13 @@ it('rejects a wrong password', function () {
 
     $this->assertGuest();
 });
+
+it('renders the auth modal loading overlay hooks', function () {
+    $html = livewire(AuthButton::class)->html();
+
+    expect($html)
+        ->toContain('isAuthModalLoading')
+        ->toContain('beginAuthModalLoading()')
+        ->toContain('openAuthModal()')
+        ->toContain('x-on:x-modal-opened.window');
+});
