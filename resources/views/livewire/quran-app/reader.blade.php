@@ -2461,9 +2461,7 @@
             animation: quran-wird-hover-shimmer-pass 1.18s cubic-bezier(0.24, 0.75, 0.3, 1) 1;
         }
 
-        /* The gem-shaped "well" carries the clip; fills inside are plain rects,
-               so their leading edge reads as a straight liquid waterline cut by the
-               gem outline, mana-style, instead of a tiny standalone hexagon. */
+        /* The gem-shaped "well" carries the clip; fills inside are plain rects, so their leading edge reads as a straight liquid waterline cut by the gem outline, mana-style, instead of a tiny standalone hexagon. */
         .quran-wird-progress-fill-well {
             position: absolute;
             inset: 0.16rem;
