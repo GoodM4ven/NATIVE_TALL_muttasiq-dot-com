@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Auth;
 
 use App\Models\User;
+use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -14,9 +15,30 @@ use Laravel\Socialite\Facades\Socialite;
 
 class TelegramAuthController
 {
+    public function native(): View
+    {
+        $isNativeRuntime = is_platform('native');
+
+        return view('auth.telegram-native', [
+            'isNativeRuntime' => $isNativeRuntime,
+            'telegramBotName' => trim((string) config('services.telegram.bot', '')),
+            'telegramCallbackUrl' => route('auth.telegram.callback'),
+            'nativeTelegramCallbackUrl' => $this->resolveNativeTelegramCallbackUrl(),
+        ]);
+    }
+
     public function callback(): RedirectResponse
     {
-        $telegramUser = Socialite::driver('telegram')->user();
+        try {
+            $telegramUser = Socialite::driver('telegram')->user();
+        } catch (\Throwable) {
+            notify(
+                'heroicon-o-exclamation-circle',
+                arabic_text('تعذر إتمام تسجيل الدخول عبر تيليجرام. حاول مرة أخرى.'),
+            );
+
+            return redirect()->route('home');
+        }
 
         $existing = User::query()->where('telegram_id', $telegramUser->getId())->first();
 
@@ -50,6 +72,11 @@ class TelegramAuthController
         notify('heroicon-o-check-circle', arabic_text('تم تسجيل الدخول بنجاح'));
 
         return redirect()->route('home');
+    }
+
+    private function resolveNativeTelegramCallbackUrl(): string
+    {
+        return 'nativephp://auth/telegram/callback';
     }
 
     private function generateUniqueUsername(): string

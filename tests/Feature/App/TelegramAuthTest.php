@@ -58,6 +58,12 @@ it('reuses the existing account on a returning telegram login', function () {
     $this->assertAuthenticatedAs($existing->fresh());
 });
 
+it('redirects home when telegram callback data is invalid', function () {
+    get(route('auth.telegram.callback'))->assertRedirect(route('home'));
+
+    $this->assertGuest();
+});
+
 it('logs in with username and password', function () {
     $user = User::factory()->create(['password' => Hash::make('secret-pass')]);
 
@@ -91,7 +97,40 @@ it('renders the auth modal loading overlay hooks', function () {
 
     expect($html)
         ->toContain('isAuthModalLoading')
+        ->toContain('window.nativeNetwork?.status')
+        ->toContain('closeAuthModalIfOpen()')
         ->toContain('beginAuthModalLoading()')
         ->toContain('openAuthModal()')
         ->toContain('x-on:x-modal-opened.window');
+});
+
+it('renders a native-safe telegram auth launcher in mobile runtime', function () {
+    config([
+        'nativephp-internal.running' => true,
+        'nativephp-internal.platform' => 'android',
+        'app.custom.native_end_points.settings' => 'http://192.168.1.8:8787/api/settings',
+        'app.custom.native_end_points.telegram_auth' => 'https://muttasiq.com/auth/telegram/native',
+    ]);
+
+    $html = view('livewire.auth.telegram-widget')->render();
+
+    expect($html)
+        ->toContain('browser?.auth')
+        ->toContain('window.nativeNetwork?.status')
+        ->toContain('http:\\/\\/192.168.1.8:8787\\/auth\\/telegram\\/native')
+        ->toContain(arabic_text('يتطلب تسجيل الدخول عبر تيليجرام اتصالًا بالإنترنت.'));
+});
+
+it('renders the native telegram launcher page with the nativephp deeplink callback', function () {
+    config([
+        'nativephp-internal.running' => true,
+        'services.telegram.bot' => 'muttasiq_bot',
+    ]);
+
+    get(route('auth.telegram.native'))
+        ->assertOk()
+        ->assertSee('images/logo.svg', escape: false)
+        ->assertSee('https://telegram.org/js/telegram-widget.js?22', escape: false)
+        ->assertSee('nativephp:\\/\\/auth\\/telegram\\/callback', escape: false)
+        ->assertSee('muttasiq_bot', escape: false);
 });

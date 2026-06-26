@@ -14,6 +14,7 @@ Route::get('/', HomeController::class)
     ->middleware(TrackWebHomeMetrics::class)
     ->name('home');
 
+Route::get('/auth/telegram/native', [TelegramAuthController::class, 'native'])->name('auth.telegram.native');
 Route::get('/auth/telegram/callback', [TelegramAuthController::class, 'callback'])->name('auth.telegram.callback');
 
 Route::get('/qpc-v2-fonts/{page}.ttf', function (int $page) {

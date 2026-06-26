@@ -744,32 +744,11 @@ export const createLifecycleBootstrapSupportAndWirdStateModule = (deps) => {
                 }
             }
 
-            if (typeof this.mountReaderAction === 'function') {
-                const mounted = await this.mountReaderAction('supportUnlock');
-
-                if (mounted) {
-                    return;
-                }
-            }
-
-            if (this.$wire && typeof this.$wire.mountAction === 'function') {
-                if (typeof this.$wire.unmountAction === 'function') {
-                    try {
-                        await this.$wire.unmountAction(false);
-                    } catch (_) {
-                        //
-                    }
-                }
-
-                try {
-                    await this.$wire.mountAction('supportUnlock');
-
-                    return;
-                } catch (_) {
-                    //
-                }
-            }
-
+            // The support-unlock modal is owned by the control panel, which wires the
+            // loading overlay, the Buy Me a Coffee widget, and its removal on close.
+            // Route through the canonical event instead of mounting a duplicate action
+            // on the reader's own $wire (that bypassed the overlay and BMC teardown,
+            // and left the page hidden without a matching reveal).
             window.dispatchEvent(new CustomEvent('open-support-unlock-modal'));
         },
 

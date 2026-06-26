@@ -25,6 +25,7 @@ return [
             'athkar' => env('NATIVE_ATHKAR_ENDPOINT', 'https://muttasiq.com/api/athkar'),
             'settings' => env('NATIVE_SETTINGS_ENDPOINT', 'https://muttasiq.com/api/settings'),
             'visit_metrics' => env('NATIVE_VISIT_METRICS_ENDPOINT', 'https://muttasiq.com/api/visit-metrics'),
+            'telegram_auth' => env('NATIVE_TELEGRAM_AUTH_ENDPOINT', 'https://muttasiq.com/auth/telegram/native'),
             'quran_snapshot_meta' => env('NATIVE_QURAN_SNAPSHOT_META_ENDPOINT', 'https://muttasiq.com/api/quran-snapshot/meta'),
             'quran_snapshot_download' => env('NATIVE_QURAN_SNAPSHOT_DOWNLOAD_ENDPOINT', 'https://muttasiq.com/api/quran-snapshot/download'),
             'js_error_reports' => env('NATIVE_JS_ERROR_REPORTS_ENDPOINT', 'https://muttasiq.com/api/js-error-reports'),

@@ -54,7 +54,7 @@ return [
     |
     */
 
-    'deeplink_scheme' => env('NATIVEPHP_DEEPLINK_SCHEME'),
+    'deeplink_scheme' => env('NATIVEPHP_DEEPLINK_SCHEME', 'muttasiq'),
 
     /*
     |--------------------------------------------------------------------------

@@ -135,10 +135,18 @@ const releaseWebWakeLock = async () => {
 
 const syncScreenAwakeState = () => {
     const shouldKeepScreenAwake = activeScreenAwakeTokens.size > 0;
+    const isDocumentVisible =
+        typeof document === 'undefined' || document.visibilityState === 'visible';
+    const shouldHoldScreenAwake = shouldKeepScreenAwake && isDocumentVisible;
+    const nativeBridgeHandled = applyNativeBridgeAwakeState(shouldHoldScreenAwake);
 
-    applyNativeBridgeAwakeState(shouldKeepScreenAwake);
+    if (!shouldHoldScreenAwake) {
+        void releaseWebWakeLock();
 
-    if (!shouldKeepScreenAwake) {
+        return;
+    }
+
+    if (nativeBridgeHandled) {
         void releaseWebWakeLock();
 
         return;
@@ -153,15 +161,19 @@ if (typeof document !== 'undefined') {
             return;
         }
 
-        if (document.visibilityState !== 'visible') {
-            return;
-        }
-
         syncScreenAwakeState();
     });
 }
 
 if (typeof window !== 'undefined') {
+    window.addEventListener('pagehide', () => {
+        if (activeScreenAwakeTokens.size === 0) {
+            return;
+        }
+
+        syncScreenAwakeState();
+    });
+
     window.addEventListener('beforeunload', () => {
         activeScreenAwakeTokens.clear();
         syncScreenAwakeState();

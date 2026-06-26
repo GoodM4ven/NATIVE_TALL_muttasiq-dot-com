@@ -2461,34 +2461,65 @@
             animation: quran-wird-hover-shimmer-pass 1.18s cubic-bezier(0.24, 0.75, 0.3, 1) 1;
         }
 
-        .quran-wird-progress-fill {
+        /* The gem-shaped "well" carries the clip; fills inside are plain rects,
+               so their leading edge reads as a straight liquid waterline cut by the
+               gem outline, mana-style, instead of a tiny standalone hexagon. */
+        .quran-wird-progress-fill-well {
             position: absolute;
-            inset-block: 0.16rem;
-            inset-inline-start: 0;
+            inset: 0.16rem;
+            border-radius: 999px;
             clip-path: polygon(var(--quran-wird-frame-cut-inner) 0,
                     calc(100% - var(--quran-wird-frame-cut-inner)) 0,
                     100% 50%,
                     calc(100% - var(--quran-wird-frame-cut-inner)) 100%,
                     var(--quran-wird-frame-cut-inner) 100%,
                     0 50%);
-            transition: width 420ms cubic-bezier(0.22, 1, 0.36, 1);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .quran-wird-progress-fill {
+            position: absolute;
+            inset-block: 0;
+            inset-inline-start: 0;
+            transition: width 480ms cubic-bezier(0.22, 1, 0.36, 1);
         }
 
         .quran-wird-progress-fill--committed {
             width: var(--quran-wird-progress-percent);
-            background: linear-gradient(90deg,
-                    color-mix(in srgb, var(--success-600) 74%, transparent),
-                    color-mix(in srgb, var(--success-400) 58%, transparent));
+            background:
+                linear-gradient(180deg,
+                    color-mix(in srgb, var(--success-200) 46%, transparent),
+                    transparent 42%),
+                linear-gradient(90deg,
+                    color-mix(in srgb, var(--success-700) 82%, transparent),
+                    color-mix(in srgb, var(--success-500) 70%, transparent) 58%,
+                    color-mix(in srgb, var(--success-400) 64%, transparent));
             z-index: 1;
+        }
+
+        /* Glowing meniscus riding the leading waterline (direction-agnostic). */
+        .quran-wird-progress-fill--committed::after {
+            content: '';
+            position: absolute;
+            inset-block: -30%;
+            inset-inline-end: -0.16rem;
+            width: 0.6rem;
+            border-radius: 999px;
+            background: linear-gradient(90deg,
+                    transparent 0%,
+                    color-mix(in srgb, white 78%, var(--success-200)) 50%,
+                    transparent 100%);
+            box-shadow: 0 0 0.5rem color-mix(in srgb, var(--success-300) 60%, transparent);
+            opacity: 0.92;
         }
 
         .quran-wird-progress-fill--browse {
             width: var(--quran-wird-progress-browse-percent);
-            inset-block: 0.16rem;
             background: linear-gradient(90deg,
                     color-mix(in srgb, white 86%, var(--gray-100) 14%),
                     color-mix(in srgb, var(--gray-200) 56%, transparent));
-            opacity: 0.34;
+            opacity: 0.3;
             z-index: 2;
         }
 
@@ -4177,13 +4208,12 @@
                                 aria-hidden="true"
                             ></span>
                             <span
-                                class="quran-wird-progress-fill quran-wird-progress-fill--committed"
+                                class="quran-wird-progress-fill-well"
                                 aria-hidden="true"
-                            ></span>
-                            <span
-                                class="quran-wird-progress-fill quran-wird-progress-fill--browse"
-                                aria-hidden="true"
-                            ></span>
+                            >
+                                <span class="quran-wird-progress-fill quran-wird-progress-fill--committed"></span>
+                                <span class="quran-wird-progress-fill quran-wird-progress-fill--browse"></span>
+                            </span>
                             <span class="quran-wird-progress-content">
                                 <span
                                     class="quran-wird-progress-percent 4xl:min-h-[1.56rem] 4xl:min-w-[2.54rem] 4xl:px-[0.52rem] 4xl:text-[0.68rem] 2xl:min-h-5.5 3xl:min-h-6 min-h-[1.16rem] min-w-[1.8rem] px-[0.34rem] text-[0.52rem] sm:min-h-[1.4rem] sm:min-w-[2.22rem] sm:px-[0.46rem] sm:text-[0.61rem] md:min-h-[1.46rem] md:min-w-[2.32rem] md:px-[0.48rem] md:text-[0.75rem] lg:min-h-6 lg:min-w-[2.42rem] lg:px-2 lg:text-[0.66rem] xl:min-h-6 xl:text-[0.63rem] 2xl:text-[0.66rem]"

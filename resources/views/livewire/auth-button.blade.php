@@ -11,8 +11,28 @@
         x-data="{
             authModalId: @js('fi-' . $this->getId() . '-action-0'),
             isAuthenticated: @js($isAuthenticated),
+            isNativeRuntime: @js((bool) config('nativephp-internal.running', false) && is_platform('mobile')),
+            isOnline: true,
             isAuthModalLoading: false,
             authModalLoadingSafetyTimerId: null,
+            async resolveOnlineState() {
+                if (this.isNativeRuntime && window.nativeNetwork?.status) {
+                    try {
+                        const status = await window.nativeNetwork.status();
+        
+                        if (typeof status?.connected === 'boolean') {
+                            return status.connected;
+                        }
+                    } catch (_) {
+                        // Fall back to the browser hint when the native bridge is temporarily unavailable.
+                    }
+                }
+        
+                return typeof navigator === 'undefined' ? true : navigator.onLine;
+            },
+            async syncConnectivityState() {
+                this.isOnline = await this.resolveOnlineState();
+            },
             beginAuthModalLoading() {
                 this.isAuthModalLoading = true;
         
@@ -37,14 +57,32 @@
                     this.authModalLoadingSafetyTimerId = null;
                 }
             },
+            closeAuthModalIfOpen() {
+                window.dispatchEvent(new CustomEvent('close-modal-quietly', {
+                    detail: { id: this.authModalId },
+                }));
+                window.dispatchEvent(new CustomEvent('close-modal', {
+                    detail: { id: this.authModalId },
+                }));
+                this.endAuthModalLoading();
+            },
             openAuthModal() {
+                if (this.isNativeRuntime && !this.isOnline) {
+                    this.closeAuthModalIfOpen();
+        
+                    return;
+                }
+        
                 this.beginAuthModalLoading();
         
                 void $wire.mountAction(this.isAuthenticated ? 'account' : 'login');
             },
         }"
+        x-init="syncConnectivityState()"
         x-transition
-        x-show="views['main-menu'].isOpen && !isControlPanelOpen && !isAthkarManagerOpen && !isIntroductionVideoOpen"
+        x-show="views['main-menu'].isOpen && !isControlPanelOpen && !isAthkarManagerOpen && !isIntroductionVideoOpen && (!isNativeRuntime || isOnline)"
+        x-on:online.window="syncConnectivityState()"
+        x-on:offline.window="syncConnectivityState().then(() => { if (isNativeRuntime && !isOnline) { closeAuthModalIfOpen(); } })"
         x-on:x-modal-opened.window="if ($event.detail?.id === authModalId) { endAuthModalLoading(); }"
         x-on:close-modal.window="if ($event.detail?.id === authModalId) { endAuthModalLoading(); }"
         x-on:close-modal-quietly.window="if ($event.detail?.id === authModalId) { endAuthModalLoading(); }"

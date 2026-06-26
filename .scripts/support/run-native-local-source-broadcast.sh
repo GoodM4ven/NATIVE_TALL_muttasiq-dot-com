@@ -22,12 +22,19 @@ public_base_url="${NATIVE_QURAN_LOCAL_PUBLIC_BASE_URL:-}"
 android_host="${NATIVE_QURAN_LOCAL_ANDROID_HOST:-10.0.2.2}"
 ios_host="${NATIVE_QURAN_LOCAL_IOS_HOST:-127.0.0.1}"
 api_log_file="${project_root}/storage/logs/native-local-source-broadcast-api.log"
+tailscale_log_file="${project_root}/storage/logs/native-local-source-broadcast-tailscale.log"
 adb_reverse_enabled=0
 adb_reverse_active=0
 server_pid=""
 server_ready=0
 port_was_explicit=0
 native_android_keep_loopback_endpoints=0
+tailscale_funnel_pid=""
+tailscale_funnel_active=0
+tailscale_funnel_target=""
+tailscale_funnel_https_port=443
+watch_prefers_tailscale=0
+tailscale_requires_sudo=0
 
 if [[ -n "${NATIVE_QURAN_LOCAL_API_PORT:-}" ]]; then
     port_was_explicit=1
@@ -74,6 +81,170 @@ resolve_local_lan_ipv4() {
         printf '%s' "${lan_ipv4}"
     fi
 }
+
+resolve_tailscale_funnel_url() {
+    local funnel_status=""
+
+    if ! command -v tailscale >/dev/null 2>&1; then
+        return 1
+    fi
+
+    funnel_status="$(tailscale funnel status 2>/dev/null || true)"
+
+    if [[ -z "${funnel_status}" ]]; then
+        return 1
+    fi
+
+    printf '%s\n' "${funnel_status}" \
+        | grep -Eo 'https://[^[:space:]]+\.ts\.net(:[0-9]+)?' \
+        | head -n 1 \
+        | sed -E 's#:443$##'
+}
+
+resolve_tailscale_command_prefix() {
+    if [[ "$(uname -s)" == "Linux" ]] && [[ "$(id -u)" -ne 0 ]] && command -v sudo >/dev/null 2>&1; then
+        tailscale_requires_sudo=1
+        printf 'sudo'
+        return 0
+    fi
+
+    tailscale_requires_sudo=0
+    printf ''
+}
+
+log_tailscale_diagnostics() {
+    if ! command -v tailscale >/dev/null 2>&1; then
+        echo "[native-local-source-broadcast] tailscale: command not installed" >&2
+        return 1
+    fi
+
+    {
+        echo "[native-local-source-broadcast] tailscale version:"
+        tailscale version
+        echo "[native-local-source-broadcast] tailscale status:"
+        tailscale status --json || true
+        echo "[native-local-source-broadcast] tailscale funnel status:"
+        tailscale funnel status || true
+    } >"${tailscale_log_file}" 2>&1
+
+    local tailscale_backend_state=""
+    local tailscale_health_state=""
+
+    tailscale_backend_state="$(
+        grep -Eo '"BackendState"[[:space:]]*:[[:space:]]*"[^"]+"' "${tailscale_log_file}" 2>/dev/null \
+            | head -n 1 \
+            | sed -E 's/.*:[[:space:]]*"([^"]+)"/\1/'
+    )"
+    tailscale_health_state="$(
+        grep -Eo '"Health"[[:space:]]*:[[:space:]]*\[[^]]*\]' "${tailscale_log_file}" 2>/dev/null \
+            | head -n 1 \
+            | sed -E 's/.*\[([^]]*)\].*/\1/'
+    )"
+
+    echo "[native-local-source-broadcast] tailscale backend: ${tailscale_backend_state:-unknown}" >&2
+    echo "[native-local-source-broadcast] tailscale health: ${tailscale_health_state:-unknown}" >&2
+    echo "[native-local-source-broadcast] tailscale diagnostics: ${tailscale_log_file}" >&2
+
+    if [[ "${tailscale_backend_state}" == "NeedsLogin" ]]; then
+        return 1
+    fi
+
+    if [[ "${tailscale_health_state}" == '"Tailscale is stopped."' ]]; then
+        return 1
+    fi
+
+    return 0
+}
+
+prompt_for_tailscale_setup_or_exit() {
+    local setup_link="https://login.tailscale.com/f/funnel?node=nBuJSLYtYt11CNTRL"
+
+    echo "[native-local-source-broadcast] tailscale is not ready yet." >&2
+    echo "[native-local-source-broadcast] first-time setup reminders:" >&2
+    echo "[native-local-source-broadcast] - run: sudo tailscale up" >&2
+    echo "[native-local-source-broadcast] - if this host still needs Funnel approval, open: ${setup_link}" >&2
+    echo "[native-local-source-broadcast] - if you want non-root Funnel config later, run: sudo tailscale set --operator=\"${USER}\"" >&2
+    echo "[native-local-source-broadcast] continuing without Tailscale will fall back to the local LAN URL." >&2
+
+    if [[ ! -t 0 ]]; then
+        echo "[native-local-source-broadcast] non-interactive shell; stopping here." >&2
+        exit 1
+    fi
+
+    read -r -p "[native-local-source-broadcast] continue with LAN fallback anyway? [y/N] " response
+
+    case "${response}" in
+    y | Y | yes | YES)
+        return 0
+        ;;
+    *)
+        echo "[native-local-source-broadcast] aborted." >&2
+        exit 1
+        ;;
+    esac
+}
+
+start_tailscale_funnel() {
+    local funnel_target="$1"
+
+    if ! command -v tailscale >/dev/null 2>&1; then
+        return 1
+    fi
+
+    : >"${tailscale_log_file}"
+
+    local tailscale_command_prefix
+    tailscale_command_prefix="$(resolve_tailscale_command_prefix)"
+
+    if [[ "${tailscale_requires_sudo}" -eq 1 ]]; then
+        echo "[native-local-source-broadcast] tailscale funnel config requires sudo on this machine; you will be prompted once." >&2
+    fi
+
+    if [[ -n "${tailscale_command_prefix}" ]]; then
+        (
+            cd "${project_root}"
+            ${tailscale_command_prefix} tailscale funnel --yes --bg --https="${tailscale_funnel_https_port}" "${funnel_target}"
+        ) >"${tailscale_log_file}" 2>&1
+    else
+        (
+            cd "${project_root}"
+            tailscale funnel --yes --bg --https="${tailscale_funnel_https_port}" "${funnel_target}"
+        ) >"${tailscale_log_file}" 2>&1
+    fi
+
+    tailscale_funnel_pid=""
+    tailscale_funnel_active=1
+    tailscale_funnel_target="${funnel_target}"
+
+    return 0
+}
+
+stop_tailscale_funnel() {
+    if [[ "${tailscale_funnel_active}" -ne 1 ]]; then
+        return 0
+    fi
+
+    if [[ -n "${tailscale_funnel_pid}" ]] && kill -0 "${tailscale_funnel_pid}" >/dev/null 2>&1; then
+        kill "${tailscale_funnel_pid}" >/dev/null 2>&1 || true
+        wait "${tailscale_funnel_pid}" >/dev/null 2>&1 || true
+    fi
+
+    if [[ -n "${tailscale_funnel_target}" ]]; then
+        if [[ "${tailscale_requires_sudo}" -eq 1 ]]; then
+            sudo tailscale funnel --yes --https="${tailscale_funnel_https_port}" "${tailscale_funnel_target}" off >/dev/null 2>&1 || true
+        else
+            tailscale funnel --yes --https="${tailscale_funnel_https_port}" "${tailscale_funnel_target}" off >/dev/null 2>&1 || true
+        fi
+    fi
+}
+
+if [[ "${mode}" == "watch" ]]; then
+    if log_tailscale_diagnostics; then
+        watch_prefers_tailscale=1
+    else
+        prompt_for_tailscale_setup_or_exit
+    fi
+fi
 
 extract_url_host() {
     local url="$1"
@@ -127,22 +298,54 @@ if [[ "${adb_reverse_enabled}" -eq 1 ]] && adb get-state >/dev/null 2>&1; then
         adb_reverse_active=1
         native_android_keep_loopback_endpoints=1
 
-        if [[ -z "${public_base_url}" ]]; then
+        if [[ -z "${public_base_url}" && ! ("${mode}" == "watch" && "${watch_prefers_tailscale}" -eq 1) ]]; then
             public_base_url="http://127.0.0.1:${port}"
         fi
     fi
 fi
 
-if [[ -z "${public_base_url}" ]]; then
-    if [[ "${platform}" == "android" ]]; then
-        local_lan_ipv4="$(resolve_local_lan_ipv4)"
+if [[ -z "${public_base_url}" && "${mode}" == "watch" ]]; then
+    tailscale_funnel_target="localhost:${port}"
 
+    if log_tailscale_diagnostics && start_tailscale_funnel "${tailscale_funnel_target}"; then
+        for _ in {1..80}; do
+            if funnel_url="$(resolve_tailscale_funnel_url || true)"; then
+                if [[ -n "${funnel_url}" ]]; then
+                    public_base_url="${funnel_url}"
+                    echo "[native-local-source-broadcast] using tailscale funnel ${public_base_url}" >&2
+                    break
+                fi
+            fi
+
+            if ! kill -0 "${tailscale_funnel_pid}" >/dev/null 2>&1; then
+                echo "[native-local-source-broadcast] tailscale funnel exited early. See ${tailscale_log_file}" >&2
+                stop_tailscale_funnel
+                break
+            fi
+
+            sleep 0.25
+        done
+
+        if [[ -z "${public_base_url}" ]]; then
+            echo "[native-local-source-broadcast] tailscale funnel did not become ready in time. Falling back to LAN host." >&2
+            stop_tailscale_funnel
+        fi
+    fi
+fi
+
+if [[ -z "${public_base_url}" ]]; then
+    local_lan_ipv4="$(resolve_local_lan_ipv4 || true)"
+
+    if [[ "${platform}" == "android" ]]; then
         if [[ -n "${local_lan_ipv4}" && "${android_host}" == "10.0.2.2" && "${adb_reverse_active}" -eq 0 ]]; then
             public_base_url="http://${local_lan_ipv4}:${port}"
             echo "[native-local-source-broadcast] adb reverse is inactive; using detected LAN host ${local_lan_ipv4}" >&2
         else
             public_base_url="http://${android_host}:${port}"
         fi
+    elif [[ -n "${local_lan_ipv4}" ]] && is_loopback_style_host "${ios_host}"; then
+        public_base_url="http://${local_lan_ipv4}:${port}"
+        echo "[native-local-source-broadcast] using detected LAN host ${local_lan_ipv4} for ios" >&2
     else
         public_base_url="http://${ios_host}:${port}"
     fi
@@ -179,6 +382,8 @@ if [[ ! -f "${native_script}" ]]; then
 fi
 
 cleanup() {
+    stop_tailscale_funnel
+
     if [[ "${adb_reverse_active}" -eq 1 ]]; then
         adb reverse --remove "tcp:${port}" >/dev/null 2>&1 || true
     fi
@@ -223,11 +428,13 @@ fi
 meta_endpoint="${public_base_url}/api/quran-snapshot/meta"
 download_endpoint="${public_base_url}/api/quran-snapshot/download"
 settings_endpoint="${public_base_url}/api/settings"
+telegram_auth_endpoint="${public_base_url}/auth/telegram/native"
 
 echo "[native-local-source-broadcast] local API server: http://${bind_host}:${port}"
 echo "[native-local-source-broadcast] settings endpoint: ${settings_endpoint}"
 echo "[native-local-source-broadcast] meta endpoint: ${meta_endpoint}"
 echo "[native-local-source-broadcast] download endpoint: ${download_endpoint}"
+echo "[native-local-source-broadcast] telegram auth endpoint: ${telegram_auth_endpoint}"
 echo "[native-local-source-broadcast] running ${native_script}"
 
 (
@@ -235,6 +442,7 @@ echo "[native-local-source-broadcast] running ${native_script}"
     NATIVE_SETTINGS_ENDPOINT="${settings_endpoint}" \
         NATIVE_QURAN_SNAPSHOT_META_ENDPOINT="${meta_endpoint}" \
         NATIVE_QURAN_SNAPSHOT_DOWNLOAD_ENDPOINT="${download_endpoint}" \
+        NATIVE_TELEGRAM_AUTH_ENDPOINT="${telegram_auth_endpoint}" \
         NATIVE_ANDROID_KEEP_LOOPBACK_ENDPOINTS="${native_android_keep_loopback_endpoints}" \
         "${native_script}"
 )
