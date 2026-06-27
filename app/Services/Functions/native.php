@@ -92,6 +92,19 @@ if (! function_exists('native_server_base')) {
     throw new Exception('The function `native_server_base` already exists.');
 }
 
+if (! function_exists('normalize_socket_id')) {
+    function normalize_socket_id(?string $socketId): ?string
+    {
+        $normalizedSocketId = trim((string) $socketId);
+
+        return in_array($normalizedSocketId, ['', 'undefined', 'null'], true)
+            ? null
+            : $normalizedSocketId;
+    }
+} else {
+    throw new Exception('The function `normalize_socket_id` already exists.');
+}
+
 if (! function_exists('open_link_native_aware')) {
     function open_link_native_aware(string $url): string
     {

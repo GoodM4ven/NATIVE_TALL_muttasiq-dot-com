@@ -30,27 +30,58 @@ const sameOriginUrl = (resource) => {
 
 const installSocketHeaderForwarding = () => {
     if (window.__muttasiqRealtimeFetchPatched === true || typeof window.fetch !== 'function') {
-        return;
+        // Keep going: XHR may still need the socket header even when fetch is unavailable.
+    } else {
+        const originalFetch = window.fetch.bind(window);
+        window.__muttasiqRealtimeFetchPatched = true;
+
+        window.fetch = (resource, options = {}) => {
+            const currentSocketId = socketId();
+
+            if (!currentSocketId || !sameOriginUrl(resource)) {
+                return originalFetch(resource, options);
+            }
+
+            const headers = new Headers(options.headers || resource?.headers || {});
+            headers.set('X-Socket-ID', currentSocketId);
+
+            return originalFetch(resource, {
+                ...options,
+                headers,
+            });
+        };
     }
 
-    const originalFetch = window.fetch.bind(window);
-    window.__muttasiqRealtimeFetchPatched = true;
+    if (
+        window.__muttasiqRealtimeXhrPatched !== true &&
+        typeof window.XMLHttpRequest === 'function'
+    ) {
+        const originalOpen = window.XMLHttpRequest.prototype.open;
+        const originalSend = window.XMLHttpRequest.prototype.send;
+        const originalSetRequestHeader = window.XMLHttpRequest.prototype.setRequestHeader;
 
-    window.fetch = (resource, options = {}) => {
-        const currentSocketId = socketId();
+        window.__muttasiqRealtimeXhrPatched = true;
 
-        if (!currentSocketId || !sameOriginUrl(resource)) {
-            return originalFetch(resource, options);
-        }
+        window.XMLHttpRequest.prototype.open = function (method, url, ...rest) {
+            this.__muttasiqRealtimeUrl = url;
 
-        const headers = new Headers(options.headers || resource?.headers || {});
-        headers.set('X-Socket-ID', currentSocketId);
+            return originalOpen.call(this, method, url, ...rest);
+        };
 
-        return originalFetch(resource, {
-            ...options,
-            headers,
-        });
-    };
+        window.XMLHttpRequest.prototype.send = function (body) {
+            const currentSocketId = socketId();
+
+            if (currentSocketId && sameOriginUrl(this.__muttasiqRealtimeUrl || '')) {
+                try {
+                    originalSetRequestHeader.call(this, 'X-Socket-ID', currentSocketId);
+                } catch (_) {
+                    // Ignore header injection failures; the request can still proceed.
+                }
+            }
+
+            return originalSend.call(this, body);
+        };
+    }
 };
 
 const authorizeChannel = async (authEndpoint, socketIdValue, channelName) => {
@@ -98,6 +129,12 @@ const forceMainMenu = () => {
     } catch (_) {
         // Ignore unavailable storage; the reload still fetches the latest bundle.
     }
+
+    window.dispatchEvent(
+        new CustomEvent('switch-view', {
+            detail: { to: 'main-menu' },
+        }),
+    );
 };
 
 const wipeLocalUserBranch = () => {
@@ -150,10 +187,41 @@ const localLogout = async () => {
     }
 };
 
+const refreshNativeMirror = async () => {
+    if (!isNativeRuntime()) {
+        return false;
+    }
+
+    const pullUrl = String(bootstrap().nativeSyncPullUrl || '').trim();
+
+    if (pullUrl === '') {
+        return false;
+    }
+
+    try {
+        const response = await fetch(pullUrl, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken(),
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: '{}',
+        });
+
+        return response.ok;
+    } catch (_) {
+        return false;
+    }
+};
+
 const blinkThen = (callback) => {
     const delay = beginBlink();
 
     window.setTimeout(async () => {
+        forceMainMenu();
         await callback();
         window.location.assign('/');
     }, delay);
@@ -186,7 +254,9 @@ const handleRealtimeEvent = (event) => {
 
     if (['dataSynced', 'dataOverridden', 'deviceLoggedOut'].includes(type)) {
         blinkThen(async () => {
-            forceMainMenu();
+            if (['dataSynced', 'dataOverridden'].includes(type)) {
+                await refreshNativeMirror();
+            }
         });
     }
 };

@@ -7,7 +7,11 @@ use App\Livewire\AuthButton;
 use App\Models\User;
 use Illuminate\Events\Dispatcher;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
+use Laravel\Sanctum\Sanctum;
 
+use function Pest\Laravel\getJson;
+use function Pest\Laravel\postJson;
 use function Pest\Livewire\livewire;
 
 it('returns correct link-open expressions for mobile and desktop runtimes', function () {
@@ -89,6 +93,12 @@ it('normalizes missing socket ids before broadcasting realtime events', function
     expect($event->socket)->toBeNull();
 });
 
+it('normalizes socket ids before using them in realtime sync helpers', function () {
+    expect(normalize_socket_id('undefined'))->toBeNull()
+        ->and(normalize_socket_id('null'))->toBeNull()
+        ->and(normalize_socket_id('  123|456  '))->toBe('123|456');
+});
+
 it('keeps auth changes working when realtime broadcasting is down', function () {
     config(['nativephp-internal.running' => false]);
 
@@ -117,4 +127,50 @@ it('keeps auth changes working when realtime broadcasting is down', function () 
     } finally {
         app()->instance('events', $originalEvents);
     }
+});
+
+it('returns the authoritative settings snapshot for native sync pulls', function () {
+    $user = User::factory()->create([
+        'synced_data' => ['athkar-progress-v1' => 'remote'],
+    ]);
+
+    Sanctum::actingAs($user);
+
+    getJson(route('api.native-sync.snapshot'))
+        ->assertOk()
+        ->assertJsonPath('ok', true)
+        ->assertJsonPath('synced_data.athkar-progress-v1', 'remote');
+});
+
+it('pulls the server snapshot into the native mirror', function () {
+    config(['nativephp-internal.running' => true]);
+
+    Http::fake([
+        '*/api/native-sync/snapshot' => Http::response([
+            'ok' => true,
+            'synced_data' => [
+                'athkar-progress-v1' => 'remote',
+                'quran-reader-last-page-v1' => '7',
+            ],
+            'synced_data_updated_at' => '2026-06-27T00:00:00Z',
+        ]),
+    ]);
+
+    $user = User::factory()->create([
+        'native_api_token' => 'dev-token',
+        'synced_data' => ['athkar-progress-v1' => 'local'],
+    ]);
+
+    Auth::login($user);
+
+    postJson(route('native.sync.pull'))
+        ->assertOk()
+        ->assertJsonPath('ok', true)
+        ->assertJsonPath('synced_data.athkar-progress-v1', 'remote');
+
+    expect($user->fresh()->synced_data)
+        ->toBe([
+            'athkar-progress-v1' => 'remote',
+            'quran-reader-last-page-v1' => '7',
+        ]);
 });

@@ -328,6 +328,7 @@ class AuthButton extends Component implements HasActions, HasSchemas
     public function pushUserData(array $data, bool $reloadAfter = false, ?string $socketId = null): void
     {
         $user = Auth::user();
+        $normalizedSocketId = normalize_socket_id($socketId ?? request()->headers->get('X-Socket-ID'));
 
         if (! $user instanceof User) {
             return;
@@ -349,12 +350,12 @@ class AuthButton extends Component implements HasActions, HasSchemas
             // survives offline stretches and coalesces rapid changes (the job is
             // unique-until-processing and reads the latest bundle at run time).
             if (is_platform('native')) {
-                SyncUserSettings::dispatch($user->getKey(), $socketId, $realtimeType);
+                SyncUserSettings::dispatch($user->getKey(), $normalizedSocketId, $realtimeType);
             } elseif ($user->telegram_id !== null) {
                 $this->broadcastRealtimeEvent(new UserRealtimeEvent(
                     (int) $user->telegram_id,
                     $realtimeType,
-                    socketId: $socketId ?? request()->headers->get('X-Socket-ID'),
+                    socketId: $normalizedSocketId,
                 ));
             }
         }
@@ -381,6 +382,7 @@ class AuthButton extends Component implements HasActions, HasSchemas
 
         $user = Auth::user();
         $serverBase = native_server_base();
+        $socketId = normalize_socket_id(request()->headers->get('X-Socket-ID'));
 
         if (! $user instanceof User || blank($user->native_api_token) || $serverBase === null) {
             return false;
@@ -391,7 +393,7 @@ class AuthButton extends Component implements HasActions, HasSchemas
                 ->connectTimeout(3)->timeout(4)
                 ->withToken((string) $user->native_api_token)
                 ->withHeaders(array_filter([
-                    'X-Socket-ID' => request()->headers->get('X-Socket-ID'),
+                    'X-Socket-ID' => $socketId,
                 ]))
                 ->post($serverBase.'/api/'.str_replace('.', '/', $routeName), $payload);
 
@@ -453,7 +455,7 @@ class AuthButton extends Component implements HasActions, HasSchemas
                     $this->broadcastRealtimeEvent(new UserRealtimeEvent(
                         (int) $user->telegram_id,
                         'passwordChanged',
-                        socketId: request()->headers->get('X-Socket-ID'),
+                        socketId: normalize_socket_id(request()->headers->get('X-Socket-ID')),
                     ));
                 }
 
@@ -521,7 +523,7 @@ class AuthButton extends Component implements HasActions, HasSchemas
                     (int) $user->telegram_id,
                     'deviceLoggedOut',
                     $tokenId,
-                    request()->headers->get('X-Socket-ID'),
+                    normalize_socket_id(request()->headers->get('X-Socket-ID')),
                 ));
             }
         }

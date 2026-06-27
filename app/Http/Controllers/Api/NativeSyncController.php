@@ -10,6 +10,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
 use Laravel\Sanctum\PersonalAccessToken;
 
@@ -22,7 +23,7 @@ class NativeSyncController
      */
     public function password(Request $request): JsonResponse
     {
-        /** @var User $user */
+        /** @var User|null $user */
         $user = $request->user();
         $currentTokenId = $this->currentTokenId($request);
 
@@ -32,7 +33,7 @@ class NativeSyncController
 
         $user->forceFill(['password' => Hash::make($validated['password'])])->save();
         $this->deleteOtherTokens($user, $currentTokenId);
-        $this->broadcast($user, 'passwordChanged', socketId: $request->headers->get('X-Socket-ID'));
+        $this->broadcast($user, 'passwordChanged', socketId: normalize_socket_id($request->headers->get('X-Socket-ID')));
 
         return response()->json(['ok' => true]);
     }
@@ -72,10 +73,25 @@ class NativeSyncController
         $this->broadcast(
             $user,
             (string) ($validated['realtime_type'] ?? 'dataSynced'),
-            socketId: $request->headers->get('X-Socket-ID'),
+            socketId: normalize_socket_id($request->headers->get('X-Socket-ID')),
         );
 
         return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Return the authoritative settings bundle for the current account.
+     */
+    public function snapshot(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        return response()->json([
+            'ok' => true,
+            'synced_data' => $user->synced_data ?? [],
+            'synced_data_updated_at' => $user->synced_data_updated_at?->toISOString(),
+        ]);
     }
 
     public function devices(Request $request): JsonResponse
@@ -122,7 +138,7 @@ class NativeSyncController
             return response()->json(['ok' => false], 404);
         }
 
-        $this->broadcast($user, 'deviceLoggedOut', $tokenId, $request->headers->get('X-Socket-ID'));
+        $this->broadcast($user, 'deviceLoggedOut', $tokenId, normalize_socket_id($request->headers->get('X-Socket-ID')));
 
         return response()->json(['ok' => true]);
     }
@@ -189,9 +205,55 @@ class NativeSyncController
 
         $request->user()?->currentAccessToken()?->delete();
 
-        $this->broadcast($user, 'deviceLoggedOut', $tokenId, $request->headers->get('X-Socket-ID'));
+        $this->broadcast($user, 'deviceLoggedOut', $tokenId, normalize_socket_id($request->headers->get('X-Socket-ID')));
 
         return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Pull the authoritative settings bundle down into the native device mirror.
+     */
+    public function pull(Request $request): JsonResponse
+    {
+        abort_unless(is_platform('native'), 404);
+
+        /** @var User|null $user */
+        $user = $request->user();
+        $serverBase = native_server_base();
+
+        if (! $user instanceof User || blank($user->native_api_token) || $serverBase === null) {
+            return response()->json(['ok' => false], 422);
+        }
+
+        try {
+            $response = Http::asJson()->acceptJson()
+                ->connectTimeout(3)->timeout(6)
+                ->withToken((string) $user->native_api_token)
+                ->get($serverBase.'/api/native-sync/snapshot');
+        } catch (\Throwable) {
+            return response()->json(['ok' => false], 502);
+        }
+
+        if (! $response->successful() || $response->json('ok') !== true) {
+            return response()->json(['ok' => false], 502);
+        }
+
+        $syncedData = $response->json('synced_data');
+        $syncedData = is_array($syncedData) ? array_filter($syncedData, static fn ($value): bool => is_string($value)) : [];
+        $syncedDataUpdatedAt = $response->json('synced_data_updated_at');
+
+        $user->forceFill([
+            'synced_data' => $syncedData,
+            'synced_data_updated_at' => is_string($syncedDataUpdatedAt) && $syncedDataUpdatedAt !== ''
+                ? CarbonImmutable::parse($syncedDataUpdatedAt)
+                : now()->toImmutable(),
+        ])->save();
+
+        return response()->json([
+            'ok' => true,
+            'synced_data' => $syncedData,
+            'synced_data_updated_at' => $user->fresh()?->synced_data_updated_at?->toISOString(),
+        ]);
     }
 
     private function currentTokenId(Request $request): ?int

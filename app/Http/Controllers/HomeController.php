@@ -27,6 +27,9 @@ class HomeController extends Controller
         $overrideNotice = session()->pull('data-branch-override-notice');
         $nativeAuthRestart = (bool) session()->pull('auth.native_restart', false);
         $nativeAuthRestoreToken = session()->pull('auth.native_restore_token');
+        $nativeAuthRestartPayload = is_string($nativeAuthRestoreToken) && $nativeAuthRestoreToken !== ''
+            ? ['token' => $nativeAuthRestoreToken]
+            : null;
 
         if (is_string($overrideNotice) && $overrideNotice !== '') {
             notify('heroicon-o-circle-stack', $overrideNotice);
@@ -40,7 +43,7 @@ class HomeController extends Controller
             'athkarMainTextSizeLimits' => $settingsPayload['mainTextSizeLimits'],
             'currentAppVersion' => Setting::appVersion(),
             'nativeAuthRestart' => $nativeAuthRestart,
-            'nativeAuthRestoreToken' => is_string($nativeAuthRestoreToken) ? $nativeAuthRestoreToken : null,
+            'nativeAuthRestartPayload' => $nativeAuthRestartPayload,
         ]);
     }
 

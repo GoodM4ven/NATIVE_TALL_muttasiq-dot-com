@@ -26,12 +26,13 @@
                 telegramId: @js(auth()->user()?->telegram_id),
                 nativeTokenId: @js($nativeRealtimeTokenId),
                 nativeBroadcastAuthUrl: @js(route('native.broadcasting.auth', absolute: false)),
+                nativeSyncPullUrl: @js(route('native.sync.pull', absolute: false)),
                 realtimeLogoutUrl: @js(route('auth.realtime.logout', absolute: false)),
             };
 
             // Set right after a native Telegram login: the local home blinks,
             // stores this token in SecureStorage, then restarts the app.
-            window.nativeAuthRestart = @js($nativeAuthRestart ? ['token' => $nativeAuthRestoreToken] : null);
+            window.nativeAuthRestart = @js($nativeAuthRestartPayload);
         </script>
     @endpush
 

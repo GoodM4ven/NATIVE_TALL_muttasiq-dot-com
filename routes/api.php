@@ -46,6 +46,10 @@ Route::name('api.')->group(function () {
         ->middleware(['auth:sanctum', 'throttle:30,1'])
         ->name('native-sync.settings');
 
+    Route::get('/native-sync/snapshot', [NativeSyncController::class, 'snapshot'])
+        ->middleware(['auth:sanctum', 'throttle:30,1'])
+        ->name('native-sync.snapshot');
+
     Route::get('/native-sync/devices', [NativeSyncController::class, 'devices'])
         ->middleware(['auth:sanctum', 'throttle:30,1'])
         ->name('native-sync.devices');

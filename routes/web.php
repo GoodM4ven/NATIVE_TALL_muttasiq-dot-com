@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Api\NativeSyncController;
 use App\Http\Controllers\Auth\RealtimeLogoutController;
 use App\Http\Controllers\Auth\TelegramAuthController;
 use App\Http\Controllers\HomeController;
@@ -25,6 +26,9 @@ Route::post('/auth/realtime/logout', RealtimeLogoutController::class)->name('aut
 Route::post('/native/broadcasting/auth', NativeBroadcastAuthController::class)
     ->middleware('throttle:60,1')
     ->name('native.broadcasting.auth');
+Route::post('/native-sync/pull', [NativeSyncController::class, 'pull'])
+    ->middleware('auth')
+    ->name('native.sync.pull');
 
 Route::get('/qpc-v2-fonts/{page}.ttf', function (int $page) {
     return redirect()->route('qpc-v2-font', ['page' => $page], 301);
