@@ -351,7 +351,7 @@ class AuthButton extends Component implements HasActions, HasSchemas
             if (is_platform('native')) {
                 SyncUserSettings::dispatch($user->getKey(), $socketId, $realtimeType);
             } elseif ($user->telegram_id !== null) {
-                broadcast(new UserRealtimeEvent(
+                $this->broadcastRealtimeEvent(new UserRealtimeEvent(
                     (int) $user->telegram_id,
                     $realtimeType,
                     socketId: $socketId ?? request()->headers->get('X-Socket-ID'),
@@ -450,7 +450,7 @@ class AuthButton extends Component implements HasActions, HasSchemas
 
                 if (! is_platform('native') && $user->telegram_id !== null) {
                     $user->tokens()->delete();
-                    broadcast(new UserRealtimeEvent(
+                    $this->broadcastRealtimeEvent(new UserRealtimeEvent(
                         (int) $user->telegram_id,
                         'passwordChanged',
                         socketId: request()->headers->get('X-Socket-ID'),
@@ -517,7 +517,7 @@ class AuthButton extends Component implements HasActions, HasSchemas
             $didRevoke = $user->tokens()->whereKey($tokenId)->delete() > 0;
 
             if ($didRevoke && $user->telegram_id !== null) {
-                broadcast(new UserRealtimeEvent(
+                $this->broadcastRealtimeEvent(new UserRealtimeEvent(
                     (int) $user->telegram_id,
                     'deviceLoggedOut',
                     $tokenId,
@@ -585,7 +585,7 @@ class AuthButton extends Component implements HasActions, HasSchemas
                 }
 
                 if (! is_platform('native') && $user->telegram_id !== null) {
-                    broadcast(new UserRealtimeEvent((int) $user->telegram_id, 'accountDeleted'));
+                    $this->broadcastRealtimeEvent(new UserRealtimeEvent((int) $user->telegram_id, 'accountDeleted'));
                     $user->tokens()->delete();
                 }
 
@@ -610,6 +610,15 @@ class AuthButton extends Component implements HasActions, HasSchemas
         $user = Auth::user();
 
         return $user;
+    }
+
+    private function broadcastRealtimeEvent(UserRealtimeEvent $event): void
+    {
+        try {
+            broadcast($event);
+        } catch (\Throwable) {
+            // ponytail: realtime is best-effort; auth/data changes must not fail when Reverb is down.
+        }
     }
 
     private function verifyNativeTwoFactorCode(User $user, string $code): bool

@@ -7,7 +7,13 @@ const isNativeRuntime = () => document.body?.classList.contains('native-platform
 
 const bootstrap = () => window.realtimeBootstrap || {};
 
-const socketId = () => window.Echo?.socketId?.() || null;
+const normalizeSocketId = (value) => {
+    const socketId = String(value || '').trim();
+
+    return socketId === '' || socketId === 'undefined' || socketId === 'null' ? null : socketId;
+};
+
+const socketId = () => normalizeSocketId(window.Echo?.socketId?.());
 
 const sameOriginUrl = (resource) => {
     try {

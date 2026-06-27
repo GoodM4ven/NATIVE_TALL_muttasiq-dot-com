@@ -171,7 +171,7 @@ class NativeSyncController
         $user->delete();
 
         if ($telegramId !== null) {
-            broadcast(new UserRealtimeEvent($telegramId, 'accountDeleted'));
+            $this->broadcastUserRealtimeEvent(new UserRealtimeEvent($telegramId, 'accountDeleted'));
         }
 
         return response()->json(['ok' => true]);
@@ -218,6 +218,15 @@ class NativeSyncController
             return;
         }
 
-        broadcast(new UserRealtimeEvent((int) $user->telegram_id, $type, $targetTokenId, $socketId));
+        $this->broadcastUserRealtimeEvent(new UserRealtimeEvent((int) $user->telegram_id, $type, $targetTokenId, $socketId));
+    }
+
+    private function broadcastUserRealtimeEvent(UserRealtimeEvent $event): void
+    {
+        try {
+            broadcast($event);
+        } catch (\Throwable) {
+            // ponytail: realtime is best-effort; API auth and sync should keep working if Reverb is down.
+        }
     }
 }

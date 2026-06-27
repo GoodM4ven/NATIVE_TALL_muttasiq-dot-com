@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+use App\Events\UserRealtimeEvent;
+use App\Livewire\AuthButton;
+use App\Models\User;
+use Illuminate\Events\Dispatcher;
+use Illuminate\Support\Facades\Auth;
+
+use function Pest\Livewire\livewire;
+
 it('returns correct link-open expressions for mobile and desktop runtimes', function () {
     config([
         'nativephp-internal.running' => true,
@@ -73,4 +81,40 @@ it('detects the native bootstrap runtime from the platform env', function () {
     }
 
     putenv('NATIVEPHP_RUNNING='.$previousRunning);
+});
+
+it('normalizes missing socket ids before broadcasting realtime events', function () {
+    $event = new UserRealtimeEvent(123, 'dataSynced', null, 'undefined');
+
+    expect($event->socket)->toBeNull();
+});
+
+it('keeps auth changes working when realtime broadcasting is down', function () {
+    config(['nativephp-internal.running' => false]);
+
+    $originalEvents = app('events');
+    $throwingEvents = new class(app()) extends Dispatcher
+    {
+        public function dispatch($event, $payload = [], $halt = false)
+        {
+            if ($event instanceof UserRealtimeEvent) {
+                throw new RuntimeException('broadcast unavailable');
+            }
+
+            return parent::dispatch($event, $payload, $halt);
+        }
+    };
+
+    app()->instance('events', $throwingEvents);
+
+    try {
+        $user = User::factory()->create(['telegram_id' => 321]);
+        Auth::login($user);
+
+        livewire(AuthButton::class)->call('pushUserData', ['athkar-progress-v1' => 'value']);
+
+        expect($user->fresh()->synced_data)->toBe(['athkar-progress-v1' => 'value']);
+    } finally {
+        app()->instance('events', $originalEvents);
+    }
 });

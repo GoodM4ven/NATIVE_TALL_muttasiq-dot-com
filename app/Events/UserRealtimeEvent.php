@@ -20,7 +20,11 @@ class UserRealtimeEvent implements ShouldBroadcastNow
         public ?int $targetTokenId = null,
         ?string $socketId = null,
     ) {
-        $this->socket = $socketId;
+        $normalizedSocketId = trim((string) $socketId);
+
+        $this->socket = in_array($normalizedSocketId, ['', 'undefined', 'null'], true)
+            ? null
+            : $normalizedSocketId;
     }
 
     /**
