@@ -512,6 +512,9 @@ echo "[native-local-source-broadcast] running composer dev:native + ${native_scr
         NATIVE_QURAN_SNAPSHOT_DOWNLOAD_ENDPOINT="${download_endpoint}" \
         NATIVE_TELEGRAM_AUTH_ENDPOINT="${telegram_auth_endpoint}" \
         NATIVE_ANDROID_KEEP_LOOPBACK_ENDPOINTS="${native_android_keep_loopback_endpoints}" \
+        NATIVEPHP_RUNNING="true" \
+        NATIVEPHP_PLATFORM="${platform}" \
+        BROADCAST_CONNECTION="null" \
         VITE_REVERB_HOST="${public_host}" \
         VITE_REVERB_PORT="${public_reverb_port}" \
         VITE_REVERB_SCHEME="${public_scheme}" \

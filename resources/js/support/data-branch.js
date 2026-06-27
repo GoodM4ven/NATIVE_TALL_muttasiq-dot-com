@@ -47,6 +47,8 @@ const BRANCHED_KEYS = SYNCED_KEYS;
 // avoid a request per Quran page-turn / progress tick; web just writes locally.
 const isNativePlatform = () => document.body?.classList.contains('native-platform') === true;
 const pushDebounceMs = () => (isNativePlatform() ? 5000 : 1500);
+const isObjectLike = (value) =>
+    value !== null && typeof value === 'object' && !Array.isArray(value);
 
 const branchedKey = (branch, key) => `${branch}::${key}`;
 
@@ -70,6 +72,7 @@ export const installDataBranch = (storage = window.localStorage) => {
         setItem: storage.setItem.bind(storage),
         removeItem: storage.removeItem.bind(storage),
     };
+    let isApplyingRemoteBundle = false;
 
     // Clean up the persisted junk key left by the earlier buggy guard.
     original.removeItem('__dataBranchInstalled');
@@ -123,6 +126,34 @@ export const installDataBranch = (storage = window.localStorage) => {
         return bundle;
     };
 
+    const dispatchStorageEvent = (key, oldValue, newValue) => {
+        if (typeof window.StorageEvent === 'function') {
+            window.dispatchEvent(
+                new StorageEvent('storage', {
+                    key,
+                    oldValue,
+                    newValue,
+                    storageArea: storage,
+                    url: window.location.href,
+                }),
+            );
+
+            return;
+        }
+
+        const event = new Event('storage');
+
+        Object.assign(event, {
+            key,
+            oldValue,
+            newValue,
+            storageArea: storage,
+            url: window.location.href,
+        });
+
+        window.dispatchEvent(event);
+    };
+
     const pushUserBundle = (reloadAfter = false) => {
         window.Livewire?.dispatch('push-user-data', {
             data: collectUserBundle(),
@@ -142,9 +173,66 @@ export const installDataBranch = (storage = window.localStorage) => {
         pushTimer = window.setTimeout(pushUserBundle, pushDebounceMs());
     };
 
+    const applyUserBundle = (bundle = {}) => {
+        if (activeBranch() !== 'user' || !isObjectLike(bundle)) {
+            return false;
+        }
+
+        let didChange = false;
+        const normalizedBundle = {};
+
+        SYNCED_KEYS.forEach((key) => {
+            if (typeof bundle[key] === 'string') {
+                normalizedBundle[key] = bundle[key];
+            }
+        });
+
+        isApplyingRemoteBundle = true;
+
+        try {
+            window.userSyncedData = normalizedBundle;
+
+            SYNCED_KEYS.forEach((key) => {
+                const nextValue = Object.prototype.hasOwnProperty.call(normalizedBundle, key)
+                    ? normalizedBundle[key]
+                    : null;
+                const oldValue = original.getItem(branchedKey('user', key));
+
+                if (oldValue === nextValue) {
+                    return;
+                }
+
+                if (nextValue === null) {
+                    original.removeItem(branchedKey('user', key));
+                } else {
+                    original.setItem(branchedKey('user', key), nextValue);
+                }
+
+                didChange = true;
+                dispatchStorageEvent(key, oldValue, nextValue);
+            });
+        } finally {
+            isApplyingRemoteBundle = false;
+        }
+
+        if (didChange) {
+            window.dispatchEvent(
+                new CustomEvent('muttasiq-user-synced-data-updated', {
+                    detail: { bundle: normalizedBundle },
+                }),
+            );
+        }
+
+        return didChange;
+    };
+
     // ponytail: only the three accessor methods are wrapped (the only ones the
     // app uses). Bracket access / key(i) / length are not branched.
     const afterWrite = (key) => {
+        if (isApplyingRemoteBundle) {
+            return;
+        }
+
         if (SYNCED_KEYS.has(key)) {
             schedulePush();
         }
@@ -189,6 +277,7 @@ export const installDataBranch = (storage = window.localStorage) => {
     window.muttasiqDataBranch = {
         copyBranch,
         pushUserBundle,
+        applyUserBundle,
         activeBranch,
         BRANCHED_KEYS,
         SYNCED_KEYS,

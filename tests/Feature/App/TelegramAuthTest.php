@@ -94,6 +94,16 @@ it('issues a one-time code and redirects native telegram login to the app deepli
 
     expect($code)->not->toBe('');
     expect(Cache::get('native-auth-code:'.$code))->toBe(User::query()->first()?->getKey());
+    assertGuest();
+});
+
+it('keeps the browser session guest during native telegram auth handoff', function () {
+    fakeTelegramUser();
+
+    get(route('auth.telegram.native.callback'))
+        ->assertStatus(302);
+
+    assertGuest();
 });
 
 it('exchanges a one-time code for the account payload', function () {
@@ -365,7 +375,8 @@ it('wires the native auth restore endpoint into the home shell', function () {
 
     expect($html)
         ->toContain('nativeAuthBootstrap')
-        ->toContain('restoreUrl');
+        ->toContain('restoreUrl')
+        ->toContain('realtimeSnapshotUrl');
 });
 
 it('hands the native auth restart payload to the home shell', function () {

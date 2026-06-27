@@ -532,8 +532,15 @@ class AuthButton extends Component implements HasActions, HasSchemas
             $didRevoke ? 'heroicon-o-device-phone-mobile' : 'heroicon-o-exclamation-circle',
             $didRevoke
                 ? arabic_text('تم تسجيل خروج الجهاز')
-                : arabic_text('تعذر تسجيل خروج الجهاز، حاول مرة أخرى'),
+            : arabic_text('تعذر تسجيل خروج الجهاز، حاول مرة أخرى'),
         );
+    }
+
+    #[On('native-devices-refresh')]
+    public function refreshDevices(): void
+    {
+        // Empty on purpose. Livewire re-renders the component after the event,
+        // which refreshes the device list in the tab.
     }
 
     public function logoutAction(): Action

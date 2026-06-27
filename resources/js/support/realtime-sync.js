@@ -123,6 +123,18 @@ const beginBlink = () => {
     return layout.defaultTransitionDurationInMs || 500;
 };
 
+const revealBlinker = () => {
+    const layout = window.Alpine?.$data?.(document.body);
+
+    if (layout?.revealApp) {
+        layout.revealApp();
+    } else {
+        window.dispatchEvent(new CustomEvent('native-auth-reveal'));
+    }
+
+    window.__authReloadInProgress = false;
+};
+
 const forceMainMenu = () => {
     try {
         window.localStorage.setItem('app-active-view', 'main-menu');
@@ -187,43 +199,60 @@ const localLogout = async () => {
     }
 };
 
-const refreshNativeMirror = async () => {
-    if (!isNativeRuntime()) {
+const refreshUserBundle = async () => {
+    const snapshotUrl = isNativeRuntime()
+        ? String(bootstrap().nativeSyncPullUrl || '').trim()
+        : String(bootstrap().realtimeSnapshotUrl || '').trim();
+
+    if (snapshotUrl === '') {
         return false;
     }
 
-    const pullUrl = String(bootstrap().nativeSyncPullUrl || '').trim();
+    const requestOptions = {
+        method: isNativeRuntime() ? 'POST' : 'GET',
+        credentials: 'same-origin',
+        headers: {
+            Accept: 'application/json',
+            'X-CSRF-TOKEN': csrfToken(),
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+    };
 
-    if (pullUrl === '') {
+    if (isNativeRuntime()) {
+        requestOptions.headers['Content-Type'] = 'application/json';
+        requestOptions.body = '{}';
+    }
+
+    const response = await fetch(snapshotUrl, requestOptions);
+
+    if (!response.ok) {
         return false;
     }
 
-    try {
-        const response = await fetch(pullUrl, {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: {
-                Accept: 'application/json',
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken(),
-                'X-Requested-With': 'XMLHttpRequest',
-            },
-            body: '{}',
-        });
+    const payload = await response.json();
+    const bundle = payload?.synced_data;
 
-        return response.ok;
-    } catch (_) {
-        return false;
-    }
+    return window.muttasiqDataBranch?.applyUserBundle?.(bundle) === true;
 };
 
-const blinkThen = (callback) => {
+const blinkThen = (callback, { reload = false, forceMenu = true } = {}) => {
     const delay = beginBlink();
 
     window.setTimeout(async () => {
-        forceMainMenu();
-        await callback();
-        window.location.assign('/');
+        if (forceMenu) {
+            forceMainMenu();
+        }
+
+        try {
+            await callback();
+        } finally {
+            if (reload) {
+                window.location.assign('/');
+                return;
+            }
+
+            revealBlinker();
+        }
     }, delay);
 };
 
@@ -238,26 +267,45 @@ const handleRealtimeEvent = (event) => {
         targetTokenId === currentTokenId;
 
     if (type === 'accountDeleted') {
-        blinkThen(async () => {
-            wipeLocalUserBranch();
-            await localLogout();
-        });
+        blinkThen(
+            async () => {
+                wipeLocalUserBranch();
+                await localLogout();
+            },
+            { reload: true },
+        );
 
         return;
     }
 
     if (type === 'passwordChanged' || isCurrentRevokedNativeDevice) {
-        blinkThen(localLogout);
+        blinkThen(localLogout, { reload: true });
 
         return;
     }
 
-    if (['dataSynced', 'dataOverridden', 'deviceLoggedOut'].includes(type)) {
+    if (['dataSynced', 'dataOverridden'].includes(type)) {
         blinkThen(async () => {
-            if (['dataSynced', 'dataOverridden'].includes(type)) {
-                await refreshNativeMirror();
-            }
+            await refreshUserBundle();
         });
+
+        return;
+    }
+
+    if (type === 'deviceLoggedOut') {
+        blinkThen(
+            async () => {
+                if (isCurrentRevokedNativeDevice) {
+                    await localLogout();
+                } else {
+                    window.Livewire?.dispatch('native-devices-refresh');
+                }
+            },
+            {
+                reload: isCurrentRevokedNativeDevice,
+                forceMenu: isCurrentRevokedNativeDevice,
+            },
+        );
     }
 };
 

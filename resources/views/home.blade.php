@@ -3,6 +3,13 @@
         @php
             $nativeRealtimeTokenId = null;
             $nativeRealtimeToken = (string) auth()->user()?->native_api_token;
+            $realtimeSnapshotUrl = native_server_base();
+
+            if (is_string($realtimeSnapshotUrl) && $realtimeSnapshotUrl !== '') {
+                $realtimeSnapshotUrl .= '/api/native-sync/snapshot';
+            } else {
+                $realtimeSnapshotUrl = route('api.native-sync.snapshot', absolute: false);
+            }
 
             if (
                 is_platform('native') &&
@@ -27,6 +34,7 @@
                 nativeTokenId: @js($nativeRealtimeTokenId),
                 nativeBroadcastAuthUrl: @js(route('native.broadcasting.auth', absolute: false)),
                 nativeSyncPullUrl: @js(route('native.sync.pull', absolute: false)),
+                realtimeSnapshotUrl: @js($realtimeSnapshotUrl),
                 realtimeLogoutUrl: @js(route('auth.realtime.logout', absolute: false)),
             };
 

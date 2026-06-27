@@ -40,6 +40,8 @@ class TelegramAuthController
             return redirect()->route('home');
         }
 
+        Auth::login($user, remember: true);
+
         // Flashes through the redirect so it shows on the freshly loaded home,
         // matching the username/password login notification.
         notify('heroicon-o-check-circle', arabic_text('تم تسجيل الدخول بنجاح'));
@@ -49,7 +51,7 @@ class TelegramAuthController
 
     public function nativeCallback(): RedirectResponse
     {
-        $user = $this->authenticateTelegramUser();
+        $user = $this->authenticateTelegramUser(freshCredentials: false);
 
         if ($user === null) {
             return redirect()->route('home');
@@ -67,7 +69,7 @@ class TelegramAuthController
         return redirect()->away($this->nativeScheme().'://auth/telegram/handoff?code='.$code);
     }
 
-    private function authenticateTelegramUser(): ?User
+    private function authenticateTelegramUser(bool $freshCredentials = true): ?User
     {
         try {
             $telegramUser = Socialite::driver('telegram')->user();
@@ -96,16 +98,16 @@ class TelegramAuthController
 
             $this->notifyCredentials((int) $telegramUser->getId(), $username, $password);
 
-            session()->flash('auth.fresh_credentials', [
-                'username' => $username,
-                'password' => $password,
-            ]);
+            if ($freshCredentials) {
+                session()->flash('auth.fresh_credentials', [
+                    'username' => $username,
+                    'password' => $password,
+                ]);
+            }
         } else {
             $user = $existing;
             $user->forceFill(['telegram_username' => $telegramUser->getNickname()])->save();
         }
-
-        Auth::login($user, remember: true);
 
         return $user;
     }
