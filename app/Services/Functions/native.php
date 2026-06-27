@@ -41,6 +41,41 @@ if (! function_exists('is_platform')) {
     throw new Exception('The function `is_platform` already exists.');
 }
 
+if (! function_exists('native_server_base')) {
+    /**
+     * Resolve the public server's scheme://host[:port] that the native runtime
+     * should talk to (where Telegram auth + account sync live), derived from the
+     * configured native endpoints. Returns null if none are usable.
+     */
+    function native_server_base(): ?string
+    {
+        foreach ([
+            config('app.custom.native_end_points.settings'),
+            config('app.custom.native_end_points.telegram_auth'),
+            config('app.url'),
+        ] as $endpoint) {
+            $endpoint = trim((string) $endpoint);
+
+            if ($endpoint === '') {
+                continue;
+            }
+
+            $scheme = parse_url($endpoint, PHP_URL_SCHEME);
+            $host = parse_url($endpoint, PHP_URL_HOST);
+
+            if (is_string($scheme) && is_string($host) && $scheme !== '' && $host !== '') {
+                $port = parse_url($endpoint, PHP_URL_PORT);
+
+                return $scheme.'://'.$host.($port !== null ? ':'.$port : '');
+            }
+        }
+
+        return null;
+    }
+} else {
+    throw new Exception('The function `native_server_base` already exists.');
+}
+
 if (! function_exists('open_link_native_aware')) {
     function open_link_native_aware(string $url): string
     {

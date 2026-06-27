@@ -22,6 +22,8 @@ use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Support\Enums\Width;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\HtmlString;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
@@ -201,6 +203,7 @@ class AuthButton extends Component implements HasActions, HasSchemas
             ->schema([
                 Tabs::make('Tabs')->tabs([
                     Tab::make('account')
+                        ->key('account')
                         ->label(arabic_text('الحساب'))
                         ->icon('tabler.id-badge-2')
                         ->schema([
@@ -231,6 +234,7 @@ class AuthButton extends Component implements HasActions, HasSchemas
                             ])->alignCenter(),
                         ]),
                     Tab::make('data')
+                        ->key('data')
                         ->label(arabic_text('البيانات'))
                         ->icon('tabler.packages')
                         ->schema([
@@ -283,8 +287,10 @@ class AuthButton extends Component implements HasActions, HasSchemas
                 // instead of being consumed live during the blinker fade.
                 session()->put('data-branch-override-notice', arabic_text('تم استبدال بيانات حسابك ببيانات الجهاز'));
 
+                // No auth-blink-reload here: the override copies guest→user in JS,
+                // then pushUserData() pushes to the server and dispatches the reload
+                // itself, so the native sync isn't cut off by an early reload.
                 $this->dispatch('override-data-branch', fromBranch: 'guest', toBranch: 'user');
-                $this->dispatch('auth-blink-reload');
 
                 $action->halt();
             });
@@ -298,7 +304,7 @@ class AuthButton extends Component implements HasActions, HasSchemas
      * @param  array<string, mixed>  $data
      */
     #[On('push-user-data')]
-    public function pushUserData(array $data): void
+    public function pushUserData(array $data, bool $reloadAfter = false): void
     {
         $user = Auth::user();
 
@@ -308,11 +314,55 @@ class AuthButton extends Component implements HasActions, HasSchemas
 
         $bundle = array_filter($data, static fn ($value): bool => is_string($value));
 
-        if (strlen((string) json_encode($bundle)) > self::SYNCED_DATA_MAX_BYTES) {
-            return;
+        if (strlen((string) json_encode($bundle)) <= self::SYNCED_DATA_MAX_BYTES) {
+            $user->forceFill(['synced_data' => $bundle])->save();
+
+            // On native the local DB is just a mirror; push to the authoritative server.
+            $this->pushNativeSync('native-sync.settings', ['data' => $bundle]);
         }
 
-        $user->forceFill(['synced_data' => $bundle])->save();
+        // The "make account = device" override defers its blinker reload to here,
+        // so the server push above completes before the page reloads (otherwise
+        // the reload would race and cut off the native sync).
+        if ($reloadAfter) {
+            $this->dispatch('auth-blink-reload');
+        }
+    }
+
+    /**
+     * Push a local account change to the authoritative server (native only).
+     * The server account is keyed by the device's mirrored sync token.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function pushNativeSync(string $routeName, array $payload): bool
+    {
+        if (! is_platform('native')) {
+            return false;
+        }
+
+        $user = Auth::user();
+        $serverBase = native_server_base();
+
+        if (! $user instanceof User || blank($user->native_sync_token) || $serverBase === null) {
+            return false;
+        }
+
+        try {
+            $response = Http::asJson()->acceptJson()
+                ->connectTimeout(3)->timeout(4)
+                ->withToken((string) $user->native_sync_token)
+                ->post($serverBase.'/api/'.str_replace('.', '/', $routeName), $payload);
+
+            return $response->successful() && $response->json('ok') === true;
+        } catch (\Throwable $exception) {
+            Log::warning('Native account sync failed.', [
+                'route' => $routeName,
+                'message' => $exception->getMessage(),
+            ]);
+
+            return false;
+        }
     }
 
     public function notifyCopied(): void
@@ -349,7 +399,18 @@ class AuthButton extends Component implements HasActions, HasSchemas
                     'password' => Hash::make((string) $data['password']),
                 ])->save();
 
-                notify('mdi.content-save-check', arabic_text('تم تحديث كلمة المرور'));
+                // Native: mirror the change to the authoritative server so web +
+                // other devices use the new password.
+                $synced = $this->pushNativeSync('native-sync.password', [
+                    'password' => (string) $data['password'],
+                ]);
+
+                notify(
+                    'mdi.content-save-check',
+                    (is_platform('native') && ! $synced)
+                        ? arabic_text('تم تحديث كلمة المرور على هذا الجهاز فقط، تعذرت المزامنة مع الخادم')
+                        : arabic_text('تم تحديث كلمة المرور'),
+                );
             });
     }
 
@@ -403,6 +464,10 @@ class AuthButton extends Component implements HasActions, HasSchemas
             ->modalDescription(arabic_text('هل تريد تسجيل الخروج من حسابك؟'))
             ->modalSubmitActionLabel(arabic_text('نعم، سجّل خروجي'))
             ->action(function (Action $action): void {
+                // Native: best-effort revoke this device's server token (don't block
+                // logout on server reachability).
+                $this->pushNativeSync('native-sync.logout', []);
+
                 Auth::logout();
                 session()->invalidate();
                 session()->regenerateToken();
@@ -428,6 +493,15 @@ class AuthButton extends Component implements HasActions, HasSchemas
             ->modalSubmitActionLabel(arabic_text('نعم، احذف حسابي'))
             ->action(function (Action $action): void {
                 $user = $this->currentUser();
+
+                // Native: the authoritative account lives on the server. Delete it
+                // there first (while we still hold the token); abort if we can't,
+                // so we never leave a local-deleted / server-alive divergence.
+                if (is_platform('native') && ! $this->pushNativeSync('native-sync.delete', [])) {
+                    notify('heroicon-o-exclamation-circle', arabic_text('تعذر حذف الحساب من الخادم، حاول مرة أخرى'));
+
+                    return;
+                }
 
                 Auth::logout();
                 session()->invalidate();

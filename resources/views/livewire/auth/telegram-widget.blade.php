@@ -33,8 +33,10 @@
 @endphp
 
 @if (is_platform('native'))
+    {{-- min-h reserves the button's space so the modal doesn't jolt when the --}}
+    {{-- (initially x-cloaked) button appears after the async connectivity check. --}}
     <div
-        class="mx-auto flex w-full max-w-full flex-col items-center gap-3 py-2"
+        class="mx-auto flex min-h-16 w-full max-w-full flex-col items-center justify-center gap-3 py-2"
         x-data="{
             launcherUrl: @js($nativeTelegramLauncherUrl),
             isOnline: true,
@@ -57,8 +59,20 @@
                 this.isOnline = await this.resolveOnlineState();
             },
             async openNativeTelegramAuth() {
-                if (!this.isOnline || !this.launcherUrl) {
+                // Don't gate on isOnline: the native connectivity probe misreports
+                // on some networks, which would silently block a working connection.
+                // If genuinely offline, the launcher simply fails to load.
+                if (!this.launcherUrl) {
                     return;
+                }
+        
+                // Mark the Telegram return as pending so the home shell holds the
+                // blinker over the whole round-trip (cold-start, deeplink handoff,
+                // restart, restore) instead of flashing the guest login UI.
+                try {
+                    window.localStorage.setItem('auth.telegram.pending', String(Date.now()));
+                } catch (_) {
+                    // Non-fatal: the flow still works, just without the early blinker.
                 }
         
                 if (window.browser?.auth) {
@@ -78,7 +92,7 @@
             class="inline-flex min-h-12 items-center justify-center rounded-2xl bg-sky-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-50"
             type="button"
             x-cloak
-            x-show="launcherUrl && isOnline"
+            x-show="launcherUrl"
             x-on:click="openNativeTelegramAuth()"
         >
             {{ arabic_text('تسجيل الدخول عبر تيليجرام') }}
@@ -87,7 +101,7 @@
         <p
             class="text-center text-xs text-gray-500 dark:text-gray-400"
             x-cloak
-            x-show="!isOnline"
+            x-show="launcherUrl && !isOnline"
         >
             {{ arabic_text('يتطلب تسجيل الدخول عبر تيليجرام اتصالًا بالإنترنت.') }}
         </p>
@@ -95,7 +109,7 @@
         <p
             class="text-center text-xs text-gray-500 dark:text-gray-400"
             x-cloak
-            x-show="isOnline && !launcherUrl"
+            x-show="!launcherUrl"
         >
             {{ arabic_text('تسجيل الدخول عبر تيليجرام غير متاح في هذا الإصدار حاليًا.') }}
         </p>

@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
+use Laravel\Sanctum\Sanctum;
 use Laravel\Socialite\Contracts\Provider;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\User as SocialiteUser;
@@ -91,18 +92,79 @@ it('issues a one-time code and redirects native telegram login to the app deepli
 });
 
 it('exchanges a one-time code for the account payload', function () {
-    $user = User::factory()->create(['telegram_id' => 555, 'username' => 'user_exchange']);
+    $user = User::factory()->create([
+        'telegram_id' => 555,
+        'username' => 'user_exchange',
+        'synced_data' => ['quran-reader-last-page-v1' => '42'],
+    ]);
     Cache::put('native-auth-code:CODE123', $user->getKey(), now()->addMinutes(5));
 
-    postJson(route('api.native-auth.exchange'), ['code' => 'CODE123'])
+    $response = postJson(route('api.native-auth.exchange'), ['code' => 'CODE123'])
         ->assertOk()
         ->assertJsonPath('ok', true)
         ->assertJsonPath('user.telegram_id', 555)
-        ->assertJsonPath('user.username', 'user_exchange');
+        ->assertJsonPath('user.username', 'user_exchange')
+        ->assertJsonPath('user.synced_data.quran-reader-last-page-v1', '42');
+
+    // A fresh Sanctum Bearer token is issued and persisted server-side.
+    expect((string) $response->json('user.sync_token'))->toContain('|');
+    expect($user->tokens()->count())->toBe(1);
 
     // Single-use: the code is consumed.
     postJson(route('api.native-auth.exchange'), ['code' => 'CODE123'])
         ->assertStatus(422);
+});
+
+it('pushes a native password change to the authoritative server', function () {
+    $user = User::factory()->create();
+    Sanctum::actingAs($user);
+
+    postJson(route('api.native-sync.password'), ['password' => 'brand-new-pass'])
+        ->assertOk()
+        ->assertJsonPath('ok', true);
+
+    expect(Hash::check('brand-new-pass', $user->fresh()->password))->toBeTrue();
+});
+
+it('pushes a native settings change to the authoritative server', function () {
+    $user = User::factory()->create();
+    Sanctum::actingAs($user);
+
+    postJson(route('api.native-sync.settings'), ['data' => ['athkar-progress-v1' => 'value']])
+        ->assertOk()
+        ->assertJsonPath('ok', true);
+
+    expect($user->fresh()->synced_data)->toBe(['athkar-progress-v1' => 'value']);
+});
+
+it('rejects native sync without a valid bearer token', function () {
+    postJson(route('api.native-sync.password'), ['password' => 'whatever-pass'])
+        ->assertStatus(401);
+});
+
+it('deletes the authoritative account from a native device', function () {
+    $user = User::factory()->create();
+    $user->createToken('native-device');
+    Sanctum::actingAs($user);
+
+    postJson(route('api.native-sync.delete'))
+        ->assertOk()
+        ->assertJsonPath('ok', true);
+
+    expect(User::query()->whereKey($user->getKey())->exists())->toBeFalse();
+});
+
+it('revokes only the device token on native logout', function () {
+    $user = User::factory()->create();
+    $token = $user->createToken('native-device')->plainTextToken;
+
+    expect($user->tokens()->count())->toBe(1);
+
+    postJson(route('api.native-sync.logout'), [], ['Authorization' => "Bearer {$token}"])
+        ->assertOk()
+        ->assertJsonPath('ok', true);
+
+    expect($user->fresh()->tokens()->count())->toBe(0);
 });
 
 it('mirrors the account locally and flags a restart from the native deeplink handoff', function () {
@@ -117,6 +179,8 @@ it('mirrors the account locally and flags a restart from the native deeplink han
                 'name' => 'Handoff User',
                 'username' => 'user_handoff',
                 'password' => bcrypt('secret-pass'),
+                'sync_token' => 'sync-handoff',
+                'synced_data' => ['quran-reader-last-page-v1' => '7'],
             ],
         ]),
     ]);
@@ -132,7 +196,10 @@ it('mirrors the account locally and flags a restart from the native deeplink han
     $user = User::query()->where('telegram_id', 777)->first();
 
     expect($user)->not->toBeNull()
-        ->and($user->username)->toBe('user_handoff');
+        ->and($user->username)->toBe('user_handoff')
+        // Server-authoritative state is mirrored locally on login.
+        ->and($user->native_sync_token)->toBe('sync-handoff')
+        ->and($user->synced_data)->toBe(['quran-reader-last-page-v1' => '7']);
 
     assertAuthenticatedAs($user);
 

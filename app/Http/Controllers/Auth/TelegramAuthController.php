@@ -161,7 +161,7 @@ class TelegramAuthController
 
     private function mirrorAccountFromExchange(string $code): ?User
     {
-        $serverBase = $this->nativeServerBase();
+        $serverBase = native_server_base();
 
         if ($code === '' || $serverBase === null) {
             return null;
@@ -195,6 +195,10 @@ class TelegramAuthController
                 'username' => (string) ($data['username'] ?? ''),
                 'telegram_username' => $data['telegram_username'] ?? null,
                 'password' => $passwordHash,
+                // Pull the server's settings + sync token so the device mirror is
+                // consistent (server stays authoritative).
+                'synced_data' => is_array($data['synced_data'] ?? null) ? $data['synced_data'] : null,
+                'native_sync_token' => $data['sync_token'] ?? null,
             ],
         );
 
@@ -203,32 +207,6 @@ class TelegramAuthController
         User::query()->whereKey($user->getKey())->update(['password' => $passwordHash]);
 
         return $user->refresh();
-    }
-
-    private function nativeServerBase(): ?string
-    {
-        foreach ([
-            config('app.custom.native_end_points.settings'),
-            config('app.custom.native_end_points.telegram_auth'),
-            config('app.url'),
-        ] as $endpoint) {
-            $endpoint = trim((string) $endpoint);
-
-            if ($endpoint === '') {
-                continue;
-            }
-
-            $scheme = parse_url($endpoint, PHP_URL_SCHEME);
-            $host = parse_url($endpoint, PHP_URL_HOST);
-
-            if (is_string($scheme) && is_string($host) && $scheme !== '' && $host !== '') {
-                $port = parse_url($endpoint, PHP_URL_PORT);
-
-                return $scheme.'://'.$host.($port !== null ? ':'.$port : '');
-            }
-        }
-
-        return null;
     }
 
     private function nativeScheme(): string

@@ -35,7 +35,10 @@ const SYNCED_KEYS = new Set([
 
 const BRANCHED_KEYS = SYNCED_KEYS;
 
-const PUSH_DEBOUNCE_MS = 1500;
+// Native pushes each change to the server over HTTP, so debounce harder there to
+// avoid a request per Quran page-turn / progress tick; web just writes locally.
+const isNativePlatform = () => document.body?.classList.contains('native-platform') === true;
+const pushDebounceMs = () => (isNativePlatform() ? 5000 : 1500);
 
 const branchedKey = (branch, key) => `${branch}::${key}`;
 
@@ -112,8 +115,11 @@ export const installDataBranch = (storage = window.localStorage) => {
         return bundle;
     };
 
-    const pushUserBundle = () => {
-        window.Livewire?.dispatch('push-user-data', { data: collectUserBundle() });
+    const pushUserBundle = (reloadAfter = false) => {
+        window.Livewire?.dispatch('push-user-data', {
+            data: collectUserBundle(),
+            reloadAfter,
+        });
     };
 
     let pushTimer = null;
@@ -124,7 +130,7 @@ export const installDataBranch = (storage = window.localStorage) => {
         }
 
         window.clearTimeout(pushTimer);
-        pushTimer = window.setTimeout(pushUserBundle, PUSH_DEBOUNCE_MS);
+        pushTimer = window.setTimeout(pushUserBundle, pushDebounceMs());
     };
 
     // ponytail: only the three accessor methods are wrapped (the only ones the
@@ -183,10 +189,10 @@ export const installDataBranch = (storage = window.localStorage) => {
 installDataBranch();
 
 // Driven by the two data-tab buttons (override guest⇄user). Copies the bundle
-// between branches; when the user branch is the target, also pushes it to the
-// server so the override follows the account. The reload is handled by the
-// `auth-blink-reload` blinker the action dispatches alongside this event — its
-// delay covers the push roundtrip before the reset-on-reload re-reads.
+// between branches. When the user branch is the target, it also pushes to the
+// server and asks pushUserData() to fire the blinker reload *after* that push
+// completes (so the native HTTP sync isn't cut off by an early reload). When the
+// guest branch is the target it's a local-only copy, so the action reloads itself.
 if (typeof window !== 'undefined') {
     document.addEventListener('livewire:init', () => {
         window.Livewire?.on('override-data-branch', (event) => {
@@ -195,7 +201,7 @@ if (typeof window !== 'undefined') {
             window.muttasiqDataBranch?.copyBranch(fromBranch, toBranch);
 
             if (toBranch === 'user') {
-                window.muttasiqDataBranch?.pushUserBundle();
+                window.muttasiqDataBranch?.pushUserBundle(true);
             }
         });
     });

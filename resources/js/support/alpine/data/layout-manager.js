@@ -47,23 +47,32 @@ document.addEventListener('alpine:init', () => {
                 if (typeof window.AndroidBridge?.restartApplication === 'function') {
                     window.AndroidBridge.restartApplication();
 
+                    // Anti-stuck: if the restart didn't actually take, reveal the
+                    // (already authenticated) app after a grace period.
+                    window.setTimeout(() => this.revealApp(), 6000);
+
                     return;
                 }
 
-                this.isBlinkerShown = false;
-                this.isBodyVisible = true;
+                this.revealApp();
             }, this.defaultTransitionDurationInMs || 350);
         },
 
-        init() {
-            // Just logged in via native Telegram: stay under the blinker (its
-            // default state) and hand off to the store-token + restart flow,
-            // skipping the normal reveal so nothing flashes before the restart.
-            if (window.nativeAuthRestart && document.body?.classList.contains('native-platform')) {
-                void this.runNativeAuthRestart();
-
+        revealApp() {
+            if (this.isBodyVisible) {
                 return;
             }
+
+            if (!this.isFastUiMode) {
+                this.useFastTransitionDuration = false;
+            }
+
+            this.isBlinkerShown = false;
+            this.isBodyVisible = true;
+        },
+
+        init() {
+            const isNativePlatform = document.body?.classList.contains('native-platform') === true;
 
             this.isStartupSyncPending = this.shouldRunStartupSync;
             window.__startupSyncResolved = !this.isStartupSyncPending;
@@ -84,11 +93,6 @@ document.addEventListener('alpine:init', () => {
                 this.useFastTransitionDuration = true;
                 this.isFontReady = true;
                 this.isLayoutSetUp = true;
-                this.isBlinkerShown = false;
-                this.isBodyVisible = true;
-            } else {
-                this.isBlinkerShown = false;
-                this.isBodyVisible = true;
             }
 
             // ? Keep track of Filament action events
@@ -122,6 +126,30 @@ document.addEventListener('alpine:init', () => {
             window.Alpine.effect(() => {
                 this.isLayoutSetUp = this.isFontReady;
             });
+
+            // Just logged in via native Telegram: hold the blinker, persist the
+            // restore token, and restart (Quran-bootstrap UX).
+            if (isNativePlatform && window.nativeAuthRestart) {
+                void this.runNativeAuthRestart();
+
+                return;
+            }
+
+            // Native + logged out: keep the blinker up across the whole auth
+            // round-trip (cold-start restore / Telegram handoff / restart) so the
+            // guest UI never flashes. native-auth-persistence reloads on a
+            // successful restore or fires `native-auth-reveal` when there's nothing
+            // to restore; the 8s fallback guarantees we never stay stuck.
+            if (isNativePlatform && !this.isFastUiMode && window.dataBranch !== 'user') {
+                window.addEventListener('native-auth-reveal', () => this.revealApp(), {
+                    once: true,
+                });
+                window.setTimeout(() => this.revealApp(), 8000);
+
+                return;
+            }
+
+            this.revealApp();
         },
 
         blink(

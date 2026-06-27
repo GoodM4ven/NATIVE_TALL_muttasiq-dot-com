@@ -1,4 +1,5 @@
 const restoreStorageKey = 'auth.telegram.restore';
+const pendingKey = 'auth.telegram.pending';
 
 // Web shares this bundle but has no native bridge — calling SecureStorage there
 // throws "No device connected". The body carries `native-platform` only in the
@@ -11,12 +12,39 @@ const getBootstrapConfig = () => window.nativeAuthBootstrap || {};
 
 const getSecureStorage = () => window.nativeSecureStorage || null;
 
+// On native the home shell holds the blinker while logged out; this tells it to
+// stop holding and show the (guest) UI because there is nothing to restore.
+const revealApp = () => {
+    window.dispatchEvent(new CustomEvent('native-auth-reveal'));
+};
+
 const dispatchReloadBlink = () => {
     window.dispatchEvent(
         new CustomEvent('auth-blink-reload', {
             detail: { url: window.location.pathname || '/' },
         }),
     );
+};
+
+// True while a Telegram login is mid-flight (the user tapped login recently), so
+// the blinker keeps holding for the incoming deeplink handoff instead of flashing
+// the guest UI. 5 minutes covers a slow OAuth screen.
+const isTelegramAuthPending = () => {
+    try {
+        const at = window.localStorage.getItem(pendingKey);
+
+        return at !== null && Date.now() - Number(at) < 300000;
+    } catch (_) {
+        return false;
+    }
+};
+
+const clearTelegramAuthPending = () => {
+    try {
+        window.localStorage.removeItem(pendingKey);
+    } catch (_) {
+        // Ignore cleanup failures.
+    }
 };
 
 const deleteRestoreToken = async (secureStorage) => {
@@ -32,10 +60,11 @@ const deleteRestoreToken = async (secureStorage) => {
 };
 
 const restoreNativeSession = async (secureStorage) => {
-    const bootstrapConfig = getBootstrapConfig();
-    const restoreUrl = String(bootstrapConfig.restoreUrl || '').trim();
+    const restoreUrl = String(getBootstrapConfig().restoreUrl || '').trim();
 
     if (restoreUrl === '' || !secureStorage?.get) {
+        revealApp();
+
         return;
     }
 
@@ -51,6 +80,12 @@ const restoreNativeSession = async (secureStorage) => {
     const storedToken = String(storedTokenResponse?.value || '').trim();
 
     if (storedToken === '') {
+        // No saved session. If a Telegram login is mid-flight, keep holding the
+        // blinker for the deeplink handoff; otherwise reveal the guest UI.
+        if (!isTelegramAuthPending()) {
+            revealApp();
+        }
+
         return;
     }
 
@@ -70,13 +105,15 @@ const restoreNativeSession = async (secureStorage) => {
 
         if (!response.ok) {
             await deleteRestoreToken(secureStorage);
+            revealApp();
 
             return;
         }
 
         dispatchReloadBlink();
     } catch (_) {
-        // Leave the token in place for the next launch attempt.
+        // Couldn't reach the local runtime; reveal so the app never hangs.
+        revealApp();
     } finally {
         window.__nativeAuthRestoreInFlight = false;
     }
@@ -90,11 +127,16 @@ const bootstrapNativeAuthPersistence = async () => {
     const secureStorage = getSecureStorage();
 
     if (!secureStorage) {
+        // No bridge to restore from — reveal so the blinker doesn't hang.
+        revealApp();
+
         return;
     }
 
     // Logged-in already (cookie survived): nothing to restore.
     if (window.dataBranch === 'user') {
+        clearTelegramAuthPending();
+
         return;
     }
 
@@ -118,6 +160,8 @@ const scheduleBootstrap = () => {
 };
 
 window.addEventListener('native-auth-forget', () => {
+    clearTelegramAuthPending();
+
     if (!isNativeRuntime()) {
         return;
     }

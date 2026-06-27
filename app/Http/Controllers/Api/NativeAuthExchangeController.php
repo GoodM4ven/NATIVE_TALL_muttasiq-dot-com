@@ -47,6 +47,10 @@ class NativeAuthExchangeController
                 // Already a bcrypt hash; the device stores it verbatim so the
                 // texted username/password keeps working there too.
                 'password' => $user->password,
+                // Server-authoritative state the device mirrors on login.
+                'synced_data' => $user->synced_data,
+                // Sanctum Bearer token the device presents to push changes back.
+                'sync_token' => $user->createToken('native-device')->plainTextToken,
             ],
         ]);
     }
