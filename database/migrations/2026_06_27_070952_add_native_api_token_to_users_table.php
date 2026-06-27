@@ -12,9 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            // Server-issued credential the native runtime presents to push account
-            // changes (password, settings) back to the authoritative server.
-            $table->string('native_sync_token')->nullable()->unique()->after('synced_data');
+            // The Sanctum Bearer the native device stores (mirrored from the server
+            // at login) and presents when pushing changes back to the authoritative
+            // server. Server-side this column is unused; it's the device's copy.
+            $table->string('native_api_token')->nullable()->after('synced_data');
         });
     }
 
@@ -24,7 +25,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn('native_sync_token');
+            $table->dropColumn('native_api_token');
         });
     }
 };

@@ -2,12 +2,14 @@
 
 declare(strict_types=1);
 
+use App\Jobs\SyncUserSettings;
 use App\Livewire\AuthButton;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Laravel\Sanctum\Sanctum;
 use Laravel\Socialite\Contracts\Provider;
 use Laravel\Socialite\Facades\Socialite;
@@ -142,6 +144,35 @@ it('rejects native sync without a valid bearer token', function () {
         ->assertStatus(401);
 });
 
+it('queues the settings sync on native instead of pushing synchronously', function () {
+    config(['nativephp-internal.running' => true]);
+    Queue::fake();
+
+    $user = User::factory()->create(['native_api_token' => 'dev-bearer']);
+    Auth::login($user);
+
+    livewire(AuthButton::class)->call('pushUserData', ['athkar-progress-v1' => 'x']);
+
+    Queue::assertPushed(SyncUserSettings::class);
+});
+
+it('pushes the latest settings bundle to the server when the sync job runs', function () {
+    Http::fake(['*/api/native-sync/settings' => Http::response(['ok' => true])]);
+
+    $user = User::factory()->create([
+        'native_api_token' => 'dev-bearer',
+        'synced_data' => ['athkar-progress-v1' => 'latest'],
+    ]);
+
+    (new SyncUserSettings($user->getKey()))->handle();
+
+    Http::assertSent(
+        fn ($request): bool => str_contains($request->url(), '/api/native-sync/settings')
+            && $request->hasHeader('Authorization', 'Bearer dev-bearer')
+            && $request['data']['athkar-progress-v1'] === 'latest',
+    );
+});
+
 it('deletes the authoritative account from a native device', function () {
     $user = User::factory()->create();
     $user->createToken('native-device');
@@ -198,7 +229,7 @@ it('mirrors the account locally and flags a restart from the native deeplink han
     expect($user)->not->toBeNull()
         ->and($user->username)->toBe('user_handoff')
         // Server-authoritative state is mirrored locally on login.
-        ->and($user->native_sync_token)->toBe('sync-handoff')
+        ->and($user->native_api_token)->toBe('sync-handoff')
         ->and($user->synced_data)->toBe(['quran-reader-last-page-v1' => '7']);
 
     assertAuthenticatedAs($user);

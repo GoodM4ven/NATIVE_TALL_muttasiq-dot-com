@@ -36,7 +36,7 @@ class User extends Authenticatable implements FilamentUser
         'remember_token',
         'two_factor_recovery_codes',
         'two_factor_secret',
-        'native_sync_token',
+        'native_api_token',
     ];
 
     /**

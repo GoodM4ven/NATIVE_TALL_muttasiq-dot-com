@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Livewire;
 
+use App\Jobs\SyncUserSettings;
 use App\Models\User;
 use Closure;
 use Filament\Actions\Action;
@@ -317,8 +318,12 @@ class AuthButton extends Component implements HasActions, HasSchemas
         if (strlen((string) json_encode($bundle)) <= self::SYNCED_DATA_MAX_BYTES) {
             $user->forceFill(['synced_data' => $bundle])->save();
 
-            // On native the local DB is just a mirror; push to the authoritative server.
-            $this->pushNativeSync('native-sync.settings', ['data' => $bundle]);
+            // On native the local DB is just a mirror. Queue the server push so it
+            // survives offline stretches and coalesces rapid changes (the job is
+            // unique-until-processing and reads the latest bundle at run time).
+            if (is_platform('native')) {
+                SyncUserSettings::dispatch($user->getKey());
+            }
         }
 
         // The "make account = device" override defers its blinker reload to here,
@@ -344,14 +349,14 @@ class AuthButton extends Component implements HasActions, HasSchemas
         $user = Auth::user();
         $serverBase = native_server_base();
 
-        if (! $user instanceof User || blank($user->native_sync_token) || $serverBase === null) {
+        if (! $user instanceof User || blank($user->native_api_token) || $serverBase === null) {
             return false;
         }
 
         try {
             $response = Http::asJson()->acceptJson()
                 ->connectTimeout(3)->timeout(4)
-                ->withToken((string) $user->native_sync_token)
+                ->withToken((string) $user->native_api_token)
                 ->post($serverBase.'/api/'.str_replace('.', '/', $routeName), $payload);
 
             return $response->successful() && $response->json('ok') === true;

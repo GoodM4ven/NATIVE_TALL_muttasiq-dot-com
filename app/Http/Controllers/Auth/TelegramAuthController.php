@@ -195,10 +195,10 @@ class TelegramAuthController
                 'username' => (string) ($data['username'] ?? ''),
                 'telegram_username' => $data['telegram_username'] ?? null,
                 'password' => $passwordHash,
-                // Pull the server's settings + sync token so the device mirror is
+                // Pull the server's settings + API token so the device mirror is
                 // consistent (server stays authoritative).
                 'synced_data' => is_array($data['synced_data'] ?? null) ? $data['synced_data'] : null,
-                'native_sync_token' => $data['sync_token'] ?? null,
+                'native_api_token' => $data['sync_token'] ?? null,
             ],
         );
 

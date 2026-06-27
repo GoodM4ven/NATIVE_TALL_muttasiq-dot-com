@@ -27,11 +27,16 @@ const SYNCED_KEYS = new Set([
     'athkar-progress-v1',
     'athkar-notice-bypass-flags-v1',
     'quran-reader-bookmarks-v1',
-    'quran-reader-last-page-v1',
-    'quran-reader-navigation-history-v1',
     'quran-reader-wird-day-offset-v1',
     'quran-reader-wird-progress-v1',
 ]);
+
+// Deliberately NOT synced/branched: "where you are" is device-specific, so it
+// stays a plain, device-permanent localStorage value (same across guest/user,
+// never sent to the cloud, never overwritten by another device):
+//   - quran-reader-last-page-v1        (last page you were reading)
+//   - quran-reader-navigation-history-v1 (in-reader back-stack)
+//   - app-active-view                  (already device-local via Alpine $persist)
 
 const BRANCHED_KEYS = SYNCED_KEYS;
 
