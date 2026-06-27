@@ -470,3 +470,12 @@ it('renders the native telegram launcher page posting to the https callback', fu
         ->assertDontSee('muttasiq:', escape: false)
         ->assertSee('muttasiq_bot', escape: false);
 });
+
+it('renders the web telegram widget with a relative callback path', function () {
+    $html = view('livewire.auth.telegram-widget')->render();
+
+    expect($html)
+        ->toContain('\\/auth\\/telegram\\/callback');
+
+    expect(str_contains($html, 'https://muttasiq.dev.localhost/auth/telegram/callback'))->toBeFalse();
+});

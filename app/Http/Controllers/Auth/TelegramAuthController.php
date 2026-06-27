@@ -28,7 +28,7 @@ class TelegramAuthController
         // extra param would break signature validation.
         return view('auth.telegram-native', [
             'telegramBotName' => trim((string) config('services.telegram.bot', '')),
-            'callbackUrl' => route('auth.telegram.native.callback'),
+            'callbackUrl' => route('auth.telegram.native.callback', [], false),
         ]);
     }
 

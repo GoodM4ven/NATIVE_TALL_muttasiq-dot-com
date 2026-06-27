@@ -116,22 +116,6 @@ resolve_tailscale_command_prefix() {
     printf ''
 }
 
-read_env_value() {
-    local key="$1"
-    local line="${2:-}"
-
-    if [[ -z "${line}" ]]; then
-        line="$(grep -E "^${key}=" "${project_root}/.env" 2>/dev/null | head -n1 || true)"
-    fi
-
-    line="${line#${key}=}"
-    line="${line%$'\r'}"
-    line="${line%\"}"
-    line="${line#\"}"
-
-    printf '%s' "${line}"
-}
-
 log_tailscale_diagnostics() {
     if ! command -v tailscale >/dev/null 2>&1; then
         echo "[native-local-source-broadcast] tailscale: command not installed" >&2
@@ -482,20 +466,9 @@ trap cleanup EXIT INT TERM
 mkdir -p "$(dirname "${composer_dev_log_file}")"
 : >"${composer_dev_log_file}"
 
-export SERVER_HOST="${bind_host}"
-export SERVER_PORT="${port}"
-export BROADCAST_CONNECTION="$(read_env_value BROADCAST_CONNECTION)"
-export REVERB_APP_ID="$(read_env_value REVERB_APP_ID)"
-export REVERB_APP_KEY="$(read_env_value REVERB_APP_KEY)"
-export REVERB_APP_SECRET="$(read_env_value REVERB_APP_SECRET)"
-export REVERB_HOST="$(read_env_value REVERB_HOST)"
-export REVERB_PORT="$(read_env_value REVERB_PORT)"
-export REVERB_SCHEME="$(read_env_value REVERB_SCHEME)"
-export REVERB_ALLOWED_ORIGINS="$(read_env_value REVERB_ALLOWED_ORIGINS)"
-
 (
     cd "${project_root}"
-    composer dev >"${composer_dev_log_file}" 2>&1
+    SERVER_HOST="${bind_host}" SERVER_PORT="${port}" composer dev:native >"${composer_dev_log_file}" 2>&1
 ) &
 
 composer_dev_pid="$!"
@@ -530,7 +503,7 @@ echo "[native-local-source-broadcast] meta endpoint: ${meta_endpoint}"
 echo "[native-local-source-broadcast] download endpoint: ${download_endpoint}"
 echo "[native-local-source-broadcast] telegram auth endpoint: ${telegram_auth_endpoint}"
 echo "[native-local-source-broadcast] reverb host: ${public_host}:${public_reverb_port} (${public_scheme})"
-echo "[native-local-source-broadcast] running composer dev + ${native_script}"
+echo "[native-local-source-broadcast] running composer dev:native + ${native_script}"
 
 (
     cd "${project_root}"

@@ -134,7 +134,7 @@
                     });
         
                     window.dispatchEvent(new CustomEvent('auth-blink-reload', {
-                        detail: { url: @js(route('auth.telegram.callback')) + '?' + params.toString() },
+                        detail: { url: @js(route('auth.telegram.callback', [], false)) + '?' + params.toString() },
                     }));
                 };
         

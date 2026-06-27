@@ -127,6 +127,10 @@
             "@optimize",
             "pnpm exec concurrently -c \"#93c5fd,#c4b5fd,#34d399,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"php artisan reverb:start --host=0.0.0.0\" \"php artisan pail --timeout=0\" \"pnpm run dev\" --names=server,queue,reverb,logs,vite --kill-others"
         ],
+        "dev:native": [
+            "@optimize",
+            "pnpm exec concurrently -c \"#93c5fd,#c4b5fd,#34d399,#fb7185\" \"php artisan serve --host=${SERVER_HOST:-127.0.0.1} --port=${SERVER_PORT:-8000}\" \"php artisan queue:listen --tries=1\" \"php artisan reverb:start --host=0.0.0.0\" \"php artisan pail --timeout=0\" --names=server,queue,reverb,logs --kill-others"
+        ],
         "format": [
             "pnpm run format:blade",
             "pnpm run format:prettier",

@@ -41,6 +41,22 @@ if (! function_exists('is_platform')) {
     throw new Exception('The function `is_platform` already exists.');
 }
 
+if (! function_exists('is_native_bootstrap_runtime')) {
+    function is_native_bootstrap_runtime(): bool
+    {
+        $nativeRunning = strtolower((string) getenv('NATIVEPHP_RUNNING'));
+        $nativePlatform = strtolower((string) getenv('NATIVEPHP_PLATFORM'));
+
+        if (in_array($nativeRunning, ['1', 'true', 'yes'], true)) {
+            return true;
+        }
+
+        return in_array($nativePlatform, ['android', 'ios'], true);
+    }
+} else {
+    throw new Exception('The function `is_native_bootstrap_runtime` already exists.');
+}
+
 if (! function_exists('native_server_base')) {
     /**
      * Resolve the public server's scheme://host[:port] that the native runtime
