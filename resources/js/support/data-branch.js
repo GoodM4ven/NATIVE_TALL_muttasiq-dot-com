@@ -27,16 +27,19 @@ const SYNCED_KEYS = new Set([
     'athkar-progress-v1',
     'athkar-notice-bypass-flags-v1',
     'quran-reader-bookmarks-v1',
+    'quran-reader-last-page-v1',
+    'quran-reader-navigation-history-v1',
     'quran-reader-wird-day-offset-v1',
     'quran-reader-wird-progress-v1',
 ]);
 
-// Deliberately NOT synced/branched: "where you are" is device-specific, so it
-// stays a plain, device-permanent localStorage value (same across guest/user,
-// never sent to the cloud, never overwritten by another device):
-//   - quran-reader-last-page-v1        (last page you were reading)
-//   - quran-reader-navigation-history-v1 (in-reader back-stack)
-//   - app-active-view                  (already device-local via Alpine $persist)
+// `quran-reader-last-page-v1` / `quran-reader-navigation-history-v1` ARE synced:
+// reading position follows the account across devices (read on desktop, continue
+// on mobile). Cross-device "active usage" is handled by the websocket listener,
+// which sends idle devices back to the main menu so they don't fight over state.
+//
+// NOT synced (genuinely device-local UI state): `app-active-view` — which screen
+// is open — stays device-local via Alpine $persist.
 
 const BRANCHED_KEYS = SYNCED_KEYS;
 
@@ -124,6 +127,7 @@ export const installDataBranch = (storage = window.localStorage) => {
         window.Livewire?.dispatch('push-user-data', {
             data: collectUserBundle(),
             reloadAfter,
+            socketId: window.Echo?.socketId?.() || null,
         });
     };
 

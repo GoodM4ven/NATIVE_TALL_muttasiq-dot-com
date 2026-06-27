@@ -1,4 +1,5 @@
 import 'laravel-hot-refresh';
+import './support/realtime-sync';
 import './support/data-branch';
 import './support/dispatch';
 import './support/css-variables';

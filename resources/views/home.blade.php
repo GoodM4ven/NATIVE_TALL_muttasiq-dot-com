@@ -1,5 +1,17 @@
 <x-app>
     @push('head-scripts')
+        @php
+            $nativeRealtimeTokenId = null;
+            $nativeRealtimeToken = (string) auth()->user()?->native_api_token;
+
+            if (
+                is_platform('native') &&
+                preg_match('/^(\d+)\|/', $nativeRealtimeToken, $nativeRealtimeTokenMatches) === 1
+            ) {
+                $nativeRealtimeTokenId = (int) $nativeRealtimeTokenMatches[1];
+            }
+        @endphp
+
         <script>
             window.dataBranch = @js(auth()->check() ? 'user' : 'guest');
             window.userSyncedData = @js(auth()->user()?->synced_data);
@@ -9,6 +21,12 @@
             // never the absolute APP_URL (muttasiq.com).
             window.nativeAuthBootstrap = {
                 restoreUrl: @js(route('auth.telegram.native.restore', absolute: false)),
+            };
+            window.realtimeBootstrap = {
+                telegramId: @js(auth()->user()?->telegram_id),
+                nativeTokenId: @js($nativeRealtimeTokenId),
+                nativeBroadcastAuthUrl: @js(route('native.broadcasting.auth', absolute: false)),
+                realtimeLogoutUrl: @js(route('auth.realtime.logout', absolute: false)),
             };
 
             // Set right after a native Telegram login: the local home blinks,

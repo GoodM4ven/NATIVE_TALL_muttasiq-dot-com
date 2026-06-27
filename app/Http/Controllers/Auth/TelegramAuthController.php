@@ -169,7 +169,10 @@ class TelegramAuthController
 
         try {
             $response = Http::asJson()->acceptJson()
-                ->post($serverBase.'/api/native-auth/exchange', ['code' => $code]);
+                ->post($serverBase.'/api/native-auth/exchange', [
+                    'code' => $code,
+                    'device_name' => $this->nativeDeviceName(),
+                ]);
         } catch (\Throwable) {
             return null;
         }
@@ -198,6 +201,8 @@ class TelegramAuthController
                 // Pull the server's settings + API token so the device mirror is
                 // consistent (server stays authoritative).
                 'synced_data' => is_array($data['synced_data'] ?? null) ? $data['synced_data'] : null,
+                'synced_data_updated_at' => $data['synced_data_updated_at'] ?? null,
+                'two_factor_confirmed_at' => $data['two_factor_confirmed_at'] ?? null,
                 'native_api_token' => $data['sync_token'] ?? null,
             ],
         );
@@ -207,6 +212,15 @@ class TelegramAuthController
         User::query()->whereKey($user->getKey())->update(['password' => $passwordHash]);
 
         return $user->refresh();
+    }
+
+    private function nativeDeviceName(): string
+    {
+        return match (true) {
+            is_platform('android') => 'Android native app',
+            is_platform('ios') => 'iOS native app',
+            default => 'Native app',
+        };
     }
 
     private function nativeScheme(): string

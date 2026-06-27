@@ -28,7 +28,11 @@ class SyncUserSettings implements ShouldBeUniqueUntilProcessing, ShouldQueue
 
     public int $uniqueFor = 120;
 
-    public function __construct(public int $userId) {}
+    public function __construct(
+        public int $userId,
+        public ?string $socketId = null,
+        public string $realtimeType = 'dataSynced',
+    ) {}
 
     public function uniqueId(): string
     {
@@ -61,9 +65,14 @@ class SyncUserSettings implements ShouldBeUniqueUntilProcessing, ShouldQueue
         $response = Http::asJson()->acceptJson()
             ->connectTimeout(5)->timeout(8)
             ->withToken((string) $user->native_api_token)
+            ->withHeaders(array_filter([
+                'X-Socket-ID' => $this->socketId,
+            ]))
             ->post($serverBase.'/api/native-sync/settings', [
                 // Read fresh at run time so the latest state always wins.
                 'data' => $user->synced_data ?? [],
+                'synced_at' => $user->synced_data_updated_at?->toISOString() ?? now()->toISOString(),
+                'realtime_type' => $this->realtimeType,
             ]);
 
         if (! $response->successful() || $response->json('ok') !== true) {

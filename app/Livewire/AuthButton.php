@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Livewire;
 
+use App\Events\UserRealtimeEvent;
 use App\Jobs\SyncUserSettings;
 use App\Models\User;
 use Closure;
@@ -26,6 +27,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\HtmlString;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
 use Laravel\Fortify\Actions\ConfirmTwoFactorAuthentication;
@@ -130,7 +132,15 @@ class AuthButton extends Component implements HasActions, HasSchemas
 
                         $user = User::query()->where('username', (string) $get('username'))->first();
 
-                        if ($user === null || $user->two_factor_secret === null) {
+                        if ($user === null) {
+                            return;
+                        }
+
+                        if ($user->two_factor_secret === null) {
+                            if (! $this->verifyNativeTwoFactorCode($user, (string) $value)) {
+                                $fail(arabic_text('رمز المصادقة الثنائية غير صحيح'));
+                            }
+
                             return;
                         }
 
@@ -152,6 +162,8 @@ class AuthButton extends Component implements HasActions, HasSchemas
                     $this->awaitingTwoFactor = true;
 
                     $action->halt();
+
+                    return;
                 }
 
                 Auth::login($user, remember: true);
@@ -247,6 +259,14 @@ class AuthButton extends Component implements HasActions, HasSchemas
                                 $this->overrideAccountWithGuestAction(),
                             ])->alignCenter(),
                         ]),
+                    Tab::make('devices')
+                        ->key('devices')
+                        ->label(arabic_text('أجهزتي'))
+                        ->icon('heroicon-o-device-phone-mobile')
+                        ->schema([
+                            Text::make(fn (): HtmlString => $this->devicesHtml())
+                                ->extraAttributes(['class' => 'w-full']),
+                        ]),
                 ]),
             ]);
     }
@@ -305,7 +325,7 @@ class AuthButton extends Component implements HasActions, HasSchemas
      * @param  array<string, mixed>  $data
      */
     #[On('push-user-data')]
-    public function pushUserData(array $data, bool $reloadAfter = false): void
+    public function pushUserData(array $data, bool $reloadAfter = false, ?string $socketId = null): void
     {
         $user = Auth::user();
 
@@ -316,13 +336,26 @@ class AuthButton extends Component implements HasActions, HasSchemas
         $bundle = array_filter($data, static fn ($value): bool => is_string($value));
 
         if (strlen((string) json_encode($bundle)) <= self::SYNCED_DATA_MAX_BYTES) {
-            $user->forceFill(['synced_data' => $bundle])->save();
+            $syncedAt = now();
+
+            $user->forceFill([
+                'synced_data' => $bundle,
+                'synced_data_updated_at' => $syncedAt,
+            ])->save();
+
+            $realtimeType = $reloadAfter ? 'dataOverridden' : 'dataSynced';
 
             // On native the local DB is just a mirror. Queue the server push so it
             // survives offline stretches and coalesces rapid changes (the job is
             // unique-until-processing and reads the latest bundle at run time).
             if (is_platform('native')) {
-                SyncUserSettings::dispatch($user->getKey());
+                SyncUserSettings::dispatch($user->getKey(), $socketId, $realtimeType);
+            } elseif ($user->telegram_id !== null) {
+                broadcast(new UserRealtimeEvent(
+                    (int) $user->telegram_id,
+                    $realtimeType,
+                    socketId: $socketId ?? request()->headers->get('X-Socket-ID'),
+                ));
             }
         }
 
@@ -357,6 +390,9 @@ class AuthButton extends Component implements HasActions, HasSchemas
             $response = Http::asJson()->acceptJson()
                 ->connectTimeout(3)->timeout(4)
                 ->withToken((string) $user->native_api_token)
+                ->withHeaders(array_filter([
+                    'X-Socket-ID' => request()->headers->get('X-Socket-ID'),
+                ]))
                 ->post($serverBase.'/api/'.str_replace('.', '/', $routeName), $payload);
 
             return $response->successful() && $response->json('ok') === true;
@@ -400,7 +436,9 @@ class AuthButton extends Component implements HasActions, HasSchemas
                     ->extraAttributes(['class' => 'ltr-enforced']),
             ])
             ->action(function (array $data): void {
-                $this->currentUser()->forceFill([
+                $user = $this->currentUser();
+
+                $user->forceFill([
                     'password' => Hash::make((string) $data['password']),
                 ])->save();
 
@@ -409,6 +447,15 @@ class AuthButton extends Component implements HasActions, HasSchemas
                 $synced = $this->pushNativeSync('native-sync.password', [
                     'password' => (string) $data['password'],
                 ]);
+
+                if (! is_platform('native') && $user->telegram_id !== null) {
+                    $user->tokens()->delete();
+                    broadcast(new UserRealtimeEvent(
+                        (int) $user->telegram_id,
+                        'passwordChanged',
+                        socketId: request()->headers->get('X-Socket-ID'),
+                    ));
+                }
 
                 notify(
                     'mdi.content-save-check',
@@ -456,6 +503,35 @@ class AuthButton extends Component implements HasActions, HasSchemas
     public function regenerateRecoveryCodes(): void
     {
         app(GenerateNewRecoveryCodes::class)($this->currentUser());
+    }
+
+    public function revokeDevice(int $tokenId): void
+    {
+        $user = $this->currentUser();
+
+        if (is_platform('native')) {
+            $didRevoke = $this->pushNativeSync('native-sync.devices.revoke', [
+                'token_id' => $tokenId,
+            ]);
+        } else {
+            $didRevoke = $user->tokens()->whereKey($tokenId)->delete() > 0;
+
+            if ($didRevoke && $user->telegram_id !== null) {
+                broadcast(new UserRealtimeEvent(
+                    (int) $user->telegram_id,
+                    'deviceLoggedOut',
+                    $tokenId,
+                    request()->headers->get('X-Socket-ID'),
+                ));
+            }
+        }
+
+        notify(
+            $didRevoke ? 'heroicon-o-device-phone-mobile' : 'heroicon-o-exclamation-circle',
+            $didRevoke
+                ? arabic_text('تم تسجيل خروج الجهاز')
+                : arabic_text('تعذر تسجيل خروج الجهاز، حاول مرة أخرى'),
+        );
     }
 
     public function logoutAction(): Action
@@ -508,6 +584,11 @@ class AuthButton extends Component implements HasActions, HasSchemas
                     return;
                 }
 
+                if (! is_platform('native') && $user->telegram_id !== null) {
+                    broadcast(new UserRealtimeEvent((int) $user->telegram_id, 'accountDeleted'));
+                    $user->tokens()->delete();
+                }
+
                 Auth::logout();
                 session()->invalidate();
                 session()->regenerateToken();
@@ -529,6 +610,157 @@ class AuthButton extends Component implements HasActions, HasSchemas
         $user = Auth::user();
 
         return $user;
+    }
+
+    private function verifyNativeTwoFactorCode(User $user, string $code): bool
+    {
+        if (! is_platform('native') || blank($user->native_api_token)) {
+            return false;
+        }
+
+        $serverBase = native_server_base();
+
+        if ($serverBase === null) {
+            return false;
+        }
+
+        try {
+            $response = Http::asJson()->acceptJson()
+                ->connectTimeout(3)->timeout(4)
+                ->withToken((string) $user->native_api_token)
+                ->post($serverBase.'/api/native-auth/two-factor', ['code' => $code]);
+
+            return $response->successful() && $response->json('ok') === true;
+        } catch (\Throwable $exception) {
+            Log::warning('Native two-factor verification failed.', [
+                'message' => $exception->getMessage(),
+            ]);
+
+            return false;
+        }
+    }
+
+    private function currentNativeTokenId(): ?int
+    {
+        $token = (string) $this->currentUser()->native_api_token;
+
+        if (preg_match('/^(?<id>\d+)\|/', $token, $matches) !== 1) {
+            return null;
+        }
+
+        return (int) $matches['id'];
+    }
+
+    private function devicesHtml(): HtmlString
+    {
+        $devices = $this->nativeDevices();
+
+        if ($devices === null) {
+            return new HtmlString(
+                '<div class="rounded-xl border border-amber-300/70 bg-amber-50/90 px-3 py-2 text-sm text-amber-950 dark:border-amber-700 dark:bg-amber-950/70 dark:text-amber-100">'
+                    .e(arabic_text('تعذر تحميل الأجهزة الآن. تحقق من الاتصال ثم حاول مرة أخرى.'))
+                    .'</div>',
+            );
+        }
+
+        if ($devices === []) {
+            return new HtmlString(
+                '<div class="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-center text-sm text-gray-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200">'
+                    .e(arabic_text('لا توجد أجهزة أخرى مسجلة.'))
+                    .'</div>',
+            );
+        }
+
+        $items = collect($devices)
+            ->map(function (array $device): string {
+                $id = (int) ($device['id'] ?? 0);
+                $name = e((string) ($device['name'] ?? arabic_text('جهاز')));
+                $caption = e($this->deviceCaption($device));
+                $revokeLabel = e(arabic_text('تسجيل خروجه'));
+
+                return <<<HTML
+                    <div class="flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white/80 px-3 py-2 text-sm shadow-sm dark:border-gray-800 dark:bg-gray-950/70">
+                        <div class="min-w-0">
+                            <div class="truncate font-semibold text-gray-950 dark:text-gray-50">{$name}</div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">{$caption}</div>
+                        </div>
+                        <button type="button" wire:click="revokeDevice({$id})" wire:loading.attr="disabled" class="shrink-0 rounded-full bg-danger-600 px-3 py-1 text-xs font-bold text-white transition hover:bg-danger-700 disabled:opacity-50">
+                            {$revokeLabel}
+                        </button>
+                    </div>
+                    HTML;
+            })
+            ->implode('');
+
+        return new HtmlString('<div class="space-y-2">'.$items.'</div>');
+    }
+
+    /**
+     * @return array<int, array{id:int|string|null,name:string|null,last_used_at:string|null,created_at:string|null}>|null
+     */
+    private function nativeDevices(): ?array
+    {
+        $user = $this->currentUser();
+
+        if (is_platform('native')) {
+            $serverBase = native_server_base();
+
+            if (blank($user->native_api_token) || $serverBase === null) {
+                return null;
+            }
+
+            try {
+                $response = Http::acceptJson()
+                    ->connectTimeout(3)->timeout(4)
+                    ->withToken((string) $user->native_api_token)
+                    ->get($serverBase.'/api/native-sync/devices');
+
+                return $response->successful() && $response->json('ok') === true
+                    ? (array) $response->json('devices', [])
+                    : null;
+            } catch (\Throwable $exception) {
+                Log::warning('Native devices list fetch failed.', [
+                    'message' => $exception->getMessage(),
+                ]);
+
+                return null;
+            }
+        }
+
+        $currentTokenId = $this->currentNativeTokenId();
+
+        return $user->tokens()
+            ->latest('id')
+            ->get()
+            ->reject(fn ($token): bool => $currentTokenId !== null && (int) $token->getKey() === $currentTokenId)
+            ->values()
+            ->map(fn ($token): array => [
+                'id' => $token->getKey(),
+                'name' => $token->name,
+                'last_used_at' => $token->last_used_at?->toISOString(),
+                'created_at' => $token->created_at?->toISOString(),
+            ])
+            ->all();
+    }
+
+    /**
+     * @param  array{id?:int|string|null,name?:string|null,last_used_at?:string|null,created_at?:string|null}  $device
+     */
+    private function deviceCaption(array $device): string
+    {
+        $lastUsedAt = (string) ($device['last_used_at'] ?? '');
+
+        if ($lastUsedAt !== '') {
+            return arabic_text('آخر استخدام: ').Str::of($lastUsedAt)->replace('T', ' ')->before('.');
+        }
+
+        $createdAt = (string) ($device['created_at'] ?? '');
+
+        if ($createdAt !== '') {
+            return arabic_text('أضيف: ').Str::of($createdAt)->replace('T', ' ')->before('.');
+        }
+
+        return arabic_text('جهاز مسجل');
     }
 
     public function render(): View

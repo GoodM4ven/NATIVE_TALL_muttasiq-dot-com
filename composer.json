@@ -25,6 +25,7 @@
         "laravel/fortify": "^1.37",
         "laravel/framework": "^12.0",
         "laravel/nightwatch": "^1.22",
+        "laravel/reverb": "^1.10",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.10.1",
         "livewire/blaze": "^1.0",
@@ -124,7 +125,7 @@
         ],
         "dev": [
             "@optimize",
-            "pnpm exec concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"php artisan pail --timeout=0\" \"pnpm run dev\" --names=server,queue,logs,vite --kill-others"
+            "pnpm exec concurrently -c \"#93c5fd,#c4b5fd,#34d399,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"php artisan reverb:start --host=0.0.0.0\" \"php artisan pail --timeout=0\" \"pnpm run dev\" --names=server,queue,reverb,logs,vite --kill-others"
         ],
         "format": [
             "pnpm run format:blade",

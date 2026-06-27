@@ -33,6 +33,10 @@ tailscale_funnel_pid=""
 tailscale_funnel_active=0
 tailscale_funnel_target=""
 tailscale_funnel_https_port=443
+tailscale_funnel_reverb_target=""
+tailscale_funnel_reverb_active=0
+tailscale_funnel_reverb_https_port="${NATIVE_QURAN_LOCAL_REVERB_HTTPS_PORT:-8443}"
+reverb_server_port="${REVERB_SERVER_PORT:-8080}"
 watch_prefers_tailscale=0
 tailscale_requires_sudo=0
 
@@ -219,7 +223,43 @@ start_tailscale_funnel() {
     return 0
 }
 
+start_tailscale_reverb_funnel() {
+    local funnel_target="$1"
+
+    if ! command -v tailscale >/dev/null 2>&1; then
+        return 1
+    fi
+
+    local tailscale_command_prefix
+    tailscale_command_prefix="$(resolve_tailscale_command_prefix)"
+
+    if [[ -n "${tailscale_command_prefix}" ]]; then
+        (
+            cd "${project_root}"
+            ${tailscale_command_prefix} tailscale funnel --yes --bg --https="${tailscale_funnel_reverb_https_port}" "${funnel_target}"
+        ) >>"${tailscale_log_file}" 2>&1
+    else
+        (
+            cd "${project_root}"
+            tailscale funnel --yes --bg --https="${tailscale_funnel_reverb_https_port}" "${funnel_target}"
+        ) >>"${tailscale_log_file}" 2>&1
+    fi
+
+    tailscale_funnel_reverb_active=1
+    tailscale_funnel_reverb_target="${funnel_target}"
+
+    return 0
+}
+
 stop_tailscale_funnel() {
+    if [[ "${tailscale_funnel_reverb_active}" -eq 1 && -n "${tailscale_funnel_reverb_target}" ]]; then
+        if [[ "${tailscale_requires_sudo}" -eq 1 ]]; then
+            sudo tailscale funnel --yes --https="${tailscale_funnel_reverb_https_port}" "${tailscale_funnel_reverb_target}" off >/dev/null 2>&1 || true
+        else
+            tailscale funnel --yes --https="${tailscale_funnel_reverb_https_port}" "${tailscale_funnel_reverb_target}" off >/dev/null 2>&1 || true
+        fi
+    fi
+
     if [[ "${tailscale_funnel_active}" -ne 1 ]]; then
         return 0
     fi
@@ -252,6 +292,26 @@ extract_url_host() {
     local host_and_port="${without_scheme%%/*}"
 
     printf '%s' "${host_and_port%%:*}"
+}
+
+extract_url_scheme() {
+    local url="$1"
+
+    printf '%s' "${url%%://*}"
+}
+
+extract_url_port() {
+    local url="$1"
+    local fallback_port="$2"
+    local without_scheme="${url#*://}"
+    local host_and_port="${without_scheme%%/*}"
+
+    if [[ "${host_and_port}" == *:* ]]; then
+        printf '%s' "${host_and_port##*:}"
+        return 0
+    fi
+
+    printf '%s' "${fallback_port}"
 }
 
 is_loopback_style_host() {
@@ -313,6 +373,7 @@ if [[ -z "${public_base_url}" && "${mode}" == "watch" ]]; then
                 if [[ -n "${funnel_url}" ]]; then
                     public_base_url="${funnel_url}"
                     echo "[native-local-source-broadcast] using tailscale funnel ${public_base_url}" >&2
+                    start_tailscale_reverb_funnel "localhost:${reverb_server_port}" || true
                     break
                 fi
             fi
@@ -359,6 +420,12 @@ if [[ ! "${public_base_url}" =~ ^https?:// ]]; then
 fi
 
 public_host="$(extract_url_host "${public_base_url}")"
+public_scheme="$(extract_url_scheme "${public_base_url}")"
+public_reverb_port="${NATIVE_QURAN_LOCAL_REVERB_PUBLIC_PORT:-$(extract_url_port "${public_base_url}" "$([[ "${public_scheme}" == "https" ]] && printf '443' || printf '80')")}"
+
+if [[ "${tailscale_funnel_reverb_active}" -eq 1 ]]; then
+    public_reverb_port="${tailscale_funnel_reverb_https_port}"
+fi
 
 if [[ -z "${public_host}" ]]; then
     echo "[native-local-source-broadcast] unable to resolve host from NATIVE_QURAN_LOCAL_PUBLIC_BASE_URL: ${public_base_url}" >&2
@@ -435,6 +502,7 @@ echo "[native-local-source-broadcast] settings endpoint: ${settings_endpoint}"
 echo "[native-local-source-broadcast] meta endpoint: ${meta_endpoint}"
 echo "[native-local-source-broadcast] download endpoint: ${download_endpoint}"
 echo "[native-local-source-broadcast] telegram auth endpoint: ${telegram_auth_endpoint}"
+echo "[native-local-source-broadcast] reverb host: ${public_host}:${public_reverb_port} (${public_scheme})"
 echo "[native-local-source-broadcast] running ${native_script}"
 
 (
@@ -444,5 +512,8 @@ echo "[native-local-source-broadcast] running ${native_script}"
         NATIVE_QURAN_SNAPSHOT_DOWNLOAD_ENDPOINT="${download_endpoint}" \
         NATIVE_TELEGRAM_AUTH_ENDPOINT="${telegram_auth_endpoint}" \
         NATIVE_ANDROID_KEEP_LOOPBACK_ENDPOINTS="${native_android_keep_loopback_endpoints}" \
+        VITE_REVERB_HOST="${public_host}" \
+        VITE_REVERB_PORT="${public_reverb_port}" \
+        VITE_REVERB_SCHEME="${public_scheme}" \
         "${native_script}"
 )

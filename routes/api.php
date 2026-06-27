@@ -10,9 +10,14 @@ use App\Http\Controllers\Api\QuranSnapshotDownloadController;
 use App\Http\Controllers\Api\QuranSnapshotMetaController;
 use App\Http\Controllers\Api\SettingsController;
 use App\Http\Controllers\Api\VisitMetricController;
+use Illuminate\Broadcasting\BroadcastController;
 use Illuminate\Support\Facades\Route;
 
 Route::name('api.')->group(function () {
+    Route::match(['get', 'post'], '/broadcasting/auth', [BroadcastController::class, 'authenticate'])
+        ->middleware(['auth:sanctum', 'throttle:60,1'])
+        ->name('broadcasting.auth');
+
     Route::get('/athkar', AthkarController::class)
         ->middleware('throttle:athkar')
         ->name('athkar.index');
@@ -40,6 +45,18 @@ Route::name('api.')->group(function () {
     Route::post('/native-sync/settings', [NativeSyncController::class, 'settings'])
         ->middleware(['auth:sanctum', 'throttle:30,1'])
         ->name('native-sync.settings');
+
+    Route::get('/native-sync/devices', [NativeSyncController::class, 'devices'])
+        ->middleware(['auth:sanctum', 'throttle:30,1'])
+        ->name('native-sync.devices');
+
+    Route::post('/native-sync/devices/revoke', [NativeSyncController::class, 'revokeDevice'])
+        ->middleware(['auth:sanctum', 'throttle:30,1'])
+        ->name('native-sync.devices.revoke');
+
+    Route::post('/native-auth/two-factor', [NativeSyncController::class, 'twoFactor'])
+        ->middleware(['auth:sanctum', 'throttle:6,1'])
+        ->name('native-auth.two-factor');
 
     Route::post('/native-sync/delete', [NativeSyncController::class, 'destroy'])
         ->middleware(['auth:sanctum', 'throttle:6,1'])

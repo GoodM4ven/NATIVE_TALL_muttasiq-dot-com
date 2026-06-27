@@ -20,6 +20,7 @@ class NativeAuthExchangeController
     public function __invoke(Request $request): JsonResponse
     {
         $code = trim((string) $request->input('code', ''));
+        $deviceName = trim((string) $request->input('device_name', ''));
 
         if ($code === '') {
             return response()->json(['ok' => false], 422);
@@ -49,8 +50,10 @@ class NativeAuthExchangeController
                 'password' => $user->password,
                 // Server-authoritative state the device mirrors on login.
                 'synced_data' => $user->synced_data,
+                'synced_data_updated_at' => $user->synced_data_updated_at?->toISOString(),
+                'two_factor_confirmed_at' => $user->two_factor_confirmed_at?->toISOString(),
                 // Sanctum Bearer token the device presents to push changes back.
-                'sync_token' => $user->createToken('native-device')->plainTextToken,
+                'sync_token' => $user->createToken($deviceName !== '' ? $deviceName : 'Native device')->plainTextToken,
             ],
         ]);
     }

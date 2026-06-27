@@ -11,6 +11,7 @@ use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Carbon;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Sanctum\HasApiTokens;
 
@@ -20,6 +21,8 @@ use Laravel\Sanctum\HasApiTokens;
  * @property string|null $telegram_username
  * @property int|null $telegram_id
  * @property string|null $email
+ * @property Carbon|null $synced_data_updated_at
+ * @property Carbon|null $two_factor_confirmed_at
  */
 class User extends Authenticatable implements FilamentUser
 {
@@ -51,6 +54,7 @@ class User extends Authenticatable implements FilamentUser
             'two_factor_confirmed_at' => 'datetime',
             'password' => 'hashed',
             'synced_data' => 'array',
+            'synced_data_updated_at' => 'datetime',
         ];
     }
 

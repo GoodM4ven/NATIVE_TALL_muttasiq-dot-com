@@ -10,14 +10,17 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
+use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
 use Laravel\Sanctum\Sanctum;
 use Laravel\Socialite\Contracts\Provider;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\User as SocialiteUser;
+use PragmaRX\Google2FA\Google2FA;
 
 use function Pest\Laravel\assertAuthenticatedAs;
 use function Pest\Laravel\assertGuest;
 use function Pest\Laravel\get;
+use function Pest\Laravel\getJson;
 use function Pest\Laravel\postJson;
 use function Pest\Livewire\livewire;
 
@@ -139,6 +142,23 @@ it('pushes a native settings change to the authoritative server', function () {
     expect($user->fresh()->synced_data)->toBe(['athkar-progress-v1' => 'value']);
 });
 
+it('ignores stale native settings pushes', function () {
+    $user = User::factory()->create([
+        'synced_data' => ['athkar-progress-v1' => 'newer'],
+        'synced_data_updated_at' => now(),
+    ]);
+    $token = $user->createToken('native-device')->plainTextToken;
+
+    postJson(route('api.native-sync.settings'), [
+        'data' => ['athkar-progress-v1' => 'older'],
+        'synced_at' => now()->subMinute()->toISOString(),
+    ], ['Authorization' => "Bearer {$token}"])
+        ->assertOk()
+        ->assertJsonPath('stale', true);
+
+    expect($user->fresh()->synced_data)->toBe(['athkar-progress-v1' => 'newer']);
+});
+
 it('rejects native sync without a valid bearer token', function () {
     postJson(route('api.native-sync.password'), ['password' => 'whatever-pass'])
         ->assertStatus(401);
@@ -196,6 +216,86 @@ it('revokes only the device token on native logout', function () {
         ->assertJsonPath('ok', true);
 
     expect($user->fresh()->tokens()->count())->toBe(0);
+});
+
+it('lists and revokes native device tokens except the current one', function () {
+    $user = User::factory()->create();
+    $currentToken = $user->createToken('this-device')->plainTextToken;
+    $otherToken = $user->createToken('other-device')->accessToken;
+
+    getJson(route('api.native-sync.devices'), ['Authorization' => "Bearer {$currentToken}"])
+        ->assertOk()
+        ->assertJsonPath('devices.0.id', $otherToken->getKey())
+        ->assertJsonPath('devices.0.name', 'other-device');
+
+    postJson(route('api.native-sync.devices.revoke'), [
+        'token_id' => $otherToken->getKey(),
+    ], ['Authorization' => "Bearer {$currentToken}"])
+        ->assertOk()
+        ->assertJsonPath('ok', true);
+
+    expect($user->tokens()->whereKey($otherToken->getKey())->exists())->toBeFalse()
+        ->and($user->tokens()->where('name', 'this-device')->exists())->toBeTrue();
+});
+
+it('verifies native two-factor codes against the authoritative server', function () {
+    $provider = app(TwoFactorAuthenticationProvider::class);
+    $secret = $provider->generateSecretKey();
+    $code = (new Google2FA)->getCurrentOtp($secret);
+    $user = User::factory()->create([
+        'two_factor_secret' => encrypt($secret),
+        'two_factor_confirmed_at' => now(),
+    ]);
+    $token = $user->createToken('native-device')->plainTextToken;
+
+    postJson(route('api.native-auth.two-factor'), ['code' => $code], ['Authorization' => "Bearer {$token}"])
+        ->assertOk()
+        ->assertJsonPath('ok', true);
+
+    postJson(route('api.native-auth.two-factor'), ['code' => '000000'], ['Authorization' => "Bearer {$token}"])
+        ->assertStatus(422);
+});
+
+it('uses server two-factor verification for native username logins', function () {
+    config([
+        'nativephp-internal.running' => true,
+        'app.custom.native_end_points.settings' => 'https://sync.example.test/api/settings',
+    ]);
+
+    $user = User::factory()->create([
+        'password' => Hash::make('secret-pass'),
+        'two_factor_secret' => null,
+        'two_factor_confirmed_at' => now(),
+        'native_api_token' => '1|native-token',
+    ]);
+
+    $component = livewire(AuthButton::class)
+        ->mountAction('login')
+        ->fillForm([
+            'username' => $user->username,
+            'password' => 'secret-pass',
+            'code' => '',
+        ])
+        ->callMountedAction()
+        ->assertSet('awaitingTwoFactor', true)
+        ->assertNotDispatched('auth-blink-reload');
+
+    assertGuest();
+
+    Http::fake([
+        'https://sync.example.test/api/native-auth/two-factor' => Http::response(['ok' => true]),
+    ]);
+
+    $component
+        ->fillForm([
+            'username' => $user->username,
+            'password' => 'secret-pass',
+            'code' => '123456',
+        ])
+        ->callMountedAction()
+        ->assertDispatched('auth-blink-reload');
+
+    assertAuthenticatedAs($user);
 });
 
 it('mirrors the account locally and flags a restart from the native deeplink handoff', function () {
