@@ -6,8 +6,12 @@ namespace App\Http\Controllers\Auth;
 
 use App\Models\User;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -17,17 +21,53 @@ class TelegramAuthController
 {
     public function native(): View
     {
-        $isNativeRuntime = is_platform('native');
-
+        // The launcher page is served from the public host and opened inside the
+        // OAuth browser. It posts the Telegram result to the dedicated NATIVE
+        // callback route — the native signal MUST be the route, never a query
+        // param: Telegram's hash is computed over every received field, so an
+        // extra param would break signature validation.
         return view('auth.telegram-native', [
-            'isNativeRuntime' => $isNativeRuntime,
             'telegramBotName' => trim((string) config('services.telegram.bot', '')),
-            'telegramCallbackUrl' => route('auth.telegram.callback'),
-            'nativeTelegramCallbackUrl' => $this->resolveNativeTelegramCallbackUrl(),
+            'callbackUrl' => route('auth.telegram.native.callback'),
         ]);
     }
 
     public function callback(): RedirectResponse
+    {
+        $user = $this->authenticateTelegramUser();
+
+        if ($user === null) {
+            return redirect()->route('home');
+        }
+
+        // Flashes through the redirect so it shows on the freshly loaded home,
+        // matching the username/password login notification.
+        notify('heroicon-o-check-circle', arabic_text('تم تسجيل الدخول بنجاح'));
+
+        return redirect()->route('home');
+    }
+
+    public function nativeCallback(): RedirectResponse
+    {
+        $user = $this->authenticateTelegramUser();
+
+        if ($user === null) {
+            return redirect()->route('home');
+        }
+
+        // Runs on the public host inside the OAuth browser. Issue a short-lived,
+        // single-use code the device can exchange over HTTPS for the account
+        // payload (the device has its own local DB + APP_KEY, so it can't share
+        // an encrypted token or the user row). A SERVER-side 302 to the custom
+        // scheme hands control back to the installed app; the code is random
+        // alphanumeric, so it survives the deeplink round-trip intact.
+        $code = Str::random(64);
+        Cache::put('native-auth-code:'.$code, $user->getKey(), now()->addMinutes(5));
+
+        return redirect()->away($this->nativeScheme().'://auth/telegram/handoff?code='.$code);
+    }
+
+    private function authenticateTelegramUser(): ?User
     {
         try {
             $telegramUser = Socialite::driver('telegram')->user();
@@ -37,7 +77,7 @@ class TelegramAuthController
                 arabic_text('تعذر إتمام تسجيل الدخول عبر تيليجرام. حاول مرة أخرى.'),
             );
 
-            return redirect()->route('home');
+            return null;
         }
 
         $existing = User::query()->where('telegram_id', $telegramUser->getId())->first();
@@ -67,16 +107,135 @@ class TelegramAuthController
 
         Auth::login($user, remember: true);
 
-        // Flashes through the redirect so it shows on the freshly loaded home,
-        // matching the username/password login notification.
-        notify('heroicon-o-check-circle', arabic_text('تم تسجيل الدخول بنجاح'));
-
-        return redirect()->route('home');
+        return $user;
     }
 
-    private function resolveNativeTelegramCallbackUrl(): string
+    public function handoff(Request $request): RedirectResponse|Response
     {
-        return 'nativephp://auth/telegram/callback';
+        // Reached only via the deeplink, which routes into the LOCAL native
+        // runtime's WebView. Exchange the one-time code over HTTPS for the account
+        // payload, mirror the user into the device's own DB, log in, then hand off
+        // to home for SecureStorage persistence + the blink/restart (Quran UX).
+        abort_unless(is_platform('native'), 404);
+
+        $user = $this->mirrorAccountFromExchange((string) $request->query('code', ''));
+
+        if ($user === null) {
+            // Relative so the WebView stays on the local runtime (127.0.0.1).
+            return response('', 302, ['Location' => '/']);
+        }
+
+        // remember: true makes Auth set/persist the remember token; we then hand
+        // that exact token to the device. It survives the Android cold-start
+        // cookie wipe via SecureStorage, and restoreNative() re-logs-in by it.
+        Auth::login($user, remember: true);
+
+        session()->flash('auth.native_restore_token', (string) $user->getRememberToken());
+        session()->flash('auth.native_restart', true);
+
+        return response('', 302, ['Location' => '/']);
+    }
+
+    public function restoreNative(Request $request): JsonResponse
+    {
+        abort_unless(is_platform('native'), 404);
+
+        $validated = $request->validate([
+            'token' => ['required', 'string'],
+        ]);
+
+        $nativeUser = User::query()->where('remember_token', $validated['token'])->first();
+
+        if (! $nativeUser instanceof User) {
+            return response()->json([
+                'restored' => false,
+            ], 422);
+        }
+
+        Auth::login($nativeUser, remember: true);
+
+        return response()->json([
+            'restored' => true,
+        ]);
+    }
+
+    private function mirrorAccountFromExchange(string $code): ?User
+    {
+        $serverBase = $this->nativeServerBase();
+
+        if ($code === '' || $serverBase === null) {
+            return null;
+        }
+
+        try {
+            $response = Http::asJson()->acceptJson()
+                ->post($serverBase.'/api/native-auth/exchange', ['code' => $code]);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        if (! $response->successful() || $response->json('ok') !== true) {
+            return null;
+        }
+
+        /** @var array<string, mixed> $data */
+        $data = (array) $response->json('user');
+        $telegramId = $data['telegram_id'] ?? null;
+
+        if ($telegramId === null) {
+            return null;
+        }
+
+        $passwordHash = (string) ($data['password'] ?? '');
+
+        $user = User::query()->updateOrCreate(
+            ['telegram_id' => $telegramId],
+            [
+                'name' => (string) ($data['name'] ?? ''),
+                'username' => (string) ($data['username'] ?? ''),
+                'telegram_username' => $data['telegram_username'] ?? null,
+                'password' => $passwordHash,
+            ],
+        );
+
+        // Re-set the password via the query builder so the already-hashed value
+        // from the server is stored verbatim instead of being hashed again.
+        User::query()->whereKey($user->getKey())->update(['password' => $passwordHash]);
+
+        return $user->refresh();
+    }
+
+    private function nativeServerBase(): ?string
+    {
+        foreach ([
+            config('app.custom.native_end_points.settings'),
+            config('app.custom.native_end_points.telegram_auth'),
+            config('app.url'),
+        ] as $endpoint) {
+            $endpoint = trim((string) $endpoint);
+
+            if ($endpoint === '') {
+                continue;
+            }
+
+            $scheme = parse_url($endpoint, PHP_URL_SCHEME);
+            $host = parse_url($endpoint, PHP_URL_HOST);
+
+            if (is_string($scheme) && is_string($host) && $scheme !== '' && $host !== '') {
+                $port = parse_url($endpoint, PHP_URL_PORT);
+
+                return $scheme.'://'.$host.($port !== null ? ':'.$port : '');
+            }
+        }
+
+        return null;
+    }
+
+    private function nativeScheme(): string
+    {
+        $scheme = trim((string) config('nativephp.deeplink_scheme', 'nativephp'));
+
+        return $scheme !== '' ? $scheme : 'nativephp';
     }
 
     private function generateUniqueUsername(): string

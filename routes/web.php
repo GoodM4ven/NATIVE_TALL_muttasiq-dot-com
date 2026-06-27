@@ -16,6 +16,9 @@ Route::get('/', HomeController::class)
 
 Route::get('/auth/telegram/native', [TelegramAuthController::class, 'native'])->name('auth.telegram.native');
 Route::get('/auth/telegram/callback', [TelegramAuthController::class, 'callback'])->name('auth.telegram.callback');
+Route::get('/auth/telegram/native/callback', [TelegramAuthController::class, 'nativeCallback'])->name('auth.telegram.native.callback');
+Route::get('/auth/telegram/handoff', [TelegramAuthController::class, 'handoff'])->name('auth.telegram.handoff');
+Route::post('/auth/telegram/native/restore', [TelegramAuthController::class, 'restoreNative'])->name('auth.telegram.native.restore');
 
 Route::get('/qpc-v2-fonts/{page}.ttf', function (int $page) {
     return redirect()->route('qpc-v2-font', ['page' => $page], 301);

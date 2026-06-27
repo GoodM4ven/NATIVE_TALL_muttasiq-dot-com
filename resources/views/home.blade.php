@@ -5,6 +5,15 @@
             window.userSyncedData = @js(auth()->user()?->synced_data);
             window.athkarSettingsDefaults = @js($athkarSettings);
             window.athkarMainTextSizeLimits = @js($athkarMainTextSizeLimits);
+            // Relative so the fetch stays on the local native runtime (127.0.0.1),
+            // never the absolute APP_URL (muttasiq.com).
+            window.nativeAuthBootstrap = {
+                restoreUrl: @js(route('auth.telegram.native.restore', absolute: false)),
+            };
+
+            // Set right after a native Telegram login: the local home blinks,
+            // stores this token in SecureStorage, then restarts the app.
+            window.nativeAuthRestart = @js($nativeAuthRestart ? ['token' => $nativeAuthRestoreToken] : null);
         </script>
     @endpush
 

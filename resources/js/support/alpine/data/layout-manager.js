@@ -30,7 +30,41 @@ document.addEventListener('alpine:init', () => {
             window.dispatchEvent(new CustomEvent('startup-sync-resolved'));
         },
 
+        async runNativeAuthRestart() {
+            const payload = window.nativeAuthRestart || {};
+            const token = String(payload.token || '').trim();
+
+            try {
+                if (token !== '' && window.nativeSecureStorage?.set) {
+                    await window.nativeSecureStorage.set('auth.telegram.restore', token);
+                }
+            } catch (_) {
+                // Without persistence the restart would log the user back out,
+                // so fall through and just reveal the (already authenticated) app.
+            }
+
+            window.setTimeout(() => {
+                if (typeof window.AndroidBridge?.restartApplication === 'function') {
+                    window.AndroidBridge.restartApplication();
+
+                    return;
+                }
+
+                this.isBlinkerShown = false;
+                this.isBodyVisible = true;
+            }, this.defaultTransitionDurationInMs || 350);
+        },
+
         init() {
+            // Just logged in via native Telegram: stay under the blinker (its
+            // default state) and hand off to the store-token + restart flow,
+            // skipping the normal reveal so nothing flashes before the restart.
+            if (window.nativeAuthRestart && document.body?.classList.contains('native-platform')) {
+                void this.runNativeAuthRestart();
+
+                return;
+            }
+
             this.isStartupSyncPending = this.shouldRunStartupSync;
             window.__startupSyncResolved = !this.isStartupSyncPending;
 

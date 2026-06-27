@@ -407,6 +407,7 @@ class AuthButton extends Component implements HasActions, HasSchemas
                 session()->invalidate();
                 session()->regenerateToken();
 
+                $this->dispatch('native-auth-forget');
                 notify('heroicon-o-arrow-left-start-on-rectangle', arabic_text('تم تسجيل الخروج'));
 
                 $this->dispatch('auth-blink-reload');
@@ -432,6 +433,7 @@ class AuthButton extends Component implements HasActions, HasSchemas
                 session()->invalidate();
                 session()->regenerateToken();
 
+                $this->dispatch('native-auth-forget');
                 $user->delete();
 
                 notify('heroicon-o-trash', arabic_text('تم حذف حسابك'));

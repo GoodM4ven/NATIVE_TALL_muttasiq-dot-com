@@ -25,6 +25,8 @@ class HomeController extends Controller
         // during the fade (the live notifications component would otherwise
         // pull it from the session before the reload).
         $overrideNotice = session()->pull('data-branch-override-notice');
+        $nativeAuthRestart = (bool) session()->pull('auth.native_restart', false);
+        $nativeAuthRestoreToken = session()->pull('auth.native_restore_token');
 
         if (is_string($overrideNotice) && $overrideNotice !== '') {
             notify('heroicon-o-circle-stack', $overrideNotice);
@@ -37,6 +39,8 @@ class HomeController extends Controller
             'athkarSettings' => $settingsPayload['settings'],
             'athkarMainTextSizeLimits' => $settingsPayload['mainTextSizeLimits'],
             'currentAppVersion' => Setting::appVersion(),
+            'nativeAuthRestart' => $nativeAuthRestart,
+            'nativeAuthRestoreToken' => is_string($nativeAuthRestoreToken) ? $nativeAuthRestoreToken : null,
         ]);
     }
 

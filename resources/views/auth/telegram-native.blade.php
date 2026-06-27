@@ -248,8 +248,12 @@
 
                 <script>
                     window.onTelegramNativeAuth = (user) => {
+                        // Navigate to the dedicated NATIVE callback route (a JS jump to a custom
+                        // scheme is blocked by Chrome Custom Tabs without a user gesture). Only the
+                        // Telegram fields go in the query — no extra params, or the server-side hash
+                        // check fails. The server finishes by 302-redirecting to the app's deeplink.
                         const params = new URLSearchParams();
-                        const callbackUrl = @js($isNativeRuntime ? $nativeTelegramCallbackUrl : $telegramCallbackUrl);
+                        const callbackUrl = @js($callbackUrl);
 
                         Object.entries(user ?? {}).forEach(([key, value]) => {
                             if (value !== undefined && value !== null) {

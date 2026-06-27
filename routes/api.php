@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Api\AthkarController;
 use App\Http\Controllers\Api\JsErrorReportController;
+use App\Http\Controllers\Api\NativeAuthExchangeController;
 use App\Http\Controllers\Api\QuranSnapshotDownloadController;
 use App\Http\Controllers\Api\QuranSnapshotMetaController;
 use App\Http\Controllers\Api\SettingsController;
@@ -26,6 +27,10 @@ Route::name('api.')->group(function () {
     Route::post('/visit-metrics', VisitMetricController::class)
         ->middleware('throttle:visit-metrics')
         ->name('visit-metrics.store');
+
+    Route::post('/native-auth/exchange', NativeAuthExchangeController::class)
+        ->middleware('throttle:6,1')
+        ->name('native-auth.exchange');
 
     Route::get('/quran-snapshot/meta', QuranSnapshotMetaController::class)
         ->middleware('throttle:quran-snapshot')
