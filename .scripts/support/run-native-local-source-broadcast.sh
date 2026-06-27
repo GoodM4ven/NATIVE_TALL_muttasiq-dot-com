@@ -21,11 +21,11 @@ bind_host="${NATIVE_QURAN_LOCAL_BIND_HOST:-127.0.0.1}"
 public_base_url="${NATIVE_QURAN_LOCAL_PUBLIC_BASE_URL:-}"
 android_host="${NATIVE_QURAN_LOCAL_ANDROID_HOST:-10.0.2.2}"
 ios_host="${NATIVE_QURAN_LOCAL_IOS_HOST:-127.0.0.1}"
-api_log_file="${project_root}/storage/logs/native-local-source-broadcast-api.log"
+composer_dev_log_file="${project_root}/storage/logs/native-local-source-broadcast-composer-dev.log"
 tailscale_log_file="${project_root}/storage/logs/native-local-source-broadcast-tailscale.log"
 adb_reverse_enabled=0
 adb_reverse_active=0
-server_pid=""
+composer_dev_pid=""
 server_ready=0
 port_was_explicit=0
 native_android_keep_loopback_endpoints=0
@@ -114,6 +114,22 @@ resolve_tailscale_command_prefix() {
 
     tailscale_requires_sudo=0
     printf ''
+}
+
+read_env_value() {
+    local key="$1"
+    local line="${2:-}"
+
+    if [[ -z "${line}" ]]; then
+        line="$(grep -E "^${key}=" "${project_root}/.env" 2>/dev/null | head -n1 || true)"
+    fi
+
+    line="${line#${key}=}"
+    line="${line%$'\r'}"
+    line="${line%\"}"
+    line="${line#\"}"
+
+    printf '%s' "${line}"
 }
 
 log_tailscale_diagnostics() {
@@ -455,27 +471,38 @@ cleanup() {
         adb reverse --remove "tcp:${port}" >/dev/null 2>&1 || true
     fi
 
-    if [[ -n "${server_pid}" ]] && kill -0 "${server_pid}" >/dev/null 2>&1; then
-        kill "${server_pid}" >/dev/null 2>&1 || true
-        wait "${server_pid}" >/dev/null 2>&1 || true
+    if [[ -n "${composer_dev_pid}" ]] && kill -0 "${composer_dev_pid}" >/dev/null 2>&1; then
+        kill "${composer_dev_pid}" >/dev/null 2>&1 || true
+        wait "${composer_dev_pid}" >/dev/null 2>&1 || true
     fi
 }
 
 trap cleanup EXIT INT TERM
 
-mkdir -p "$(dirname "${api_log_file}")"
-: >"${api_log_file}"
+mkdir -p "$(dirname "${composer_dev_log_file}")"
+: >"${composer_dev_log_file}"
+
+export SERVER_HOST="${bind_host}"
+export SERVER_PORT="${port}"
+export BROADCAST_CONNECTION="$(read_env_value BROADCAST_CONNECTION)"
+export REVERB_APP_ID="$(read_env_value REVERB_APP_ID)"
+export REVERB_APP_KEY="$(read_env_value REVERB_APP_KEY)"
+export REVERB_APP_SECRET="$(read_env_value REVERB_APP_SECRET)"
+export REVERB_HOST="$(read_env_value REVERB_HOST)"
+export REVERB_PORT="$(read_env_value REVERB_PORT)"
+export REVERB_SCHEME="$(read_env_value REVERB_SCHEME)"
+export REVERB_ALLOWED_ORIGINS="$(read_env_value REVERB_ALLOWED_ORIGINS)"
 
 (
     cd "${project_root}"
-    php artisan serve --host="${bind_host}" --port="${port}" >"${api_log_file}" 2>&1
+    composer dev >"${composer_dev_log_file}" 2>&1
 ) &
 
-server_pid="$!"
+composer_dev_pid="$!"
 
 for _ in {1..60}; do
-    if ! kill -0 "${server_pid}" >/dev/null 2>&1; then
-        echo "[native-local-source-broadcast] local API server exited early. See ${api_log_file}" >&2
+    if ! kill -0 "${composer_dev_pid}" >/dev/null 2>&1; then
+        echo "[native-local-source-broadcast] composer dev exited early. See ${composer_dev_log_file}" >&2
         exit 1
     fi
 
@@ -488,7 +515,7 @@ for _ in {1..60}; do
 done
 
 if [[ "${server_ready}" -ne 1 ]]; then
-    echo "[native-local-source-broadcast] local API server did not become ready in time. See ${api_log_file}" >&2
+    echo "[native-local-source-broadcast] local API server did not become ready in time. See ${composer_dev_log_file}" >&2
     exit 1
 fi
 
@@ -503,7 +530,7 @@ echo "[native-local-source-broadcast] meta endpoint: ${meta_endpoint}"
 echo "[native-local-source-broadcast] download endpoint: ${download_endpoint}"
 echo "[native-local-source-broadcast] telegram auth endpoint: ${telegram_auth_endpoint}"
 echo "[native-local-source-broadcast] reverb host: ${public_host}:${public_reverb_port} (${public_scheme})"
-echo "[native-local-source-broadcast] running ${native_script}"
+echo "[native-local-source-broadcast] running composer dev + ${native_script}"
 
 (
     cd "${project_root}"

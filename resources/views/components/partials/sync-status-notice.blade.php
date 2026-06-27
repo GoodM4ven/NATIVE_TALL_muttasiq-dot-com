@@ -8,8 +8,9 @@
     x-data="{
         isOnline: true,
         isSignedIn: window.dataBranch === 'user',
+        isNativeRuntime: @js(is_platform('native')),
         async resolveOnlineState() {
-            if (window.nativeNetwork?.status) {
+            if (this.isNativeRuntime && window.nativeNetwork?.status) {
                 try {
                     const status = await window.nativeNetwork.status();
                     if (typeof status?.connected === 'boolean') {

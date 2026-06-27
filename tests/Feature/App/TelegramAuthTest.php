@@ -432,6 +432,14 @@ it('renders the auth modal loading overlay hooks', function () {
         ->toContain('x-on:x-modal-opened.window');
 });
 
+it('renders the offline pill with a native runtime guard', function () {
+    $html = get(route('home'))->getContent();
+
+    expect($html)
+        ->toContain('isNativeRuntime: false')
+        ->toContain('this.isNativeRuntime && window.nativeNetwork?.status');
+});
+
 it('renders a native-safe telegram auth launcher in mobile runtime', function () {
     config([
         'nativephp-internal.running' => true,

@@ -237,7 +237,7 @@ https://muttasiq.com
 ### Running Locally
 
 - Use `composer dev` to run the local web stack together — it starts the web server, **the queue worker** (`php artisan queue:listen`), **Reverb** (`php artisan reverb:start`), the log tailer, and Vite. Queue + Reverb are now hard dependencies for authenticated account/settings synchronization and realtime cross-device invalidation, so if you start the app without `composer dev`, also run a queue worker and Reverb yourself.
-- When testing native server/sync/realtime behavior, run both `composer dev` and the matching native watch script (`.scripts/watch-android.sh` or `.scripts/watch-ios.sh`). `composer dev` provides the server/queue/Reverb/Vite processes; the watch script exposes the Laravel API and Reverb over Tailscale and passes the resulting endpoints into the native build.
+- When testing native server/sync/realtime behavior, run the matching native watch script (`.scripts/watch-android.sh` or `.scripts/watch-ios.sh`). It now starts `composer dev` for you, then exposes the Laravel API and Reverb over Tailscale and passes the resulting endpoints into the native build. Use plain `composer dev` only when you want the web stack without a native run.
 - Local Reverb uses `REVERB_*` for the server connection and `VITE_REVERB_*` for browser/native Echo. Keep `REVERB_ALLOWED_ORIGINS` restricted to the dev/prod origins you actually serve from (for local Tailscale testing, include the Funnel URL origin).
 - The native runtime ships its own on-device queue worker, but it requires a local cache + queue store: set `QUEUE_CONNECTION=database` (default) and `CACHE_STORE=database` in native builds — the unique-job lock can't use the `redis` store on-device.
 
