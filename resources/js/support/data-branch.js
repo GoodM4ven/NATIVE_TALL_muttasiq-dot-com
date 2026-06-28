@@ -229,13 +229,30 @@ export const installDataBranch = (storage = window.localStorage) => {
     // ponytail: only the three accessor methods are wrapped (the only ones the
     // app uses). Bracket access / key(i) / length are not branched.
     const afterWrite = (key) => {
-        if (isApplyingRemoteBundle) {
+        if (isApplyingRemoteBundle || !SYNCED_KEYS.has(key)) {
             return;
         }
 
-        if (SYNCED_KEYS.has(key)) {
-            schedulePush();
+        // Echo guard: receiving a remote bundle makes the app reactively
+        // re-persist the just-applied values through this wrapped setItem. Those
+        // writes are byte-identical to what the server sent (tracked in
+        // window.userSyncedData), so skip them — only a real divergence pushes.
+        // Deterministic, unlike a timing window: a re-applied value never loops,
+        // and a genuine change (or a revert) always syncs.
+        const current = original.getItem(branchedKey('user', key));
+        const lastSynced = window.userSyncedData?.[key] ?? null;
+
+        if (current === lastSynced) {
+            return;
         }
+
+        // Remember what we're about to push so repeated re-persists of this same
+        // new value don't each re-arm the debounce.
+        if (window.userSyncedData && typeof window.userSyncedData === 'object') {
+            window.userSyncedData[key] = current;
+        }
+
+        schedulePush();
     };
 
     Object.defineProperties(storage, {

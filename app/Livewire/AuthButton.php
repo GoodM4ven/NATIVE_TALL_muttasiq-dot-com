@@ -543,6 +543,12 @@ class AuthButton extends Component implements HasActions, HasSchemas
         // which refreshes the device list in the tab.
     }
 
+    #[On('realtime-other-device-notice')]
+    public function realtimeOtherDeviceNotice(): void
+    {
+        notify('heroicon-o-arrow-path', arabic_text('تمّت مزامنة تغييرات من جهازٍ آخر'));
+    }
+
     public function logoutAction(): Action
     {
         return Action::make('logout')

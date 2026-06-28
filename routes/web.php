@@ -30,6 +30,12 @@ Route::post('/native-sync/pull', [NativeSyncController::class, 'pull'])
     ->middleware('auth')
     ->name('native.sync.pull');
 
+// Web realtime clients refresh their bundle via the WEB session guard (statefulApi
+// is not enabled, so the api `auth:sanctum` snapshot only accepts Bearer tokens).
+Route::get('/native-sync/snapshot', [NativeSyncController::class, 'snapshot'])
+    ->middleware('auth')
+    ->name('native.sync.snapshot');
+
 Route::get('/qpc-v2-fonts/{page}.ttf', function (int $page) {
     return redirect()->route('qpc-v2-font', ['page' => $page], 301);
 })->whereNumber('page');

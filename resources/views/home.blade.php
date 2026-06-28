@@ -3,13 +3,9 @@
         @php
             $nativeRealtimeTokenId = null;
             $nativeRealtimeToken = (string) auth()->user()?->native_api_token;
-            $realtimeSnapshotUrl = native_server_base();
-
-            if (is_string($realtimeSnapshotUrl) && $realtimeSnapshotUrl !== '') {
-                $realtimeSnapshotUrl .= '/api/native-sync/snapshot';
-            } else {
-                $realtimeSnapshotUrl = route('api.native-sync.snapshot', absolute: false);
-            }
+            // Web-only (native uses nativeSyncPullUrl). Same-origin WEB-session route
+            // so the GET authenticates via the browser session on this server.
+            $realtimeSnapshotUrl = route('native.sync.snapshot', absolute: false);
 
             if (
                 is_platform('native') &&
@@ -36,6 +32,15 @@
                 nativeSyncPullUrl: @js(route('native.sync.pull', absolute: false)),
                 realtimeSnapshotUrl: @js($realtimeSnapshotUrl),
                 realtimeLogoutUrl: @js(route('auth.realtime.logout', absolute: false)),
+                // Web: server-injected Reverb host so the page connects to whatever
+                // the dev tunnel exposes. Native uses its build-time VITE_ values
+                // (baked to the on-device tunnel), so we leave this null there.
+                reverb: @js(is_platform('native') ? null : [
+                    'key' => config('broadcasting.connections.reverb.public.key'),
+                    'host' => config('broadcasting.connections.reverb.public.host'),
+                    'port' => config('broadcasting.connections.reverb.public.port'),
+                    'scheme' => config('broadcasting.connections.reverb.public.scheme'),
+                ]),
             };
 
             // Set right after a native Telegram login: the local home blinks,

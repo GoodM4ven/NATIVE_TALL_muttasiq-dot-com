@@ -7,83 +7,6 @@ const isNativeRuntime = () => document.body?.classList.contains('native-platform
 
 const bootstrap = () => window.realtimeBootstrap || {};
 
-const normalizeSocketId = (value) => {
-    const socketId = String(value || '').trim();
-
-    return socketId === '' || socketId === 'undefined' || socketId === 'null' ? null : socketId;
-};
-
-const socketId = () => normalizeSocketId(window.Echo?.socketId?.());
-
-const sameOriginUrl = (resource) => {
-    try {
-        const url =
-            typeof resource === 'string'
-                ? new URL(resource, window.location.href)
-                : new URL(resource?.url || '', window.location.href);
-
-        return url.origin === window.location.origin;
-    } catch (_) {
-        return false;
-    }
-};
-
-const installSocketHeaderForwarding = () => {
-    if (window.__muttasiqRealtimeFetchPatched === true || typeof window.fetch !== 'function') {
-        // Keep going: XHR may still need the socket header even when fetch is unavailable.
-    } else {
-        const originalFetch = window.fetch.bind(window);
-        window.__muttasiqRealtimeFetchPatched = true;
-
-        window.fetch = (resource, options = {}) => {
-            const currentSocketId = socketId();
-
-            if (!currentSocketId || !sameOriginUrl(resource)) {
-                return originalFetch(resource, options);
-            }
-
-            const headers = new Headers(options.headers || resource?.headers || {});
-            headers.set('X-Socket-ID', currentSocketId);
-
-            return originalFetch(resource, {
-                ...options,
-                headers,
-            });
-        };
-    }
-
-    if (
-        window.__muttasiqRealtimeXhrPatched !== true &&
-        typeof window.XMLHttpRequest === 'function'
-    ) {
-        const originalOpen = window.XMLHttpRequest.prototype.open;
-        const originalSend = window.XMLHttpRequest.prototype.send;
-        const originalSetRequestHeader = window.XMLHttpRequest.prototype.setRequestHeader;
-
-        window.__muttasiqRealtimeXhrPatched = true;
-
-        window.XMLHttpRequest.prototype.open = function (method, url, ...rest) {
-            this.__muttasiqRealtimeUrl = url;
-
-            return originalOpen.call(this, method, url, ...rest);
-        };
-
-        window.XMLHttpRequest.prototype.send = function (body) {
-            const currentSocketId = socketId();
-
-            if (currentSocketId && sameOriginUrl(this.__muttasiqRealtimeUrl || '')) {
-                try {
-                    originalSetRequestHeader.call(this, 'X-Socket-ID', currentSocketId);
-                } catch (_) {
-                    // Ignore header injection failures; the request can still proceed.
-                }
-            }
-
-            return originalSend.call(this, body);
-        };
-    }
-};
-
 const authorizeChannel = async (authEndpoint, socketIdValue, channelName) => {
     const response = await fetch(authEndpoint, {
         method: 'POST',
@@ -235,25 +158,34 @@ const refreshUserBundle = async () => {
     return window.muttasiqDataBranch?.applyUserBundle?.(bundle) === true;
 };
 
-const blinkThen = (callback, { reload = false, forceMenu = true } = {}) => {
+const NOTICE_FLAG = 'muttasiq-realtime-notice-pending';
+
+// Fire the "changes from another device" Filament notification (rendered by the
+// AuthButton Livewire listener). Best-effort: a missed notice is harmless.
+const fireOtherDeviceNotice = () => {
+    window.Livewire?.dispatch('realtime-other-device-notice');
+};
+
+const closeModals = () => {
+    window.dispatchEvent(new CustomEvent('close-modal'));
+    window.dispatchEvent(new CustomEvent('close-modal-quietly'));
+};
+
+const flagPostReloadNotice = () => {
+    try {
+        window.localStorage.setItem(NOTICE_FLAG, '1');
+    } catch (_) {
+        // Storage unavailable; the notice is non-critical.
+    }
+};
+
+// Blink FULLY out (await the white-fade transition) before doing anything
+// visible — so no content morph / modal flicker is ever seen — then run `action`.
+const blinkOutThen = async (action) => {
     const delay = beginBlink();
 
-    window.setTimeout(async () => {
-        if (forceMenu) {
-            forceMainMenu();
-        }
-
-        try {
-            await callback();
-        } finally {
-            if (reload) {
-                window.location.assign('/');
-                return;
-            }
-
-            revealBlinker();
-        }
-    }, delay);
+    await new Promise((resolve) => window.setTimeout(resolve, delay));
+    await action();
 };
 
 const handleRealtimeEvent = (event) => {
@@ -266,61 +198,98 @@ const handleRealtimeEvent = (event) => {
         targetTokenId > 0 &&
         targetTokenId === currentTokenId;
 
+    // RELOAD cases (auth side effects): blink fully out, run the side effect,
+    // flag the notice to fire after the reload, then hard-reload. No modal
+    // closing / morphing — the reload rebuilds the whole app.
     if (type === 'accountDeleted') {
-        blinkThen(
-            async () => {
-                wipeLocalUserBranch();
-                await localLogout();
-            },
-            { reload: true },
-        );
-
-        return;
-    }
-
-    if (type === 'passwordChanged' || isCurrentRevokedNativeDevice) {
-        blinkThen(localLogout, { reload: true });
-
-        return;
-    }
-
-    if (['dataSynced', 'dataOverridden'].includes(type)) {
-        blinkThen(async () => {
-            await refreshUserBundle();
+        blinkOutThen(async () => {
+            wipeLocalUserBranch();
+            await localLogout();
+            flagPostReloadNotice();
+            window.location.assign('/');
         });
 
         return;
     }
 
+    if (type === 'passwordChanged' || isCurrentRevokedNativeDevice) {
+        blinkOutThen(async () => {
+            await localLogout();
+            flagPostReloadNotice();
+            window.location.assign('/');
+        });
+
+        return;
+    }
+
+    // MAIN-MENU case (data synced from another device): blink fully out, close any
+    // open modal, navigate to the main menu, apply the new bundle — all hidden
+    // behind the blink — then blink back in once ready and notify.
+    if (type === 'dataSynced' || type === 'dataOverridden') {
+        blinkOutThen(async () => {
+            closeModals();
+            forceMainMenu();
+            await refreshUserBundle();
+        }).then(() => {
+            revealBlinker();
+            fireOtherDeviceNotice();
+        });
+
+        return;
+    }
+
+    // Another device logged out: refresh the "My Devices" list live (the intended
+    // feature). No blink — that would close the very modal being used.
     if (type === 'deviceLoggedOut') {
-        blinkThen(
-            async () => {
-                if (isCurrentRevokedNativeDevice) {
-                    await localLogout();
-                } else {
-                    window.Livewire?.dispatch('native-devices-refresh');
-                }
-            },
-            {
-                reload: isCurrentRevokedNativeDevice,
-                forceMenu: isCurrentRevokedNativeDevice,
-            },
-        );
+        window.Livewire?.dispatch('native-devices-refresh');
+    }
+};
+
+// After a reload-type realtime event, fire the deferred notice once the page
+// (and Livewire) is back. Runs regardless of auth state, since auth-change
+// reloads land the user as a guest.
+const firePendingNotice = () => {
+    let pending = false;
+
+    try {
+        pending = window.localStorage.getItem(NOTICE_FLAG) === '1';
+
+        if (pending) {
+            window.localStorage.removeItem(NOTICE_FLAG);
+        }
+    } catch (_) {
+        return;
+    }
+
+    if (!pending) {
+        return;
+    }
+
+    if (window.Livewire) {
+        fireOtherDeviceNotice();
+    } else {
+        document.addEventListener('livewire:init', fireOtherDeviceNotice, { once: true });
     }
 };
 
 const bootRealtime = () => {
     const config = bootstrap();
     const telegramId = Number(config.telegramId || 0);
-    const key = import.meta.env.VITE_REVERB_APP_KEY;
-    const host = import.meta.env.VITE_REVERB_HOST;
+
+    // Prefer the server-injected Reverb host (web, points at the dev tunnel);
+    // fall back to the build-time VITE_ values (native on-device bundle).
+    const reverb = config.reverb || {};
+    const key = reverb.key || import.meta.env.VITE_REVERB_APP_KEY;
+    const host = reverb.host || import.meta.env.VITE_REVERB_HOST;
 
     if (!telegramId || !key || !host) {
         return;
     }
 
-    const scheme = import.meta.env.VITE_REVERB_SCHEME || 'https';
-    const port = Number(import.meta.env.VITE_REVERB_PORT || (scheme === 'https' ? 443 : 80));
+    const scheme = reverb.scheme || import.meta.env.VITE_REVERB_SCHEME || 'https';
+    const port = Number(
+        reverb.port || import.meta.env.VITE_REVERB_PORT || (scheme === 'https' ? 443 : 80),
+    );
     const authEndpoint = isNativeRuntime()
         ? String(config.nativeBroadcastAuthUrl || '/native/broadcasting/auth')
         : '/broadcasting/auth';
@@ -343,13 +312,16 @@ const bootRealtime = () => {
         }),
     });
 
-    installSocketHeaderForwarding();
-
     window.Echo.private(`user.${telegramId}`).listen('.user-realtime', handleRealtimeEvent);
 };
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bootRealtime, { once: true });
-} else {
+const boot = () => {
+    firePendingNotice();
     bootRealtime();
+};
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot, { once: true });
+} else {
+    boot();
 }

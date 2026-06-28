@@ -466,9 +466,25 @@ trap cleanup EXIT INT TERM
 mkdir -p "$(dirname "${composer_dev_log_file}")"
 : >"${composer_dev_log_file}"
 
+# Build the web assets so the funnel-served web app (composer dev:native serves
+# built assets, no Vite) ships the latest realtime client, which reads the Reverb
+# host injected at runtime. Skippable for speed once built.
+if [[ "${NATIVE_LOCAL_SKIP_WEB_BUILD:-0}" != "1" ]]; then
+    echo "[native-local-source-broadcast] building web assets (set NATIVE_LOCAL_SKIP_WEB_BUILD=1 to skip)..." >&2
+    (cd "${project_root}" && pnpm run build) >>"${composer_dev_log_file}" 2>&1 || {
+        echo "[native-local-source-broadcast] web asset build failed. See ${composer_dev_log_file}" >&2
+        exit 1
+    }
+fi
+
 (
     cd "${project_root}"
-    SERVER_HOST="${bind_host}" SERVER_PORT="${port}" composer dev:native >"${composer_dev_log_file}" 2>&1
+    SERVER_HOST="${bind_host}" SERVER_PORT="${port}" \
+        REVERB_PUBLIC_HOST="${public_host}" \
+        REVERB_PUBLIC_PORT="${public_reverb_port}" \
+        REVERB_PUBLIC_SCHEME="${public_scheme}" \
+        REVERB_ALLOWED_ORIGINS="*" \
+        composer dev:native >"${composer_dev_log_file}" 2>&1
 ) &
 
 composer_dev_pid="$!"
@@ -504,6 +520,16 @@ echo "[native-local-source-broadcast] download endpoint: ${download_endpoint}"
 echo "[native-local-source-broadcast] telegram auth endpoint: ${telegram_auth_endpoint}"
 echo "[native-local-source-broadcast] reverb host: ${public_host}:${public_reverb_port} (${public_scheme})"
 echo "[native-local-source-broadcast] running composer dev:native + ${native_script}"
+echo "[native-local-source-broadcast] ---"
+echo "[native-local-source-broadcast] LAPTOP (web) test client: open  http://127.0.0.1:${port}  in your browser"
+echo "[native-local-source-broadcast]   (NOT the ${public_host} funnel URL — this machine is on the tailnet, so"
+echo "[native-local-source-broadcast]    MagicDNS routes the funnel domain to the local node, which only serves"
+echo "[native-local-source-broadcast]    TLS on :${public_reverb_port}, not :443. The phone uses the funnel; the laptop uses local.)"
+echo "[native-local-source-broadcast]   Sign in with username/password (same account as the phone)."
+echo "[native-local-source-broadcast]   Reverb for both is ${public_host}:${public_reverb_port} (${public_scheme}); the laptop reaches it"
+echo "[native-local-source-broadcast]   over the tailnet, so settings/progress sync live both ways. Other"
+echo "[native-local-source-broadcast]   accounts/guests are isolated (private per-account channel)."
+echo "[native-local-source-broadcast] ---"
 
 (
     cd "${project_root}"
