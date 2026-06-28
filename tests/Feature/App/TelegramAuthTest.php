@@ -332,6 +332,7 @@ it('mirrors the account locally and flags a restart from the native deeplink han
         ->assertStatus(302)
         ->assertHeader('Location', '/')
         ->assertSessionHas('auth.native_restart', true)
+        ->assertSessionHas('auth.native_return_notice', true)
         ->assertSessionHas('auth.native_restore_token');
 
     $user = User::query()->where('telegram_id', 777)->first();

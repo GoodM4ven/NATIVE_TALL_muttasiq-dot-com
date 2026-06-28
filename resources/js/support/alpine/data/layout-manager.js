@@ -30,6 +30,19 @@ document.addEventListener('alpine:init', () => {
             window.dispatchEvent(new CustomEvent('startup-sync-resolved'));
         },
 
+        startAuthReloadTransition() {
+            window.__authReloadInProgress = true;
+            this.useFastTransitionDuration = false;
+            this.isBlinkerShown = true;
+            this.isBodyVisible = false;
+            this.isActionOpen = false;
+
+            window.dispatchEvent(new CustomEvent('close-modal'));
+            window.dispatchEvent(new CustomEvent('close-modal-quietly'));
+
+            return this.defaultTransitionDurationInMs || 350;
+        },
+
         async runNativeAuthRestart() {
             const payload = window.nativeAuthRestart || {};
             const token = String(payload.token || '').trim();
@@ -43,19 +56,13 @@ document.addEventListener('alpine:init', () => {
                 // so fall through and just reveal the (already authenticated) app.
             }
 
-            window.setTimeout(() => {
-                if (typeof window.AndroidBridge?.restartApplication === 'function') {
-                    window.AndroidBridge.restartApplication();
-
-                    // Anti-stuck: if the restart didn't actually take, reveal the
-                    // (already authenticated) app after a grace period.
-                    window.setTimeout(() => this.revealApp(), 6000);
-
-                    return;
-                }
-
-                this.revealApp();
-            }, this.defaultTransitionDurationInMs || 350);
+            window.dispatchEvent(
+                new CustomEvent('auth-blink-reload', {
+                    detail: {
+                        nativeRestart: true,
+                    },
+                }),
+            );
         },
 
         revealApp() {

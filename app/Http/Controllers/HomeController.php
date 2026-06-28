@@ -27,12 +27,27 @@ class HomeController extends Controller
         $overrideNotice = session()->pull('data-branch-override-notice');
         $nativeAuthRestart = (bool) session()->pull('auth.native_restart', false);
         $nativeAuthRestoreToken = session()->pull('auth.native_restore_token');
+        $nativeAuthReturnNotice = (bool) session()->get('auth.native_return_notice', false);
         $nativeAuthRestartPayload = is_string($nativeAuthRestoreToken) && $nativeAuthRestoreToken !== ''
             ? ['token' => $nativeAuthRestoreToken]
             : null;
 
         if (is_string($overrideNotice) && $overrideNotice !== '') {
             notify('heroicon-o-circle-stack', $overrideNotice);
+        }
+
+        if ($nativeAuthReturnNotice) {
+            if ($nativeAuthRestart) {
+                // Keep the notice alive for the post-restart page load; the first
+                // response is only the bridge back into the native app.
+                session()->flash('auth.native_return_notice', true);
+            } else {
+                notify(
+                    'heroicon-o-arrow-uturn-left',
+                    arabic_text('يجب أن نعود إلى التطبيق'),
+                    arabic_text('أغلق نافذة تيليجرام للعودة إلى التطبيق.'),
+                );
+            }
         }
 
         $settingsPayload = $this->resolveLocalSettingsPayload();

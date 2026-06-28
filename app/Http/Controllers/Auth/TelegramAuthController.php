@@ -134,6 +134,7 @@ class TelegramAuthController
 
         session()->flash('auth.native_restore_token', (string) $user->getRememberToken());
         session()->flash('auth.native_restart', true);
+        session()->flash('auth.native_return_notice', true);
 
         return response('', 302, ['Location' => '/']);
     }

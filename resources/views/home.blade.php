@@ -35,12 +35,16 @@
                 // Web: server-injected Reverb host so the page connects to whatever
                 // the dev tunnel exposes. Native uses its build-time VITE_ values
                 // (baked to the on-device tunnel), so we leave this null there.
-                reverb: @js(is_platform('native') ? null : [
-                    'key' => config('broadcasting.connections.reverb.public.key'),
-                    'host' => config('broadcasting.connections.reverb.public.host'),
-                    'port' => config('broadcasting.connections.reverb.public.port'),
-                    'scheme' => config('broadcasting.connections.reverb.public.scheme'),
-                ]),
+                reverb: @js(
+    is_platform('native')
+        ? null
+        : [
+            'key' => config('broadcasting.connections.reverb.public.key'),
+            'host' => config('broadcasting.connections.reverb.public.host'),
+            'port' => config('broadcasting.connections.reverb.public.port'),
+            'scheme' => config('broadcasting.connections.reverb.public.scheme'),
+        ],
+),
             };
 
             // Set right after a native Telegram login: the local home blinks,
@@ -657,7 +661,7 @@
             }),
         }"
         x-on:switch-view.window="applyViewState($event.detail?.to)"
-        x-on:auth-blink-reload.window="window.__authReloadInProgress = true; useFastTransitionDuration = false; isBlinkerShown = true; setTimeout(() => { const reloadUrl = $event.detail?.url; if (reloadUrl) { window.location.assign(reloadUrl); } else { window.location.reload(); } }, (defaultTransitionDurationInMs ?? 500))"
+        x-on:auth-blink-reload.window="const reloadDelay = startAuthReloadTransition(); setTimeout(() => { if ($event.detail?.nativeRestart && typeof window.AndroidBridge?.restartApplication === 'function') { window.AndroidBridge.restartApplication(); window.setTimeout(() => revealApp(), 6000); return; } const reloadUrl = $event.detail?.url; if (reloadUrl) { window.location.assign(reloadUrl); } else { window.location.reload(); } }, reloadDelay)"
         x-on:introduction-video-modal-opened.window="isIntroductionVideoOpen = true"
         x-on:introduction-video-modal-closed.window="isIntroductionVideoOpen = false"
         x-on:muttasiq-app-version-major-minor-reset.window="handleAppVersionMajorMinorReset($event.detail ?? {})"
