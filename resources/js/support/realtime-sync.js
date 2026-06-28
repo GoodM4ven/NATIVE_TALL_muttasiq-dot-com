@@ -167,8 +167,21 @@ const fireOtherDeviceNotice = () => {
 };
 
 const closeModals = () => {
-    window.dispatchEvent(new CustomEvent('close-modal'));
-    window.dispatchEvent(new CustomEvent('close-modal-quietly'));
+    // Filament modal handlers read `$event.detail.id`, so a detail-less dispatch
+    // throws "Cannot read properties of null (reading 'id')" in every mounted
+    // modal. Close each one by its own id (same shape as hash-actions.js).
+    document.querySelectorAll('[data-fi-modal-id]').forEach((modal) => {
+        const id = String(modal.getAttribute('data-fi-modal-id') || '').trim();
+
+        if (id === '') {
+            return;
+        }
+
+        const detail = { id };
+
+        window.dispatchEvent(new CustomEvent('close-modal-quietly', { detail }));
+        window.dispatchEvent(new CustomEvent('close-modal', { detail }));
+    });
 };
 
 const flagPostReloadNotice = () => {

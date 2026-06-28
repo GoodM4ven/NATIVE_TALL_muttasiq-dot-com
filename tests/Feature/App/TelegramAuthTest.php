@@ -377,7 +377,11 @@ it('wires the native auth restore endpoint into the home shell', function () {
     expect($html)
         ->toContain('nativeAuthBootstrap')
         ->toContain('restoreUrl')
-        ->toContain('realtimeSnapshotUrl');
+        ->toContain('realtimeSnapshotUrl')
+        ->toContain('auth-blink-hold')
+        ->toContain('startAuthHoldTransition()')
+        ->toContain('setTimeout(() => {')
+        ->toContain('}, 0)');
 });
 
 it('hands the native auth restart payload to the home shell', function () {
@@ -465,6 +469,8 @@ it('renders a native-safe telegram auth launcher in mobile runtime', function ()
     expect($html)
         ->toContain('browser?.auth')
         ->toContain('window.nativeNetwork?.status')
+        ->toContain('auth-blink-hold')
+        ->toContain('native-auth-reveal')
         ->toContain('http:\\/\\/192.168.1.8:8787\\/auth\\/telegram\\/native')
         ->toContain(arabic_text('يتطلب تسجيل الدخول عبر تيليجرام اتصالًا بالإنترنت.'));
 });

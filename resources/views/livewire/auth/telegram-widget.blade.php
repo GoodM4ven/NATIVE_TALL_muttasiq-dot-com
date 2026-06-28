@@ -75,13 +75,36 @@
                     // Non-fatal: the flow still works, just without the early blinker.
                 }
         
+                window.dispatchEvent(new CustomEvent('auth-blink-hold'));
+                await new Promise((resolve) => {
+                    window.requestAnimationFrame(() => {
+                        window.requestAnimationFrame(resolve);
+                    });
+                });
+        
                 if (window.browser?.auth) {
-                    await window.browser.auth(this.launcherUrl);
+                    try {
+                        const didOpen = await window.browser.auth(this.launcherUrl);
+        
+                        if (didOpen === true) {
+                            return;
+                        }
+                    } catch (_) {
+                        // Fall through to the offline reveal path below.
+                    }
+        
+                    window.setTimeout(() => {
+                        window.dispatchEvent(new CustomEvent('native-auth-reveal'));
+                    }, 300);
         
                     return;
                 }
         
                 window.open(this.launcherUrl, `_blank`, `noopener`);
+        
+                window.setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent('native-auth-reveal'));
+                }, 300);
             },
         }"
         x-init="syncConnectivityState()"

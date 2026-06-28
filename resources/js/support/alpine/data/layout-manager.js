@@ -9,10 +9,12 @@ document.addEventListener('alpine:init', () => {
         isBodyVisible: false,
         isBlinkerShown: true,
         defaultTransitionDurationInMs: 350,
+        authTransitionDurationInMs: 500,
         fastTransitionDurationInMs: 250,
         useFastTransitionDuration: false,
         isActionOpen: false,
         isScrollingDisabled: false,
+        isAuthHoldActive: false,
 
         completeStartupSync() {
             if (!this.isStartupSyncPending) {
@@ -30,17 +32,43 @@ document.addEventListener('alpine:init', () => {
             window.dispatchEvent(new CustomEvent('startup-sync-resolved'));
         },
 
-        startAuthReloadTransition() {
+        closeOpenModals() {
+            document.querySelectorAll('[data-fi-modal-id]').forEach((modal) => {
+                const id = String(modal.getAttribute('data-fi-modal-id') || '').trim();
+
+                if (id === '') {
+                    return;
+                }
+
+                const detail = { id };
+
+                window.dispatchEvent(new CustomEvent('close-modal-quietly', { detail }));
+                window.dispatchEvent(new CustomEvent('close-modal', { detail }));
+            });
+        },
+
+        startAuthHoldTransition() {
             window.__authReloadInProgress = true;
+            this.isAuthHoldActive = true;
+            this.defaultTransitionDurationInMs = this.authTransitionDurationInMs;
             this.useFastTransitionDuration = false;
             this.isBlinkerShown = true;
-            this.isBodyVisible = false;
             this.isActionOpen = false;
 
-            window.dispatchEvent(new CustomEvent('close-modal'));
-            window.dispatchEvent(new CustomEvent('close-modal-quietly'));
+            this.closeOpenModals();
+        },
 
-            return this.defaultTransitionDurationInMs || 350;
+        startAuthReloadTransition() {
+            window.__authReloadInProgress = true;
+            this.isAuthHoldActive = false;
+            this.defaultTransitionDurationInMs = 350;
+            this.useFastTransitionDuration = false;
+            this.isBlinkerShown = true;
+            this.isActionOpen = false;
+
+            this.closeOpenModals();
+
+            return 0;
         },
 
         async runNativeAuthRestart() {
@@ -69,6 +97,10 @@ document.addEventListener('alpine:init', () => {
             if (this.isBodyVisible) {
                 return;
             }
+
+            window.__authReloadInProgress = false;
+            this.isAuthHoldActive = false;
+            this.defaultTransitionDurationInMs = 350;
 
             if (!this.isFastUiMode) {
                 this.useFastTransitionDuration = false;
@@ -120,6 +152,21 @@ document.addEventListener('alpine:init', () => {
                 'closed-form-component-action-modal',
                 () => (this.isActionOpen = false),
             );
+            window.addEventListener('native-auth-reveal', () => this.revealApp());
+            window.addEventListener('focus', () => {
+                if (this.isAuthHoldActive && window.dataBranch !== 'user') {
+                    window.dispatchEvent(new CustomEvent('native-auth-reveal'));
+                }
+            });
+            document.addEventListener('visibilitychange', () => {
+                if (
+                    document.visibilityState === 'visible' &&
+                    this.isAuthHoldActive &&
+                    window.dataBranch !== 'user'
+                ) {
+                    window.dispatchEvent(new CustomEvent('native-auth-reveal'));
+                }
+            });
 
             // // ? Auto-scroll to the top instantly upon load
             // if ('scrollRestoration' in history) history.scrollRestoration = 'manual';

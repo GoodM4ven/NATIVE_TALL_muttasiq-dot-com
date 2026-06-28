@@ -175,4 +175,8 @@ window.addEventListener('native-auth-forget', () => {
     void deleteRestoreToken(secureStorage);
 });
 
+window.addEventListener('native-auth-reveal', () => {
+    clearTelegramAuthPending();
+});
+
 scheduleBootstrap();
