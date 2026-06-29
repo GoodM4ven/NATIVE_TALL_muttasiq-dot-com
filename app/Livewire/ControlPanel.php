@@ -15,6 +15,7 @@ use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Support\Enums\Width;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\HtmlString;
 use Illuminate\View\View;
@@ -32,6 +33,8 @@ class ControlPanel extends Component implements HasActions, HasSchemas
     private const CONTROL_PANEL_TAB_INDEX = 1;
 
     private const UPDATES_TAB_INDEX = 2;
+
+    private const SAVE_NOTICE_COOLDOWN_SECONDS = 2;
 
     /**
      * @var array<string, bool|int|string>
@@ -77,10 +80,7 @@ class ControlPanel extends Component implements HasActions, HasSchemas
                 );
 
                 if (! $isMaintenancePulse) {
-                    notify(
-                        iconName: 'mdi.content-save-check',
-                        title: arabic_text('تم حفظ الإعدادات بنجاح'),
-                    );
+                    $this->notifyControlPanelSaved();
                 }
             });
     }
@@ -106,10 +106,7 @@ class ControlPanel extends Component implements HasActions, HasSchemas
             returnToGate: false,
         );
 
-        notify(
-            iconName: 'mdi.content-save-check',
-            title: arabic_text('تم حفظ الإعدادات بنجاح'),
-        );
+        $this->notifyControlPanelSaved();
     }
 
     public function supportUnlockAction(): Action
@@ -204,6 +201,22 @@ class ControlPanel extends Component implements HasActions, HasSchemas
     public function syncClientControlPanel(array $controlPanel): void
     {
         $this->clientControlPanel = $this->filterControlPanel($controlPanel);
+    }
+
+    /**
+     * @param  array<string, mixed>  $controlPanel
+     */
+    public function refreshOpenControlPanel(array $controlPanel = []): void
+    {
+        $this->syncClientControlPanel($controlPanel);
+
+        $mountedAction = $this->mountedActions[array_key_last($this->mountedActions ?? [])] ?? null;
+
+        if (! is_array($mountedAction) || ($mountedAction['name'] ?? null) !== 'controlPanel') {
+            return;
+        }
+
+        $this->getMountedActionForm()?->fill($this->clientControlPanel);
     }
 
     public function render(): View
@@ -337,5 +350,29 @@ class ControlPanel extends Component implements HasActions, HasSchemas
         }
 
         return false;
+    }
+
+    private function notifyControlPanelSaved(): void
+    {
+        $cacheKey = $this->controlPanelSaveNoticeCacheKey();
+
+        if (Cache::get($cacheKey, false) === true) {
+            return;
+        }
+
+        Cache::put($cacheKey, true, now()->addSeconds(self::SAVE_NOTICE_COOLDOWN_SECONDS));
+
+        notify(
+            iconName: 'mdi.content-save-check',
+            title: arabic_text('تم حفظ الإعدادات بنجاح'),
+        );
+    }
+
+    private function controlPanelSaveNoticeCacheKey(): string
+    {
+        $userId = Auth::id();
+        $sessionId = session()->getId();
+
+        return 'control-panel-save-notice:'.($userId !== null ? 'user:'.$userId : 'session:'.$sessionId);
     }
 }

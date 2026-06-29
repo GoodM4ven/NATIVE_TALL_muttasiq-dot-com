@@ -75,6 +75,7 @@
             quranCopyHintMobile: @js(arabic_text('عند التعطيل في الجوال: النقر المزدوج ينسخ الهدف الافتراضي، والنقر المزدوج مع التثبيت في النقرة الثانية يستهدف الهدف العكسي.')),
             sliderNumeralsObserver: null,
             sliderNumeralsSyncTimer: null,
+            openControlPanelRefreshTimer: null,
             fieldTextOriginalValues: new WeakMap(),
             resolveControlPanelModalWindow() {
                 const escapedId = window.CSS?.escape ?
@@ -611,6 +612,23 @@
                     this.syncControlPanelNumerals();
                 }, Math.max(0, Number(delayMs) || 0));
             },
+            queueOpenControlPanelRefreshFromStorage(delayMs = 0) {
+                if (this.openControlPanelRefreshTimer !== null) {
+                    clearTimeout(this.openControlPanelRefreshTimer);
+                    this.openControlPanelRefreshTimer = null;
+                }
+        
+                this.openControlPanelRefreshTimer = window.setTimeout(() => {
+                    this.openControlPanelRefreshTimer = null;
+        
+                    if (!this.isControlPanelModalCurrentlyOpen()) {
+                        return;
+                    }
+        
+                    $wire.refreshOpenControlPanel(window.getAthkarSettingsFromStorage?.() ?? {});
+                    this.queueControlPanelSliderNumeralsSync(40);
+                }, Math.max(0, Number(delayMs) || 0));
+            },
             closeVisibleFilamentModals({ exceptIds = [] } = {}) {
                 if (typeof document === 'undefined') {
                     return;
@@ -846,6 +864,7 @@
         x-on:open-support-unlock-modal.window="openSupportUnlockModalFromEvent()"
         x-on:athkar-reader-maintenance.window="runReaderMaintenancePulse()"
         x-on:control-panel-updated.window="queueControlPanelSliderNumeralsSync(0)"
+        x-on:muttasiq-user-synced-data-updated.window="queueOpenControlPanelRefreshFromStorage(80)"
         x-on:resize.window="if (isControlPanelOpen) { queueControlPanelSliderNumeralsSync(0); }"
         x-on:change.window="if (resolveControlPanelModalWindow()?.contains($event.target)) { queueControlPanelSliderNumeralsSync(0); }"
         x-on:input.window="if (resolveControlPanelModalWindow()?.contains($event.target)) { queueControlPanelSliderNumeralsSync(0); }"

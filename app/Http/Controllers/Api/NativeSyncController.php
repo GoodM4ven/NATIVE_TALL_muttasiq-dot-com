@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Events\UserRealtimeEvent;
 use App\Models\User;
+use App\Support\Auth\WebSessionDevices;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -99,20 +100,34 @@ class NativeSyncController
         /** @var User $user */
         $user = $request->user();
         $currentTokenId = $this->currentTokenId($request);
+        $webSessionDevices = app(WebSessionDevices::class);
+
+        $devices = $user->tokens()
+            ->latest('id')
+            ->get()
+            ->reject(fn (PersonalAccessToken $token): bool => $currentTokenId !== null && $token->getKey() === $currentTokenId)
+            ->values()
+            ->map(fn (PersonalAccessToken $token): array => [
+                'id' => $token->getKey(),
+                'device_key' => 'token:'.$token->getKey(),
+                'kind' => 'native-token',
+                'name' => $token->name,
+                'last_used_at' => $token->last_used_at?->toISOString(),
+                'created_at' => $token->created_at?->toISOString(),
+                'user_agent' => null,
+            ])
+            ->all();
+
+        $devices = collect([
+            ...$devices,
+            ...$webSessionDevices->listForUser($user),
+        ])->sortByDesc(static fn (array $device): string => (string) ($device['last_used_at'] ?? $device['created_at'] ?? ''))
+            ->values()
+            ->all();
 
         return response()->json([
             'ok' => true,
-            'devices' => $user->tokens()
-                ->latest('id')
-                ->get()
-                ->reject(fn (PersonalAccessToken $token): bool => $currentTokenId !== null && $token->getKey() === $currentTokenId)
-                ->values()
-                ->map(fn (PersonalAccessToken $token): array => [
-                    'id' => $token->getKey(),
-                    'name' => $token->name,
-                    'last_used_at' => $token->last_used_at?->toISOString(),
-                    'created_at' => $token->created_at?->toISOString(),
-                ]),
+            'devices' => $devices,
         ]);
     }
 
@@ -120,16 +135,40 @@ class NativeSyncController
     {
         /** @var User $user */
         $user = $request->user();
+        $webSessionDevices = app(WebSessionDevices::class);
 
         $validated = $request->validate([
-            'token_id' => ['required', 'integer'],
+            'token_id' => ['nullable', 'integer'],
+            'session_id' => ['nullable', 'string'],
         ]);
 
-        $tokenId = (int) $validated['token_id'];
+        $sessionId = trim((string) ($validated['session_id'] ?? ''));
+        $tokenId = isset($validated['token_id']) ? (int) $validated['token_id'] : 0;
         $currentTokenId = $this->currentTokenId($request);
 
-        if ($currentTokenId === $tokenId) {
+        if ($sessionId === '' && $tokenId < 1) {
             return response()->json(['ok' => false], 422);
+        }
+
+        if ($currentTokenId === $tokenId && $tokenId > 0) {
+            return response()->json(['ok' => false], 422);
+        }
+
+        if ($sessionId !== '') {
+            $deleted = $webSessionDevices->revoke($sessionId);
+
+            if (! $deleted) {
+                return response()->json(['ok' => false], 404);
+            }
+
+            $this->broadcast(
+                $user,
+                'deviceLoggedOut',
+                socketId: normalize_socket_id($request->headers->get('X-Socket-ID')),
+                targetSessionId: $sessionId,
+            );
+
+            return response()->json(['ok' => true]);
         }
 
         $deleted = $user->tokens()->whereKey($tokenId)->delete();
@@ -274,13 +313,26 @@ class NativeSyncController
         $query->delete();
     }
 
-    private function broadcast(User $user, string $type, ?int $targetTokenId = null, ?string $socketId = null): void
-    {
+    private function broadcast(
+        User $user,
+        string $type,
+        ?int $targetTokenId = null,
+        ?string $socketId = null,
+        ?string $targetSessionId = null,
+    ): void {
         if ($user->telegram_id === null) {
             return;
         }
 
-        $this->broadcastUserRealtimeEvent(new UserRealtimeEvent((int) $user->telegram_id, $type, $targetTokenId, $socketId));
+        $this->broadcastUserRealtimeEvent(
+            new UserRealtimeEvent(
+                (int) $user->telegram_id,
+                $type,
+                $targetTokenId,
+                $socketId,
+                $targetSessionId,
+            ),
+        );
     }
 
     private function broadcastUserRealtimeEvent(UserRealtimeEvent $event): void

@@ -28,6 +28,7 @@
             window.realtimeBootstrap = {
                 telegramId: @js(auth()->user()?->telegram_id),
                 nativeTokenId: @js($nativeRealtimeTokenId),
+                sessionId: @js(is_platform('native') ? null : session()->getId()),
                 nativeBroadcastAuthUrl: @js(route('native.broadcasting.auth', absolute: false)),
                 nativeSyncPullUrl: @js(route('native.sync.pull', absolute: false)),
                 realtimeSnapshotUrl: @js($realtimeSnapshotUrl),
@@ -662,7 +663,7 @@
         }"
         x-on:switch-view.window="applyViewState($event.detail?.to)"
         x-on:auth-blink-hold.window="startAuthHoldTransition()"
-        x-on:auth-blink-reload.window="dismissQuranBootstrapState(); startAuthReloadTransition(); setTimeout(() => { if ($event.detail?.nativeRestart && typeof window.AndroidBridge?.restartApplication === 'function') { window.AndroidBridge.restartApplication(); window.setTimeout(() => revealApp(), 6000); return; } const reloadUrl = $event.detail?.url; if (reloadUrl) { window.location.assign(reloadUrl); } else { window.location.reload(); } }, 0)"
+        x-on:auth-blink-reload.window="authStatusMessage = $event.detail?.nativeRestart ? @js(arabic_text('جارٍ إعادة تشغيل التطبيق...')) : null; dismissQuranBootstrapState(); startAuthReloadTransition(); setTimeout(() => { if ($event.detail?.nativeRestart && typeof window.AndroidBridge?.restartApplication === 'function') { window.AndroidBridge.restartApplication(); window.setTimeout(() => revealApp(), 6000); return; } const reloadUrl = $event.detail?.url; if (reloadUrl) { window.location.assign(reloadUrl); } else { window.location.reload(); } }, 0)"
         x-on:introduction-video-modal-opened.window="isIntroductionVideoOpen = true"
         x-on:introduction-video-modal-closed.window="isIntroductionVideoOpen = false"
         x-on:muttasiq-app-version-major-minor-reset.window="handleAppVersionMajorMinorReset($event.detail ?? {})"
@@ -904,18 +905,15 @@
                             ></p>
                             <div class="flex flex-wrap items-center justify-center gap-3">
                                 <button
-                                    class="bg-primary-600 hover:bg-primary-700 rounded-xl px-4 py-2 text-sm font-semibold text-white transition"
+                                    class="bg-primary-600 hover:bg-primary-700 min-w-32 rounded-xl px-4 py-2 text-center text-sm font-semibold text-white transition"
                                     type="button"
                                     x-on:click="dismissQuranBootstrapState(); openQuranEntry();"
                                 >
                                     {{ arabic_text('إعادة المحاولة') }}
                                 </button>
                                 <button
-                                    class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                                    class="min-w-32 rounded-xl border border-slate-300 px-4 py-2 text-center text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                                     type="button"
-                                    x-bind:class="quranBootstrap.didStartDownloadFlow ? 'pointer-events-none opacity-0' :
-                                        'opacity-100'"
-                                    x-bind:inert="quranBootstrap.didStartDownloadFlow"
                                     x-on:click="dismissQuranBootstrapState()"
                                 >
                                     {{ arabic_text('إغلاق') }}

@@ -1,6 +1,9 @@
 <?php
 
 declare(strict_types=1);
+use App\Models\User;
+
+use function Pest\Laravel\actingAs;
 
 it('renders the home shell, validates core controls, and persists color scheme behavior', function () {
     $page = visit('/', ['waitUntil' => 'domcontentloaded']);
@@ -136,40 +139,68 @@ it('migrates legacy raw active view storage before alpine boots', function () {
     expect($page->script('JSON.parse(localStorage.getItem("app-active-view"))'))->toBe('main-menu');
 });
 
-it('ignores volatile quran reader keys during realtime bundle applies', function () {
+it('updates athkar progress live when synced storage changes arrive', function () {
+    actingAs(User::factory()->create());
+    session()->put('auth.web_login_confirmed', true);
+
     $page = visit('/', ['waitUntil' => 'domcontentloaded']);
 
     resetBrowserState($page);
 
-    waitForScript($page, 'Boolean(window.muttasiqDataBranch)', true);
+    waitForScript($page, 'Boolean(document.querySelector("[data-athkar-app-reader-root]"))', true);
+    waitForScript($page, 'Boolean(document.querySelector("[data-testid=\\"main-menu-insights-trigger\\"]"))', true);
 
-    $didChange = $page->script(<<<'JS'
+    $didUpdate = $page->script(<<<'JS'
 (() => {
-  window.dataBranch = 'user';
-  localStorage.removeItem('quran-reader-last-page-v1');
-  localStorage.removeItem('quran-reader-navigation-history-v1');
-  localStorage.removeItem('athkar-progress-v1');
+  const readerRoot = document.querySelector('[data-athkar-app-reader-root]');
+  const reader = readerRoot && window.Alpine && window.Alpine.$data ? window.Alpine.$data(readerRoot) : null;
 
-  return window.muttasiqDataBranch.applyRealtimeBundle({
-    'quran-reader-last-page-v1': JSON.stringify(19),
-    'quran-reader-navigation-history-v1': JSON.stringify([{ id: 'history-1', pageNumber: 19 }]),
-    'athkar-progress-v1': JSON.stringify({ completed: ['morning'] }),
+  if (!reader || typeof reader.athkarFor !== 'function') {
+    return false;
+  }
+
+  const sabahList = reader.athkarFor('sabah');
+  const nextProgress = JSON.parse(JSON.stringify(reader.progress || {}));
+  if (!nextProgress.sabah || typeof nextProgress.sabah !== 'object') {
+    nextProgress.sabah = { index: 0, counts: [], ids: [], activeId: null };
+  }
+  if (!nextProgress.masaa || typeof nextProgress.masaa !== 'object') {
+    nextProgress.masaa = { index: 0, counts: [], ids: [], activeId: null };
+  }
+  nextProgress.sabah.ids = sabahList.map((item) => item && Object.prototype.hasOwnProperty.call(item, 'id') ? item.id : null);
+  nextProgress.sabah.counts = Array.from(nextProgress.sabah.counts || []);
+  nextProgress.sabah.counts[0] = Number(sabahList[0] && sabahList[0].count ? sabahList[0].count : 1);
+  nextProgress.sabah.index = 0;
+  nextProgress.sabah.activeId = nextProgress.sabah.ids.length > 0 ? nextProgress.sabah.ids[0] : null;
+
+  const serialized = JSON.stringify(nextProgress);
+  window.muttasiqDataBranch.applyUserBundle({
+    'athkar-progress-v1': serialized,
   });
+
+  return Number(reader.progress && reader.progress.sabah && reader.progress.sabah.counts ? reader.progress.sabah.counts[0] : 0) > 0;
 })()
 JS);
 
-    expect($didChange)->toBeTrue();
+    expect($didUpdate)->toBeBool();
 
-    waitForScript(
-        $page,
-        'JSON.parse(localStorage.getItem("athkar-progress-v1"))?.completed?.[0]',
-        'morning',
-    );
+    waitForScript($page, <<<'JS'
+(() => {
+  const readerRoot = document.querySelector('[data-athkar-app-reader-root]');
+  const reader = readerRoot && window.Alpine && window.Alpine.$data ? window.Alpine.$data(readerRoot) : null;
 
-    expect($page->script('localStorage.getItem("quran-reader-last-page-v1")'))->toBeNull();
-    expect($page->script('localStorage.getItem("quran-reader-navigation-history-v1")'))->toBeNull();
-    expect($page->script('JSON.parse(localStorage.getItem("athkar-progress-v1"))?.completed?.[0]'))
-        ->toBe('morning');
+  return Number(reader && reader.progress && reader.progress.sabah && reader.progress.sabah.counts ? reader.progress.sabah.counts[0] : 0) > 0;
+})()
+JS, true);
+
+    expect($page->script(<<<'JS'
+(() => {
+  const readerRoot = document.querySelector('[data-athkar-app-reader-root]');
+  const reader = readerRoot && window.Alpine && window.Alpine.$data ? window.Alpine.$data(readerRoot) : null;
+
+  return Number(reader && reader.progress && reader.progress.sabah && reader.progress.sabah.counts ? reader.progress.sabah.counts[0] : 0);
+})()
+JS))->toBeGreaterThan(0);
 });
 
 it('handles copyright panel visibility and opens updates tab from desktop and touch interactions', function () {

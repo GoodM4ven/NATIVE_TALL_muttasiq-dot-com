@@ -81,11 +81,32 @@ export const createLifecycleModule = (deps) => {
                 this.applyAthkarOverrides(event?.detail?.overrides ?? [], { persist: true });
             });
             window.addEventListener('storage', (event) => {
-                if (event.key !== athkarOverridesStorageKey) {
+                if (event.key === athkarOverridesStorageKey) {
+                    this.applyAthkarOverrides(readAthkarOverridesFromStorage(), { persist: false });
+
                     return;
                 }
 
-                this.applyAthkarOverrides(readAthkarOverridesFromStorage(), { persist: false });
+                if (event.key !== progressStorageKey) {
+                    return;
+                }
+
+                this.progress = readProgressFromStorage();
+                this.ensureState();
+                this.syncDay();
+                this.ensureProgress('sabah');
+                this.ensureProgress('masaa');
+
+                if (!this.activeMode) {
+                    return;
+                }
+
+                this.ensureProgress(this.activeMode);
+                this.resumeModeIndex?.();
+
+                this.$nextTick(() => {
+                    this.syncVisibleTextBoxState?.(this.activeIndex);
+                });
             });
             window.addEventListener('athkar-single-completion-confirmed', (event) => {
                 const index = Number(event?.detail?.index ?? -1);

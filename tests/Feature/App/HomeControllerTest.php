@@ -2,9 +2,12 @@
 
 use App\Models\Setting;
 use App\Models\Thikr;
+use App\Models\User;
 use App\Services\Enums\ThikrType;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Session;
 
+use function Pest\Laravel\actingAs;
 use function Pest\Laravel\get;
 
 function copyrightVersionShellClasses(string $content): string
@@ -261,4 +264,37 @@ it('renders a single athkar font scale slider that controls one shared text size
         ->not->toContain('aria-label="الحد الأقصى لحجم النص"')
         ->not->toContain('x-on:input="handleMinimumMainTextSizeInput($event)"')
         ->not->toContain('x-on:input="handleMaximumMainTextSizeInput($event)"');
+});
+
+it('logs out unconfirmed web sessions instead of silently reusing them', function () {
+    config([
+        'nativephp-internal.running' => false,
+        'nativephp-internal.platform' => null,
+    ]);
+
+    $user = User::factory()->create();
+
+    actingAs($user);
+    Session::forget('auth.web_login_confirmed');
+
+    get('/')
+        ->assertSuccessful();
+
+    expect(auth()->check())->toBeFalse();
+});
+
+it('renders the realtime session bootstrap and keeps the quran failure close action visible', function () {
+    config([
+        'nativephp-internal.running' => false,
+        'nativephp-internal.platform' => null,
+    ]);
+
+    $response = get('/');
+    $content = $response->getContent();
+
+    expect($content)
+        ->toContain('sessionId:')
+        ->toContain('x-on:click="dismissQuranBootstrapState()"')
+        ->not->toContain('x-bind:inert="quranBootstrap.didStartDownloadFlow"')
+        ->not->toContain("quranBootstrap.didStartDownloadFlow ? 'pointer-events-none opacity-0'");
 });

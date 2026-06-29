@@ -15,6 +15,7 @@ document.addEventListener('alpine:init', () => {
         isActionOpen: false,
         isScrollingDisabled: false,
         isAuthHoldActive: false,
+        authStatusMessage: null,
 
         completeStartupSync() {
             if (!this.isStartupSyncPending) {
@@ -50,6 +51,7 @@ document.addEventListener('alpine:init', () => {
         startAuthHoldTransition() {
             window.__authReloadInProgress = true;
             this.isAuthHoldActive = true;
+            this.authStatusMessage = null;
             this.defaultTransitionDurationInMs = this.authTransitionDurationInMs;
             this.useFastTransitionDuration = false;
             this.isBlinkerShown = true;
@@ -104,6 +106,7 @@ document.addEventListener('alpine:init', () => {
 
             window.__authReloadInProgress = false;
             this.isAuthHoldActive = false;
+            this.authStatusMessage = null;
             this.defaultTransitionDurationInMs = 350;
 
             if (!this.isFastUiMode) {

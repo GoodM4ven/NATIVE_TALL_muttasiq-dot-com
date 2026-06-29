@@ -5,6 +5,8 @@ use App\Models\Setting;
 use App\Providers\AppServiceProvider;
 use Illuminate\Support\Facades\Blade;
 
+use function Pest\Livewire\livewire;
+
 it('resolves the app version from settings and falls back to config defaults', function () {
     Setting::setAppVersion('2.0.0');
 
@@ -102,4 +104,13 @@ it('renders the introduction video modal content responsively', function () {
         ->toContain('playsinline=1')
         ->toContain('allowfullscreen')
         ->toContain('استعراض في يوتيوب');
+});
+
+it('refreshes the open control panel form state from synced settings', function () {
+    livewire(ControlPanel::class)
+        ->mountAction('controlPanel')
+        ->call('refreshOpenControlPanel', [
+            Setting::DOES_SKIP_GUIDANCE_PANELS => true,
+        ])
+        ->assertSet('mountedActions.0.data.'.Setting::DOES_SKIP_GUIDANCE_PANELS, true);
 });

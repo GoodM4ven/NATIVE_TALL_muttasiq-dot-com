@@ -21,7 +21,15 @@ class HomeController extends Controller
             Setting::setAppVersion(Setting::configuredAppVersion());
         }
 
-        if (! is_platform('native') && Auth::viaRemember()) {
+        if (
+            ! is_platform('native') &&
+            Auth::check() &&
+            $request->session()->get('auth.web_login_confirmed') !== true
+        ) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        } elseif (! is_platform('native') && Auth::viaRemember()) {
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
@@ -40,6 +48,10 @@ class HomeController extends Controller
 
         if (is_string($overrideNotice) && $overrideNotice !== '') {
             notify('heroicon-o-circle-stack', $overrideNotice);
+        }
+
+        if ($nativeAuthRestart) {
+            notify('heroicon-o-arrow-path', arabic_text('جارٍ إعادة تشغيل التطبيق...'));
         }
 
         $settingsPayload = $this->resolveLocalSettingsPayload();

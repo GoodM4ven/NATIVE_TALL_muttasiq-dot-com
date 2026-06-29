@@ -19,6 +19,7 @@ class UserRealtimeEvent implements ShouldBroadcastNow
         public string $type,
         public ?int $targetTokenId = null,
         ?string $socketId = null,
+        public ?string $targetSessionId = null,
     ) {
         $normalizedSocketId = trim((string) $socketId);
 
@@ -43,13 +44,14 @@ class UserRealtimeEvent implements ShouldBroadcastNow
     }
 
     /**
-     * @return array{type: string, target_token_id: int|null}
+     * @return array{type: string, target_token_id: int|null, target_session_id: string|null}
      */
     public function broadcastWith(): array
     {
         return [
             'type' => $this->type,
             'target_token_id' => $this->targetTokenId,
+            'target_session_id' => $this->targetSessionId,
         ];
     }
 }

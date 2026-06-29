@@ -44,6 +44,7 @@ class TelegramAuthController
         // A long-lived remember cookie would auto-restore the session (and, on a
         // shared-DB dev host, silently sign a browser in as the native account).
         Auth::login($user, remember: false);
+        session()->put('auth.web_login_confirmed', true);
 
         // Flashes through the redirect so it shows on the freshly loaded home,
         // matching the username/password login notification.

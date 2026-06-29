@@ -9,4 +9,12 @@
     x-bind:class="{
         'opacity-0 pointer-events-none': !isBlinkerShown,
     }"
-></div>
+>
+    <div
+        class="pointer-events-none absolute inset-0 flex items-center justify-center px-6 text-center text-lg font-semibold text-slate-700 dark:text-slate-200"
+        x-cloak
+        x-show="isBlinkerShown && authStatusMessage"
+        x-transition.opacity
+        x-text="authStatusMessage"
+    ></div>
+</div>

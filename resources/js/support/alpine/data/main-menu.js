@@ -68,6 +68,7 @@ document.addEventListener('alpine:init', () => {
         _onWindowBlur: null,
         _onWindowPointerDown: null,
         _onWindowStorage: null,
+        _onUserSyncedDataUpdated: null,
         _onSwitchView: null,
         _onWindowResize: null,
         _insightsFastCloseToken: null,
@@ -184,6 +185,10 @@ document.addEventListener('alpine:init', () => {
                 this.refreshDailyProgress();
                 this.refreshVisualEnhancementsSetting();
             };
+            this._onUserSyncedDataUpdated = () => {
+                this.refreshDailyProgress();
+                this.refreshVisualEnhancementsSetting();
+            };
             this._onSwitchView = (event) => {
                 const nextView = String(event?.detail?.to ?? '').trim();
                 const shouldPreserveGateLaunch =
@@ -216,6 +221,10 @@ document.addEventListener('alpine:init', () => {
 
             window.addEventListener('pointerdown', this._onWindowPointerDown, true);
             window.addEventListener('storage', this._onWindowStorage);
+            window.addEventListener(
+                'muttasiq-user-synced-data-updated',
+                this._onUserSyncedDataUpdated,
+            );
             window.addEventListener('switch-view', this._onSwitchView);
             window.addEventListener('resize', this._onWindowResize, {
                 passive: true,
@@ -260,6 +269,14 @@ document.addEventListener('alpine:init', () => {
             if (this._onWindowStorage) {
                 window.removeEventListener('storage', this._onWindowStorage);
                 this._onWindowStorage = null;
+            }
+
+            if (this._onUserSyncedDataUpdated) {
+                window.removeEventListener(
+                    'muttasiq-user-synced-data-updated',
+                    this._onUserSyncedDataUpdated,
+                );
+                this._onUserSyncedDataUpdated = null;
             }
 
             if (this._onSwitchView) {

@@ -99,7 +99,9 @@ it('queues native quran preparation when reader data is not ready', function () 
         'state' => 'queued',
     ]);
 
-    Queue::assertPushed(DownloadNativeQuranSnapshot::class);
+    Queue::assertPushed(DownloadNativeQuranSnapshot::class, function (DownloadNativeQuranSnapshot $job): bool {
+        return $job->connection === 'deferred';
+    });
 });
 
 it('does not enqueue native quran preparation again while it is already running', function () {

@@ -5,8 +5,10 @@ declare(strict_types=1);
 use App\Jobs\SyncUserSettings;
 use App\Livewire\AuthButton;
 use App\Models\User;
+use App\Support\Auth\WebSessionDevices;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -54,6 +56,7 @@ it('creates a username-driven account and logs in on first telegram contact', fu
         ->and($user->email)->toBeNull();
 
     assertAuthenticatedAs($user);
+    expect(session()->get('auth.web_login_confirmed'))->toBeTrue();
 });
 
 it('reuses the existing account on a returning telegram login', function () {
@@ -234,11 +237,23 @@ it('lists and revokes native device tokens except the current one', function () 
     $user = User::factory()->create();
     $currentToken = $user->createToken('this-device')->plainTextToken;
     $otherToken = $user->createToken('other-device')->accessToken;
+    $webSessionDevices = app(WebSessionDevices::class);
+
+    DB::table('sessions')->insert([
+        'id' => 'web-session-123',
+        'user_id' => $user->getKey(),
+        'ip_address' => '127.0.0.1',
+        'user_agent' => 'Browser Test Agent',
+        'payload' => '',
+        'last_activity' => now()->getTimestamp(),
+    ]);
 
     getJson(route('api.native-sync.devices'), ['Authorization' => "Bearer {$currentToken}"])
         ->assertOk()
         ->assertJsonPath('devices.0.id', $otherToken->getKey())
-        ->assertJsonPath('devices.0.name', 'other-device');
+        ->assertJsonPath('devices.0.name', 'other-device')
+        ->assertJsonPath('devices.1.id', 'web-session-123')
+        ->assertJsonPath('devices.1.device_key', $webSessionDevices->composeDeviceKey('web-session-123'));
 
     postJson(route('api.native-sync.devices.revoke'), [
         'token_id' => $otherToken->getKey(),
@@ -248,6 +263,15 @@ it('lists and revokes native device tokens except the current one', function () 
 
     expect($user->tokens()->whereKey($otherToken->getKey())->exists())->toBeFalse()
         ->and($user->tokens()->where('name', 'this-device')->exists())->toBeTrue();
+
+    postJson(route('api.native-sync.devices.revoke'), [
+        'session_id' => 'web-session-123',
+    ], ['Authorization' => "Bearer {$currentToken}"])
+        ->assertOk()
+        ->assertJsonPath('ok', true);
+
+    expect(DB::table('sessions')->where('id', 'web-session-123')->exists())->toBeFalse()
+        ->and($webSessionDevices->isRevoked('web-session-123'))->toBeTrue();
 });
 
 it('verifies native two-factor codes against the authoritative server', function () {

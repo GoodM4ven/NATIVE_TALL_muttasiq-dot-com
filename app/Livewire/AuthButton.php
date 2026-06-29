@@ -7,6 +7,7 @@ namespace App\Livewire;
 use App\Events\UserRealtimeEvent;
 use App\Jobs\SyncUserSettings;
 use App\Models\User;
+use App\Support\Auth\WebSessionDevices;
 use Closure;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
@@ -170,6 +171,7 @@ class AuthButton extends Component implements HasActions, HasSchemas
                 // a long-lived remember cookie is what let a browser silently sign
                 // in as the native account on the shared-DB dev host.
                 Auth::login($user, remember: false);
+                session()->put('auth.web_login_confirmed', true);
 
                 notify('heroicon-o-check-circle', arabic_text('تم تسجيل الدخول بنجاح'));
 
@@ -510,8 +512,52 @@ class AuthButton extends Component implements HasActions, HasSchemas
         app(GenerateNewRecoveryCodes::class)($this->currentUser());
     }
 
-    public function revokeDevice(int $tokenId): void
+    public function revokeDeviceByKey(string $deviceKey): void
     {
+        $webSessionDevices = app(WebSessionDevices::class);
+        $sessionId = $webSessionDevices->parseDeviceKey($deviceKey);
+
+        if ($sessionId !== null) {
+            $user = Auth::user();
+
+            if (! $user instanceof User) {
+                return;
+            }
+
+            if (is_platform('native')) {
+                $didRevoke = $this->pushNativeSync('native-sync.devices.revoke', [
+                    'session_id' => $sessionId,
+                ]);
+            } else {
+                $didRevoke = $webSessionDevices->revoke($sessionId);
+
+                if ($didRevoke && $user->telegram_id !== null) {
+                    $this->broadcastRealtimeEvent(new UserRealtimeEvent(
+                        (int) $user->telegram_id,
+                        'deviceLoggedOut',
+                        socketId: normalize_socket_id(request()->headers->get('X-Socket-ID')),
+                        targetSessionId: $sessionId,
+                    ));
+                }
+            }
+
+            notify(
+                $didRevoke ? 'heroicon-o-computer-desktop' : 'heroicon-o-exclamation-circle',
+                $didRevoke
+                    ? arabic_text('تم تسجيل خروج المتصفح')
+                    : arabic_text('تعذر تسجيل خروج المتصفح، حاول مرة أخرى'),
+            );
+
+            return;
+        }
+
+        if (! preg_match('/^token:(\d+)$/', trim($deviceKey), $matches)) {
+            notify('heroicon-o-exclamation-circle', arabic_text('تعذر تحديد الجهاز المطلوب.'));
+
+            return;
+        }
+
+        $tokenId = (int) $matches[1];
         $user = $this->currentUser();
 
         if (is_platform('native')) {
@@ -669,7 +715,13 @@ class AuthButton extends Component implements HasActions, HasSchemas
 
     private function currentNativeTokenId(): ?int
     {
-        $token = (string) $this->currentUser()->native_api_token;
+        $user = Auth::user();
+
+        if (! $user instanceof User) {
+            return null;
+        }
+
+        $token = (string) $user->native_api_token;
 
         if (preg_match('/^(?<id>\d+)\|/', $token, $matches) !== 1) {
             return null;
@@ -700,7 +752,7 @@ class AuthButton extends Component implements HasActions, HasSchemas
 
         $items = collect($devices)
             ->map(function (array $device): string {
-                $id = (int) ($device['id'] ?? 0);
+                $deviceKey = e((string) ($device['device_key'] ?? ''));
                 $name = e((string) ($device['name'] ?? arabic_text('جهاز')));
                 $caption = e($this->deviceCaption($device));
                 $revokeLabel = e(arabic_text('تسجيل خروجه'));
@@ -711,7 +763,7 @@ class AuthButton extends Component implements HasActions, HasSchemas
                             <div class="truncate font-semibold text-gray-950 dark:text-gray-50">{$name}</div>
                             <div class="text-xs text-gray-500 dark:text-gray-400">{$caption}</div>
                         </div>
-                        <button type="button" wire:click="revokeDevice({$id})" wire:loading.attr="disabled" class="shrink-0 rounded-full bg-danger-600 px-3 py-1 text-xs font-bold text-white transition hover:bg-danger-700 disabled:opacity-50">
+                        <button type="button" wire:click="revokeDeviceByKey('{$deviceKey}')" wire:loading.attr="disabled" class="shrink-0 rounded-full bg-danger-600 px-3 py-1 text-xs font-bold text-white transition hover:bg-danger-700 disabled:opacity-50">
                             {$revokeLabel}
                         </button>
                     </div>
@@ -723,11 +775,23 @@ class AuthButton extends Component implements HasActions, HasSchemas
     }
 
     /**
-     * @return array<int, array{id:int|string|null,name:string|null,last_used_at:string|null,created_at:string|null}>|null
+     * @return array<int, array{
+     *     id:int|string|null,
+     *     device_key?:string|null,
+     *     kind?:string|null,
+     *     name:string|null,
+     *     last_used_at:string|null,
+     *     created_at:string|null,
+     *     user_agent?:string|null
+     * }>|null
      */
     private function nativeDevices(): ?array
     {
-        $user = $this->currentUser();
+        $user = Auth::user();
+
+        if (! $user instanceof User) {
+            return [];
+        }
 
         if (is_platform('native')) {
             $serverBase = native_server_base();
@@ -756,29 +820,59 @@ class AuthButton extends Component implements HasActions, HasSchemas
 
         $currentTokenId = $this->currentNativeTokenId();
 
-        return $user->tokens()
+        $tokenDevices = $user->tokens()
             ->latest('id')
             ->get()
             ->reject(fn ($token): bool => $currentTokenId !== null && (int) $token->getKey() === $currentTokenId)
             ->values()
             ->map(fn ($token): array => [
                 'id' => $token->getKey(),
+                'device_key' => 'token:'.$token->getKey(),
+                'kind' => 'native-token',
                 'name' => $token->name,
                 'last_used_at' => $token->last_used_at?->toISOString(),
                 'created_at' => $token->created_at?->toISOString(),
+                'user_agent' => null,
             ])
+            ->all();
+
+        $webSessionDevices = app(WebSessionDevices::class)->listForUser(
+            $user,
+            app(WebSessionDevices::class)->currentSessionId(request()),
+        );
+
+        return collect([
+            ...$tokenDevices,
+            ...$webSessionDevices,
+        ])->sortByDesc(static fn (array $device): string => (string) ($device['last_used_at'] ?? $device['created_at'] ?? ''))
+            ->values()
             ->all();
     }
 
     /**
-     * @param  array{id?:int|string|null,name?:string|null,last_used_at?:string|null,created_at?:string|null}  $device
+     * @param  array{
+     *     id?:int|string|null,
+     *     device_key?:string|null,
+     *     kind?:string|null,
+     *     name?:string|null,
+     *     last_used_at?:string|null,
+     *     created_at?:string|null,
+     *     user_agent?:string|null
+     * }  $device
      */
     private function deviceCaption(array $device): string
     {
+        $userAgent = trim((string) ($device['user_agent'] ?? ''));
         $lastUsedAt = (string) ($device['last_used_at'] ?? '');
 
         if ($lastUsedAt !== '') {
-            return arabic_text('آخر استخدام: ').Str::of($lastUsedAt)->replace('T', ' ')->before('.');
+            $baseCaption = arabic_text('آخر استخدام: ').Str::of($lastUsedAt)->replace('T', ' ')->before('.');
+
+            if ($userAgent !== '') {
+                return $baseCaption.' • '.Str::limit($userAgent, 72);
+            }
+
+            return $baseCaption;
         }
 
         $createdAt = (string) ($device['created_at'] ?? '');

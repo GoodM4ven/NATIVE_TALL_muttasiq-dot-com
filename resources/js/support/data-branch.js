@@ -40,14 +40,6 @@ const SYNCED_KEYS = new Set([
     'quran-reader-wird-progress-v1',
 ]);
 
-// These keys are still account-synced, but they are too "live" to apply over a
-// websocket pull while another device is actively reading: each reader quickly
-// re-asserts its own cursor/history and the full-bundle sync starts bouncing.
-const REALTIME_VOLATILE_KEYS = new Set([
-    'quran-reader-last-page-v1',
-    'quran-reader-navigation-history-v1',
-]);
-
 // `quran-reader-last-page-v1` / `quran-reader-navigation-history-v1` ARE synced:
 // reading position follows the account across devices (read on desktop, continue
 // on mobile). Cross-device "active usage" is handled by the websocket listener,
@@ -109,22 +101,6 @@ const normalizePersistedAppActiveView = (storage = window.localStorage) => {
     } catch (_) {
         // Ignore malformed storage; Alpine can still boot on a clean key.
     }
-};
-
-const filterRealtimeBundle = (bundle = {}) => {
-    if (!isObjectLike(bundle)) {
-        return {};
-    }
-
-    const filteredBundle = {};
-
-    Object.entries(bundle).forEach(([key, value]) => {
-        if (!REALTIME_VOLATILE_KEYS.has(key)) {
-            filteredBundle[key] = value;
-        }
-    });
-
-    return filteredBundle;
 };
 
 // Module-scoped, so it resets every page load. It must NOT live on `localStorage`:
@@ -344,8 +320,6 @@ export const installDataBranch = (storage = window.localStorage) => {
         return didChange;
     };
 
-    const applyRealtimeBundle = (bundle = {}) => applyUserBundle(filterRealtimeBundle(bundle));
-
     // ponytail: only the three accessor methods are wrapped (the only ones the
     // app uses). Bracket access / key(i) / length are not branched.
     const afterWrite = (key) => {
@@ -435,11 +409,9 @@ export const installDataBranch = (storage = window.localStorage) => {
         copyBranch,
         pushUserBundle,
         applyUserBundle,
-        applyRealtimeBundle,
         activeBranch,
         BRANCHED_KEYS,
         SYNCED_KEYS,
-        REALTIME_VOLATILE_KEYS,
     };
 };
 

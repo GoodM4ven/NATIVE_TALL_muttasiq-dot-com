@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\TrackAuthenticatedWebSession;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -21,7 +22,7 @@ if (! is_native_bootstrap_runtime()) {
 
 return $application
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->web(append: TrackAuthenticatedWebSession::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

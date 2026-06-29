@@ -96,7 +96,7 @@ const localLogout = async () => {
     }
 };
 
-const refreshUserBundle = async (isRealtimeEvent = false) => {
+const refreshUserBundle = async () => {
     const snapshotUrl = isNativeRuntime()
         ? String(bootstrap().nativeSyncPullUrl || '').trim()
         : String(bootstrap().realtimeSnapshotUrl || '').trim();
@@ -129,14 +129,17 @@ const refreshUserBundle = async (isRealtimeEvent = false) => {
     const payload = await response.json();
     const bundle = payload?.synced_data;
 
-    const applyBundle = isRealtimeEvent
-        ? window.muttasiqDataBranch?.applyRealtimeBundle
-        : window.muttasiqDataBranch?.applyUserBundle;
-
-    return applyBundle?.(bundle) === true;
+    return window.muttasiqDataBranch?.applyUserBundle?.(bundle) === true;
 };
 
 const NOTICE_FLAG = 'muttasiq-realtime-notice-pending';
+const DATA_SYNC_REFRESH_DEBOUNCE_MS = 240;
+const DATA_SYNC_NOTICE_DEBOUNCE_MS = 1200;
+
+let pendingDataSyncRefreshTimer = null;
+let pendingDataSyncNoticeTimer = null;
+let isDataSyncRefreshInFlight = false;
+let shouldEmitDataSyncNotice = false;
 
 // Fire the "changes from another device" Filament notification (rendered by the
 // AuthButton Livewire listener). Best-effort: a missed notice is harmless.
@@ -152,6 +155,54 @@ const flagPostReloadNotice = () => {
     }
 };
 
+const scheduleOtherDeviceNotice = () => {
+    shouldEmitDataSyncNotice = true;
+
+    if (pendingDataSyncNoticeTimer !== null) {
+        window.clearTimeout(pendingDataSyncNoticeTimer);
+    }
+
+    pendingDataSyncNoticeTimer = window.setTimeout(() => {
+        pendingDataSyncNoticeTimer = null;
+
+        if (!shouldEmitDataSyncNotice) {
+            return;
+        }
+
+        shouldEmitDataSyncNotice = false;
+        fireOtherDeviceNotice();
+    }, DATA_SYNC_NOTICE_DEBOUNCE_MS);
+};
+
+const flushRealtimeDataSync = async () => {
+    if (isDataSyncRefreshInFlight) {
+        return;
+    }
+
+    isDataSyncRefreshInFlight = true;
+
+    try {
+        const didChange = await refreshUserBundle();
+
+        if (didChange) {
+            scheduleOtherDeviceNotice();
+        }
+    } finally {
+        isDataSyncRefreshInFlight = false;
+    }
+};
+
+const scheduleRealtimeDataSync = () => {
+    if (pendingDataSyncRefreshTimer !== null) {
+        window.clearTimeout(pendingDataSyncRefreshTimer);
+    }
+
+    pendingDataSyncRefreshTimer = window.setTimeout(() => {
+        pendingDataSyncRefreshTimer = null;
+        flushRealtimeDataSync();
+    }, DATA_SYNC_REFRESH_DEBOUNCE_MS);
+};
+
 // Blink FULLY out (await the white-fade transition) before doing anything
 // visible — so no content morph / modal flicker is ever seen — then run `action`.
 const blinkOutThen = async (action) => {
@@ -164,12 +215,20 @@ const blinkOutThen = async (action) => {
 const handleRealtimeEvent = (event) => {
     const type = String(event?.type || '');
     const targetTokenId = Number(event?.target_token_id || 0);
+    const targetSessionId = String(event?.target_session_id || '').trim();
     const currentTokenId = Number(bootstrap().nativeTokenId || 0);
+    const currentSessionId = String(bootstrap().sessionId || '').trim();
     const isCurrentRevokedNativeDevice =
         type === 'deviceLoggedOut' &&
         isNativeRuntime() &&
         targetTokenId > 0 &&
         targetTokenId === currentTokenId;
+    const isCurrentRevokedWebSession =
+        type === 'deviceLoggedOut' &&
+        !isNativeRuntime() &&
+        targetSessionId !== '' &&
+        currentSessionId !== '' &&
+        targetSessionId === currentSessionId;
 
     // RELOAD cases (auth side effects): blink fully out, run the side effect,
     // flag the notice to fire after the reload, then hard-reload. No modal
@@ -185,7 +244,7 @@ const handleRealtimeEvent = (event) => {
         return;
     }
 
-    if (type === 'passwordChanged' || isCurrentRevokedNativeDevice) {
+    if (type === 'passwordChanged' || isCurrentRevokedNativeDevice || isCurrentRevokedWebSession) {
         blinkOutThen(async () => {
             await localLogout();
             flagPostReloadNotice();
@@ -200,11 +259,7 @@ const handleRealtimeEvent = (event) => {
     // no reload — then show a single subtle toast. Forcing navigation here used
     // to make this device re-assert its own state and ping-pong with the peer.
     if (type === 'dataSynced' || type === 'dataOverridden') {
-        refreshUserBundle(true).then((didChange) => {
-            if (didChange) {
-                fireOtherDeviceNotice();
-            }
-        });
+        scheduleRealtimeDataSync();
 
         return;
     }

@@ -87,6 +87,35 @@ it('detects the native bootstrap runtime from the platform env', function () {
     putenv('NATIVEPHP_RUNNING='.$previousRunning);
 });
 
+it('uses a dedicated native session cookie name during bootstrap runtime', function () {
+    $previousPlatform = getenv('NATIVEPHP_PLATFORM');
+    $previousRunning = getenv('NATIVEPHP_RUNNING');
+
+    try {
+        putenv('NATIVEPHP_RUNNING=true');
+        putenv('NATIVEPHP_PLATFORM=android');
+
+        /** @var array{cookie:string} $config */
+        $config = require config_path('session.php');
+
+        expect($config['cookie'])->toContain('-native-session');
+    } finally {
+        if ($previousPlatform === false) {
+            putenv('NATIVEPHP_PLATFORM');
+        } else {
+            putenv('NATIVEPHP_PLATFORM='.$previousPlatform);
+        }
+
+        if ($previousRunning === false) {
+            putenv('NATIVEPHP_RUNNING');
+
+            return;
+        }
+
+        putenv('NATIVEPHP_RUNNING='.$previousRunning);
+    }
+});
+
 it('normalizes missing socket ids before broadcasting realtime events', function () {
     $event = new UserRealtimeEvent(123, 'dataSynced', null, 'undefined');
 

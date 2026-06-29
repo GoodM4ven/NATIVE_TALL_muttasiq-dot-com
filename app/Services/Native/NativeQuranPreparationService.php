@@ -56,7 +56,7 @@ class NativeQuranPreparationService
         ], self::PENDING_TTL_SECONDS);
 
         try {
-            DownloadNativeQuranSnapshot::dispatch();
+            DownloadNativeQuranSnapshot::dispatch()->onConnection('deferred');
         } catch (Throwable $throwable) {
             return $this->markFailed($throwable);
         }

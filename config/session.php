@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 use Illuminate\Support\Str;
 
+$defaultSessionCookie = Str::slug((string) env('APP_NAME', 'laravel')).'-session';
+$nativeSessionCookie = Str::slug((string) env('APP_NAME', 'laravel')).'-native-session';
+
 return [
 
     /*
@@ -131,7 +134,7 @@ return [
 
     'cookie' => env(
         'SESSION_COOKIE',
-        Str::slug((string) env('APP_NAME', 'laravel')).'-session'
+        is_native_bootstrap_runtime() ? $nativeSessionCookie : $defaultSessionCookie,
     ),
 
     /*

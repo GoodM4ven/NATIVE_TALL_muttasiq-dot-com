@@ -14,6 +14,7 @@
     >
         <div
             class="absolute inset-0 transition-opacity delay-300 duration-500 will-change-[opacity]"
+            data-testid="main-menu-bg-light-layer"
             x-cloak
             x-show="!$store.colorScheme.isDarkModeOn"
         >
@@ -28,6 +29,7 @@
 
         <div
             class="absolute inset-0 transition-opacity delay-300 duration-500 will-change-[opacity]"
+            data-testid="main-menu-bg-dark-layer"
             x-cloak
             x-show="$store.colorScheme.isDarkModeOn"
         >
