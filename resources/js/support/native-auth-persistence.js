@@ -179,4 +179,60 @@ window.addEventListener('native-auth-reveal', () => {
     clearTelegramAuthPending();
 });
 
+// Grace window after the app is resumed mid-login: long enough for a real
+// deeplink handoff to start reloading the app, short enough that an empty-handed
+// return doesn't leave the blinker stuck on white for long.
+const authReturnGraceMs = 2000;
+let authReturnRevealTimer = null;
+
+const cancelAuthReturnReveal = () => {
+    if (authReturnRevealTimer !== null) {
+        window.clearTimeout(authReturnRevealTimer);
+        authReturnRevealTimer = null;
+    }
+};
+
+// A real login navigates the WebView to the handoff route (then restarts), which
+// fires pagehide — cancel the reveal so we never flash the app right before it
+// reloads. An empty-handed return never navigates, so the timer below survives.
+window.addEventListener('pagehide', cancelAuthReturnReveal);
+
+// When the app comes back to the foreground while a Telegram login is pending,
+// wait a beat: if the deeplink brought auth data back it will reload/restart the
+// app (this context dies). If it didn't — the user just closed the browser with
+// the system back button — reveal the held blinker instead of hanging on white.
+const handleNativeAuthResume = () => {
+    if (!isNativeRuntime() || window.dataBranch === 'user' || !isTelegramAuthPending()) {
+        return;
+    }
+
+    cancelAuthReturnReveal();
+
+    authReturnRevealTimer = window.setTimeout(() => {
+        authReturnRevealTimer = null;
+
+        // Still here, still guest, nothing restoring/restarting → no auth came back.
+        if (
+            window.dataBranch === 'user' ||
+            window.__nativeAuthRestoreInFlight === true ||
+            window.nativeAuthRestart
+        ) {
+            return;
+        }
+
+        clearTelegramAuthPending();
+        revealApp();
+    }, authReturnGraceMs);
+};
+
+window.addEventListener('quran-native-lifecycle', (event) => {
+    if (
+        String(event?.detail?.event ?? '')
+            .trim()
+            .toLowerCase() === 'activity-resume'
+    ) {
+        handleNativeAuthResume();
+    }
+});
+
 scheduleBootstrap();

@@ -36,6 +36,34 @@
     @vite('resources/css/app.css')
     @stack('styles')
 
+    <script>
+        (() => {
+            try {
+                const rawValue = localStorage.getItem('app-active-view');
+
+                if (rawValue === null) {
+                    return;
+                }
+
+                try {
+                    JSON.parse(rawValue);
+                } catch (_) {
+                    const normalizedValue = rawValue.trim();
+
+                    if (normalizedValue === '') {
+                        localStorage.removeItem('app-active-view');
+
+                        return;
+                    }
+
+                    localStorage.setItem('app-active-view', JSON.stringify(normalizedValue));
+                }
+            } catch (_) {
+                // Ignore storage failures; Alpine can still boot on a clean key.
+            }
+        })();
+    </script>
+
     <!-- Head Scripts --> {{-- ! Loads only once --}}
     @vite('resources/js/app.js')
     @stack('head-scripts')

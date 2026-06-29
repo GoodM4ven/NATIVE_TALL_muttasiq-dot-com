@@ -166,7 +166,10 @@ class AuthButton extends Component implements HasActions, HasSchemas
                     return;
                 }
 
-                Auth::login($user, remember: true);
+                // remember: false — web sessions must re-authenticate each time;
+                // a long-lived remember cookie is what let a browser silently sign
+                // in as the native account on the shared-DB dev host.
+                Auth::login($user, remember: false);
 
                 notify('heroicon-o-check-circle', arabic_text('تم تسجيل الدخول بنجاح'));
 

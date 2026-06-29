@@ -122,6 +122,56 @@ JS, true);
     $page->assertScript($isDarkScript, false);
 });
 
+it('migrates legacy raw active view storage before alpine boots', function () {
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
+
+    resetBrowserState($page);
+
+    $page->script('localStorage.setItem("app-active-view", "main-menu");');
+    $page->script('window.location.reload();');
+
+    waitForScript($page, 'JSON.parse(localStorage.getItem("app-active-view"))', 'main-menu');
+    waitForScript($page, homeDataScript('data.activeView'), 'main-menu');
+
+    expect($page->script('JSON.parse(localStorage.getItem("app-active-view"))'))->toBe('main-menu');
+});
+
+it('ignores volatile quran reader keys during realtime bundle applies', function () {
+    $page = visit('/', ['waitUntil' => 'domcontentloaded']);
+
+    resetBrowserState($page);
+
+    waitForScript($page, 'Boolean(window.muttasiqDataBranch)', true);
+
+    $didChange = $page->script(<<<'JS'
+(() => {
+  window.dataBranch = 'user';
+  localStorage.removeItem('quran-reader-last-page-v1');
+  localStorage.removeItem('quran-reader-navigation-history-v1');
+  localStorage.removeItem('athkar-progress-v1');
+
+  return window.muttasiqDataBranch.applyRealtimeBundle({
+    'quran-reader-last-page-v1': JSON.stringify(19),
+    'quran-reader-navigation-history-v1': JSON.stringify([{ id: 'history-1', pageNumber: 19 }]),
+    'athkar-progress-v1': JSON.stringify({ completed: ['morning'] }),
+  });
+})()
+JS);
+
+    expect($didChange)->toBeTrue();
+
+    waitForScript(
+        $page,
+        'JSON.parse(localStorage.getItem("athkar-progress-v1"))?.completed?.[0]',
+        'morning',
+    );
+
+    expect($page->script('localStorage.getItem("quran-reader-last-page-v1")'))->toBeNull();
+    expect($page->script('localStorage.getItem("quran-reader-navigation-history-v1")'))->toBeNull();
+    expect($page->script('JSON.parse(localStorage.getItem("athkar-progress-v1"))?.completed?.[0]'))
+        ->toBe('morning');
+});
+
 it('handles copyright panel visibility and opens updates tab from desktop and touch interactions', function () {
     $desktopPage = visit('/', ['waitUntil' => 'domcontentloaded']);
 

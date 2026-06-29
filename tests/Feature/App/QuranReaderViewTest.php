@@ -213,7 +213,7 @@ it('injects visible basmallah lines under late-page surah headers', function () 
         ->and($page['basmallahFontFamily'] ?? null)->toBe('QuranCommon')
         ->and($page['basmallahFontFormat'] ?? null)->toBe('woff2')
         ->and($page['basmallahText'] ?? null)->toBe("\u{FDFD}")
-        ->and($page['basmallahFontUrl'] ?? null)->toBe(url('/vendor/arabicable/quran-common.woff2'))
+        ->and($page['basmallahFontUrl'] ?? null)->toBe('/vendor/arabicable/quran-common.woff2')
         ->and($firstAyahLine)->toBeArray();
 
     expect(public_path('vendor/arabicable/quran-common.woff2'))->toBeFile();
@@ -239,8 +239,8 @@ it('prefers published static quran helper font assets over dynamic binary routes
 
     $page = $service->resolvePage(604);
 
-    expect($page['surahHeaderFontUrl'] ?? null)->toBe(url('/vendor/arabicable/surah-name-v4.ttf'))
-        ->and($page['basmallahFontUrl'] ?? null)->toBe(url('/vendor/arabicable/quran-common.woff2'));
+    expect($page['surahHeaderFontUrl'] ?? null)->toBe('/vendor/arabicable/surah-name-v4.ttf')
+        ->and($page['basmallahFontUrl'] ?? null)->toBe('/vendor/arabicable/quran-common.woff2');
 });
 
 it('keeps search destination cue caption-only on immersive mobile and touch contexts', function () {

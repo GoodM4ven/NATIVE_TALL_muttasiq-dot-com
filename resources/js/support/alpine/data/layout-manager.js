@@ -94,7 +94,11 @@ document.addEventListener('alpine:init', () => {
         },
 
         revealApp() {
-            if (this.isBodyVisible) {
+            // Bail only when fully revealed already. During an auth *hold* the body
+            // stays visible while the blinker is raised on top, so guarding on
+            // `isBodyVisible` alone would leave that white overlay stuck forever
+            // (e.g. returning from the Telegram browser without authenticating).
+            if (this.isBodyVisible && !this.isBlinkerShown) {
                 return;
             }
 

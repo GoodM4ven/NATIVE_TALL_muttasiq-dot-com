@@ -40,7 +40,10 @@ class TelegramAuthController
             return redirect()->route('home');
         }
 
-        Auth::login($user, remember: true);
+        // remember: false — the web browser must re-authenticate each session.
+        // A long-lived remember cookie would auto-restore the session (and, on a
+        // shared-DB dev host, silently sign a browser in as the native account).
+        Auth::login($user, remember: false);
 
         // Flashes through the redirect so it shows on the freshly loaded home,
         // matching the username/password login notification.
@@ -49,24 +52,28 @@ class TelegramAuthController
         return redirect()->route('home');
     }
 
-    public function nativeCallback(): RedirectResponse
+    public function nativeCallback(): View
     {
         $user = $this->authenticateTelegramUser(freshCredentials: false);
 
         if ($user === null) {
-            return redirect()->route('home');
+            return view('auth.telegram-native-success', ['handoffUrl' => null]);
         }
 
         // Runs on the public host inside the OAuth browser. Issue a short-lived,
         // single-use code the device can exchange over HTTPS for the account
         // payload (the device has its own local DB + APP_KEY, so it can't share
-        // an encrypted token or the user row). A SERVER-side 302 to the custom
-        // scheme hands control back to the installed app; the code is random
-        // alphanumeric, so it survives the deeplink round-trip intact.
+        // an encrypted token or the user row). The code is random alphanumeric,
+        // so it survives the deeplink round-trip intact.
         $code = Str::random(64);
         Cache::put('native-auth-code:'.$code, $user->getKey(), now()->addMinutes(5));
 
-        return redirect()->away($this->nativeScheme().'://auth/telegram/handoff?code='.$code);
+        // Render a success page IN the browser (manual return): the user reads the
+        // "you're signed in, go back to the app" notice here and taps the button,
+        // which deeplinks into the installed app to finish the handoff/login.
+        return view('auth.telegram-native-success', [
+            'handoffUrl' => $this->nativeScheme().'://auth/telegram/handoff?code='.$code,
+        ]);
     }
 
     private function authenticateTelegramUser(bool $freshCredentials = true): ?User
@@ -127,6 +134,13 @@ class TelegramAuthController
             return response('', 302, ['Location' => '/']);
         }
 
+        // Rotate the restore token on every native handoff so any stale browser
+        // remember cookie for this account dies immediately instead of silently
+        // auto-signing the web app back in.
+        $user->forceFill([
+            'remember_token' => Str::random(60),
+        ])->save();
+
         // remember: true makes Auth set/persist the remember token; we then hand
         // that exact token to the device. It survives the Android cold-start
         // cookie wipe via SecureStorage, and restoreNative() re-logs-in by it.
@@ -134,7 +148,6 @@ class TelegramAuthController
 
         session()->flash('auth.native_restore_token', (string) $user->getRememberToken());
         session()->flash('auth.native_restart', true);
-        session()->flash('auth.native_return_notice', true);
 
         return response('', 302, ['Location' => '/']);
     }

@@ -6003,7 +6003,7 @@ class QuranReaderDataService
             return '/vendor/arabicable/'.$normalizedRelativePath;
         }
 
-        return asset('vendor/arabicable/'.$normalizedRelativePath);
+        return '/vendor/arabicable/'.$normalizedRelativePath;
     }
 
     private function ensurePublishedQuranVendorAsset(string $sourcePath, string $relativePath): bool

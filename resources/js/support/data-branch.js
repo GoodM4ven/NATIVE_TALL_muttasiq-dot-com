@@ -1,3 +1,9 @@
+import {
+    athkarSettingsStorageKey,
+    resolveEffectiveSettings,
+    writeAthkarSettingsToStorage,
+} from './alpine/athkar-app-overrides';
+
 // Two-branch localStorage namespacing: guest-stuff vs user-stuff.
 //
 // Branched keys are transparently prefixed with the active branch (`guest::` or
@@ -16,12 +22,13 @@
 // quran page fit adjustments and fit-cache, color scheme, version markers,
 // error log. Those are tied to the physical device, not the account.
 
-// Every branched key is also synced. `athkar-settings-v1` is the full settings
-// snapshot the control-panel form reads from, so it must sync alongside its
-// overrides delta — otherwise the form would show stale/default values on
-// another device while behavior used the synced overrides.
+// `athkar-settings-v1` is intentionally NOT synced: it is a DERIVED, device-
+// dependent snapshot (numerals/harakat display + main-text-size clamping) that
+// every device re-computes from the synced overrides + server defaults. Syncing
+// the snapshot made two devices re-serialize it slightly differently and push it
+// back and forth forever. It stays branched + device-local (see BRANCHED_KEYS)
+// and is re-derived locally whenever the synced overrides change.
 const SYNCED_KEYS = new Set([
-    'athkar-settings-v1',
     'athkar-settings-user-overrides-v1',
     'athkar-overrides-v1',
     'athkar-progress-v1',
@@ -33,6 +40,14 @@ const SYNCED_KEYS = new Set([
     'quran-reader-wird-progress-v1',
 ]);
 
+// These keys are still account-synced, but they are too "live" to apply over a
+// websocket pull while another device is actively reading: each reader quickly
+// re-asserts its own cursor/history and the full-bundle sync starts bouncing.
+const REALTIME_VOLATILE_KEYS = new Set([
+    'quran-reader-last-page-v1',
+    'quran-reader-navigation-history-v1',
+]);
+
 // `quran-reader-last-page-v1` / `quran-reader-navigation-history-v1` ARE synced:
 // reading position follows the account across devices (read on desktop, continue
 // on mobile). Cross-device "active usage" is handled by the websocket listener,
@@ -41,18 +56,76 @@ const SYNCED_KEYS = new Set([
 // NOT synced (genuinely device-local UI state): `app-active-view` — which screen
 // is open — stays device-local via Alpine $persist.
 
-const BRANCHED_KEYS = SYNCED_KEYS;
+// Branched (per guest/user) but not all synced: the derived settings snapshot is
+// device-local yet must still live under the active branch so guest and user
+// state never bleed into each other.
+const BRANCHED_KEYS = new Set([...SYNCED_KEYS, athkarSettingsStorageKey]);
 
 // Native pushes each change to the server over HTTP, so debounce harder there to
 // avoid a request per Quran page-turn / progress tick; web just writes locally.
 const isNativePlatform = () => document.body?.classList.contains('native-platform') === true;
 const pushDebounceMs = () => (isNativePlatform() ? 5000 : 1500);
+
+// After applying a remote bundle, the app reactively re-persists the just-applied
+// values — and some are re-serialized into different bytes (per-device numeral /
+// harakat / size normalization) or re-asserted to this device's own value (live
+// reading position). The byte-compare guard below can't catch a re-normalized
+// value, so without this window two devices push those differences back and forth
+// forever. Hold off outgoing pushes briefly so the receiver settles silently; a
+// genuine user change after the window still syncs.
+const remoteSettleMs = () => (isNativePlatform() ? 4000 : 2500);
 const isObjectLike = (value) =>
     value !== null && typeof value === 'object' && !Array.isArray(value);
 
 const branchedKey = (branch, key) => `${branch}::${key}`;
 
 const activeBranch = () => (window.dataBranch === 'user' ? 'user' : 'guest');
+
+const normalizePersistedAppActiveView = (storage = window.localStorage) => {
+    if (!storage?.getItem || !storage?.setItem) {
+        return;
+    }
+
+    try {
+        const rawValue = storage.getItem('app-active-view');
+
+        if (rawValue === null) {
+            return;
+        }
+
+        try {
+            JSON.parse(rawValue);
+        } catch (_) {
+            const normalizedValue = rawValue.trim();
+
+            if (normalizedValue === '') {
+                storage.removeItem('app-active-view');
+
+                return;
+            }
+
+            storage.setItem('app-active-view', JSON.stringify(normalizedValue));
+        }
+    } catch (_) {
+        // Ignore malformed storage; Alpine can still boot on a clean key.
+    }
+};
+
+const filterRealtimeBundle = (bundle = {}) => {
+    if (!isObjectLike(bundle)) {
+        return {};
+    }
+
+    const filteredBundle = {};
+
+    Object.entries(bundle).forEach(([key, value]) => {
+        if (!REALTIME_VOLATILE_KEYS.has(key)) {
+            filteredBundle[key] = value;
+        }
+    });
+
+    return filteredBundle;
+};
 
 // Module-scoped, so it resets every page load. It must NOT live on `localStorage`:
 // assigning an arbitrary property to a Storage object persists it as a real key,
@@ -73,6 +146,11 @@ export const installDataBranch = (storage = window.localStorage) => {
         removeItem: storage.removeItem.bind(storage),
     };
     let isApplyingRemoteBundle = false;
+    // Timestamp until which outgoing pushes are held after applying a remote
+    // bundle (see remoteSettleMs) — breaks the cross-device sync ping-pong.
+    let remoteSettleUntil = 0;
+
+    normalizePersistedAppActiveView(storage);
 
     // Clean up the persisted junk key left by the earlier buggy guard.
     original.removeItem('__dataBranchInstalled');
@@ -154,12 +232,41 @@ export const installDataBranch = (storage = window.localStorage) => {
         window.dispatchEvent(event);
     };
 
-    const pushUserBundle = (reloadAfter = false) => {
+    const pushUserBundle = (reloadAfter = false, attempt = 0) => {
+        const socketId = window.Echo?.socketId?.() || null;
+
+        // A null socket id means Echo hasn't finished connecting; broadcasting
+        // without it makes the server echo this change back to us. Defer a few
+        // short beats so the id is available (and excludes us). If Echo never
+        // connects, fall through and push anyway so the data still syncs.
+        if (socketId === null && window.Echo && attempt < 3) {
+            window.setTimeout(() => pushUserBundle(reloadAfter, attempt + 1), 600);
+
+            return;
+        }
+
         window.Livewire?.dispatch('push-user-data', {
             data: collectUserBundle(),
             reloadAfter,
-            socketId: window.Echo?.socketId?.() || null,
+            socketId,
         });
+    };
+
+    // Re-derive the (unsynced, device-local) athkar-settings-v1 snapshot from the
+    // synced overrides + server defaults, into the active (user) branch via the
+    // wrapped storage. Never pushes — athkar-settings-v1 isn't a synced key.
+    const deriveUserAthkarSettings = () => {
+        const defaults = window.athkarSettingsDefaults;
+
+        if (!isObjectLike(defaults) || Object.keys(defaults).length === 0) {
+            return;
+        }
+
+        try {
+            writeAthkarSettingsToStorage(resolveEffectiveSettings(defaults), defaults);
+        } catch (_) {
+            // Best-effort; the athkar app also re-derives this on its own boot.
+        }
     };
 
     let pushTimer = null;
@@ -211,8 +318,19 @@ export const installDataBranch = (storage = window.localStorage) => {
                 didChange = true;
                 dispatchStorageEvent(key, oldValue, nextValue);
             });
+
+            // The settings snapshot isn't synced; re-derive it locally from the
+            // overrides we just applied so direct readers (main menu, fitty) show
+            // the change without waiting for the reader to mount. Still inside the
+            // apply guard, so neither this nor any migrate write schedules a push.
+            if (didChange) {
+                deriveUserAthkarSettings();
+            }
         } finally {
             isApplyingRemoteBundle = false;
+            // Open the settle window so the reactive re-writes that follow this
+            // apply don't bounce back to the server and ping-pong.
+            remoteSettleUntil = Date.now() + remoteSettleMs();
         }
 
         if (didChange) {
@@ -225,6 +343,8 @@ export const installDataBranch = (storage = window.localStorage) => {
 
         return didChange;
     };
+
+    const applyRealtimeBundle = (bundle = {}) => applyUserBundle(filterRealtimeBundle(bundle));
 
     // ponytail: only the three accessor methods are wrapped (the only ones the
     // app uses). Bracket access / key(i) / length are not branched.
@@ -246,10 +366,17 @@ export const installDataBranch = (storage = window.localStorage) => {
             return;
         }
 
-        // Remember what we're about to push so repeated re-persists of this same
-        // new value don't each re-arm the debounce.
+        // Remember this as the new baseline so repeated re-persists of the same
+        // value don't each re-arm the debounce (and so a re-asserted value during
+        // the settle window below becomes canonical instead of looping).
         if (window.userSyncedData && typeof window.userSyncedData === 'object') {
             window.userSyncedData[key] = current;
+        }
+
+        // Within the post-apply settle window, swallow the push: this write is the
+        // app reacting to a bundle we just received, not a fresh user change.
+        if (Date.now() < remoteSettleUntil) {
+            return;
         }
 
         schedulePush();
@@ -273,6 +400,19 @@ export const installDataBranch = (storage = window.localStorage) => {
         },
     });
 
+    // Seed the derived snapshot for the initial logged-in load: the seed block
+    // above only restores the *synced* keys, and athkar-settings-v1 is derived.
+    // Guard it as a remote apply so a first-run migrate write can't schedule a push.
+    if (activeBranch() === 'user') {
+        isApplyingRemoteBundle = true;
+
+        try {
+            deriveUserAthkarSettings();
+        } finally {
+            isApplyingRemoteBundle = false;
+        }
+    }
+
     // Copy the whole branched bundle from one branch to the other (override).
     // Uses the raw accessors so it never triggers the debounced push itself.
     const copyBranch = (from, to) => {
@@ -295,9 +435,11 @@ export const installDataBranch = (storage = window.localStorage) => {
         copyBranch,
         pushUserBundle,
         applyUserBundle,
+        applyRealtimeBundle,
         activeBranch,
         BRANCHED_KEYS,
         SYNCED_KEYS,
+        REALTIME_VOLATILE_KEYS,
     };
 };
 

@@ -46,32 +46,6 @@ const beginBlink = () => {
     return layout.defaultTransitionDurationInMs || 500;
 };
 
-const revealBlinker = () => {
-    const layout = window.Alpine?.$data?.(document.body);
-
-    if (layout?.revealApp) {
-        layout.revealApp();
-    } else {
-        window.dispatchEvent(new CustomEvent('native-auth-reveal'));
-    }
-
-    window.__authReloadInProgress = false;
-};
-
-const forceMainMenu = () => {
-    try {
-        window.localStorage.setItem('app-active-view', 'main-menu');
-    } catch (_) {
-        // Ignore unavailable storage; the reload still fetches the latest bundle.
-    }
-
-    window.dispatchEvent(
-        new CustomEvent('switch-view', {
-            detail: { to: 'main-menu' },
-        }),
-    );
-};
-
 const wipeLocalUserBranch = () => {
     const keys = window.muttasiqDataBranch?.SYNCED_KEYS;
 
@@ -122,7 +96,7 @@ const localLogout = async () => {
     }
 };
 
-const refreshUserBundle = async () => {
+const refreshUserBundle = async (isRealtimeEvent = false) => {
     const snapshotUrl = isNativeRuntime()
         ? String(bootstrap().nativeSyncPullUrl || '').trim()
         : String(bootstrap().realtimeSnapshotUrl || '').trim();
@@ -155,7 +129,11 @@ const refreshUserBundle = async () => {
     const payload = await response.json();
     const bundle = payload?.synced_data;
 
-    return window.muttasiqDataBranch?.applyUserBundle?.(bundle) === true;
+    const applyBundle = isRealtimeEvent
+        ? window.muttasiqDataBranch?.applyRealtimeBundle
+        : window.muttasiqDataBranch?.applyUserBundle;
+
+    return applyBundle?.(bundle) === true;
 };
 
 const NOTICE_FLAG = 'muttasiq-realtime-notice-pending';
@@ -164,24 +142,6 @@ const NOTICE_FLAG = 'muttasiq-realtime-notice-pending';
 // AuthButton Livewire listener). Best-effort: a missed notice is harmless.
 const fireOtherDeviceNotice = () => {
     window.Livewire?.dispatch('realtime-other-device-notice');
-};
-
-const closeModals = () => {
-    // Filament modal handlers read `$event.detail.id`, so a detail-less dispatch
-    // throws "Cannot read properties of null (reading 'id')" in every mounted
-    // modal. Close each one by its own id (same shape as hash-actions.js).
-    document.querySelectorAll('[data-fi-modal-id]').forEach((modal) => {
-        const id = String(modal.getAttribute('data-fi-modal-id') || '').trim();
-
-        if (id === '') {
-            return;
-        }
-
-        const detail = { id };
-
-        window.dispatchEvent(new CustomEvent('close-modal-quietly', { detail }));
-        window.dispatchEvent(new CustomEvent('close-modal', { detail }));
-    });
 };
 
 const flagPostReloadNotice = () => {
@@ -235,17 +195,15 @@ const handleRealtimeEvent = (event) => {
         return;
     }
 
-    // MAIN-MENU case (data synced from another device): blink fully out, close any
-    // open modal, navigate to the main menu, apply the new bundle — all hidden
-    // behind the blink — then blink back in once ready and notify.
+    // DATA-SYNC case (settings/bookmarks/progress/position changed elsewhere):
+    // merge the new bundle in place — no blink, no modal close, no navigation,
+    // no reload — then show a single subtle toast. Forcing navigation here used
+    // to make this device re-assert its own state and ping-pong with the peer.
     if (type === 'dataSynced' || type === 'dataOverridden') {
-        blinkOutThen(async () => {
-            closeModals();
-            forceMainMenu();
-            await refreshUserBundle();
-        }).then(() => {
-            revealBlinker();
-            fireOtherDeviceNotice();
+        refreshUserBundle(true).then((didChange) => {
+            if (didChange) {
+                fireOtherDeviceNotice();
+            }
         });
 
         return;

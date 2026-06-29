@@ -197,28 +197,6 @@ it('renders expected icon and markup contracts while resetting app version to co
         ->and($content)->toContain('data-quran-app-reader-root');
 });
 
-it('keeps the native telegram return notice alive for the post-restart load', function () {
-    session([
-        'auth.native_restart' => true,
-        'auth.native_restore_token' => 'sample-restore-token',
-        'auth.native_return_notice' => true,
-    ]);
-
-    get(route('home'))
-        ->assertSuccessful()
-        ->assertSessionHas('auth.native_return_notice', true);
-});
-
-it('renders the native telegram return notice once the restart flag is gone', function () {
-    session([
-        'auth.native_return_notice' => true,
-    ]);
-
-    get(route('home'))
-        ->assertSuccessful()
-        ->assertSee('يجب أن نعود إلى التطبيق', false);
-});
-
 it('renders the download and introduction video stack controls on web runtime only', function () {
     config([
         'nativephp-internal.running' => false,

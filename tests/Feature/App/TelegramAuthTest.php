@@ -75,22 +75,24 @@ it('redirects home when telegram callback data is invalid', function () {
     assertGuest();
 });
 
-it('issues a one-time code and redirects native telegram login to the app deeplink', function () {
+it('issues a one-time code and shows the return-to-app deeplink for native telegram login', function () {
     fakeTelegramUser();
 
     // Native flow uses a dedicated route (never a query param — that would break
-    // Telegram's hash check). The server 302s to the deeplink carrying a random,
-    // single-use code the device exchanges over HTTPS.
+    // Telegram's hash check). The browser stays on a success page (manual return)
+    // linking to the deeplink, which carries a random, single-use code the device
+    // exchanges over HTTPS.
+    $deeplinkPrefix = config('nativephp.deeplink_scheme').'://auth/telegram/handoff?code=';
+
     $response = get(route('auth.telegram.native.callback'))
-        ->assertStatus(302);
+        ->assertOk();
 
-    $location = (string) $response->headers->get('Location');
+    $content = (string) $response->getContent();
 
-    expect($location)
-        ->toStartWith(config('nativephp.deeplink_scheme').'://auth/telegram/handoff?code=');
+    expect($content)->toContain($deeplinkPrefix);
 
-    parse_str((string) parse_url($location, PHP_URL_QUERY), $query);
-    $code = (string) ($query['code'] ?? '');
+    preg_match('#'.preg_quote($deeplinkPrefix, '#').'([A-Za-z0-9]+)#', $content, $matches);
+    $code = (string) ($matches[1] ?? '');
 
     expect($code)->not->toBe('');
     expect(Cache::get('native-auth-code:'.$code))->toBe(User::query()->first()?->getKey());
@@ -101,7 +103,7 @@ it('keeps the browser session guest during native telegram auth handoff', functi
     fakeTelegramUser();
 
     get(route('auth.telegram.native.callback'))
-        ->assertStatus(302);
+        ->assertOk();
 
     assertGuest();
 });
@@ -332,7 +334,6 @@ it('mirrors the account locally and flags a restart from the native deeplink han
         ->assertStatus(302)
         ->assertHeader('Location', '/')
         ->assertSessionHas('auth.native_restart', true)
-        ->assertSessionHas('auth.native_return_notice', true)
         ->assertSessionHas('auth.native_restore_token');
 
     $user = User::query()->where('telegram_id', 777)->first();
@@ -350,6 +351,42 @@ it('mirrors the account locally and flags a restart from the native deeplink han
 
     // The remember token is persisted for the cold-start restore.
     expect($user->fresh()->remember_token)->toBe(session('auth.native_restore_token'));
+});
+
+it('rotates the native restore token during handoff so stale browser remember cookies die', function () {
+    config(['nativephp-internal.running' => true]);
+
+    $user = User::factory()->create([
+        'telegram_id' => 777,
+        'remember_token' => 'stale-browser-token',
+    ]);
+
+    Http::fake([
+        '*/api/native-auth/exchange' => Http::response([
+            'ok' => true,
+            'user' => [
+                'telegram_id' => 777,
+                'telegram_username' => 'tg_handoff',
+                'name' => 'Handoff User',
+                'username' => $user->username,
+                'password' => $user->password,
+                'sync_token' => 'sync-handoff',
+                'synced_data' => ['quran-reader-last-page-v1' => '7'],
+            ],
+        ]),
+    ]);
+
+    get(route('auth.telegram.handoff', ['code' => 'ABC']))
+        ->assertStatus(302)
+        ->assertHeader('Location', '/')
+        ->assertSessionHas('auth.native_restore_token');
+
+    $freshUser = $user->fresh();
+    $restoreToken = (string) session('auth.native_restore_token');
+
+    expect($freshUser)->not->toBeNull()
+        ->and($restoreToken)->not->toBe('stale-browser-token')
+        ->and($freshUser?->remember_token)->toBe($restoreToken);
 });
 
 it('blocks the native handoff outside the native runtime', function () {
