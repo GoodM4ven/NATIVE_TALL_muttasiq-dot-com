@@ -9,6 +9,7 @@ use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 /**
@@ -54,14 +55,33 @@ class SyncUserSettings implements ShouldBeUniqueUntilProcessing, ShouldQueue
         $socketId = normalize_socket_id($this->socketId);
 
         if (! $user instanceof User || blank($user->native_api_token)) {
+            // ponytail: temporary diagnostic for cross-device sync (issue #5).
+            Log::warning('[native-sync] skipped: missing user or native_api_token', [
+                'user_id' => $this->userId,
+                'has_user' => $user instanceof User,
+                'has_token' => $user instanceof User ? ! blank($user->native_api_token) : false,
+            ]);
+
             return;
         }
 
         $serverBase = native_server_base();
 
         if ($serverBase === null) {
+            // ponytail: temporary diagnostic for cross-device sync (issue #5).
+            Log::warning('[native-sync] skipped: native_server_base() is null', [
+                'user_id' => $this->userId,
+                'settings_endpoint' => config('app.custom.native_end_points.settings'),
+            ]);
+
             return;
         }
+
+        Log::info('[native-sync] posting settings to server', [
+            'user_id' => $this->userId,
+            'server_base' => $serverBase,
+            'realtime_type' => $this->realtimeType,
+        ]);
 
         $response = Http::asJson()->acceptJson()
             ->connectTimeout(5)->timeout(8)

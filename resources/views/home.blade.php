@@ -663,7 +663,7 @@
         }"
         x-on:switch-view.window="applyViewState($event.detail?.to)"
         x-on:auth-blink-hold.window="startAuthHoldTransition()"
-        x-on:auth-blink-reload.window="authStatusMessage = $event.detail?.nativeRestart ? @js(arabic_text('جارٍ إعادة تشغيل التطبيق...')) : null; dismissQuranBootstrapState(); startAuthReloadTransition(); setTimeout(() => { if ($event.detail?.nativeRestart && typeof window.AndroidBridge?.restartApplication === 'function') { window.AndroidBridge.restartApplication(); window.setTimeout(() => revealApp(), 6000); return; } const reloadUrl = $event.detail?.url; if (reloadUrl) { window.location.assign(reloadUrl); } else { window.location.reload(); } }, 0)"
+        x-on:auth-blink-reload.window="authStatusMessage = $event.detail?.nativeRestart ? @js(arabic_text('جارٍ إعادة تشغيل التطبيق...')) : null; dismissQuranBootstrapState(); startAuthReloadTransition(); if ($event.detail?.nativeRestart && typeof window.AndroidBridge?.restartApplication === 'function') { window.setTimeout(() => { window.AndroidBridge.restartApplication(); window.setTimeout(() => revealApp(), 6000); }, 900); } else { setTimeout(() => { const reloadUrl = $event.detail?.url; if (reloadUrl) { window.location.assign(reloadUrl); } else { window.location.reload(); } }, 0); }"
         x-on:introduction-video-modal-opened.window="isIntroductionVideoOpen = true"
         x-on:introduction-video-modal-closed.window="isIntroductionVideoOpen = false"
         x-on:muttasiq-app-version-major-minor-reset.window="handleAppVersionMajorMinorReset($event.detail ?? {})"

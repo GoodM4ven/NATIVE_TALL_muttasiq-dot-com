@@ -30,6 +30,12 @@ class DownloadNativeQuranSnapshot implements ShouldQueue
 
     public bool $failOnTimeout = true;
 
+    /**
+     * Canonical production snapshot endpoint. Used as a fallback when the
+     * configured (e.g. local dev-broadcast) endpoint is unreachable.
+     */
+    private const PRODUCTION_METADATA_ENDPOINT = 'https://muttasiq.com/api/quran-snapshot/meta';
+
     public function handle(
         NativeQuranPreparationService $preparationService,
         QuranReaderDataService $readerDataService,
@@ -48,11 +54,54 @@ class DownloadNativeQuranSnapshot implements ShouldQueue
 
         $preparationService->markRunning(progressPercent: 1, message: arabic_text('يجري تنزيل بيانات القرآن...'));
 
+        $lastError = null;
+
+        // Try the configured endpoint first (which watch scripts point at a local
+        // source), then fall back to production muttasiq.com so a flaky/missing
+        // local snapshot still resolves online instead of failing outright.
+        foreach ($this->metadataEndpointCandidates() as $metadataUrl) {
+            try {
+                $this->syncSnapshotFromEndpoint($metadataUrl, $preparationService, $readerDataService);
+
+                return;
+            } catch (Throwable $throwable) {
+                $lastError = $throwable;
+
+                // Offline: no other endpoint will help, so stop retrying.
+                if ($preparationService->isInternetConnected() === false) {
+                    break;
+                }
+            }
+        }
+
+        if ($preparationService->isInternetConnected() === false) {
+            $preparationService->markNoInternetConnection();
+        } else {
+            $preparationService->markFailed($lastError);
+        }
+
+        throw $lastError ?? new RuntimeException('Native Quran snapshot sync failed for every endpoint.');
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function metadataEndpointCandidates(): array
+    {
+        $configured = $this->metadataEndpointUrl();
+
+        return array_values(array_unique([$configured, self::PRODUCTION_METADATA_ENDPOINT]));
+    }
+
+    private function syncSnapshotFromEndpoint(
+        string $metadataUrl,
+        NativeQuranPreparationService $preparationService,
+        QuranReaderDataService $readerDataService,
+    ): void {
         $temporaryGzipPath = null;
         $temporarySnapshotPath = null;
 
         try {
-            $metadataUrl = $this->metadataEndpointUrl();
             $metadata = $this->fetchRemoteSnapshotMetadata($metadataUrl, $preparationService);
             $snapshotInfo = $metadata['snapshot'] ?? null;
 
@@ -103,14 +152,6 @@ class DownloadNativeQuranSnapshot implements ShouldQueue
             }
 
             $preparationService->markReady();
-        } catch (Throwable $throwable) {
-            if ($preparationService->isInternetConnected() === false) {
-                $preparationService->markNoInternetConnection();
-            } else {
-                $preparationService->markFailed($throwable);
-            }
-
-            throw $throwable;
         } finally {
             if (is_string($temporaryGzipPath)) {
                 File::delete($temporaryGzipPath);
