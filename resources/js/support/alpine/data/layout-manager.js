@@ -117,6 +117,19 @@ document.addEventListener('alpine:init', () => {
             this.isBodyVisible = true;
         },
 
+        // Mirrors native-auth-persistence: true while a native Telegram login is in
+        // flight (button tapped within the last 5 min). Used to keep the loading
+        // overlay up across the browser round-trip instead of revealing on return.
+        isTelegramAuthPending() {
+            try {
+                const at = window.localStorage.getItem('auth.telegram.pending');
+
+                return at !== null && Date.now() - Number(at) < 300000;
+            } catch (_) {
+                return false;
+            }
+        },
+
         init() {
             const isNativePlatform = document.body?.classList.contains('native-platform') === true;
 
@@ -160,8 +173,17 @@ document.addEventListener('alpine:init', () => {
                 () => (this.isActionOpen = false),
             );
             window.addEventListener('native-auth-reveal', () => this.revealApp());
+            // On foreground return, un-stick the auth hold ONLY when no Telegram
+            // login is mid-flight. While one is pending, the loading overlay must
+            // stay up and let the resume claim-poll (native-auth-persistence) decide
+            // the outcome — revealing here would hide the overlay and clear the
+            // pending flag, killing the poll before it runs.
             window.addEventListener('focus', () => {
-                if (this.isAuthHoldActive && window.dataBranch !== 'user') {
+                if (
+                    this.isAuthHoldActive &&
+                    window.dataBranch !== 'user' &&
+                    !this.isTelegramAuthPending()
+                ) {
                     window.dispatchEvent(new CustomEvent('native-auth-reveal'));
                 }
             });
@@ -169,7 +191,8 @@ document.addEventListener('alpine:init', () => {
                 if (
                     document.visibilityState === 'visible' &&
                     this.isAuthHoldActive &&
-                    window.dataBranch !== 'user'
+                    window.dataBranch !== 'user' &&
+                    !this.isTelegramAuthPending()
                 ) {
                     window.dispatchEvent(new CustomEvent('native-auth-reveal'));
                 }
@@ -188,9 +211,13 @@ document.addEventListener('alpine:init', () => {
                 this.isLayoutSetUp = this.isFontReady;
             });
 
-            // Just logged in via native Telegram: hold the blinker, persist the
-            // restore token, and restart (Quran-bootstrap UX).
+            // Just logged in via native Telegram: hold the blinker with the auth
+            // loading spinner, persist the restore token, and restart. Keeping
+            // isAuthHoldActive true bridges the spinner across this reload so it
+            // stays visible right up to the restart.
             if (isNativePlatform && window.nativeAuthRestart) {
+                this.isAuthHoldActive = true;
+                this.isBlinkerShown = true;
                 void this.runNativeAuthRestart();
 
                 return;
@@ -200,12 +227,23 @@ document.addEventListener('alpine:init', () => {
             // round-trip (cold-start restore / Telegram handoff / restart) so the
             // guest UI never flashes. native-auth-persistence reloads on a
             // successful restore or fires `native-auth-reveal` when there's nothing
-            // to restore; the 8s fallback guarantees we never stay stuck.
+            // to restore; the fallback guarantees we never stay stuck.
             if (isNativePlatform && !this.isFastUiMode && window.dataBranch !== 'user') {
                 window.addEventListener('native-auth-reveal', () => this.revealApp(), {
                     once: true,
                 });
-                window.setTimeout(() => this.revealApp(), 8000);
+
+                // A Telegram login mid-flight (even one that survived a WebView
+                // recreation): show the loading overlay and give the resume claim-poll
+                // (~12s) room to finish before the hard fallback reveals.
+                const isAuthPending = this.isTelegramAuthPending();
+
+                if (isAuthPending) {
+                    this.isAuthHoldActive = true;
+                    this.isBlinkerShown = true;
+                }
+
+                window.setTimeout(() => this.revealApp(), isAuthPending ? 14000 : 8000);
 
                 return;
             }

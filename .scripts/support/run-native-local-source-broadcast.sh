@@ -32,6 +32,9 @@ native_android_keep_loopback_endpoints=0
 tailscale_funnel_pid=""
 tailscale_funnel_active=0
 tailscale_funnel_target=""
+# Must stay :443 — the Telegram login widget is served from this funnel domain and
+# BotFather's domain setting is host-only (rejects a port), so a non-standard port
+# stops the widget from rendering.
 tailscale_funnel_https_port=443
 tailscale_funnel_reverb_target=""
 tailscale_funnel_reverb_active=0

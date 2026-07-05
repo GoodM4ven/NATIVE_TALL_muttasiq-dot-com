@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Api\AthkarController;
 use App\Http\Controllers\Api\JsErrorReportController;
+use App\Http\Controllers\Api\NativeAuthClaimController;
 use App\Http\Controllers\Api\NativeAuthExchangeController;
 use App\Http\Controllers\Api\NativeSyncController;
 use App\Http\Controllers\Api\QuranSnapshotDownloadController;
@@ -37,6 +38,10 @@ Route::name('api.')->group(function () {
     Route::post('/native-auth/exchange', NativeAuthExchangeController::class)
         ->middleware('throttle:6,1')
         ->name('native-auth.exchange');
+
+    Route::post('/native-auth/claim', NativeAuthClaimController::class)
+        ->middleware('throttle:20,1')
+        ->name('native-auth.claim');
 
     Route::post('/native-sync/password', [NativeSyncController::class, 'password'])
         ->middleware(['auth:sanctum', 'throttle:6,1'])

@@ -58,6 +58,21 @@
             async syncConnectivityState() {
                 this.isOnline = await this.resolveOnlineState();
             },
+            generateAuthState() {
+                // 48-hex-char device secret. Bound server-side to the completed
+                // login so the app can claim it on resume even without the deeplink.
+                const bytes = new Uint8Array(24);
+        
+                if (window.crypto?.getRandomValues) {
+                    window.crypto.getRandomValues(bytes);
+                } else {
+                    for (let i = 0; i < bytes.length; i++) {
+                        bytes[i] = Math.floor(Math.random() * 256);
+                    }
+                }
+        
+                return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+            },
             async openNativeTelegramAuth() {
                 // Don't gate on isOnline: the native connectivity probe misreports
                 // on some networks, which would silently block a working connection.
@@ -75,6 +90,21 @@
                     // Non-fatal: the flow still works, just without the early blinker.
                 }
         
+                // Register a poll state the device claims on resume (system-back safe).
+                const authState = this.generateAuthState();
+        
+                try {
+                    window.localStorage.setItem('auth.telegram.state', authState);
+                } catch (_) {
+                    // Non-fatal: falls back to the deeplink-button return path.
+                }
+        
+                const launchUrl =
+                    this.launcherUrl +
+                    (this.launcherUrl.includes('?') ? '&' : '?') +
+                    'state=' +
+                    encodeURIComponent(authState);
+        
                 window.dispatchEvent(new CustomEvent('auth-blink-hold'));
                 await new Promise((resolve) => {
                     window.requestAnimationFrame(() => {
@@ -84,7 +114,7 @@
         
                 if (window.browser?.auth) {
                     try {
-                        const didOpen = await window.browser.auth(this.launcherUrl);
+                        const didOpen = await window.browser.auth(launchUrl);
         
                         if (didOpen === true) {
                             return;
@@ -94,13 +124,16 @@
                     }
         
                     window.setTimeout(() => {
-                        window.dispatchEvent(new CustomEvent('native-auth-reveal'));
+                        // Don't reveal outright — the login may have completed. Hand
+                        // off to the claim-poll, which keeps the loading overlay up
+                        // and only reveals if nothing came back within its window.
+                        window.dispatchEvent(new CustomEvent('native-auth-return-check'));
                     }, 300);
         
                     return;
                 }
         
-                window.open(this.launcherUrl, `_blank`, `noopener`);
+                window.open(launchUrl, `_blank`, `noopener`);
         
                 window.setTimeout(() => {
                     window.dispatchEvent(new CustomEvent('native-auth-reveal'));

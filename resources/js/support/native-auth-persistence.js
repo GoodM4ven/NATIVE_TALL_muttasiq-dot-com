@@ -39,11 +39,71 @@ const isTelegramAuthPending = () => {
     }
 };
 
+const stateKey = 'auth.telegram.state';
+
 const clearTelegramAuthPending = () => {
     try {
         window.localStorage.removeItem(pendingKey);
+        window.localStorage.removeItem(stateKey);
     } catch (_) {
         // Ignore cleanup failures.
+    }
+};
+
+// Recovery for a login that finished in the browser when the user returned via the
+// system back button (no deeplink). Polls the public server for the one-time code
+// bound to this device's registered `state`, then navigates to the same local
+// handoff route the deeplink button would have. Returns true if a handoff started.
+const claimPendingLogin = async () => {
+    const claimUrl = String(getBootstrapConfig().claimUrl || '').trim();
+
+    let state = '';
+
+    try {
+        state = String(window.localStorage.getItem(stateKey) || '').trim();
+    } catch (_) {
+        // Ignore storage read failures.
+    }
+
+    if (claimUrl === '' || state === '') {
+        return false;
+    }
+
+    try {
+        const response = await fetch(claimUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+            },
+            body: JSON.stringify({ state }),
+        });
+
+        if (!response.ok) {
+            return false;
+        }
+
+        const data = await response.json();
+        const code = String(data?.code || '').trim();
+
+        if (data?.ready !== true || code === '') {
+            return false;
+        }
+
+        // One-time state consumed server-side; drop the local copy too.
+        try {
+            window.localStorage.removeItem(stateKey);
+        } catch (_) {
+            // Ignore storage cleanup failures.
+        }
+
+        // The local handoff route mirrors the account, logs in, and triggers the
+        // restart — identical to tapping the deeplink button.
+        window.location.assign('/auth/telegram/handoff?code=' + encodeURIComponent(code));
+
+        return true;
+    } catch (_) {
+        return false;
     }
 };
 
@@ -197,10 +257,37 @@ const cancelAuthReturnReveal = () => {
 // reloads. An empty-handed return never navigates, so the timer below survives.
 window.addEventListener('pagehide', cancelAuthReturnReveal);
 
+// How long to keep the loading overlay up while polling the claim endpoint on
+// resume, and how often to poll. The window has to outlast a slow OAuth finish so
+// we don't declare "no login" while the server is still binding the result.
+const claimPollIntervalMs = 1500;
+const claimPollMaxMs = 12000;
+
+const hasClaimableLogin = () => {
+    const claimUrl = String(getBootstrapConfig().claimUrl || '').trim();
+
+    let state = '';
+
+    try {
+        state = String(window.localStorage.getItem(stateKey) || '').trim();
+    } catch (_) {
+        // Ignore storage read failures.
+    }
+
+    return claimUrl !== '' && state !== '';
+};
+
+const authFlowResolvedElsewhere = () =>
+    window.dataBranch === 'user' ||
+    window.__nativeAuthRestoreInFlight === true ||
+    Boolean(window.nativeAuthRestart) ||
+    !isTelegramAuthPending();
+
 // When the app comes back to the foreground while a Telegram login is pending,
-// wait a beat: if the deeplink brought auth data back it will reload/restart the
-// app (this context dies). If it didn't — the user just closed the browser with
-// the system back button — reveal the held blinker instead of hanging on white.
+// keep the loading overlay up and poll the claim endpoint for a bounded window:
+// if the login finished in the browser (deeplink OR system back button) we hand
+// off and this context tears down; only if nothing comes back within the window
+// do we close the overlay and reveal the app for normal use.
 const handleNativeAuthResume = () => {
     if (!isNativeRuntime() || window.dataBranch === 'user' || !isTelegramAuthPending()) {
         return;
@@ -208,21 +295,49 @@ const handleNativeAuthResume = () => {
 
     cancelAuthReturnReveal();
 
-    authReturnRevealTimer = window.setTimeout(() => {
+    // No registered state / claim endpoint → can't poll; short grace then reveal.
+    if (!hasClaimableLogin()) {
+        authReturnRevealTimer = window.setTimeout(() => {
+            authReturnRevealTimer = null;
+
+            if (authFlowResolvedElsewhere()) {
+                return;
+            }
+
+            clearTelegramAuthPending();
+            revealApp();
+        }, authReturnGraceMs);
+
+        return;
+    }
+
+    const pollStartedAt = Date.now();
+
+    const pollForClaim = async () => {
         authReturnRevealTimer = null;
 
-        // Still here, still guest, nothing restoring/restarting → no auth came back.
-        if (
-            window.dataBranch === 'user' ||
-            window.__nativeAuthRestoreInFlight === true ||
-            window.nativeAuthRestart
-        ) {
+        // Resolved elsewhere (deeplink handoff / restore / restart) → stop polling.
+        if (authFlowResolvedElsewhere()) {
             return;
         }
 
-        clearTelegramAuthPending();
-        revealApp();
-    }, authReturnGraceMs);
+        // Claimed → navigating to the handoff; this context tears down.
+        if (await claimPendingLogin()) {
+            return;
+        }
+
+        // Still nothing after the window → the login didn't come back; close overlay.
+        if (Date.now() - pollStartedAt >= claimPollMaxMs) {
+            clearTelegramAuthPending();
+            revealApp();
+
+            return;
+        }
+
+        authReturnRevealTimer = window.setTimeout(pollForClaim, claimPollIntervalMs);
+    };
+
+    void pollForClaim();
 };
 
 window.addEventListener('quran-native-lifecycle', (event) => {
@@ -234,5 +349,10 @@ window.addEventListener('quran-native-lifecycle', (event) => {
         handleNativeAuthResume();
     }
 });
+
+// The login launcher fires this when the OAuth browser resolves (returned or
+// failed to open): run the same claim-poll so the loading overlay persists until
+// the outcome is known, instead of revealing the app immediately.
+window.addEventListener('native-auth-return-check', () => handleNativeAuthResume());
 
 scheduleBootstrap();

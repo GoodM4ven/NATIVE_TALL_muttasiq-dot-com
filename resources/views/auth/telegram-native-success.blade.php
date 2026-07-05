@@ -41,6 +41,12 @@
             background: var(--telegram-page-bg);
             color: var(--telegram-text-strong);
             font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            opacity: 0;
+            transition: opacity 0.35s ease;
+        }
+
+        body.tg-ready {
+            opacity: 1;
         }
 
         body::before,
@@ -208,6 +214,10 @@
             @endif
         </section>
     </main>
+
+    <script>
+        requestAnimationFrame(() => document.body.classList.add('tg-ready'));
+    </script>
 </body>
 
 </html>

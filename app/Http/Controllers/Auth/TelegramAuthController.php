@@ -19,13 +19,24 @@ use Laravel\Socialite\Facades\Socialite;
 
 class TelegramAuthController
 {
-    public function native(): View
+    public function native(Request $request): View
     {
         // The launcher page is served from the public host and opened inside the
         // OAuth browser. It posts the Telegram result to the dedicated NATIVE
         // callback route — the native signal MUST be the route, never a query
         // param: Telegram's hash is computed over every received field, so an
         // extra param would break signature validation.
+
+        // Stash the device-generated poll `state` in this OAuth-browser session so
+        // the callback can bind the completed login to it — that lets the device
+        // claim the login on resume even if it returns via the system back button
+        // instead of tapping the deeplink button.
+        $state = $this->sanitizeNativeAuthState((string) $request->query('state', ''));
+
+        if ($state !== null) {
+            session(['native_auth_state' => $state]);
+        }
+
         return view('auth.telegram-native', [
             'telegramBotName' => trim((string) config('services.telegram.bot', '')),
             'callbackUrl' => route('auth.telegram.native.callback', [], false),
@@ -68,6 +79,17 @@ class TelegramAuthController
         // so it survives the deeplink round-trip intact.
         $code = Str::random(64);
         Cache::put('native-auth-code:'.$code, $user->getKey(), now()->addMinutes(5));
+
+        // Bind the code to the device's poll `state` (registered on the launcher)
+        // so the device can claim this login on resume without the deeplink. Same
+        // 5-minute window; the code stays single-use (whichever of poll/button
+        // exchanges it first wins).
+        $state = $this->sanitizeNativeAuthState((string) session('native_auth_state', ''));
+
+        if ($state !== null) {
+            Cache::put('native-auth-claim:'.$state, $code, now()->addMinutes(5));
+            session()->forget('native_auth_state');
+        }
 
         // Render a success page IN the browser (manual return): the user reads the
         // "you're signed in, go back to the app" notice here and taps the button,
@@ -238,6 +260,13 @@ class TelegramAuthController
             is_platform('ios') => 'iOS native app',
             default => 'Native app',
         };
+    }
+
+    private function sanitizeNativeAuthState(string $state): ?string
+    {
+        $state = trim($state);
+
+        return preg_match('/^[A-Za-z0-9]{32,128}$/', $state) === 1 ? $state : null;
     }
 
     private function nativeScheme(): string

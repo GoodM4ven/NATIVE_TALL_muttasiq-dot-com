@@ -41,6 +41,16 @@
             background: var(--telegram-page-bg);
             color: var(--telegram-text-strong);
             font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            opacity: 0;
+            transition: opacity 0.35s ease;
+        }
+
+        body.tg-ready {
+            opacity: 1;
+        }
+
+        body.tg-leaving {
+            opacity: 0;
         }
 
         body::before,
@@ -262,7 +272,11 @@
                         });
 
                         const queryString = params.toString();
-                        window.location.replace(queryString === '' ? callbackUrl : `${callbackUrl}?${queryString}`);
+                        const destination = queryString === '' ? callbackUrl : `${callbackUrl}?${queryString}`;
+
+                        // Fade out before navigating so it cross-fades into the callback view.
+                        document.body.classList.add('tg-leaving');
+                        window.setTimeout(() => window.location.replace(destination), 280);
                     };
 
                     (() => {
@@ -291,6 +305,10 @@
             @endif
         </section>
     </main>
+
+    <script>
+        requestAnimationFrame(() => document.body.classList.add('tg-ready'));
+    </script>
 </body>
 
 </html>

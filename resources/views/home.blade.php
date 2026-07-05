@@ -24,6 +24,10 @@
             // never the absolute APP_URL (muttasiq.com).
             window.nativeAuthBootstrap = {
                 restoreUrl: @js(route('auth.telegram.native.restore', absolute: false)),
+                // Public-server endpoint the device polls on resume to claim a
+                // Telegram login that finished in the browser even when the user
+                // returned via the system back button (no deeplink). Null on web.
+                claimUrl: @js(is_platform('native') && native_server_base() !== null ? native_server_base() . '/api/native-auth/claim' : null),
             };
             window.realtimeBootstrap = {
                 telegramId: @js(auth()->user()?->telegram_id),
@@ -663,7 +667,7 @@
         }"
         x-on:switch-view.window="applyViewState($event.detail?.to)"
         x-on:auth-blink-hold.window="startAuthHoldTransition()"
-        x-on:auth-blink-reload.window="authStatusMessage = $event.detail?.nativeRestart ? @js(arabic_text('جارٍ إعادة تشغيل التطبيق...')) : null; dismissQuranBootstrapState(); startAuthReloadTransition(); if ($event.detail?.nativeRestart && typeof window.AndroidBridge?.restartApplication === 'function') { window.setTimeout(() => { window.AndroidBridge.restartApplication(); window.setTimeout(() => revealApp(), 6000); }, 900); } else { setTimeout(() => { const reloadUrl = $event.detail?.url; if (reloadUrl) { window.location.assign(reloadUrl); } else { window.location.reload(); } }, 0); }"
+        x-on:auth-blink-reload.window="dismissQuranBootstrapState(); if ($event.detail?.nativeRestart && typeof window.AndroidBridge?.restartApplication === 'function') { closeOpenModals(); isBlinkerShown = true; isAuthHoldActive = true; window.setTimeout(() => { window.AndroidBridge.restartApplication(); window.setTimeout(() => revealApp(), 6000); }, 1200); } else { startAuthReloadTransition(); setTimeout(() => { const reloadUrl = $event.detail?.url; if (reloadUrl) { window.location.assign(reloadUrl); } else { window.location.reload(); } }, 0); }"
         x-on:introduction-video-modal-opened.window="isIntroductionVideoOpen = true"
         x-on:introduction-video-modal-closed.window="isIntroductionVideoOpen = false"
         x-on:muttasiq-app-version-major-minor-reset.window="handleAppVersionMajorMinorReset($event.detail ?? {})"

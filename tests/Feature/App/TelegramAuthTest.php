@@ -102,6 +102,39 @@ it('issues a one-time code and shows the return-to-app deeplink for native teleg
     assertGuest();
 });
 
+it('binds the login to a device state and lets the app claim it once on resume', function () {
+    fakeTelegramUser();
+
+    $state = str_repeat('a1b2c3d4', 6); // 48 alphanumeric chars
+
+    // Launcher registers the device's poll state in the OAuth-browser session.
+    get(route('auth.telegram.native', ['state' => $state]))->assertOk();
+
+    // Completing the login binds the one-time code to that state.
+    get(route('auth.telegram.native.callback'))->assertOk();
+
+    $code = Cache::get('native-auth-claim:'.$state);
+
+    expect($code)->not->toBeNull();
+    expect(Cache::get('native-auth-code:'.$code))->toBe(User::query()->first()?->getKey());
+
+    // The device claims it (system-back recovery)...
+    postJson(route('api.native-auth.claim'), ['state' => $state])
+        ->assertOk()
+        ->assertJson(['ready' => true, 'code' => $code]);
+
+    // ...and the claim is single-use.
+    postJson(route('api.native-auth.claim'), ['state' => $state])
+        ->assertOk()
+        ->assertJson(['ready' => false]);
+});
+
+it('rejects a malformed native-auth claim state', function () {
+    postJson(route('api.native-auth.claim'), ['state' => 'too-short'])
+        ->assertStatus(422)
+        ->assertJson(['ready' => false]);
+});
+
 it('keeps the browser session guest during native telegram auth handoff', function () {
     fakeTelegramUser();
 

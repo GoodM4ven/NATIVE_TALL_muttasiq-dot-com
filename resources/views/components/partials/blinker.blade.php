@@ -10,11 +10,36 @@
         'opacity-0 pointer-events-none': !isBlinkerShown,
     }"
 >
+    {{-- Auth loading overlay: the same dark-blur + spinner shown when the control --}}
+    {{-- panel modal opens, raised over the blinker for the whole Telegram round-trip --}}
+    {{-- (login tap → browser → return → restart/close) so the user always sees the --}}
+    {{-- app is working out the login, instead of a delayed toast. --}}
     <div
-        class="pointer-events-none absolute inset-0 flex items-center justify-center px-6 text-center text-lg font-semibold text-slate-700 dark:text-slate-200"
+        class="absolute inset-0 flex items-center justify-center bg-black/25 backdrop-blur-[10px]"
         x-cloak
-        x-show="isBlinkerShown && authStatusMessage"
+        x-show="isBlinkerShown && isAuthHoldActive"
         x-transition.opacity
-        x-text="authStatusMessage"
-    ></div>
+    >
+        <svg
+            class="size-8 animate-spin text-white [animation-direction:reverse] sm:size-10"
+            aria-hidden="true"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+        >
+            <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+            ></circle>
+            <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+            ></path>
+        </svg>
+    </div>
 </div>
