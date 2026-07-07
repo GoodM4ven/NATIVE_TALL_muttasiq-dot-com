@@ -1,0 +1,113 @@
+[plugins]
+php = 'https://github.com/verzly/mise-php#latest'
+
+[tools]
+node = '22'
+php = '8.4'
+pnpm = '11'
+
+[env]
+_.file = { path = '.env', redact = true }
+_.php = { prebuilt_static = true, prebuilt_static_flavor = 'bulk' }
+_.path = [
+  '{{config_root}}/vendor/bin',
+  '{{config_root}}/node_modules/.bin',
+]
+
+COMPOSER_PROCESS_TIMEOUT = '0'
+
+[tasks.install]
+description = 'Install PHP and Node dependencies'
+run = [
+  'composer install --no-interaction',
+  'pnpm install',
+]
+
+[tasks.setup]
+description = 'Bootstrap the app'
+run = 'composer run setup'
+
+[tasks.dev]
+description = 'Run Laravel, queue, logs, and Vite'
+alias = 'd'
+run = 'composer run dev'
+
+[tasks.build]
+description = 'Build frontend assets'
+alias = 'b'
+run = 'pnpm run build'
+
+[tasks.format]
+description = 'Format Blade, JS/CSS, and PHP'
+run = 'composer run format'
+
+[tasks.analyse]
+description = 'Run PHPStan'
+alias = 'a'
+run = 'composer run analyse'
+
+[tasks.lint]
+description = 'Run formatting and static analysis'
+run = 'composer run lint'
+
+[tasks.test]
+description = 'Run the default test suite'
+alias = 't'
+run = 'composer run test'
+
+[tasks.testparal]
+description = 'Run the parallel test suite'
+run = 'composer run testparal'
+
+[tasks.testcov]
+description = 'Run tests with coverage'
+run = 'composer run testcov'
+
+[tasks.testbrowser]
+description = 'Run browser tests'
+run = 'composer run testbrowser'
+
+[tasks.testall]
+description = 'Run all test suites'
+run = 'composer run testall'
+
+[tasks.green]
+description = 'Run the release gate'
+alias = 'g'
+run = 'composer run green'
+
+[tasks.native_watch_web]
+description = 'Watch the web app for NativePHP'
+run = '.scripts/watch-web.sh'
+
+[tasks.native_watch_android]
+description = 'Watch the Android app'
+run = '.scripts/watch-android.sh'
+
+[tasks.native_watch_ios]
+description = 'Watch the iOS app'
+run = '.scripts/watch-ios.sh'
+
+[tasks.native_run_android]
+description = 'Run the Android app'
+run = '.scripts/run-android.sh'
+
+[tasks.native_run_ios]
+description = 'Run the iOS app'
+run = '.scripts/run-ios.sh'
+
+[tasks.native_log_android]
+description = 'Collect Android logs'
+run = '.scripts/log-android.sh'
+
+[tasks.native_log_ios]
+description = 'Collect iOS logs'
+run = '.scripts/log-ios.sh'
+
+[tasks.native_share_android]
+description = 'Share the Android build'
+run = '.scripts/share-android.sh'
+
+[tasks.native_share_ios]
+description = 'Share the iOS build'
+run = '.scripts/share-ios.sh'
