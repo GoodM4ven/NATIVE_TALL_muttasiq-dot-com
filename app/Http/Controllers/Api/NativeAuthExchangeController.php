@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Models\User;
+use App\Support\Auth\WebSessionDevices;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -37,6 +38,8 @@ class NativeAuthExchangeController
         if (! $user instanceof User) {
             return response()->json(['ok' => false], 422);
         }
+
+        app(WebSessionDevices::class)->revokeAllForUser($user);
 
         return response()->json([
             'ok' => true,

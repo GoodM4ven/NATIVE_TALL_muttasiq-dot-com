@@ -3,8 +3,11 @@
     x-ref="blinker"
     x-on:livewire-session-timed-out.window="blink(false, true)"
     x-bind:style="{
-        backgroundColor: $store.colorScheme.bodyBackgroundColor,
-        transitionDuration: (defaultTransitionDurationInMs + 'ms'),
+        {{-- During an auth hold the body stays visible underneath, so go transparent --}}
+        {{-- and let the overlay's backdrop-blur blur the real (main-menu) view instead --}}
+        {{-- of a flat gray fill. --}}
+        backgroundColor: isAuthHoldActive ? 'transparent' : $store.colorScheme.bodyBackgroundColor,
+            transitionDuration: (defaultTransitionDurationInMs + 'ms'),
     }"
     x-bind:class="{
         'opacity-0 pointer-events-none': !isBlinkerShown,

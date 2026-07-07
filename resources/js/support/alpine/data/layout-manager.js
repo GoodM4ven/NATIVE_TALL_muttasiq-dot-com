@@ -218,6 +218,7 @@ document.addEventListener('alpine:init', () => {
             if (isNativePlatform && window.nativeAuthRestart) {
                 this.isAuthHoldActive = true;
                 this.isBlinkerShown = true;
+                this.isBodyVisible = true;
                 void this.runNativeAuthRestart();
 
                 return;

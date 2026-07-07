@@ -263,6 +263,39 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
             this._onWindowStorage = (event) => {
                 const storageKey = String(event?.key ?? '');
 
+                // Live cross-device follow: data-branch dispatches a synthetic
+                // `storage` event ONLY when a remote bundle is applied (never for this
+                // device's own writes), so reacting here mirrors the other device's
+                // reading position without echoing our own page turns. The re-persist
+                // that goToPage triggers is byte-identical to what the server sent and
+                // lands inside the remote-settle window, so it never pings back.
+                if (storageKey === lastPageStorageKey && !this.wirdModeActive) {
+                    let parsedPage = Number.NaN;
+
+                    try {
+                        parsedPage = Number(JSON.parse(String(event?.newValue ?? '')));
+                    } catch (_) {
+                        parsedPage = Number(event?.newValue);
+                    }
+
+                    const targetPage = Math.trunc(parsedPage);
+                    const currentPage = Math.max(1, Math.trunc(Number(this.pageNumber ?? 1)));
+
+                    if (
+                        Number.isFinite(targetPage) &&
+                        targetPage >= 1 &&
+                        targetPage !== currentPage
+                    ) {
+                        void this.goToPage(targetPage, {
+                            direction: targetPage > currentPage ? 'next' : 'prev',
+                            animate: true,
+                            source: 'remote-sync',
+                        });
+                    }
+
+                    return;
+                }
+
                 if (
                     storageKey !== wirdProgressStorageKey &&
                     storageKey !== wirdDayOffsetStorageKey
@@ -277,6 +310,38 @@ export const createLifecycleBootstrapEnvironmentAndCacheModule = (deps) => {
                 this.ensureWirdDailyRecord({
                     forceRebuild: storageKey === wirdDayOffsetStorageKey,
                 });
+
+                // Mirror the other device's wird navigation live: follow to its current
+                // wird page, and if it finished the wird there (last page turned), finish
+                // here too — same exit the local last-step turn performs.
+                if (this.wirdModeActive) {
+                    const record = this.wirdDailyRecord;
+
+                    if (record?.completed) {
+                        void this.exitWirdMode({
+                            restoreNormalPage: true,
+                            reason: 'remote-complete',
+                        });
+                    } else if (record) {
+                        const targetPage = this.absolutePageToPageNumber(
+                            this.wirdCurrentAbsolutePage(record),
+                        );
+                        const currentPage = Math.max(1, Math.trunc(Number(this.pageNumber ?? 1)));
+
+                        if (
+                            Number.isFinite(targetPage) &&
+                            targetPage >= 1 &&
+                            targetPage !== currentPage
+                        ) {
+                            void this.goToPage(targetPage, {
+                                direction: targetPage > currentPage ? 'next' : 'prev',
+                                animate: true,
+                                forceRefit: true,
+                                source: 'wird-remote-sync',
+                            });
+                        }
+                    }
+                }
             };
             window.addEventListener('storage', this._onWindowStorage);
 

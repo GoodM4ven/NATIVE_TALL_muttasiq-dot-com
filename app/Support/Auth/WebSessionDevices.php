@@ -85,6 +85,20 @@ class WebSessionDevices
         return $deleted > 0;
     }
 
+    public function revokeAllForUser(User $user): int
+    {
+        $sessionIds = DB::table('sessions')
+            ->where('user_id', $user->getKey())
+            ->pluck('id')
+            ->map(fn (mixed $sessionId): string => trim((string) $sessionId))
+            ->filter(fn (string $sessionId): bool => $sessionId !== '')
+            ->values();
+
+        $sessionIds->each(fn (string $sessionId): bool => $this->revoke($sessionId));
+
+        return $sessionIds->count();
+    }
+
     public function isRevoked(string $sessionId): bool
     {
         return Cache::get($this->revocationCacheKey($sessionId), false) === true;

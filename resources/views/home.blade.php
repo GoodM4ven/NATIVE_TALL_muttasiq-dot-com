@@ -1,5 +1,6 @@
 <x-app>
     @push('head-scripts')
+        {{-- blade-formatter-disable --}}
         @php
             $nativeRealtimeTokenId = null;
             $nativeRealtimeToken = (string) auth()->user()?->native_api_token;
@@ -13,7 +14,30 @@
             ) {
                 $nativeRealtimeTokenId = (int) $nativeRealtimeTokenMatches[1];
             }
+
+            // Web Reverb target the browser/native-testing page connects to. Normally
+            // the server-configured public host. But when this page is reached over an
+            // external dev tunnel (the request host differs from APP_URL's host, e.g. a
+            // Tailscale Funnel FQDN), point Echo at that same funnel host on :443.
+            $reverbPublic = [
+                'key' => config('broadcasting.connections.reverb.public.key'),
+                'host' => config('broadcasting.connections.reverb.public.host'),
+                'port' => config('broadcasting.connections.reverb.public.port'),
+                'scheme' => config('broadcasting.connections.reverb.public.scheme'),
+            ];
+
+            if (! is_platform('native')) {
+                $appHost = parse_url((string) config('app.url'), PHP_URL_HOST);
+                $requestHost = request()->getHost();
+
+                if ($appHost && $requestHost && $requestHost !== $appHost) {
+                    $reverbPublic['host'] = $requestHost;
+                    $reverbPublic['port'] = 443;
+                    $reverbPublic['scheme'] = 'https';
+                }
+            }
         @endphp
+        {{-- blade-formatter-enable --}}
 
         <script>
             window.dataBranch = @js(auth()->check() ? 'user' : 'guest');
@@ -40,16 +64,7 @@
                 // Web: server-injected Reverb host so the page connects to whatever
                 // the dev tunnel exposes. Native uses its build-time VITE_ values
                 // (baked to the on-device tunnel), so we leave this null there.
-                reverb: @js(
-    is_platform('native')
-        ? null
-        : [
-            'key' => config('broadcasting.connections.reverb.public.key'),
-            'host' => config('broadcasting.connections.reverb.public.host'),
-            'port' => config('broadcasting.connections.reverb.public.port'),
-            'scheme' => config('broadcasting.connections.reverb.public.scheme'),
-        ],
-),
+                reverb: @js(is_platform('native') ? null : $reverbPublic),
             };
 
             // Set right after a native Telegram login: the local home blinks,
@@ -667,7 +682,7 @@
         }"
         x-on:switch-view.window="applyViewState($event.detail?.to)"
         x-on:auth-blink-hold.window="startAuthHoldTransition()"
-        x-on:auth-blink-reload.window="dismissQuranBootstrapState(); if ($event.detail?.nativeRestart && typeof window.AndroidBridge?.restartApplication === 'function') { closeOpenModals(); isBlinkerShown = true; isAuthHoldActive = true; window.setTimeout(() => { window.AndroidBridge.restartApplication(); window.setTimeout(() => revealApp(), 6000); }, 1200); } else { startAuthReloadTransition(); setTimeout(() => { const reloadUrl = $event.detail?.url; if (reloadUrl) { window.location.assign(reloadUrl); } else { window.location.reload(); } }, 0); }"
+        x-on:auth-blink-reload.window="dismissQuranBootstrapState(); if ($event.detail?.nativeRestart && typeof window.AndroidBridge?.restartApplication === 'function') { closeOpenModals(); isBodyVisible = true; isBlinkerShown = true; isAuthHoldActive = true; window.setTimeout(() => { window.AndroidBridge.restartApplication(); window.setTimeout(() => revealApp(), 6000); }, 1200); } else { startAuthReloadTransition(); setTimeout(() => { const reloadUrl = $event.detail?.url; if (reloadUrl) { window.location.assign(reloadUrl); } else { window.location.reload(); } }, 0); }"
         x-on:introduction-video-modal-opened.window="isIntroductionVideoOpen = true"
         x-on:introduction-video-modal-closed.window="isIntroductionVideoOpen = false"
         x-on:muttasiq-app-version-major-minor-reset.window="handleAppVersionMajorMinorReset($event.detail ?? {})"

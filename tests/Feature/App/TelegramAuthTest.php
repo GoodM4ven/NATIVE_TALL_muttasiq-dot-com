@@ -168,6 +168,38 @@ it('exchanges a one-time code for the account payload', function () {
         ->assertStatus(422);
 });
 
+it('revokes tracked web sessions when exchanging a native auth code', function () {
+    $user = User::factory()->create();
+    $webSessionDevices = app(WebSessionDevices::class);
+
+    DB::table('sessions')->insert([
+        'id' => 'web-session-before-native-auth',
+        'user_id' => $user->getKey(),
+        'ip_address' => '127.0.0.1',
+        'user_agent' => 'Browser Test Agent',
+        'payload' => '',
+        'last_activity' => now()->getTimestamp(),
+    ]);
+
+    Cache::put('native-auth-code:CODE123', $user->getKey(), now()->addMinutes(5));
+
+    postJson(route('api.native-auth.exchange'), ['code' => 'CODE123'])
+        ->assertOk()
+        ->assertJsonPath('ok', true);
+
+    expect(DB::table('sessions')->where('id', 'web-session-before-native-auth')->exists())->toBeFalse()
+        ->and($webSessionDevices->isRevoked('web-session-before-native-auth'))->toBeTrue();
+});
+
+it('rejects web sessions on native token api routes', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user);
+
+    getJson(route('api.native-sync.snapshot'))
+        ->assertUnauthorized();
+});
+
 it('pushes a native password change to the authoritative server', function () {
     $user = User::factory()->create();
     Sanctum::actingAs($user);
@@ -476,6 +508,15 @@ it('wires the native auth restore endpoint into the home shell', function () {
         ->toContain('startAuthHoldTransition()')
         ->toContain('setTimeout(() => {')
         ->toContain('}, 0)');
+});
+
+it('checks native auth claims when returning from the browser by system back', function () {
+    $source = file_get_contents(resource_path('js/support/native-auth-persistence.js'));
+
+    expect($source)
+        ->toContain("window.addEventListener('focus', () => handleNativeAuthResume())")
+        ->toContain("document.addEventListener('visibilitychange', () => {")
+        ->toContain("window.addEventListener('native-auth-return-check', () => handleNativeAuthResume())");
 });
 
 it('hands the native auth restart payload to the home shell', function () {

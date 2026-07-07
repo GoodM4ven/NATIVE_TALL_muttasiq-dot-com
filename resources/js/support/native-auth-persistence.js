@@ -50,6 +50,18 @@ const clearTelegramAuthPending = () => {
     }
 };
 
+// Drop only the mid-flight HOLD flag, keeping the server-bound claim `state`. Used
+// when an empty-handed return reveals the app: the user may still finish the login
+// in the (still-open) browser, and the preserved state lets the next return claim
+// it silently instead of forcing a whole fresh attempt.
+const clearTelegramAuthHold = () => {
+    try {
+        window.localStorage.removeItem(pendingKey);
+    } catch (_) {
+        // Ignore cleanup failures.
+    }
+};
+
 // Recovery for a login that finished in the browser when the user returned via the
 // system back button (no deeplink). Polls the public server for the one-time code
 // bound to this device's registered `state`, then navigates to the same local
@@ -236,7 +248,9 @@ window.addEventListener('native-auth-forget', () => {
 });
 
 window.addEventListener('native-auth-reveal', () => {
-    clearTelegramAuthPending();
+    // Keep the claim `state`: revealing the app doesn't mean the login was
+    // abandoned — the user may complete it on the next browser round-trip.
+    clearTelegramAuthHold();
 });
 
 // Grace window after the app is resumed mid-login: long enough for a real
@@ -289,7 +303,19 @@ const authFlowResolvedElsewhere = () =>
 // off and this context tears down; only if nothing comes back within the window
 // do we close the overlay and reveal the app for normal use.
 const handleNativeAuthResume = () => {
-    if (!isNativeRuntime() || window.dataBranch === 'user' || !isTelegramAuthPending()) {
+    if (!isNativeRuntime() || window.dataBranch === 'user') {
+        return;
+    }
+
+    // No active hold, but an earlier empty-handed return may have left a claimable
+    // `state` behind. Try to claim it silently (no overlay hold, so ordinary
+    // resumes never flash the spinner) — if the login finished in the browser
+    // meanwhile, this hands off; otherwise it's a harmless no-op.
+    if (!isTelegramAuthPending()) {
+        if (hasClaimableLogin()) {
+            void claimPendingLogin();
+        }
+
         return;
     }
 
@@ -326,9 +352,11 @@ const handleNativeAuthResume = () => {
             return;
         }
 
-        // Still nothing after the window → the login didn't come back; close overlay.
+        // Still nothing after the window → close the overlay so the app is usable,
+        // but KEEP the claim `state`: the user may finish the login in the browser
+        // afterwards, and the next resume claims it silently (see handleNativeAuthResume).
         if (Date.now() - pollStartedAt >= claimPollMaxMs) {
-            clearTelegramAuthPending();
+            clearTelegramAuthHold();
             revealApp();
 
             return;
@@ -346,6 +374,14 @@ window.addEventListener('quran-native-lifecycle', (event) => {
             .trim()
             .toLowerCase() === 'activity-resume'
     ) {
+        handleNativeAuthResume();
+    }
+});
+
+window.addEventListener('focus', () => handleNativeAuthResume());
+
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
         handleNativeAuthResume();
     }
 });
