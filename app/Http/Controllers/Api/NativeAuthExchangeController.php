@@ -27,7 +27,12 @@ class NativeAuthExchangeController
             return response()->json(['ok' => false], 422);
         }
 
-        $userId = Cache::pull('native-auth-code:'.$code);
+        // Read (not pull): on return the deeplink handoff AND the resume claim-poll
+        // can both exchange the same code in a race. Single-use meant the loser got a
+        // null exchange and fell back to a plain page reload with no auth. Reading
+        // lets both succeed within the code's short TTL (the first restart wins); the
+        // code still expires on its own and is only ever delivered to this device.
+        $userId = Cache::get('native-auth-code:'.$code);
 
         if ($userId === null) {
             return response()->json(['ok' => false], 422);

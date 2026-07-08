@@ -102,13 +102,6 @@ const claimPendingLogin = async () => {
             return false;
         }
 
-        // One-time state consumed server-side; drop the local copy too.
-        try {
-            window.localStorage.removeItem(stateKey);
-        } catch (_) {
-            // Ignore storage cleanup failures.
-        }
-
         // The local handoff route mirrors the account, logs in, and triggers the
         // restart — identical to tapping the deeplink button.
         window.location.assign('/auth/telegram/handoff?code=' + encodeURIComponent(code));
@@ -256,7 +249,7 @@ window.addEventListener('native-auth-reveal', () => {
 // Grace window after the app is resumed mid-login: long enough for a real
 // deeplink handoff to start reloading the app, short enough that an empty-handed
 // return doesn't leave the blinker stuck on white for long.
-const authReturnGraceMs = 2000;
+const authReturnGraceMs = 1000;
 let authReturnRevealTimer = null;
 
 const cancelAuthReturnReveal = () => {
@@ -272,10 +265,11 @@ const cancelAuthReturnReveal = () => {
 window.addEventListener('pagehide', cancelAuthReturnReveal);
 
 // How long to keep the loading overlay up while polling the claim endpoint on
-// resume, and how often to poll. The window has to outlast a slow OAuth finish so
-// we don't declare "no login" while the server is still binding the result.
-const claimPollIntervalMs = 1500;
-const claimPollMaxMs = 12000;
+// resume, and how often to poll. Kept short: on an empty-handed return (user came
+// back without finishing) the login is already bound by the time they return, so a
+// few quick polls are enough — no need to make them stare at the spinner for 12s.
+const claimPollIntervalMs = 700;
+const claimPollMaxMs = 4000;
 
 const hasClaimableLogin = () => {
     const claimUrl = String(getBootstrapConfig().claimUrl || '').trim();

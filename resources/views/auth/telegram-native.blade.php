@@ -259,17 +259,26 @@
                 <script>
                     window.onTelegramNativeAuth = (user) => {
                         // Navigate to the dedicated NATIVE callback route (a JS jump to a custom
-                        // scheme is blocked by Chrome Custom Tabs without a user gesture). Only the
-                        // Telegram fields go in the query — no extra params, or the server-side hash
-                        // check fails. The server finishes by 302-redirecting to the app's deeplink.
+                        // scheme is blocked by Chrome Custom Tabs without a user gesture). The
+                        // Telegram fields plus our device `native_state` go in the query; the
+                        // server strips `native_state` before the hash check, so signature
+                        // validation still sees only Telegram's own fields. Carrying the state on
+                        // this navigation (instead of the OAuth-browser session, which auth-session
+                        // browsers don't reliably persist) is what lets a system-back return still
+                        // claim the finished login.
                         const params = new URLSearchParams();
                         const callbackUrl = @js($callbackUrl);
+                        const nativeAuthState = @js($nativeAuthState);
 
                         Object.entries(user ?? {}).forEach(([key, value]) => {
                             if (value !== undefined && value !== null) {
                                 params.append(key, value);
                             }
                         });
+
+                        if (nativeAuthState !== '') {
+                            params.append('native_state', nativeAuthState);
+                        }
 
                         const queryString = params.toString();
                         const destination = queryString === '' ? callbackUrl : `${callbackUrl}?${queryString}`;

@@ -40,6 +40,9 @@ class TelegramAuthController
         return view('auth.telegram-native', [
             'telegramBotName' => trim((string) config('services.telegram.bot', '')),
             'callbackUrl' => route('auth.telegram.native.callback', [], false),
+            // Carried into the JS-controlled callback navigation so the claim can be
+            // bound without relying on the OAuth-browser session (see nativeCallback).
+            'nativeAuthState' => $state ?? '',
         ]);
     }
 
@@ -64,8 +67,22 @@ class TelegramAuthController
         return redirect()->route('home');
     }
 
-    public function nativeCallback(): View
+    public function nativeCallback(Request $request): View
     {
+        // Bind the completed login to the device's poll `state` WITHOUT depending on
+        // the OAuth-browser session surviving launcher → callback: the auth-session
+        // browsers (Android Custom Tabs / iOS ASWebAuthenticationSession) don't
+        // reliably persist our session cookie across that hop, which left the claim
+        // unbound so a system-back return could never catch the finished login. The
+        // state rides the callback navigation as `native_state` instead; it must be
+        // stripped before Socialite runs, because Telegram's hash is computed over
+        // every received field. Session stays as a fallback.
+        $state = $this->sanitizeNativeAuthState((string) $request->query('native_state', ''))
+            ?? $this->sanitizeNativeAuthState((string) session('native_auth_state', ''));
+
+        $request->query->remove('native_state');
+        $request->request->remove('native_state');
+
         $user = $this->authenticateTelegramUser(freshCredentials: false);
 
         if ($user === null) {
@@ -80,12 +97,10 @@ class TelegramAuthController
         $code = Str::random(64);
         Cache::put('native-auth-code:'.$code, $user->getKey(), now()->addMinutes(5));
 
-        // Bind the code to the device's poll `state` (registered on the launcher)
-        // so the device can claim this login on resume without the deeplink. Same
-        // 5-minute window; the code stays single-use (whichever of poll/button
-        // exchanges it first wins).
-        $state = $this->sanitizeNativeAuthState((string) session('native_auth_state', ''));
-
+        // Bind the code to the device's poll `state` (resolved above from the
+        // callback navigation, session as fallback) so the device can claim this
+        // login on resume without the deeplink. Same 5-minute window; the code stays
+        // single-use (whichever of poll/button exchanges it first wins).
         if ($state !== null) {
             Cache::put('native-auth-claim:'.$state, $code, now()->addMinutes(5));
             session()->forget('native_auth_state');

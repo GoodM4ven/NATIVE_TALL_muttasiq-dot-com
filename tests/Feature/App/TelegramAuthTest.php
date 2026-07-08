@@ -102,7 +102,7 @@ it('issues a one-time code and shows the return-to-app deeplink for native teleg
     assertGuest();
 });
 
-it('binds the login to a device state and lets the app claim it once on resume', function () {
+it('binds the login to a device state and lets the app retry the claim on resume', function () {
     fakeTelegramUser();
 
     $state = str_repeat('a1b2c3d4', 6); // 48 alphanumeric chars
@@ -123,10 +123,31 @@ it('binds the login to a device state and lets the app claim it once on resume',
         ->assertOk()
         ->assertJson(['ready' => true, 'code' => $code]);
 
-    // ...and the claim is single-use.
+    // ...and can retry during the short TTL if local handoff/navigation loses a race.
     postJson(route('api.native-auth.claim'), ['state' => $state])
         ->assertOk()
-        ->assertJson(['ready' => false]);
+        ->assertJson(['ready' => true, 'code' => $code]);
+});
+
+it('binds the claim from the callback native_state without a persisted session', function () {
+    fakeTelegramUser();
+
+    $state = str_repeat('b4c3d2e1', 6); // 48 alphanumeric chars
+
+    // No launcher call first, so there is no `native_auth_state` in the session:
+    // the state must be recovered from the callback navigation itself. This is the
+    // path that fixes system-back returns, where the auth-session browser did not
+    // persist the OAuth-browser session cookie between launcher and callback.
+    get(route('auth.telegram.native.callback', ['native_state' => $state]))->assertOk();
+
+    $code = Cache::get('native-auth-claim:'.$state);
+
+    expect($code)->not->toBeNull();
+    expect(Cache::get('native-auth-code:'.$code))->toBe(User::query()->first()?->getKey());
+
+    postJson(route('api.native-auth.claim'), ['state' => $state])
+        ->assertOk()
+        ->assertJson(['ready' => true, 'code' => $code]);
 });
 
 it('rejects a malformed native-auth claim state', function () {
@@ -144,7 +165,7 @@ it('keeps the browser session guest during native telegram auth handoff', functi
     assertGuest();
 });
 
-it('exchanges a one-time code for the account payload', function () {
+it('exchanges a short-lived native auth code for the account payload', function () {
     $user = User::factory()->create([
         'telegram_id' => 555,
         'username' => 'user_exchange',
@@ -163,9 +184,10 @@ it('exchanges a one-time code for the account payload', function () {
     expect((string) $response->json('user.sync_token'))->toContain('|');
     expect($user->tokens()->count())->toBe(1);
 
-    // Single-use: the code is consumed.
+    // Retryable during its short TTL so deeplink and resume-claim races can both finish.
     postJson(route('api.native-auth.exchange'), ['code' => 'CODE123'])
-        ->assertStatus(422);
+        ->assertOk()
+        ->assertJsonPath('ok', true);
 });
 
 it('revokes tracked web sessions when exchanging a native auth code', function () {
@@ -512,11 +534,15 @@ it('wires the native auth restore endpoint into the home shell', function () {
 
 it('checks native auth claims when returning from the browser by system back', function () {
     $source = file_get_contents(resource_path('js/support/native-auth-persistence.js'));
+    $launcher = file_get_contents(resource_path('views/livewire/auth/telegram-widget.blade.php'));
 
     expect($source)
         ->toContain("window.addEventListener('focus', () => handleNativeAuthResume())")
         ->toContain("document.addEventListener('visibilitychange', () => {")
         ->toContain("window.addEventListener('native-auth-return-check', () => handleNativeAuthResume())");
+
+    expect($launcher)
+        ->toContain('Browser.auth() only means the Custom Tab opened');
 });
 
 it('hands the native auth restart payload to the home shell', function () {

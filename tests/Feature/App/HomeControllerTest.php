@@ -283,6 +283,41 @@ it('logs out unconfirmed web sessions instead of silently reusing them', functio
     expect(auth()->check())->toBeFalse();
 });
 
+it('logs out unconfirmed web sessions on non-home GETs too, not just the home route', function () {
+    config([
+        'nativephp-internal.running' => false,
+        'nativephp-internal.platform' => null,
+    ]);
+
+    $user = User::factory()->create();
+
+    actingAs($user);
+    Session::forget('auth.web_login_confirmed');
+
+    // A plain front-end asset GET must not render as the leaked account either —
+    // the old home-only guard let these slip a bled-through session through.
+    get('/qpc-v2-fonts/1.ttf');
+
+    expect(auth()->check())->toBeFalse();
+});
+
+it('keeps a confirmed web session authenticated across requests', function () {
+    config([
+        'nativephp-internal.running' => false,
+        'nativephp-internal.platform' => null,
+    ]);
+
+    $user = User::factory()->create();
+
+    actingAs($user);
+    Session::put('auth.web_login_confirmed', true);
+
+    get('/')
+        ->assertSuccessful();
+
+    expect(auth()->check())->toBeTrue();
+});
+
 it('renders the realtime session bootstrap and keeps the quran failure close action visible', function () {
     config([
         'nativephp-internal.running' => false,

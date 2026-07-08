@@ -8,7 +8,6 @@ use App\Models\Setting;
 use App\Models\Thikr;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class HomeController extends Controller
 {
@@ -21,19 +20,10 @@ class HomeController extends Controller
             Setting::setAppVersion(Setting::configuredAppVersion());
         }
 
-        if (
-            ! is_platform('native') &&
-            Auth::check() &&
-            $request->session()->get('auth.web_login_confirmed') !== true
-        ) {
-            Auth::logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-        } elseif (! is_platform('native') && Auth::viaRemember()) {
-            Auth::logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-        }
+        // The web-session auth invariant (a session may only stay logged in when a
+        // real front-end login set `auth.web_login_confirmed`) is enforced globally
+        // by the TrackAuthenticatedWebSession middleware, so it no longer needs a
+        // home-route-only guard here.
 
         // Surfaced here, after the data-override blinker reload, so the
         // notification renders on the fresh page rather than flashing away

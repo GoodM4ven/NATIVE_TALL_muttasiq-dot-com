@@ -114,19 +114,15 @@
         
                 if (window.browser?.auth) {
                     try {
-                        const didOpen = await window.browser.auth(launchUrl);
-        
-                        if (didOpen === true) {
-                            return;
-                        }
+                        await window.browser.auth(launchUrl);
                     } catch (_) {
                         // Fall through to the offline reveal path below.
                     }
         
                     window.setTimeout(() => {
-                        // Don't reveal outright — the login may have completed. Hand
-                        // off to the claim-poll, which keeps the loading overlay up
-                        // and only reveals if nothing came back within its window.
+                        // Browser.auth() only means the Custom Tab opened. When the
+                        // app comes back by system back/app switcher, poll for the
+                        // finished login instead of waiting for a deeplink button.
                         window.dispatchEvent(new CustomEvent('native-auth-return-check'));
                     }, 300);
         

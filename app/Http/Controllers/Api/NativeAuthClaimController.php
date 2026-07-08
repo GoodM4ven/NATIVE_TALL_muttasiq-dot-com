@@ -28,8 +28,10 @@ class NativeAuthClaimController
             return response()->json(['ready' => false], 422);
         }
 
-        // Single-use: pull so a claimed state can't be replayed.
-        $code = Cache::pull('native-auth-claim:'.$state);
+        // Retryable for the short TTL: a resume claim can start local handoff and
+        // still lose the WebView/navigation race. Keeping the state lets the next
+        // focus or the manual deeplink button recover with the same code.
+        $code = Cache::get('native-auth-claim:'.$state);
 
         if (! is_string($code) || $code === '') {
             return response()->json(['ready' => false]);
