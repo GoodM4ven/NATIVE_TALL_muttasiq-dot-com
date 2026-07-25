@@ -5,6 +5,29 @@ declare(strict_types=1);
 use Illuminate\Support\Str;
 use Pdo\Mysql;
 
+/**
+ * Resolve a usable SQLite database path.
+ *
+ * `DB_DATABASE` normally holds the MySQL database *name* (for example `muttasiq`), but
+ * NativePHP flips the default connection to SQLite. A bare name is then interpreted as a
+ * relative path, so running a native script on the host silently created a stray SQLite
+ * file named after the database in the working directory. On device NativePHP exports an
+ * absolute path, and PHPUnit exports `:memory:`; anything else falls back to convention.
+ */
+$resolveSqliteDatabase = static function (): string {
+    $database = env('DB_DATABASE');
+
+    if (! is_string($database) || $database === '') {
+        return database_path('database.sqlite');
+    }
+
+    if ($database === ':memory:' || str_contains($database, DIRECTORY_SEPARATOR)) {
+        return $database;
+    }
+
+    return database_path('database.sqlite');
+};
+
 return [
 
     /*
@@ -39,7 +62,7 @@ return [
         'sqlite' => [
             'driver' => 'sqlite',
             'url' => env('DB_URL'),
-            'database' => env('DB_DATABASE', database_path('database.sqlite')),
+            'database' => $resolveSqliteDatabase(),
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
             'busy_timeout' => null,

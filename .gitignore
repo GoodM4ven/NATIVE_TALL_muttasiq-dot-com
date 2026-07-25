@@ -21,6 +21,11 @@
 /.agents
 /.credentials
 /.playwright-mcp
+# Written by Zed's PHP extension (Phpactor). The `.zed/` directory itself is committed
+# as the shared editor config, replacing the old `.vscode/`.
+.phpactor.json
+# Personal Claude Code skill pins; the `.claude/` directory they apply to is ignored too.
+skills-lock.json
 /build
 /public/css
 /public/fonts

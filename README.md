@@ -225,21 +225,23 @@ https://muttasiq.com
 
 ### Setup
 
-1. We recommend [Ubuntu](https://ubuntu.com) (LTS) for stable and upgradable development environment, or if you're comfertable with Linux already, then [EndeavorOS](https://endeavouros.com) is good option.
-2. Setting up your **development environment** could be easier using this [lara-stacker](https://github.com/GoodM4ven/CLI_LARAVEL_lara-stacker) CLI [Bash](https://www.gnu.org/software/bash) scripts, which utilizes [Docker](https://docker.com) to setup the main services, and leaving you to only care about few tools that are essential for [PHP](https://php.net) development...
-   - We recommend using `git clone` into lara-stacker's apps-root directory and then using lara-stacker's "rewire" command on this project. 
-   - Running `composer setup` command at the beginning, as for any Laravel of course.
-3. We strongly advocate for using [VSCodium](https://vscodium.com), especially for those who are new to the development world.
-4. Check out all of our VSC configurations set in this [TALL-STANDARDS](https://github.com/GoodM4ven/WIKI_NATIVE_tall-standards) wikipedia, which also contains a decent bit of tips for dealing with the tall-stack and some other related tools and technologies. (The project isn't yet complete)
-5. And whatever we advised to do for quick learning about this stack, please make sure you read the [development section](#development) up top.
-6. For [Laravel Boost](https://laravel.com/docs/boost) installation, first, **if it doesn't exist already**, `cp boost.json.dist boost.json` and modify if necessary, then call `php artisan boost:install` to guide you in terminal.
+1. Clone into the apps-root directory of [lara-stacker](https://github.com/GoodM4ven/CLI_MACOS_lara-stacker) and run its "Rewire" command on this project; that repository's README covers the environment itself. Any setup that provides the runtimes pinned in [`mise.toml`](./mise.toml) plus MySQL and Redis works too — the app is not tied to lara-stacker.
+2. The host toolchain is pinned with [mise](https://mise.jdx.dev): `mise install` provides PHP, Node, and pnpm and puts `vendor/bin` and `node_modules/.bin` on `PATH`, so `pint`, `pest`, `phpstan`, and `prettier` run without a prefix. `mise tasks ls` lists the [`./.scripts`](./.scripts) wrappers; everything else is a Composer script (`composer run --list`).
+   - This project uses **pnpm**, not npm — a `preinstall` hook enforces it.
+   - `.env` is deliberately **not** loaded by mise. Exporting it would override the `<env>` entries in [`phpunit.xml`](./phpunit.xml), because PHPUnit skips those when a variable is already set, and the suite would then run against the development database. See the comments in [`mise.toml`](./mise.toml).
+3. Run `composer setup`, as for any Laravel project.
+4. **Native builds need platform SDKs that mise does not manage.** Android needs [Android Studio](https://developer.android.com/studio) for the SDK (`adb`) **and its bundled JDK** — Gradle will not run without a JDK on `PATH` or a valid `JAVA_HOME`. iOS needs Xcode for `xcrun`/`xcodebuild`.
+5. Editor: [Zed](https://zed.dev). Install its PHP extension once (`cmd-shift-x`) to supply the `Xdebug` adapter that [`.zed/debug.json`](./.zed/debug.json) expects, then pick your own shortcut for `debugger: start`.
+6. And whatever we advised to do for quick learning about this stack, please make sure you read the [development section](#development) up top.
+7. For [Laravel Boost](https://laravel.com/docs/boost) installation, first, **if it doesn't exist already**, `cp boost.json.dist boost.json` and modify if necessary, then call `php artisan boost:install` to guide you in terminal.
 
-### Running Locally
+### Scripts
 
 - Use `composer dev` to run the local web stack together — it starts the web server, **the queue worker** (`php artisan queue:listen`), **Reverb** (`php artisan reverb:start`), the log tailer, and Vite. Queue + Reverb are now hard dependencies for authenticated account/settings synchronization and realtime cross-device invalidation, so if you start the app without `composer dev`, also run a queue worker and Reverb yourself.
 - When testing native server/sync/realtime behavior, run the matching native watch script (`.scripts/watch-android.sh` or `.scripts/watch-ios.sh`) and pass the resulting endpoints into the native build. Use plain `composer dev` only when you want the web stack.
-- **Android** (`.scripts/watch-android.sh` → [`run-android-docker-funnel.sh`](./.scripts/support/run-android-docker-funnel.sh)) reuses the **existing lara-stacker Docker app** (`https://muttasiq.dev.localhost`) instead of spinning up a second `php artisan serve`. It exposes that app over a **single Tailscale Funnel on `:443`**, and the app's Reverb websocket rides the **same `:443`** (Caddy proxies `/app` to the host Reverb). One port-less domain is required because Telegram's login-widget domain in BotFather is host-only and rejects ports — so set the widget domain to your funnel FQDN (e.g. `g15.tail4a0cb8.ts.net`). iOS still uses the older [`run-native-local-source-broadcast.sh`](./.scripts/support/run-native-local-source-broadcast.sh) local-server path.
-  - **One-time lara-stacker setup** (in `~/Code/Scripts/CLI_LARAVEL_lara-stacker`): add `TS_FUNNEL_HOST=<your-node>.ts.net` and `TS_FUNNEL_REVERB_PORT=8080` to its `.env`, then restart Caddy with `./scripts/start.sh` (menu option `Start`) so it serves that host. Without it the funnel returns a Caddy 404 (it only matches `*.dev.localhost` otherwise). There is **no** per-project `TS_FUNNEL_APP` — Caddy serves the `_funnel_app` symlink under `APPS_ROOT`, which `watch-android.sh` points at this project automatically, so the setup stays generic across projects.
+- **Android** (`.scripts/watch-android.sh` → [`run-android-docker-funnel.sh`](./.scripts/support/run-android-docker-funnel.sh)) reuses the **existing lara-stacker Docker app** (`https://muttasiq.dev.localhost`) instead of spinning up a second `php artisan serve`. It exposes that app over a **single Tailscale Funnel on `:443`**, and the app's Reverb websocket rides the **same `:443`** (Caddy proxies `/app` to the host Reverb). One port-less domain is required because Telegram's login-widget domain in BotFather is host-only and rejects ports. iOS still uses the older [`run-native-local-source-broadcast.sh`](./.scripts/support/run-native-local-source-broadcast.sh) local-server path.
+  - The Funnel itself is configured in lara-stacker, not here — see that repository's README. Nothing Tailscale-related belongs in this project's `.env`.
+  - **Set the BotFather login-widget domain to your current funnel FQDN.** It derives from your Tailscale machine name, so it changes whenever you switch machines, and Telegram login keeps failing until the widget domain matches. Read it from `tailscale status --json` (`Self.DNSName`).
 - Local Reverb uses `REVERB_*` for the server connection and `VITE_REVERB_*` for browser/native Echo. Keep `REVERB_ALLOWED_ORIGINS` restricted to the dev/prod origins you actually serve from (for local Tailscale testing, include the Funnel URL origin — the Android script starts Reverb with `*` for you when it owns the port).
 
 #### What `watch-android.sh` orchestrates
@@ -331,6 +333,9 @@ Copyright (C) 2026 Muttasiq Contributors.
 - [Laravel](https://laravel.com) entire ecosystem
 - [FilamentPHP](https://filamentphp.com)
 - [NativePHP](https://nativephp.com)
+- [mise](https://mise.jdx.dev) and [verzly/mise-php](https://github.com/verzly/mise-php)
+- [OrbStack](https://orbstack.dev) and [Caddy](https://caddyserver.com)
+- [Zed](https://zed.dev)
 - [VSCodium](https://vscodium.com) (the project was accidentally deleted during development, and then got recovered, file by file, using tons of versions for each file, from **the no-telemetry cache** of this awesome piece of software)
 
 

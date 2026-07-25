@@ -1,0 +1,14 @@
+[
+    {
+        "label": "PHP: Listen to Xdebug",
+        "adapter": "Xdebug",
+        "request": "launch",
+        "hostname": "0.0.0.0",
+        "port": 9003,
+        "log": true,
+        "maxConnections": 1,
+        "pathMappings": {
+            "/var/www/html/muttasiq": "$ZED_WORKTREE_ROOT"
+        }
+    }
+]
