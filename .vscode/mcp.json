@@ -1,7 +1,0 @@
-{
-    "servers": {
-        "laravel-boost": {
-            "command": "./laravel-boost-mcp.sh"
-        }
-    }
-}
