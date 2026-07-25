@@ -16,6 +16,18 @@ _.path = [
   '{{config_root}}/node_modules/.bin',
 ]
 
+# Extensions PIE has to add, because the source build does not bundle them:
+#   redis   — REDIS_CLIENT=phpredis drives the cache *and* the session store.
+#   imagick — spatie/image (via goodm4ven/blurred-image) picks Imagick when it is
+#             loaded and silently falls back to GD otherwise, which changes output.
+#             Needs `brew install imagemagick` present at build time.
+# Everything else the app requires is already compiled in by default: bcmath, exif,
+# gd, intl, mbstring, pcntl (Reverb), sockets (Pest browser tests), zip, iconv,
+# pdo_mysql, pdo_sqlite, and the standard ctype/dom/filter/xml family.
+# This only takes effect when mise installs PHP; it deliberately matches
+# lara-stacker's own mise.toml so both resolve to the same build.
+_.php = { pie_extensions = 'phpredis/phpredis imagick/imagick' }
+
 # `composer dev` and the native watch scripts are long-running by design.
 COMPOSER_PROCESS_TIMEOUT = '0'
 
@@ -30,11 +42,11 @@ COMPOSER_PROCESS_TIMEOUT = '0'
 #    itself, so there is nothing to gain here. Anything that genuinely needs a shell
 #    variable belongs in this `[env]` block instead.
 #
-# 2. `_.php = { prebuilt_static = ... }` — how PHP is built is the host toolchain's
-#    call, not the project's. This app runs `REDIS_CLIENT=phpredis`, and the prebuilt
-#    static builds do not ship `phpredis`; lara-stacker's mise.toml installs it with
-#    PIE from a source build. Pinning a build flavour here would override that and
-#    hand contributors a PHP that cannot serve sessions or the cache.
+# 2. `prebuilt_static` / `prebuilt_static_flavor` — the static builds cannot take PIE
+#    extensions, so they ship no `phpredis`, and this app needs it for both the cache
+#    and the session store. The source build above is what makes `pie_extensions`
+#    work at all; pinning a static flavour would hand contributors a PHP that boots
+#    but cannot serve a session.
 
 # Tasks below only wrap the `.scripts/` helpers, which have no Composer equivalent.
 # Everything else stays in composer.json so there is a single source of truth —
@@ -59,14 +71,6 @@ run = './.scripts/watch-android.sh'
 description = 'Watch the iOS app over the local-source broadcast'
 run = './.scripts/watch-ios.sh'
 
-[tasks.'run:android']
-description = 'Build and run the Android app'
-run = './.scripts/run-android.sh'
-
-[tasks.'run:ios']
-description = 'Build and run the iOS app'
-run = './.scripts/run-ios.sh'
-
 [tasks.'log:android']
 description = 'Collect Android logs'
 run = './.scripts/log-android.sh'
@@ -74,14 +78,6 @@ run = './.scripts/log-android.sh'
 [tasks.'log:ios']
 description = 'Collect iOS logs'
 run = './.scripts/log-ios.sh'
-
-[tasks.'share:android']
-description = 'Share an Android build'
-run = './.scripts/share-android.sh'
-
-[tasks.'share:ios']
-description = 'Share an iOS build'
-run = './.scripts/share-ios.sh'
 
 [tasks.'publish:android']
 description = 'Publish the Android app'
