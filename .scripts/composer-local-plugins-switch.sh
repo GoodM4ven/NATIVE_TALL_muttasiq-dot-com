@@ -76,6 +76,39 @@ has_matching_repositories() {
     ' "${package_name}" "${repository_key}" "$(basename "${package_path}")"
 }
 
+matching_repository_url() {
+    php -r '
+        $composer = json_decode(file_get_contents("composer.json"), true);
+        $repositories = $composer["repositories"] ?? [];
+        $packageName = $argv[1];
+        $repositoryKey = $argv[2];
+        $targetDirectoryName = $argv[3];
+
+        foreach ($repositories as $repository) {
+            if (! is_array($repository)) {
+                continue;
+            }
+
+            if (($repository["type"] ?? null) !== "path") {
+                continue;
+            }
+
+            $versions = $repository["options"]["versions"] ?? [];
+            $url = (string) ($repository["url"] ?? "");
+            $urlDirectoryName = $url !== "" ? basename(rtrim($url, "/\\")) : "";
+
+            $matchesByName = ($repository["name"] ?? null) === $repositoryKey;
+            $matchesByVersion = is_array($versions) && array_key_exists($packageName, $versions);
+            $matchesByDirectory = $urlDirectoryName !== "" && $urlDirectoryName === $targetDirectoryName;
+
+            if ($matchesByName || $matchesByVersion || $matchesByDirectory) {
+                echo $url;
+                break;
+            }
+        }
+    ' "${package_name}" "${repository_key}" "$(basename "${package_path}")"
+}
+
 remove_matching_repositories() {
     php -r '
         $composerPath = "composer.json";
@@ -155,10 +188,21 @@ if [[ "${action}" == "off" ]]; then
 fi
 
 if [[ "${action}" == "toggle" && -n "${has_matching_repository}" ]]; then
-    remove_matching_repositories
-    run_package_update
-    echo "[composer-local-plugins-switch] disabled local path repository for ${package_name}"
-    exit 0
+    # A path repository whose URL this machine cannot resolve is not a working "on"
+    # state — for example one carried over from another OS, where Composer leaves a
+    # dangling symlink in vendor/ and the app fails to boot. Re-point it at the local
+    # path instead of disabling it, which is what "toggle" would otherwise do and is
+    # the opposite of what someone re-running this script on a new machine wants.
+    matched_repository_url="$(matching_repository_url)"
+
+    if [[ -n "${matched_repository_url}" && ! -d "${matched_repository_url}" ]]; then
+        echo "[composer-local-plugins-switch] re-pointing unresolvable path repository for ${package_name}: ${matched_repository_url} -> ${package_path}"
+    else
+        remove_matching_repositories
+        run_package_update
+        echo "[composer-local-plugins-switch] disabled local path repository for ${package_name}"
+        exit 0
+    fi
 fi
 
 remove_matching_repositories
