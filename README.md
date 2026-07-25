@@ -226,17 +226,16 @@ https://muttasiq.com
 ### Setup
 
 1. Clone into the apps-root directory of [lara-stacker](https://github.com/GoodM4ven/CLI_MACOS_lara-stacker) and run its "Rewire" command on this project; that repository's README covers the environment itself. Any setup that provides the runtimes pinned in [`mise.toml`](./mise.toml) plus MySQL and Redis works too — the app is not tied to lara-stacker.
-2. Run `composer setup`, as for any Laravel project.
-3. The host toolchain is pinned with [mise](https://mise.jdx.dev): `mise install` provides PHP, Node, and pnpm and puts `vendor/bin` and `node_modules/.bin` on `PATH`, so `pint`, `pest`, `phpstan`, and `prettier` run without a prefix. `mise tasks ls` lists the [`./.scripts`](./.scripts) wrappers; everything else is a Composer script (`composer run --list`).
+2. The host toolchain is pinned with [mise](https://mise.jdx.dev): `mise install` provides PHP, Node, and pnpm and puts `vendor/bin` and `node_modules/.bin` on `PATH`, so `pint`, `pest`, `phpstan`, and `prettier` run without a prefix. `mise tasks ls` lists the [`./.scripts`](./.scripts) wrappers; everything else is a Composer script (`composer run --list`).
    - This project uses **pnpm**, not npm — a `preinstall` hook enforces it.
    - `.env` is deliberately **not** loaded by mise. Exporting it would override the `<env>` entries in [`phpunit.xml`](./phpunit.xml), because PHPUnit skips those when a variable is already set, and the suite would then run against the development database. See the comments in [`mise.toml`](./mise.toml).
+3. Run `composer setup`, as for any Laravel project.
 4. **Native builds need platform SDKs that mise does not manage.** Android needs [Android Studio](https://developer.android.com/studio) for the SDK (`adb`) **and its bundled JDK** — Gradle will not run without a JDK on `PATH` or a valid `JAVA_HOME`. iOS needs Xcode for `xcrun`/`xcodebuild`.
 5. Editor: [Zed](https://zed.dev). Install its PHP extension once (`cmd-shift-x`) to supply the `Xdebug` adapter that [`.zed/debug.json`](./.zed/debug.json) expects, then pick your own shortcut for `debugger: start`.
-6. Check out the tips in the [TALL-STANDARDS](https://github.com/GoodM4ven/WIKI_NATIVE_tall-standards) wikipedia for dealing with the tall-stack and some other related tools and technologies. (The project isn't yet complete, and its editor configuration still targets VS Code derivatives.)
-7. And whatever we advised to do for quick learning about this stack, please make sure you read the [development section](#development) up top.
-8. For [Laravel Boost](https://laravel.com/docs/boost) installation, first, **if it doesn't exist already**, `cp boost.json.dist boost.json` and modify if necessary, then call `php artisan boost:install` to guide you in terminal.
+6. And whatever we advised to do for quick learning about this stack, please make sure you read the [development section](#development) up top.
+7. For [Laravel Boost](https://laravel.com/docs/boost) installation, first, **if it doesn't exist already**, `cp boost.json.dist boost.json` and modify if necessary, then call `php artisan boost:install` to guide you in terminal.
 
-### Running Locally
+### Scripts
 
 - Use `composer dev` to run the local web stack together — it starts the web server, **the queue worker** (`php artisan queue:listen`), **Reverb** (`php artisan reverb:start`), the log tailer, and Vite. Queue + Reverb are now hard dependencies for authenticated account/settings synchronization and realtime cross-device invalidation, so if you start the app without `composer dev`, also run a queue worker and Reverb yourself.
 - When testing native server/sync/realtime behavior, run the matching native watch script (`.scripts/watch-android.sh` or `.scripts/watch-ios.sh`) and pass the resulting endpoints into the native build. Use plain `composer dev` only when you want the web stack.
