@@ -21,6 +21,10 @@
 /.agents
 /.credentials
 /.playwright-mcp
+# Editor config: lara-stacker generates .zed/ per machine (debug.json carries a
+# host-specific container path mapping), and Zed's PHP extension writes .phpactor.json.
+/.zed
+.phpactor.json
 /build
 /public/css
 /public/fonts

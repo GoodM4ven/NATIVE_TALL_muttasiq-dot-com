@@ -225,12 +225,16 @@ https://muttasiq.com
 
 ### Setup
 
-1. We recommend [Ubuntu](https://ubuntu.com) (LTS) for stable and upgradable development environment, or if you're comfertable with Linux already, then [EndeavorOS](https://endeavouros.com) is good option.
-2. Setting up your **development environment** could be easier using this [lara-stacker](https://github.com/GoodM4ven/CLI_LARAVEL_lara-stacker) CLI [Bash](https://www.gnu.org/software/bash) scripts, which utilizes [Docker](https://docker.com) to setup the main services, and leaving you to only care about few tools that are essential for [PHP](https://php.net) development...
-   - We recommend using `git clone` into lara-stacker's apps-root directory and then using lara-stacker's "rewire" command on this project. 
+1. Setting up your **development environment** is easiest with the [lara-stacker](https://github.com/GoodM4ven/CLI_MACOS_lara-stacker) CLI [Bash](https://www.gnu.org/software/bash) scripts. It is **macOS-only** and [OrbStack](https://orbstack.dev)-backed: one shared PHP-FPM/Caddy/MySQL/Redis/MinIO/Mailpit stack serves every registered app, so you only manage the host toolchain.
+   - We recommend using `git clone` into lara-stacker's apps-root directory and then using lara-stacker's "Rewire" command on this project.
    - Running `composer setup` command at the beginning, as for any Laravel of course.
-3. We strongly advocate for using [VSCodium](https://vscodium.com), especially for those who are new to the development world.
-4. Check out all of our VSC configurations set in this [TALL-STANDARDS](https://github.com/GoodM4ven/WIKI_NATIVE_tall-standards) wikipedia, which also contains a decent bit of tips for dealing with the tall-stack and some other related tools and technologies. (The project isn't yet complete)
+   - Not on macOS? Any environment providing PHP 8.4, Node 22, pnpm, MySQL, and Redis works — the app itself is not tied to lara-stacker. Match the versions in [`mise.toml`](./mise.toml).
+2. The host toolchain is managed with [mise](https://mise.jdx.dev). Running `mise install` in this directory installs the pinned PHP, Node, and pnpm; it also puts `vendor/bin` and `node_modules/.bin` on `PATH` so `pint`, `pest`, `phpstan`, and `prettier` run without a prefix.
+   - `.env` is **not** loaded by mise on purpose. Exporting it would override the `<env>` entries in [`phpunit.xml`](./phpunit.xml) (PHPUnit skips those when a variable is already set), which would point the test suite at the real development database. See the comments in [`mise.toml`](./mise.toml).
+   - `mise tasks ls` lists wrappers for the [`./.scripts`](./.scripts) helpers (`watch:web`, `watch:android`, `run:ios`, …). Everything else stays a Composer script — use `composer run --list`.
+   - This project uses **pnpm**, not npm. A `preinstall` hook enforces it.
+3. We recommend [Zed](https://zed.dev) as the editor. lara-stacker generates a `.zed/` directory for each app (`settings.json` wiring the Laravel Boost MCP server, and `debug.json` with the container-to-worktree path mapping for Xdebug), so it is Git-ignored rather than committed. Install Zed's PHP extension once (`cmd-shift-x`) to get the `Xdebug` adapter, then pick your own shortcut for `debugger: start`.
+4. Check out the tips in the [TALL-STANDARDS](https://github.com/GoodM4ven/WIKI_NATIVE_tall-standards) wikipedia for dealing with the tall-stack and some other related tools and technologies. (The project isn't yet complete, and its editor configuration still targets VS Code derivatives.)
 5. And whatever we advised to do for quick learning about this stack, please make sure you read the [development section](#development) up top.
 6. For [Laravel Boost](https://laravel.com/docs/boost) installation, first, **if it doesn't exist already**, `cp boost.json.dist boost.json` and modify if necessary, then call `php artisan boost:install` to guide you in terminal.
 
@@ -239,7 +243,8 @@ https://muttasiq.com
 - Use `composer dev` to run the local web stack together — it starts the web server, **the queue worker** (`php artisan queue:listen`), **Reverb** (`php artisan reverb:start`), the log tailer, and Vite. Queue + Reverb are now hard dependencies for authenticated account/settings synchronization and realtime cross-device invalidation, so if you start the app without `composer dev`, also run a queue worker and Reverb yourself.
 - When testing native server/sync/realtime behavior, run the matching native watch script (`.scripts/watch-android.sh` or `.scripts/watch-ios.sh`) and pass the resulting endpoints into the native build. Use plain `composer dev` only when you want the web stack.
 - **Android** (`.scripts/watch-android.sh` → [`run-android-docker-funnel.sh`](./.scripts/support/run-android-docker-funnel.sh)) reuses the **existing lara-stacker Docker app** (`https://muttasiq.dev.localhost`) instead of spinning up a second `php artisan serve`. It exposes that app over a **single Tailscale Funnel on `:443`**, and the app's Reverb websocket rides the **same `:443`** (Caddy proxies `/app` to the host Reverb). One port-less domain is required because Telegram's login-widget domain in BotFather is host-only and rejects ports — so set the widget domain to your funnel FQDN (e.g. `g15.tail4a0cb8.ts.net`). iOS still uses the older [`run-native-local-source-broadcast.sh`](./.scripts/support/run-native-local-source-broadcast.sh) local-server path.
-  - **One-time lara-stacker setup** (in `~/Code/Scripts/CLI_LARAVEL_lara-stacker`): add `TS_FUNNEL_HOST=<your-node>.ts.net` and `TS_FUNNEL_REVERB_PORT=8080` to its `.env`, then restart Caddy with `./scripts/start.sh` (menu option `Start`) so it serves that host. Without it the funnel returns a Caddy 404 (it only matches `*.dev.localhost` otherwise). There is **no** per-project `TS_FUNNEL_APP` — Caddy serves the `_funnel_app` symlink under `APPS_ROOT`, which `watch-android.sh` points at this project automatically, so the setup stays generic across projects.
+  - **One-time lara-stacker setup** (in `~/Code/Scripts/CLI_MACOS_lara-stacker`): add `TAILSCALE_AUTH_KEY` (from the [Tailscale admin console](https://login.tailscale.com/admin/settings/keys)), `TAILSCALE_HOSTNAME=<your-node>`, and `TAILSCALE_REVERB_PORT=8080` to **its** `.env` — these live in lara-stacker's `.env`, never in this project's. Enable HTTPS certificates and Funnel access for the tailnet in that console, then start the service from `./lara-stacker.sh` → `Services` → `Tailscale` → `Funnel`. Without it the funnel returns a Caddy 404 (it only matches `*.dev.localhost` otherwise). There is **no** per-project setting — Caddy serves the `_funnel_app` symlink under `APPS_ROOT`, which the Funnel command and `watch-android.sh` point at this project automatically, so the setup stays generic across projects.
+    - Funnel is **public internet exposure**, and `TAILSCALE_AUTH_KEY` is a secret. Stop the Funnel when you are done testing.
 - Local Reverb uses `REVERB_*` for the server connection and `VITE_REVERB_*` for browser/native Echo. Keep `REVERB_ALLOWED_ORIGINS` restricted to the dev/prod origins you actually serve from (for local Tailscale testing, include the Funnel URL origin — the Android script starts Reverb with `*` for you when it owns the port).
 
 #### What `watch-android.sh` orchestrates
@@ -331,6 +336,9 @@ Copyright (C) 2026 Muttasiq Contributors.
 - [Laravel](https://laravel.com) entire ecosystem
 - [FilamentPHP](https://filamentphp.com)
 - [NativePHP](https://nativephp.com)
+- [mise](https://mise.jdx.dev) and [verzly/mise-php](https://github.com/verzly/mise-php)
+- [OrbStack](https://orbstack.dev) and [Caddy](https://caddyserver.com)
+- [Zed](https://zed.dev)
 - [VSCodium](https://vscodium.com) (the project was accidentally deleted during development, and then got recovered, file by file, using tons of versions for each file, from **the no-telemetry cache** of this awesome piece of software)
 
 

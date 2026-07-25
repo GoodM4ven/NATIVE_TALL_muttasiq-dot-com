@@ -1,3 +1,6 @@
+# Toolchain pins for contributors who do not already have a global mise setup.
+# Keep these aligned with lara-stacker: its own mise.toml owns the host toolchain,
+# and its `PHP_VERSION` owns the PHP-FPM container image.
 [plugins]
 php = 'https://github.com/verzly/mise-php#latest'
 
@@ -7,107 +10,91 @@ php = '8.4'
 pnpm = '11'
 
 [env]
-_.file = { path = '.env', redact = true }
-_.php = { prebuilt_static = true, prebuilt_static_flavor = 'bulk' }
+# Run `pint`, `pest`, `phpstan`, `prettier`, and `blade-formatter` without a prefix.
 _.path = [
   '{{config_root}}/vendor/bin',
   '{{config_root}}/node_modules/.bin',
 ]
 
+# `composer dev` and the native watch scripts are long-running by design.
 COMPOSER_PROCESS_TIMEOUT = '0'
 
+# Deliberately NOT set here:
+#
+# 1. `_.file = { path = '.env' }` — mise would export `.env` into the real process
+#    environment. PHPUnit only applies a `<env>` entry from phpunit.xml when the
+#    variable is still unset (`$force || getenv($name) === false`), and none of ours
+#    use `force="true"`. So exporting `.env` silently defeats every override: tests
+#    would run with `APP_ENV=local` against the `muttasiq` MySQL database — and
+#    `tests/Pest.php` applies `RefreshDatabase` to both suites. Laravel loads `.env`
+#    itself, so there is nothing to gain here. Anything that genuinely needs a shell
+#    variable belongs in this `[env]` block instead.
+#
+# 2. `_.php = { prebuilt_static = ... }` — how PHP is built is the host toolchain's
+#    call, not the project's. This app runs `REDIS_CLIENT=phpredis`, and the prebuilt
+#    static builds do not ship `phpredis`; lara-stacker's mise.toml installs it with
+#    PIE from a source build. Pinning a build flavour here would override that and
+#    hand contributors a PHP that cannot serve sessions or the cache.
+
+# Tasks below only wrap the `.scripts/` helpers, which have no Composer equivalent.
+# Everything else stays in composer.json so there is a single source of truth —
+# use `composer run <script>` (or `composer run --list`) for dev/format/lint/test.
+
 [tasks.install]
-description = 'Install PHP and Node dependencies'
+description = 'Install PHP and JavaScript dependencies'
 run = [
   'composer install --no-interaction',
   'pnpm install',
 ]
 
-[tasks.setup]
-description = 'Bootstrap the app'
-run = 'composer run setup'
+[tasks.'watch:web']
+description = 'Run the web stack (server, queue, Reverb, logs, Vite)'
+run = './.scripts/watch-web.sh'
 
-[tasks.dev]
-description = 'Run Laravel, queue, logs, and Vite'
-alias = 'd'
-run = 'composer run dev'
+[tasks.'watch:android']
+description = 'Watch the Android app over the Tailscale Funnel'
+run = './.scripts/watch-android.sh'
 
-[tasks.build]
-description = 'Build frontend assets'
-alias = 'b'
-run = 'pnpm run build'
+[tasks.'watch:ios']
+description = 'Watch the iOS app over the local-source broadcast'
+run = './.scripts/watch-ios.sh'
 
-[tasks.format]
-description = 'Format Blade, JS/CSS, and PHP'
-run = 'composer run format'
+[tasks.'run:android']
+description = 'Build and run the Android app'
+run = './.scripts/run-android.sh'
 
-[tasks.analyse]
-description = 'Run PHPStan'
-alias = 'a'
-run = 'composer run analyse'
+[tasks.'run:ios']
+description = 'Build and run the iOS app'
+run = './.scripts/run-ios.sh'
 
-[tasks.lint]
-description = 'Run formatting and static analysis'
-run = 'composer run lint'
-
-[tasks.test]
-description = 'Run the default test suite'
-alias = 't'
-run = 'composer run test'
-
-[tasks.testparal]
-description = 'Run the parallel test suite'
-run = 'composer run testparal'
-
-[tasks.testcov]
-description = 'Run tests with coverage'
-run = 'composer run testcov'
-
-[tasks.testbrowser]
-description = 'Run browser tests'
-run = 'composer run testbrowser'
-
-[tasks.testall]
-description = 'Run all test suites'
-run = 'composer run testall'
-
-[tasks.green]
-description = 'Run the release gate'
-alias = 'g'
-run = 'composer run green'
-
-[tasks.native_watch_web]
-description = 'Watch the web app for NativePHP'
-run = '.scripts/watch-web.sh'
-
-[tasks.native_watch_android]
-description = 'Watch the Android app'
-run = '.scripts/watch-android.sh'
-
-[tasks.native_watch_ios]
-description = 'Watch the iOS app'
-run = '.scripts/watch-ios.sh'
-
-[tasks.native_run_android]
-description = 'Run the Android app'
-run = '.scripts/run-android.sh'
-
-[tasks.native_run_ios]
-description = 'Run the iOS app'
-run = '.scripts/run-ios.sh'
-
-[tasks.native_log_android]
+[tasks.'log:android']
 description = 'Collect Android logs'
-run = '.scripts/log-android.sh'
+run = './.scripts/log-android.sh'
 
-[tasks.native_log_ios]
+[tasks.'log:ios']
 description = 'Collect iOS logs'
-run = '.scripts/log-ios.sh'
+run = './.scripts/log-ios.sh'
 
-[tasks.native_share_android]
-description = 'Share the Android build'
-run = '.scripts/share-android.sh'
+[tasks.'share:android']
+description = 'Share an Android build'
+run = './.scripts/share-android.sh'
 
-[tasks.native_share_ios]
-description = 'Share the iOS build'
-run = '.scripts/share-ios.sh'
+[tasks.'share:ios']
+description = 'Share an iOS build'
+run = './.scripts/share-ios.sh'
+
+[tasks.'publish:android']
+description = 'Publish the Android app'
+run = './.scripts/publish-android.sh'
+
+[tasks.'publish:ios']
+description = 'Publish the iOS app'
+run = './.scripts/publish-ios.sh'
+
+[tasks.'env:toggle']
+description = 'Toggle .env between development and production identities'
+run = './.scripts/toggle-dev-production.sh'
+
+[tasks.'plugins:switch']
+description = 'Switch muttasiq-patches between the local path and the released package'
+run = './.scripts/composer-local-plugins-switch.sh'
