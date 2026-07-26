@@ -85,7 +85,7 @@ function runAndroidPrepareCommand(string $command, array $environment, string $w
     return runAndroidLaunchCommand($command, $environment, $workingDirectory);
 }
 
-it('passes the linux emulator args through the run-android wrapper', function () {
+it('keeps the native android watch process scoped to the selected emulator', function () {
     $workspace = createAndroidLaunchTempDirectory();
     $projectRoot = dirname(__DIR__, 2);
 
@@ -94,8 +94,8 @@ it('passes the linux emulator args through the run-android wrapper', function ()
         mkdir($workspace.'/.scripts/native/mobile/android/support', 0777, true);
         mkdir($workspace.'/bin', 0777, true);
 
-        copy($projectRoot.'/.scripts/run-android.sh', $workspace.'/.scripts/run-android.sh');
-        chmod($workspace.'/.scripts/run-android.sh', 0755);
+        copy($projectRoot.'/.scripts/support/watch-android-native.sh', $workspace.'/.scripts/support/watch-android-native.sh');
+        chmod($workspace.'/.scripts/support/watch-android-native.sh', 0755);
 
         writeAndroidLaunchExecutable($workspace.'/.scripts/support/prepare.sh', <<<'BASH'
 #!/usr/bin/env bash
@@ -109,12 +109,30 @@ set -euo pipefail
 exit 0
 BASH);
 
+        writeAndroidLaunchExecutable($workspace.'/.scripts/native/mobile/android/support/select-emulator.sh', <<<'BASH'
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s' 'emulator-5556'
+BASH);
+
+        writeAndroidLaunchExecutable($workspace.'/bin/watchman', <<<'BASH'
+#!/usr/bin/env bash
+set -euo pipefail
+exit 0
+BASH);
+
+        writeAndroidLaunchExecutable($workspace.'/bin/watchman-wait', <<<'BASH'
+#!/usr/bin/env bash
+set -euo pipefail
+exit 0
+BASH);
+
         writeAndroidLaunchExecutable($workspace.'/bin/php', <<<'BASH'
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ "${1:-}" == "artisan" && "${2:-}" == "native:run" && "${3:-}" == "android" ]]; then
-    printf '%s' "${NATIVEPHP_ANDROID_EMULATOR_ARGS:-}"
+if [[ "$*" == "artisan native:run android emulator-5556 --build=debug --watch" ]]; then
+    printf '%s|%s' "${ANDROID_SERIAL:-}" "$*"
     exit 0
 fi
 
@@ -123,7 +141,7 @@ exit 1
 BASH);
 
         $result = runAndroidLaunchCommand(
-            'bash '.escapeshellarg($workspace.'/.scripts/run-android.sh'),
+            'bash '.escapeshellarg($workspace.'/.scripts/support/watch-android-native.sh'),
             [
                 'PATH' => $workspace.'/bin:'.getenv('PATH'),
             ],
@@ -132,7 +150,8 @@ BASH);
 
         expect($result['exit_code'])->toBe(0, $result['stderr']);
         expect($result['stderr'])->toBe('');
-        expect(trim($result['stdout']))->toBe('-gpu swiftshader_indirect');
+        expect(trim($result['stdout']))->toContain('[native-watch:android] using target emulator-5556');
+        expect(trim($result['stdout']))->toEndWith('emulator-5556|artisan native:run android emulator-5556 --build=debug --watch');
     } finally {
         deleteAndroidLaunchTempDirectory($workspace);
     }

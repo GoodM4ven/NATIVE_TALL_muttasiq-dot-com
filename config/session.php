@@ -23,7 +23,9 @@ return [
     |
     */
 
-    'driver' => env('SESSION_DRIVER', 'database'),
+    'driver' => is_native_bootstrap_runtime()
+        ? 'file'
+        : env('SESSION_DRIVER', 'database'),
 
     /*
     |--------------------------------------------------------------------------

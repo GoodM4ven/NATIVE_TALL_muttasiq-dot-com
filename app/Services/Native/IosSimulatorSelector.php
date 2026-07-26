@@ -6,7 +6,7 @@ namespace App\Services\Native;
 
 class IosSimulatorSelector
 {
-    public function selectUdidFromJson(string $json): ?string
+    public function selectUdidFromJson(string $json, string $preferredIphoneName = 'iPhone 17 Pro'): ?string
     {
         $data = json_decode($json, true);
 
@@ -20,10 +20,6 @@ class IosSimulatorSelector
             return null;
         }
 
-        $bootedSimulator = null;
-        $preferredIphone = null;
-        $fallbackIphone = null;
-
         foreach ($devices as $runtimeDevices) {
             if (! is_array($runtimeDevices)) {
                 continue;
@@ -36,33 +32,18 @@ class IosSimulatorSelector
 
                 $udid = (string) ($device['udid'] ?? '');
                 $name = (string) ($device['name'] ?? '');
-                $state = (string) ($device['state'] ?? '');
                 $isAvailable = ($device['isAvailable'] ?? false) === true;
 
-                if ($udid === '') {
+                if ($udid === '' || ! $isAvailable || ! str_contains($name, 'iPhone')) {
                     continue;
                 }
 
-                if ($state === 'Booted') {
-                    $bootedSimulator ??= $udid;
-
-                    continue;
+                if ($name === $preferredIphoneName) {
+                    return $udid;
                 }
-
-                if (! $isAvailable || ! str_contains($name, 'iPhone')) {
-                    continue;
-                }
-
-                if ($name === 'iPhone 16 Pro') {
-                    $preferredIphone ??= $udid;
-
-                    continue;
-                }
-
-                $fallbackIphone ??= $udid;
             }
         }
 
-        return $bootedSimulator ?? $preferredIphone ?? $fallbackIphone;
+        return null;
     }
 }

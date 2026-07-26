@@ -1,5 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
+$appUrl = parse_url((string) env('APP_URL', 'http://localhost'));
+$defaultAllowedOrigin = env('APP_ENV', 'production') === 'local'
+    ? '*'
+    : (is_array($appUrl) ? ($appUrl['host'] ?? '') : '');
+
 return [
 
     'default' => env('REVERB_SERVER', 'reverb'),
@@ -9,7 +16,7 @@ return [
             'host' => env('REVERB_SERVER_HOST', '0.0.0.0'),
             'port' => env('REVERB_SERVER_PORT', 8080),
             'path' => env('REVERB_SERVER_PATH', ''),
-            'hostname' => env('REVERB_HOST'),
+            'hostname' => env('REVERB_HOST', '127.0.0.1'),
             'options' => [
                 'tls' => [],
             ],
@@ -40,13 +47,13 @@ return [
                 'secret' => env('REVERB_APP_SECRET'),
                 'app_id' => env('REVERB_APP_ID'),
                 'options' => [
-                    'host' => env('REVERB_HOST'),
-                    'port' => env('REVERB_PORT', 443),
-                    'scheme' => env('REVERB_SCHEME', 'https'),
-                    'useTLS' => env('REVERB_SCHEME', 'https') === 'https',
+                    'host' => env('REVERB_HOST', '127.0.0.1'),
+                    'port' => env('REVERB_PORT', 8080),
+                    'scheme' => env('REVERB_SCHEME', 'http'),
+                    'useTLS' => env('REVERB_SCHEME', 'http') === 'https',
                 ],
                 'allowed_origins' => array_values(array_filter(
-                    array_map('trim', explode(',', (string) env('REVERB_ALLOWED_ORIGINS', ''))),
+                    array_map('trim', explode(',', (string) env('REVERB_ALLOWED_ORIGINS', $defaultAllowedOrigin))),
                     static fn (string $origin): bool => $origin !== '',
                 )),
                 'ping_interval' => env('REVERB_APP_PING_INTERVAL', 60),

@@ -55,7 +55,43 @@ fi
 is_tcp_port_in_use() {
     local candidate_port="$1"
 
-    ss -lnt | awk -v target_port=":${candidate_port}" '$4 ~ target_port"$" { found = 1 } END { exit found ? 0 : 1 }'
+    if command -v ss >/dev/null 2>&1; then
+        ss -lnt | awk -v target_port=":${candidate_port}" '$4 ~ target_port"$" { found = 1 } END { exit found ? 0 : 1 }'
+        return $?
+    fi
+
+    if command -v lsof >/dev/null 2>&1; then
+        [[ -n "$(lsof -nP -iTCP:"${candidate_port}" -sTCP:LISTEN -t 2>/dev/null)" ]]
+        return $?
+    fi
+
+    if command -v netstat >/dev/null 2>&1; then
+        netstat -an -p tcp 2>/dev/null \
+            | awk -v target_port=".${candidate_port}" '$4 ~ target_port"$" && $6 == "LISTEN" { found = 1 } END { exit found ? 0 : 1 }'
+        return $?
+    fi
+
+    echo "[native-local-source-broadcast] cannot inspect TCP ports: install lsof, iproute2, or net-tools." >&2
+    return 2
+}
+
+describe_tcp_port_usage() {
+    local candidate_port="$1"
+
+    if command -v ss >/dev/null 2>&1; then
+        ss -lntp | awk -v target_port=":${candidate_port}" '$4 ~ target_port"$" { print }' >&2 || true
+        return 0
+    fi
+
+    if command -v lsof >/dev/null 2>&1; then
+        lsof -nP -iTCP:"${candidate_port}" -sTCP:LISTEN >&2 || true
+        return 0
+    fi
+
+    if command -v netstat >/dev/null 2>&1; then
+        netstat -an -p tcp 2>/dev/null \
+            | awk -v target_port=".${candidate_port}" '$4 ~ target_port"$" && $6 == "LISTEN" { print }' >&2 || true
+    fi
 }
 
 pick_available_tcp_port() {
@@ -148,6 +184,10 @@ log_tailscale_diagnostics() {
             | sed -E 's/.*\[([^]]*)\].*/\1/'
     )"
 
+    if grep -Eq '"Health"[[:space:]]*:[[:space:]]*\[[[:space:]]*\]' "${tailscale_log_file}" 2>/dev/null; then
+        tailscale_health_state="healthy"
+    fi
+
     echo "[native-local-source-broadcast] tailscale backend: ${tailscale_backend_state:-unknown}" >&2
     echo "[native-local-source-broadcast] tailscale health: ${tailscale_health_state:-unknown}" >&2
     echo "[native-local-source-broadcast] tailscale diagnostics: ${tailscale_log_file}" >&2
@@ -198,8 +238,6 @@ start_tailscale_funnel() {
         return 1
     fi
 
-    : >"${tailscale_log_file}"
-
     local tailscale_command_prefix
     tailscale_command_prefix="$(resolve_tailscale_command_prefix)"
 
@@ -210,13 +248,15 @@ start_tailscale_funnel() {
     if [[ -n "${tailscale_command_prefix}" ]]; then
         (
             cd "${project_root}"
+            echo "[native-local-source-broadcast] starting Tailscale Funnel on :${tailscale_funnel_https_port}:"
             ${tailscale_command_prefix} tailscale funnel --yes --bg --https="${tailscale_funnel_https_port}" "${funnel_target}"
-        ) >"${tailscale_log_file}" 2>&1
+        ) >>"${tailscale_log_file}" 2>&1
     else
         (
             cd "${project_root}"
+            echo "[native-local-source-broadcast] starting Tailscale Funnel on :${tailscale_funnel_https_port}:"
             tailscale funnel --yes --bg --https="${tailscale_funnel_https_port}" "${funnel_target}"
-        ) >"${tailscale_log_file}" 2>&1
+        ) >>"${tailscale_log_file}" 2>&1
     fi
 
     tailscale_funnel_pid=""
@@ -335,7 +375,7 @@ public_base_url="${public_base_url%/}"
 if is_tcp_port_in_use "${port}"; then
     if [[ -n "${public_base_url}" || "${port_was_explicit}" -eq 1 ]]; then
         echo "[native-local-source-broadcast] port ${port} is already in use. Free it or choose another NATIVE_QURAN_LOCAL_API_PORT." >&2
-        ss -lntp | awk -v target_port=":${port}" '$4 ~ target_port"$" { print }' >&2 || true
+        describe_tcp_port_usage "${port}"
         exit 1
     fi
 
@@ -369,8 +409,15 @@ fi
 
 if [[ -z "${public_base_url}" && "${mode}" == "watch" ]]; then
     tailscale_funnel_target="localhost:${port}"
+    tailscale_ready=0
 
-    if log_tailscale_diagnostics && start_tailscale_funnel "${tailscale_funnel_target}"; then
+    if [[ "${watch_prefers_tailscale}" -eq 1 ]]; then
+        tailscale_ready=1
+    elif log_tailscale_diagnostics; then
+        tailscale_ready=1
+    fi
+
+    if [[ "${tailscale_ready}" -eq 1 ]] && start_tailscale_funnel "${tailscale_funnel_target}"; then
         for _ in {1..80}; do
             if funnel_url="$(resolve_tailscale_funnel_url || true)"; then
                 if [[ -n "${funnel_url}" ]]; then
@@ -381,7 +428,7 @@ if [[ -z "${public_base_url}" && "${mode}" == "watch" ]]; then
                 fi
             fi
 
-            if ! kill -0 "${tailscale_funnel_pid}" >/dev/null 2>&1; then
+            if [[ -n "${tailscale_funnel_pid}" ]] && ! kill -0 "${tailscale_funnel_pid}" >/dev/null 2>&1; then
                 echo "[native-local-source-broadcast] tailscale funnel exited early. See ${tailscale_log_file}" >&2
                 stop_tailscale_funnel
                 break

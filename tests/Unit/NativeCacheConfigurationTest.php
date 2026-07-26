@@ -32,6 +32,20 @@ function restoreNativeCacheConfigurationEnv(string $key, string|false|null $prev
     $_SERVER[$key] = $previousValue;
 }
 
+function setNativeCacheConfigurationEnv(string $key, ?string $value): void
+{
+    if ($value === null) {
+        putenv($key);
+        unset($_ENV[$key], $_SERVER[$key]);
+
+        return;
+    }
+
+    putenv("{$key}={$value}");
+    $_ENV[$key] = $value;
+    $_SERVER[$key] = $value;
+}
+
 it('stores the native file cache in the native temp directory', function () {
     $tempDir = createNativeCacheConfigurationTempDirectory();
     $previousNativeTempDir = getenv('NATIVEPHP_TEMPDIR');
@@ -47,5 +61,55 @@ it('stores the native file cache in the native temp directory', function () {
         if (is_dir($tempDir)) {
             rmdir($tempDir);
         }
+    }
+});
+
+it('uses file backed cache and sessions in the native runtime', function () {
+    $previousNativeRunning = getenv('NATIVEPHP_RUNNING');
+    $previousNativePlatform = getenv('NATIVEPHP_PLATFORM');
+    $previousCacheStore = getenv('CACHE_STORE');
+    $previousSessionDriver = getenv('SESSION_DRIVER');
+
+    try {
+        setNativeCacheConfigurationEnv('NATIVEPHP_RUNNING', 'true');
+        setNativeCacheConfigurationEnv('NATIVEPHP_PLATFORM', null);
+        setNativeCacheConfigurationEnv('CACHE_STORE', 'redis');
+        setNativeCacheConfigurationEnv('SESSION_DRIVER', 'redis');
+
+        $cacheConfig = require base_path('config/cache.php');
+        $sessionConfig = require base_path('config/session.php');
+
+        expect($cacheConfig['default'])->toBe('file')
+            ->and($sessionConfig['driver'])->toBe('file');
+    } finally {
+        restoreNativeCacheConfigurationEnv('NATIVEPHP_RUNNING', $previousNativeRunning);
+        restoreNativeCacheConfigurationEnv('NATIVEPHP_PLATFORM', $previousNativePlatform);
+        restoreNativeCacheConfigurationEnv('CACHE_STORE', $previousCacheStore);
+        restoreNativeCacheConfigurationEnv('SESSION_DRIVER', $previousSessionDriver);
+    }
+});
+
+it('preserves configured cache and session drivers outside the native runtime', function () {
+    $previousNativeRunning = getenv('NATIVEPHP_RUNNING');
+    $previousNativePlatform = getenv('NATIVEPHP_PLATFORM');
+    $previousCacheStore = getenv('CACHE_STORE');
+    $previousSessionDriver = getenv('SESSION_DRIVER');
+
+    try {
+        setNativeCacheConfigurationEnv('NATIVEPHP_RUNNING', null);
+        setNativeCacheConfigurationEnv('NATIVEPHP_PLATFORM', null);
+        setNativeCacheConfigurationEnv('CACHE_STORE', 'redis');
+        setNativeCacheConfigurationEnv('SESSION_DRIVER', 'redis');
+
+        $cacheConfig = require base_path('config/cache.php');
+        $sessionConfig = require base_path('config/session.php');
+
+        expect($cacheConfig['default'])->toBe('redis')
+            ->and($sessionConfig['driver'])->toBe('redis');
+    } finally {
+        restoreNativeCacheConfigurationEnv('NATIVEPHP_RUNNING', $previousNativeRunning);
+        restoreNativeCacheConfigurationEnv('NATIVEPHP_PLATFORM', $previousNativePlatform);
+        restoreNativeCacheConfigurationEnv('CACHE_STORE', $previousCacheStore);
+        restoreNativeCacheConfigurationEnv('SESSION_DRIVER', $previousSessionDriver);
     }
 });

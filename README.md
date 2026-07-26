@@ -240,9 +240,9 @@ https://muttasiq.com
 - Use `composer dev` to run the local web stack together — it starts the web server, **the queue worker** (`php artisan queue:listen`), **Reverb** (`php artisan reverb:start`), the log tailer, and Vite. Queue + Reverb are now hard dependencies for authenticated account/settings synchronization and realtime cross-device invalidation, so if you start the app without `composer dev`, also run a queue worker and Reverb yourself.
 - When testing native server/sync/realtime behavior, run the matching native watch script (`.scripts/watch-android.sh` or `.scripts/watch-ios.sh`) and pass the resulting endpoints into the native build. Use plain `composer dev` only when you want the web stack.
 - **Android** (`.scripts/watch-android.sh` → [`run-android-docker-funnel.sh`](./.scripts/support/run-android-docker-funnel.sh)) reuses the **existing lara-stacker Docker app** (`https://muttasiq.dev.localhost`) instead of spinning up a second `php artisan serve`. It exposes that app over a **single Tailscale Funnel on `:443`**, and the app's Reverb websocket rides the **same `:443`** (Caddy proxies `/app` to the host Reverb). One port-less domain is required because Telegram's login-widget domain in BotFather is host-only and rejects ports. iOS still uses the older [`run-native-local-source-broadcast.sh`](./.scripts/support/run-native-local-source-broadcast.sh) local-server path.
-  - The Funnel itself is configured in lara-stacker, not here — see that repository's README. Nothing Tailscale-related belongs in this project's `.env`.
-  - **Set the BotFather login-widget domain to your current funnel FQDN.** It derives from your Tailscale machine name, so it changes whenever you switch machines, and Telegram login keeps failing until the widget domain matches. Read it from `tailscale status --json` (`Self.DNSName`).
-- Local Reverb uses `REVERB_*` for the server connection and `VITE_REVERB_*` for browser/native Echo. Keep `REVERB_ALLOWED_ORIGINS` restricted to the dev/prod origins you actually serve from (for local Tailscale testing, include the Funnel URL origin — the Android script starts Reverb with `*` for you when it owns the port).
+  - The Funnel runs in lara-stacker's Tailscale container and targets Caddy's dedicated internal `:8081` funnel site. Nothing Tailscale-related belongs in this project's `.env`.
+  - **Set the BotFather login-widget domain to the Funnel FQDN printed by the watch script.** It derives from lara-stacker's Tailscale container name, so it changes whenever you switch machines, and Telegram login keeps failing until the widget domain matches.
+- Local Reverb keeps only `REVERB_APP_ID`, `REVERB_APP_KEY`, and `REVERB_APP_SECRET` in the project env. The app derives its public web endpoint from `APP_URL`; lara-stacker supplies the container-to-host server route, and the native watch scripts supply their Funnel endpoint at build time.
 
 #### What `watch-android.sh` orchestrates
 
@@ -250,11 +250,11 @@ https://muttasiq.com
 |---|-------|---------------|------------|-------|
 | 1 | muttasiq web+API app (`php-fpm`) | lara-stacker Docker (`app` + `caddy`) | `:443` via funnel FQDN | Reused, **not** re-served — serves `/api/settings`, `/api/quran-snapshot/*`, `/auth/telegram/native` |
 | 2 | Reverb websocket | host (`php artisan reverb:start`) | host `:8080`, client via `wss://<fqdn>/app` | Caddy proxies `/app` → `host.docker.internal:8080`; rides the same `:443` funnel |
-| 3 | Tailscale Funnel | host `tailscaled` | **`:443` only** (reset first) | `serve reset` each run kills stale `:8443`/`:10000` targets that broke the Telegram widget |
+| 3 | Tailscale Funnel | lara-stacker `tailscale` container | public `:443` → Caddy `:8081` | The script discovers the running Compose service and confirms the public HTTP + websocket routes before building |
 | 4 | Android native build + watcher | host (`native:run android --watch`) | on-device | Gets funnel endpoints + `VITE_REVERB_*` pointed at `<fqdn>:443` (https) |
 
-Provided by **lara-stacker's** Docker stack (already running, not started by the script): `caddy`, `app` (php-fpm), `mysql`, `redis`, `mailpit`, `minio`, plus the file `synchronizer`. The script only adds items 2–4 above and the funnel routing into Caddy.
-- The native runtime ships its own on-device queue worker, but it requires a local cache + queue store: set `QUEUE_CONNECTION=database` (default) and `CACHE_STORE=database` in native builds — the unique-job lock can't use the `redis` store on-device.
+Provided by **lara-stacker's** Docker stack (already running, not started by the script): `caddy`, `tailscale`, `app` (php-fpm), `mysql`, `redis`, `mailpit`, `minio`, plus the file `synchronizer`. The script starts Reverb when needed, confirms the existing Funnel route, then starts the native watcher.
+- The native runtime automatically uses persistent file-backed cache and sessions on both platforms, while its on-device queue stays database-backed. This keeps lara-stacker's Redis settings web-only because the embedded mobile PHP runtime does not ship with the Redis extension.
 
 ### Tools and Guides
 

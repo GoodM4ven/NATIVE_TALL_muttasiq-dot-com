@@ -5,40 +5,58 @@ set -euo pipefail
 # (https://<app>.dev.localhost) exposed over a single Tailscale Funnel on :443.
 # No parallel `php artisan serve` and no second funnel port: the app and its
 # Reverb websocket both ride the one :443 funnel domain, which is host-only so
-# Telegram's login widget accepts it. lara-stacker's Caddy must be serving the
-# funnel host — set TS_FUNNEL_HOST + TS_FUNNEL_APP in lara-stacker's .env and
-# restart caddy (see this repo's README "Running Locally").
+# Telegram's login widget accepts it. The Funnel runs in lara-stacker's Tailscale
+# container, which shares Caddy's network and proxies to its dedicated :8081 site.
 
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 reverb_server_port="${REVERB_SERVER_PORT:-8080}"
 reverb_pid=""
+tailscale_container="${LARA_STACKER_TAILSCALE_CONTAINER:-}"
 
-tailscale_prefix() {
-    if [[ "$(uname -s)" == "Linux" && "$(id -u)" -ne 0 ]] && command -v sudo >/dev/null 2>&1; then
-        printf 'sudo '
-    fi
+resolve_lara_stacker_tailscale_container() {
+    docker ps \
+        --filter 'label=com.docker.compose.project=lara-stacker' \
+        --filter 'label=com.docker.compose.service=tailscale' \
+        --filter 'status=running' \
+        --format '{{.ID}}' \
+        | awk 'NR == 1 { print; exit }'
 }
 
-stop_funnel_without_prompt() {
-    tailscale funnel --yes --https=443 https+insecure://localhost:443 off >/dev/null 2>&1 && return 0
-
-    if [[ "$(uname -s)" == "Linux" && "$(id -u)" -ne 0 ]] && command -v sudo >/dev/null 2>&1; then
-        sudo -n tailscale funnel --yes --https=443 https+insecure://localhost:443 off >/dev/null 2>&1 || true
-    fi
+tailscale_exec() {
+    docker exec "${tailscale_container}" tailscale "$@"
 }
 
 # The port-less :443 funnel URL is the authoritative FQDN (that's what Telegram and
 # the phone hit). Read it back from `funnel status` rather than guessing "Self".
 resolve_funnel_fqdn() {
-    $(tailscale_prefix)tailscale funnel status 2>/dev/null \
+    tailscale_exec funnel status 2>/dev/null \
         | grep -Eo 'https://[a-zA-Z0-9.-]+\.ts\.net([[:space:]]|$)' \
         | head -n 1 \
         | sed -E 's#https://([^[:space:]]+).*#\1#'
 }
 
 is_port_in_use() {
-    ss -lnt 2>/dev/null | awk -v p=":${1}" '$4 ~ p"$" { f = 1 } END { exit f ? 0 : 1 }'
+    local port="${1}"
+
+    if command -v ss >/dev/null 2>&1; then
+        ss -lnt | awk -v target_port=":${port}" '$4 ~ target_port"$" { found = 1 } END { exit found ? 0 : 1 }'
+        return $?
+    fi
+
+    if command -v lsof >/dev/null 2>&1; then
+        [[ -n "$(lsof -nP -iTCP:"${port}" -sTCP:LISTEN -t 2>/dev/null)" ]]
+        return $?
+    fi
+
+    if command -v netstat >/dev/null 2>&1; then
+        netstat -an -p tcp 2>/dev/null \
+            | awk -v target_port=".${port}" '$4 ~ target_port"$" && $6 == "LISTEN" { found = 1 } END { exit found ? 0 : 1 }'
+        return $?
+    fi
+
+    echo "[android-docker-funnel] cannot inspect TCP ports: install lsof, iproute2, or net-tools." >&2
+    return 2
 }
 
 resolve_reverb_app_key() {
@@ -54,8 +72,7 @@ websocket_route_accepts_handshake() {
     local status_line
 
     status_line="$(
-        curl --silent --insecure --include --no-buffer --http1.1 --max-time 3 \
-            --resolve "${host}:443:127.0.0.1" \
+        curl --silent --include --no-buffer --http1.1 --max-time 3 \
             --header "Origin: https://${host}" \
             --header 'Connection: Upgrade' \
             --header 'Upgrade: websocket' \
@@ -69,15 +86,30 @@ websocket_route_accepts_handshake() {
     [[ "${status_line}" == *" 101 "* ]]
 }
 
-if ! command -v tailscale >/dev/null 2>&1; then
-    echo "[android-docker-funnel] tailscale is not installed." >&2
+if ! command -v docker >/dev/null 2>&1; then
+    echo "[android-docker-funnel] Docker was not found." >&2
     exit 1
 fi
 
-# Fresh funnel state each run so a stale target can't push us onto :8443/:10000.
-$(tailscale_prefix)tailscale serve reset >/dev/null 2>&1 || true
-$(tailscale_prefix)tailscale funnel --yes --bg --https=443 https+insecure://localhost:443 \
-    || { echo "[android-docker-funnel] failed to start funnel on :443. Run: sudo tailscale up (and approve Funnel)." >&2; exit 1; }
+# Point lara-stacker's generic funnel document root at THIS project. Caddy serves
+# /var/www/html/_funnel_app/public through its internal :8081 site, so we symlink
+# `_funnel_app` in the apps root to this project.
+apps_root_dir="$(dirname "${project_root}")"
+ln -sfn "$(basename "${project_root}")" "${apps_root_dir}/_funnel_app" \
+    || { echo "[android-docker-funnel] could not create _funnel_app in ${apps_root_dir}." >&2; exit 1; }
+
+if [[ -z "${tailscale_container}" ]]; then
+    tailscale_container="$(resolve_lara_stacker_tailscale_container || true)"
+fi
+
+if [[ -z "${tailscale_container}" ]]; then
+    echo "[android-docker-funnel] lara-stacker's Tailscale container is not running." >&2
+    echo "[android-docker-funnel] start lara-stacker with its Tailscale profile enabled." >&2
+    exit 1
+fi
+
+tailscale_exec funnel --yes --bg --https=443 http://127.0.0.1:8081 \
+    || { echo "[android-docker-funnel] lara-stacker's Tailscale container could not expose Caddy :8081." >&2; exit 1; }
 
 funnel_fqdn=""
 for _ in {1..20}; do
@@ -87,23 +119,14 @@ for _ in {1..20}; do
 done
 
 if [[ -z "${funnel_fqdn}" ]]; then
-    echo "[android-docker-funnel] funnel did not report a :443 .ts.net URL. See: sudo tailscale funnel status" >&2
+    echo "[android-docker-funnel] lara-stacker's Funnel did not report a :443 .ts.net URL." >&2
+    echo "[android-docker-funnel] inspect it with: docker exec ${tailscale_container} tailscale funnel status" >&2
     exit 1
 fi
 
 public_base_url="https://${funnel_fqdn}"
 
-# Point lara-stacker's generic funnel document root at THIS project. Caddy serves
-# /var/www/html/_funnel_app/public for the funnel host, so we symlink `_funnel_app`
-# (in the apps root — the project's parent dir, which lara-stacker mounts into Caddy)
-# to this project. Keeps lara-stacker free of any per-project TS_FUNNEL_APP value.
-apps_root_dir="$(dirname "${project_root}")"
-ln -sfn "$(basename "${project_root}")" "${apps_root_dir}/_funnel_app" \
-    || echo "[android-docker-funnel] warning: could not create _funnel_app symlink in ${apps_root_dir}" >&2
-
 cleanup() {
-    stop_funnel_without_prompt
-
     if [[ -n "${reverb_pid}" ]] && kill -0 "${reverb_pid}" >/dev/null 2>&1; then
         kill "${reverb_pid}" >/dev/null 2>&1 || true
         wait "${reverb_pid}" >/dev/null 2>&1 || true
@@ -121,7 +144,7 @@ if is_port_in_use "${reverb_server_port}"; then
 else
     (
         cd "${project_root}"
-        REVERB_ALLOWED_ORIGINS="*" php artisan reverb:start --host=0.0.0.0 --port="${reverb_server_port}"
+        exec env REVERB_ALLOWED_ORIGINS="*" php artisan reverb:start --host=0.0.0.0 --port="${reverb_server_port}"
     ) &
     reverb_pid="$!"
 fi
@@ -129,10 +152,7 @@ fi
 # Wait for the Docker app to answer over the funnel host (Caddy -> php-fpm).
 server_ready=0
 for _ in {1..40}; do
-    # --insecure: Caddy serves the local dev cert on the .ts.net host by design
-    # (the funnel connects with https+insecure), so the name mismatch is expected.
-    if curl --silent --insecure --fail --max-time 3 --resolve "${funnel_fqdn}:443:127.0.0.1" \
-        "https://${funnel_fqdn}/api/settings" >/dev/null 2>&1; then
+    if curl --silent --fail --max-time 3 "${public_base_url}/api/settings" >/dev/null 2>&1; then
         server_ready=1
         break
     fi
@@ -141,7 +161,7 @@ done
 
 if [[ "${server_ready}" -ne 1 ]]; then
     echo "[android-docker-funnel] the Docker app did not answer for host ${funnel_fqdn}." >&2
-    echo "[android-docker-funnel] confirm lara-stacker: TS_FUNNEL_HOST=${funnel_fqdn}, TS_FUNNEL_APP set, caddy restarted." >&2
+    echo "[android-docker-funnel] confirm lara-stacker Caddy and Tailscale containers are healthy and _funnel_app points to this project." >&2
     exit 1
 fi
 

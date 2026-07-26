@@ -3,13 +3,17 @@ set -euo pipefail
 
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
-if command -v watchman >/dev/null 2>&1; then
-    watchman shutdown-server || true
+if ! command -v watchman >/dev/null 2>&1; then
+    echo "[native-watch:ios] watchman is required for NativePHP hot reloading." >&2
+    echo "[native-watch:ios] install it with: brew install watchman" >&2
+    exit 1
 fi
+
+watchman shutdown-server || true
 
 if ! command -v watchman-wait >/dev/null 2>&1; then
     export PATH="${project_root}/.scripts/support/bin:${PATH}"
-    echo "[native-watch:ios] watchman-wait is unavailable; using bundled watchman shim" >&2
+    echo "[native-watch:ios] watchman-wait is unavailable; using the bundled compatibility shim" >&2
 fi
 
 "${project_root}/.scripts/support/prepare.sh"

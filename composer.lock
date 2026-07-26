@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "64ae712b125007e9d4795bffae8e9860",
+    "content-hash": "5b4f834683c75fd945ea49bb7f0e7d73",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -2249,8 +2249,8 @@
             "version": "1.6.999999",
             "dist": {
                 "type": "path",
-                "url": "/home/goodm4ven/Code/LaravelPackages/NATIVE_PLUGIN_muttasiq-patches",
-                "reference": "591fc8afb1b5123bf1cc13771953c8bdec099258"
+                "url": "/Users/goodm4ven/Code/LaravelPackages/NATIVE_PLUGIN_muttasiq-patches",
+                "reference": "743ba0560c39959a713e5271ee988568dbc67e44"
             },
             "require": {
                 "nativephp/mobile": "^3.2",

@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 use App\Services\Native\IosSimulatorSelector;
 
-it('prefers an already booted simulator even when it is not an iPhone', function () {
+it('prefers the default iphone even when another simulator is already booted', function () {
     $selector = app(IosSimulatorSelector::class);
 
     $selectedUdid = $selector->selectUdidFromJson(json_encode([
         'devices' => [
-            'com.apple.CoreSimulator.SimRuntime.iOS-18-0' => [
+            'com.apple.CoreSimulator.SimRuntime.iOS-26-0' => [
                 [
-                    'name' => 'iPhone 16 Pro',
-                    'udid' => 'iphone-16-pro',
+                    'name' => 'iPhone 17 Pro',
+                    'udid' => 'iphone-17-pro',
                     'state' => 'Shutdown',
                     'isAvailable' => true,
                 ],
@@ -26,24 +26,24 @@ it('prefers an already booted simulator even when it is not an iPhone', function
         ],
     ], JSON_THROW_ON_ERROR));
 
-    expect($selectedUdid)->toBe('ipad-air-11');
+    expect($selectedUdid)->toBe('iphone-17-pro');
 });
 
-it('falls back to the iPhone 16 Pro when no simulator is already booted', function () {
+it('falls back to the iPhone 17 Pro when no simulator is already booted', function () {
     $selector = app(IosSimulatorSelector::class);
 
     $selectedUdid = $selector->selectUdidFromJson(json_encode([
         'devices' => [
-            'com.apple.CoreSimulator.SimRuntime.iOS-18-0' => [
+            'com.apple.CoreSimulator.SimRuntime.iOS-26-0' => [
                 [
-                    'name' => 'iPhone 16',
-                    'udid' => 'iphone-16',
+                    'name' => 'iPhone 17',
+                    'udid' => 'iphone-17',
                     'state' => 'Shutdown',
                     'isAvailable' => true,
                 ],
                 [
-                    'name' => 'iPhone 16 Pro',
-                    'udid' => 'iphone-16-pro',
+                    'name' => 'iPhone 17 Pro',
+                    'udid' => 'iphone-17-pro',
                     'state' => 'Shutdown',
                     'isAvailable' => true,
                 ],
@@ -51,10 +51,35 @@ it('falls back to the iPhone 16 Pro when no simulator is already booted', functi
         ],
     ], JSON_THROW_ON_ERROR));
 
-    expect($selectedUdid)->toBe('iphone-16-pro');
+    expect($selectedUdid)->toBe('iphone-17-pro');
 });
 
-it('falls back to the first available iphone when the iPhone 16 Pro is unavailable', function () {
+it('allows the default iphone name to be overridden', function () {
+    $selector = app(IosSimulatorSelector::class);
+
+    $selectedUdid = $selector->selectUdidFromJson(json_encode([
+        'devices' => [
+            'com.apple.CoreSimulator.SimRuntime.iOS-26-0' => [
+                [
+                    'name' => 'iPhone 17 Pro',
+                    'udid' => 'iphone-17-pro',
+                    'state' => 'Shutdown',
+                    'isAvailable' => true,
+                ],
+                [
+                    'name' => 'iPhone Air',
+                    'udid' => 'iphone-air',
+                    'state' => 'Shutdown',
+                    'isAvailable' => true,
+                ],
+            ],
+        ],
+    ], JSON_THROW_ON_ERROR), 'iPhone Air');
+
+    expect($selectedUdid)->toBe('iphone-air');
+});
+
+it('does not silently select another iphone when the default iphone is unavailable', function () {
     $selector = app(IosSimulatorSelector::class);
 
     $selectedUdid = $selector->selectUdidFromJson(json_encode([
@@ -76,7 +101,7 @@ it('falls back to the first available iphone when the iPhone 16 Pro is unavailab
         ],
     ], JSON_THROW_ON_ERROR));
 
-    expect($selectedUdid)->toBe('iphone-15-pro');
+    expect($selectedUdid)->toBeNull();
 });
 
 it('returns null for invalid simulator payloads', function () {
